@@ -51,7 +51,26 @@ classdef tri_mesh_3d
     end
     
     function e = get_element( obj, i )
-      e = obj.elems( i, : );
+      e = obj.elems( i, : ) + 1;
+    end
+    
+    function e = get_node( obj, i )
+      e = obj.nodes( i, : );
+    end
+    
+    function e = get_nodes( obj, i )
+      e = obj.nodes( obj.elems( i, : ) + 1, : );
+    end
+    
+    function value = get_area( obj, i )
+      e = obj.get_nodes( i );
+      u = e( 1, : ) - e( 2, : );
+      v = e( 3, : ) - e( 2, : );
+      s( 1 ) = u( 2 ) * v( 3 ) - u( 3 ) * v( 2 );
+      s( 2 ) = u( 3 ) * v( 1 ) - u( 1 ) * v( 3 );
+      s( 3 ) = u( 1 ) * v( 2 ) - u( 2 ) * v( 1 );
+      
+      value = 0.5 * sqrt( s * s' );
     end
   end
 end
