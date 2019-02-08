@@ -6,34 +6,22 @@ classdef be_integrator
     order_nf;
     order_ff;
     
+    % type = 1 ... disjoint
+    % type = 2 ... vertex
+    % type = 3 ... edge
+    % type = 4 ... identical
+    
     % Tausch
-    % n_simplex = [ 6 2 4 1 ];
+    % n_simplex = [ 1 2 4 6 ];
     % Sauter, Schwab
-    n_simplex = [ 6 2 5 1 ];
+    n_simplex = [ 1 2 5 6 ];
     
-    x1_ref_identical;
-    x2_ref_identical;
-    y1_ref_identical;
-    y2_ref_identical;
-    w_identical;
-    
-    x1_ref_edge;
-    x2_ref_edge;
-    y1_ref_edge;
-    y2_ref_edge;
-    w_edge;
-    
-    x1_ref_vertex;
-    x2_ref_vertex;
-    y1_ref_vertex;
-    y2_ref_vertex;
-    w_vertex;
-    
-    x1_ref_disjoint;
-    x2_ref_disjoint;
-    y1_ref_disjoint;
-    y2_ref_disjoint;
-    w_disjoint;
+    x1_ref = cell( 4, 1 );
+    x2_ref = cell( 4, 1 );
+    y1_ref = cell( 4, 1 );
+    y2_ref = cell( 4, 1 );
+    w = cell( 4, 1 );
+
   end
   
   methods
@@ -62,31 +50,21 @@ classdef be_integrator
       for i_trial = 1 : n_elems
         for i_test = 1 : n_elems
           
-          [ type, rot_test, rot_trial  ] = obj.type( i_test, i_trial );
+          [ type, rot_test, rot_trial  ] = obj.get_type( i_test, i_trial );
                     
           value = 0;      
-          for i_simplex = 1 : obj.n_simplex( type + 1 )
+          for i_simplex = 1 : obj.n_simplex( type )
             [ x, y ] = global_quad( obj, i_test, i_trial, type, ...
               rot_test, rot_trial, i_simplex );
             k = obj.kernel.eval( x, y )';
-            switch type
-              case 0
-                value = value + k * obj.w_identical( :, i_simplex );
-              case 1
-                value = value + k * obj.w_vertex( :, i_simplex );
-              case 2
-                value = value + k * obj.w_edge( :, i_simplex );
-              case 3
-                value = value + k * obj.w_disjoint( :, i_simplex );
-            end
+            value = value + k * obj.w{ type }( :, i_simplex );
           end
           
           V( i_test, i_trial ) = value * 4 ...
             * obj.mesh.get_area( i_trial ) * obj.mesh.get_area( i_test );
         end
       end
-      
-      
+           
     end
     
   end
@@ -102,24 +80,13 @@ classdef be_integrator
       z2 = nodes( map( rot_test + 2 ), : );
       z3 = nodes( map( rot_test + 3 ), : );
       R = [ z2 - z1; z3 - z1 ];
-      switch type
-        case 0
-          x = [ obj.x1_ref_identical( :, i_simplex ) ...
-            obj.x2_ref_identical( :, i_simplex ) ] * R;
-        case 1
-          x = [ obj.x1_ref_vertex( :, i_simplex ) ...
-            obj.x2_ref_vertex( :, i_simplex ) ] * R;
-        case 2
-          x = [ obj.x1_ref_edge( :, i_simplex ) ...
-            obj.x2_ref_edge( :, i_simplex ) ] * R;
-        case 3
-          x = [ obj.x1_ref_disjoint obj.x2_ref_disjoint ] * R;
-      end
+      x = [ obj.x1_ref{ type }( :, i_simplex ) ...
+        obj.x2_ref{ type }( :, i_simplex ) ] * R;     
       x = x + z1;
       
       nodes = obj.mesh.get_nodes( i_trial );
       % inverting trial element
-      if type == 2
+      if type == 3
         z1 = nodes( map( rot_trial + 2 ), : );
         z2 = nodes( map( rot_trial + 1 ), : );
       else
@@ -127,34 +94,22 @@ classdef be_integrator
         z2 = nodes( map( rot_trial + 2 ), : );
       end
       z3 = nodes( map( rot_trial + 3 ), : );
-
       R = [ z2 - z1; z3 - z1 ];
-      switch type
-        case 0
-          y = [ obj.y1_ref_identical( :, i_simplex ) ...
-            obj.y2_ref_identical( :, i_simplex ) ] * R;
-        case 1
-          y = [ obj.y1_ref_vertex( :, i_simplex ) ...
-            obj.y2_ref_vertex( :, i_simplex ) ] * R;
-        case 2
-          y = [ obj.y1_ref_edge( :, i_simplex ) ...
-            obj.y2_ref_edge( :, i_simplex ) ] * R;
-        case 3
-          y = [ obj.y1_ref_disjoint obj.y2_ref_disjoint ] * R;
-      end
+      y = [ obj.y1_ref{ type }( :, i_simplex ) ...
+        obj.y2_ref{ type }( :, i_simplex ) ] * R;
       y = y + z1;
       
     end
     
     function [ type, rot_test, rot_trial ] = ...
-        type( obj, i_test, i_trial )
+        get_type( obj, i_test, i_trial )
       
       rot_test = 0;
       rot_trial = 0;
       
       % identical
       if i_test == i_trial
-        type = 0;
+        type = 4;
         return;
       end
       
@@ -167,13 +122,13 @@ classdef be_integrator
       
       % disjoint
       if nc == 0
-        type = 3;
+        type = 1;
         return
       end
       
       % edge
       if nc == 2
-        type = 2;
+        type = 3;
         map = [ 2 1 0 2 1 0 ];
         rot_test = map( c_test( 1 ) + c_test( 2 ) );
         rot_trial = map( c_trial( 1 ) + c_trial( 2 ) );
@@ -182,7 +137,7 @@ classdef be_integrator
       
       % vertex
       if nc == 1
-        type = 1;
+        type = 2;
         rot_test = c_test - 1;
         rot_trial = c_trial - 1;
         return;
@@ -191,106 +146,70 @@ classdef be_integrator
     end
     
     function obj = init_quadrature_data( obj )
-      size = obj.order_nf * obj.order_nf * obj.order_nf * obj.order_nf;
       
-      type = 0;
-      ns = obj.n_simplex( type + 1 );
-      obj.x1_ref_identical = zeros( size, ns );
-      obj.x2_ref_identical = zeros( size, ns );
-      obj.y1_ref_identical = zeros( size, ns );
-      obj.y2_ref_identical = zeros( size, ns );
-      obj.w_identical = zeros( size, ns );
+      size = obj.order_nf * obj.order_nf * obj.order_nf * obj.order_nf;      
+      for type = 1 : 4
+        ns = obj.n_simplex( type );
+        obj.x1_ref{ type } = zeros( size, ns );
+        obj.x2_ref{ type } = zeros( size, ns );
+        obj.y1_ref{ type } = zeros( size, ns );
+        obj.y2_ref{ type } = zeros( size, ns );
+        obj.w{ type } = zeros( size, ns );
+      end
       
-      type = 2;
-      ns = obj.n_simplex( type + 1 );
-      obj.x1_ref_edge = zeros( size, ns );
-      obj.x2_ref_edge = zeros( size, ns );
-      obj.y1_ref_edge = zeros( size, ns );
-      obj.y2_ref_edge = zeros( size, ns );
-      obj.w_edge = zeros( size, ns );
-      
-      type = 1;
-      ns = obj.n_simplex( type + 1 );
-      obj.x1_ref_vertex = zeros( size, ns );
-      obj.x2_ref_vertex = zeros( size, ns );
-      obj.y1_ref_vertex = zeros( size, ns );
-      obj.y2_ref_vertex = zeros( size, ns );
-      obj.w_vertex = zeros( size, ns );
-      
-      type = 3;
-      ns = obj.n_simplex( type + 1 );
-      obj.x1_ref_disjoint = zeros( size, ns );
-      obj.x2_ref_disjoint = zeros( size, ns );
-      obj.y1_ref_disjoint = zeros( size, ns );
-      obj.y2_ref_disjoint = zeros( size, ns );
-      obj.w_disjoint = zeros( size, ns );
-      
-      [ x, w, l ] = quadratures.line( obj.order_nf );
+      [ x_line, w_line, l_line ] = quadratures.line( obj.order_nf );
       
       counter = 1;
-      for i_ksi = 1 : l
-        for i_eta1 = 1 : l
-          for i_eta2 = 1 : l
-            for i_eta3 = 1 : l
+      for i_ksi = 1 : l_line
+        for i_eta1 = 1 : l_line
+          for i_eta2 = 1 : l_line
+            for i_eta3 = 1 : l_line
               
-              weight = ...
-                w( i_ksi ) * w( i_eta1 ) * w( i_eta2 ) * w( i_eta3 );
+              weight = w_line( i_ksi ) * w_line( i_eta1 ) ...
+                * w_line( i_eta2 ) * w_line( i_eta3 );
               
-              type = 0;
-              ns = obj.n_simplex( type + 1 );
-              for i_simplex = 1 : ns
-                [ x_ref, y_ref, jac ] = obj.cube_to_tri_identical( ...
-                  x( i_ksi ), x( i_eta1 ), x( i_eta2 ), x( i_eta3 ), ...
-                  i_simplex );
-                obj.x1_ref_identical( counter, i_simplex ) = x_ref( 1 );
-                obj.x2_ref_identical( counter, i_simplex ) = x_ref( 2 );
-                obj.y1_ref_identical( counter, i_simplex ) = y_ref( 1 );
-                obj.y2_ref_identical( counter, i_simplex ) = y_ref( 2 );
-                obj.w_identical( counter, i_simplex ) = weight * jac;
+              for type = 1 : 4
+                ns = obj.n_simplex( type );
+                for i_simplex = 1 : ns
+                  [ x_ref, y_ref, jac ] = obj.cube_to_tri( ...
+                    x_line( i_ksi ), x_line( i_eta1 ), ...
+                    x_line( i_eta2 ), x_line( i_eta3 ), ...
+                    type, i_simplex );
+                  obj.x1_ref{ type }( counter, i_simplex ) = ...
+                    x_ref( 1 );
+                  obj.x2_ref{ type }( counter, i_simplex ) = ...
+                    x_ref( 2 );
+                  obj.y1_ref{ type }( counter, i_simplex ) = ...
+                    y_ref( 1 );
+                  obj.y2_ref{ type }( counter, i_simplex ) = ...
+                    y_ref( 2 );
+                  obj.w{ type }( counter, i_simplex ) = weight * jac;
+                end
               end
-              
-              type = 2;
-              ns = obj.n_simplex( type + 1 );
-              for i_simplex = 1 : ns
-                [ x_ref, y_ref, jac ] = obj.cube_to_tri_edge( ...
-                  x( i_ksi ), x( i_eta1 ), x( i_eta2 ), x( i_eta3 ), ...
-                  i_simplex );
-                obj.x1_ref_edge( counter, i_simplex ) = x_ref( 1 );
-                obj.x2_ref_edge( counter, i_simplex ) = x_ref( 2 );
-                obj.y1_ref_edge( counter, i_simplex ) = y_ref( 1 );
-                obj.y2_ref_edge( counter, i_simplex ) = y_ref( 2 );
-                obj.w_edge( counter, i_simplex ) = weight * jac;
-              end
-              
-              type = 1;
-              ns = obj.n_simplex( type + 1 );
-              for i_simplex = 1 : ns
-                [ x_ref, y_ref, jac ] = obj.cube_to_tri_vertex( ...
-                  x( i_ksi ), x( i_eta1 ), x( i_eta2 ), x( i_eta3 ), ...
-                  i_simplex );
-                obj.x1_ref_vertex( counter, i_simplex ) = x_ref( 1 );
-                obj.x2_ref_vertex( counter, i_simplex ) = x_ref( 2 );
-                obj.y1_ref_vertex( counter, i_simplex ) = y_ref( 1 );
-                obj.y2_ref_vertex( counter, i_simplex ) = y_ref( 2 );
-                obj.w_vertex( counter, i_simplex ) = weight * jac;
-              end
-              
-              type = 3;
-              ns = obj.n_simplex( type + 1 );
-              for i_simplex = 1 : ns
-                [ x_ref, y_ref, jac ] = obj.cube_to_tri_disjoint( ...
-                  x( i_ksi ), x( i_eta1 ), x( i_eta2 ), x( i_eta3 ) );
-                obj.x1_ref_disjoint( counter, i_simplex ) = x_ref( 1 );
-                obj.x2_ref_disjoint( counter, i_simplex ) = x_ref( 2 );
-                obj.y1_ref_disjoint( counter, i_simplex ) = y_ref( 1 );
-                obj.y2_ref_disjoint( counter, i_simplex ) = y_ref( 2 );
-                obj.w_disjoint( counter, i_simplex ) = weight * jac;
-              end
-              
+                           
               counter = counter + 1;
             end
           end
         end
+      end
+    end
+    
+    function [ x, y, jac ] = ...
+        cube_to_tri( obj, ksi, eta1, eta2, eta3, type, simplex )
+      
+      switch type
+        case 1
+          [ x, y, jac ] = ...
+            obj.cube_to_tri_disjoint( ksi, eta1, eta2, eta3 );
+        case 2
+          [ x, y, jac ] = ...
+            obj.cube_to_tri_vertex( ksi, eta1, eta2, eta3, simplex );
+        case 3
+          [ x, y, jac ] = ...
+            obj.cube_to_tri_edge( ksi, eta1, eta2, eta3, simplex );
+        case 4
+          [ x, y, jac ] = ...
+            obj.cube_to_tri_identical( ksi, eta1, eta2, eta3, simplex );
       end
     end
   
