@@ -97,7 +97,7 @@ classdef be_integrator
       
       map = [ 1 2 3 1 2 ];
 
-      nodes = obj.mesh.get_nodes( i_trial );          
+      nodes = obj.mesh.get_nodes( i_test );          
       z1 = nodes( map( rot_test + 1 ), : );
       z2 = nodes( map( rot_test + 2 ), : );
       z3 = nodes( map( rot_test + 3 ), : );
@@ -117,15 +117,17 @@ classdef be_integrator
       end
       x = x + z1;
       
-      nodes = obj.mesh.get_nodes( i_test );
-      z1 = nodes( map( rot_trial + 1 ), : );
-      z2 = nodes( map( rot_trial + 2 ), : );
+      nodes = obj.mesh.get_nodes( i_trial );
       % inverting trial element
       if type == 2
         z1 = nodes( map( rot_trial + 2 ), : );
         z2 = nodes( map( rot_trial + 1 ), : );
+      else
+        z1 = nodes( map( rot_trial + 1 ), : );
+        z2 = nodes( map( rot_trial + 2 ), : );
       end
       z3 = nodes( map( rot_trial + 3 ), : );
+
       R = [ z2 - z1; z3 - z1 ];
       switch type
         case 0
@@ -174,7 +176,7 @@ classdef be_integrator
         type = 2;
         map = [ 2 1 0 2 1 0 ];
         rot_test = map( c_test( 1 ) + c_test( 2 ) );
-        rot_trial = map( c_trial( 1 ) + c_test( 2 ) );
+        rot_trial = map( c_trial( 1 ) + c_trial( 2 ) );
         return;
       end
       
