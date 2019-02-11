@@ -56,8 +56,19 @@ classdef be_integrator
         obj.w{ i } = cell( obj.n_simplex( i ), 1 );
       end
       
-      obj = init_quadrature_data( obj );
-      
+      obj = init_quadrature_data( obj );      
+    end
+    
+    function obj = set_kernel( obj, kernel )
+      obj.kernel = kernel;
+    end
+    
+    function obj = set_test( obj, test )
+      obj.test = test;
+    end
+    
+    function obj = set_trial( obj, trial )
+      obj.trial = trial;
     end
         
     function A = assemble( obj )
@@ -96,9 +107,8 @@ classdef be_integrator
           for i_simplex = 1 : obj.n_simplex( type )
             [ x( 1 : size, : ), y( 1 : size, : ) ] = global_quad( ... 
               obj, i_test, i_trial, type, rot_test, rot_trial, i_simplex );
-            k( 1 : size ) = ...
-              obj.kernel.eval( x( 1 : size, : ), y( 1 : size, : ), ...
-              obj.mesh.get_normal( i_trial ) );
+            k( 1 : size ) = obj.kernel.eval( x( 1 : size, : ), ...
+              y( 1 : size, : ), obj.mesh.get_normal( i_trial ) );
             test_fun( 1 : size, : ) = ...
               obj.test.eval( obj.x_ref{ type }{ i_simplex } );
             trial_fun( 1 : size, : ) = ...
@@ -154,8 +164,7 @@ classdef be_integrator
       
     end
     
-    function [ type, rot_test, rot_trial ] = ...
-        get_type( obj, i_test, i_trial )
+    function [ type, rot_test, rot_trial ] = get_type( obj, i_test, i_trial )
       
       rot_test = 0;
       rot_trial = 0;
@@ -173,11 +182,9 @@ classdef be_integrator
       for i_trial = 1 : 3
         for i_test = 1 : 3
           if ( ...
-            ( elem_trial( i_trial ) ...
-            == elem_test( obj.map( i_test + 1 ) ) ) ...
+            ( elem_trial( i_trial ) == elem_test( obj.map( i_test + 1 ) ) ) ...
             && ...
-            ( elem_trial( obj.map( i_trial + 1 ) ) ...
-            == elem_test( i_test ) ) ) 
+            ( elem_trial( obj.map( i_trial + 1 ) ) == elem_test( i_test ) ) ) 
             
             type = 3;
             rot_test = i_test - 1;
