@@ -34,7 +34,7 @@ classdef tri_mesh_3d
       for i = 1 : obj.n_elems
         line = fgets( fid );
         row = textscan( line, '%d' );
-        obj.elems( i, : ) = row{ 1 };
+        obj.elems( i, : ) = row{ 1 } + 1;
       end
       
       fclose( fid );
@@ -53,7 +53,7 @@ classdef tri_mesh_3d
     end
     
     function e = get_element( obj, i )
-      e = obj.elems( i, : ) + 1;
+      e = obj.elems( i, : );
     end
     
     function e = get_node( obj, i )
@@ -61,7 +61,7 @@ classdef tri_mesh_3d
     end
     
     function e = get_nodes( obj, i )
-      e = obj.nodes( obj.elems( i, : ) + 1, : );
+      e = obj.nodes( obj.elems( i, : ), : );
     end
     
     function value = get_area( obj, i )

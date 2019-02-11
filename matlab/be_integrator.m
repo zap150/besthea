@@ -285,8 +285,7 @@ classdef be_integrator
 %           y( 2 ) = x( 2 ) + ksi;
 %       end
 %       
-%       jac = ksi * ( 1 - ksi ) * ( 1 - ksi ) * eta2;
-%       
+%       jac = ksi * ( 1 - ksi ) * ( 1 - ksi ) * eta2;       
 %     end
     
     % Sauter, Schwab
@@ -326,8 +325,7 @@ classdef be_integrator
           x( 2 ) = ksi * eta1 * ( 1 - eta2 );
           y( 1 ) = ksi * ( 1 - eta1 );
           y( 2 ) = ksi * eta1 * ( 1 - eta2 * eta3 );
-      end
-            
+      end           
     end
     
     % Tausch
@@ -417,8 +415,7 @@ classdef be_integrator
           y( 2 ) = ksi * eta1;
       end
       
-      jac = ksi * ksi * ksi * eta2;
-      
+      jac = ksi * ksi * ksi * eta2;      
     end
     
     function [ x, y, jac ] = ...
@@ -429,8 +426,7 @@ classdef be_integrator
       y( 1 ) = eta2 * ( 1 - eta3 );
       y( 2 ) = eta2 * eta3;
       
-      jac = ksi * eta2;
-      
+      jac = ksi * eta2;    
     end
   end
 end
