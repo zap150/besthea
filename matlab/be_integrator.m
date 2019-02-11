@@ -19,10 +19,8 @@ classdef be_integrator
     % Sauter, Schwab
     n_simplex = [ 1 2 5 6 ];
     
-    x1_ref = cell( 4, 1 );
-    x2_ref = cell( 4, 1 );
-    y1_ref = cell( 4, 1 );
-    y2_ref = cell( 4, 1 );
+    x_ref = cell( 4, 1 );
+    y_ref = cell( 4, 1 );
     w = cell( 4, 1 );
 
   end
@@ -45,48 +43,30 @@ classdef be_integrator
       end
       obj.size_nf = order_nf * order_nf * order_nf * order_nf;
       
+      for i = 1 : 4
+        obj.x_ref{ i } = cell( obj.n_simplex( i ), 1 );
+        obj.y_ref{ i } = cell( obj.n_simplex( i ), 1 );
+        obj.w{ i } = cell( obj.n_simplex( i ), 1 );
+      end
+      
       obj = init_quadrature_data( obj );
       
     end
-    
-    function V = assemble_v_p0_p0( obj )
-      n_elems = obj.mesh.n_elems;
-      
-      V = zeros( n_elems, n_elems );
-      
-      for i_trial = 1 : n_elems
-        for i_test = 1 : n_elems
-          
-          [ type, rot_test, rot_trial  ] = obj.get_type( i_test, i_trial );
-                    
-          value = 0;      
-          for i_simplex = 1 : obj.n_simplex( type )
-            [ x, y ] = global_quad( obj, i_test, i_trial, type, ...
-              rot_test, rot_trial, i_simplex );
-            k = obj.kernel.eval( x, y );
-            value = value + k' * obj.w{ type }( :, i_simplex );
-          end
-          
-          V( i_test, i_trial ) = value ...
-            * obj.mesh.get_area( i_trial ) * obj.mesh.get_area( i_test );
-        end
-      end          
-    end
-    
+        
     function A = assemble( obj )
       A = zeros( obj.test.dim_global( ), obj.trial.dim_global( ) );
       
-      n_elems = obj.mesh.n_elems;
+      n_elems = obj.mesh.get_n_elems( );
       dim_test = obj.test.dim_local( );
       dim_trial = obj.trial.dim_local( );
       
       % preallocation
       A_local = zeros( dim_test, dim_trial );
-      map_test = zeros( dim_test );
-      map_trial = zeros( dim_trial );
+      map_test = zeros( dim_test, 1 );
+      map_trial = zeros( dim_trial, 1 );
       k = zeros( obj.size_nf, 1 );
-      test_fun = zeros( obj.size_nf, 1 );
-      trial_fun = zeros( obj.size_nf, 1 );
+      test_fun = zeros( obj.size_nf, dim_test );
+      trial_fun = zeros( obj.size_nf, dim_trial );
       x = zeros( obj.size_nf, 3 );
       y = zeros( obj.size_nf, 3 );
       
@@ -99,13 +79,12 @@ classdef be_integrator
           for i_simplex = 1 : obj.n_simplex( type )
             [ x( : ,: ), y( :, : ) ] = global_quad( obj, i_test, ...
               i_trial, type, rot_test, rot_trial, i_simplex );
-            k( : ) = obj.kernel.eval( x, y );
-            test_fun( : ) = obj.test.eval( ...
-              [ obj.x1_ref{ type }( :, i_simplex ) ...
-                obj.x2_ref{ type }( :, i_simplex ) ] );
-            trial_fun( :, 1 ) = obj.trial.eval( ...
-              [ obj.y1_ref{ type }( :, i_simplex ) ...
-                obj.y2_ref{ type }( :, i_simplex ) ] );
+            k( : ) = ...
+              obj.kernel.eval( x, y, obj.mesh.get_normal( i_trial ) );
+            test_fun( : ) = ...
+              obj.test.eval( obj.x_ref{ type }{ i_simplex } );
+            trial_fun( : ) = ...
+              obj.trial.eval( obj.y_ref{ type }{ i_simplex } );
             
             for i_loc_test = 1 : dim_test
               for i_loc_trial = 1 : dim_trial
@@ -113,7 +92,7 @@ classdef be_integrator
                   A_local( i_loc_test, i_loc_trial ) ...
                   + ( k .* test_fun( :, i_loc_test ) ...
                   .* trial_fun( :, i_loc_trial ) )' ...
-                  * obj.w{ type }( :, i_simplex );
+                  * obj.w{ type }{ i_simplex };
               end
             end
           end
@@ -140,8 +119,7 @@ classdef be_integrator
       z2 = nodes( map( rot_test + 2 ), : );
       z3 = nodes( map( rot_test + 3 ), : );
       R = [ z2 - z1; z3 - z1 ];
-      x = [ obj.x1_ref{ type }( :, i_simplex ) ...
-        obj.x2_ref{ type }( :, i_simplex ) ] * R; 
+      x = obj.x_ref{ type }{ i_simplex } * R; 
       x = x + z1;
       
       nodes = obj.mesh.get_nodes( i_trial );
@@ -155,8 +133,7 @@ classdef be_integrator
       end
       z3 = nodes( map( rot_trial + 3 ), : );
       R = [ z2 - z1; z3 - z1 ];
-      y = [ obj.y1_ref{ type }( :, i_simplex ) ...
-        obj.y2_ref{ type }( :, i_simplex ) ] * R;
+      y = obj.y_ref{ type }{ i_simplex } * R;
       y = y + z1;
       
     end
@@ -215,11 +192,11 @@ classdef be_integrator
             
       for type = 1 : 4
         ns = obj.n_simplex( type );
-        obj.x1_ref{ type } = zeros( obj.size_nf, ns );
-        obj.x2_ref{ type } = zeros( obj.size_nf, ns );
-        obj.y1_ref{ type } = zeros( obj.size_nf, ns );
-        obj.y2_ref{ type } = zeros( obj.size_nf, ns );
-        obj.w{ type } = zeros( obj.size_nf, ns );
+        for i_simplex = 1 : ns
+          obj.x_ref{ type }{ i_simplex } = zeros( obj.size_nf, 2 );
+          obj.y_ref{ type }{ i_simplex } = zeros( obj.size_nf, 2 );
+          obj.w{ type }{ i_simplex } = zeros( obj.size_nf, 1 );
+        end
       end
       
       [ x_line, w_line, l_line ] = quadratures.line( obj.order_nf );
@@ -236,19 +213,12 @@ classdef be_integrator
               for type = 1 : 4
                 ns = obj.n_simplex( type );
                 for i_simplex = 1 : ns
-                  [ x_ref, y_ref, jac ] = obj.cube_to_tri( ...
+                  [ x_single, y_single, jac ] = obj.cube_to_tri( ...
                     x_line( i_ksi ), x_line( i_eta1 ), ...
-                    x_line( i_eta2 ), x_line( i_eta3 ), ...
-                    type, i_simplex );
-                  obj.x1_ref{ type }( counter, i_simplex ) = ...
-                    x_ref( 1 );
-                  obj.x2_ref{ type }( counter, i_simplex ) = ...
-                    x_ref( 2 );
-                  obj.y1_ref{ type }( counter, i_simplex ) = ...
-                    y_ref( 1 );
-                  obj.y2_ref{ type }( counter, i_simplex ) = ...
-                    y_ref( 2 );
-                  obj.w{ type }( counter, i_simplex ) = weight * jac;
+                    x_line( i_eta2 ), x_line( i_eta3 ), type, i_simplex );
+                  obj.x_ref{ type }{ i_simplex }( counter, : ) = x_single;
+                  obj.y_ref{ type }{ i_simplex }( counter, : ) = y_single;
+                  obj.w{ type }{ i_simplex }( counter ) = weight * jac;
                 end
               end
                            

@@ -10,7 +10,7 @@ classdef p0 < basis_function
     end
     
     function value = dim_global( obj )
-      value = obj.mesh.n_elems;
+      value = obj.mesh.get_n_elems( );
     end
     
     function value = dim_local( ~ )
