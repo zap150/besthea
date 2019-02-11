@@ -3,7 +3,10 @@ classdef be_integrator
   properties (Access = private)
     mesh;
     kernel;
+    test;
+    trial;
     order_nf;
+    size_nf;
     order_ff;
     
     % type = 1 ... disjoint
@@ -25,10 +28,13 @@ classdef be_integrator
   end
   
   methods
-    function obj = be_integrator( mesh, kernel, order_nf, order_ff )
+    function obj = ...
+        be_integrator( mesh, kernel, test, trial, order_nf, order_ff )
       
       obj.mesh = mesh;
       obj.kernel = kernel;
+      obj.test = test;
+      obj.trial = trial;
       
       if( nargin < 4 )
         obj.order_nf = 4;
@@ -37,6 +43,7 @@ classdef be_integrator
         obj.order_nf = order_nf;
         obj.order_ff = order_ff;
       end
+      obj.size_nf = order_nf * order_nf * order_nf * order_nf;
       
       obj = init_quadrature_data( obj );
       
@@ -56,15 +63,68 @@ classdef be_integrator
           for i_simplex = 1 : obj.n_simplex( type )
             [ x, y ] = global_quad( obj, i_test, i_trial, type, ...
               rot_test, rot_trial, i_simplex );
-            k = obj.kernel.eval( x, y )';
-            value = value + k * obj.w{ type }( :, i_simplex );
+            k = obj.kernel.eval( x, y );
+            value = value + k' * obj.w{ type }( :, i_simplex );
           end
           
-          V( i_test, i_trial ) = value * 4 ...
+          V( i_test, i_trial ) = value ...
             * obj.mesh.get_area( i_trial ) * obj.mesh.get_area( i_test );
         end
-      end
-           
+      end          
+    end
+    
+    function A = assemble( obj )
+      A = zeros( obj.test.dim_global( ), obj.trial.dim_global( ) );
+      
+      n_elems = obj.mesh.n_elems;
+      dim_test = obj.test.dim_local( );
+      dim_trial = obj.trial.dim_local( );
+      
+      % preallocation
+      A_local = zeros( dim_test, dim_trial );
+      map_test = zeros( dim_test );
+      map_trial = zeros( dim_trial );
+      k = zeros( obj.size_nf, 1 );
+      test_fun = zeros( obj.size_nf, 1 );
+      trial_fun = zeros( obj.size_nf, 1 );
+      x = zeros( obj.size_nf, 3 );
+      y = zeros( obj.size_nf, 3 );
+      
+      for i_trial = 1 : n_elems
+        for i_test = 1 : n_elems
+          
+          [ type, rot_test, rot_trial ] = obj.get_type( i_test, i_trial );
+          
+          A_local( :, : ) = 0;
+          for i_simplex = 1 : obj.n_simplex( type )
+            [ x( : ,: ), y( :, : ) ] = global_quad( obj, i_test, ...
+              i_trial, type, rot_test, rot_trial, i_simplex );
+            k( : ) = obj.kernel.eval( x, y );
+            test_fun( : ) = obj.test.eval( ...
+              [ obj.x1_ref{ type }( :, i_simplex ) ...
+                obj.x2_ref{ type }( :, i_simplex ) ] );
+            trial_fun( :, 1 ) = obj.trial.eval( ...
+              [ obj.y1_ref{ type }( :, i_simplex ) ...
+                obj.y2_ref{ type }( :, i_simplex ) ] );
+            
+            for i_loc_test = 1 : dim_test
+              for i_loc_trial = 1 : dim_trial
+                A_local( i_loc_test, i_loc_trial ) = ...
+                  A_local( i_loc_test, i_loc_trial ) ...
+                  + ( k .* test_fun( :, i_loc_test ) ...
+                  .* trial_fun( :, i_loc_trial ) )' ...
+                  * obj.w{ type }( :, i_simplex );
+              end
+            end
+          end
+          
+          map_test( : ) = obj.test.map( i_test, type, rot_test, false );
+          map_trial( : ) = obj.trial.map( i_trial, type, rot_trial, true );
+          A( map_test, map_trial ) = A( map_test, map_trial ) ...
+            + A_local * obj.mesh.get_area( i_trial ) ...
+            * obj.mesh.get_area( i_test );
+        end
+      end          
     end
     
   end
@@ -81,7 +141,7 @@ classdef be_integrator
       z3 = nodes( map( rot_test + 3 ), : );
       R = [ z2 - z1; z3 - z1 ];
       x = [ obj.x1_ref{ type }( :, i_simplex ) ...
-        obj.x2_ref{ type }( :, i_simplex ) ] * R;     
+        obj.x2_ref{ type }( :, i_simplex ) ] * R; 
       x = x + z1;
       
       nodes = obj.mesh.get_nodes( i_trial );
@@ -116,45 +176,50 @@ classdef be_integrator
       elem_test = obj.mesh.get_element( i_test );
       elem_trial = obj.mesh.get_element( i_trial );
       
-      [ c, c_test, c_trial ] = intersect( elem_test, elem_trial );
+      map = [ 1 2 3 1 ];
       
-      nc = length( c );
+      % common edge
+      for i_trial = 1 : 3
+        for i_test = 1 : 3
+          if ( ...
+            ( elem_trial( i_trial ) == elem_test( map( i_test + 1 ) ) ) ...
+            && ...
+            ( elem_trial( map( i_trial + 1 ) ) == elem_test( i_test ) ) ) 
+            
+            type = 3;
+            rot_test = i_test - 1;
+            rot_trial = i_trial - 1;
+            return;
+          end
+        end
+      end
+      
+      % common vertex
+      for i_trial = 1 : 3
+        for i_test = 1 : 3
+          if elem_test( i_test ) == elem_trial( i_trial )
+            type = 2;
+            rot_test = i_test - 1;
+            rot_trial = i_trial - 1;
+          return;
+          end
+        end
+      end
       
       % disjoint
-      if nc == 0
-        type = 1;
-        return
-      end
-      
-      % edge
-      if nc == 2
-        type = 3;
-        map = [ 2 1 0 2 1 0 ];
-        rot_test = map( c_test( 1 ) + c_test( 2 ) );
-        rot_trial = map( c_trial( 1 ) + c_trial( 2 ) );
-        return;
-      end
-      
-      % vertex
-      if nc == 1
-        type = 2;
-        rot_test = c_test - 1;
-        rot_trial = c_trial - 1;
-        return;
-      end
+      type = 1;
       
     end
     
     function obj = init_quadrature_data( obj )
-      
-      size = obj.order_nf * obj.order_nf * obj.order_nf * obj.order_nf;      
+            
       for type = 1 : 4
         ns = obj.n_simplex( type );
-        obj.x1_ref{ type } = zeros( size, ns );
-        obj.x2_ref{ type } = zeros( size, ns );
-        obj.y1_ref{ type } = zeros( size, ns );
-        obj.y2_ref{ type } = zeros( size, ns );
-        obj.w{ type } = zeros( size, ns );
+        obj.x1_ref{ type } = zeros( obj.size_nf, ns );
+        obj.x2_ref{ type } = zeros( obj.size_nf, ns );
+        obj.y1_ref{ type } = zeros( obj.size_nf, ns );
+        obj.y2_ref{ type } = zeros( obj.size_nf, ns );
+        obj.w{ type } = zeros( obj.size_nf, ns );
       end
       
       [ x_line, w_line, l_line ] = quadratures.line( obj.order_nf );
@@ -165,7 +230,7 @@ classdef be_integrator
           for i_eta2 = 1 : l_line
             for i_eta3 = 1 : l_line
               
-              weight = w_line( i_ksi ) * w_line( i_eta1 ) ...
+              weight = 4 * w_line( i_ksi ) * w_line( i_eta1 ) ...
                 * w_line( i_eta2 ) * w_line( i_eta3 );
               
               for type = 1 : 4

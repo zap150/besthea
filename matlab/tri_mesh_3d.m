@@ -3,6 +3,7 @@ classdef tri_mesh_3d
   properties (Access = private)
     nodes;
     elems;
+    areas;
   end
   
   properties (Dependent)
@@ -40,6 +41,8 @@ classdef tri_mesh_3d
       
       fclose( fid );
       
+      obj = obj.init_areas( );
+      
     end
     
     function value = get.n_nodes( obj )
@@ -63,14 +66,22 @@ classdef tri_mesh_3d
     end
     
     function value = get_area( obj, i )
-      e = obj.get_nodes( i );
-      u = e( 1, : ) - e( 2, : );
-      v = e( 3, : ) - e( 2, : );
-      s( 1 ) = u( 2 ) * v( 3 ) - u( 3 ) * v( 2 );
-      s( 2 ) = u( 3 ) * v( 1 ) - u( 1 ) * v( 3 );
-      s( 3 ) = u( 1 ) * v( 2 ) - u( 2 ) * v( 1 );
-      
-      value = 0.5 * sqrt( s * s' );
+      value = obj.areas( i );
+    end
+  end
+  
+  methods (Access = private)
+    function obj = init_areas( obj )
+      obj.areas = zeros( obj.n_elems, 1 );
+      for i = 1 : obj.n_elems
+        e = obj.get_nodes( i );
+        u = e( 1, : ) - e( 2, : );
+        v = e( 3, : ) - e( 2, : );
+        s( 1 ) = u( 2 ) * v( 3 ) - u( 3 ) * v( 2 );
+        s( 2 ) = u( 3 ) * v( 1 ) - u( 1 ) * v( 3 );
+        s( 3 ) = u( 1 ) * v( 2 ) - u( 2 ) * v( 1 );     
+        obj.areas( i ) = 0.5 * sqrt( s * s' );
+      end
     end
   end
 end
