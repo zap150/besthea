@@ -18,7 +18,7 @@ classdef p0 < basis_function
     end
     
     function value = eval( ~, x, ~ )
-      value = ones( length( x ), 1 );
+      value = ones( size( x, 1 ), 1 );
     end
     
     function value = l2g( ~, i, ~, ~, ~ )
