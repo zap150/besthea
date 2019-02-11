@@ -21,7 +21,7 @@ classdef p0 < basis_function
       value = ones( length( x ), 1 );
     end
     
-    function value = map( ~, i, ~, ~, ~ )
+    function value = l2g( ~, i, ~, ~, ~ )
       value = i;
     end
   end

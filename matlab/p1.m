@@ -2,6 +2,8 @@ classdef p1 < basis_function
   
   properties (Access = private)
     mesh;
+    
+    map = [ 1 2 3 1 2 ];
   end
   
   methods
@@ -23,17 +25,16 @@ classdef p1 < basis_function
       value( :, 3 ) = x( :, 2 );
     end
     
-    function value = map( obj, i, type, rot, swap )  
-      map = [ 1 2 3 1 2 ];
+    function value = l2g( obj, i, type, rot, swap )  
       nodes = obj.mesh.get_element( i );
       if type == 3 && swap
-        value( 1 ) = nodes( map( rot + 2 ) );
-        value( 2 ) = nodes( map( rot + 1 ) );
+        value( 1 ) = nodes( obj.map( rot + 2 ) );
+        value( 2 ) = nodes( obj.map( rot + 1 ) );
       else
-        value( 1 ) = nodes( map( rot + 1 ) );
-        value( 2 ) = nodes( map( rot + 2 ) );
+        value( 1 ) = nodes( obj.map( rot + 1 ) );
+        value( 2 ) = nodes( obj.map( rot + 2 ) );
       end
-      value( 3 ) = nodes( map( rot + 3 ) );
+      value( 3 ) = nodes( obj.map( rot + 3 ) );
     end
   end
 end

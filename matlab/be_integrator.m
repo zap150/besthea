@@ -9,19 +9,22 @@ classdef be_integrator
     size_nf;
     order_ff;
     
-    % type = 1 ... disjoint
-    % type = 2 ... vertex
-    % type = 3 ... edge
-    % type = 4 ... identical
     
-    % Tausch
+    %%%% type = 1 ... disjoint                                         %%%%
+    %%%% type = 2 ... vertex                                           %%%%
+    %%%% type = 3 ... edge                                             %%%%
+    %%%% type = 4 ... identical                                        %%%%
+    
+    %%%% Tausch                                                        %%%%
     % n_simplex = [ 1 2 4 6 ];
-    % Sauter, Schwab
+    %%%% Sauter, Schwab                                                %%%%
     n_simplex = [ 1 2 5 6 ];
     
     x_ref = cell( 4, 1 );
     y_ref = cell( 4, 1 );
     w = cell( 4, 1 );
+    
+    map = [ 1 2 3 1 2 ];
 
   end
   
@@ -97,8 +100,8 @@ classdef be_integrator
             end
           end
           
-          map_test( : ) = obj.test.map( i_test, type, rot_test, false );
-          map_trial( : ) = obj.trial.map( i_trial, type, rot_trial, true );
+          map_test( : ) = obj.test.l2g( i_test, type, rot_test, false );
+          map_trial( : ) = obj.trial.l2g( i_trial, type, rot_trial, true );
           A( map_test, map_trial ) = A( map_test, map_trial ) ...
             + A_local * obj.mesh.get_area( i_trial ) ...
             * obj.mesh.get_area( i_test );
@@ -112,12 +115,10 @@ classdef be_integrator
     function [ x, y ] = global_quad( obj, i_test, i_trial, type, ... 
         rot_test, rot_trial, i_simplex )
       
-      map = [ 1 2 3 1 2 ];
-
       nodes = obj.mesh.get_nodes( i_test );          
-      z1 = nodes( map( rot_test + 1 ), : );
-      z2 = nodes( map( rot_test + 2 ), : );
-      z3 = nodes( map( rot_test + 3 ), : );
+      z1 = nodes( obj.map( rot_test + 1 ), : );
+      z2 = nodes( obj.map( rot_test + 2 ), : );
+      z3 = nodes( obj.map( rot_test + 3 ), : );
       R = [ z2 - z1; z3 - z1 ];
       x = obj.x_ref{ type }{ i_simplex } * R; 
       x = x + z1;
@@ -125,13 +126,13 @@ classdef be_integrator
       nodes = obj.mesh.get_nodes( i_trial );
       % inverting trial element
       if type == 3
-        z1 = nodes( map( rot_trial + 2 ), : );
-        z2 = nodes( map( rot_trial + 1 ), : );
+        z1 = nodes( obj.map( rot_trial + 2 ), : );
+        z2 = nodes( obj.map( rot_trial + 1 ), : );
       else
-        z1 = nodes( map( rot_trial + 1 ), : );
-        z2 = nodes( map( rot_trial + 2 ), : );
+        z1 = nodes( obj.map( rot_trial + 1 ), : );
+        z2 = nodes( obj.map( rot_trial + 2 ), : );
       end
-      z3 = nodes( map( rot_trial + 3 ), : );
+      z3 = nodes( obj.map( rot_trial + 3 ), : );
       R = [ z2 - z1; z3 - z1 ];
       y = obj.y_ref{ type }{ i_simplex } * R;
       y = y + z1;
@@ -152,16 +153,16 @@ classdef be_integrator
       
       elem_test = obj.mesh.get_element( i_test );
       elem_trial = obj.mesh.get_element( i_trial );
-      
-      map = [ 1 2 3 1 ];
-      
+            
       % common edge
       for i_trial = 1 : 3
         for i_test = 1 : 3
           if ( ...
-            ( elem_trial( i_trial ) == elem_test( map( i_test + 1 ) ) ) ...
+            ( elem_trial( i_trial ) ...
+            == elem_test( obj.map( i_test + 1 ) ) ) ...
             && ...
-            ( elem_trial( map( i_trial + 1 ) ) == elem_test( i_test ) ) ) 
+            ( elem_trial( obj.map( i_trial + 1 ) ) ...
+            == elem_test( i_test ) ) ) 
             
             type = 3;
             rot_test = i_test - 1;

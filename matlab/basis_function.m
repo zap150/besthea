@@ -8,7 +8,7 @@ classdef (Abstract) basis_function
     value = dim_global( obj )
     value = dim_local( obj )
     value = eval( obj, x, n )
-    value = map( obj, i, type, rot, swap )
+    value = l2g( obj, i, type, rot, swap )
   end
 end
 
