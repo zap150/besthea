@@ -9,8 +9,7 @@ classdef be_integrator
     size_nf;
     order_ff;
     size_ff;
-    
-    
+      
     %%%% type = 1 ... disjoint
     %%%% type = 2 ... vertex
     %%%% type = 3 ... edge
@@ -56,7 +55,7 @@ classdef be_integrator
         obj.w{ i } = cell( obj.n_simplex( i ), 1 );
       end
       
-      obj = init_quadrature_data( obj );      
+      obj = init_quadrature_data( obj );   
     end
     
     function obj = set_kernel( obj, kernel )
@@ -107,10 +106,13 @@ classdef be_integrator
           for i_simplex = 1 : obj.n_simplex( type )
             [ x( 1 : size, : ), y( 1 : size, : ) ] = global_quad( ... 
               obj, i_test, i_trial, type, rot_test, rot_trial, i_simplex );
+            
             k( 1 : size ) = obj.kernel.eval( x( 1 : size, : ), ...
               y( 1 : size, : ), obj.mesh.get_normal( i_trial ) );
+            
             test_fun( 1 : size, : ) = ...
               obj.test.eval( obj.x_ref{ type }{ i_simplex } );
+            
             trial_fun( 1 : size, : ) = ...
               obj.trial.eval( obj.y_ref{ type }{ i_simplex } );
             
@@ -118,9 +120,10 @@ classdef be_integrator
               for i_loc_trial = 1 : dim_trial
                 A_local( i_loc_test, i_loc_trial ) = ...
                   A_local( i_loc_test, i_loc_trial ) ...
-                  + ( k( 1 : size ) .* test_fun( 1 : size, i_loc_test ) ...
+                  + ( obj.w{ type }{ i_simplex } ...
+                  .* test_fun( 1 : size, i_loc_test ) ...
                   .* trial_fun( 1 : size, i_loc_trial ) )' ...
-                  * obj.w{ type }{ i_simplex };
+                  * k( 1 : size );
               end
             end
           end

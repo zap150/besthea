@@ -1,8 +1,8 @@
 classdef kernel_laplace_sl < kernel
   
   methods
-    function value = eval( ~, x, y, ~ )
-      value = 1 ./ ( 4 * pi * vecnorm( ( x - y )' ) )';
+    function value = eval( ~, x, y, ~, ~ )
+      value = 1 ./ ( 4 * pi * sqrt( ( x - y ).^2 * [ 1; 1; 1 ] ) );
     end
   end
   
