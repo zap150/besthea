@@ -22,7 +22,8 @@ tic;
 V_lap_test = bei.assemble( );
 toc;
 if test
- disp( norm( V_lap_test - V_lap ) / norm( V_lap ) );
+ no = norm( V_lap_test - V_lap ) / norm( V_lap );
+ fprintf( 1, 'Relative error is %e.\n\n', no );
 end
 
 bei = bei.set_kernel( kernel_laplace_dl );
@@ -31,7 +32,8 @@ tic;
 K_lap_test = bei.assemble( );
 toc;
 if test
- disp( norm( K_lap_test - K_lap ) / norm( K_lap ) );
+ no = norm( K_lap_test - K_lap ) / norm( K_lap );
+ fprintf( 1, 'Relative error is %e.\n\n', no );
 end
 
 kappa = 2;
@@ -41,7 +43,8 @@ tic;
 V_helm_test = bei.assemble( );
 toc;
 if test
- disp( norm( V_helm_test - V_helm ) / norm( V_helm ) );
+ no = norm( V_helm_test - V_helm ) / norm( V_helm );
+ fprintf( 1, 'Relative error is %e.\n\n', no );
 end
 
 bei = bei.set_kernel( kernel_helmholtz_dl( kappa ) );
@@ -50,7 +53,8 @@ tic;
 K_helm_test = bei.assemble( );
 toc;
 if test
- disp( norm( K_helm_test - K_helm ) / norm( K_helm ) );
+ no = norm( K_helm_test - K_helm ) / norm( K_helm );
+ fprintf( 1, 'Relative error is %e.\n\n', no );
 end
 
 end

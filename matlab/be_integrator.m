@@ -76,60 +76,36 @@ classdef be_integrator
       n_elems = obj.mesh.get_n_elems( );
       dim_test = obj.test.dim_local( );
       dim_trial = obj.trial.dim_local( );
-      
-      %%%% preallocation
-      A_local = zeros( dim_test, dim_trial );
-      map_test = zeros( dim_test, 1 );
-      map_trial = zeros( dim_trial, 1 );
-      size = obj.size_nf;
-      if( obj.size_ff > size )
-        size = obj.size_ff;
-      end
-      k = zeros( size, 1 );
-      test_fun = zeros( size, dim_test );
-      trial_fun = zeros( size, dim_trial );
-      x = zeros( size, 3 );
-      y = zeros( size, 3 );
-      
+            
       for i_trial = 1 : n_elems
         for i_test = 1 : n_elems
           
           [ type, rot_test, rot_trial ] = obj.get_type( i_test, i_trial );
-          
-          if type == 1
-            size = obj.size_ff;
-          else
-            size = obj.size_nf;
-          end
-          
-          A_local( :, : ) = 0;
+                    
+          A_local = zeros( dim_test, dim_trial );
           for i_simplex = 1 : obj.n_simplex( type )
-            [ x( 1 : size, : ), y( 1 : size, : ) ] = global_quad( ... 
+            [ x, y ] = global_quad( ... 
               obj, i_test, i_trial, type, rot_test, rot_trial, i_simplex );
             
-            k( 1 : size ) = obj.kernel.eval( x( 1 : size, : ), ...
-              y( 1 : size, : ), obj.mesh.get_normal( i_trial ) );
+            k = obj.kernel.eval( x, y, obj.mesh.get_normal( i_trial ) );
             
-            test_fun( 1 : size, : ) = ...
-              obj.test.eval( obj.x_ref{ type }{ i_simplex } );
+            test_fun = obj.test.eval( obj.x_ref{ type }{ i_simplex } );
             
-            trial_fun( 1 : size, : ) = ...
-              obj.trial.eval( obj.y_ref{ type }{ i_simplex } );
+            trial_fun = obj.trial.eval( obj.y_ref{ type }{ i_simplex } );
             
             for i_loc_test = 1 : dim_test
               for i_loc_trial = 1 : dim_trial
                 A_local( i_loc_test, i_loc_trial ) = ...
                   A_local( i_loc_test, i_loc_trial ) ...
                   + ( obj.w{ type }{ i_simplex } ...
-                  .* test_fun( 1 : size, i_loc_test ) ...
-                  .* trial_fun( 1 : size, i_loc_trial ) )' ...
-                  * k( 1 : size );
+                  .* test_fun( :, i_loc_test ) ...
+                  .* trial_fun( :, i_loc_trial ) )' * k;
               end
             end
           end
           
-          map_test( : ) = obj.test.l2g( i_test, type, rot_test, false );
-          map_trial( : ) = obj.trial.l2g( i_trial, type, rot_trial, true );
+          map_test = obj.test.l2g( i_test, type, rot_test, false );
+          map_trial = obj.trial.l2g( i_trial, type, rot_trial, true );
           A( map_test, map_trial ) = A( map_test, map_trial ) ...
             + A_local * obj.mesh.get_area( i_trial ) ...
             * obj.mesh.get_area( i_test );
