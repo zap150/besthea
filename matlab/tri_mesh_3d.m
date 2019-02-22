@@ -40,8 +40,7 @@ classdef tri_mesh_3d
       fclose( fid );
       
       obj = obj.init_areas( );
-      obj = obj.init_normals( );
-      
+      obj = obj.init_normals( );    
     end
     
     function value = get_n_nodes( obj )

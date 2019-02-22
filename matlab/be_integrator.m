@@ -76,13 +76,14 @@ classdef be_integrator
       n_elems = obj.mesh.get_n_elems( );
       dim_test = obj.test.dim_local( );
       dim_trial = obj.trial.dim_local( );
-            
+      A_local = zeros( dim_test, dim_trial );
+                  
       for i_trial = 1 : n_elems
         for i_test = 1 : n_elems
           
           [ type, rot_test, rot_trial ] = obj.get_type( i_test, i_trial );
                     
-          A_local = zeros( dim_test, dim_trial );
+          A_local( :, : ) = 0;
           for i_simplex = 1 : obj.n_simplex( type )
             [ x, y ] = global_quad( ... 
               obj, i_test, i_trial, type, rot_test, rot_trial, i_simplex );
@@ -113,18 +114,80 @@ classdef be_integrator
       end          
     end
     
+    function A = assemble_st( obj )
+      
+      nt = obj.mesh.get_nt( );
+      A = cell( nt, 1 );
+      for d = 0 : nt - 1
+        A{ d + 1 } = zeros( obj.test.dim_global( ), obj.trial.dim_global( ) );
+      end
+            
+      n_elems = obj.mesh.get_n_elems( );
+      dim_test = obj.test.dim_local( );
+      dim_trial = obj.trial.dim_local( );
+      A_local = zeros( dim_test, dim_trial );
+      obj.kernel = obj.kernel.set_ht( obj.mesh.get_ht( ) );
+      obj.kernel = obj.kernel.set_nt( obj.mesh.get_nt( ) );
+      
+      for d = 0 : nt - 1        
+        obj.kernel = obj.kernel.set_d( d );
+        
+        for i_trial = 1 : n_elems
+          for i_test = 1 : n_elems
+            
+            if d <= 1
+              [ type, rot_test, rot_trial ] = obj.get_type( i_test, i_trial );
+            else
+              type = 1;
+              rot_test = 0;
+              rot_trial = 0;
+            end
+            
+            A_local( :, : ) = 0;
+            for i_simplex = 1 : obj.n_simplex( type )
+              [ x, y ] = global_quad( ...
+                obj, i_test, i_trial, type, rot_test, rot_trial, i_simplex );
+              
+              k = obj.kernel.eval( x, y, obj.mesh.get_normal( i_trial ) );
+              
+              test_fun = obj.test.eval( obj.x_ref{ type }{ i_simplex } );
+              
+              trial_fun = obj.trial.eval( obj.y_ref{ type }{ i_simplex } );
+              
+              for i_loc_test = 1 : dim_test
+                for i_loc_trial = 1 : dim_trial
+                  A_local( i_loc_test, i_loc_trial ) = ...
+                    A_local( i_loc_test, i_loc_trial ) ...
+                    + ( obj.w{ type }{ i_simplex } ...
+                    .* test_fun( :, i_loc_test ) ...
+                    .* trial_fun( :, i_loc_trial ) )' * k;
+                end
+              end
+            end
+            
+            map_test = obj.test.l2g( i_test, type, rot_test, false );
+            map_trial = obj.trial.l2g( i_trial, type, rot_trial, true );
+            A{ d + 1 }( map_test, map_trial ) = ...
+              A{ d + 1 }( map_test, map_trial ) ...
+              + A_local * obj.mesh.get_area( i_trial ) ...
+              * obj.mesh.get_area( i_test );
+          end
+        end
+      end
+    end
+    
   end
   
   methods (Access = private)
-    function [ x, y ] = global_quad( obj, i_test, i_trial, type, ... 
+    function [ x, y ] = global_quad( obj, i_test, i_trial, type, ...
         rot_test, rot_trial, i_simplex )
       
-      nodes = obj.mesh.get_nodes( i_test );          
+      nodes = obj.mesh.get_nodes( i_test );
       z1 = nodes( obj.map( rot_test + 1 ), : );
       z2 = nodes( obj.map( rot_test + 2 ), : );
       z3 = nodes( obj.map( rot_test + 3 ), : );
       R = [ z2 - z1; z3 - z1 ];
-      x = obj.x_ref{ type }{ i_simplex } * R; 
+      x = obj.x_ref{ type }{ i_simplex } * R;
       x = x + z1;
       
       nodes = obj.mesh.get_nodes( i_trial );
