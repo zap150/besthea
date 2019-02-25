@@ -5,6 +5,11 @@ classdef tri_mesh_3d
     n_nodes;
     elems;
     n_elems;
+    
+    edges;
+    n_edges;
+    elem_to_edges;
+    
     areas;
     normals;
   end
@@ -40,7 +45,8 @@ classdef tri_mesh_3d
       fclose( fid );
       
       obj = obj.init_areas( );
-      obj = obj.init_normals( );    
+      obj = obj.init_normals( );  
+      obj = obj.init_edges( );
     end
     
     function value = get_n_nodes( obj )
@@ -63,12 +69,129 @@ classdef tri_mesh_3d
       e = obj.nodes( obj.elems( i, : ), : );
     end
     
+    function e = get_edge( obj, i )
+      e = obj.edges( i, : );
+    end
+    
+    function e = get_edges( obj, i )
+      e = obj.elem_to_edges( i, : );
+    end
+    
     function value = get_area( obj, i )
       value = obj.areas( i );
     end
     
     function value = get_normal( obj, i )
       value = obj.normals( i, : );
+    end
+    
+    function obj = refine( obj, level )
+      
+      if nargin == 1
+        level = 1;
+      end
+      
+      for l = 1 : level
+        new_n_elems = 4 * obj.n_elems;
+        new_elems = zeros( new_n_elems, 3 );
+        new_n_nodes = obj.n_nodes + obj.n_edges;
+        new_nodes = zeros( new_n_nodes, 3 );
+        new_n_edges = 2 * obj.n_edges + 3 * obj.n_elems;
+        new_edges = zeros( new_n_edges, 2 );
+        new_elem_to_edges = zeros( new_n_elems, 3 );
+        
+        new_nodes( 1 : obj.n_nodes, : ) = obj.nodes;
+        for i = 1 : obj.n_edges
+          edge = obj.get_edge( i );
+          x1 = obj.get_node( edge( 1 ) );
+          x2 = obj.get_node( edge( 2 ) );
+          new_nodes( obj.n_nodes + i, : ) = ( x1 + x2 ) / 2;
+          new_edges( 2 * i - 1, : ) = [ edge( 1 ) obj.n_nodes + i ];
+          new_edges( 2 * i, : ) = [ edge( 2 ) obj.n_nodes + i ];
+        end
+        
+        for i = 1 : obj.n_elems
+          i_element = obj.get_element( i );
+          i_edges = obj.get_edges( i );
+          
+          node1 = i_element( 1 );
+          node2 = i_element( 2 );
+          node3 = i_element( 3 );
+          node4 = obj.n_nodes + i_edges( 1 );
+          node5 = obj.n_nodes + i_edges( 2 );
+          node6 = obj.n_nodes + i_edges( 3 );
+          
+          new_elems( 4 * i - 3, : ) = [ node1 node4 node6 ];
+          new_elems( 4 * i - 2, : ) = [ node4 node2 node5 ];
+          new_elems( 4 * i - 1, : ) = [ node5 node3 node6 ];
+          new_elems( 4 * i - 0, : ) = [ node4 node5 node6 ];
+          
+          new_edges( 2 * obj.n_edges + 3 * i - 2, : ) = sort( [ node4 node5 ] );
+          new_edges( 2 * obj.n_edges + 3 * i - 1, : ) = sort( [ node5 node6 ] );
+          new_edges( 2 * obj.n_edges + 3 * i - 0, : ) = sort( [ node4 node6 ] );
+          
+          new_elem_to_edges( 4 * i - 3, : ) = [ 2 * i_edges( 1 ) - 1 ...
+            2 * obj.n_edges + 3 * i - 0 ...
+            2 * i_edges( 3 ) - 1 ];
+          
+          new_elem_to_edges( 4 * i - 2, : ) = [ 2 * i_edges( 1 ) - 1 ...
+            2 * i_edges( 2 ) - 1 ...
+            2 * obj.n_edges + 3 * i - 2 ];
+          
+          new_elem_to_edges( 4 * i - 1, : ) = [ 2 * i_edges( 2 ) - 1 ...
+            2 * i_edges( 3 ) - 1 ...
+            2 * obj.n_edges + 3 * i - 1 ];
+          
+          new_elem_to_edges( 4 * i - 0, : ) = [ 2 * obj.n_edges + 3 * i - 2 ...
+            2 * obj.n_edges + 3 * i - 1 ...
+            2 * obj.n_edges + 3 * i - 0 ];
+          
+          if node1 > node2
+            new_elem_to_edges( 4 * i - 3, 1 ) = ...
+              new_elem_to_edges( 4 * i - 3, 1 ) + 1;
+          else
+            new_elem_to_edges( 4 * i - 2, 1 ) = ...
+              new_elem_to_edges( 4 * i - 2, 1 ) + 1;            
+          end
+          
+          if node1 > node3
+            new_elem_to_edges( 4 * i - 3, 3 ) = ...
+              new_elem_to_edges( 4 * i - 3, 3 ) + 1;
+          else
+            new_elem_to_edges( 4 * i - 1, 2 ) = ...
+              new_elem_to_edges( 4 * i - 1, 2 ) + 1;
+          end
+          
+          if node2 > node3
+            new_elem_to_edges( 4 * i - 2, 2 ) = ...
+              new_elem_to_edges( 4 * i - 2, 2 ) + 1;
+          else
+            new_elem_to_edges( 4 * i - 1, 1 ) = ...
+              new_elem_to_edges( 4 * i - 1, 1 ) + 1;
+          end
+        end
+        
+        obj.n_elems = new_n_elems;
+        obj.elems = new_elems;
+        obj.n_nodes = new_n_nodes;
+        obj.nodes = new_nodes;
+        obj.n_edges = new_n_edges;
+        obj.edges = new_edges;
+        obj.elem_to_edges = new_elem_to_edges;
+      end
+    
+      obj = obj.init_areas( );
+      obj = obj.init_normals( );
+    end
+    
+    function plot( obj, data )
+      if nargin == 1
+        data = zeros( obj.n_elems, 1 );
+      end
+      figure;
+      axis equal;
+      trisurf( obj.elems, obj.nodes( :, 1 ), obj.nodes( :, 2 ), ...
+        obj.nodes( :, 3 ), data );
     end
   end
   
@@ -98,6 +221,15 @@ classdef tri_mesh_3d
         norm = sqrt( obj.normals( i, : ) * obj.normals( i, : )' );
         obj.normals( i, : ) = obj.normals( i, : ) / norm;
       end
+    end
+    
+    function obj = init_edges( obj )
+      [ obj.edges, ~, ic ] = unique( sort( [ ...
+        obj.elems( :, [ 1 2 ] )
+        obj.elems( :, [ 2 3 ] )
+        obj.elems( :, [ 3 1 ] ) ], 2 ), 'rows' );
+      obj.n_edges = size( obj.edges, 1 );
+      obj.elem_to_edges = reshape( ic, obj.n_elems, 3 );
     end
   end
 end

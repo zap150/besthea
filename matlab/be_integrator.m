@@ -9,7 +9,7 @@ classdef be_integrator
     size_nf;
     order_ff;
     size_ff;
-      
+    
     %%%% type = 1 ... disjoint
     %%%% type = 2 ... vertex
     %%%% type = 3 ... edge
@@ -25,7 +25,7 @@ classdef be_integrator
     w = cell( 4, 1 );
     
     map = [ 1 2 3 1 2 ];
-
+    
   end
   
   methods
@@ -55,7 +55,7 @@ classdef be_integrator
         obj.w{ i } = cell( obj.n_simplex( i ), 1 );
       end
       
-      obj = init_quadrature_data( obj );   
+      obj = init_quadrature_data( obj );
     end
     
     function obj = set_kernel( obj, kernel )
@@ -69,23 +69,35 @@ classdef be_integrator
     function obj = set_trial( obj, trial )
       obj.trial = trial;
     end
-        
+    
     function A = assemble( obj )
+      if( isa( obj.mesh, 'spacetime_mesh' ) )
+        A = obj.assemble_st( );
+      else
+        A = obj.assemble_s( );
+      end
+    end
+    
+  end
+  
+  methods (Access = private)
+    
+    function A = assemble_s( obj )
       A = zeros( obj.test.dim_global( ), obj.trial.dim_global( ) );
       
       n_elems = obj.mesh.get_n_elems( );
       dim_test = obj.test.dim_local( );
       dim_trial = obj.trial.dim_local( );
       A_local = zeros( dim_test, dim_trial );
-                  
+      
       for i_trial = 1 : n_elems
         for i_test = 1 : n_elems
           
           [ type, rot_test, rot_trial ] = obj.get_type( i_test, i_trial );
-                    
+          
           A_local( :, : ) = 0;
           for i_simplex = 1 : obj.n_simplex( type )
-            [ x, y ] = global_quad( ... 
+            [ x, y ] = global_quad( ...
               obj, i_test, i_trial, type, rot_test, rot_trial, i_simplex );
             
             k = obj.kernel.eval( x, y, obj.mesh.get_normal( i_trial ) );
@@ -111,7 +123,7 @@ classdef be_integrator
             + A_local * obj.mesh.get_area( i_trial ) ...
             * obj.mesh.get_area( i_test );
         end
-      end          
+      end
     end
     
     function A = assemble_st( obj )
@@ -121,7 +133,7 @@ classdef be_integrator
       for d = 0 : nt - 1
         A{ d + 1 } = zeros( obj.test.dim_global( ), obj.trial.dim_global( ) );
       end
-            
+      
       n_elems = obj.mesh.get_n_elems( );
       dim_test = obj.test.dim_local( );
       dim_trial = obj.trial.dim_local( );
@@ -129,7 +141,7 @@ classdef be_integrator
       obj.kernel = obj.kernel.set_ht( obj.mesh.get_ht( ) );
       obj.kernel = obj.kernel.set_nt( obj.mesh.get_nt( ) );
       
-      for d = 0 : nt - 1        
+      for d = 0 : nt - 1
         obj.kernel = obj.kernel.set_d( d );
         
         for i_trial = 1 : n_elems
@@ -176,9 +188,6 @@ classdef be_integrator
       end
     end
     
-  end
-  
-  methods (Access = private)
     function [ x, y ] = global_quad( obj, i_test, i_trial, type, ...
         rot_test, rot_trial, i_simplex )
       
@@ -219,14 +228,14 @@ classdef be_integrator
       
       elem_test = obj.mesh.get_element( i_test );
       elem_trial = obj.mesh.get_element( i_trial );
-            
+      
       %%%% common edge
       for i_trial = 1 : 3
         for i_test = 1 : 3
           if ( ...
-            ( elem_trial( i_trial ) == elem_test( obj.map( i_test + 1 ) ) ) ...
-            && ...
-            ( elem_trial( obj.map( i_trial + 1 ) ) == elem_test( i_test ) ) ) 
+              ( elem_trial( i_trial ) == elem_test( obj.map( i_test + 1 ) ) ) ...
+              && ...
+              ( elem_trial( obj.map( i_trial + 1 ) ) == elem_test( i_test ) ) )
             
             type = 3;
             rot_test = i_test - 1;
@@ -243,7 +252,7 @@ classdef be_integrator
             type = 2;
             rot_test = i_test - 1;
             rot_trial = i_trial - 1;
-          return;
+            return;
           end
         end
       end
@@ -254,7 +263,7 @@ classdef be_integrator
     end
     
     function obj = init_quadrature_data( obj )
-         
+      
       %%%% disjoint
       obj.x_ref{ 1 }{ 1 } = zeros( obj.size_ff, 2 );
       obj.y_ref{ 1 }{ 1 } = zeros( obj.size_ff, 2 );
@@ -281,7 +290,7 @@ classdef be_integrator
           obj.w{ type }{ i_simplex } = zeros( obj.size_nf, 1 );
         end
       end
-            
+      
       [ x_line, w_line, l_line ] = quadratures.line( obj.order_nf );
       
       counter = 1;
@@ -304,12 +313,12 @@ classdef be_integrator
                   obj.w{ type }{ i_simplex }( counter ) = weight * jac;
                 end
               end
-                           
+              
               counter = counter + 1;
             end
           end
         end
-      end    
+      end
     end
     
     function [ x, y, jac ] = ...
@@ -330,46 +339,46 @@ classdef be_integrator
             obj.cube_to_tri_identical( ksi, eta1, eta2, eta3, simplex );
       end
     end
-  
+    
     % Tausch
-%     function [ x, y, jac ] = ...
-%         cube_to_tri_identical( ~, ksi, eta1, eta2, eta3, simplex )
-%       
-%       switch simplex
-%         case 1
-%           x( 1 ) = ( 1 - ksi ) * eta2 * ( 1 - eta3 );
-%           x( 2 ) = ksi + ( 1 - ksi ) * eta2 * eta3;
-%           y( 1 ) = x( 1 ) + ksi * ( 1 - eta1 );
-%           y( 2 ) = x( 2 ) - ksi;
-%         case 2
-%           x( 1 ) = ksi * ( 1 - eta1 ) + ( 1 - ksi ) * eta2 * ( 1 - eta3 );
-%           x( 2 ) = ksi * eta1 + ( 1 - ksi ) * eta2 * eta3;
-%           y( 1 ) = x( 1 ) + ksi * ( 1 - eta1 );
-%           y( 2 ) = x( 2 ) - ksi;
-%         case 3
-%           x( 1 ) = ksi + ( 1 - ksi ) * eta2 * ( 1 - eta3 );
-%           x( 2 ) = ( 1 - ksi ) * eta2 * eta3;
-%           y( 1 ) = x( 1 ) - ksi;
-%           y( 2 ) = x( 2 ) + ksi * ( 1 - eta1 );
-%         case 4
-%           x( 1 ) = ( 1 - ksi ) * eta2 * ( 1 - eta3 );
-%           x( 2 ) = ksi * eta1 + ( 1 - ksi ) * eta2 * eta3;
-%           y( 1 ) = x( 1 ) + ksi;
-%           y( 2 ) = x( 2 ) - ksi * eta1;
-%         case 5
-%           x( 1 ) = ( 1 - ksi ) * eta2 * ( 1 - eta3 );
-%           x( 2 ) = ( 1 - ksi ) * eta2 * eta3;
-%           y( 1 ) = x( 1 ) + ksi * ( 1 - eta1 );
-%           y( 2 ) = x( 2 ) + ksi * eta1;
-%         case 6
-%           x( 1 ) = ksi * ( 1 - eta1 ) + ( 1 - ksi ) * eta2 * ( 1 - eta3 );
-%           x( 2 ) = ( 1 - ksi ) * eta2 * eta3;
-%           y( 1 ) = x( 1 ) - ksi * ( 1 - eta1 );
-%           y( 2 ) = x( 2 ) + ksi;
-%       end
-%       
-%       jac = ksi * ( 1 - ksi ) * ( 1 - ksi ) * eta2;       
-%     end
+    %     function [ x, y, jac ] = ...
+    %         cube_to_tri_identical( ~, ksi, eta1, eta2, eta3, simplex )
+    %
+    %       switch simplex
+    %         case 1
+    %           x( 1 ) = ( 1 - ksi ) * eta2 * ( 1 - eta3 );
+    %           x( 2 ) = ksi + ( 1 - ksi ) * eta2 * eta3;
+    %           y( 1 ) = x( 1 ) + ksi * ( 1 - eta1 );
+    %           y( 2 ) = x( 2 ) - ksi;
+    %         case 2
+    %           x( 1 ) = ksi * ( 1 - eta1 ) + ( 1 - ksi ) * eta2 * ( 1 - eta3 );
+    %           x( 2 ) = ksi * eta1 + ( 1 - ksi ) * eta2 * eta3;
+    %           y( 1 ) = x( 1 ) + ksi * ( 1 - eta1 );
+    %           y( 2 ) = x( 2 ) - ksi;
+    %         case 3
+    %           x( 1 ) = ksi + ( 1 - ksi ) * eta2 * ( 1 - eta3 );
+    %           x( 2 ) = ( 1 - ksi ) * eta2 * eta3;
+    %           y( 1 ) = x( 1 ) - ksi;
+    %           y( 2 ) = x( 2 ) + ksi * ( 1 - eta1 );
+    %         case 4
+    %           x( 1 ) = ( 1 - ksi ) * eta2 * ( 1 - eta3 );
+    %           x( 2 ) = ksi * eta1 + ( 1 - ksi ) * eta2 * eta3;
+    %           y( 1 ) = x( 1 ) + ksi;
+    %           y( 2 ) = x( 2 ) - ksi * eta1;
+    %         case 5
+    %           x( 1 ) = ( 1 - ksi ) * eta2 * ( 1 - eta3 );
+    %           x( 2 ) = ( 1 - ksi ) * eta2 * eta3;
+    %           y( 1 ) = x( 1 ) + ksi * ( 1 - eta1 );
+    %           y( 2 ) = x( 2 ) + ksi * eta1;
+    %         case 6
+    %           x( 1 ) = ksi * ( 1 - eta1 ) + ( 1 - ksi ) * eta2 * ( 1 - eta3 );
+    %           x( 2 ) = ( 1 - ksi ) * eta2 * eta3;
+    %           y( 1 ) = x( 1 ) - ksi * ( 1 - eta1 );
+    %           y( 2 ) = x( 2 ) + ksi;
+    %       end
+    %
+    %       jac = ksi * ( 1 - ksi ) * ( 1 - ksi ) * eta2;
+    %     end
     
     % Sauter, Schwab
     function [ x, y, jac ] = ...
@@ -408,46 +417,46 @@ classdef be_integrator
           x( 2 ) = ksi * eta1 * ( 1 - eta2 );
           y( 1 ) = ksi * ( 1 - eta1 );
           y( 2 ) = ksi * eta1 * ( 1 - eta2 * eta3 );
-      end           
+      end
     end
     
     % Tausch
-%     function [ x, y, jac ] = ...
-%         cube_to_tri_edge( ~, ksi, eta1, eta2, eta3, simplex )
-%       
-%       switch simplex
-%         case 1
-%           x( 1 ) = ksi * ( 1 - eta2 ) + ( 1 - ksi ) * eta3;
-%           x( 2 ) = ksi * eta2;
-%           y( 1 ) = ( 1 - ksi ) * eta3;
-%           y( 2 ) = ksi * ( 1 - eta1 );
-%           jac = ( 1 - ksi ) * ksi * ksi;
-%         case 2
-%           x( 1 ) = ( 1 - ksi ) * eta3;
-%           x( 2 ) = ksi;
-%           y( 1 ) = ksi * ( 1 - eta2 ) + ( 1 - ksi ) * eta3;
-%           y( 2 ) = ksi * ( 1 - eta1 ) * eta2;
-%           jac = ( 1 - ksi ) * ksi * ksi * eta2;
-%         case 3
-%           x( 1 ) = ( 1 - 2 * eta1 ) * ksi + ( 1 - ksi ) * eta3;
-%           x( 2 ) = ksi * eta1;
-%           y( 1 ) = ksi * ( 2 - 2 * eta1 - eta2 ) + ( 1 - ksi ) * eta3;
-%           y( 2 ) = ksi * eta2;
-%           jac = ( 1 - ksi ) * ksi * ksi;
-%         case 4
-%           x( 1 ) = ksi * ( 1 - eta2 ) + ( 1 - ksi ) * eta3;
-%           x( 2 ) = ksi * ( 1 - eta1 ) * eta2;
-%           y( 1 ) = ( 1 - ksi ) * eta3;
-%           y( 2 ) = ksi;
-%           jac = ( 1 - ksi ) * ksi * ksi * eta2;
-%       end
-%     end
-
+    %     function [ x, y, jac ] = ...
+    %         cube_to_tri_edge( ~, ksi, eta1, eta2, eta3, simplex )
+    %
+    %       switch simplex
+    %         case 1
+    %           x( 1 ) = ksi * ( 1 - eta2 ) + ( 1 - ksi ) * eta3;
+    %           x( 2 ) = ksi * eta2;
+    %           y( 1 ) = ( 1 - ksi ) * eta3;
+    %           y( 2 ) = ksi * ( 1 - eta1 );
+    %           jac = ( 1 - ksi ) * ksi * ksi;
+    %         case 2
+    %           x( 1 ) = ( 1 - ksi ) * eta3;
+    %           x( 2 ) = ksi;
+    %           y( 1 ) = ksi * ( 1 - eta2 ) + ( 1 - ksi ) * eta3;
+    %           y( 2 ) = ksi * ( 1 - eta1 ) * eta2;
+    %           jac = ( 1 - ksi ) * ksi * ksi * eta2;
+    %         case 3
+    %           x( 1 ) = ( 1 - 2 * eta1 ) * ksi + ( 1 - ksi ) * eta3;
+    %           x( 2 ) = ksi * eta1;
+    %           y( 1 ) = ksi * ( 2 - 2 * eta1 - eta2 ) + ( 1 - ksi ) * eta3;
+    %           y( 2 ) = ksi * eta2;
+    %           jac = ( 1 - ksi ) * ksi * ksi;
+    %         case 4
+    %           x( 1 ) = ksi * ( 1 - eta2 ) + ( 1 - ksi ) * eta3;
+    %           x( 2 ) = ksi * ( 1 - eta1 ) * eta2;
+    %           y( 1 ) = ( 1 - ksi ) * eta3;
+    %           y( 2 ) = ksi;
+    %           jac = ( 1 - ksi ) * ksi * ksi * eta2;
+    %       end
+    %     end
+    
     % Sauter, Schwab
-        function [ x, y, jac ] = ...
+    function [ x, y, jac ] = ...
         cube_to_tri_edge( ~, ksi, eta1, eta2, eta3, simplex )
       
-        jac = ksi * ksi * ksi * eta1 * eta1;
+      jac = ksi * ksi * ksi * eta1 * eta1;
       
       switch simplex
         case 1
@@ -498,7 +507,7 @@ classdef be_integrator
           y( 2 ) = ksi * eta1;
       end
       
-      jac = ksi * ksi * ksi * eta2;      
+      jac = ksi * ksi * ksi * eta2;
     end
     
     function [ x, y, jac ] = ...
@@ -509,7 +518,7 @@ classdef be_integrator
       y( 1 ) = eta2 * ( 1 - eta3 );
       y( 2 ) = eta2 * eta3;
       
-      jac = ksi * eta2;    
+      jac = ksi * eta2;
     end
   end
 end

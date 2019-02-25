@@ -30,6 +30,18 @@ classdef spacetime_mesh < tri_mesh_3d
     function nodes = get_time_nodes( obj, i )
       nodes = [ ( i - 1 ) * obj.ht i * obj.ht ];
     end
+    
+    function obj = refine( obj, level, order )
+      if nargin < 3
+        order = 2;
+      end
+      if nargin < 2
+        level = 1;
+      end
+      obj = refine@tri_mesh_3d( obj, level );
+      obj.nt = 2^( order * level ) * obj.nt;
+      obj.ht = obj.T / obj.nt;
+    end
   end
 
 end
