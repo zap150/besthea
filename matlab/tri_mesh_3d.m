@@ -81,6 +81,10 @@ classdef tri_mesh_3d
       value = obj.areas( i );
     end
     
+    function h = get_h( obj )
+      h = max( sqrt( obj.areas ) );
+    end
+    
     function value = get_normal( obj, i )
       value = obj.normals( i, : );
     end

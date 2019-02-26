@@ -26,6 +26,12 @@ classdef p1 < basis_function
     end
     
     function value = l2g( obj, i, type, rot, swap )  
+      if nargin < 3
+        type = 1;
+        rot = 0;
+        swap = false;
+      end
+      
       nodes = obj.mesh.get_element( i );
       if type == 3 && swap
         value( 1 ) = nodes( obj.map( rot + 2 ) );

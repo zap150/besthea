@@ -1,4 +1,4 @@
-classdef be_integrator
+classdef be_assembler
   
   properties (Access = private)
     mesh;
@@ -30,7 +30,7 @@ classdef be_integrator
   
   methods
     function obj = ...
-        be_integrator( mesh, kernel, test, trial, order_nf, order_ff )
+        be_assembler( mesh, kernel, test, trial, order_nf, order_ff )
       
       obj.mesh = mesh;
       obj.kernel = kernel;
