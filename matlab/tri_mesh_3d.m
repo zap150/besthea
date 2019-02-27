@@ -52,7 +52,7 @@ classdef tri_mesh_3d
     function value = get_n_nodes( obj )
       value = obj.n_nodes;
     end
-    
+        
     function value = get_n_elems( obj )
       value = obj.n_elems;
     end

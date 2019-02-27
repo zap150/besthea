@@ -97,8 +97,8 @@ classdef be_assembler
           
           A_local( :, : ) = 0;
           for i_simplex = 1 : obj.n_simplex( type )
-            [ x, y ] = global_quad( ...
-              obj, i_test, i_trial, type, rot_test, rot_trial, i_simplex );
+            [ x, y ] = obj.global_quad( ...
+              i_test, i_trial, type, rot_test, rot_trial, i_simplex );
             
             k = obj.kernel.eval( x, y, obj.mesh.get_normal( i_trial ) );
             

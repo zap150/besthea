@@ -84,10 +84,10 @@ classdef be_evaluator
       end
     end
     
-    function y = global_quad( obj, x, i_trial )   
+    function y = global_quad( obj, y_ref, i_trial )   
       nodes = obj.mesh.get_nodes( i_trial );
       R = [ nodes( 2, : ) - nodes( 1, : ); nodes( 3, : ) - nodes( 1, : ) ];
-      y = x * R;
+      y = y_ref * R;
       y = y + nodes( 1, : );     
     end    
     
