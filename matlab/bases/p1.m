@@ -30,7 +30,6 @@ classdef p1 < basis_function
         swap = false;
       end
       
-      %nodes = obj.mesh.get_element( i );
       nodes = obj.mesh.elems( i, : );
       if type == 3 && swap
         value( 1 ) = nodes( obj.map( rot + 2 ) );

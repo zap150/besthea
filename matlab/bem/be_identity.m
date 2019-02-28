@@ -28,14 +28,6 @@ classdef be_identity
       end
     end
     
-%     function obj = set_test( obj, test )
-%       obj.test = test;
-%     end
-    
-%     function obj = set_trial( obj, trial )
-%       obj.trial = trial;
-%     end
-    
     function M = assemble( obj )
       n_elems = obj.mesh.n_elems;
       dim_test = obj.test.dim_local( );

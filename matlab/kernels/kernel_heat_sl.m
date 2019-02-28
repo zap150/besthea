@@ -14,19 +14,7 @@ classdef kernel_heat_sl < kernel
       obj.nt = 0;
       obj.d = 0;
     end
-    
-%     function obj = set_d( obj, d )
-%       obj.d = d;
-%     end
-    
-%     function obj = set_ht( obj, ht )
-%       obj.ht = ht;
-%     end
-    
-%     function obj = set_nt( obj, nt )
-%       obj.nt = nt;
-%     end
-    
+        
     function value = eval( obj, x, y, ~ )
       norm = sqrt( ( x - y ).^2 * [ 1; 1; 1 ] );
       rr = norm / sqrt( obj.alpha * obj.ht );      

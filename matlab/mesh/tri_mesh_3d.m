@@ -53,45 +53,13 @@ classdef tri_mesh_3d
       obj = obj.init_edges( );
     end
     
-%     function value = get_n_nodes( obj )
-%       value = obj.n_nodes;
-%     end
-         
-%     function value = get_n_elems( obj )
-%       value = obj.n_elems;
-%     end
-    
-%     function e = get_element( obj, i )
-%       e = obj.elems( i, : );
-%     end
-    
-%     function e = get_node( obj, i )
-%       e = obj.nodes( i, : );
-%     end
-    
 %     function e = get_nodes( obj, i )
 %       e = obj.nodes( obj.elems( i, : ), : );
-%     end
-    
-%     function e = get_edge( obj, i )
-%       e = obj.edges( i, : );
-%     end
-    
-%     function e = get_edges( obj, i )
-%       e = obj.elem_to_edges( i, : );
-%     end
-    
-%     function value = get_area( obj, i )
-%       value = obj.areas( i );
 %     end
     
     function h = get.h( obj )
       h = max( sqrt( obj.areas ) );
     end
-    
-%     function value = get_normal( obj, i )
-%       value = obj.normals( i, : );
-%     end
     
     function obj = refine( obj, level )
       

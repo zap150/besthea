@@ -26,18 +26,6 @@ classdef be_evaluator
       end
     end
     
-%     function obj = set_kernel( obj, kernel )
-%       obj.kernel = kernel;
-%     end
-     
-%     function obj = set_trial( obj, trial )
-%       obj.trial = trial;
-%     end
-     
-%     function obj = set_density( obj, density )
-%       obj.density = density;
-%     end
-    
     function result = evaluate( obj )
       if( isa( obj.mesh, 'spacetime_mesh' ) )
         result = evaluate_st( obj );

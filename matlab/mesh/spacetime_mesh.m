@@ -19,18 +19,6 @@ classdef spacetime_mesh < tri_mesh_3d
       obj.ht = T / nt;
     end
     
-%     function value = get_nt( obj )
-%       value = obj.nt;
-%     end
-    
-%     function value = get_ht( obj )
-%       value = obj.ht;
-%     end
-    
-%     function value = get_hx( obj )
-%       value = obj.get_h( );
-%     end
-
     function hx = get.hx( obj )
       hx = obj.h;
     end

@@ -59,18 +59,6 @@ classdef be_assembler
       obj = init_quadrature_data( obj );
     end
     
-%     function obj = set_kernel( obj, kernel )
-%       obj.kernel = kernel;
-%     end
-    
-%     function obj = set_test( obj, test )
-%       obj.test = test;
-%     end
-    
-%     function obj = set_trial( obj, trial )
-%       obj.trial = trial;
-%     end
-    
     function A = assemble( obj )
       if( isa( obj.mesh, 'spacetime_mesh' ) )
         A = assemble_st( obj );
@@ -91,7 +79,12 @@ classdef be_assembler
       dim_trial = obj.trial.dim_local( );
       A_local = zeros( dim_test, dim_trial );
       
+      msg = sprintf( 'assembling %s', class( obj.kernel ) );
+      f = waitbar( 0, msg );
+      f.Children.Title.Interpreter = 'none';      
+      
       for i_trial = 1 : n_elems
+        waitbar( ( i_trial - 1 ) / n_elems, f );
         for i_test = 1 : n_elems
           
           [ type, rot_test, rot_trial ] = get_type( obj, i_test, i_trial );
@@ -125,6 +118,8 @@ classdef be_assembler
             * obj.mesh.areas( i_test );
         end
       end
+      waitbar( 1, f );
+      close( f );
     end
     
     function A = assemble_st( obj )
@@ -142,10 +137,18 @@ classdef be_assembler
       obj.kernel.ht = obj.mesh.ht;
       obj.kernel.nt = obj.mesh.nt;
       
+      msg = sprintf( 'assembling %s', class( obj.kernel ) );
+      f = waitbar( 0, msg );
+      f.Children.Title.Interpreter = 'none';
+      
       for d = 0 : nt - 1
         obj.kernel.d = d;
         
+        msgd = [ msg sprintf( ', d = %d/%d', d + 1, nt ) ];
+        waitbar( d / nt, f, msgd );
+        
         for i_trial = 1 : n_elems
+          waitbar( ( d + ( i_trial - 1 ) / n_elems ) / nt, f );
           for i_test = 1 : n_elems
             
             if d <= 1
@@ -187,6 +190,8 @@ classdef be_assembler
           end
         end
       end
+      waitbar( 1, f );
+      close( f );
     end
     
     function [ x, y ] = global_quad( obj, i_test, i_trial, type, ...
