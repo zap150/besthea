@@ -1,6 +1,6 @@
 classdef kernel_heat_dl < kernel
   
-  properties (Access = private)
+  properties (Access = public)
     alpha;
     ht;
     nt;
@@ -15,17 +15,17 @@ classdef kernel_heat_dl < kernel
       obj.d = 0;
     end
     
-    function obj = set_d( obj, d )
-      obj.d = d;
-    end
+%     function obj = set_d( obj, d )
+%       obj.d = d;
+%     end
     
-    function obj = set_ht( obj, ht )
-      obj.ht = ht;
-    end
+%     function obj = set_ht( obj, ht )
+%       obj.ht = ht;
+%     end
     
-    function obj = set_nt( obj, nt )
-      obj.nt = nt;
-    end
+%     function obj = set_nt( obj, nt )
+%       obj.nt = nt;
+%     end
     
     function value = eval( obj, x, y, n )
       xy = x - y;

@@ -1,8 +1,6 @@
 classdef p1 < basis_function
   
-  properties (Access = private)
-    mesh;
-    
+  properties (Constant)      
     map = [ 1 2 3 1 2 ];
   end
   
@@ -12,7 +10,7 @@ classdef p1 < basis_function
     end
     
     function value = dim_global( obj )
-      value = obj.mesh.get_n_nodes( );
+      value = obj.mesh.n_nodes;
     end
     
     function value = dim_local( ~ )
@@ -32,7 +30,8 @@ classdef p1 < basis_function
         swap = false;
       end
       
-      nodes = obj.mesh.get_element( i );
+      %nodes = obj.mesh.get_element( i );
+      nodes = obj.mesh.elems( i, : );
       if type == 3 && swap
         value( 1 ) = nodes( obj.map( rot + 2 ) );
         value( 2 ) = nodes( obj.map( rot + 1 ) );
@@ -43,5 +42,6 @@ classdef p1 < basis_function
       value( 3 ) = nodes( obj.map( rot + 3 ) );
     end
   end
+  
 end
 

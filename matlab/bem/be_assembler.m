@@ -1,6 +1,6 @@
 classdef be_assembler
   
-  properties (Access = private)
+  properties (Access = public)
     mesh;
     kernel;
     test;
@@ -9,7 +9,13 @@ classdef be_assembler
     size_nf;
     order_ff;
     size_ff;
-    
+        
+    x_ref = cell( 4, 1 );
+    y_ref = cell( 4, 1 );
+    w = cell( 4, 1 );
+  end
+  
+  properties (Constant)
     %%%% type = 1 ... disjoint
     %%%% type = 2 ... vertex
     %%%% type = 3 ... edge
@@ -20,12 +26,7 @@ classdef be_assembler
     %%%% Sauter, Schwab
     n_simplex = [ 1 2 5 6 ];
     
-    x_ref = cell( 4, 1 );
-    y_ref = cell( 4, 1 );
-    w = cell( 4, 1 );
-    
     map = [ 1 2 3 1 2 ];
-    
   end
   
   methods
@@ -58,23 +59,23 @@ classdef be_assembler
       obj = init_quadrature_data( obj );
     end
     
-    function obj = set_kernel( obj, kernel )
-      obj.kernel = kernel;
-    end
+%     function obj = set_kernel( obj, kernel )
+%       obj.kernel = kernel;
+%     end
     
-    function obj = set_test( obj, test )
-      obj.test = test;
-    end
+%     function obj = set_test( obj, test )
+%       obj.test = test;
+%     end
     
-    function obj = set_trial( obj, trial )
-      obj.trial = trial;
-    end
+%     function obj = set_trial( obj, trial )
+%       obj.trial = trial;
+%     end
     
     function A = assemble( obj )
       if( isa( obj.mesh, 'spacetime_mesh' ) )
-        A = obj.assemble_st( );
+        A = assemble_st( obj );
       else
-        A = obj.assemble_s( );
+        A = assemble_s( obj );
       end
     end
     
@@ -85,7 +86,7 @@ classdef be_assembler
     function A = assemble_s( obj )
       A = zeros( obj.test.dim_global( ), obj.trial.dim_global( ) );
       
-      n_elems = obj.mesh.get_n_elems( );
+      n_elems = obj.mesh.n_elems;
       dim_test = obj.test.dim_local( );
       dim_trial = obj.trial.dim_local( );
       A_local = zeros( dim_test, dim_trial );
@@ -93,14 +94,14 @@ classdef be_assembler
       for i_trial = 1 : n_elems
         for i_test = 1 : n_elems
           
-          [ type, rot_test, rot_trial ] = obj.get_type( i_test, i_trial );
+          [ type, rot_test, rot_trial ] = get_type( obj, i_test, i_trial );
           
           A_local( :, : ) = 0;
           for i_simplex = 1 : obj.n_simplex( type )
-            [ x, y ] = obj.global_quad( ...
+            [ x, y ] = global_quad( obj, ...
               i_test, i_trial, type, rot_test, rot_trial, i_simplex );
             
-            k = obj.kernel.eval( x, y, obj.mesh.get_normal( i_trial ) );
+            k = obj.kernel.eval( x, y, obj.mesh.normals( i_trial, : ) );
             
             test_fun = obj.test.eval( obj.x_ref{ type }{ i_simplex } );
             
@@ -120,35 +121,35 @@ classdef be_assembler
           map_test = obj.test.l2g( i_test, type, rot_test, false );
           map_trial = obj.trial.l2g( i_trial, type, rot_trial, true );
           A( map_test, map_trial ) = A( map_test, map_trial ) ...
-            + A_local * obj.mesh.get_area( i_trial ) ...
-            * obj.mesh.get_area( i_test );
+            + A_local * obj.mesh.areas( i_trial ) ...
+            * obj.mesh.areas( i_test );
         end
       end
     end
     
     function A = assemble_st( obj )
       
-      nt = obj.mesh.get_nt( );
+      nt = obj.mesh.nt;
       A = cell( nt, 1 );
       for d = 0 : nt - 1
         A{ d + 1 } = zeros( obj.test.dim_global( ), obj.trial.dim_global( ) );
       end
       
-      n_elems = obj.mesh.get_n_elems( );
+      n_elems = obj.mesh.n_elems;
       dim_test = obj.test.dim_local( );
       dim_trial = obj.trial.dim_local( );
       A_local = zeros( dim_test, dim_trial );
-      obj.kernel = obj.kernel.set_ht( obj.mesh.get_ht( ) );
-      obj.kernel = obj.kernel.set_nt( obj.mesh.get_nt( ) );
+      obj.kernel.ht = obj.mesh.ht;
+      obj.kernel.nt = obj.mesh.nt;
       
       for d = 0 : nt - 1
-        obj.kernel = obj.kernel.set_d( d );
+        obj.kernel.d = d;
         
         for i_trial = 1 : n_elems
           for i_test = 1 : n_elems
             
             if d <= 1
-              [ type, rot_test, rot_trial ] = obj.get_type( i_test, i_trial );
+              [ type, rot_test, rot_trial ] = get_type( obj, i_test, i_trial );
             else
               type = 1;
               rot_test = 0;
@@ -157,10 +158,10 @@ classdef be_assembler
             
             A_local( :, : ) = 0;
             for i_simplex = 1 : obj.n_simplex( type )
-              [ x, y ] = global_quad( ...
-                obj, i_test, i_trial, type, rot_test, rot_trial, i_simplex );
+              [ x, y ] = global_quad( obj, ...
+                i_test, i_trial, type, rot_test, rot_trial, i_simplex );
               
-              k = obj.kernel.eval( x, y, obj.mesh.get_normal( i_trial ) );
+              k = obj.kernel.eval( x, y, obj.mesh.normals( i_trial, : ) );
               
               test_fun = obj.test.eval( obj.x_ref{ type }{ i_simplex } );
               
@@ -181,8 +182,8 @@ classdef be_assembler
             map_trial = obj.trial.l2g( i_trial, type, rot_trial, true );
             A{ d + 1 }( map_test, map_trial ) = ...
               A{ d + 1 }( map_test, map_trial ) ...
-              + A_local * obj.mesh.get_area( i_trial ) ...
-              * obj.mesh.get_area( i_test );
+              + A_local * obj.mesh.areas( i_trial ) ...
+              * obj.mesh.areas( i_test );
           end
         end
       end
@@ -191,15 +192,13 @@ classdef be_assembler
     function [ x, y ] = global_quad( obj, i_test, i_trial, type, ...
         rot_test, rot_trial, i_simplex )
       
-      nodes = obj.mesh.get_nodes( i_test );
+      nodes = obj.mesh.nodes( obj.mesh.elems( i_test, : ), : );
       z1 = nodes( obj.map( rot_test + 1 ), : );
       z2 = nodes( obj.map( rot_test + 2 ), : );
       z3 = nodes( obj.map( rot_test + 3 ), : );
-      R = [ z2 - z1; z3 - z1 ];
-      x = obj.x_ref{ type }{ i_simplex } * R;
-      x = x + z1;
+      x = z1 + obj.x_ref{ type }{ i_simplex } * [ z2 - z1; z3 - z1 ];
       
-      nodes = obj.mesh.get_nodes( i_trial );
+      nodes = obj.mesh.nodes( obj.mesh.elems( i_trial, : ), : );
       %%%% inverting trial element
       if type == 3
         z1 = nodes( obj.map( rot_trial + 2 ), : );
@@ -209,9 +208,7 @@ classdef be_assembler
         z2 = nodes( obj.map( rot_trial + 2 ), : );
       end
       z3 = nodes( obj.map( rot_trial + 3 ), : );
-      R = [ z2 - z1; z3 - z1 ];
-      y = obj.y_ref{ type }{ i_simplex } * R;
-      y = y + z1;
+      y = z1 + obj.y_ref{ type }{ i_simplex } * [ z2 - z1; z3 - z1 ];
       
     end
     
@@ -219,15 +216,21 @@ classdef be_assembler
       
       rot_test = 0;
       rot_trial = 0;
+
+      elem_test = obj.mesh.elems( i_test, : );
+      elem_trial = obj.mesh.elems( i_trial, : );
+      
+      %%%% disjoint
+      if ~any( elem_test( : ) == elem_trial, 'all' )
+        type = 1;
+        return;
+      end
       
       %%%% identical
       if i_test == i_trial
         type = 4;
         return;
       end
-      
-      elem_test = obj.mesh.get_element( i_test );
-      elem_trial = obj.mesh.get_element( i_trial );
       
       %%%% common edge
       for i_trial = 1 : 3
@@ -256,9 +259,6 @@ classdef be_assembler
           end
         end
       end
-      
-      %%%% disjoint
-      type = 1;
       
     end
     
@@ -327,16 +327,16 @@ classdef be_assembler
       switch type
         case 1
           [ x, y, jac ] = ...
-            obj.cube_to_tri_disjoint( ksi, eta1, eta2, eta3 );
+            cube_to_tri_disjoint( ksi, eta1, eta2, eta3 );
         case 2
           [ x, y, jac ] = ...
-            obj.cube_to_tri_vertex( ksi, eta1, eta2, eta3, simplex );
+            cube_to_tri_vertex( obj, ksi, eta1, eta2, eta3, simplex );
         case 3
           [ x, y, jac ] = ...
-            obj.cube_to_tri_edge( ksi, eta1, eta2, eta3, simplex );
+            cube_to_tri_edge( obj, ksi, eta1, eta2, eta3, simplex );
         case 4
           [ x, y, jac ] = ...
-            obj.cube_to_tri_identical( ksi, eta1, eta2, eta3, simplex );
+            cube_to_tri_identical( obj, ksi, eta1, eta2, eta3, simplex );
       end
     end
     

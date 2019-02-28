@@ -1,6 +1,6 @@
 classdef tri_mesh_3d
   
-  properties (Access = private)
+  properties (Access = public)
     nodes;
     n_nodes;
     elems;
@@ -12,6 +12,10 @@ classdef tri_mesh_3d
     
     areas;
     normals;
+  end
+  
+  properties (Dependent)
+    h;
   end
     
   methods
@@ -49,45 +53,45 @@ classdef tri_mesh_3d
       obj = obj.init_edges( );
     end
     
-    function value = get_n_nodes( obj )
-      value = obj.n_nodes;
-    end
-        
-    function value = get_n_elems( obj )
-      value = obj.n_elems;
-    end
+%     function value = get_n_nodes( obj )
+%       value = obj.n_nodes;
+%     end
+         
+%     function value = get_n_elems( obj )
+%       value = obj.n_elems;
+%     end
     
-    function e = get_element( obj, i )
-      e = obj.elems( i, : );
-    end
+%     function e = get_element( obj, i )
+%       e = obj.elems( i, : );
+%     end
     
-    function e = get_node( obj, i )
-      e = obj.nodes( i, : );
-    end
+%     function e = get_node( obj, i )
+%       e = obj.nodes( i, : );
+%     end
     
-    function e = get_nodes( obj, i )
-      e = obj.nodes( obj.elems( i, : ), : );
-    end
+%     function e = get_nodes( obj, i )
+%       e = obj.nodes( obj.elems( i, : ), : );
+%     end
     
-    function e = get_edge( obj, i )
-      e = obj.edges( i, : );
-    end
+%     function e = get_edge( obj, i )
+%       e = obj.edges( i, : );
+%     end
     
-    function e = get_edges( obj, i )
-      e = obj.elem_to_edges( i, : );
-    end
+%     function e = get_edges( obj, i )
+%       e = obj.elem_to_edges( i, : );
+%     end
     
-    function value = get_area( obj, i )
-      value = obj.areas( i );
-    end
+%     function value = get_area( obj, i )
+%       value = obj.areas( i );
+%     end
     
-    function h = get_h( obj )
+    function h = get.h( obj )
       h = max( sqrt( obj.areas ) );
     end
     
-    function value = get_normal( obj, i )
-      value = obj.normals( i, : );
-    end
+%     function value = get_normal( obj, i )
+%       value = obj.normals( i, : );
+%     end
     
     function obj = refine( obj, level )
       
@@ -106,17 +110,17 @@ classdef tri_mesh_3d
         
         new_nodes( 1 : obj.n_nodes, : ) = obj.nodes;
         for i = 1 : obj.n_edges
-          edge = obj.get_edge( i );
-          x1 = obj.get_node( edge( 1 ) );
-          x2 = obj.get_node( edge( 2 ) );
+          edge = obj.edges( i, : );
+          x1 = obj.nodes( edge( 1 ), : );
+          x2 = obj.nodes( edge( 2 ), : );
           new_nodes( obj.n_nodes + i, : ) = ( x1 + x2 ) / 2;
           new_edges( 2 * i - 1, : ) = [ edge( 1 ) obj.n_nodes + i ];
           new_edges( 2 * i, : ) = [ edge( 2 ) obj.n_nodes + i ];
         end
         
         for i = 1 : obj.n_elems
-          i_element = obj.get_element( i );
-          i_edges = obj.get_edges( i );
+          i_element = obj.elems( i, : );
+          i_edges = obj.elem_to_edges( i, : );
           
           node1 = i_element( 1 );
           node2 = i_element( 2 );
@@ -188,14 +192,23 @@ classdef tri_mesh_3d
       obj = obj.init_normals( );
     end
     
-    function plot( obj, data )
-      if nargin == 1
+    function plot( obj, data, name )
+      if nargin < 2
         data = zeros( obj.n_elems, 1 );
+      end
+      if nargin < 3
+        name = '';
       end
       figure;
       axis equal;
-      trisurf( obj.elems, obj.nodes( :, 1 ), obj.nodes( :, 2 ), ...
-        obj.nodes( :, 3 ), data );
+      colormap( 'jet' );
+      title( name );
+      handle = trisurf( obj.elems, obj.nodes( :, 1 ), obj.nodes( :, 2 ), ...
+        obj.nodes( :, 3 ), data, 'EdgeColor', 'black' );
+      if( size( data, 1 ) == obj.n_nodes )
+        shading( 'interp' );
+        set( handle, 'EdgeColor', 'black' );
+      end
     end
   end
   
@@ -203,7 +216,7 @@ classdef tri_mesh_3d
     function obj = init_areas( obj )
       obj.areas = zeros( obj.n_elems, 1 );
       for i = 1 : obj.n_elems
-        e = obj.get_nodes( i );
+        e = obj.nodes( obj.elems( i, : ), : );
         u = e( 2, : ) - e( 1, : );
         v = e( 3, : ) - e( 1, : );
         s( 1 ) = u( 2 ) * v( 3 ) - u( 3 ) * v( 2 );
@@ -216,7 +229,7 @@ classdef tri_mesh_3d
     function obj = init_normals( obj )
       obj.normals = zeros( obj.n_elems, 1 );
       for i = 1 : obj.n_elems
-        e = obj.get_nodes( i );
+        e = obj.nodes( obj.elems( i, : ), : );
         u = e( 2, : ) - e( 1, : );
         v = e( 3, : ) - e( 1, : );
         obj.normals( i, 1 ) = u( 2 ) * v( 3 ) - u( 3 ) * v( 2 );

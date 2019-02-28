@@ -1,6 +1,6 @@
 classdef (Abstract) basis_function
   
-  properties (Access = private)
+  properties (Access = public)
     mesh;
   end
   

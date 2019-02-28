@@ -1,6 +1,6 @@
 classdef kernel_helmholtz_sl < kernel
   
-  properties (Access = private)
+  properties (Access = public)
     kappa;
   end
   
