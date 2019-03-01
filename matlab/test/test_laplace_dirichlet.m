@@ -61,7 +61,6 @@ l2_diff_err = 0;
 l2_err = 0;
 n_elems = mesh.n_elems;
 for i_tau = 1 : n_elems
-  %nodes = mesh.get_nodes( i_tau );
   nodes = mesh.nodes( mesh.elems( i_tau, : ), : );
   x = x_ref ...
     * [ nodes( 2, : ) - nodes( 1, : ); nodes( 3, : ) - nodes( 1, : ) ] ...

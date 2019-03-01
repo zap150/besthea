@@ -170,13 +170,13 @@ classdef tri_mesh_3d
       figure;
       axis equal;
       colormap( 'jet' );
-      title( name );
       handle = trisurf( obj.elems, obj.nodes( :, 1 ), obj.nodes( :, 2 ), ...
         obj.nodes( :, 3 ), data, 'EdgeColor', 'black' );
       if( size( data, 1 ) == obj.n_nodes )
         shading( 'interp' );
         set( handle, 'EdgeColor', 'black' );
       end
+      title( name );
     end
   end
   

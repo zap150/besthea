@@ -1,4 +1,5 @@
-function [ dir, neu ] = test_heat_dirichlet( level )
+function [ dir, neu, err_bnd ] = test_heat_dirichlet( level )
+%function test_heat_dirichlet( level, neu )
 
 if nargin < 1
   level = 0;
@@ -7,6 +8,8 @@ end
 file='../../bem4i/input/cube_192.txt';
 stmesh = spacetime_mesh( file, 1, 8 );
 stmesh = stmesh.refine_xt( level, 2 );
+% stmesh = spacetime_mesh( file, 1, 3 );
+% stmesh = stmesh.refine_xt( level, 1 );
 
 order_nf = 4;
 order_ff = 4;
@@ -49,28 +52,38 @@ tic;
 neu = solver.solve_dirichlet( V, K, M, dir );
 fprintf( 1, '  done in %f s.\n', toc );
 
-% [ x_ref, w, ~ ] = quadratures.tri( 5 );
-% l2_diff_err = 0;
-% l2_err = 0;
-% n_elems = mesh.n_elems;
-% for i_tau = 1 : n_elems
-%   %nodes = mesh.get_nodes( i_tau );
-%   nodes = mesh.nodes( mesh.elems( i_tau, : ), : );
-%   x = x_ref ...
-%     * [ nodes( 2, : ) - nodes( 1, : ); nodes( 3, : ) - nodes( 1, : ) ] ...
-%     + nodes( 1, : );
-%   f = neu_fun( x, mesh.normals( i_tau, : ) );
-%   area = mesh.areas( i_tau );
-%   l2_diff_err = l2_diff_err + ( w' * ( f - neu( i_tau ) ).^2 ) * area;
-%   l2_err = l2_err + ( w' * f.^2 ) * area;
-% end
-% 
-% err_bnd = sqrt( l2_diff_err / l2_err );
-% fprintf( 1, 'L2 relative error: %f.\n', err_bnd );
-% 
-% mesh.plot( dir, 'Dirichlet' );
-% mesh.plot( neu, 'Neumann' );
-% 
+[ x_ref, wx, ~ ] = quadratures.tri( 5 );
+[ t_ref, wt, lt ] = quadratures.line( 4 );
+l2_diff_err = 0;
+l2_err = 0;
+n_elems = stmesh.n_elems;
+nt = stmesh.nt;
+ht = stmesh.ht;
+for d = 0 : nt - 1
+  t = ht * ( t_ref + d );
+  for i_tau = 1 : n_elems
+    nodes = stmesh.nodes( stmesh.elems( i_tau, : ), : );
+    x = x_ref ...
+      * [ nodes( 2, : ) - nodes( 1, : ); nodes( 3, : ) - nodes( 1, : ) ] ...
+      + nodes( 1, : );
+    area = stmesh.areas( i_tau );
+    for i_t = 1 : lt
+      f = neu_fun( x, t( i_t ), stmesh.normals( i_tau, : ) );
+      l2_diff_err = l2_diff_err + ( wx' * ( f - neu{ d + 1 }( i_tau ) ).^2 ) ...
+        * area * ht * wt( i_t );
+      l2_err = l2_err + ( wx' * f.^2 ) * area * ht * wt( i_t );
+    end
+  end
+end
+ 
+err_bnd = sqrt( l2_diff_err / l2_err );
+fprintf( 1, 'L2 relative error: %f.\n', err_bnd );
+
+stmesh.plot( dir{ 1 }, 'Dirichlet, t = 0' );
+stmesh.plot( dir{ nt }, [ 'Dirichlet, t = ' string( stmesh.T ) ] );
+stmesh.plot( neu{ 1 }, 'Neumann, t = ' );
+stmesh.plot( neu{ nt }, [ 'Neumann, t = ' string( stmesh.T ) ] );
+
 % h = mesh.h / sqrt( 2 );
 % line( :, 1 ) = ( -1 + h ) : h : ( 1 - h );
 % l = size( line, 1 );
