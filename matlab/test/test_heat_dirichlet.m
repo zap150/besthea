@@ -79,10 +79,10 @@ end
 err_bnd = sqrt( l2_diff_err / l2_err );
 fprintf( 1, 'L2 relative error: %f.\n', err_bnd );
 
-stmesh.plot( dir{ 1 }, 'Dirichlet, t = 0' );
-stmesh.plot( dir{ nt }, [ 'Dirichlet, t = ' string( stmesh.T ) ] );
-stmesh.plot( neu{ 1 }, 'Neumann, t = ' );
-stmesh.plot( neu{ nt }, [ 'Neumann, t = ' string( stmesh.T ) ] );
+stmesh.plot( dir{ 1 }, sprintf( 'Dirichlet, t = %f', 0 ) );
+stmesh.plot( dir{ nt }, sprintf( 'Dirichlet, t = %f', stmesh.T ) );
+stmesh.plot( neu{ 1 }, sprintf( 'Neumann, t = %f', 0 ) );
+stmesh.plot( neu{ nt }, sprintf( 'Neumann, t = %f', stmesh.T ) );
 
 % h = mesh.h / sqrt( 2 );
 % line( :, 1 ) = ( -1 + h ) : h : ( 1 - h );
