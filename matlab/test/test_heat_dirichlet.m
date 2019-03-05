@@ -5,7 +5,7 @@ if nargin < 1
   level = 0;
 end
 
-file='../../bem4i/input/cube_192.txt';
+file='./input/cube_192.txt';
 stmesh = spacetime_mesh( file, 1, 8 );
 stmesh = stmesh.refine_xt( level, 2 );
 % stmesh = spacetime_mesh( file, 1, 3 );

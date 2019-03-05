@@ -4,7 +4,7 @@ if nargin < 1
   level = 0;
 end
 
-file='../../bem4i/input/cube_192.txt';
+file='./input/cube_192.txt';
 stmesh = spacetime_mesh( file, 1, 8 );
 stmesh = stmesh.refine_xt( level, 2 );
 % stmesh = spacetime_mesh( file, 1, 3 );
@@ -21,15 +21,19 @@ dir_fun = @( x, t, ~ ) ( 4 * pi * alpha * t )^( -3 / 2 ) ...
 neu_fun = @( x, t, n ) ( - 2 * t )^( -1 ) * dir_fun( x, t ) ...
   .* ( ( x - y ) * n' );
 
+basis_p1 = p1( stmesh );
+basis_p0 = p0( stmesh );
+basis_curl_p1 = curl_p1( stmesh );
+
 beas_d1_heat = be_assembler( stmesh, kernel_heat_hs1( alpha ), ...
-  curl_p1( stmesh ), curl_p1( stmesh ), order_nf, order_ff );
+  basis_curl_p1, basis_curl_p1, order_nf, order_ff );
 fprintf( 1, 'Assembling D1\n' );
 tic;
 D = beas_d1_heat.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
 
 beas_d2_heat = be_assembler( stmesh, kernel_heat_hs2( alpha ), ...
-  p1( stmesh ), p1( stmesh ), order_nf, order_ff );
+  basis_p1, basis_p1, order_nf, order_ff );
 fprintf( 1, 'Assembling D2\n' );
 tic;
 D2 = beas_d2_heat.assemble( );
@@ -40,7 +44,7 @@ for i = 1 : stmesh.nt
 end
 
 beas_k_heat = be_assembler( stmesh, kernel_heat_dl( alpha ), ...
-  p0( stmesh ), p1( stmesh ), order_nf, order_ff );
+  basis_p0, basis_p1, order_nf, order_ff );
 fprintf( 1, 'Assembling K\n' );
 tic;
 K = beas_k_heat.assemble( );
@@ -48,11 +52,11 @@ fprintf( 1, '  done in %f s.\n', toc );
 
 fprintf( 1, 'Assembling M\n' );
 tic;
-beid = be_identity( stmesh, p0( stmesh ), p1( stmesh ), 1 );
+beid = be_identity( stmesh, basis_p0, basis_p1, 1 );
 M = beid.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
 
-beid_p0p0 = be_identity( stmesh, p0( stmesh ), p0( stmesh ), 5, 4 ); 
+beid_p0p0 = be_identity( stmesh, basis_p0, basis_p0, 5, 4 ); 
 neu = beid_p0p0.L2_projection( neu_fun );
 
 solver = spacetime_solver( );
@@ -61,8 +65,6 @@ fprintf( 1, 'Solving the system\n' );
 tic;
 dir = solver.solve_neumann( D, K, M, neu );
 fprintf( 1, '  done in %f s.\n', toc );
-
-return;
 
 [ x_ref, wx, ~ ] = quadratures.tri( 5 );
 [ t_ref, wt, lt ] = quadratures.line( 4 );
@@ -78,10 +80,15 @@ for d = 0 : nt - 1
     x = x_ref ...
       * [ nodes( 2, : ) - nodes( 1, : ); nodes( 3, : ) - nodes( 1, : ) ] ...
       + nodes( 1, : );
+    basis = basis_p1.eval( x_ref );
+    basis_map = basis_p1.l2g( i_tau );
     area = stmesh.areas( i_tau );
+    neu_val = neu{ d + 1 }( basis_map( 1 ) ) * basis( :, 1 ) ...
+      + neu{ d + 1 }( basis_map( 2 ) ) * basis( :, 2 ) ...
+      + neu{ d + 1 }( basis_map( 3 ) ) * basis( :, 3 );
     for i_t = 1 : lt
       f = neu_fun( x, t( i_t ), stmesh.normals( i_tau, : ) );
-      l2_diff_err = l2_diff_err + ( wx' * ( f - neu{ d + 1 }( i_tau ) ).^2 ) ...
+      l2_diff_err = l2_diff_err + ( wx' * ( f - neu_val ).^2 ) ...
         * area * ht * wt( i_t );
       l2_err = l2_err + ( wx' * f.^2 ) * area * ht * wt( i_t );
     end
