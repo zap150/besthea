@@ -22,15 +22,18 @@ dir_fun = @( x, t, ~ ) ( 4 * pi * alpha * t )^( -3 / 2 ) ...
 neu_fun = @( x, t, n ) ( - 2 * t )^( -1 ) * dir_fun( x, t ) ...
   .* ( ( x - y ) * n' );
 
+basis_p1 = p1( stmesh );
+basis_p0 = p0( stmesh );
+
 beas_v_heat = be_assembler( stmesh, kernel_heat_sl( alpha ), ...
-  p0( stmesh ), p0( stmesh ), order_nf, order_ff );
+  basis_p0, basis_p0, order_nf, order_ff );
 fprintf( 1, 'Assembling V\n' );
 tic;
 V = beas_v_heat.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
 
 beas_k_heat = be_assembler( stmesh, kernel_heat_dl( alpha ), ...
-  p0( stmesh ), p1( stmesh ), order_nf, order_ff );
+  basis_p0, basis_p1, order_nf, order_ff );
 fprintf( 1, 'Assembling K\n' );
 tic;
 K = beas_k_heat.assemble( );
@@ -38,12 +41,12 @@ fprintf( 1, '  done in %f s.\n', toc );
 
 fprintf( 1, 'Assembling M\n' );
 tic;
-beid = be_identity( stmesh, p0( stmesh ), p1( stmesh ), 1 );
+beid = be_identity( stmesh, basis_p0, basis_p1, 1 );
 M = beid.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
 
-beid_p1p1 = be_identity( stmesh, p1( stmesh ), p1( stmesh ), 5, 4 ); 
-dir = beid_p1p1.L2_projection( dir_fun );
+L2_p1 = L2_tools( stmesh, basis_p1, 5, 4 );
+dir = L2_p1.projection( dir_fun );
 
 solver = spacetime_solver( );
 
@@ -52,32 +55,8 @@ tic;
 neu = solver.solve_dirichlet( V, K, M, dir );
 fprintf( 1, '  done in %f s.\n', toc );
 
-[ x_ref, wx, ~ ] = quadratures.tri( 5 );
-[ t_ref, wt, lt ] = quadratures.line( 4 );
-l2_diff_err = 0;
-l2_err = 0;
-n_elems = stmesh.n_elems;
-nt = stmesh.nt;
-ht = stmesh.ht;
-for d = 0 : nt - 1
-  t = ht * ( t_ref + d );
-  for i_tau = 1 : n_elems
-    nodes = stmesh.nodes( stmesh.elems( i_tau, : ), : );
-    x = x_ref ...
-      * [ nodes( 2, : ) - nodes( 1, : ); nodes( 3, : ) - nodes( 1, : ) ] ...
-      + nodes( 1, : );
-    area = stmesh.areas( i_tau );
-    for i_t = 1 : lt
-      f = neu_fun( x, t( i_t ), stmesh.normals( i_tau, : ) );
-      l2_diff_err = l2_diff_err + ( wx' * ( f - neu{ d + 1 }( i_tau ) ).^2 ) ...
-        * area * ht * wt( i_t );
-      l2_err = l2_err + ( wx' * f.^2 ) * area * ht * wt( i_t );
-    end
-  end
-end
- 
-err_bnd = sqrt( l2_diff_err / l2_err );
-fprintf( 1, 'L2 relative error: %f.\n', err_bnd );
+L2_p0 = L2_tools( stmesh, basis_p0, 5, 4 );
+fprintf( 1, 'L2 relative error: %f.\n', L2_p0.relative_error( neu_fun, neu ) );
 
 stmesh.plot( dir{ 1 }, sprintf( 'Dirichlet, t = %f', 0 ) );
 stmesh.plot( dir{ nt }, sprintf( 'Dirichlet, t = %f', stmesh.T ) );

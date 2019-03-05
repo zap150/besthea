@@ -56,8 +56,8 @@ beid = be_identity( stmesh, basis_p0, basis_p1, 1 );
 M = beid.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
 
-beid_p0p0 = be_identity( stmesh, basis_p0, basis_p0, 5, 4 ); 
-neu = beid_p0p0.L2_projection( neu_fun );
+L2_p0 = L2_tools( stmesh, basis_p0, 5, 4 );
+neu = L2_p0.projection( neu_fun );
 
 solver = spacetime_solver( );
 
@@ -66,37 +66,8 @@ tic;
 dir = solver.solve_neumann( D, K, M, neu );
 fprintf( 1, '  done in %f s.\n', toc );
 
-[ x_ref, wx, ~ ] = quadratures.tri( 5 );
-[ t_ref, wt, lt ] = quadratures.line( 4 );
-l2_diff_err = 0;
-l2_err = 0;
-n_elems = stmesh.n_elems;
-nt = stmesh.nt;
-ht = stmesh.ht;
-for d = 0 : nt - 1
-  t = ht * ( t_ref + d );
-  for i_tau = 1 : n_elems
-    nodes = stmesh.nodes( stmesh.elems( i_tau, : ), : );
-    x = x_ref ...
-      * [ nodes( 2, : ) - nodes( 1, : ); nodes( 3, : ) - nodes( 1, : ) ] ...
-      + nodes( 1, : );
-    basis = basis_p1.eval( x_ref );
-    basis_map = basis_p1.l2g( i_tau );
-    area = stmesh.areas( i_tau );
-    neu_val = neu{ d + 1 }( basis_map( 1 ) ) * basis( :, 1 ) ...
-      + neu{ d + 1 }( basis_map( 2 ) ) * basis( :, 2 ) ...
-      + neu{ d + 1 }( basis_map( 3 ) ) * basis( :, 3 );
-    for i_t = 1 : lt
-      f = neu_fun( x, t( i_t ), stmesh.normals( i_tau, : ) );
-      l2_diff_err = l2_diff_err + ( wx' * ( f - neu_val ).^2 ) ...
-        * area * ht * wt( i_t );
-      l2_err = l2_err + ( wx' * f.^2 ) * area * ht * wt( i_t );
-    end
-  end
-end
- 
-err_bnd = sqrt( l2_diff_err / l2_err );
-fprintf( 1, 'L2 relative error: %f.\n', err_bnd );
+L2_p1 = L2_tools( stmesh, basis_p1, 5, 4 );
+fprintf( 1, 'L2 relative error: %f.\n', L2_p1.relative_error( dir_fun, dir ) );
 
 stmesh.plot( dir{ 1 }, sprintf( 'Dirichlet, t = %f', 0 ) );
 stmesh.plot( dir{ nt }, sprintf( 'Dirichlet, t = %f', stmesh.T ) );

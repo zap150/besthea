@@ -51,7 +51,7 @@ classdef be_evaluator
         density_loc = obj.density( map_trial );
         
         for i_quad = 1 : l
-          k = obj.kernel.eval( obj.points, y( i_quad, : ), ...
+          k = obj.kernel.eval( obj.points, y( i_quad, : ), 0, ...
             obj.mesh.normals( i_trial, : ) );
           trial_fun = obj.trial.eval( y_ref( i_quad, : ) );
           area = obj.mesh.areas( i_trial );

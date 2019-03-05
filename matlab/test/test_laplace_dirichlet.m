@@ -22,15 +22,18 @@ neu_fun = @( x, n ) n( 1 ) * x( :, 2 ) .* x( :, 3 ) ...
 order_nf = 4;
 order_ff = 4;
 
+basis_p1 = p1( mesh );
+basis_p0 = p0( mesh );
+
 beas_v_laplace = be_assembler( mesh, kernel_laplace_sl, ...
-  p0( mesh ), p0( mesh ), order_nf, order_ff );
+  basis_p0, basis_p0, order_nf, order_ff );
 fprintf( 1, 'Assembling V\n' );
 tic;
 V = beas_v_laplace.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
 
 beas_k_laplace = be_assembler( mesh, kernel_laplace_dl, ...
-  p0( mesh ), p1( mesh ), order_nf, order_ff );
+  basis_p0, basis_p1, order_nf, order_ff );
 fprintf( 1, 'Assembling K\n' );
 tic;
 K = beas_k_laplace.assemble( );
@@ -38,15 +41,14 @@ fprintf( 1, '  done in %f s.\n', toc );
 
 fprintf( 1, 'Assembling M\n' );
 tic;
-beid = be_identity( mesh, p0( mesh ), p1( mesh ), 1 );
+beid = be_identity( mesh, basis_p0, basis_p1, 1 );
 M = beid.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
 
-beid_p1p1 = be_identity( mesh, p1( mesh ), p1( mesh ), 5 );
-
 fprintf( 1, 'Assembling rhs\n' );
 tic;
-dir = beid_p1p1.L2_projection( dir_fun );
+L2_p1 = L2_tools( mesh, basis_p1, 5, 4 );
+dir = L2_p1.projection( dir_fun );
 rhs = 0.5 * M * dir;
 rhs = rhs + K * dir;
 fprintf( 1, '  done in %f s.\n', toc );
@@ -56,23 +58,8 @@ tic;
 neu = V \ rhs;
 fprintf( 1, '  done in %f s.\n', toc );
 
-[ x_ref, w, ~ ] = quadratures.tri( 5 );
-l2_diff_err = 0;
-l2_err = 0;
-n_elems = mesh.n_elems;
-for i_tau = 1 : n_elems
-  nodes = mesh.nodes( mesh.elems( i_tau, : ), : );
-  x = x_ref ...
-    * [ nodes( 2, : ) - nodes( 1, : ); nodes( 3, : ) - nodes( 1, : ) ] ...
-    + nodes( 1, : );
-  f = neu_fun( x, mesh.normals( i_tau, : ) );
-  area = mesh.areas( i_tau );
-  l2_diff_err = l2_diff_err + ( w' * ( f - neu( i_tau ) ).^2 ) * area;
-  l2_err = l2_err + ( w' * f.^2 ) * area;
-end
-
-err_bnd = sqrt( l2_diff_err / l2_err );
-fprintf( 1, 'L2 relative error: %f.\n', err_bnd );
+L2_p0 = L2_tools( mesh, basis_p0, 5, 4 );
+fprintf( 1, 'L2 relative error: %f.\n', L2_p0.relative_error( neu_fun, neu ) );
 
 mesh.plot( dir, 'Dirichlet' );
 mesh.plot( neu, 'Neumann' );
