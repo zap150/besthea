@@ -67,7 +67,8 @@ dir = solver.solve_neumann( D, K, M, neu );
 fprintf( 1, '  done in %f s.\n', toc );
 
 L2_p1 = L2_tools( stmesh, basis_p1, 5, 4 );
-fprintf( 1, 'L2 relative error: %f.\n', L2_p1.relative_error( dir_fun, dir ) );
+err_bnd = L2_p1.relative_error( dir_fun, dir );
+fprintf( 1, 'L2 relative error: %f.\n', err_bnd );
 
 stmesh.plot( dir{ 1 }, sprintf( 'Dirichlet, t = %f', 0 ) );
 stmesh.plot( dir{ stmesh.nt }, sprintf( 'Dirichlet, t = %f', stmesh.T ) );

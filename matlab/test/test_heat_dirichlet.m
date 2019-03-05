@@ -1,5 +1,4 @@
 function [ dir, neu, err_bnd ] = test_heat_dirichlet( level )
-%function test_heat_dirichlet( level, neu )
 
 if nargin < 1
   level = 0;
@@ -56,7 +55,8 @@ neu = solver.solve_dirichlet( V, K, M, dir );
 fprintf( 1, '  done in %f s.\n', toc );
 
 L2_p0 = L2_tools( stmesh, basis_p0, 5, 4 );
-fprintf( 1, 'L2 relative error: %f.\n', L2_p0.relative_error( neu_fun, neu ) );
+err_bnd =  L2_p0.relative_error( neu_fun, neu );
+fprintf( 1, 'L2 relative error: %f.\n', err_bnd );
 
 stmesh.plot( dir{ 1 }, sprintf( 'Dirichlet, t = %f', 0 ) );
 stmesh.plot( dir{ stmesh.nt }, sprintf( 'Dirichlet, t = %f', stmesh.T ) );
