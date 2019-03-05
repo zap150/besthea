@@ -59,9 +59,9 @@ L2_p0 = L2_tools( stmesh, basis_p0, 5, 4 );
 fprintf( 1, 'L2 relative error: %f.\n', L2_p0.relative_error( neu_fun, neu ) );
 
 stmesh.plot( dir{ 1 }, sprintf( 'Dirichlet, t = %f', 0 ) );
-stmesh.plot( dir{ nt }, sprintf( 'Dirichlet, t = %f', stmesh.T ) );
+stmesh.plot( dir{ stmesh.nt }, sprintf( 'Dirichlet, t = %f', stmesh.T ) );
 stmesh.plot( neu{ 1 }, sprintf( 'Neumann, t = %f', 0 ) );
-stmesh.plot( neu{ nt }, sprintf( 'Neumann, t = %f', stmesh.T ) );
+stmesh.plot( neu{ stmesh.nt }, sprintf( 'Neumann, t = %f', stmesh.T ) );
 
 % h = mesh.h / sqrt( 2 );
 % line( :, 1 ) = ( -1 + h ) : h : ( 1 - h );
