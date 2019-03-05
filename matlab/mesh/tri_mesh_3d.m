@@ -12,6 +12,8 @@ classdef tri_mesh_3d
     
     areas;
     normals;
+    
+    r_tinv;
   end
   
   properties (Dependent)
@@ -51,6 +53,7 @@ classdef tri_mesh_3d
       obj = obj.init_areas( );
       obj = obj.init_normals( );  
       obj = obj.init_edges( );
+      obj = obj.init_r_tinv( );
     end
     
 %     function e = get_nodes( obj, i )
@@ -158,6 +161,7 @@ classdef tri_mesh_3d
     
       obj = obj.init_areas( );
       obj = obj.init_normals( );
+      obj = obj.init_r_tinv( );
     end
     
     function plot( obj, data, name )
@@ -215,6 +219,18 @@ classdef tri_mesh_3d
         obj.elems( :, [ 3 1 ] ) ], 2 ), 'rows' );
       obj.n_edges = size( obj.edges, 1 );
       obj.elem_to_edges = reshape( ic, obj.n_elems, 3 );
+    end
+    
+    function obj = init_r_tinv( obj )
+      obj.r_tinv = cell( obj.n_elems, 1 );
+      for i = 1 : obj.n_elems
+        nod = obj.nodes( obj.elems( i, : ), : );
+        obj.r_tinv{ i } = inv( [ ...
+          nod( 2, : ) - nod( 1, : )
+          nod( 3, : ) - nod( 1, : )
+          obj.normals( i, : ) ...
+          ] );
+      end
     end
   end
 end

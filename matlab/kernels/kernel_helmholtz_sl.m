@@ -9,7 +9,7 @@ classdef kernel_helmholtz_sl < kernel
       obj.kappa = kappa;
     end
     
-    function value = eval( obj, x, y, ~ )
+    function value = eval( obj, x, y, ~, ~ )
       norm = sqrt( ( x - y ).^2 * [ 1; 1; 1 ] );
       value = exp( 1i * obj.kappa * norm ) ./ ( 4 * pi * norm );
     end

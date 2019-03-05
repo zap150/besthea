@@ -15,11 +15,11 @@ classdef kernel_heat_dl < kernel
       obj.d = 0;
     end
         
-    function value = eval( obj, x, y, n )
+    function value = eval( obj, x, y, ~, ny )
       xy = x - y;
       norm = sqrt( xy.^2 * [ 1; 1; 1 ] );
       rr = norm / sqrt( obj.alpha * obj.ht );   
-      dot = ( xy * n' ) / sqrt( obj.alpha * obj.ht );
+      dot = ( xy * ny' ) / sqrt( obj.alpha * obj.ht );
       if obj.d > 0
         value = - obj.dnG_anti_tau_anti_t( rr, dot, obj.d + 1 ) ...
           + 2 * obj.dnG_anti_tau_anti_t( rr, dot, obj.d ) ...

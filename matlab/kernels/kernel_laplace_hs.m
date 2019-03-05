@@ -1,4 +1,4 @@
-classdef kernel_laplace_sl < kernel
+classdef kernel_laplace_hs < kernel
   
   methods
     function value = eval( ~, x, y, ~, ~ )

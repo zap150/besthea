@@ -1,5 +1,4 @@
-function [ dir, neu, err_bnd ] = test_heat_dirichlet( level )
-%function test_heat_dirichlet( level, neu )
+function [ dir, neu, err_bnd ] = test_heat_neumann( level )
 
 if nargin < 1
   level = 0;
@@ -22,12 +21,23 @@ dir_fun = @( x, t, ~ ) ( 4 * pi * alpha * t )^( -3 / 2 ) ...
 neu_fun = @( x, t, n ) ( - 2 * t )^( -1 ) * dir_fun( x, t ) ...
   .* ( ( x - y ) * n' );
 
-beas_v_heat = be_assembler( stmesh, kernel_heat_sl( alpha ), ...
-  p0( stmesh ), p0( stmesh ), order_nf, order_ff );
-fprintf( 1, 'Assembling V\n' );
+beas_d1_heat = be_assembler( stmesh, kernel_heat_hs1( alpha ), ...
+  curl_p1( stmesh ), curl_p1( stmesh ), order_nf, order_ff );
+fprintf( 1, 'Assembling D1\n' );
 tic;
-V = beas_v_heat.assemble( );
+D = beas_d1_heat.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
+
+beas_d2_heat = be_assembler( stmesh, kernel_heat_hs2( alpha ), ...
+  p1( stmesh ), p1( stmesh ), order_nf, order_ff );
+fprintf( 1, 'Assembling D2\n' );
+tic;
+D2 = beas_d2_heat.assemble( );
+fprintf( 1, '  done in %f s.\n', toc );
+
+for i = 1 : stmesh.nt
+ D{ i } = D{ i } + D2{ i }; 
+end
 
 beas_k_heat = be_assembler( stmesh, kernel_heat_dl( alpha ), ...
   p0( stmesh ), p1( stmesh ), order_nf, order_ff );
@@ -42,15 +52,17 @@ beid = be_identity( stmesh, p0( stmesh ), p1( stmesh ), 1 );
 M = beid.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
 
-beid_p1p1 = be_identity( stmesh, p1( stmesh ), p1( stmesh ), 5, 4 ); 
-dir = beid_p1p1.L2_projection( dir_fun );
+beid_p0p0 = be_identity( stmesh, p0( stmesh ), p0( stmesh ), 5, 4 ); 
+neu = beid_p0p0.L2_projection( neu_fun );
 
 solver = spacetime_solver( );
 
 fprintf( 1, 'Solving the system\n' );
 tic;
-neu = solver.solve_dirichlet( V, K, M, dir );
+dir = solver.solve_neumann( D, K, M, neu );
 fprintf( 1, '  done in %f s.\n', toc );
+
+return;
 
 [ x_ref, wx, ~ ] = quadratures.tri( 5 );
 [ t_ref, wt, lt ] = quadratures.line( 4 );

@@ -1,4 +1,4 @@
-classdef kernel_heat_sl < kernel
+classdef kernel_heat_hs1 < kernel
   
   properties (Access = public)
     alpha;
@@ -8,7 +8,7 @@ classdef kernel_heat_sl < kernel
   end
   
   methods    
-    function obj = kernel_heat_sl( alpha )
+    function obj = kernel_heat_hs1( alpha )
       obj.alpha = alpha;
       obj.ht = 0;
       obj.nt = 0;
@@ -26,7 +26,7 @@ classdef kernel_heat_sl < kernel
         value = - obj.G_anti_tau_anti_t( rr, 1 ) ...
           + obj.G_anti_tau_anti_t( rr, 0 ) + obj.G_anti_tau( rr );
       end
-      value = value * sqrt( obj.ht / obj.alpha^3 );
+      value = value * sqrt( obj.ht * obj.alpha );
     end
   end
   

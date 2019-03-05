@@ -9,6 +9,10 @@ classdef p1 < basis_function
       obj.mesh = mesh;
     end
     
+    function value = dim( ~ )
+      value = 1;
+    end
+    
     function value = dim_global( obj )
       value = obj.mesh.n_nodes;
     end
@@ -17,7 +21,7 @@ classdef p1 < basis_function
       value = 3;
     end
     
-    function value = eval( ~, x, ~ )
+    function value = eval( ~, x, ~, ~, ~, ~, ~ )
       value( :, 1 ) = 1 - x( :, 1 ) - x( :, 2 );
       value( :, 2 ) = x( :, 1 );
       value( :, 3 ) = x( :, 2 );
