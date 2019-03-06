@@ -1,4 +1,4 @@
-function [ dir, neu, err_bnd, err_vol ] = test_laplace_dirichlet( level )
+function [ dir, neu, err_bnd, err_vol ] = test_laplace_neumann( level )
 
 if nargin < 1
   level = 0;
@@ -8,28 +8,29 @@ file='./input/cube_192.txt';
 mesh = tri_mesh_3d( file );
 mesh = mesh.refine( level );
 
-% dir_fun = @( x, ~ ) ( 1 + x( :, 1 ) ) .* exp( 2 * pi * x( :, 2 ) ) .* ...
-%   cos( 2 * pi * x( :, 3 ) );
-% neu_fun = @( x, n ) exp( 2 * pi * x( :, 2 ) ) ...
-%   .* ( n( 1 ) * cos( 2 * pi * x( :, 3 ) ) ...
-%   + 2 * pi * ( 1 + x( :, 1 ) ) * n( 2 ) .* cos( 2 * pi * x( :, 3 ) ) ...
-%   - 2 * pi * ( 1 + x( :, 1 ) ) * n( 3 ) .* sin( 2 * pi * x( :, 3 ) ) );
+dir_fun = @( x, ~ ) ( 1 + x( :, 1 ) ) .* exp( 2 * pi * x( :, 2 ) ) .* ...
+  cos( 2 * pi * x( :, 3 ) );
+neu_fun = @( x, n ) exp( 2 * pi * x( :, 2 ) ) ...
+  .* ( n( 1 ) * cos( 2 * pi * x( :, 3 ) ) ...
+  + 2 * pi * ( 1 + x( :, 1 ) ) * n( 2 ) .* cos( 2 * pi * x( :, 3 ) ) ...
+  - 2 * pi * ( 1 + x( :, 1 ) ) * n( 3 ) .* sin( 2 * pi * x( :, 3 ) ) );
 
-dir_fun = @( x, ~ ) x( :, 1 ) .* x( :, 2 ) .* x( :, 3 );
-neu_fun = @( x, n ) n( 1 ) * x( :, 2 ) .* x( :, 3 ) ...
-  + n( 2 ) * x( :, 1 ) .* x( :, 3 ) +  n( 3 ) * x( :, 1 ) .* x( :, 2 );
+% dir_fun = @( x, ~ ) x( :, 1 ) .* x( :, 2 ) .* x( :, 3 );
+% neu_fun = @( x, n ) n( 1 ) * x( :, 2 ) .* x( :, 3 ) ...
+%   + n( 2 ) * x( :, 1 ) .* x( :, 3 ) +  n( 3 ) * x( :, 1 ) .* x( :, 2 );
 
 order_nf = 4;
 order_ff = 4;
 
 basis_p1 = p1( mesh );
 basis_p0 = p0( mesh );
+basis_curl_p1 = curl_p1( mesh );
 
-beas_v_laplace = be_assembler( mesh, kernel_laplace_sl, ...
-  basis_p0, basis_p0, order_nf, order_ff );
-fprintf( 1, 'Assembling V\n' );
+beas_d_laplace = be_assembler( mesh, kernel_laplace_sl, ...
+  basis_curl_p1, basis_curl_p1, order_nf, order_ff );
+fprintf( 1, 'Assembling D\n' );
 tic;
-V = beas_v_laplace.assemble( );
+D = beas_d_laplace.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
 
 beas_k_laplace = be_assembler( mesh, kernel_laplace_dl, ...
@@ -47,15 +48,23 @@ fprintf( 1, '  done in %f s.\n', toc );
 
 fprintf( 1, 'Assembling rhs\n' );
 tic;
-L2_p1 = L2_tools( mesh, basis_p1, 5, 4 );
-dir = L2_p1.projection( dir_fun );
-rhs = 0.5 * M * dir;
-rhs = rhs + K * dir;
+L2_p0 = L2_tools( mesh, basis_p0, 5, 4 );
+neu = L2_p0.projection( neu_fun );
+rhs = 0.5 * M' * neu;
+rhs = rhs - K' * neu;
+fprintf( 1, '  done in %f s.\n', toc );
+
+fprintf( 1, 'Stabilizing\n' );
+tic;
+a = M' * ones( mesh.n_elems, 1 );
+D = D + a * a';
+alpha = integral( mesh, dir_fun );
+rhs = rhs + alpha * a;
 fprintf( 1, '  done in %f s.\n', toc );
 
 fprintf( 1, 'Solving the system\n' );
 tic;
-neu = V \ rhs;
+dir = D \ rhs;
 fprintf( 1, '  done in %f s.\n', toc );
 
 L2_p0 = L2_tools( mesh, basis_p0, 5, 4 );
@@ -90,5 +99,21 @@ title( 'Solution' );
 
 sol = dir_fun( [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) zeros( l^2, 1 ) ] );
 err_vol = abs( repr - sol );
+
+end
+
+function result = integral( mesh, fun )
+
+[ x_ref, wx, ~ ] = quadratures.tri( 5 );
+result = 0;
+n_elems = mesh.n_elems;
+for i_tau = 1 : n_elems
+  nodes = mesh.nodes( mesh.elems( i_tau, : ), : );
+  x = nodes( 1, : ) + x_ref ...
+    * [ nodes( 2, : ) - nodes( 1, : ); nodes( 3, : ) - nodes( 1, : ) ];
+  area = mesh.areas( i_tau );
+  f = fun( x, mesh.normals( i_tau, : ) );
+  result = result + ( wx' * f ) * area;
+end
 
 end
