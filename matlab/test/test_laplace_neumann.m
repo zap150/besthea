@@ -8,16 +8,16 @@ file='./input/cube_192.txt';
 mesh = tri_mesh_3d( file );
 mesh = mesh.refine( level );
 
-dir_fun = @( x, ~ ) ( 1 + x( :, 1 ) ) .* exp( 2 * pi * x( :, 2 ) ) .* ...
-  cos( 2 * pi * x( :, 3 ) );
-neu_fun = @( x, n ) exp( 2 * pi * x( :, 2 ) ) ...
-  .* ( n( 1 ) * cos( 2 * pi * x( :, 3 ) ) ...
-  + 2 * pi * ( 1 + x( :, 1 ) ) * n( 2 ) .* cos( 2 * pi * x( :, 3 ) ) ...
-  - 2 * pi * ( 1 + x( :, 1 ) ) * n( 3 ) .* sin( 2 * pi * x( :, 3 ) ) );
+% dir_fun = @( x, ~ ) ( 1 + x( :, 1 ) ) .* exp( 2 * pi * x( :, 2 ) ) .* ...
+%   cos( 2 * pi * x( :, 3 ) );
+% neu_fun = @( x, n ) exp( 2 * pi * x( :, 2 ) ) ...
+%   .* ( n( 1 ) * cos( 2 * pi * x( :, 3 ) ) ...
+%   + 2 * pi * ( 1 + x( :, 1 ) ) * n( 2 ) .* cos( 2 * pi * x( :, 3 ) ) ...
+%   - 2 * pi * ( 1 + x( :, 1 ) ) * n( 3 ) .* sin( 2 * pi * x( :, 3 ) ) );
 
-% dir_fun = @( x, ~ ) x( :, 1 ) .* x( :, 2 ) .* x( :, 3 );
-% neu_fun = @( x, n ) n( 1 ) * x( :, 2 ) .* x( :, 3 ) ...
-%   + n( 2 ) * x( :, 1 ) .* x( :, 3 ) +  n( 3 ) * x( :, 1 ) .* x( :, 2 );
+dir_fun = @( x, ~ ) x( :, 1 ) .* x( :, 2 ) .* x( :, 3 );
+neu_fun = @( x, n ) n( 1 ) * x( :, 2 ) .* x( :, 3 ) ...
+  + n( 2 ) * x( :, 1 ) .* x( :, 3 ) +  n( 3 ) * x( :, 1 ) .* x( :, 2 );
 
 order_nf = 4;
 order_ff = 4;
@@ -58,7 +58,10 @@ fprintf( 1, 'Stabilizing\n' );
 tic;
 a = M' * ones( mesh.n_elems, 1 );
 D = D + a * a';
-alpha = integral( mesh, dir_fun );
+alpha = integral_continuous( mesh, dir_fun );
+%L2_p1 = L2_tools( mesh, basis_p1, 5, 4 );
+%dir_proj = L2_p1.projection( dir_fun );
+%alpha = integral_discrete( mesh, basis_p1, dir_proj );
 rhs = rhs + alpha * a;
 fprintf( 1, '  done in %f s.\n', toc );
 
@@ -67,8 +70,8 @@ tic;
 dir = D \ rhs;
 fprintf( 1, '  done in %f s.\n', toc );
 
-L2_p0 = L2_tools( mesh, basis_p0, 5, 4 );
-err_bnd = L2_p0.relative_error( neu_fun, neu );
+L2_p1 = L2_tools( mesh, basis_p1, 5, 4 );
+err_bnd = L2_p1.relative_error( dir_fun, dir );
 fprintf( 1, 'L2 relative error: %f.\n', err_bnd );
 
 mesh.plot( dir, 'Dirichlet' );
@@ -102,7 +105,7 @@ err_vol = abs( repr - sol );
 
 end
 
-function result = integral( mesh, fun )
+function result = integral_continuous( mesh, fun )
 
 [ x_ref, wx, ~ ] = quadratures.tri( 5 );
 result = 0;
@@ -114,6 +117,25 @@ for i_tau = 1 : n_elems
   area = mesh.areas( i_tau );
   f = fun( x, mesh.normals( i_tau, : ) );
   result = result + ( wx' * f ) * area;
+end
+
+end
+
+function result = integral_discrete( mesh, basis, fun )
+
+[ x_ref, wx, ~ ] = quadratures.tri( 5 );
+result = 0;
+n_elems = mesh.n_elems;
+basis_dim = basis.dim_local( );
+for i_tau = 1 : n_elems
+  basis_val = basis.eval( x_ref );
+  basis_map = basis.l2g( i_tau );
+  area = mesh.areas( i_tau );
+  val = 0;
+  for i_local_dim = 1 : basis_dim
+    val = val + fun( basis_map( i_local_dim ) ) * basis_val( :, i_local_dim );
+  end
+  result = result + ( wx' * val ) * area;
 end
 
 end
