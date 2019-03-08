@@ -42,6 +42,65 @@ classdef L2_tools
       end
     end
     
+    function result = relative_error_s( obj, fun, fun_disc )
+      [ x_ref, wx, ~ ] = quadratures.tri( obj.order_x );
+      l2_diff_err = 0;
+      l2_err = 0;
+      n_elems = obj.mesh.n_elems;
+      basis_dim = obj.basis.dim_local( );
+      for i_tau = 1 : n_elems
+        nodes = obj.mesh.nodes( obj.mesh.elems( i_tau, : ), : );
+        x = nodes( 1, : ) + x_ref ...
+          * [ nodes( 2, : ) - nodes( 1, : ); nodes( 3, : ) - nodes( 1, : ) ];
+        basis_val = obj.basis.eval( x_ref );
+        basis_map = obj.basis.l2g( i_tau );
+        area = obj.mesh.areas( i_tau );
+        val = 0;
+        for i_local_dim = 1 : basis_dim
+          val = val + fun_disc( basis_map( i_local_dim ) ) ...
+            * basis_val( :, i_local_dim );
+        end
+        f = fun( x, obj.mesh.normals( i_tau, : ) );
+        l2_diff_err = l2_diff_err + ( wx' * ( f - val ).^2 ) * area;
+        l2_err = l2_err + ( wx' * f.^2 ) * area;
+      end
+      result = sqrt( l2_diff_err / l2_err );
+    end
+    
+    function result = relative_error_st( obj, fun, fun_disc )
+      [ x_ref, wx, ~ ] = quadratures.tri( obj.order_x );
+      [ t_ref, wt, lt ] = quadratures.line( obj.order_t );
+      l2_diff_err = 0;
+      l2_err = 0;
+      n_elems = obj.mesh.n_elems;
+      basis_dim = obj.basis.dim_local( );
+      nt = obj.mesh.nt;
+      ht = obj.mesh.ht;
+      for d = 0 : nt - 1
+        t = ht * ( t_ref + d );
+        for i_tau = 1 : n_elems
+          nodes = obj.mesh.nodes( obj.mesh.elems( i_tau, : ), : );
+          x = nodes( 1, : ) + x_ref ...
+            * [ nodes( 2, : ) - nodes( 1, : ); nodes( 3, : ) - nodes( 1, : ) ];
+          basis_val = obj.basis.eval( x_ref );
+          basis_map = obj.basis.l2g( i_tau );
+          area = obj.mesh.areas( i_tau );
+          val = 0;
+          for i_local_dim = 1 : basis_dim
+            val = val + fun_disc{ d + 1 }( basis_map( i_local_dim ) ) ...
+              * basis_val( :, i_local_dim );
+          end
+          for i_t = 1 : lt
+            f = fun( x, t( i_t ), obj.mesh.normals( i_tau, : ) );
+            l2_diff_err = l2_diff_err + ( wx' * ( f - val ).^2 ) ...
+              * area * ht * wt( i_t );
+            l2_err = l2_err + ( wx' * f.^2 ) * area * ht * wt( i_t );
+          end
+        end
+      end
+      result = sqrt( l2_diff_err / l2_err );
+    end
+    
 %     function result = norm_continuous( obj, fun )
 %       if( isa( obj.mesh, 'spacetime_mesh' ) )
 %         result = norm_continuous_st( obj, fun );
@@ -116,66 +175,7 @@ classdef L2_tools
         rhs( :, : ) = 0;
       end
     end
-    
-    function result = relative_error_s( obj, fun, fun_disc )
-      [ x_ref, wx, ~ ] = quadratures.tri( obj.order_x );
-      l2_diff_err = 0;
-      l2_err = 0;
-      n_elems = obj.mesh.n_elems;
-      basis_dim = obj.basis.dim_local( );
-      for i_tau = 1 : n_elems
-        nodes = obj.mesh.nodes( obj.mesh.elems( i_tau, : ), : );
-        x = nodes( 1, : ) + x_ref ...
-          * [ nodes( 2, : ) - nodes( 1, : ); nodes( 3, : ) - nodes( 1, : ) ];
-        basis_val = obj.basis.eval( x_ref );
-        basis_map = obj.basis.l2g( i_tau );
-        area = obj.mesh.areas( i_tau );
-        val = 0;
-        for i_local_dim = 1 : basis_dim
-          val = val + fun_disc( basis_map( i_local_dim ) ) ...
-            * basis_val( :, i_local_dim );
-        end
-        f = fun( x, obj.mesh.normals( i_tau, : ) );
-        l2_diff_err = l2_diff_err + ( wx' * ( f - val ).^2 ) * area;
-        l2_err = l2_err + ( wx' * f.^2 ) * area;
-      end
-      result = sqrt( l2_diff_err / l2_err );
-    end
-    
-    function result = relative_error_st( obj, fun, fun_disc )
-      [ x_ref, wx, ~ ] = quadratures.tri( obj.order_x );
-      [ t_ref, wt, lt ] = quadratures.line( obj.order_t );
-      l2_diff_err = 0;
-      l2_err = 0;
-      n_elems = obj.mesh.n_elems;
-      basis_dim = obj.basis.dim_local( );
-      nt = obj.mesh.nt;
-      ht = obj.mesh.ht;
-      for d = 0 : nt - 1
-        t = ht * ( t_ref + d );
-        for i_tau = 1 : n_elems
-          nodes = obj.mesh.nodes( obj.mesh.elems( i_tau, : ), : );
-          x = nodes( 1, : ) + x_ref ...
-            * [ nodes( 2, : ) - nodes( 1, : ); nodes( 3, : ) - nodes( 1, : ) ];
-          basis_val = obj.basis.eval( x_ref );
-          basis_map = obj.basis.l2g( i_tau );
-          area = obj.mesh.areas( i_tau );
-          val = 0;
-          for i_local_dim = 1 : basis_dim
-            val = val + fun_disc{ d + 1 }( basis_map( i_local_dim ) ) ...
-              * basis_val( :, i_local_dim );
-          end
-          for i_t = 1 : lt
-            f = fun( x, t( i_t ), obj.mesh.normals( i_tau, : ) );
-            l2_diff_err = l2_diff_err + ( wx' * ( f - val ).^2 ) ...
-              * area * ht * wt( i_t );
-            l2_err = l2_err + ( wx' * f.^2 ) * area * ht * wt( i_t );
-          end
-        end
-      end
-      result = sqrt( l2_diff_err / l2_err );
-    end
-    
+        
 %     function result = norm_continuous_s( obj, fun )
 %       [ x_ref, wx, ~ ] = quadratures.tri( obj.order_x );
 %       l2_norm = 0;

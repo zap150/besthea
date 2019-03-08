@@ -1,4 +1,5 @@
-function [ dir, neu, err_bnd ] = test_heat_dirichlet( level )
+function ...
+  [ dir, neu, neu_proj, err_bnd, err_bnd_x, err_bnd_proj, err_bnd_proj_x ] = test_heat_dirichlet( level )
 
 if nargin < 1
   level = 0;
@@ -13,7 +14,7 @@ stmesh = stmesh.refine_xt( level, 2 );
 order_nf = 4;
 order_ff = 4;
 
-alpha = 1;
+alpha = 0.1;
 y = [ 0 0 1.5 ];
 dir_fun = @( x, t, ~ ) ( 4 * pi * alpha * t )^( -3 / 2 ) ...
   .* exp( - ( ( x - y ).^2 * [ 1; 1; 1 ] ) / ( 4 * alpha * t ) );
@@ -56,6 +57,18 @@ fprintf( 1, '  done in %f s.\n', toc );
 L2_p0 = L2_tools( stmesh, basis_p0, 5, 4 );
 err_bnd =  L2_p0.relative_error( neu_fun, neu );
 fprintf( 1, 'L2 relative error: %f.\n', err_bnd );
+neu_proj = L2_p0.projection( neu_fun );
+err_bnd_proj =  L2_p0.relative_error( neu_fun, neu_proj );
+fprintf( 1, 'Projection L2 relative error: %f.\n', err_bnd_proj );
+
+err_bnd_x = zeros( stmesh.nt, 1 );
+err_bnd_proj_x = zeros( stmesh.nt, 1 );
+for i= 1 : stmesh.nt
+  t = ( i - 0.5 ) / stmesh.nt; 
+  neu_fun_t = @( x, n ) neu_fun( x, t, n ); 
+  err_bnd_x( i ) = L2_p0.relative_error_s( neu_fun_t, neu{ i } );
+  err_bnd_proj_x( i ) = L2_p0.relative_error_s( neu_fun_t, neu_proj{ i } );
+end
 
 stmesh.plot( dir{ 1 }, sprintf( 'Dirichlet, t = %f', 0 ) );
 stmesh.plot( dir{ stmesh.nt }, sprintf( 'Dirichlet, t = %f', stmesh.T ) );

@@ -26,7 +26,7 @@ basis_p1 = p1( mesh );
 basis_p0 = p0( mesh );
 basis_curl_p1 = curl_p1( mesh );
 
-beas_d_laplace = be_assembler( mesh, kernel_laplace_sl, ...
+beas_d_laplace = be_assembler( mesh, kernel_laplace_hs, ...
   basis_curl_p1, basis_curl_p1, order_nf, order_ff );
 fprintf( 1, 'Assembling D\n' );
 tic;

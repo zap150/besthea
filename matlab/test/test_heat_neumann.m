@@ -1,4 +1,5 @@
-function [ dir, neu, err_bnd ] = test_heat_neumann( level )
+function ...
+  [ dir, neu, dir_proj, err_bnd, err_bnd_x, err_bnd_proj, err_bnd_proj_x ] = test_heat_neumann( level )
 
 if nargin < 1
   level = 0;
@@ -13,7 +14,7 @@ stmesh = stmesh.refine_xt( level, 2 );
 order_nf = 4;
 order_ff = 4;
 
-alpha = 1;
+alpha = 0.1;
 y = [ 0 0 1.5 ];
 dir_fun = @( x, t, ~ ) ( 4 * pi * alpha * t )^( -3 / 2 ) ...
   .* exp( - ( ( x - y ).^2 * [ 1; 1; 1 ] ) / ( 4 * alpha * t ) );
@@ -39,7 +40,7 @@ D2 = beas_d2_heat.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
 
 for i = 1 : stmesh.nt
- D{ i } = D{ i } + D2{ i }; 
+ D{ i } = D{ i } + D2{ i };
 end
 
 beas_k_heat = be_assembler( stmesh, kernel_heat_dl( alpha ), ...
@@ -68,6 +69,18 @@ fprintf( 1, '  done in %f s.\n', toc );
 L2_p1 = L2_tools( stmesh, basis_p1, 5, 4 );
 err_bnd = L2_p1.relative_error( dir_fun, dir );
 fprintf( 1, 'L2 relative error: %f.\n', err_bnd );
+dir_proj = L2_p1.projection( dir_fun );
+err_bnd_proj = L2_p1.relative_error( dir_fun, dir_proj );
+fprintf( 1, 'Projection L2 relative error: %f.\n', err_bnd_proj );
+
+err_bnd_x = zeros( stmesh.nt, 1 );
+err_bnd_proj_x = zeros( stmesh.nt, 1 );
+for i= 1 : stmesh.nt
+  t = ( i - 0.5 ) / stmesh.nt;
+  dir_fun_t = @( x, n ) dir_fun( x, t, n );
+  err_bnd_x( i ) = L2_p1.relative_error_s( dir_fun_t, dir{ i } );
+  err_bnd_proj_x( i ) = L2_p1.relative_error_s( dir_fun_t, dir_proj{ i } );
+end
 
 stmesh.plot( dir{ 1 }, sprintf( 'Dirichlet, t = %f', 0 ) );
 stmesh.plot( dir{ stmesh.nt }, sprintf( 'Dirichlet, t = %f', stmesh.T ) );
@@ -84,19 +97,19 @@ stmesh.plot( neu{ stmesh.nt }, sprintf( 'Neumann, t = %f', stmesh.T ) );
 % tic;
 % repr = beev_v_laplace.evaluate( );
 % fprintf( 1, '  done in %f s.\n', toc );
-% 
+%
 % beev_k_laplace = be_evaluator( mesh, kernel_laplace_dl, p1( mesh ), dir, ...
 %   [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) zeros( l^2, 1 ) ], order_ff );
 % fprintf( 1, 'Evaluating W\n' );
 % repr = repr - beev_k_laplace.evaluate( );
 % fprintf( 1, '  done in %f s.\n', toc );
-% 
+%
 % figure;
 % handle = surf( X, Y, zeros( l, l ), reshape( repr, l, l ) );
 % shading( 'interp' );
 % set( handle, 'EdgeColor', 'black' );
 % title( 'Solution' );
-% 
+%
 % sol = dir_fun( [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) zeros( l^2, 1 ) ] );
 % err_vol = abs( repr - sol );
 

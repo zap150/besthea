@@ -17,7 +17,8 @@ classdef kernel_heat_hs2 < kernel
         
     function value = eval( obj, x, y, nx, ny )
       dot = nx * ny';
-      if dot == 0
+%       if dot == 0
+      if dot < 1e-8
         value = zeros( size( x, 1 ), 1 );
         return;
       end
