@@ -21,6 +21,20 @@ classdef spacetime_solver
       end
     end
     
+    function density = solve_dirichlet_indirect( ~, V, M, dir )
+      nt = size( V, 1 );
+      density = cell( nt, 1 );
+      
+      rhs = zeros( size( V{ 1 }, 1 ), 1 );      
+      for d = 1 : nt
+        rhs( :, 1 ) = M * dir{ d };
+        for j = 2 : d
+          rhs( :, 1 ) = rhs( :, 1 ) - V{ j } * density{ d - j + 1 };
+        end        
+        density{ d } = V{ 1 } \ rhs;
+      end
+    end
+    
     function dir = solve_neumann( ~, D, K, M, neu )
       nt = size( D, 1 );
       dir = cell( nt, 1 );

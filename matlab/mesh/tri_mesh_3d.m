@@ -164,6 +164,13 @@ classdef tri_mesh_3d
       obj = obj.init_r_tinv( );
     end
     
+    function obj = map_to_unit_ball( obj )
+      obj.nodes = obj.nodes ./ sqrt( ( obj.nodes .* obj.nodes ) * [ 1; 1; 1 ] );
+      obj = obj.init_areas( );
+      obj = obj.init_normals( );
+      obj = obj.init_r_tinv( );
+    end
+    
     function plot( obj, data, name )
       if nargin < 2
         data = zeros( obj.n_elems, 1 );
@@ -181,6 +188,7 @@ classdef tri_mesh_3d
         set( handle, 'EdgeColor', 'black' );
       end
       title( name );
+      axis vis3d;
     end
   end
   
