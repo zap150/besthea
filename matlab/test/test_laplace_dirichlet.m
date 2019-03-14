@@ -1,4 +1,4 @@
-function [ dir, neu, err_bnd, err_vol ] = test_laplace_dirichlet( level )
+function [ dir, neu, repr, err_bnd, err_vol ] = test_laplace_dirichlet( level )
 
 if nargin < 1
   level = 0;

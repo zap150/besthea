@@ -1,5 +1,6 @@
 function ...
-  [ dir, neu, neu_proj, err_bnd, err_bnd_x, err_bnd_proj, err_bnd_proj_x ] = test_heat_dirichlet( level )
+  [ dir, neu, neu_proj, repr, err_bnd, err_bnd_x, err_bnd_proj, ...
+  err_bnd_proj_x, err_vol ] = test_heat_dirichlet( level )
 
 if nargin < 1
   level = 0;
@@ -14,7 +15,7 @@ stmesh = stmesh.refine_xt( level, 2 );
 order_nf = 4;
 order_ff = 4;
 
-alpha = 0.1;
+alpha = 1;
 y = [ 0 0 1.5 ];
 dir_fun = @( x, t, ~ ) ( 4 * pi * alpha * t )^( -3 / 2 ) ...
   .* exp( - ( ( x - y ).^2 * [ 1; 1; 1 ] ) / ( 4 * alpha * t ) );
@@ -64,41 +65,60 @@ fprintf( 1, 'Projection L2 relative error: %f.\n', err_bnd_proj );
 err_bnd_x = zeros( stmesh.nt, 1 );
 err_bnd_proj_x = zeros( stmesh.nt, 1 );
 for i= 1 : stmesh.nt
-  t = ( i - 0.5 ) / stmesh.nt; 
-  neu_fun_t = @( x, n ) neu_fun( x, t, n ); 
+  t = ( i - 0.5 ) / stmesh.nt;
+  neu_fun_t = @( x, n ) neu_fun( x, t, n );
   err_bnd_x( i ) = L2_p0.relative_error_s( neu_fun_t, neu{ i } );
   err_bnd_proj_x( i ) = L2_p0.relative_error_s( neu_fun_t, neu_proj{ i } );
 end
 
-stmesh.plot( dir{ 1 }, sprintf( 'Dirichlet, t = %f', 0 ) );
-stmesh.plot( dir{ stmesh.nt }, sprintf( 'Dirichlet, t = %f', stmesh.T ) );
-stmesh.plot( neu{ 1 }, sprintf( 'Neumann, t = %f', 0 ) );
-stmesh.plot( neu{ stmesh.nt }, sprintf( 'Neumann, t = %f', stmesh.T ) );
+stmesh.plot( dir{ 1 }, sprintf( 'Dirichlet, t = %f', stmesh.ht / 2 ) );
+stmesh.plot( dir{ stmesh.nt }, sprintf( 'Dirichlet, t = %f', ...
+  stmesh.T - stmesh.ht / 2 ) );
+stmesh.plot( neu{ 1 }, sprintf( 'Neumann, t = %f', stmesh.ht / 2 ) );
+stmesh.plot( neu{ stmesh.nt }, sprintf( 'Neumann, t = %f', ...
+  stmesh.T - stmesh.ht / 2 ) );
 
-% h = mesh.h / sqrt( 2 );
-% line( :, 1 ) = ( -1 + h ) : h : ( 1 - h );
-% l = size( line, 1 );
-% [ X, Y ] = meshgrid( line, line );
-% beev_v_laplace = be_evaluator( mesh, kernel_laplace_sl, p0( mesh ), neu, ...
-%   [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) zeros( l^2, 1 ) ], order_ff );
-% fprintf( 1, 'Evaluating V\n' );
-% tic;
-% repr = beev_v_laplace.evaluate( );
-% fprintf( 1, '  done in %f s.\n', toc );
-% 
-% beev_k_laplace = be_evaluator( mesh, kernel_laplace_dl, p1( mesh ), dir, ...
-%   [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) zeros( l^2, 1 ) ], order_ff );
-% fprintf( 1, 'Evaluating W\n' );
-% repr = repr - beev_k_laplace.evaluate( );
-% fprintf( 1, '  done in %f s.\n', toc );
-% 
-% figure;
-% handle = surf( X, Y, zeros( l, l ), reshape( repr, l, l ) );
-% shading( 'interp' );
-% set( handle, 'EdgeColor', 'black' );
-% title( 'Solution' );
-% 
-% sol = dir_fun( [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) zeros( l^2, 1 ) ] );
-% err_vol = abs( repr - sol );
+h = stmesh.h / sqrt( 2 );
+line( :, 1 ) = ( -1 + h ) : h : ( 1 - h );
+l = size( line, 1 );
+[ X, Y ] = meshgrid( line, line );
+beev_v_heat = be_evaluator( stmesh, kernel_heat_sl( alpha ), p0( stmesh ), ...
+  neu, ...
+  [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) zeros( l^2, 1 ) ], order_ff );
+fprintf( 1, 'Evaluating V\n' );
+tic;
+repr = beev_v_heat.evaluate( );
+fprintf( 1, '  done in %f s.\n', toc );
+
+beev_k_heat = be_evaluator( stmesh, kernel_heat_dl( alpha ), p1( stmesh ), ... 
+  dir, ...
+  [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) zeros( l^2, 1 ) ], order_ff );
+fprintf( 1, 'Evaluating W\n' );
+pot_k = beev_k_heat.evaluate( );
+for d = 1 : stmesh.nt + 1
+  repr{ d } = repr{ d } - pot_k{ d };
+end
+fprintf( 1, '  done in %f s.\n', toc );
+
+figure;
+handle = surf( X, Y, zeros( l, l ), reshape( repr{ 1 }, l, l ) );
+shading( 'interp' );
+set( handle, 'EdgeColor', 'black' );
+title( sprintf( 'Solution, t = %f', 0 ) );
+
+figure;
+handle = surf( X, Y, zeros( l, l ), reshape( repr{ stmesh.nt + 1 }, l, l ) );
+shading( 'interp' );
+set( handle, 'EdgeColor', 'black' );
+title( sprintf( 'Solution, t = %f', stmesh.T ) );
+
+err_vol = cell( stmesh.nt + 1, 1 );
+%%%%% initial condition
+err_vol{ 1 } = zeros( l^2, 1 );
+for d = 1 : stmesh.nt
+  sol = dir_fun( [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) ...
+    zeros( l^2, 1 ) ], d * stmesh.ht );
+  err_vol{ d + 1 } = abs( repr{ d + 1 } - sol );
+end
 
 end

@@ -45,7 +45,7 @@ classdef be_evaluator
       dim_trial = obj.trial.dim_local( );
       [ y_ref, w, l ] = quadratures.tri( obj.order_ff );
       
-      for i_trial = 1 : n_elems        
+      for i_trial = 1 : n_elems
         y = global_quad( obj, y_ref, i_trial );
         map_trial = obj.trial.l2g( i_trial );
         density_loc = obj.density( map_trial );
@@ -56,7 +56,7 @@ classdef be_evaluator
           trial_fun = obj.trial.eval( y_ref( i_quad, : ) );
           area = obj.mesh.areas( i_trial );
           
-          for i_loc_trial = 1 : dim_trial            
+          for i_loc_trial = 1 : dim_trial
             result = result + w( i_quad ) * area ...
               * density_loc( i_loc_trial ) * k .* trial_fun( :, i_loc_trial );
           end
@@ -65,18 +65,51 @@ classdef be_evaluator
     end
     
     function result = evaluate_st( obj )
-      nt = obj.mesh.get_nt( );
+      nt = obj.mesh.nt;
+      obj.kernel.ht = obj.mesh.ht;
+      obj.kernel.nt = nt;
       result = cell( nt, 1 );
-      for d = 0 : nt - 1
-        result{ d + 1 } = zeros( size( obj.points, 1 ), 1 );
+      
+      %%%%% result{ 1 } holds the initial condition
+      for d = 1 : nt + 1
+        result{ d } = zeros( size( obj.points, 1 ), 1 );
       end
+      
+      n_elems = obj.mesh.n_elems;
+      dim_trial = obj.trial.dim_local( );
+      [ y_ref, w, l ] = quadratures.tri( obj.order_ff );
+      
+      for d = 1 : nt
+        obj.kernel.d = d;
+        for i_trial = 1 : n_elems
+          y = global_quad( obj, y_ref, i_trial );
+          map_trial = obj.trial.l2g( i_trial );
+          density_loc = obj.density{ d }( map_trial );
+          
+          for i_quad = 1 : l
+            k = obj.kernel.eval_repr( obj.points, y( i_quad, : ), ...
+              obj.mesh.normals( i_trial, : ) );
+            trial_fun = obj.trial.eval( y_ref( i_quad, : ) );
+            area = obj.mesh.areas( i_trial );
+            
+            for i_loc_trial = 1 : dim_trial
+              result_loc = w( i_quad ) * area ...
+                * density_loc( i_loc_trial ) * k .* trial_fun( :, i_loc_trial );
+              for i_d = 1 : d
+                result{ i_d + 1 } = result{ i_d + 1 } + result_loc;
+              end
+            end
+          end
+        end
+      end
+      
     end
     
-    function y = global_quad( obj, y_ref, i_trial )   
+    function y = global_quad( obj, y_ref, i_trial )
       nodes = obj.mesh.nodes( obj.mesh.elems( i_trial, : ), : );
       y = nodes( 1, : ) + y_ref ...
-        * [ nodes( 2, : ) - nodes( 1, : ); nodes( 3, : ) - nodes( 1, : ) ];    
-    end    
+        * [ nodes( 2, : ) - nodes( 1, : ); nodes( 3, : ) - nodes( 1, : ) ];
+    end
     
   end
   

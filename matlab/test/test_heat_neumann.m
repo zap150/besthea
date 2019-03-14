@@ -82,10 +82,12 @@ for i= 1 : stmesh.nt
   err_bnd_proj_x( i ) = L2_p1.relative_error_s( dir_fun_t, dir_proj{ i } );
 end
 
-stmesh.plot( dir{ 1 }, sprintf( 'Dirichlet, t = %f', 0 ) );
-stmesh.plot( dir{ stmesh.nt }, sprintf( 'Dirichlet, t = %f', stmesh.T ) );
-stmesh.plot( neu{ 1 }, sprintf( 'Neumann, t = %f', 0 ) );
-stmesh.plot( neu{ stmesh.nt }, sprintf( 'Neumann, t = %f', stmesh.T ) );
+stmesh.plot( dir{ 1 }, sprintf( 'Dirichlet, t = %f', stmesh.ht / 2 ) );
+stmesh.plot( dir{ stmesh.nt }, sprintf( 'Dirichlet, t = %f', ...
+  stmesh.T - stmesh.ht / 2 ) );
+stmesh.plot( neu{ 1 }, sprintf( 'Neumann, t = %f', stmesh.ht / 2 ) );
+stmesh.plot( neu{ stmesh.nt }, sprintf( 'Neumann, t = %f', ...
+  stmesh.T - stmesh.ht / 2 ) );
 
 % h = mesh.h / sqrt( 2 );
 % line( :, 1 ) = ( -1 + h ) : h : ( 1 - h );

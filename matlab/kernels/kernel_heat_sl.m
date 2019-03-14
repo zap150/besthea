@@ -19,25 +19,41 @@ classdef kernel_heat_sl < kernel
       norm = sqrt( ( x - y ).^2 * [ 1; 1; 1 ] );
       rr = norm / sqrt( obj.alpha * obj.ht );      
       if obj.d > 0
-        value = - obj.G_anti_tau_anti_t( rr, obj.d + 1 ) ...
-          + 2 * obj.G_anti_tau_anti_t( rr, obj.d ) ...
-          - obj.G_anti_tau_anti_t( rr, obj.d - 1 );
+        value = - G_anti_tau_anti_t( obj, rr, obj.d + 1 ) ...
+          + 2 * G_anti_tau_anti_t( obj, rr, obj.d ) ...
+          - G_anti_tau_anti_t( obj, rr, obj.d - 1 );
       else
-        value = - obj.G_anti_tau_anti_t( rr, 1 ) ...
-          + obj.G_anti_tau_anti_t( rr, 0 ) + obj.G_anti_tau( rr );
+        value = - G_anti_tau_anti_t( obj, rr, 1 ) ...
+          + G_anti_tau_anti_t( obj, rr, 0 ) + G_anti_tau_limit( obj, rr );
       end
       value = value * sqrt( obj.ht / obj.alpha^3 );
+    end
+    
+    function value = eval_repr( obj, x, y, ~ )
+      norm = sqrt( ( x - y ).^2 * [ 1; 1; 1 ] );
+      rr = norm / sqrt( obj.alpha * obj.ht );      
+      value = G_anti_tau( obj, rr, obj.d - 1 ) ...
+          - G_anti_tau( obj, rr, obj.d );
+      value = value / sqrt( obj.ht * obj.alpha^3 );
     end
   end
   
   methods (Access = private)
     function res = G_anti_tau_anti_t( obj, rr, delta )
       if( delta > 0 )
-        res = obj.G_anti_tau_anti_t_regular( rr, delta );
+        res = G_anti_tau_anti_t_regular( obj, rr, delta );
       else
-        res = obj.G_anti_tau_anti_t_limit( rr );
+        res = G_anti_tau_anti_t_limit( obj, rr );
       end     
     end
+    
+    function res = G_anti_tau( obj, rr, delta )
+      if( delta > 0 )
+        res = G_anti_tau_regular( obj, rr, delta );
+      else
+        res = G_anti_tau_limit( obj, rr );
+      end   
+    end    
  
     %%%%% int int G dtau dt
     %%%%% delta > 0, rr > 0 or limit for rr -> 0
@@ -57,10 +73,16 @@ classdef kernel_heat_sl < kernel
     function res = G_anti_tau_anti_t_limit( ~, rr )
         res = rr / ( 8 * pi );   
     end
+    
+    %%%%% int G dtau      
+    %%%%% delta > 0 && rr > 0
+    function res = G_anti_tau_regular( ~, rr, delta )
+      res = erf( rr / sqrt( 4 * delta ) ) ./ ( 4 * pi * rr );
+    end
  
     %%%%% int G dtau      
-    %%%%% Assuming delta == 0 && rr > 0
-    function res = G_anti_tau( ~, rr )
+    %%%%% Limit for delta -> 0, assuming rr > 0
+    function res = G_anti_tau_limit( ~, rr )
       res = 1 ./ ( 4 * pi * rr );
     end
   end

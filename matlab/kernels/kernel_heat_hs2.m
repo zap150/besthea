@@ -25,10 +25,10 @@ classdef kernel_heat_hs2 < kernel
       norm = sqrt( ( x - y ).^2 * [ 1; 1; 1 ] );
       rr = norm / sqrt( obj.alpha * obj.ht );      
       if obj.d > 0
-        value = - obj.G_anti_t( rr, obj.d + 1 ) ...
-          + 2 * obj.G_anti_t( rr, obj.d ) - obj.G_anti_t( rr, obj.d - 1 );
+        value = - G_anti_t( obj, rr, obj.d + 1 ) ...
+          + 2 * G_anti_t( obj, rr, obj.d ) - G_anti_t( obj, rr, obj.d - 1 );
       else
-        value = - obj.G_anti_t( rr, 1 ) + obj.G_anti_t( rr, 0 );
+        value = - G_anti_t( obj, rr, 1 ) + G_anti_t( obj, rr, 0 );
       end
       value = - value * dot * sqrt( obj.alpha / obj.ht );
     end
@@ -37,9 +37,9 @@ classdef kernel_heat_hs2 < kernel
   methods (Access = private)
     function res = G_anti_t( obj, rr, delta )
       if( delta > 0 )
-        res = obj.G_anti_t_regular( rr, delta );
+        res = G_anti_t_regular( obj, rr, delta );
       else
-        res = obj.G_anti_t_limit( rr );
+        res = G_anti_t_limit( obj, rr );
       end     
     end
  
