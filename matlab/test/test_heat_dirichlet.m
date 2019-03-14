@@ -1,6 +1,6 @@
 function ...
-  [ dir, neu, neu_proj, repr, err_bnd, err_bnd_x, err_bnd_proj, ...
-  err_bnd_proj_x, err_vol ] = test_heat_dirichlet( level )
+  [ dir, neu, neu_proj, repr, repr_interp, err_bnd, err_bnd_x, err_bnd_proj, ...
+  err_bnd_proj_x, err_vol, err_vol_x ] = test_heat_dirichlet( level )
 
 if nargin < 1
   level = 0;
@@ -105,20 +105,32 @@ handle = surf( X, Y, zeros( l, l ), reshape( repr{ 1 }, l, l ) );
 shading( 'interp' );
 set( handle, 'EdgeColor', 'black' );
 title( sprintf( 'Solution, t = %f', 0 ) );
+axis vis3d;
 
 figure;
 handle = surf( X, Y, zeros( l, l ), reshape( repr{ stmesh.nt + 1 }, l, l ) );
 shading( 'interp' );
 set( handle, 'EdgeColor', 'black' );
 title( sprintf( 'Solution, t = %f', stmesh.T ) );
+axis vis3d;
 
-err_vol = cell( stmesh.nt + 1, 1 );
+err_vol = 0;
+aux = 0;
+err_vol_x = zeros( stmesh.nt + 1, 1 );
+repr_interp = cell( stmesh.nt + 1, 1 );
 %%%%% initial condition
-err_vol{ 1 } = zeros( l^2, 1 );
+err_vol_x( 1 ) = 0;
+repr_interp{ 1 } = zeros( l^2, 1 );
 for d = 1 : stmesh.nt
-  sol = dir_fun( [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) ...
-    zeros( l^2, 1 ) ], d * stmesh.ht );
-  err_vol{ d + 1 } = abs( repr{ d + 1 } - sol );
+  repr_interp{ d + 1 } = dir_fun( [ reshape( X, l^2, 1 ) ...
+    reshape( Y, l^2, 1 ) zeros( l^2, 1 ) ], d * stmesh.ht );
+  aux1 = sum( ( repr{ d + 1 } - repr_interp{ d + 1 } ).^2 );
+  aux2 = sum( repr_interp{ d + 1 }.^2 );
+  err_vol_x( d + 1 ) = sqrt( aux1 / aux2 );
+  err_vol = err_vol + aux1;
+  aux = aux + aux2;
 end
+err_vol = sqrt( err_vol / aux );
+fprintf( 1, 'l2 relative error: %f.\n', err_vol );
 
 end

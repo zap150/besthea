@@ -58,7 +58,7 @@ classdef be_evaluator
           
           for i_loc_trial = 1 : dim_trial
             result = result + w( i_quad ) * area ...
-              * density_loc( i_loc_trial ) * k .* trial_fun( :, i_loc_trial );
+              * density_loc( i_loc_trial ) * k * trial_fun( :, i_loc_trial );
           end
         end
       end
@@ -68,7 +68,7 @@ classdef be_evaluator
       nt = obj.mesh.nt;
       obj.kernel.ht = obj.mesh.ht;
       obj.kernel.nt = nt;
-      result = cell( nt, 1 );
+      result = cell( nt + 1, 1 );
       
       %%%%% result{ 1 } holds the initial condition
       for d = 1 : nt + 1
@@ -94,15 +94,14 @@ classdef be_evaluator
             
             for i_loc_trial = 1 : dim_trial
               result_loc = w( i_quad ) * area ...
-                * density_loc( i_loc_trial ) * k .* trial_fun( :, i_loc_trial );
-              for i_d = 1 : d
+                * density_loc( i_loc_trial ) * k * trial_fun( :, i_loc_trial );
+              for i_d = d : nt
                 result{ i_d + 1 } = result{ i_d + 1 } + result_loc;
               end
             end
           end
         end
       end
-      
     end
     
     function y = global_quad( obj, y_ref, i_trial )

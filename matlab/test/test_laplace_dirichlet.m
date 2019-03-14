@@ -70,25 +70,30 @@ line( :, 1 ) = ( -1 + h ) : h : ( 1 - h );
 l = size( line, 1 );
 [ X, Y ] = meshgrid( line, line );
 beev_v_laplace = be_evaluator( mesh, kernel_laplace_sl, p0( mesh ), neu, ...
-  [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) zeros( l^2, 1 ) ], order_ff );
+  [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) 0.5 * ones( l^2, 1 ) ], ...
+  order_ff );
 fprintf( 1, 'Evaluating V\n' );
 tic;
 repr = beev_v_laplace.evaluate( );
 fprintf( 1, '  done in %f s.\n', toc );
 
 beev_k_laplace = be_evaluator( mesh, kernel_laplace_dl, p1( mesh ), dir, ...
-  [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) zeros( l^2, 1 ) ], order_ff );
+  [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) 0.5 * ones( l^2, 1 ) ], ...
+  order_ff );
 fprintf( 1, 'Evaluating W\n' );
 repr = repr - beev_k_laplace.evaluate( );
 fprintf( 1, '  done in %f s.\n', toc );
 
 figure;
-handle = surf( X, Y, zeros( l, l ), reshape( repr, l, l ) );
+handle = surf( X, Y, 0.5 * ones( l, l ), reshape( repr, l, l ) );
 shading( 'interp' );
 set( handle, 'EdgeColor', 'black' );
 title( 'Solution' );
+axis vis3d;
 
-sol = dir_fun( [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) zeros( l^2, 1 ) ] );
-err_vol = abs( repr - sol );
+sol = ...
+  dir_fun( [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) 0.5 * ones( l^2, 1 ) ] );
+err_vol = sqrt( sum( ( repr - sol ).^2 ) / sum( sol.^2 ) );
+fprintf( 1, 'l2 relative error: %f.\n', err_vol );
 
 end
