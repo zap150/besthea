@@ -86,7 +86,7 @@ classdef kernel_heat_dl < kernel
     function res = dnG_anti_tau_regular( ~, rr, dot, delta )
       res = dot ./ ( 4 * pi * rr.^2 ) ...
         .* ( erf( rr / sqrt( 4 * delta ) ) ./ rr ...
-        - 2 / sqrt( pi ) * exp( - rr.^2 / ( 4 * delta ) ) );
+        - 1 / sqrt( pi * delta ) * exp( - rr.^2 / ( 4 * delta ) ) );
     end    
     
     %%%%% int dG/dn dtau      
