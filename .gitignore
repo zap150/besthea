@@ -1,2 +1,9 @@
 *.asv
 *.bak
+*.aux
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.xmpi
+notes/integration/integration.pdf

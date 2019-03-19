@@ -1,5 +1,6 @@
 function ...
-  [ dir, neu, dir_proj, err_bnd, err_bnd_x, err_bnd_proj, err_bnd_proj_x ] = test_heat_neumann( level )
+  [ dir, neu, dir_proj, err_bnd, err_bnd_x, err_bnd_proj, ...
+  err_bnd_proj_x ] = heat_neumann( level )
 
 if nargin < 1
   level = 0;
@@ -88,31 +89,5 @@ stmesh.plot( dir{ stmesh.nt }, sprintf( 'Dirichlet, t = %f', ...
 stmesh.plot( neu{ 1 }, sprintf( 'Neumann, t = %f', stmesh.ht / 2 ) );
 stmesh.plot( neu{ stmesh.nt }, sprintf( 'Neumann, t = %f', ...
   stmesh.T - stmesh.ht / 2 ) );
-
-% h = mesh.h / sqrt( 2 );
-% line( :, 1 ) = ( -1 + h ) : h : ( 1 - h );
-% l = size( line, 1 );
-% [ X, Y ] = meshgrid( line, line );
-% beev_v_laplace = be_evaluator( mesh, kernel_laplace_sl, p0( mesh ), neu, ...
-%   [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) zeros( l^2, 1 ) ], order_ff );
-% fprintf( 1, 'Evaluating V\n' );
-% tic;
-% repr = beev_v_laplace.evaluate( );
-% fprintf( 1, '  done in %f s.\n', toc );
-%
-% beev_k_laplace = be_evaluator( mesh, kernel_laplace_dl, p1( mesh ), dir, ...
-%   [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) zeros( l^2, 1 ) ], order_ff );
-% fprintf( 1, 'Evaluating W\n' );
-% repr = repr - beev_k_laplace.evaluate( );
-% fprintf( 1, '  done in %f s.\n', toc );
-%
-% figure;
-% handle = surf( X, Y, zeros( l, l ), reshape( repr, l, l ) );
-% shading( 'interp' );
-% set( handle, 'EdgeColor', 'black' );
-% title( 'Solution' );
-%
-% sol = dir_fun( [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) zeros( l^2, 1 ) ] );
-% err_vol = abs( repr - sol );
 
 end

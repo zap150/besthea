@@ -21,7 +21,7 @@ classdef spacetime_solver
       end
     end
     
-    function density = solve_dirichlet_indirect( ~, V, M, dir )
+    function density = solve_dirichlet_v_indirect( ~, V, M, dir )
       nt = size( V, 1 );
       density = cell( nt, 1 );
       
@@ -35,6 +35,20 @@ classdef spacetime_solver
       end
     end
     
+    function density = solve_dirichlet_w_indirect( ~, K, M, dir )
+      nt = size( K, 1 );
+      density = cell( nt, 1 );
+      
+      rhs = zeros( size( K{ 1 }, 1 ), 1 );      
+      for d = 1 : nt
+        rhs( :, 1 ) = M * dir{ d };
+        for j = 2 : d
+          rhs( :, 1 ) = rhs( :, 1 ) - K{ j } * density{ d - j + 1 };
+        end        
+        density{ d } = ( -0.5 * M + K{ 1 } ) \ rhs;
+      end
+    end
+    
     function dir = solve_neumann( ~, D, K, M, neu )
       nt = size( D, 1 );
       dir = cell( nt, 1 );
@@ -43,12 +57,40 @@ classdef spacetime_solver
       for d = 1 : nt
         rhs( :, 1 ) = 0.5 * M' * neu{ d };
         for j = 1 : d
-          rhs( :, 1 ) = rhs( :, 1 ) - K{ j }' * neu{ d - j + 1 };
+          rhs( :, 1 ) = rhs( :, 1 ) - K{ j }.' * neu{ d - j + 1 };
         end
         for j = 2 : d
           rhs( :, 1 ) = rhs( :, 1 ) - D{ j } * dir{ d - j + 1 };
         end        
         dir{ d } = D{ 1 } \ rhs;
+      end
+    end
+    
+    function density = solve_neumann_w_indirect( ~, D, M, neu )
+      nt = size( D, 1 );
+      density = cell( nt, 1 );
+      
+      rhs = zeros( size( D{ 1 }, 1 ), 1 );      
+      for d = 1 : nt
+        rhs( :, 1 ) = -M * neu{ d };
+        for j = 2 : d
+          rhs( :, 1 ) = rhs( :, 1 ) - D{ j } * density{ d - j + 1 };
+        end        
+        density{ d } = D{ 1 } \ rhs;
+      end
+    end
+    
+    function density = solve_neumann_v_indirect( ~, K, M, neu )
+      nt = size( K, 1 );
+      density = cell( nt, 1 );
+      
+      rhs = zeros( size( K{ 1 }, 1 ), 1 );      
+      for d = 1 : nt
+        rhs( :, 1 ) = M * neu{ d };
+        for j = 2 : d
+          rhs( :, 1 ) = rhs( :, 1 ) - K{ j }.' * density{ d - j + 1 };
+        end        
+        density{ d } = ( 0.5 * M + K{ 1 }.' ) \ rhs;
       end
     end
     

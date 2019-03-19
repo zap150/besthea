@@ -1,0 +1,108 @@
+\documentclass[a4paper,11pt]{article}
+
+\input{scripts.tex}
+
+\title{\sffamily\bfseries Integration schemes \\ for the heat boundary integral equations}
+\author{Jan Zapletal\\\texttt{jan.zapletal@vsb.cz}}
+\date{\today}
+
+\begin{document}
+
+\pagenumbering{roman} 
+
+\maketitle
+\thispagestyle{empty}
+\vfill
+\tableofcontents
+\thispagestyle{empty}
+\vfill
+\newpage
+
+\pagestyle{plain}
+\setcounter{page}{1}
+\pagenumbering{arabic}
+
+\section{Heat equation}
+
+For a bounded Lipschitz domain $\Omega \subset \R^3$ we aim to solve the heat equation
+\begin{equation}
+  \label{eq:heat_eq}
+  \frac{\partial u}{\partial t}(\vx,t) - \alpha \upDelta u(\vx,t) = 0 \quad\text{for } (\vx,t) \in \Omega \times (0,T) =: Q
+\end{equation}
+with $\alpha \geq 0$, the initial condition
+\begin{equation*}
+  u(\vx,0) = u_0(\vx) \quad\text{for }\vx \in \Omega
+\end{equation*}
+and a Dirichlet or Neumann boundary condition, i.e.,
+\begin{equation*}
+  u(\vx,t) = g(\vx,t) \quad\text{for }\vx \in \partial\Omega \times (0,T) =: \Sigma
+\end{equation*}
+or
+\begin{equation*}
+  \alpha\frac{\partial u}{\partial \vn}(\vx,t) = h(\vx,t) \quad\text{for }\vx \in \partial\Omega \times (0,T),
+\end{equation*}
+respectively.
+
+The solution to \eqref{eq:heat_eq} is given by the representation formula
+\begin{equation}
+  \label{eq:repr}
+  u(\vx,t) = \widetilde M_0 u_0(\vx,t) + \widetilde V \frac{\partial u}{\partial \vn}(\vx,t) - Wu(\vx,t)
+\end{equation}
+with the initial potential
+\begin{equation*}
+  M_0 u_0(\vx,t) := \int_\Omega G_\alpha(\vx-\vy,t) u_0(\vx,t) \,\dif\vy,
+\end{equation*}
+the single-layer potential \todo{compare to Dohr, no $\alpha$ in LHS}
+\begin{equation*}
+  \widetilde V \alpha\frac{\partial u}{\partial \vn} (\vx,t) := \int_{\partial\Omega} G_\alpha(\vx-\vy,t-\tau) \alpha\frac{\partial u}{\partial \vn} (\vy,\tau) \,\dif\vs_\vy \,\dif\tau,
+\end{equation*}
+the double-layer potential
+\begin{equation*}
+  W u (\vx,t) := \int_{\partial\Omega} \alpha\frac{\partial G_\alpha}{\partial \vn_\vy}a(\vx-\vy,t-\tau) u(\vy,\tau) \,\dif\vs_\vy \,\dif\tau,
+\end{equation*}
+and the fundamental solution to the heat equation
+\begin{equation*}
+  G_\alpha(\vx-\vy,t-\tau) :=
+  \begin{cases}
+  \displaystyle
+  (4\alpha(t-\tau))^{-3/2}\exp\bigg( -\frac{\|\vx-\vy\|^2}{4\alpha(t-\tau)} \bigg) & \text{for } t > \tau, \\
+  0 & \text{otherwise.}
+  \end{cases}
+\end{equation*}
+
+\begin{remark}
+  It can be easily checked that there holds the scaling condition
+  \begin{equation*}
+    G_\alpha(\vx-\vy,\beta(t-\tau)) = (\alpha\beta)^{-3/2} G_1\bigg( \frac{\vx-\vy}{\sqrt{\alpha\beta}}, t-\tau \bigg).
+  \end{equation*}
+\end{remark}
+
+To obtain the Cauchy data we apply the Dirichlet and Neumann trace operators to the representation formula \eqref{eq:repr} to obtain the boundary integral equations
+\begin{align*}
+  V\frac{\partial u}{\partial \vn}(\vx,t) &= \bigg(\frac{1}{2} I + K \bigg) u(\vx,t) - M_0 u_0(\vx,t) &&\text{for } (\vx,t) \in \Sigma, \\
+  Du(\vx,t) &= \bigg(\frac{1}{2} I - K' \bigg) \frac{\partial u}{\partial \vn}(\vx,t) - M_1 u_0(\vx,t) &&\text{for } (\vx,t) \in \Sigma.
+\end{align*}
+respectively. 
+
+\section{Boundary element method}
+
+
+\newpage
+\bibliographystyle{acm}
+\bibliography{/Users/zap150/Dropbox/library/bibtex_database}
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+

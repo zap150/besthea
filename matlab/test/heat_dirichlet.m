@@ -1,6 +1,6 @@
 function ...
   [ dir, neu, neu_proj, repr, repr_interp, err_bnd, err_bnd_x, err_bnd_proj, ...
-  err_bnd_proj_x, err_vol, err_vol_x ] = test_heat_dirichlet( level )
+  err_bnd_proj_x, err_vol, err_vol_x ] = heat_dirichlet( level )
 
 if nargin < 1
   level = 0;
@@ -82,33 +82,33 @@ h = stmesh.h / sqrt( 2 );
 line( :, 1 ) = ( -1 + h ) : h : ( 1 - h );
 l = size( line, 1 );
 [ X, Y ] = meshgrid( line, line );
-beev_v_heat = be_evaluator( stmesh, kernel_heat_sl( alpha ), p0( stmesh ), ...
-  neu, ...
-  [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) zeros( l^2, 1 ) ], order_ff );
+z = 0;
+points = [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) z * ones( l^2, 1 ) ];
+beev_v_heat = be_evaluator( stmesh, kernel_heat_sl( alpha ), basis_p0, ...
+  neu, points, order_ff );
 fprintf( 1, 'Evaluating V\n' );
 tic;
 repr = beev_v_heat.evaluate( );
 fprintf( 1, '  done in %f s.\n', toc );
 
-beev_k_heat = be_evaluator( stmesh, kernel_heat_dl( alpha ), p1( stmesh ), ... 
-  dir, ...
-  [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) zeros( l^2, 1 ) ], order_ff );
+beev_w_heat = be_evaluator( stmesh, kernel_heat_dl( alpha ), basis_p1, ... 
+  dir, points, order_ff );
 fprintf( 1, 'Evaluating W\n' );
-pot_k = beev_k_heat.evaluate( );
+pot_k = beev_w_heat.evaluate( );
 for d = 1 : stmesh.nt + 1
   repr{ d } = repr{ d } - pot_k{ d };
 end
 fprintf( 1, '  done in %f s.\n', toc );
 
-figure;
-handle = surf( X, Y, zeros( l, l ), reshape( repr{ 1 }, l, l ) );
-shading( 'interp' );
-set( handle, 'EdgeColor', 'black' );
-title( sprintf( 'Solution, t = %f', 0 ) );
-axis vis3d;
+% figure;
+% handle = surf( X, Y, z * ones( l, l ), reshape( repr{ 1 }, l, l ) );
+% shading( 'interp' );
+% set( handle, 'EdgeColor', 'black' );
+% title( sprintf( 'Solution, t = %f', 0 ) );
+% axis vis3d;
 
 figure;
-handle = surf( X, Y, zeros( l, l ), reshape( repr{ stmesh.nt + 1 }, l, l ) );
+handle = surf( X, Y, z * ones( l, l ), reshape( repr{ stmesh.nt + 1 }, l, l ) );
 shading( 'interp' );
 set( handle, 'EdgeColor', 'black' );
 title( sprintf( 'Solution, t = %f', stmesh.T ) );
@@ -122,8 +122,7 @@ repr_interp = cell( stmesh.nt + 1, 1 );
 err_vol_x( 1 ) = 0;
 repr_interp{ 1 } = zeros( l^2, 1 );
 for d = 1 : stmesh.nt
-  repr_interp{ d + 1 } = dir_fun( [ reshape( X, l^2, 1 ) ...
-    reshape( Y, l^2, 1 ) zeros( l^2, 1 ) ], d * stmesh.ht );
+  repr_interp{ d + 1 } = dir_fun( points, d * stmesh.ht );
   aux1 = sum( ( repr{ d + 1 } - repr_interp{ d + 1 } ).^2 );
   aux2 = sum( repr_interp{ d + 1 }.^2 );
   err_vol_x( d + 1 ) = sqrt( aux1 / aux2 );
