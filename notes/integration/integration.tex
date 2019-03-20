@@ -58,7 +58,7 @@ the single-layer potential
 \end{equation*}
 the double-layer potential
 \begin{equation*}
-  W u (\vx,t) := \int_{\partial\Omega} \alpha\frac{\partial G_\alpha}{\partial \vn_\vy}a(\vx-\vy,t-\tau) u(\vy,\tau) \,\dif\vs_\vy \,\dif\tau,
+  W u (\vx,t) := \int_{\partial\Omega} \alpha\frac{\partial G_\alpha}{\partial \vn_\vy}(\vx-\vy,t-\tau) u(\vy,\tau) \,\dif\vs_\vy \,\dif\tau,
 \end{equation*}
 and the fundamental solution to the heat equation
 \begin{equation*}
@@ -72,7 +72,7 @@ and the fundamental solution to the heat equation
 
 \begin{remark}
   \label{rem:scaling}
-  It can be easily checked that there holds the scaling condition
+  It can be easily verified that there holds the scaling condition
   \begin{equation*}
     G_\alpha(\vx-\vy,\beta(t-\tau)) = \frac{1}{(\alpha\beta)^{3/2}} G_1\bigg( \frac{\vx-\vy}{\sqrt{\alpha\beta}}, t-\tau \bigg).
   \end{equation*}
@@ -96,9 +96,9 @@ respectively. The boundary integral operators $V$, $K$, $M_0$, $D$, $K^\ast$, an
 Choosing proper functional spaces $X$ (defining its dual $X^\ast$) and $Y$, the above boundary integral equations are equivalent to the variational formulations
 \begin{align}
   \label{eq:v_form}
-  \langle Vw, q \rangle_\Sigma &= \bigg\langle \bigg( \frac{1}{2}I + K \bigg) u, q \bigg\rangle_\Sigma - \langle M_0 u_0, q \rangle &&\text{for all } q \in X^\ast,\\
+  \langle Vw, q \rangle_\Sigma &= \bigg\langle \bigg( \frac{1}{2}I + K \bigg) u, q \bigg\rangle_\Sigma - \langle M_0 u_0, q \rangle_\Sigma &&\text{for all } q \in X^\ast,\\
   \notag
-  \langle Du, r \rangle_\Sigma &= \bigg\langle \bigg( \frac{1}{2}I - K^\ast \bigg) w, r \bigg\rangle_\Sigma - \langle M_1 u_0, r \rangle &&\text{for all } r \in X
+  \langle Du, r \rangle_\Sigma &= \bigg\langle \bigg( \frac{1}{2}I - K^\ast \bigg) w, r \bigg\rangle_\Sigma - \langle M_1 u_0, r \rangle_\Sigma &&\text{for all } r \in X
 \end{align}
 with the duality pairing between $X^\ast$ and $X$
 \begin{equation*}
@@ -124,7 +124,7 @@ with $\gamma_j$ denoting planar triangular elements, we define
 \begin{equation*}
   \overline{\Sigma_h} := \bigcup_{k=1}^{E_t E_{\vx}} \overline{\sigma_k} = \bigcup_{i=1}^{E_t} \bigcup_{j=1}^{E_\vx} \overline{(t_{i-1}, t_i)} \times \overline{\gamma_j}.
 \end{equation*}
-The basis functions of the approximating spaces $X_h \subset X$ and $X^\ast_h \subset X^\ast$ are defined accordingly, i.e. the spatial and temporal contributions can be separated as $\varphi_{t,\vx,k}(\vx,t) = \varphi_{t,i} (t) \varphi_{\vx,j} (\vx) =: \varphi_{t\vx,i,j}(\vx,t)$. We thus define the space 
+The basis functions of the approximating spaces $X_h \subset X$ and $X^\ast_h \subset X^\ast$ are defined accordingly, i.e. the spatial and temporal contributions can be separated as $\varphi_{t\vx,k}(\vx,t) = \varphi_{t,i} (t) \varphi_{\vx,j} (\vx) =: \varphi_{t\vx,i,j}(\vx,t)$. We thus define the space 
 \begin{equation*}
   X^\ast_h := X_h^{0,0} := \vspan (\varphi^{0,0}_{t\vx,k})_{k=1}^{E_t E_{\vx}} = \vspan ((\varphi^0_{t,i}\varphi^0_{\vx,j})_{j=1}^{E_{\vx}})_{i=1}^{E_t}
 \end{equation*}
@@ -225,18 +225,18 @@ For $\|\tilde \vr\| > 0$ we have to treat the case
 \begin{equation*}
   \lim_{\delta \to 0+} G^{\dif\tau\dif t}_1(\tilde\vr,\delta) = \frac{\|\tilde \vr\|}{8\pi}.
 \end{equation*} 
-Similarly, for well separated $t$ and $\tau$, i.e. for $\delta > 0$ we compute the limit
+Similarly, for well separated $t$ and $\tau$, i.e. for $\delta > 0$, we compute the limit
 \begin{equation*}
   \lim_{\|\tilde\vr\|\to 0+} G^{\dif\tau\dif t}_1(\tilde\vr,\delta) = \frac{\sqrt{\delta}}{2\pi^{3/2}}.
 \end{equation*}
 Thus, if either the spatial or temporal variables are well separated, i.e. we integrate over disjoint triangles or time intervals, standard quadrature routines can be applied. For the near field, regularized quadrature techniques based on the Duffy transformation can be used. 
 
-For $V_0(\tilde \vr)$ we obtain in a similar fashion
+For $V_0(\vr)$ we obtain in a similar fashion
 \begin{align*}
-  V_0(\tilde \vr) &= \sqrt{\frac{h_t}{\alpha^3}} \int_{0}^{1} G^{\dif \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) - G^{\dif \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},\hat t\bigg) \,\dif\hat t \\
+  V_0(\vr) &= \sqrt{\frac{h_t}{\alpha^3}} \int_{0}^{1} G^{\dif \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) - G^{\dif \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},\hat t\bigg) \,\dif\hat t \\
   &= \sqrt{\frac{h_t}{\alpha^3}} \bigg[ G^{\dif \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) - G^{\dif\tau\dif t}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},1\bigg) + G^{\dif\tau\dif t}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) \bigg].
 \end{align*}
-Again, we have to consider the limiting case for $\|\tilde \vr\| > 0$
+Again, we have to consider the limiting case for $\|\tilde \vr\| > 0$,
 \begin{equation*}
   \lim_{\delta \to 0+} G^{\dif \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},\delta\bigg) = \frac{1}{4\pi\|\tilde \vr\|}.
 \end{equation*}
