@@ -73,9 +73,10 @@ and the fundamental solution to the heat equation
 \begin{remark}
   \label{rem:scaling}
   It can be easily verified that there holds the scaling condition
-  \begin{equation*}
+  \begin{equation}
+  \label{eq:G_scaling}
     G_\alpha(\vx-\vy,\beta(t-\tau)) = \frac{1}{(\alpha\beta)^{3/2}} G_1\bigg( \frac{\vx-\vy}{\sqrt{\alpha\beta}}, t-\tau \bigg).
-  \end{equation*}
+  \end{equation}
 \end{remark}
 
 To obtain the Cauchy data we apply the Dirichlet and Neumann trace operators to the representation formula \eqref{eq:repr} to obtain the boundary integral equations with $w := \alpha\partial u/\partial \vn $,
@@ -105,10 +106,13 @@ with the duality pairing between $X^\ast$ and $X$
   \langle v, w \rangle_\Sigma := \int_0^T \int_{\partial\Omega} v(\vx,t) w(\vx,t) \,\dif\vs_\vx \,\dif t.
 \end{equation*}
 For the duality pairing with the hypersingular operator we have an alternative representation
-\begin{align*}
+\begin{equation}
+\label{eq:D_bil}
+\begin{aligned}
   \langle Du, r \rangle_\Sigma &= \alpha^2 \int_0^T \int_{\partial\Omega} \curl_{\partial\Omega} r(\vx,t)^\top \int_0^t \int_{\partial\Omega} \curl_{\partial\Omega} u(\vy,\tau) G_\alpha(\vx-\vy,t-\tau) \,\dif\vs_\vy \,\dif\tau \,\dif\vs_\vx \,\dif t \\
   &- \alpha^2 \int_0^T \int_{\partial\Omega} n(\vx)^\top r(\vx,t) \int_0^t \int_{\partial\Omega} n(\vy) u(\vy,t) \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\vs_\vy \,\dif\tau \,\dif\vs_\vx \,\dif t.
-\end{align*}
+\end{aligned}
+\end{equation}
 
 \section{Boundary element method}
 
@@ -130,7 +134,7 @@ The basis functions of the approximating spaces $X_h \subset X$ and $X^\ast_h \s
 \end{equation*}
 of functions piecewise constant in space and time and the space  
 \begin{equation*}
-  X_h := X_h^{1,0} := \vspan (\varphi^{1,0}_{t\vx,k})_{k=1}^{E_t N_\vx} = \vspan ((\varphi^0_{t,i}\varphi^1_{\vx,j})_{j=1}^{N_{\vx}})_{i=1}^{E_t}
+  X_h := X_h^{0,1} := \vspan (\varphi^{0,1}_{t\vx,k})_{k=1}^{E_t N_\vx} = \vspan ((\varphi^0_{t,i}\varphi^1_{\vx,j})_{j=1}^{N_{\vx}})_{i=1}^{E_t}
 \end{equation*} 
 of functions globally continuous and piecewise linear in space and piecewise constant in time. Here we denote by $N_\vx$ the number of nodes of the triangular mesh $\Gamma_h$.
 
@@ -138,7 +142,7 @@ of functions globally continuous and piecewise linear in space and piecewise con
 
 Plugging the approximation
 \begin{equation*}
- w \approx w_h := \sum_{k=1}^{E_{t\vx}} w_k \varphi^{0,0}_{t\vx,k} = \sum_{i=1}^{E_t} \sum_{j=1}^{E_\vx} w_{i,j} \varphi^0_{t,i} \varphi^0_{\vx,j}
+ w \approx w_h := \sum_{k=1}^{E_t E_\vx} w_k \varphi^{0,0}_{t\vx,k} = \sum_{i=1}^{E_t} \sum_{j=1}^{E_\vx} w_{i,j} \varphi^0_{t,i} \varphi^0_{\vx,j}
 \end{equation*}
 into the left-hand side of \eqref{eq:v_form} and testing with
 \begin{equation*}
@@ -148,11 +152,12 @@ we obtain
 \begin{align*}
   \langle &Vw_h, q \rangle_\Sigma \\
   &= \int_0^T \int_{\partial\Omega} \varphi^0_{t,k}(t) \varphi^0_{\vx,\ell}(\vx) \int_0^t \int_{\partial\Omega} G_\alpha(\vx-\vy,t-\tau) \sum_{i=1}^{E_t} \sum_{j=1}^{E_\vx} w_{i,j} \varphi^0_{t,i}(\tau) \varphi^0_{\vx,j}(\vy) \,\dif\vs_\vy \,\dif\tau \,\dif\vs_\vx \,\dif t \\
-  &= \sum_{i=1}^{k-1} \sum_{j=1}^{E_\vx} w_{i,j} \int_{\partial\Omega} \varphi^0_{\vx,\ell}(\vx) \int_{\partial\Omega} \varphi^0_{\vx,j}(\vy) \int_{t_{k-1}}^{t_k} \int_{t_{i-1}}^{t_i} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
-  &+ \sum_{j=1}^{E_\vx} w_{k,j} \int_{\partial\Omega} \varphi^0_{\vx,\ell}(\vx) \int_{\partial\Omega} \varphi^0_{\vx,j}(\vy) \int_{t_{k-1}}^{t_k} \int_{t_{k-1}}^{t} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx.
+  &= \sum_{i=1}^{k-1} \sum_{j=1}^{E_\vx} w_{i,j} \int_{\gamma_\ell} \int_{\gamma_j} \int_{t_{k-1}}^{t_k} \int_{t_{i-1}}^{t_i} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
+  &+ \sum_{j=1}^{E_\vx} w_{k,j} \int_{\gamma_\ell} \int_{\gamma_j} \int_{t_{k-1}}^{t_k} \int_{t_{k-1}}^{t} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx.
 \end{align*}
 Since the fundamental solution only depends on the difference $t-\tau$, the double temporal integral only depends on the difference $d := k - i$. The duality pairing thus leads to the Toeplitz matrix vector product
-\begin{equation*}
+\begin{equation}
+\label{eq:V_mat}
   \matV_h \vw = 
   \begin{bmatrix}
     \matV_h^0 & 0 & \ldots & 0 \\
@@ -166,17 +171,20 @@ Since the fundamental solution only depends on the difference $t-\tau$, the doub
     \vdots \\[1mm]
     \vw^{E_t-1}
   \end{bmatrix}
-\end{equation*}
+\end{equation}
 with 
-\begin{align*}
-  \matV_h^0[\ell,j] &:= \int_{\partial\Omega} \varphi^0_{\vx,\ell}(\vx) \int_{\partial\Omega} \varphi^0_{\vx,j}(\vy) \int_{0}^{t_1} \int_{0}^{t} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
-  \matV_h^d[\ell,j] &:= \int_{\partial\Omega} \varphi^0_{\vx,\ell}(\vx) \int_{\partial\Omega} \varphi^0_{\vx,j}(\vy) \int_{t_d}^{t_{d+1}} \int_{0}^{t_1} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx
-\end{align*}
+\begin{equation}
+\label{eq:V_blocks}
+\begin{aligned}
+  \matV_h^0[\ell,j] &:= \int_{\gamma_\ell} \int_{\gamma_j} \int_{0}^{t_1} \int_{0}^{t} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx, \\
+  \matV_h^d[\ell,j] &:= \int_{\gamma_\ell} \int_{\gamma_j} \int_{t_d}^{t_{d+1}} \int_{0}^{t_1} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx
+\end{aligned}
+\end{equation}
 for $d \in \{1,\ldots,E_t-1\}$ and $w^d_j := w_{d+1,j}$.
 
 To set up $\matV_h$ we will use analytic integration in time and regularized quadrature in space as used in stationary problems. We thus have to evaluate
 \begin{equation*}
-  V_d(\vr) := 
+  V^d(\vr) := 
   \begin{cases}
   \displaystyle
     \int_{0}^{t_1} \int_{0}^{t} G_\alpha(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d = 0, \\[4mm]
@@ -185,17 +193,20 @@ To set up $\matV_h$ we will use analytic integration in time and regularized qua
   \end{cases}
 \end{equation*}
 Let us start with the latter case. Using the substitution
-\begin{align*}
+\begin{equation}
+\label{eq:subst_tau_t}
+\begin{aligned}
   \tau &= h_t \hat\tau, \quad \hat\tau = \tau/h_t, \quad \dif\tau = h_t\,\dif\hat\tau, \\
   t &= h_t (d+\hat t), \quad \hat t = t/h_t, \quad \dif t = h_t\,\dif\hat t
-\end{align*}
+\end{aligned}
+\end{equation}
 we obtain
 \begin{equation*}
-  V_d(\vr) = h_t^2 \int_{0}^{1} \int_{0}^{1} G_\alpha(\vr,h_t(d+\hat t-\hat\tau)) \,\dif\hat\tau \,\dif\hat t.
+  V^d(\vr) = h_t^2 \int_{0}^{1} \int_{0}^{1} G_\alpha(\vr,h_t(d+\hat t-\hat\tau)) \,\dif\hat\tau \,\dif\hat t.
 \end{equation*}
-With the scaling from Remark~\ref{rem:scaling} we can further write
+With the scaling from~\eqref{eq:G_scaling} we can further write
 \begin{equation*}
-  V_d(\vr) = \sqrt{\frac{h_t}{\alpha^3}} \int_{0}^{1} \int_{0}^{1} G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+\hat t-\hat\tau\bigg) \,\dif\hat\tau \,\dif\hat t
+  V^d(\vr) = \sqrt{\frac{h_t}{\alpha^3}} \int_{0}^{1} \int_{0}^{1} G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+\hat t-\hat\tau\bigg) \,\dif\hat\tau \,\dif\hat t
 \end{equation*}
 with 
 \begin{equation*}
@@ -203,42 +214,153 @@ with
 \end{equation*}
 We thus obtain
 \begin{equation*}
-  V_d(\vr) = \sqrt{\frac{h_t}{\alpha^3}} \int_{0}^{1} G^{\dif \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+\hat t-1\bigg) - G^{\dif \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+\hat t\bigg) \,\dif\hat t
+  V^d(\vr) = \sqrt{\frac{h_t}{\alpha^3}} \int_{0}^{1} G^{\dif \hat\tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+\hat t-1\bigg) - G^{\dif \hat\tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+\hat t\bigg) \,\dif\hat t
 \end{equation*}
 with
-\begin{equation*}
-  G^{\dif \tau}_1(\tilde\vr,\delta) = \frac{1}{4\pi \|\tilde \vr\|} \erf\bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} \bigg)
-\end{equation*}
+\begin{equation}
+  \label{eq:G_dtau}
+  G^{\dif \hat\tau}_1(\tilde\vr,\delta) = \frac{1}{4\pi \|\tilde \vr\|} \erf\bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} \bigg)
+\end{equation}
 and the error function
 \begin{equation*}
   \erf(x) := \frac{2}{\sqrt{\pi}} \int_0^x e^{-t^2} \,\dif t.
 \end{equation*}
 Continuing in the integration we obtain
 \begin{equation*}
-  V_d(\vr) = \sqrt{\frac{h_t}{\alpha^3}} \bigg[ 2G^{\dif\tau\dif t}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d\bigg) - G^{\dif\tau\dif t}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+1\bigg) - G^{\dif\tau\dif t}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d-1\bigg) \bigg]
+  V^d(\vr) = \sqrt{\frac{h_t}{\alpha^3}} \bigg[ 2G^{\dif\hat\tau\dif\hat t}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d\bigg) - G^{\dif\hat\tau\dif\hat t}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+1\bigg) - G^{\dif\hat\tau\dif\hat t}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d-1\bigg) \bigg]
 \end{equation*}
 with 
 \begin{equation*}
-  G^{\dif\tau\dif t}_1(\tilde\vr,\delta) = \frac{\sqrt{\delta}}{4\pi} \bigg[ \bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} + \frac{\sqrt{\delta}}{\|\tilde \vr\|} \bigg) \erf\bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} \bigg) + \frac{1}{\sqrt{\pi}}\exp\bigg( -\frac{\|\tilde \vr\|^2}{4\delta} \bigg) \bigg] \quad\text{for } \delta > 0.
+  G^{\dif\hat\tau\dif\hat t}_1(\tilde\vr,\delta) = \frac{\sqrt{\delta}}{4\pi} \bigg[ \bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} + \frac{\sqrt{\delta}}{\|\tilde \vr\|} \bigg) \erf\bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} \bigg) + \frac{1}{\sqrt{\pi}}\exp\bigg( -\frac{\|\tilde \vr\|^2}{4\delta} \bigg) \bigg] \quad\text{for } \delta > 0.
 \end{equation*}
 For $\|\tilde \vr\| > 0$ we have to treat the case
 \begin{equation*}
-  \lim_{\delta \to 0+} G^{\dif\tau\dif t}_1(\tilde\vr,\delta) = \frac{\|\tilde \vr\|}{8\pi}.
+  \lim_{\delta \to 0+} G^{\dif\hat\tau\dif\hat t}_1(\tilde\vr,\delta) = \frac{\|\tilde \vr\|}{8\pi}.
 \end{equation*} 
 Similarly, for well separated $t$ and $\tau$, i.e. for $\delta > 0$, we compute the limit
 \begin{equation*}
-  \lim_{\|\tilde\vr\|\to 0+} G^{\dif\tau\dif t}_1(\tilde\vr,\delta) = \frac{\sqrt{\delta}}{2\pi^{3/2}}.
+  \lim_{\|\tilde\vr\|\to 0+} G^{\dif\hat\tau\dif\hat t}_1(\tilde\vr,\delta) = \frac{\sqrt{\delta}}{2\pi^{3/2}}.
 \end{equation*}
 Thus, if either the spatial or temporal variables are well separated, i.e. we integrate over disjoint triangles or time intervals, standard quadrature routines can be applied. For the near field, regularized quadrature techniques based on the Duffy transformation can be used. 
 
 For $V_0(\vr)$ we obtain in a similar fashion
 \begin{align*}
-  V_0(\vr) &= \sqrt{\frac{h_t}{\alpha^3}} \int_{0}^{1} G^{\dif \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) - G^{\dif \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},\hat t\bigg) \,\dif\hat t \\
-  &= \sqrt{\frac{h_t}{\alpha^3}} \bigg[ G^{\dif \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) - G^{\dif\tau\dif t}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},1\bigg) + G^{\dif\tau\dif t}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) \bigg].
+  V_0(\vr) &= \sqrt{\frac{h_t}{\alpha^3}} \int_{0}^{1} G^{\dif\hat \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) - G^{\dif\hat \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},\hat t\bigg) \,\dif\hat t \\
+  &= \sqrt{\frac{h_t}{\alpha^3}} \bigg[ G^{\dif\hat \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) - G^{\dif\hat\tau\dif\hat t}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},1\bigg) + G^{\dif\hat\tau\dif\hat t}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) \bigg].
 \end{align*}
 Again, we have to consider the limiting case for $\|\tilde \vr\| > 0$,
+\begin{equation}
+  \label{eq:G_dtau_lim_d}
+  \lim_{\delta \to 0+} G^{\dif\hat \tau}_1(\tilde \vr,\delta) = \frac{1}{4\pi\|\tilde \vr\|}.
+\end{equation}
+
+\subsection{Double-layer operator}
+
+Plugging the approximation
 \begin{equation*}
-  \lim_{\delta \to 0+} G^{\dif \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},\delta\bigg) = \frac{1}{4\pi\|\tilde \vr\|}.
+ u \approx u_h := \sum_{k=1}^{E_t N_\vx} u_k \varphi^{0,1}_{t\vx,k} = \sum_{i=1}^{E_t} \sum_{j=1}^{N_\vx} u_{i,j} \varphi^0_{t,i} \varphi^1_{\vx,j}
+\end{equation*}
+into \eqref{eq:D_bil} and testing with
+\begin{equation*}
+  q := \varphi^0_{t,k} \varphi^0_{\vx,\ell}
+\end{equation*}
+we obtain for $d=k-i$ that
+\begin{align*}
+  \langle Ku_h, q \rangle_\Sigma &= \sum_{i=1}^{k-1} \sum_{j=1}^{N_\vx} u_{i,j} \int_{\gamma_\ell} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \alpha \int_{t_{d+1}}^{t_d} \int_{0}^{t_1} \frac{\partial G_\alpha}{\partial \vn_\vy}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
+  &+ \sum_{j=1}^{N_\vx} u_{k,j} \int_{\gamma_\ell} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \alpha \int_{0}^{t_1} \int_{0}^{t} \frac{\partial G_\alpha}{\partial \vn_\vy}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx.
+\end{align*}
+We have to analytically evaluate the integrals
+\begin{equation*}
+  K^d(\vr) := 
+  \begin{cases}
+  \displaystyle
+    \alpha \vn_\vy \cdot \nabla_\vy \int_{0}^{t_1} \int_{0}^{t} G_\alpha(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d = 0, \\[4mm]
+  \displaystyle
+    \alpha \vn_\vy \cdot \nabla_\vy \int_{t_d}^{t_{d+1}} \int_{0}^{t_1} G_\alpha(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d \in \{1,\ldots,E_t-1\}.
+  \end{cases}
+\end{equation*}
+For $d > 0$ we can use the substitution \eqref{eq:subst_tau_t} and the scaling condition~\eqref{eq:G_scaling} to obtain
+\begin{align*}
+  K^d(\vr) = 
+\end{align*}
+
+
+\subsection{Hypersingular operator}
+
+Plugging the approximation
+\begin{equation*}
+ u \approx u_h := \sum_{k=1}^{E_t N_\vx} u_k \varphi^{0,1}_{t\vx,k} = \sum_{i=1}^{E_t} \sum_{j=1}^{N_\vx} u_{i,j} \varphi^0_{t,i} \varphi^1_{\vx,j}
+\end{equation*}
+into \eqref{eq:D_bil} and testing with
+\begin{equation*}
+  r := \varphi^0_{t,k} \varphi^1_{\vx,\ell}
+\end{equation*}
+we obtain for $d=k-i$ that
+\begin{align*}
+  &\langle Du_h, r \rangle_\Sigma = \\ 
+  &\sum_{i=1}^{k-1} \sum_{j=1}^{N_\vx} u_{i,j}\int_{\partial\Omega} \int_{\partial\Omega} \curl_{\partial\Omega} \varphi^1_{\vx,\ell}(\vx) \cdot \curl_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \alpha^2 \int_{t_{d}}^{t_{d+1}} \int_{0}^{t_1} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
+    &+\sum_{j=1}^{N_\vx} u_{k,j}\int_{\partial\Omega} \int_{\partial\Omega} \curl_{\partial\Omega} \varphi^1_{\vx,\ell}(\vx) \cdot \curl_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \alpha^2 \int_{0}^{t_1} \int_{0}^{t} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
+  &- \sum_{i=1}^{k-1} \sum_{j=1}^{N_\vx} u_{i,j} \int_{\partial\Omega} \int_{\partial\Omega} n(\vx) \cdot n(\vy) \varphi^1_{\vx,\ell}(\vx) \varphi^1_{\vx,j}(\vy) \alpha^2 \int_{t_d}^{t_{d+1}} \int_{t_0}^{t_1} \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
+    &- \sum_{j=1}^{N_\vx} u_{k,j} \int_{\partial\Omega} \int_{\partial\Omega} n(\vx) \cdot n(\vy) \varphi^1_{\vx,\ell}(\vx) \varphi^1_{\vx,j}(\vy) \alpha^2 \int_{t_d}^{t_{d+1}} \int_{t_0}^{t} \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx.
+\end{align*}
+Since the surface curls of spatially piecewise linear functions are piecewise constant, we can rewrite on of the summands in the first part as
+\begin{align*}
+  \matD^{1,d}_h[\ell,j] &:= \int_{\partial\Omega} \int_{\partial\Omega}\curl_{\partial\Omega} \varphi^1_{\vx,\ell}(\vx) \cdot \curl_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \alpha^2 \int_{t_{d}}^{t_{d+1}} \int_{0}^{t_1} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
+  &= \sum_{\gamma_n \subset \supp \varphi^1_{\vx,\ell}} \sum_{\gamma_m \subset \supp \varphi^1_{\vx,j}} \curl_{\partial\Omega} \varphi^1_{\vx,\ell}|_{\gamma_n}(\vx) \cdot \curl_{\partial\Omega} \varphi^1_{\vx,j}|_{\gamma_m}(\vy) \alpha^2 \matV_h^d[n,m].
+\end{align*}
+Thus, for all $d \in \{0,\ldots,E_t-1\}$ the matrix $\matD_h^{1,d}$ is a sparse transformation of the single-layer block $\matV^d_h$ from \eqref{eq:V_blocks}. In particular,
+\begin{equation*}
+  \matD_h^{1,d} = \matT^\top 
+  \begin{bmatrix}
+    \alpha^2\matV^d_h & \matO & \matO \\
+    \matO & \alpha^2\matV^d_h & \matO \\
+    \matO & \matO & \alpha^2\matV^d_h
+  \end{bmatrix}
+  \matT,\quad
+  \matT :=
+  \begin{bmatrix}
+    \matT_1 \\
+    \matT_2 \\
+    \matT_3
+  \end{bmatrix},\quad
+  \matT_o[m,j] := [\curl_{\partial\Omega} \varphi^1_{\vx,j}|_{\gamma_m}]_o.
+\end{equation*}
+
+For the second part we have to analytically evaluate the integrals
+\begin{equation*}
+  D^{2,d}(\vr) := 
+  \begin{cases}
+  \displaystyle
+    -\alpha^2 \int_{0}^{t_1} \int_{0}^{t} \frac{\partial G_\alpha}{\partial \tau}(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d = 0, \\[4mm]
+  \displaystyle
+    -\alpha^2 \int_{t_d}^{t_{d+1}} \int_{0}^{t_1} \frac{\partial G_\alpha}{\partial \tau}(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d \in \{1,\ldots,E_t-1\}.
+  \end{cases}
+\end{equation*}
+For $d>0$ we can thus write
+\begin{equation*}
+  D^{2,d}(\vr) = -\alpha^2 \int_{t_d}^{t_{d+1}} G_\alpha(\vr,t-t_1) - G_\alpha(\vr,t) \,\dif t
+\end{equation*}
+Using the substitution \eqref{eq:subst_tau_t} and the scaling condition~\eqref{eq:G_scaling} we obtain
+\begin{align*}
+  D^{2,d}(\vr) &= -\sqrt{\frac{\alpha}{h_t}} \int_0^1 G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+\hat t-1\bigg) - G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d + \hat t\bigg) \,\dif \hat t \\
+  &= -\sqrt{\frac{\alpha}{h_t}} \bigg[ 2G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, d \bigg) - G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, d + 1 \bigg) - G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, d - 1 \bigg) \bigg]
+\end{align*}
+with $G_1^{\dif\hat t} = -G_1^{\dif\hat \tau}$ from \eqref{eq:G_dtau}. In addition to the limiting case \eqref{eq:G_dtau_lim_d} we have to treat the limit for $\delta>0$,
+\begin{equation*}
+  \lim_{\|\tilde \vr\| \to 0_+} G^{\dif\hat t}_1(\tilde \vr,\delta) = -\frac{1}{4\pi\sqrt{\pi\delta}}.
+\end{equation*}
+
+For $d=0$ we have
+\begin{equation*}
+  D^{2,0}(\vr) = -\sqrt{\frac{\alpha}{h_t}} \int_0^1 G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) - G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},\hat t\bigg) \,\dif \hat t.
+\end{equation*}
+Since $G_1(\tilde \vr,0) = 0$ for any $\tilde \vr,\,\|\tilde \vr\|>0$ it holds
+\begin{equation*}
+  D^{2,0}(\vr) = -\sqrt{\frac{\alpha}{h_t}}\bigg[ G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, 0 \bigg) - G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, 1 \bigg) \bigg].
+\end{equation*}
+Finally, $\matD_h = \matD_h^1 + \matD_h^2$ possesses the same layout as \eqref{eq:V_mat}. The individual blocks in $\matD_h^2$ are set up as
+\begin{equation*}
+  \matD^{2,d}_h[ \ell , j ] = \int_{\partial\Omega} \int_{\partial\Omega} n(\vx) \cdot n(\vy) \varphi^1_{\vx,\ell}(\vx) \varphi^1_{\vx,j}(\vy) D^{2,d}(\vx-\vy) \,\dif\vs_\vy \,\dif\vs_\vx.
 \end{equation*}
 
 \newpage
