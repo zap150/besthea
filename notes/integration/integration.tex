@@ -35,11 +35,11 @@ with $\alpha \geq 0$, the initial condition
 \end{equation*}
 and a Dirichlet or Neumann boundary condition, i.e.
 \begin{equation*}
-  u(\vx,t) = g(\vx,t) \quad\text{for }\vx \in \partial\Omega \times (0,T) =: \Sigma
+  u(\vx,t) = g(\vx,t) \quad\text{for }(\vx,t) \in \partial\Omega \times (0,T) =: \Sigma
 \end{equation*}
 or
 \begin{equation*}
-  \alpha\frac{\partial u}{\partial \vn}(\vx,t) = h(\vx,t) \quad\text{for }\vx \in \partial\Omega \times (0,T),
+  \alpha\frac{\partial u}{\partial \vn}(\vx,t) = h(\vx,t) \quad\text{for }(\vx,t) \in \partial\Omega \times (0,T),
 \end{equation*}
 respectively.
 
@@ -54,11 +54,11 @@ with the initial potential
 \end{equation*}
 the single-layer potential
 \begin{equation*}
-  \widetilde V \alpha\frac{\partial u}{\partial \vn} (\vx,t) := \int_{\partial\Omega} G_\alpha(\vx-\vy,t-\tau) \alpha\frac{\partial u}{\partial \vn} (\vy,\tau) \,\dif\vs_\vy \,\dif\tau,
+  \widetilde V \alpha\frac{\partial u}{\partial \vn} (\vx,t) := \int_0^t \int_{\partial\Omega} G_\alpha(\vx-\vy,t-\tau) \alpha\frac{\partial u}{\partial \vn} (\vy,\tau) \,\dif\vs_\vy \,\dif\tau,
 \end{equation*}
 the double-layer potential
 \begin{equation*}
-  W u (\vx,t) := \int_{\partial\Omega} \alpha\frac{\partial G_\alpha}{\partial \vn_\vy}(\vx-\vy,t-\tau) u(\vy,\tau) \,\dif\vs_\vy \,\dif\tau,
+  W u (\vx,t) := \int_0^t \int_{\partial\Omega} \alpha\frac{\partial G_\alpha}{\partial \vn_\vy}(\vx-\vy,t-\tau) u(\vy,\tau) \,\dif\vs_\vy \,\dif\tau,
 \end{equation*}
 and the fundamental solution to the heat equation
 \begin{equation*}
@@ -82,7 +82,7 @@ and the fundamental solution to the heat equation
 To obtain the Cauchy data we apply the Dirichlet and Neumann trace operators to the representation formula \eqref{eq:repr} to obtain the boundary integral equations with $w := \alpha\partial u/\partial \vn $,
 \begin{align*}
   Vw(\vx,t) &= \bigg(\frac{1}{2} I + K \bigg) u(\vx,t) - M_0 u_0(\vx,t) &&\text{for } (\vx,t) \in \Sigma, \\
-  Du(\vx,t) &= \bigg(\frac{1}{2} I - K^\ast \bigg) w(\vx,t) - M_1 u_0(\vx,t) &&\text{for } (\vx,t) \in \Sigma.
+  Du(\vx,t) &= \bigg(\frac{1}{2} I - K^\ast \bigg) w(\vx,t) - M_1 u_0(\vx,t) &&\text{for } (\vx,t) \in \Sigma,
 \end{align*}
 respectively. The boundary integral operators $V$, $K$, $M_0$, $D$, $K^\ast$, and $M_1$ denote the compositions of the potentials with the respective traces and for sufficiently regular functions admit the representations
 \begin{align*}
@@ -132,7 +132,7 @@ The basis functions of the approximating spaces $X_h \subset X$ and $X^\ast_h \s
 \begin{equation*}
   X^\ast_h := X_h^{0,0} := \vspan (\varphi^{0,0}_{t\vx,k})_{k=1}^{E_t E_{\vx}} = \vspan ((\varphi^0_{t,i}\varphi^0_{\vx,j})_{j=1}^{E_{\vx}})_{i=1}^{E_t}
 \end{equation*}
-of functions piecewise constant in space and time and the space  
+of functions piecewise constant both in space and time and the space  
 \begin{equation*}
   X_h := X_h^{0,1} := \vspan (\varphi^{0,1}_{t\vx,k})_{k=1}^{E_t N_\vx} = \vspan ((\varphi^0_{t,i}\varphi^1_{\vx,j})_{j=1}^{N_{\vx}})_{i=1}^{E_t}
 \end{equation*} 
@@ -155,7 +155,7 @@ we obtain
   &= \sum_{i=1}^{k-1} \sum_{j=1}^{E_\vx} w_{i,j} \int_{\gamma_\ell} \int_{\gamma_j} \int_{t_{k-1}}^{t_k} \int_{t_{i-1}}^{t_i} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
   &+ \sum_{j=1}^{E_\vx} w_{k,j} \int_{\gamma_\ell} \int_{\gamma_j} \int_{t_{k-1}}^{t_k} \int_{t_{k-1}}^{t} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx.
 \end{align*}
-Since the fundamental solution only depends on the difference $t-\tau$, the double temporal integral only depends on the difference $d := k - i$. The duality pairing thus leads to the Toeplitz matrix vector product
+Since the fundamental solution only depends on the difference $t-\tau$, the double temporal integral only depends on the difference $d := k - i$. The duality pairing with all testing functions thus leads to the Toeplitz matrix vector product
 \begin{equation}
 \label{eq:V_mat}
   \matV_h \vw = 
@@ -182,7 +182,7 @@ with
 \end{equation}
 for $d \in \{1,\ldots,E_t-1\}$ and $w^d_j := w_{d+1,j}$.
 
-To set up $\matV_h$ we will use analytic integration in time and regularized quadrature in space as used in stationary problems. We thus have to evaluate
+To set up $\matV_h$ we will use analytic integration in time and a regularized quadrature in space as used in stationary problems. We thus have to evaluate
 \begin{equation}
 \label{eq:V_d}
   V^d(\vr) := 
@@ -267,7 +267,7 @@ into \eqref{eq:D_bil} and testing with
 \end{equation*}
 we obtain for $d=k-i$ that
 \begin{align*}
-  \langle Ku_h, q \rangle_\Sigma &= \sum_{i=1}^{k-1} \sum_{j=1}^{N_\vx} u_{i,j} \int_{\gamma_\ell} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \alpha \int_{t_{d+1}}^{t_d} \int_{0}^{t_1} \frac{\partial G_\alpha}{\partial \vn_\vy}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
+  \langle Ku_h, q \rangle_\Sigma &= \sum_{i=1}^{k-1} \sum_{j=1}^{N_\vx} u_{i,j} \int_{\gamma_\ell} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \alpha \int_{t_d}^{t_{d+1}} \int_{0}^{t_1} \frac{\partial G_\alpha}{\partial \vn_\vy}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
   &+ \sum_{j=1}^{N_\vx} u_{k,j} \int_{\gamma_\ell} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \alpha \int_{0}^{t_1} \int_{0}^{t} \frac{\partial G_\alpha}{\partial \vn_\vy}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx.
 \end{align*}
 We have to analytically evaluate the integrals
@@ -284,10 +284,13 @@ For $d > 0$ we thus obtain from the evaluation of \eqref{eq:V_d} that
 \begin{align*}
   K^d(\vr) = \sqrt{\frac{h_t}{\alpha}} \bigg[ 2 \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy} \bigg(\frac{\vr}{\sqrt{\alpha h_t}},d\bigg) - \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+1\bigg) - \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d-1\bigg) \bigg]
 \end{align*}
-Since $G^{\dif\hat\tau\dif\hat t}_1$ only depends on the norm of its first argument, we easily obtain
+Since $G^{\dif\hat\tau\dif\hat t}_1$ only depends on the norm of its first argument, we obtain
 \begin{equation}
 \label{eq:dn_G_dt_dtau}
-  \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy} = \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \|\tilde \vr\|} \vn_\vy \cdot \nabla_\vy \frac{\|\vx-\vy\|}{\sqrt{\alpha h_t}} = -\frac{1}{\sqrt{\alpha h_t}} \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \|\tilde \vr\|} \frac{(\vx-\vy)\cdot \vn_\vy}{\|\vx-\vy\|} = -\frac{1}{\sqrt{\alpha h_t}} \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \|\tilde \vr\|} \frac{\tilde \vr \cdot \vn_\vy}{\|\tilde \vr\|}
+\begin{aligned}
+  \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy} &= \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \|\tilde \vr\|} \vn_\vy \cdot \nabla_\vy \frac{\|\vx-\vy\|}{\sqrt{\alpha h_t}} \\
+  &= -\frac{1}{\sqrt{\alpha h_t}} \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \|\tilde \vr\|} \frac{(\vx-\vy)\cdot \vn_\vy}{\|\vx-\vy\|} = -\frac{1}{\sqrt{\alpha h_t}} \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \|\tilde \vr\|} \frac{\tilde \vr \cdot \vn_\vy}{\|\tilde \vr\|}
+\end{aligned}
 \end{equation}
 with
 \begin{equation*}
@@ -345,6 +348,11 @@ For $\|\tilde \vr\| > 0$ it holds
   \lim_{\delta \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau}_1}{\partial \vn_\vy} = \frac{\tilde \vr \cdot \vn_\vy}{4\pi\|\tilde\vr\|^3}.
 \end{equation}
 
+The layout of the block matrix $\matK_h$ is the same as in \eqref{eq:V_mat}. The individual blocks in $\matK_h$ are set up as
+\begin{equation*}
+  \matK^d_h[ \ell , j ] = \int_{\gamma_\ell} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) K^d(\vx-\vy) \,\dif\vs_\vy \,\dif\vs_\vx.
+\end{equation*}
+
 \subsection{Hypersingular operator}
 
 Plugging the approximation
@@ -360,10 +368,10 @@ we obtain for $d=k-i$ that
   &\langle Du_h, r \rangle_\Sigma = \\ 
   &\sum_{i=1}^{k-1} \sum_{j=1}^{N_\vx} u_{i,j}\int_{\partial\Omega} \int_{\partial\Omega} \curl_{\partial\Omega} \varphi^1_{\vx,\ell}(\vx) \cdot \curl_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \alpha^2 \int_{t_{d}}^{t_{d+1}} \int_{0}^{t_1} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
     &+\sum_{j=1}^{N_\vx} u_{k,j}\int_{\partial\Omega} \int_{\partial\Omega} \curl_{\partial\Omega} \varphi^1_{\vx,\ell}(\vx) \cdot \curl_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \alpha^2 \int_{0}^{t_1} \int_{0}^{t} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
-  &- \sum_{i=1}^{k-1} \sum_{j=1}^{N_\vx} u_{i,j} \int_{\partial\Omega} \int_{\partial\Omega} n(\vx) \cdot n(\vy) \varphi^1_{\vx,\ell}(\vx) \varphi^1_{\vx,j}(\vy) \alpha^2 \int_{t_d}^{t_{d+1}} \int_{t_0}^{t_1} \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
-    &- \sum_{j=1}^{N_\vx} u_{k,j} \int_{\partial\Omega} \int_{\partial\Omega} n(\vx) \cdot n(\vy) \varphi^1_{\vx,\ell}(\vx) \varphi^1_{\vx,j}(\vy) \alpha^2 \int_{t_d}^{t_{d+1}} \int_{t_0}^{t} \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx.
+  &- \sum_{i=1}^{k-1} \sum_{j=1}^{N_\vx} u_{i,j} \int_{\partial\Omega} \int_{\partial\Omega} n(\vx) \cdot n(\vy) \varphi^1_{\vx,\ell}(\vx) \varphi^1_{\vx,j}(\vy) \alpha^2 \int_{t_d}^{t_{d+1}} \int_0^{t_1} \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
+    &- \sum_{j=1}^{N_\vx} u_{k,j} \int_{\partial\Omega} \int_{\partial\Omega} n(\vx) \cdot n(\vy) \varphi^1_{\vx,\ell}(\vx) \varphi^1_{\vx,j}(\vy) \alpha^2 \int_{t_d}^{t_{d+1}} \int_0^{t} \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx.
 \end{align*}
-Since the surface curls of spatially piecewise linear functions are piecewise constant, we can rewrite on of the summands in the first part as
+Since the surface curls of spatially piecewise linear functions are piecewise constant, we can rewrite one of the summands in the first part as
 \begin{align*}
   \matD^{1,d}_h[\ell,j] &:= \int_{\partial\Omega} \int_{\partial\Omega}\curl_{\partial\Omega} \varphi^1_{\vx,\ell}(\vx) \cdot \curl_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \alpha^2 \int_{t_{d}}^{t_{d+1}} \int_{0}^{t_1} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
   &= \sum_{\gamma_n \subset \supp \varphi^1_{\vx,\ell}} \sum_{\gamma_m \subset \supp \varphi^1_{\vx,j}} \curl_{\partial\Omega} \varphi^1_{\vx,\ell}|_{\gamma_n}(\vx) \cdot \curl_{\partial\Omega} \varphi^1_{\vx,j}|_{\gamma_m}(\vy) \alpha^2 \matV_h^d[n,m].
@@ -396,7 +404,7 @@ For the second part we have to analytically evaluate the integrals
     -\alpha^2 \int_{t_d}^{t_{d+1}} \int_{0}^{t_1} \frac{\partial G_\alpha}{\partial \tau}(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d \in \{1,\ldots,E_t-1\}.
   \end{cases}
 \end{equation*}
-For $d>0$ we can thus write
+For $d>0$ we can write
 \begin{equation*}
   D^{2,d}(\vr) = -\alpha^2 \int_{t_d}^{t_{d+1}} G_\alpha(\vr,t-t_1) - G_\alpha(\vr,t) \,\dif t
 \end{equation*}
@@ -425,7 +433,7 @@ Finally, $\matD_h = \matD_h^1 + \matD_h^2$ possesses the same layout as \eqref{e
 
 \subsection{Single-layer potential}
 
-To evaluate the discretized representation formula in the temporal nodes $t_k = k h_t$ we have to compute the contribution of the single-layer potential
+To evaluate the discretized representation formula in $\vx\in\Omega$ and the temporal nodes $t_k = k h_t$ we have to compute the contribution of the single-layer potential
 \begin{equation*}
  Vw_h(\vx, t_k) = \sum_{i=1}^{k} \sum_{j=1}^{E_\vx} w_{i,j} \int_{\tau_j} \int_{t_{i-1}}^{t_i} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif\vs_\vy.
 \end{equation*}
