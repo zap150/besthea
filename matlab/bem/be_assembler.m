@@ -1,4 +1,4 @@
-classdef be_assembler
+classdef be_assembler < handle
   
   properties (Access = public)
     mesh;

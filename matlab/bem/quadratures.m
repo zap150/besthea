@@ -1,4 +1,4 @@
-classdef quadratures
+classdef quadratures < handle
   
   properties (Access = private, Constant)
     line_x_1 = 0.5;

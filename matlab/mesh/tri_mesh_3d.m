@@ -1,4 +1,4 @@
-classdef tri_mesh_3d
+classdef tri_mesh_3d < handle
   
   properties (Access = public)
     nodes;

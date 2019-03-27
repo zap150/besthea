@@ -1,4 +1,4 @@
-classdef (Abstract) basis_function
+classdef (Abstract) basis_function < handle
   
   properties (Access = public)
     mesh;

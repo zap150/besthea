@@ -50,8 +50,8 @@ classdef kernel_heat_hs2 < kernel
       mask = ( rr == 0 );
       res( mask, 1 ) = -1 / ( 4 * pi * sqrt( pi * delta ) );
       mask = ~mask;
-      res( mask, 1 ) = ( -1 ./ ( 4 * pi * rr( mask ) ) ) ...
-        .* erf( rr( mask ) / ( 2 * sqrt_d ) );
+      res( mask, 1 ) = -erf( rr( mask ) / ( 2 * sqrt_d ) ) ...
+        ./ ( 4 * pi * rr( mask ) );
     end 
  
     %%%%% int G dt    

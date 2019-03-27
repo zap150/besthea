@@ -1,4 +1,4 @@
-classdef be_identity
+classdef be_identity < handle
   
   properties (Access = public)
     mesh;

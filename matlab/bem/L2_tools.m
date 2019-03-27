@@ -1,4 +1,4 @@
-classdef L2_tools
+classdef L2_tools < handle
   
   properties (Access = public)
     mesh;

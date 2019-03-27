@@ -1,4 +1,4 @@
-classdef be_evaluator
+classdef be_evaluator < handle
   
   properties (Access = public)
     mesh;

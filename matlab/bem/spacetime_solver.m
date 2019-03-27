@@ -1,4 +1,4 @@
-classdef spacetime_solver
+classdef spacetime_solver < handle
   
   methods
     function obj = spacetime_solver( )
