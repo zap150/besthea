@@ -32,7 +32,7 @@ fprintf( 1, '  done in %f s.\n', toc );
 
 fprintf( 1, 'Assembling M\n' );
 tic;
-beid = be_identity( mesh, basis_p0, basis_p1, 2 );
+beid = be_identity( mesh, basis_p0, basis_p1, order_ff );
 M = beid.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
 
