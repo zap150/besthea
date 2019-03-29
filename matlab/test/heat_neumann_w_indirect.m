@@ -14,7 +14,7 @@ stmesh = stmesh.refine_xt( level, 2 );
 order_nf = 4;
 order_ff = 4;
 
-alpha = 0.1;
+alpha = 0.5;
 y = [ 0 0 1.5 ];
 dir_fun = @( x, t, ~ ) ( 4 * pi * alpha * t )^( -3 / 2 ) ...
   .* exp( - ( ( x - y ).^2 * [ 1; 1; 1 ] ) / ( 4 * alpha * t ) );
@@ -44,12 +44,12 @@ end
 
 fprintf( 1, 'Assembling M\n' );
 tic;
-beid = be_identity( stmesh, basis, basis, 1 );
+beid = be_identity( stmesh, basis, basis, 2 );
 M = beid.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
 
-L2_p1 = L2_tools( stmesh, basis, 5, 4 );
-neu = L2_p1.projection( neu_fun );
+L2 = L2_tools( stmesh, basis, 5, 4 );
+neu = L2.projection( neu_fun );
 
 solver = spacetime_solver( );
 

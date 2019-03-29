@@ -14,14 +14,14 @@ stmesh = stmesh.refine_xt( level, 2 );
 order_nf = 4;
 order_ff = 4;
 
-alpha = 0.1;
+alpha = 1;
 y = [ 0 0 1.5 ];
 dir_fun = @( x, t, ~ ) ( 4 * pi * alpha * t )^( -3 / 2 ) ...
   .* exp( - ( ( x - y ).^2 * [ 1; 1; 1 ] ) / ( 4 * alpha * t ) );
 neu_fun = @( x, t, n ) ( - 2 * t )^( -1 ) * dir_fun( x, t ) ...
   .* ( ( x - y ) * n' );
 
-basis = p0( stmesh );
+basis = p1( stmesh );
 
 beas_k_heat = be_assembler( stmesh, kernel_heat_dl( alpha ), ...
   basis, basis, order_nf, order_ff );
@@ -32,12 +32,12 @@ fprintf( 1, '  done in %f s.\n', toc );
 
 fprintf( 1, 'Assembling M\n' );
 tic;
-beid = be_identity( stmesh, basis, basis, 1 );
+beid = be_identity( stmesh, basis, basis, 2 );
 M = beid.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
 
-L2_p1 = L2_tools( stmesh, basis, 5, 4 );
-neu = L2_p1.projection( neu_fun );
+L2 = L2_tools( stmesh, basis, 5, 4 );
+neu = L2.projection( neu_fun );
 
 solver = spacetime_solver( );
 

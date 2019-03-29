@@ -1,4 +1,5 @@
 function [ dir, neu, repr, err_bnd, err_vol ] = laplace_dirichlet( level )
+%function [ V, K, M ] = laplace_dirichlet( level )
 
 if nargin < 1
   level = 0;
@@ -41,7 +42,7 @@ fprintf( 1, '  done in %f s.\n', toc );
 
 fprintf( 1, 'Assembling M\n' );
 tic;
-beid = be_identity( mesh, basis_p0, basis_p1, 1 );
+beid = be_identity( mesh, basis_p0, basis_p1, 2 );
 M = beid.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
 

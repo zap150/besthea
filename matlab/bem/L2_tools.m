@@ -61,8 +61,8 @@ classdef L2_tools < handle
             * basis_val( :, i_local_dim );
         end
         f = fun( x, obj.mesh.normals( i_tau, : ) );
-        l2_diff_err = l2_diff_err + ( wx' * ( f - val ).^2 ) * area;
-        l2_err = l2_err + ( wx' * f.^2 ) * area;
+        l2_diff_err = l2_diff_err + ( wx' * abs( f - val ).^2 ) * area;
+        l2_err = l2_err + ( wx' * abs( f ).^2 ) * area;
       end
       result = sqrt( l2_diff_err / l2_err );
     end
@@ -92,9 +92,9 @@ classdef L2_tools < handle
           end
           for i_t = 1 : lt
             f = fun( x, t( i_t ), obj.mesh.normals( i_tau, : ) );
-            l2_diff_err = l2_diff_err + ( wx' * ( f - val ).^2 ) ...
+            l2_diff_err = l2_diff_err + ( wx' * abs( f - val ).^2 ) ...
               * area * ht * wt( i_t );
-            l2_err = l2_err + ( wx' * f.^2 ) * area * ht * wt( i_t );
+            l2_err = l2_err + ( wx' * abs( f ).^2 ) * area * ht * wt( i_t );
           end
         end
       end
@@ -130,7 +130,7 @@ classdef L2_tools < handle
         
         for i_loc_test = 1 : basis_dim
           rhs( basis_map( i_loc_test ) ) = rhs( basis_map( i_loc_test ) ) ...
-            + ( ( basis_fun( :, i_loc_test ) .* f )' * w ) ...
+            + ( ( basis_fun( :, i_loc_test ) .* f ).' * w ) ...
             * obj.mesh.areas( i_tau );
         end
       end
@@ -165,7 +165,7 @@ classdef L2_tools < handle
             for i_loc_test = 1 : basis_dim
               rhs( basis_map( i_loc_test ) ) = ...
                 rhs( basis_map( i_loc_test ) ) ...
-                + ( ( basis_fun( :, i_loc_test ) .* f )' * wx ) ...
+                + ( ( basis_fun( :, i_loc_test ) .* f ).' * wx ) ...
                 * area * wt( i_t );
             end
           end
