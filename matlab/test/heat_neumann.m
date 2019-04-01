@@ -7,7 +7,7 @@ if nargin < 1
 end
 
 file='./input/cube_192.txt';
-stmesh = spacetime_mesh( file, 1, 16 );
+stmesh = spacetime_mesh( file, 1, 8 );
 stmesh = stmesh.refine_xt( level, 2 );
 % stmesh = spacetime_mesh( file, 1, 3 );
 % stmesh = stmesh.refine_xt( level, 1 );
