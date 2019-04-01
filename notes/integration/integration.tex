@@ -434,13 +434,14 @@ Finally, $\matD_h = \matD_h^1 + \matD_h^2$ possesses the same layout as \eqref{e
 \subsection{Single-layer potential}
 
 To evaluate the discretized representation formula in $\vx\in\Omega$ and the temporal nodes $t_k = k h_t$ we have to compute the contribution of the single-layer potential
-\begin{equation*}
- Vw_h(\vx, t_k) = \sum_{i=1}^{k} \sum_{j=1}^{E_\vx} w_{i,j} \int_{\tau_j} \int_{t_{i-1}}^{t_i} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif\vs_\vy.
-\end{equation*}
+\begin{align*}
+ Vw_h(\vx, t_k) &= \sum_{i=1}^{k} \sum_{j=1}^{E_\vx} w_{i,j} \int_{\tau_j} \int_{t_{i-1}}^{t_i} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif\vs_\vy \\
+ &= \sum_{d=0}^{k-1} \sum_{j=1}^{E_\vx} w_{i,j} \int_{\tau_j} \int_{0}^{t_1} G_\alpha(\vx-\vy,h_t(d+1)-\tau) \,\dif\tau \,\dif\vs_\vy
+\end{align*}
 Substituting \eqref{eq:subst_tau_t} and scaling by \eqref{eq:G_scaling} leads to
 \begin{align*}
-  Vw_h(\vx, t_k) &= \sum_{i=1}^{k} \sum_{j=1}^{E_\vx} w_{i,j} \int_{\tau_j} \frac{1}{\sqrt{\alpha^3 h_t}}\int_0^1 G_1\bigg(\frac{\vx-\vy}{\sqrt{\alpha h_t}},d-\hat\tau\bigg) \,\dif\hat\tau \,\dif\vs_\vy \\
-  &= \sum_{j=1}^{E_\vx} \int_{\tau_j} \sum_{i=1}^{k} w_{i,j} \frac{1}{\sqrt{\alpha^3 h_t}} \bigg[ G_1^{\dif\hat\tau}(\tilde \vr, d-1) - G_1^{\dif\hat\tau}(\tilde \vr, d) \bigg] \,\dif\vs_\vy
+  Vw_h(\vx, t_k) &= \sum_{d=0}^{k-1} \sum_{j=1}^{E_\vx} w_{i,j} \int_{\tau_j} \frac{1}{\sqrt{\alpha^3 h_t}}\int_0^1 G_1\bigg(\frac{\vx-\vy}{\sqrt{\alpha h_t}},d+1-\hat\tau\bigg) \,\dif\hat\tau \,\dif\vs_\vy \\
+  &= \sum_{j=1}^{E_\vx} \int_{\tau_j} \sum_{d=0}^{k-1} w_{i,j} \frac{1}{\sqrt{\alpha^3 h_t}} \bigg[ G_1^{\dif\hat\tau}(\tilde \vr, d) - G_1^{\dif\hat\tau}(\tilde \vr, d+1) \bigg] \,\dif\vs_\vy
 \end{align*}
 with $G_1^{\dif\hat\tau}$ from \eqref{eq:G_dtau} and its limit for $\delta \to 0_+$ in \eqref{eq:G_dtau_lim_d}. Note that as in the case of matrix assembly, one can reuse the analytic evaluations for all combinations of $k,i$ such that $k-i=d$ is constant.
 
@@ -449,7 +450,7 @@ with $G_1^{\dif\hat\tau}$ from \eqref{eq:G_dtau} and its limit for $\delta \to 0
 For the double-layer potential we similarly obtain
 \begin{align*}
   Ku_h(\vx, t_k) &= \sum_{i=1}^{k} \sum_{j=1}^{N_\vx} u_{i,j} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \int_{t_{i-1}}^{t_i} \alpha \frac{\partial G_\alpha}{\partial \vn_\vy}(\vx-\vy,t-\tau) \,\dif\tau \,\dif\vs_\vy \\
-  &= \sum_{j=1}^{N_\vx} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \sum_{i=1}^{k} u_{i,j} \frac{1}{\alpha h_t} \bigg[ \frac{\partial \widetilde G_1^{\dif\hat\tau}}{\partial \vn_\vy}(\tilde \vr, d-1) - \frac{\partial \widetilde G_1^{\dif\hat\tau}}{\partial \vn_\vy}(\tilde \vr, d) \bigg] \,\dif\vs_\vy
+  &= \sum_{j=1}^{N_\vx} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \sum_{d=0}^{k-1} u_{i,j} \frac{1}{\alpha h_t} \bigg[ \frac{\partial \widetilde G_1^{\dif\hat\tau}}{\partial \vn_\vy}(\tilde \vr, d) - \frac{\partial \widetilde G_1^{\dif\hat\tau}}{\partial \vn_\vy}(\tilde \vr, d+1) \bigg] \,\dif\vs_\vy
 \end{align*}
 with $\partial \widetilde G_1^{\dif\hat\tau} / \partial \vn_\vy$ from \eqref{eq:dn_G_dtau} and its limit for $\delta \to 0_+$ in \eqref{eq:dn_G_dtau_lim_r}.
 
