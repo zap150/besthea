@@ -110,7 +110,7 @@ For the duality pairing with the hypersingular operator we have an alternative r
 \label{eq:D_bil}
 \begin{aligned}
   \langle Du, r \rangle_\Sigma &= \alpha^2 \int_0^T \int_{\partial\Omega} \curl_{\partial\Omega} r(\vx,t)^\top \int_0^t \int_{\partial\Omega} \curl_{\partial\Omega} u(\vy,\tau) G_\alpha(\vx-\vy,t-\tau) \,\dif\vs_\vy \,\dif\tau \,\dif\vs_\vx \,\dif t \\
-  &- \alpha^2 \int_0^T \int_{\partial\Omega} \vn(\vx)^\top r(\vx,t) \int_0^t \int_{\partial\Omega} \vn(\vy) u(\vy,t) \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\vs_\vy \,\dif\tau \,\dif\vs_\vx \,\dif t.
+  &- \alpha \int_0^T \int_{\partial\Omega} \vn(\vx)^\top r(\vx,t) \int_0^t \int_{\partial\Omega} \vn(\vy) u(\vy,t) \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\vs_\vy \,\dif\tau \,\dif\vs_\vx \,\dif t.
 \end{aligned}
 \end{equation}
 
@@ -368,8 +368,8 @@ we obtain for $d=k-i$ that
   &\langle Du_h, r \rangle_\Sigma = \\ 
   &\sum_{i=1}^{k-1} \sum_{j=1}^{N_\vx} u_{i,j}\int_{\partial\Omega} \int_{\partial\Omega} \curl_{\partial\Omega} \varphi^1_{\vx,\ell}(\vx) \cdot \curl_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \alpha^2 \int_{t_{d}}^{t_{d+1}} \int_{0}^{t_1} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
     &+\sum_{j=1}^{N_\vx} u_{k,j}\int_{\partial\Omega} \int_{\partial\Omega} \curl_{\partial\Omega} \varphi^1_{\vx,\ell}(\vx) \cdot \curl_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \alpha^2 \int_{0}^{t_1} \int_{0}^{t} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
-  &- \sum_{i=1}^{k-1} \sum_{j=1}^{N_\vx} u_{i,j} \int_{\partial\Omega} \int_{\partial\Omega} \vn(\vx) \cdot \vn(\vy) \varphi^1_{\vx,\ell}(\vx) \varphi^1_{\vx,j}(\vy) \alpha^2 \int_{t_d}^{t_{d+1}} \int_0^{t_1} \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
-    &- \sum_{j=1}^{N_\vx} u_{k,j} \int_{\partial\Omega} \int_{\partial\Omega} \vn(\vx) \cdot \vn(\vy) \varphi^1_{\vx,\ell}(\vx) \varphi^1_{\vx,j}(\vy) \alpha^2 \int_{t_d}^{t_{d+1}} \int_0^{t} \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx.
+  &- \sum_{i=1}^{k-1} \sum_{j=1}^{N_\vx} u_{i,j} \int_{\partial\Omega} \int_{\partial\Omega} \vn(\vx) \cdot \vn(\vy) \varphi^1_{\vx,\ell}(\vx) \varphi^1_{\vx,j}(\vy) \alpha \int_{t_d}^{t_{d+1}} \int_0^{t_1} \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
+    &- \sum_{j=1}^{N_\vx} u_{k,j} \int_{\partial\Omega} \int_{\partial\Omega} \vn(\vx) \cdot \vn(\vy) \varphi^1_{\vx,\ell}(\vx) \varphi^1_{\vx,j}(\vy) \alpha \int_{t_d}^{t_{d+1}} \int_0^{t} \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx.
 \end{align*}
 Since the surface curls of spatially piecewise linear functions are piecewise constant, we can rewrite one of the summands in the first part as
 \begin{align*}
@@ -399,32 +399,32 @@ For the second part we have to analytically evaluate the integrals
   D^{2,d}(\vr) := 
   \begin{cases}
   \displaystyle
-    -\alpha^2 \int_{0}^{t_1} \int_{0}^{t} \frac{\partial G_\alpha}{\partial \tau}(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d = 0, \\[4mm]
+    -\alpha \int_{0}^{t_1} \int_{0}^{t} \frac{\partial G_\alpha}{\partial \tau}(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d = 0, \\[4mm]
   \displaystyle
-    -\alpha^2 \int_{t_d}^{t_{d+1}} \int_{0}^{t_1} \frac{\partial G_\alpha}{\partial \tau}(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d \in \{1,\ldots,E_t-1\}.
+    -\alpha \int_{t_d}^{t_{d+1}} \int_{0}^{t_1} \frac{\partial G_\alpha}{\partial \tau}(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d \in \{1,\ldots,E_t-1\}.
   \end{cases}
 \end{equation*}
 For $d>0$ we can write
 \begin{equation*}
-  D^{2,d}(\vr) = -\alpha^2 \int_{t_d}^{t_{d+1}} G_\alpha(\vr,t-t_1) - G_\alpha(\vr,t) \,\dif t
+  D^{2,d}(\vr) = -\alpha \int_{t_d}^{t_{d+1}} G_\alpha(\vr,t-t_1) - G_\alpha(\vr,t) \,\dif t
 \end{equation*}
 Using the substitution \eqref{eq:subst_tau_t} and the scaling condition~\eqref{eq:G_scaling} we obtain
 \begin{align*}
-  D^{2,d}(\vr) &= -\sqrt{\frac{\alpha}{h_t}} \int_0^1 G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+\hat t-1\bigg) - G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d + \hat t\bigg) \,\dif \hat t \\
-  &= -\sqrt{\frac{\alpha}{h_t}} \bigg[ 2\widetilde G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, d \bigg) - \widetilde G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, d + 1 \bigg) - \widetilde G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, d - 1 \bigg) \bigg]
+  D^{2,d}(\vr) &= -\frac{1}{\sqrt{\alpha h_t}} \int_0^1 G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+\hat t-1\bigg) - G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d + \hat t\bigg) \,\dif \hat t \\
+  &= -\frac{1}{\sqrt{\alpha h_t}} \bigg[ 2\widetilde G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, d \bigg) - \widetilde G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, d + 1 \bigg) - \widetilde G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, d - 1 \bigg) \bigg]
 \end{align*}
-with $\widetilde G_1^{\dif\hat t} = -G_1^{\dif\hat \tau}/\alpha^2$ from \eqref{eq:G_dtau}. In addition to the limiting case \eqref{eq:G_dtau_lim_d} we have to treat the limit for $\delta>0$,
+with $\widetilde G_1^{\dif\hat t} = -G_1^{\dif\hat \tau}/\alpha$ from \eqref{eq:G_dtau}. In addition to the limiting case \eqref{eq:G_dtau_lim_d} we have to treat the limit for $\delta>0$,
 \begin{equation*}
   \lim_{\|\tilde \vr\| \to 0_+} \widetilde G^{\dif\hat t}_1(\tilde \vr,\delta) = -\frac{1}{4\pi\sqrt{\pi\delta}}.
 \end{equation*}
 
 For $d=0$ we have
 \begin{equation*}
-  D^{2,0}(\vr) = -\sqrt{\frac{\alpha}{h_t}} \int_0^1 G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) - G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},\hat t\bigg) \,\dif \hat t.
+  D^{2,0}(\vr) = -\frac{1}{\sqrt{\alpha h_t}} \int_0^1 G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) - G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},\hat t\bigg) \,\dif \hat t.
 \end{equation*}
 Since $G_1(\tilde \vr,0) = 0$ for any $\tilde \vr,\,\|\tilde \vr\|>0$ it holds
 \begin{equation*}
-  D^{2,0}(\vr) = -\sqrt{\frac{\alpha}{h_t}}\bigg[ \widetilde G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, 0 \bigg) - \widetilde G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, 1 \bigg) \bigg].
+  D^{2,0}(\vr) = -\frac{1}{\sqrt{\alpha h_t}} \bigg[ \widetilde G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, 0 \bigg) - \widetilde G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, 1 \bigg) \bigg].
 \end{equation*}
 Finally, $\matD_h = \matD_h^1 + \matD_h^2$ possesses the same layout as \eqref{eq:V_mat}. The individual blocks in $\matD_h^2$ are set up as
 \begin{equation*}
