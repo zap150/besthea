@@ -17,10 +17,20 @@ order_ff = 4;
 
 alpha = 0.5;
 y = [ 0 0 1.5 ];
+
 dir_fun = @( x, t, ~ ) ( 4 * pi * alpha * t )^( -3 / 2 ) ...
   .* exp( - ( ( x - y ).^2 * [ 1; 1; 1 ] ) / ( 4 * alpha * t ) );
 neu_fun = @( x, t, n ) ( - 2 * t )^( -1 ) * dir_fun( x, t ) ...
   .* ( ( x - y ) * n' );
+
+% b = alpha;
+% alpha = 1;
+% stmesh = spacetime_mesh( file, b, 8 );
+% stmesh = stmesh.refine_xt( level, 2 );
+% dir_fun = @( x, t, ~ ) ( 4 * pi * t )^( -3 / 2 ) ...
+%   .* exp( - ( ( x - y ).^2 * [ 1; 1; 1 ] ) / ( 4 * t ) );
+% neu_fun = @( x, t, n ) ( - 2 * t )^( -1 ) * dir_fun( x, t ) ...
+%   .* ( ( x - y ) * n' );
 
 basis_p1 = p1( stmesh );
 basis_p0 = p0( stmesh );

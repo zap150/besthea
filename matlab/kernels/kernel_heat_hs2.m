@@ -30,7 +30,7 @@ classdef kernel_heat_hs2 < kernel
       else
         value = - G_anti_t( obj, rr, 1 ) + G_anti_t( obj, rr, 0 );
       end
-      value = - value * dot * sqrt( obj.alpha / obj.ht );
+      value = - value * dot * 1 / sqrt( obj.alpha * obj.ht );
     end
   end
   

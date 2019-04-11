@@ -7,7 +7,7 @@ classdef quadratures < handle
     line_x_2 = [
       0.21132486540518713447
       0.78867513459481286553 ];
-    line_w_2 = [ 
+    line_w_2 = [
       0.5
       0.5 ];
     
@@ -30,6 +30,38 @@ classdef quadratures < handle
       0.326072577431273
       0.326072577431273
       0.173927422568727 ];
+    
+    line_x_5 = [
+      0.046910077030668
+      0.230765344947158
+      0.500000000000000
+      0.769234655052841
+      0.953089922969332
+      ];
+    line_w_5 = [
+      0.118463442528095
+      0.239314335249683
+      0.284444444444444
+      0.239314335249683
+      0.118463442528095
+      ];
+    
+    line_x_6 = [
+      0.033765242898424
+      0.169395306766868
+      0.380690406958402
+      0.619309593041598
+      0.830604693233132
+      0.966234757101576
+      ];
+    line_w_6 = [
+      0.085662246189585
+      0.180380786524069
+      0.233956967286346
+      0.233956967286346
+      0.180380786524069
+      0.085662246189585
+      ];
     
     line_x_32 = [
       0.0013680690752592150616
@@ -101,7 +133,7 @@ classdef quadratures < handle
       ];
     
     
-    tri_x_1 = [ 
+    tri_x_1 = [
       0.333333333333333 0.333333333333333 ];
     tri_w_1 = 1.0;
     
@@ -115,7 +147,7 @@ classdef quadratures < handle
       0.333333333333333
       ];
     
-    tri_x_3 = [ 
+    tri_x_3 = [
       0.333333333333333 0.333333333333333
       0.2 0.2
       0.2 0.6
@@ -179,6 +211,10 @@ classdef quadratures < handle
           x = quadratures.line_x_3;
         case 4
           x = quadratures.line_x_4;
+        case 5
+          x = quadratures.line_x_5;
+        case 6
+          x = quadratures.line_x_6;
         case 32
           x = quadratures.line_x_32;
         otherwise
@@ -196,6 +232,10 @@ classdef quadratures < handle
           w = quadratures.line_w_3;
         case 4
           w = quadratures.line_w_4;
+        case 5
+          w = quadratures.line_w_5;
+        case 6
+          w = quadratures.line_w_6;
         case 32
           w = quadratures.line_w_32;
         otherwise
@@ -204,13 +244,13 @@ classdef quadratures < handle
     end
     
     function l = line_length( order )
-      if order > 0 && ( order < 5 || order == 32 )
+      if order > 0 && ( order < 7 || order == 32 )
         l = order;
       else
         l = 1;
       end
     end
-      
+    
     function [ x, w, l ] = tri( order )
       x = quadratures.tri_x( order );
       w = quadratures.tri_w( order );
