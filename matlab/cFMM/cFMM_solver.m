@@ -255,7 +255,12 @@ classdef cFMM_solver < handle
       neighbors = {}; 
       neighbors(1, 1) = {root.get_value( )};
       if ( level > 0 && idx > 0 )
-        n = obj.search_neighbors( obj.cluster_tree, level, idx );
+        if mod( root.get_value( ).get_idx_nl( ), 2 ) == 1 
+          n = root.get_parent( ).get_left_child( ).get_value( );
+        elseif root.get_value( ).get_idx_nl( ) ~= 0
+          n = obj.search_neighbors( root, level, idx );
+        end
+        
         if n ~= -1
           % if neighbor == -1 there is no neighbor except for the 
           % same cluster
@@ -271,20 +276,41 @@ classdef cFMM_solver < handle
       
     end
     
-    % search for a neighboring clusters
+%     % search for a neighboring clusters
     function neighbor = search_neighbors( obj, root, L, idx )
       % if neighbor == -1 there is no neighbor except for the same cluster
       neighbor = -1;
-      if ( root.get_value( ).get_idx_nl( ) == idx - 1 ) && ...
-          ( root.get_level == L )
-        neighbor = root.get_value( );
-      elseif root.get_level( ) < L 
-        neighbor = obj.search_neighbors( root.get_left_child( ), L, idx );
-        if neighbor == -1
-          neighbor = obj.search_neighbors( root.get_right_child( ), L, idx );
-        end
+      
+      node = root;
+      while node.get_parent( ).get_left_child( ).get_value( ).get_idx_nl( ) == ... 
+        node.get_value( ).get_idx_nl( )
+        node = node.get_parent( );
       end
+      
+      child = node.get_parent( ).get_left_child( );
+      
+      for l = child.get_level( ) : L - 1
+        child = child.get_right_child( );
+      end
+      
+      neighbor = child.get_value( );
+      
     end
+    
+    % search for a neighboring clusters
+%     function neighbor = search_neighbors( obj, root, L, idx )
+%       % if neighbor == -1 there is no neighbor except for the same cluster
+%       neighbor = -1;
+%       if ( root.get_value( ).get_idx_nl( ) == idx - 1 ) && ...
+%           ( root.get_level == L )
+%         neighbor = root.get_value( );
+%       elseif root.get_level( ) < L 
+%         neighbor = obj.search_neighbors( root.get_left_child( ), L, idx );
+%         if neighbor == -1
+%           neighbor = obj.search_neighbors( root.get_right_child( ), L, idx );
+%         end
+%       end
+%     end
     
     % assembles interaction list of a cluster, i.e., parents' neighbors'
     % children which are not neighbors themselves
