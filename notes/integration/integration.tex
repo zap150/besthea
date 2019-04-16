@@ -413,9 +413,9 @@ Using the substitution \eqref{eq:subst_tau_t} and the scaling condition~\eqref{e
   D^{2,d}(\vr) &= -\frac{1}{\sqrt{\alpha h_t}} \int_0^1 G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+\hat t-1\bigg) - G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d + \hat t\bigg) \,\dif \hat t \\
   &= -\frac{1}{\sqrt{\alpha h_t}} \bigg[ 2\widetilde G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, d \bigg) - \widetilde G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, d + 1 \bigg) - \widetilde G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, d - 1 \bigg) \bigg]
 \end{align*}
-with $\widetilde G_1^{\dif\hat t} = -G_1^{\dif\hat \tau}/\alpha$ from \eqref{eq:G_dtau}. In addition to the limiting case \eqref{eq:G_dtau_lim_d} we have to treat the limit for $\delta>0$,
+with $G_1^{\dif\hat t} = -G_1^{\dif\hat \tau}$ from \eqref{eq:G_dtau}. In addition to the limiting case \eqref{eq:G_dtau_lim_d} we have to treat the limit for $\delta>0$,
 \begin{equation*}
-  \lim_{\|\tilde \vr\| \to 0_+} \widetilde G^{\dif\hat t}_1(\tilde \vr,\delta) = -\frac{1}{4\pi\sqrt{\pi\delta}}.
+  \lim_{\|\tilde \vr\| \to 0_+} G^{\dif\hat t}_1(\tilde \vr,\delta) = -\frac{1}{4\pi\sqrt{\pi\delta}}.
 \end{equation*}
 
 For $d=0$ we have
@@ -424,7 +424,7 @@ For $d=0$ we have
 \end{equation*}
 Since $G_1(\tilde \vr,0) = 0$ for any $\tilde \vr,\,\|\tilde \vr\|>0$ it holds
 \begin{equation*}
-  D^{2,0}(\vr) = -\frac{1}{\sqrt{\alpha h_t}} \bigg[ \widetilde G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, 0 \bigg) - \widetilde G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, 1 \bigg) \bigg].
+  D^{2,0}(\vr) = -\frac{1}{\sqrt{\alpha h_t}} \bigg[ G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, 0 \bigg) - G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, 1 \bigg) \bigg].
 \end{equation*}
 Finally, $\matD_h = \matD_h^1 + \matD_h^2$ possesses the same layout as \eqref{eq:V_mat}. The individual blocks in $\matD_h^2$ are set up as
 \begin{equation*}
