@@ -14,7 +14,7 @@ stmesh = stmesh.refine_xt( level, 2 );
 order_nf = 4;
 order_ff = 4;
 
-alpha = 0.5;
+alpha = 0.1;
 y = [ 0 0 1.5 ];
 dir_fun = @( x, t, ~ ) ( 4 * pi * alpha * t )^( -3 / 2 ) ...
   .* exp( - ( ( x - y ).^2 * [ 1; 1; 1 ] ) / ( 4 * alpha * t ) );
