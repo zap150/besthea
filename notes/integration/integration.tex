@@ -24,6 +24,8 @@
 
 \section{Heat equation}
 
+\nocite{Mes2014,MesSchTau2014,MesSchTau2015,DohNiiSte2018,DohEtAl2018,DohZapOfMer2019,Cos1990,ManTau2019,Cos2004,Noo1988}
+
 For a bounded Lipschitz domain $\Omega \subset \R^3$ we aim to solve the heat equation
 \begin{equation}
   \label{eq:heat_eq}
@@ -128,13 +130,17 @@ with $\gamma_j$ denoting planar triangular elements, we define
 \begin{equation*}
   \overline{\Sigma_h} := \bigcup_{k=1}^{E_t E_{\vx}} \overline{\sigma_k} = \bigcup_{i=1}^{E_t} \bigcup_{j=1}^{E_\vx} \overline{(t_{i-1}, t_i)} \times \overline{\gamma_j}.
 \end{equation*}
-The basis functions of the approximating spaces $X_h \subset X$ and $X^\ast_h \subset X^\ast$ are defined accordingly, i.e. the spatial and temporal contributions can be separated as $\varphi_{t\vx,k}(\vx,t) = \varphi_{t,i} (t) \varphi_{\vx,j} (\vx) =: \varphi_{t\vx,i,j}(\vx,t)$. We thus define the space 
+The basis functions of the approximating spaces $X_h^{0,1} \subset X$ and $X_h^{0,0} \subset X^\ast$ are defined accordingly, i.e. the spatial and temporal contributions can be separated as 
 \begin{equation*}
-  X^\ast_h := X_h^{0,0} := \vspan (\varphi^{0,0}_{t\vx,k})_{k=1}^{E_t E_{\vx}} = \vspan ((\varphi^0_{t,i}\varphi^0_{\vx,j})_{j=1}^{E_{\vx}})_{i=1}^{E_t}
+  \varphi_{t\vx,k}(\vx,t) = \varphi_{t,i} (t) \varphi_{\vx,j} (\vx) =: \varphi_{t\vx,i,j}(\vx,t). 
+\end{equation*}
+We thus define the space 
+\begin{equation*}
+  X_h^{0,0} := \vspan (\varphi^{0,0}_{t\vx,k})_{k=1}^{E_t E_{\vx}} = \vspan ((\varphi^0_{t,i}\varphi^0_{\vx,j})_{j=1}^{E_{\vx}})_{i=1}^{E_t}
 \end{equation*}
 of functions piecewise constant both in space and time and the space  
 \begin{equation*}
-  X_h := X_h^{0,1} := \vspan (\varphi^{0,1}_{t\vx,k})_{k=1}^{E_t N_\vx} = \vspan ((\varphi^0_{t,i}\varphi^1_{\vx,j})_{j=1}^{N_{\vx}})_{i=1}^{E_t}
+  X_h^{0,1} := \vspan (\varphi^{0,1}_{t\vx,k})_{k=1}^{E_t N_\vx} = \vspan ((\varphi^0_{t,i}\varphi^1_{\vx,j})_{j=1}^{N_{\vx}})_{i=1}^{E_t}
 \end{equation*} 
 of functions globally continuous and piecewise linear in space and piecewise constant in time. Here we denote by $N_\vx$ the number of nodes of the triangular mesh $\Gamma_h$.
 
@@ -198,7 +204,7 @@ Let us start with the latter case. Using the substitution
 \label{eq:subst_tau_t}
 \begin{aligned}
   \tau &= h_t \hat\tau, \quad \hat\tau = \tau/h_t, \quad \dif\tau = h_t\,\dif\hat\tau, \\
-  t &= h_t (d+\hat t), \quad \hat t = t/h_t, \quad \dif t = h_t\,\dif\hat t
+  t &= h_t (d+\hat t), \quad \hat t = t/h_t - d, \quad \dif t = h_t\,\dif\hat t
 \end{aligned}
 \end{equation}
 we obtain
@@ -307,9 +313,9 @@ with
 \end{align*}
 Note that for $\delta > 0$ we have
 \begin{equation*}
-  \lim_{\|\tilde \vr\| \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy} = \infty.
+  \lim_{\|\tilde \vr\| \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy} = 0.
 \end{equation*}
-However, when integrating over two identical triangles it holds $\tilde \vr \cdot \vn_\vy = 0$ almost everywhere. \todo{what about neighbouring elements? Need SS even for $\delta>0$?} Conversely, for $\|\tilde \vr\|>0$ we have
+Conversely, for $\|\tilde \vr\|>0$ we have
 \begin{equation*}
   \lim_{\delta \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy} = -\frac{\tilde \vr \cdot \vn_\vy}{8 \pi \|\tilde \vr\|}.
 \end{equation*}
@@ -335,12 +341,13 @@ with
 \begin{equation}
 \label{eq:dn_G_dtau}
 \begin{aligned}
-   \frac{\partial \widetilde G^{\dif\hat\tau}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},1\bigg) := \sqrt{\alpha h_t} \frac{\partial G^{\dif\hat\tau}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},1\bigg) = \frac{\tilde \vr \cdot \vn_\vy}{4\pi\|\tilde\vr\|^2} \bigg[ \frac{1}{\|\tilde \vr\|} \erf\bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} \bigg) - \frac{1}{\sqrt{\pi\delta}} \exp\bigg( -\frac{\|\tilde \vr\|^2}{4\delta} \bigg) \bigg]
+   \frac{\partial \widetilde G^{\dif\hat\tau}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},1\bigg) &:= \sqrt{\alpha h_t} \frac{\partial G^{\dif\hat\tau}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},1\bigg) \\
+   &= \frac{\tilde \vr \cdot \vn_\vy}{4\pi\|\tilde\vr\|^2} \bigg[ \frac{1}{\|\tilde \vr\|} \erf\bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} \bigg) - \frac{1}{\sqrt{\pi\delta}} \exp\bigg( -\frac{\|\tilde \vr\|^2}{4\delta} \bigg) \bigg]
 \end{aligned}
 \end{equation}
 For $\delta > 0$ we again obtain
 \begin{equation*}
-  \lim_{\|\tilde \vr\| \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau}_1}{\partial \vn_\vy} = -\infty.
+  \lim_{\|\tilde \vr\| \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau}_1}{\partial \vn_\vy} = 0.
 \end{equation*}
 For $\|\tilde \vr\| > 0$ it holds
 \begin{equation}
@@ -435,7 +442,7 @@ Finally, $\matD_h = \matD_h^1 + \matD_h^2$ possesses the same layout as \eqref{e
 
 To evaluate the discretized representation formula in $\vx\in\Omega$ and the temporal nodes $t_k = k h_t$ we have to compute the contribution of the single-layer potential
 \begin{align*}
- Vw_h(\vx, t_k) &= \sum_{i=1}^{k} \sum_{j=1}^{E_\vx} w_{i,j} \int_{\gamma_j} \int_{t_{i-1}}^{t_i} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif\vs_\vy \\
+ Vw_h(\vx, t_k) &= \sum_{i=1}^{k} \sum_{j=1}^{E_\vx} w_{i,j} \int_{\gamma_j} \int_{t_{i-1}}^{t_i} G_\alpha(\vx-\vy,t_k-\tau) \,\dif\tau \,\dif\vs_\vy \\
  &= \sum_{d=0}^{k-1} \sum_{j=1}^{E_\vx} w_{i,j} \int_{\gamma_j} \int_{0}^{t_1} G_\alpha(\vx-\vy,h_t(d+1)-\tau) \,\dif\tau \,\dif\vs_\vy
 \end{align*}
 Substituting \eqref{eq:subst_tau_t} and scaling by \eqref{eq:G_scaling} leads to
@@ -449,14 +456,14 @@ with $G_1^{\dif\hat\tau}$ from \eqref{eq:G_dtau} and its limit for $\delta \to 0
 
 For the double-layer potential we similarly obtain
 \begin{align*}
-  Ku_h(\vx, t_k) &= \sum_{i=1}^{k} \sum_{j=1}^{N_\vx} u_{i,j} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \int_{t_{i-1}}^{t_i} \alpha \frac{\partial G_\alpha}{\partial \vn_\vy}(\vx-\vy,t-\tau) \,\dif\tau \,\dif\vs_\vy \\
+  Ku_h(\vx, t_k) &= \sum_{i=1}^{k} \sum_{j=1}^{N_\vx} u_{i,j} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \int_{t_{i-1}}^{t_i} \alpha \frac{\partial G_\alpha}{\partial \vn_\vy}(\vx-\vy,t_k-\tau) \,\dif\tau \,\dif\vs_\vy \\
   &= \sum_{j=1}^{N_\vx} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \sum_{d=0}^{k-1} u_{i,j} \frac{1}{\alpha h_t} \bigg[ \frac{\partial \widetilde G_1^{\dif\hat\tau}}{\partial \vn_\vy}(\tilde \vr, d) - \frac{\partial \widetilde G_1^{\dif\hat\tau}}{\partial \vn_\vy}(\tilde \vr, d+1) \bigg] \,\dif\vs_\vy
 \end{align*}
 with $\partial \widetilde G_1^{\dif\hat\tau} / \partial \vn_\vy$ from \eqref{eq:dn_G_dtau} and its limit for $\delta \to 0_+$ in \eqref{eq:dn_G_dtau_lim_r}.
 
 \newpage
 \bibliographystyle{acm}
-\bibliography{/Users/zap150/Dropbox/library/bibtex_database}
+\bibliography{references}
 
 \end{document}
 
