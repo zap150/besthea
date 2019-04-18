@@ -11,7 +11,7 @@ mesh = mesh.refine( level );
 order_nf = 4;
 order_ff = 4;
 
-kappa = 2;
+kappa = get_kappa( );
 
 basis_p1 = p1( mesh );
 basis_p0 = p0( mesh );
@@ -97,10 +97,14 @@ fprintf( 1, 'l2 relative error: %f.\n', err_vol );
 
 end
 
+function kappa = get_kappa( )
+  kappa = 4;
+end
+
 function value = dir_fun( x, ~ )
 
 y = [ 0 0 1.5 ];
-kappa = 2;
+kappa = get_kappa( );
 norm = sqrt( ( x - y ).^2 * [ 1; 1; 1 ] );
 value = exp( 1i * kappa * norm ) ./ ( 4 * pi * norm );
 
@@ -109,7 +113,7 @@ end
 function value = neu_fun( x, n )
 
 y = [ 0 0 1.5 ];
-kappa = 2;
+kappa = get_kappa( );
 xy = x - y;
 norm = sqrt( xy.^2 * [ 1; 1; 1 ] );
 value = -( xy * n' ) ./ ( 4 * pi * norm .* norm .* norm ) ...

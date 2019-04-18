@@ -47,4 +47,3 @@ classdef p1 < basis_function
   end
   
 end
-

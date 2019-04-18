@@ -24,9 +24,9 @@
 
 \section{Heat equation}
 
-\nocite{Mes2014,MesSchTau2014,MesSchTau2015,DohNiiSte2018,DohEtAl2018,DohZapOfMer2019,Cos1990,ManTau2019,Cos2004,Noo1988}
+\nocite{DohEtAl2018,DohZapOfMer2019}
 
-For a bounded Lipschitz domain $\Omega \subset \R^3$ we aim to solve the heat equation
+For a bounded Lipschitz domain $\Omega \subset \R^3$ we aim to solve the heat equation \cite{Mes2014,MesSchTau2014,MesSchTau2015}
 \begin{equation}
   \label{eq:heat_eq}
   \frac{\partial u}{\partial t}(\vx,t) - \alpha \upDelta u(\vx,t) = 0 \quad\text{for } (\vx,t) \in \Omega \times (0,T) =: Q
@@ -81,12 +81,12 @@ and the fundamental solution to the heat equation
   \end{equation}
 \end{remark}
 
-To obtain the Cauchy data we apply the Dirichlet and Neumann trace operators to the representation formula \eqref{eq:repr} to obtain the boundary integral equations with $w := \alpha\partial u/\partial \vn $,
+To obtain the Cauchy data we apply the Dirichlet and Neumann trace operators to the representation formula \eqref{eq:repr} to obtain the boundary integral equations \cite{Cos1990,Cos2004,Noo1988,DohNiiSte2018}
 \begin{align*}
   Vw(\vx,t) &= \bigg(\frac{1}{2} I + K \bigg) u(\vx,t) - M_0 u_0(\vx,t) &&\text{for } (\vx,t) \in \Sigma, \\
   Du(\vx,t) &= \bigg(\frac{1}{2} I - K^\ast \bigg) w(\vx,t) - M_1 u_0(\vx,t) &&\text{for } (\vx,t) \in \Sigma,
 \end{align*}
-respectively. The boundary integral operators $V$, $K$, $M_0$, $D$, $K^\ast$, and $M_1$ denote the compositions of the potentials with the respective traces and for sufficiently regular functions admit the representations
+respectively, with $w := \alpha\partial u/\partial \vn $. The boundary integral operators $V$, $K$, $M_0$, $D$, $K^\ast$, and $M_1$ denote the compositions of the potentials with the respective traces and for sufficiently regular functions admit the representations
 \begin{align*}
   V &\colon X^\ast \to X, &Vw(\vx,t) &= \int_0^t \int_{\partial\Omega} G_\alpha(\vx-\vy,t-\tau) w(\vy,\tau) \,\dif\vs_\vy \,\dif\tau, \\
   K &\colon X \to X, &Ku(\vx,t) &= \int_0^t \int_{\partial\Omega} \alpha\frac{\partial G_\alpha}{\partial \vn_\vy}(\vx-\vy,t-\tau) u(\vy,\tau) \,\dif\vs_\vy \,\dif\tau, \\
@@ -248,7 +248,7 @@ Similarly, for well separated $t$ and $\tau$, i.e. for $\delta > 0$, we compute 
 \begin{equation*}
   \lim_{\|\tilde\vr\|\to 0+} G^{\dif\hat\tau\dif\hat t}_1(\tilde\vr,\delta) = \frac{\sqrt{\delta}}{2\pi^{3/2}}.
 \end{equation*}
-Thus, if either the spatial or temporal variables are well separated, i.e. we integrate over disjoint triangles or time intervals, standard quadrature routines can be applied. For the near field, regularized quadrature techniques based on the Duffy transformation can be used. 
+Thus, if either the spatial or temporal variables are well separated, i.e. we integrate over disjoint triangles or time intervals, standard quadrature routines can be applied. For the near field, regularized quadrature techniques based on the Duffy transformation can be used \cite{SauSch2010,ManTau2019}. 
 
 For $V^0(\vr)$ we obtain in a similar fashion
 \begin{align*}
