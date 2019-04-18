@@ -149,16 +149,16 @@ classdef be_assembler < handle
       n_elems = obj.mesh.n_elems;
       dim_test = obj.test.dim_local( );
       dim_trial = obj.trial.dim_local( );
-      A_local = zeros( dim_test, dim_trial );
       obj.kernel.ht = obj.mesh.ht;
-      obj.kernel.nt = obj.mesh.nt;
       
       msg = sprintf( 'assembling %s', class( obj.kernel ) );
       f = waitbar( 0, msg );
       f.Children.Title.Interpreter = 'none';
       
-      for d = 0 : nt - 1
-        obj.kernel.d = d;
+      parfor d = 0 : nt - 1      
+        my_kernel = copy( obj.kernel );
+        my_kernel.d = d;
+        A_local = zeros( dim_test, dim_trial );
         
         msgd = [ msg sprintf( ', d = %d/%d', d + 1, nt ) ];
         waitbar( d / nt, f, msgd );
@@ -180,7 +180,7 @@ classdef be_assembler < handle
               [ x, y ] = global_quad( obj, ...
                 i_test, i_trial, type, rot_test, rot_trial, i_simplex );
               
-              k = obj.kernel.eval( x, y, obj.mesh.normals( i_test, : ), ...
+              k = my_kernel.eval( x, y, obj.mesh.normals( i_test, : ), ...
                 obj.mesh.normals( i_trial, : ) );
               
               test_fun = obj.test.eval( obj.x_ref{ type }{ i_simplex }, ...

@@ -1,9 +1,8 @@
-classdef kernel_heat_hs1 < kernel
+classdef kernel_heat_hs1 < kernel & matlab.mixin.Copyable
   
   properties (Access = public)
     alpha;
     ht;
-    nt;
     d;
   end
   
@@ -11,7 +10,6 @@ classdef kernel_heat_hs1 < kernel
     function obj = kernel_heat_hs1( alpha )
       obj.alpha = alpha;
       obj.ht = 0;
-      obj.nt = 0;
       obj.d = 0;
     end
         
@@ -30,7 +28,13 @@ classdef kernel_heat_hs1 < kernel
     end
   end
   
-  methods (Access = private)
+  methods (Access = protected)
+    function cp = copyElement( obj )
+      cp = kernel_heat_hs1( obj.alpha );
+      cp.ht = obj.ht;
+      cp.d = obj.d;
+    end
+    
     function res = G_anti_tau_anti_t( obj, rr, delta )
       if( delta > 0 )
         res = G_anti_tau_anti_t_regular( obj, rr, delta );
