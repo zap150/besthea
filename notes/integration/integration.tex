@@ -311,14 +311,43 @@ with
   \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}(\tilde \vr,\delta) &:= \sqrt{\alpha h_t}\frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}(\tilde \vr,\delta) \\
   &= - \frac{\sqrt{\delta}}{4\pi} \frac{\tilde \vr \cdot \vn_\vy}{\|\tilde \vr\|^2} \bigg[  \bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} - \frac{\sqrt{\delta}}{\|\tilde \vr\|} \bigg) \erf\bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} \bigg) + \frac{1}{\sqrt{\pi}} \exp \bigg( -\frac{\|\tilde \vr\|^2}{4\delta} \bigg) \bigg].
 \end{align*}
-Note that for $\delta > 0$ we have
-\begin{equation*}
-  \lim_{\|\tilde \vr\| \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy} = 0.
-\end{equation*}
-Conversely, for $\|\tilde \vr\|>0$ we have
+For $\|\tilde \vr\|>0$ we have
 \begin{equation*}
   \lim_{\delta \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy} = -\frac{\tilde \vr \cdot \vn_\vy}{8 \pi \|\tilde \vr\|}.
 \end{equation*}
+Conversely, for $\delta > 0$ we have
+\begin{equation} \label{eq:lim_double_primitive}
+  \lim_{\|\tilde \vr\| \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy} = 0.
+\end{equation}
+This follows by estimating 
+\begin{equation*}
+	\left| \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}
+	\right| \leq
+	\left| \frac{\partial \widetilde{G}_1^{\dif \hat\tau \dif\hat t }}{\partial \vn_\vy}
+	(\tilde\vr, \delta) \right| 
+	\leq \left| 
+	\frac{\left(\frac{\| \tilde \vr \|^2}{2} - \delta \right)
+	\erf\left(\frac{\|\tilde \vr \|}{2 \sqrt{\delta}}  \right)
+	+ \frac{\sqrt{\delta} \| \tilde \vr \|}{\sqrt{\pi}} 
+	\exp \left( -\frac{\|\tilde \vr\|^2}{4 \delta} \right)}
+	{4 \pi \|\tilde \vr\|^2 }
+	 \right| = |g(\|\tilde\vr \|, \delta)|.
+\end{equation*}
+The limit of the function $g$ for $\rho = \|\tilde \vr\| \rightarrow 0+$ is zero. Indeed l'Hospital's rule yields
+\begin{align*}
+	\lim_{\rho \rightarrow 0+} g(\rho,\delta) &=
+	\lim_{\rho \rightarrow 0+} \frac{
+	\left(\frac{\rho^2}{2}-\delta \right) \erf\left(\frac{\rho}{2 \sqrt{\delta}} \right)
+	+ \frac{\sqrt{\delta} \rho}{\sqrt{\pi}} \exp \left( -\frac{\rho^2}{4 \delta} \right)}
+	{4\pi \rho^2} \\ &= 
+	\lim_{\rho \rightarrow 0+} \frac{2 \rho \erf\left(\frac{\rho}{2 \sqrt{\delta}}\right)
+	+\exp\left(\frac{-\rho^2}{4\delta}\right) 
+	\left( \frac{1}{\sqrt{\pi \delta}} \left(\left( \frac{\rho^2}{2} - \delta \right)
+	+ \left( \delta - \frac{\rho^2}{2}\right) \right) \right)}
+	{8 \pi \rho} \\
+	&= \lim_{\rho \rightarrow 0 +}\frac{1}{4 \pi} \erf\left(\frac{-\rho^2}{4\delta}\right) = 0.
+\end{align*}
+This gives \eqref{eq:lim_double_primitive}.
 
 For $K^0(\vr)$ we can write
 \begin{align*}
