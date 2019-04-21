@@ -316,13 +316,12 @@ For $\|\tilde \vr\|>0$ we have
   \lim_{\delta \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy} = -\frac{\tilde \vr \cdot \vn_\vy}{8 \pi \|\tilde \vr\|}.
 \end{equation*}
 Conversely, for $\delta > 0$ we have
-\begin{equation} \label{eq:lim_double_primitive}
+\begin{equation*} 
+%\label{eq:lim_double_primitive}
   \lim_{\|\tilde \vr\| \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy} = 0.
-\end{equation}
+\end{equation*}
 This follows by estimating 
 \begin{equation*}
-	\left| \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}
-	\right| \leq
 	\left| \frac{\partial \widetilde{G}_1^{\dif \hat\tau \dif\hat t }}{\partial \vn_\vy}
 	(\tilde\vr, \delta) \right| 
 	\leq \left| 
@@ -331,9 +330,9 @@ This follows by estimating
 	+ \frac{\sqrt{\delta} \| \tilde \vr \|}{\sqrt{\pi}} 
 	\exp \left( -\frac{\|\tilde \vr\|^2}{4 \delta} \right)}
 	{4 \pi \|\tilde \vr\|^2 }
-	 \right| = |g(\|\tilde\vr \|, \delta)|.
+	 \right| =: |g(\|\tilde\vr \|, \delta)|
 \end{equation*}
-The limit of the function $g$ for $\rho = \|\tilde \vr\| \rightarrow 0+$ is zero. Indeed l'Hospital's rule yields
+and observing that the limit of the function $g$ for $\rho = \|\tilde \vr\| \rightarrow 0+$ is zero. Indeed l'Hospital's rule yields
 \begin{align*}
 	\lim_{\rho \rightarrow 0+} g(\rho,\delta) &=
 	\lim_{\rho \rightarrow 0+} \frac{
@@ -347,7 +346,6 @@ The limit of the function $g$ for $\rho = \|\tilde \vr\| \rightarrow 0+$ is zero
 	{8 \pi \rho} \\
 	&= \lim_{\rho \rightarrow 0 +}\frac{1}{4 \pi} \erf\left(\frac{-\rho^2}{4\delta}\right) = 0.
 \end{align*}
-This gives \eqref{eq:lim_double_primitive}.
 
 For $K^0(\vr)$ we can write
 \begin{align*}
