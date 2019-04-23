@@ -71,6 +71,15 @@ and the fundamental solution to the heat equation
   0 & \text{otherwise.}
   \end{cases}
 \end{equation*}
+Differentiating we obtain
+\begin{equation*}
+  \alpha\frac{\partial G_\alpha}{\partial \vn_\vy}(\vx-\vy,t-\tau) :=
+  \begin{cases}
+  \displaystyle
+  \frac{(\vx-\vy)\cdot \vn_\vy}{16(\pi\alpha)^{3/2}(t-\tau)^{5/2}}\exp\bigg( -\frac{\|\vx-\vy\|^2}{4\alpha(t-\tau)} \bigg) & \text{for } t > \tau, \\
+  0 & \text{otherwise.}
+  \end{cases}
+\end{equation*}  
 
 \begin{remark}
   \label{rem:scaling}
