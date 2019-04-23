@@ -24,7 +24,7 @@
 
 \section{Heat equation}
 
-\nocite{DohEtAl2018,DohZapOfMer2019}
+%\nocite{DohEtAl2018,DohZapOfMer2019}
 
 For a bounded Lipschitz domain $\Omega \subset \R^3$ we aim to solve the heat equation \cite{Mes2014,MesSchTau2014,MesSchTau2015}
 \begin{equation}
@@ -74,7 +74,7 @@ and the fundamental solution to the heat equation
 
 \begin{remark}
   \label{rem:scaling}
-  It can be easily verified that there holds the scaling condition
+  It can be easily verified that there holds the scaling relation
   \begin{equation}
   \label{eq:G_scaling}
     G_\alpha(\vx-\vy,\beta(t-\tau)) = \frac{1}{(\alpha\beta)^{3/2}} G_1\bigg( \frac{\vx-\vy}{\sqrt{\alpha\beta}}, t-\tau \bigg).
@@ -290,17 +290,22 @@ For $d > 0$ we thus obtain from the evaluation of \eqref{eq:V_d} that
 \begin{align*}
   K^d(\vr) = \sqrt{\frac{h_t}{\alpha}} \bigg[ 2 \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy} \bigg(\frac{\vr}{\sqrt{\alpha h_t}},d\bigg) - \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+1\bigg) - \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d-1\bigg) \bigg]
 \end{align*}
-Since $G^{\dif\hat\tau\dif\hat t}_1$ only depends on the norm of its first argument, we obtain
+Since $G^{\dif\hat\tau\dif\hat t}_1$ only depends on the norm of its first argument, we can write 
+\begin{equation}
+  \label{eq:G_to_g}
+  G^{\dif\hat\tau\dif\hat t}_1(\tilde\vr,\delta) =: g^{\dif\hat\tau\dif\hat t}(\|\tilde\vr\|,\delta) \quad\text{with}\quad g^{\dif\hat\tau\dif\hat t}(\rho,\delta)\colon \R\times\R\to\R
+\end{equation}
+to obtain
 \begin{equation}
 \label{eq:dn_G_dt_dtau}
 \begin{aligned}
-  \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy} &= \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \|\tilde \vr\|} \vn_\vy \cdot \nabla_\vy \frac{\|\vx-\vy\|}{\sqrt{\alpha h_t}} \\
-  &= -\frac{1}{\sqrt{\alpha h_t}} \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \|\tilde \vr\|} \frac{(\vx-\vy)\cdot \vn_\vy}{\|\vx-\vy\|} = -\frac{1}{\sqrt{\alpha h_t}} \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \|\tilde \vr\|} \frac{\tilde \vr \cdot \vn_\vy}{\|\tilde \vr\|}
+  \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}(\tilde\vr,\delta) &= \frac{\partial g^{\dif\hat\tau\dif\hat t}}{\partial \rho}(\|\tilde\vr\|,\delta) \vn_\vy \cdot \nabla_\vy \frac{\|\vx-\vy\|}{\sqrt{\alpha h_t}} \\
+  &= -\frac{1}{\sqrt{\alpha h_t}} \frac{\partial g^{\dif\hat\tau\dif\hat t}}{\partial \rho}(\|\tilde\vr\|,\delta) \frac{(\vx-\vy)\cdot \vn_\vy}{\|\vx-\vy\|} = -\frac{1}{\sqrt{\alpha h_t}} \frac{\partial g^{\dif\hat\tau\dif\hat t}}{\partial \rho}(\|\tilde\vr\|,\delta) \frac{\tilde \vr \cdot \vn_\vy}{\|\tilde \vr\|}
 \end{aligned}
 \end{equation}
 with
 \begin{equation*}
-  \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \|\tilde \vr\|} =\frac{\sqrt{\delta}}{4\pi\|\tilde \vr\|} \bigg[  \bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} - \frac{\sqrt{\delta}}{\|\tilde \vr\|} \bigg) \erf\bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} \bigg) + \frac{1}{\sqrt{\pi}} \exp \bigg( -\frac{\|\tilde \vr\|^2}{4\delta} \bigg) \bigg].
+  \frac{\partial g^{\dif\hat\tau\dif\hat t}}{\partial \rho}(\|\tilde\vr\|,\delta) =\frac{\sqrt{\delta}}{4\pi\|\tilde \vr\|} \bigg[  \bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} - \frac{\sqrt{\delta}}{\|\tilde \vr\|} \bigg) \erf\bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} \bigg) + \frac{1}{\sqrt{\pi}} \exp \bigg( -\frac{\|\tilde \vr\|^2}{4\delta} \bigg) \bigg].
 \end{equation*}
 Collecting all intermediate steps brings us to
 \begin{align*}
@@ -313,38 +318,38 @@ with
 \end{align*}
 For $\|\tilde \vr\|>0$ we have
 \begin{equation*}
-  \lim_{\delta \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy} = -\frac{\tilde \vr \cdot \vn_\vy}{8 \pi \|\tilde \vr\|}.
+  \lim_{\delta \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}(\tilde \vr,\delta) = -\frac{\tilde \vr \cdot \vn_\vy}{8 \pi \|\tilde \vr\|}.
 \end{equation*}
 Conversely, for $\delta > 0$ we have
 \begin{equation*} 
 %\label{eq:lim_double_primitive}
-  \lim_{\|\tilde \vr\| \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy} = 0.
+  \lim_{\|\tilde \vr\| \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}(\tilde \vr,\delta) = 0.
 \end{equation*}
 This follows by estimating 
 \begin{equation*}
-	\left| \frac{\partial \widetilde{G}_1^{\dif \hat\tau \dif\hat t }}{\partial \vn_\vy}
+	\left| \frac{\partial \widetilde{G}_1^{\dif \hat\tau \dif\hat t}}{\partial \vn_\vy}
 	(\tilde\vr, \delta) \right| 
 	\leq \left| 
 	\frac{\left(\frac{\| \tilde \vr \|^2}{2} - \delta \right)
-	\erf\left(\frac{\|\tilde \vr \|}{2 \sqrt{\delta}}  \right)
+	\erf\left(\frac{\|\tilde \vr \|}{\sqrt{4\delta}}  \right)
 	+ \frac{\sqrt{\delta} \| \tilde \vr \|}{\sqrt{\pi}} 
 	\exp \left( -\frac{\|\tilde \vr\|^2}{4 \delta} \right)}
 	{4 \pi \|\tilde \vr\|^2 }
-	 \right| =: |g(\|\tilde\vr \|, \delta)|
+	 \right| =: \big|\tilde g^{\dif \hat\tau \dif\hat t}(\|\tilde\vr \|, \delta)\big|
 \end{equation*}
-and observing that the limit of the function $g$ for $\rho = \|\tilde \vr\| \rightarrow 0+$ is zero. Indeed l'Hospital's rule yields
+and observing that the limit of the function $\tilde g^{\dif \hat\tau \dif\hat t}$ for $\rho = \|\tilde \vr\| \rightarrow 0_+$ is zero. Indeed, L'Hospital's rule yields
 \begin{align*}
-	\lim_{\rho \rightarrow 0+} g(\rho,\delta) &=
-	\lim_{\rho \rightarrow 0+} \frac{
-	\left(\frac{\rho^2}{2}-\delta \right) \erf\left(\frac{\rho}{2 \sqrt{\delta}} \right)
+	\lim_{\rho \rightarrow 0_+} \tilde g^{\dif \hat\tau \dif\hat t}(\rho,\delta) &=
+	\lim_{\rho \rightarrow 0_+} \frac{
+	\left(\frac{\rho^2}{2}-\delta \right) \erf\left(\frac{\rho}{\sqrt{4\delta}} \right)
 	+ \frac{\sqrt{\delta} \rho}{\sqrt{\pi}} \exp \left( -\frac{\rho^2}{4 \delta} \right)}
 	{4\pi \rho^2} \\ &= 
-	\lim_{\rho \rightarrow 0+} \frac{2 \rho \erf\left(\frac{\rho}{2 \sqrt{\delta}}\right)
-	+\exp\left(\frac{-\rho^2}{4\delta}\right) 
+	\lim_{\rho \rightarrow 0_+} \frac{2 \rho \erf\left(\frac{\rho}{\sqrt{4\delta}}\right)
+	+\exp\left(-\frac{\rho^2}{4\delta}\right) 
 	\left( \frac{1}{\sqrt{\pi \delta}} \left(\left( \frac{\rho^2}{2} - \delta \right)
 	+ \left( \delta - \frac{\rho^2}{2}\right) \right) \right)}
 	{8 \pi \rho} \\
-	&= \lim_{\rho \rightarrow 0 +}\frac{1}{4 \pi} \erf\left(\frac{-\rho^2}{4\delta}\right) = 0.
+	&= \lim_{\rho \rightarrow 0_+}\frac{1}{4 \pi} \erf\left(-\frac{\rho^2}{4\delta}\right) = 0.
 \end{align*}
 
 For $K^0(\vr)$ we can write
@@ -352,15 +357,15 @@ For $K^0(\vr)$ we can write
   K^0(\vr) &= \sqrt{\frac{h_t}{\alpha}} \frac{\partial}{\partial \vn_\vy} \int_{0}^{1} G^{\dif\hat \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) - G^{\dif\hat \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},\hat t\bigg) \,\dif\hat t \\
   &= \sqrt{\frac{h_t}{\alpha}} \bigg[ \frac{\partial G^{\dif\hat \tau}_1}{\partial \vn_\vy} \bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) - \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},1\bigg) + \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) \bigg]
 \end{align*}
-Similarly as in \eqref{eq:dn_G_dt_dtau} we have
+Similarly as in \eqref{eq:dn_G_dt_dtau} with \eqref{eq:G_to_g} we have
 \begin{equation*}
-  \frac{\partial G^{\dif\hat\tau}_1}{\partial \vn_\vy} = -\frac{1}{\sqrt{\alpha h_t}} \frac{\partial G^{\dif\hat\tau}_1}{\partial \|\tilde \vr\|} \frac{\tilde \vr \cdot \vn_\vy}{\|\tilde \vr\|}
+  \frac{\partial G^{\dif\hat\tau}_1}{\partial \vn_\vy}(\tilde \vr,\delta) = -\frac{1}{\sqrt{\alpha h_t}} \frac{\partial g^{\dif\hat\tau}}{\partial \rho}(\|\tilde \vr\|,\delta) \frac{\tilde \vr \cdot \vn_\vy}{\|\tilde \vr\|}
 \end{equation*}
-and with 
+with $G^{\dif\hat\tau}_1(\tilde\vr,\delta) =: g^{\dif\hat\tau}(\|\tilde\vr\|,\delta)$ and 
 \begin{equation*}
-  \frac{\partial G^{\dif\hat\tau}_1}{\partial \|\tilde \vr\|}(\tilde \vr,\delta) = -\frac{1}{4\pi\|\tilde\vr\|} \bigg[ \frac{1}{\|\tilde \vr\|} \erf\bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} \bigg) - \frac{1}{\sqrt{\pi\delta}} \exp\bigg( -\frac{\|\tilde \vr\|^2}{4\delta} \bigg) \bigg]
+  \frac{\partial g^{\dif\hat\tau}}{\partial \rho}(\|\tilde \vr\|,\delta) = -\frac{1}{4\pi\|\tilde\vr\|} \bigg[ \frac{1}{\|\tilde \vr\|} \erf\bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} \bigg) - \frac{1}{\sqrt{\pi\delta}} \exp\bigg( -\frac{\|\tilde \vr\|^2}{4\delta} \bigg) \bigg].
 \end{equation*}
-we finally obtain
+We thus finally obtain
 \begin{equation*}
   K^0(\vr) = \frac{1}{\alpha} \bigg[ \frac{\partial \widetilde G^{\dif\hat \tau}_1}{\partial \vn_\vy} \bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) - \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},1\bigg) + \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) \bigg]
 \end{equation*}
@@ -372,15 +377,15 @@ with
    &= \frac{\tilde \vr \cdot \vn_\vy}{4\pi\|\tilde\vr\|^2} \bigg[ \frac{1}{\|\tilde \vr\|} \erf\bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} \bigg) - \frac{1}{\sqrt{\pi\delta}} \exp\bigg( -\frac{\|\tilde \vr\|^2}{4\delta} \bigg) \bigg]
 \end{aligned}
 \end{equation}
-For $\delta > 0$ we again obtain
-\begin{equation*}
-  \lim_{\|\tilde \vr\| \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau}_1}{\partial \vn_\vy} = 0.
-\end{equation*}
 For $\|\tilde \vr\| > 0$ it holds
 \begin{equation}
 \label{eq:dn_G_dtau_lim_r}
-  \lim_{\delta \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau}_1}{\partial \vn_\vy} = \frac{\tilde \vr \cdot \vn_\vy}{4\pi\|\tilde\vr\|^3}.
+  \lim_{\delta \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau}_1}{\partial \vn_\vy}(\tilde \vr,\delta) = \frac{\tilde \vr \cdot \vn_\vy}{4\pi\|\tilde\vr\|^3}.
 \end{equation}
+For $\delta > 0$ we again have
+\begin{equation*}
+  \lim_{\|\tilde \vr\| \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau}_1}{\partial \vn_\vy}(\tilde \vr,\delta) = 0.
+\end{equation*}
 
 The layout of the block matrix $\matK_h$ is the same as in \eqref{eq:V_mat}. The individual blocks in $\matK_h$ are set up as
 \begin{equation*}
