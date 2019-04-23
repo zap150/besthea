@@ -155,11 +155,14 @@ classdef be_assembler < handle
       f = waitbar( 0, msg );
       f.Children.Title.Interpreter = 'none';
       
-      parfor d = 0 : nt - 1      
-        my_kernel = copy( obj.kernel );
+      my_kernel = obj.kernel;
+      A_local = zeros( dim_test, dim_trial );
+      for d = 0 : nt - 1      
+%       parfor d = 0 : nt - 1      
+%         my_kernel = copy( obj.kernel );
+%         A_local = zeros( dim_test, dim_trial );   
+
         my_kernel.d = d;
-        A_local = zeros( dim_test, dim_trial );
-        
         msgd = [ msg sprintf( ', d = %d/%d', d + 1, nt ) ];
         waitbar( d / nt, f, msgd );
         
