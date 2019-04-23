@@ -1,4 +1,4 @@
-classdef be_assembler < handle
+classdef spacetime_be_assembler < handle
   
   properties (Access = public)
     mesh;
@@ -9,7 +9,11 @@ classdef be_assembler < handle
     size_nf;
     order_ff;
     size_ff;
-        
+    
+    %%%%% temporal orders
+    order_nf_t;
+    order_ff_t;
+    
     x_ref = cell( 4, 1 );
     y_ref = cell( 4, 1 );
     w = cell( 4, 1 );
@@ -31,7 +35,8 @@ classdef be_assembler < handle
   
   methods
     function obj = ...
-        be_assembler( mesh, kernel, test, trial, order_nf, order_ff )
+        spacetime_be_assembler( mesh, kernel, test, trial, order_nf, ...
+        order_ff, order_nf_t, order_ff_t )
       
       obj.mesh = mesh;
       obj.kernel = kernel;
@@ -45,6 +50,15 @@ classdef be_assembler < handle
         obj.order_nf = order_nf;
         obj.order_ff = order_ff;
       end
+      
+      if( nargin < 8 )
+        obj.order_nf_t = 4;
+        obj.order_ff_t = 4;
+      else
+        obj.order_nf_t = order_nf_t;
+        obj.order_ff_t = order_ff_t;
+      end
+      
       length_nf = quadratures.line_length( order_nf );
       obj.size_nf = length_nf * length_nf * length_nf * length_nf;
       length_ff = quadratures.tri_length( order_ff );
@@ -60,85 +74,6 @@ classdef be_assembler < handle
     end
     
     function A = assemble( obj )
-      if( isa( obj.mesh, 'spacetime_mesh' ) )
-        A = assemble_st( obj );
-      else
-        A = assemble_s( obj );
-      end
-    end
-    
-  end
-  
-  methods (Access = private)
-    
-    function A = assemble_s( obj )
-      A = zeros( obj.test.dim_global( ), obj.trial.dim_global( ) );
-      
-      n_elems = obj.mesh.n_elems;
-      dim_test = obj.test.dim_local( );
-      dim_trial = obj.trial.dim_local( );
-      A_local = zeros( dim_test, dim_trial );
-      
-      msg = sprintf( 'assembling %s', class( obj.kernel ) );
-      f = waitbar( 0, msg );
-      f.Children.Title.Interpreter = 'none';      
-      
-      for i_trial = 1 : n_elems
-        waitbar( ( i_trial - 1 ) / n_elems, f );
-        for i_test = 1 : n_elems
-          
-          [ type, rot_test, rot_trial ] = get_type( obj, i_test, i_trial );
-          
-          A_local( :, : ) = 0;
-          for i_simplex = 1 : obj.n_simplex( type )
-            [ x, y ] = global_quad( obj, ...
-              i_test, i_trial, type, rot_test, rot_trial, i_simplex );
-            
-            k = obj.kernel.eval( x, y, obj.mesh.normals( i_test, : ), ...
-              obj.mesh.normals( i_trial, : ) );
-            
-            test_fun = obj.test.eval( obj.x_ref{ type }{ i_simplex }, ...
-              obj.mesh.normals( i_test, : ), i_test, type, rot_test, false );
-            
-            trial_fun = obj.trial.eval( obj.y_ref{ type }{ i_simplex }, ...
-              obj.mesh.normals( i_trial, : ), i_trial, type, rot_trial, true );
-            
-            if( isa( obj.test, 'curl_p1' ) )
-              for i_loc_test = 1 : dim_test
-                for i_loc_trial = 1 : dim_trial
-                  A_local( i_loc_test, i_loc_trial ) = ...
-                    A_local( i_loc_test, i_loc_trial ) ...
-                    + ( test_fun( ( i_loc_test - 1 ) * 3 + 1 : ...
-                    i_loc_test * 3 ) ... 
-                    * trial_fun( ( i_loc_trial - 1 ) * 3 + 1 : ...
-                    i_loc_trial * 3 )' ) * ( obj.w{ type }{ i_simplex } )' * k;
-                end
-              end
-            else
-              for i_loc_test = 1 : dim_test
-                for i_loc_trial = 1 : dim_trial
-                  A_local( i_loc_test, i_loc_trial ) = ...
-                    A_local( i_loc_test, i_loc_trial ) ...
-                    + ( obj.w{ type }{ i_simplex } ...
-                    .* test_fun( :, i_loc_test ) ...
-                    .* trial_fun( :, i_loc_trial ) )' * k;
-                end
-              end
-            end
-          end
-          
-          map_test = obj.test.l2g( i_test, type, rot_test, false );
-          map_trial = obj.trial.l2g( i_trial, type, rot_trial, true );
-          A( map_test, map_trial ) = A( map_test, map_trial ) ...
-            + A_local * obj.mesh.areas( i_trial ) ...
-            * obj.mesh.areas( i_test );
-        end
-      end
-      waitbar( 1, f );
-      close( f );
-    end
-    
-    function A = assemble_st( obj )
       
       nt = obj.mesh.nt;
       A = cell( nt, 1 );
@@ -151,40 +86,30 @@ classdef be_assembler < handle
       dim_trial = obj.trial.dim_local( );
       obj.kernel.ht = obj.mesh.ht;
       
-      msg = sprintf( 'assembling %s', class( obj.kernel ) );
+      msg = sprintf( 'assembling %s, singular part', class( obj.kernel ) );
       f = waitbar( 0, msg );
       f.Children.Title.Interpreter = 'none';
       
       my_kernel = obj.kernel;
       A_local = zeros( dim_test, dim_trial );
-      for d = 0 : nt - 1      
-%       parfor d = 0 : nt - 1      
-%         my_kernel = copy( obj.kernel );
-%         A_local = zeros( dim_test, dim_trial );   
-
+      for d = 0 : 1
         my_kernel.d = d;
-        msgd = [ msg sprintf( ', d = %d/%d', d + 1, nt ) ];
-        waitbar( d / nt, f, msgd );
+        msgd = [ msg sprintf( ', d = %d/%d', d + 1, 2 ) ];
+        waitbar( d / 2, f, msgd );
         
         for i_trial = 1 : n_elems
-          waitbar( ( d + ( i_trial - 1 ) / n_elems ) / nt, f );
+          waitbar( ( d + ( i_trial - 1 ) / n_elems ) / 2, f );
           for i_test = 1 : n_elems
-
-            if d <= 1
-              [ type, rot_test, rot_trial ] = get_type( obj, i_test, i_trial );
-            else
-              type = 1;
-              rot_test = 0;
-              rot_trial = 0;
-            end
             
+            [ type, rot_test, rot_trial ] = get_type( obj, i_test, i_trial );            
             A_local( :, : ) = 0;
             for i_simplex = 1 : obj.n_simplex( type )
               [ x, y ] = global_quad( obj, ...
                 i_test, i_trial, type, rot_test, rot_trial, i_simplex );
               
-              k = my_kernel.eval( x, y, obj.mesh.normals( i_test, : ), ...
-                obj.mesh.normals( i_trial, : ) );
+              k = zeros( size( x, 1 ), 1 );
+              %k = my_kernel.eval( x, y, obj.mesh.normals( i_test, : ), ...
+              %  obj.mesh.normals( i_trial, : ) );
               
               test_fun = obj.test.eval( obj.x_ref{ type }{ i_simplex }, ...
                 obj.mesh.normals( i_test, : ), i_test, type, rot_test, ...
@@ -230,7 +155,91 @@ classdef be_assembler < handle
       end
       waitbar( 1, f );
       close( f );
-    end
+      
+      msg = sprintf( 'assembling %s, regular part', class( obj.kernel ) );
+      f = waitbar( 0, msg );
+      f.Children.Title.Interpreter = 'none';
+      
+      [ t_t, w_t, l_t ] = quadratures.line( obj.order_ff_t );
+      
+      my_kernel = obj.kernel;
+      for d = 2 : nt - 1
+        %       parfor d = 0 : nt - 1
+        %         my_kernel = copy( obj.kernel );
+        %         A_local = zeros( dim_test, dim_trial );
+        
+        my_kernel.d = d;
+        msgd = [ msg sprintf( ', d = %d/%d', d - 1, nt - 2 ) ];
+        waitbar( ( d - 2 ) / ( nt - 2 ), f, msgd );
+        
+        for i_trial = 1 : n_elems
+          waitbar( ( d - 2 + ( i_trial - 1 ) / n_elems ) / ( nt - 2 ), f );
+          for i_test = 1 : n_elems
+            
+            type = 1;
+            rot_test = 0;
+            rot_trial = 0;
+            i_simplex = 1;
+            [ x, y ] = global_quad( obj, ...
+              i_test, i_trial, type, rot_test, rot_trial, i_simplex );
+            map_test = obj.test.l2g( i_test, type, rot_test, false );
+            map_trial = obj.trial.l2g( i_trial, type, rot_trial, true );
+            
+            test_fun = obj.test.eval( obj.x_ref{ type }{ i_simplex }, ...
+              obj.mesh.normals( i_test, : ), i_test, type, rot_test, ...
+              false );
+            
+            trial_fun = obj.trial.eval( obj.y_ref{ type }{ i_simplex }, ...
+              obj.mesh.normals( i_trial, : ), i_trial, type, rot_trial, ...
+              true );
+            
+            A_local( :, : ) = 0;       
+            for i_t = 1 : l_t
+              for i_tau = 1 : l_t
+                              
+                k = my_kernel.eval( x, y, obj.mesh.normals( i_test, : ), ...
+                  obj.mesh.normals( i_trial, : ), t_t( i_t ), t_t( i_tau ) );                
+                
+                if( isa( obj.test, 'curl_p1' ) )
+                  for i_loc_test = 1 : dim_test
+                    for i_loc_trial = 1 : dim_trial
+                      A_local( i_loc_test, i_loc_trial ) = ...
+                        A_local( i_loc_test, i_loc_trial ) ...
+                        + ( test_fun( ( i_loc_test - 1 ) * 3 + 1 : ...
+                        i_loc_test * 3 ) ...
+                        * trial_fun( ( i_loc_trial - 1 ) * 3 + 1 : ...
+                        i_loc_trial * 3 )' ) ...
+                        * ( obj.w{ type }{ i_simplex } )' * k ...
+                        * w_t( i_t ) * w_t( i_tau );
+                    end
+                  end
+                else
+                  for i_loc_test = 1 : dim_test
+                    for i_loc_trial = 1 : dim_trial
+                      A_local( i_loc_test, i_loc_trial ) = ...
+                        A_local( i_loc_test, i_loc_trial ) ...
+                        + ( obj.w{ type }{ i_simplex } ...
+                        .* test_fun( :, i_loc_test ) ...
+                        .* trial_fun( :, i_loc_trial ) )' * k ...
+                        * w_t( i_t ) * w_t( i_tau );
+                    end
+                  end
+                end
+              end
+            end
+            A{ d + 1 }( map_test, map_trial ) = ...
+              A{ d + 1 }( map_test, map_trial ) ...
+              + A_local * obj.mesh.areas( i_trial ) ...
+              * obj.mesh.areas( i_test );
+          end
+        end
+      end
+      waitbar( 1, f );
+      close( f );
+    end 
+  end
+  
+  methods (Access = private)
     
     function [ x, y ] = global_quad( obj, i_test, i_trial, type, ...
         rot_test, rot_trial, i_simplex )
@@ -259,7 +268,7 @@ classdef be_assembler < handle
       
       rot_test = 0;
       rot_trial = 0;
-
+      
       elem_test = obj.mesh.elems( i_test, : );
       elem_trial = obj.mesh.elems( i_trial, : );
       

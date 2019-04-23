@@ -1,7 +1,7 @@
 function ...
   [ dir, neu, neu_proj, repr, repr_interp, err_bnd, err_bnd_x, err_bnd_proj, ...
-  err_bnd_proj_x, err_vol, err_vol_x ] = heat_dirichlet( level )
-% function [ V, K ] = heat_dirichlet( level )
+  err_bnd_proj_x, err_vol, err_vol_x ] = heat_dirichlet_2( level )
+%function [ V, K ] = heat_dirichlet( level )
 
 if nargin < 1
   level = 0;
@@ -15,6 +15,8 @@ stmesh = stmesh.refine_xt( level, 2 );
 
 order_nf = 4;
 order_ff = 4;
+order_nf_t = 4;
+order_ff_t = 4;
 
 alpha = 0.1;
 y = [ 0 0 1.5 ];
@@ -36,15 +38,17 @@ neu_fun = @( x, t, n ) ( - 2 * t )^( -1 ) * dir_fun( x, t ) ...
 basis_p1 = p1( stmesh );
 basis_p0 = p0( stmesh );
 
-beas_v_heat = be_assembler( stmesh, kernel_heat_sl( alpha ), ...
-  basis_p0, basis_p0, order_nf, order_ff );
+beas_v_heat = spacetime_be_assembler( stmesh, ...
+  spacetime_kernel_heat_sl( alpha ), basis_p0, basis_p0, order_nf, order_ff, ...
+  order_nf_t, order_ff_t );
 fprintf( 1, 'Assembling V\n' );
 tic;
 V = beas_v_heat.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
 
-beas_k_heat = be_assembler( stmesh, kernel_heat_dl( alpha ), ...
-  basis_p0, basis_p1, order_nf, order_ff );
+beas_k_heat = spacetime_be_assembler( stmesh, ...
+  spacetime_kernel_heat_dl( alpha ), basis_p0, basis_p1, order_nf, order_ff, ...
+  order_nf_t, order_ff_t );
 fprintf( 1, 'Assembling K\n' );
 tic;
 K = beas_k_heat.assemble( );
