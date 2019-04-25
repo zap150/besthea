@@ -17,8 +17,6 @@ classdef spacetime_kernel_heat_sl < spacetime_kernel & matlab.mixin.Copyable
     %%%%% Transferred to (0,1)^2
     function value = eval( obj, x, y, ~, ~, t, tau )
       norm = sqrt( ( x - y ).^2 * [ 1; 1; 1 ] );     
-%       value = ( 4 * pi * obj.alpha * ( t - tau ) ).^( -3/2 ) ...
-%         .* exp( -norm.^2 ./ ( 4 * obj.alpha * ( t - tau ) ) );
       rr = norm / sqrt( obj.alpha * obj.ht );
       value = ( 4 * pi * ( obj.d + t - tau ) ).^( -3/2 ) ...
         .* exp( -rr.^2 ./ ( 4 * ( obj.d + t - tau ) ) );

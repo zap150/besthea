@@ -18,10 +18,6 @@ classdef spacetime_kernel_heat_dl < spacetime_kernel & matlab.mixin.Copyable
     function value = eval( obj, x, y, ~, ny, t, tau )
       xy = x - y;
       norm = sqrt( xy.^2 * [ 1; 1; 1 ] );   
-%       dot = xy * ny';  
-%       value = dot / 16 .* ( pi * obj.alpha )^( -3/2 ) ...
-%         .* ( t - tau ).^( -5/2 ) ...
-%         .* exp( -norm.^2 ./ ( 4 * obj.alpha * ( t - tau ) ) );
       rr = norm / sqrt( obj.alpha * obj.ht );   
       dot = ( xy * ny' ) / sqrt( obj.alpha * obj.ht );
       value = dot ./ ( 16 .* pi^( 3/2 ) ) .* ( obj.d + t - tau ).^( -5/2 ) ...
