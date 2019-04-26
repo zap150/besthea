@@ -1,7 +1,7 @@
 %function ...
 %  [ dir, neu, neu_proj, repr, repr_interp, err_bnd, err_bnd_x, err_bnd_proj, ...
 %  err_bnd_proj_x, err_vol, err_vol_x ] = heat_dirichlet_2( level )
-function [ V, K ] = heat_dirichlet_2( level )
+function [ V ] = heat_dirichlet_2( level )
 
 if nargin < 1
   level = 0;
@@ -17,7 +17,7 @@ order_nf = 4;
 order_ff = 4;
 order_ff_t = 4;
 
-alpha = 0.1;
+alpha = 2.5;
 y = [ 0 0 1.5 ];
 
 dir_fun = @( x, t, ~ ) ( 4 * pi * alpha * t )^( -3 / 2 ) ...
@@ -45,6 +45,8 @@ tic;
 V = beas_v_heat.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
 
+return;
+
 beas_k_heat = spacetime_be_assembler( stmesh, ...
   spacetime_kernel_heat_dl( alpha ), basis_p0, basis_p1, order_nf, order_ff, ...
   order_ff_t );
@@ -52,8 +54,6 @@ fprintf( 1, 'Assembling K\n' );
 tic;
 K = beas_k_heat.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
-
-return;
 
 fprintf( 1, 'Assembling M\n' );
 tic;

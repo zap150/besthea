@@ -68,17 +68,12 @@ classdef spacetime_be_assembler < handle
       obj.x_ref{ 1 } = cell( 1, 1 );
       obj.y_ref{ 1 } = cell( 1, 1 );
       obj.w{ 1 } = cell( 1, 1 );
-      obj.x_ref{ 1 }{ 1 } = ...
-        cell( obj.n_simplex( 1 ), 1 );
-      obj.y_ref{ 1 }{ 1 } = ...
-        cell( obj.n_simplex( 1 ), 1 );
-      obj.w{ 1 }{ 1 } = ...
-        cell( obj.n_simplex( 1 ), 1 );
-      obj.t_ref{ 1 }{ 1 } = ...
-        cell( obj.n_simplex( 1 ), 1 );
-      obj.tau_ref{ 1 }{ 1 } = ...
-        cell( obj.n_simplex( 1 ), 1 );
-
+      obj.x_ref{ 1 }{ 1 } = cell( obj.n_simplex( 1 ), 1 );
+      obj.y_ref{ 1 }{ 1 } = cell( obj.n_simplex( 1 ), 1 );
+      obj.w{ 1 }{ 1 } = cell( obj.n_simplex( 1 ), 1 );
+      obj.t_ref{ 1 }{ 1 } = cell( obj.n_simplex( 1 ), 1 );
+      obj.tau_ref{ 1 }{ 1 } = cell( obj.n_simplex( 1 ), 1 );
+      
       %%%% singular in time
       for i_type_t = 2 : 3
         obj.x_ref{ i_type_t } = cell( 4, 1 );
@@ -97,7 +92,7 @@ classdef spacetime_be_assembler < handle
             cell( obj.n_simplex( i_type_x ), 1 );
         end
       end
-           
+      
       obj = init_quadrature_data( obj );
     end
     
@@ -118,84 +113,86 @@ classdef spacetime_be_assembler < handle
       f = waitbar( 0, msg );
       f.Children.Title.Interpreter = 'none';
       
-%      my_kernel = obj.kernel;
+      my_kernel = obj.kernel;
       A_local = zeros( dim_test, dim_trial );
-%       for d = 0 : 1
-%         my_kernel.d = d;
-%         msgd = [ msg sprintf( ', d = %d/%d', d + 1, 2 ) ];
-%         waitbar( d / 2, f, msgd );
-%         
-%         for i_trial = 1 : n_elems
-%           waitbar( ( d + ( i_trial - 1 ) / n_elems ) / 2, f );
-%           for i_test = 1 : n_elems
-%             
-%             [ type_x, rot_test, rot_trial ] = get_type( obj, i_test, i_trial );
-%           if d == 0
-%             type_t = 3;
-%           elseif d == 1
-%             type_t = 2;
-%           end
-%           if type_x == 1
-%             type_t = 1; 
-%           end
-%             A_local( :, : ) = 0;
-%             for i_simplex = 1 : obj.n_simplex( type_x )
-%               %[ x, y ] = global_quad( obj, ...
-%               %  i_test, i_trial, type_x, rot_test, rot_trial, i_simplex, type_t );
-%               
-%               k = zeros( size( obj.x_ref{ type_t }{ type_x }{ i_simplex }, 1 ), 1 );
-%               %k = my_kernel.eval( x, y, obj.mesh.normals( i_test, : ), ...
-%               %  obj.mesh.normals( i_trial, : ) );
-%               
-%               test_fun = obj.test.eval( obj.x_ref{ type_t }{ type_x }{ i_simplex }, ...
-%                 obj.mesh.normals( i_test, : ), i_test, type_x, rot_test, ...
-%                 false );
-%               
-%               trial_fun = obj.trial.eval( obj.y_ref{ type_t }{ type_x }{ i_simplex }, ...
-%                 obj.mesh.normals( i_trial, : ), i_trial, type_x, rot_trial, ...
-%                 true );
-%               
-%               if( isa( obj.test, 'curl_p1' ) )
-%                 for i_loc_test = 1 : dim_test
-%                   for i_loc_trial = 1 : dim_trial
-%                     A_local( i_loc_test, i_loc_trial ) = ...
-%                       A_local( i_loc_test, i_loc_trial ) ...
-%                       + ( test_fun( ( i_loc_test - 1 ) * 3 + 1 : ...
-%                       i_loc_test * 3 ) ...
-%                       * trial_fun( ( i_loc_trial - 1 ) * 3 + 1 : ...
-%                       i_loc_trial * 3 )' ) ...
-%                       * ( obj.w_x_y{ type_t }{ type_x }{ i_simplex } )' * k;
-%                   end
-%                 end
-%               else
-%                 for i_loc_test = 1 : dim_test
-%                   for i_loc_trial = 1 : dim_trial
-%                     A_local( i_loc_test, i_loc_trial ) = ...
-%                       A_local( i_loc_test, i_loc_trial ) ...
-%                       + ( obj.w_x_y{ type_t }{ type_x }{ i_simplex } ...
-%                       .* test_fun( :, i_loc_test ) ...
-%                       .* trial_fun( :, i_loc_trial ) )' * k;
-%                   end
-%                 end
-%               end
-%             end
-%             
-%             map_test = obj.test.l2g( i_test, type_x, rot_test, false );
-%             map_trial = obj.trial.l2g( i_trial, type_x, rot_trial, true );
-%             A{ d + 1 }( map_test, map_trial ) = ...
-%               A{ d + 1 }( map_test, map_trial ) ...
-%               + A_local * obj.mesh.areas( i_trial ) ...
-%               * obj.mesh.areas( i_test );
-%           end
-%         end
-%       end
+      for d = 0 : 1
+        my_kernel.d = d;
+        msgd = [ msg sprintf( ', d = %d/%d', d + 1, 2 ) ];
+        waitbar( d / 2, f, msgd );
+        
+        for i_trial = 1 : n_elems
+          waitbar( ( d + ( i_trial - 1 ) / n_elems ) / 2, f );
+          for i_test = 1 : n_elems
+            
+            [ type_x, rot_test, rot_trial ] = get_type( obj, i_test, i_trial );
+            if d == 0 && type_x ~= 1
+              type_t = 3;
+            elseif d == 1 && type_x ~= 1
+              type_t = 2;
+            else
+              type_t = 1;
+            end
+            
+            A_local( :, : ) = 0;
+            for i_simplex = 1 : obj.n_simplex( type_x )
+              [ x, y ] = global_quad( obj, i_test, i_trial, type_x, ...
+                rot_test, rot_trial, i_simplex, type_t );
+              
+              k = my_kernel.eval( x, y, obj.mesh.normals( i_test, : ), ...
+                obj.mesh.normals( i_trial, : ), ...
+                obj.t_ref{ type_t }{ type_x }{ i_simplex }, ...
+                obj.tau_ref{ type_t }{ type_x }{ i_simplex } );
+              
+              test_fun = obj.test.eval( ...
+                obj.x_ref{ type_t }{ type_x }{ i_simplex }, ...
+                obj.mesh.normals( i_test, : ), i_test, type_x, rot_test, ...
+                false );
+              
+              trial_fun = obj.trial.eval( ...
+                obj.y_ref{ type_t }{ type_x }{ i_simplex }, ...
+                obj.mesh.normals( i_trial, : ), i_trial, type_x, rot_trial, ...
+                true );
+              
+              if( isa( obj.test, 'curl_p1' ) )
+                for i_loc_test = 1 : dim_test
+                  for i_loc_trial = 1 : dim_trial
+                    A_local( i_loc_test, i_loc_trial ) = ...
+                      A_local( i_loc_test, i_loc_trial ) ...
+                      + ( test_fun( ( i_loc_test - 1 ) * 3 + 1 : ...
+                      i_loc_test * 3 ) ...
+                      * trial_fun( ( i_loc_trial - 1 ) * 3 + 1 : ...
+                      i_loc_trial * 3 )' ) ...
+                      * ( obj.w{ type_t }{ type_x }{ i_simplex } )' * k;
+                  end
+                end
+              else
+                for i_loc_test = 1 : dim_test
+                  for i_loc_trial = 1 : dim_trial
+                    A_local( i_loc_test, i_loc_trial ) = ...
+                      A_local( i_loc_test, i_loc_trial ) ...
+                      + ( obj.w{ type_t }{ type_x }{ i_simplex } ...
+                      .* test_fun( :, i_loc_test ) ...
+                      .* trial_fun( :, i_loc_trial ) )' * k;
+                  end
+                end
+              end
+            end
+            
+            map_test = obj.test.l2g( i_test, type_x, rot_test, false );
+            map_trial = obj.trial.l2g( i_trial, type_x, rot_trial, true );
+            A{ d + 1 }( map_test, map_trial ) = ...
+              A{ d + 1 }( map_test, map_trial ) ...
+              + A_local * obj.mesh.areas( i_trial ) * obj.mesh.areas( i_test );
+          end
+        end
+      end
       waitbar( 1, f );
       close( f );
       
       msg = sprintf( 'assembling %s, regular part', class( obj.kernel ) );
       f = waitbar( 0, msg );
       f.Children.Title.Interpreter = 'none';
-            
+      
       my_kernel = obj.kernel;
       for d = 2 : nt - 1
         %       parfor d = 0 : nt - 1
@@ -263,8 +260,7 @@ classdef spacetime_be_assembler < handle
             
             A{ d + 1 }( map_test, map_trial ) = ...
               A{ d + 1 }( map_test, map_trial ) ...
-              + A_local * obj.mesh.areas( i_trial ) ...
-              * obj.mesh.areas( i_test );
+              + A_local * obj.mesh.areas( i_trial ) * obj.mesh.areas( i_test );
           end
         end
       end
@@ -364,8 +360,8 @@ classdef spacetime_be_assembler < handle
         zeros( obj.size_ff, 1 );
       obj.tau_ref{ 1 }{ 1 }{ 1 } = ...
         zeros( obj.size_ff, 1 );
-        
-      [ x_tri, w_tri, l_tri ] = quadratures.tri( obj.order_ff_x );    
+      
+      [ x_tri, w_tri, l_tri ] = quadratures.tri( obj.order_ff_x );
       [ t_t, w_t, l_t ] = quadratures.line( obj.order_ff_t );
       
       counter = 1;
@@ -384,7 +380,7 @@ classdef spacetime_be_assembler < handle
           end
         end
       end
-
+      
       %%%% singular in time, singular in space
       for type_t = 2 : 3
         for type_x = 2 : 4
@@ -449,6 +445,7 @@ classdef spacetime_be_assembler < handle
           end
         end
       end
+      
     end
     
     function [ x, y, t, tau, jac ] = cube_to_tritime( ...
@@ -473,7 +470,7 @@ classdef spacetime_be_assembler < handle
     function [ x, y, t, tau, jac ] = ...
         cube_to_tritime_identical_x_singular_t( ...
         ~, eta1, eta2, eta3, eta4, lambda, mu, simplex, type_t )
-           
+      
       switch simplex
         case { 1, 2, 3, 4, 5, 6 }
           ksi = lambda;
@@ -481,7 +478,7 @@ classdef spacetime_be_assembler < handle
         case { 7, 8, 9, 10, 11, 12 }
           ksi = lambda * mu;
           zeta = lambda;
-      end 
+      end
       zeta2 = zeta * zeta;
       if ( type_t == 3 )
         t = zeta2 + ( 1 - zeta2 ) * eta4;
@@ -491,7 +488,7 @@ classdef spacetime_be_assembler < handle
         tau = 1 - zeta2 * eta4;
       end
       jac = ksi * ksi * ksi * eta1 * eta1 * eta2 ...
-        * lambda * zeta * ( 1 - zeta2 ) * 2;     
+        * lambda * zeta * ( 1 - zeta2 ) * 2;
       
       switch simplex
         case { 1, 7 }
@@ -514,7 +511,7 @@ classdef spacetime_be_assembler < handle
           x( 2 ) = ksi * eta1 * ( 1 - eta2 );
           y( 1 ) = ksi * ( 1 - eta1 * ( 1 - eta2 * ( 1 - eta3 ) ) );
           y( 2 ) = ksi * eta1 * ( 1 - eta2 * ( 1 - eta3 ) );
-        case { 5, 11 } 
+        case { 5, 11 }
           x( 1 ) = ksi * ( 1 - eta1 );
           x( 2 ) = ksi * eta1 * ( 1 - eta2 * eta3 );
           y( 1 ) = ksi * ( 1 - eta1 * ( 1 - eta2 ) );
@@ -526,11 +523,11 @@ classdef spacetime_be_assembler < handle
           y( 2 ) = ksi * eta1 * ( 1 - eta2 * eta3 );
       end
     end
-            
+    
     function [ x, y, t, tau, jac ] = ...
         cube_to_tritime_edge_x_singular_t( ...
-        ~, eta1, eta2, eta3, eta4, lambda, mu, simplex, type_t )     
-           
+        ~, eta1, eta2, eta3, eta4, lambda, mu, simplex, type_t )
+      
       switch simplex
         case { 1, 2, 3, 4, 5 }
           ksi = lambda;
@@ -538,7 +535,7 @@ classdef spacetime_be_assembler < handle
         case { 6, 7, 8, 9, 10 }
           ksi = lambda * mu;
           zeta = lambda;
-      end 
+      end
       zeta2 = zeta * zeta;
       if ( type_t == 3 )
         t = zeta2 + ( 1 - zeta2 ) * eta4;
@@ -582,11 +579,11 @@ classdef spacetime_be_assembler < handle
           jac = jac * eta2;
       end
     end
-       
+    
     function [ x, y, t, tau, jac ] = ...
         cube_to_tritime_vertex_x_singular_t( ...
         ~, eta1, eta2, eta3, eta4, lambda, mu, simplex, type_t )
-   
+      
       switch simplex
         case { 1, 2 }
           ksi = lambda;
@@ -594,7 +591,7 @@ classdef spacetime_be_assembler < handle
         case { 3, 4 }
           ksi = lambda * mu;
           zeta = lambda;
-      end 
+      end
       zeta2 = zeta * zeta;
       if ( type_t == 3 )
         t = zeta2 + ( 1 - zeta2 ) * eta4;
@@ -602,7 +599,9 @@ classdef spacetime_be_assembler < handle
       elseif ( type_t == 2 )
         t = zeta2 * ( 1 - eta4 );
         tau = 1 - zeta2 * eta4;
-      end    
+      end
+      jac = ksi * ksi * ksi * eta2 ...
+        * lambda * zeta * ( 1 - zeta2 ) * 2;
       
       switch simplex
         case { 1, 3 }
@@ -617,8 +616,6 @@ classdef spacetime_be_assembler < handle
           y( 2 ) = ksi * eta1;
       end
       
-      jac = ksi * ksi * ksi * eta2 ...
-        * lambda * zeta * ( 1 - zeta2 ) * 2;
     end
     
   end
