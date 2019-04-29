@@ -10,6 +10,7 @@ classdef spacetime_be_assembler < handle
     order_nf;
     size_nf;
     size_ff;
+    size_ff_t_tri;
     w = cell( 3, 1 );
     
     %%%% spatial
@@ -19,9 +20,9 @@ classdef spacetime_be_assembler < handle
     
     %%%% temporal
     order_ff_t;
+    order_ff_t_tri;
     t_ref = cell( 3, 1 );
     tau_ref = cell( 3, 1 );
-    w_t_tau = cell( 3, 1 );
   end
   
   properties (Constant)
@@ -43,54 +44,69 @@ classdef spacetime_be_assembler < handle
   methods
     function obj = ...
         spacetime_be_assembler( mesh, kernel, test, trial, order_nf, ...
-        order_ff_x, order_ff_t )
+        order_ff_x, order_ff_t, order_ff_t_tri )
       
       obj.mesh = mesh;
       obj.kernel = kernel;
       obj.test = test;
       obj.trial = trial;
       
-      if( nargin < 7 )
+      if( nargin < 8 )
         obj.order_nf = 4;
         obj.order_ff_x = 4;
         obj.order_ff_t = 4;
+        obj.order_ff_t_tri = 4;
       else
         obj.order_nf = order_nf;
         obj.order_ff_x = order_ff_x;
         obj.order_ff_t = order_ff_t;
+        obj.order_ff_t_tri = order_ff_t_tri;
       end
       
       obj.size_nf = quadratures.line_length( order_nf )^6;
       obj.size_ff = quadratures.tri_length( order_ff_x )^2 ...
         * quadratures.line_length( order_ff_t )^2;
+      obj.size_ff_t_tri = quadratures.tri_length( order_ff_x )^2 ...
+        * quadratures.tri_length( order_ff_t_tri );
       
       %%%% regular in time, no Sauter-Schwab in space
       obj.x_ref{ 1 } = cell( 1, 1 );
       obj.y_ref{ 1 } = cell( 1, 1 );
       obj.w{ 1 } = cell( 1, 1 );
+      obj.t_ref{ 1 } = cell( 1, 1 );
+      obj.tau_ref{ 1 } = cell( 1, 1 );
       obj.x_ref{ 1 }{ 1 } = cell( obj.n_simplex( 1 ), 1 );
       obj.y_ref{ 1 }{ 1 } = cell( obj.n_simplex( 1 ), 1 );
       obj.w{ 1 }{ 1 } = cell( obj.n_simplex( 1 ), 1 );
       obj.t_ref{ 1 }{ 1 } = cell( obj.n_simplex( 1 ), 1 );
       obj.tau_ref{ 1 }{ 1 } = cell( obj.n_simplex( 1 ), 1 );
+
+      %%%% singular in time, shared vertex (need extra simplex for regular part)
+      obj.x_ref{ 2 } = cell( 4, 1 );
+      obj.y_ref{ 2 } = cell( 4, 1 );
+      obj.w{ 2 } = cell( 4, 1 );
+      obj.t_ref{ 2 } = cell( 4, 1 );
+      obj.tau_ref{ 2 } = cell( 4, 1 );
+      for i_type_x = 2 : 4
+        obj.x_ref{ 2 }{ i_type_x } = cell( obj.n_simplex( i_type_x ) + 1, 1 );
+        obj.y_ref{ 2 }{ i_type_x } = cell( obj.n_simplex( i_type_x ) + 1, 1 );
+        obj.w{ 2 }{ i_type_x } = cell( obj.n_simplex( i_type_x ) + 1, 1 );
+        obj.t_ref{ 2 }{ i_type_x } = cell( obj.n_simplex( i_type_x ) + 1, 1 );
+        obj.tau_ref{ 2 }{ i_type_x } = cell( obj.n_simplex( i_type_x ) + 1, 1 );
+      end      
       
-      %%%% singular in time
-      for i_type_t = 2 : 3
-        obj.x_ref{ i_type_t } = cell( 4, 1 );
-        obj.y_ref{ i_type_t } = cell( 4, 1 );
-        obj.w{ i_type_t } = cell( 4, 1 );
-        for i_type_x = 2 : 4
-          obj.x_ref{ i_type_t }{ i_type_x } = ...
-            cell( obj.n_simplex( i_type_x ), 1 );
-          obj.y_ref{ i_type_t }{ i_type_x } = ...
-            cell( obj.n_simplex( i_type_x ), 1 );
-          obj.w{ i_type_t }{ i_type_x } = ...
-            cell( obj.n_simplex( i_type_x ), 1 );
-          obj.t_ref{ i_type_t }{ i_type_x } = ...
-            cell( obj.n_simplex( i_type_x ), 1 );
-          obj.tau_ref{ i_type_t }{ i_type_x } = ...
-            cell( obj.n_simplex( i_type_x ), 1 );
-        end
+      %%%% singular in time, same interval
+      obj.x_ref{ 3 } = cell( 4, 1 );
+      obj.y_ref{ 3 } = cell( 4, 1 );
+      obj.w{ 3 } = cell( 4, 1 );
+      obj.t_ref{ 3 } = cell( 4, 1 );
+      obj.tau_ref{ 3 } = cell( 4, 1 );
+      for i_type_x = 2 : 4
+        obj.x_ref{ 3 }{ i_type_x } = cell( obj.n_simplex( i_type_x ), 1 );
+        obj.y_ref{ 3 }{ i_type_x } = cell( obj.n_simplex( i_type_x ), 1 );
+        obj.w{ 3 }{ i_type_x } = cell( obj.n_simplex( i_type_x ), 1 );
+        obj.t_ref{ 3 }{ i_type_x } = cell( obj.n_simplex( i_type_x ), 1 );
+        obj.tau_ref{ 3 }{ i_type_x } = cell( obj.n_simplex( i_type_x ), 1 );
       end
       
       obj = init_quadrature_data( obj );
@@ -125,16 +141,19 @@ classdef spacetime_be_assembler < handle
           for i_test = 1 : n_elems
             
             [ type_x, rot_test, rot_trial ] = get_type( obj, i_test, i_trial );
+            ns = obj.n_simplex( type_x );
             if d == 0 && type_x ~= 1
               type_t = 3;
             elseif d == 1 && type_x ~= 1
               type_t = 2;
+              %%%% extra simplex for shared temporal vertex
+              ns = ns + 1;
             else
               type_t = 1;
             end
             
             A_local( :, : ) = 0;
-            for i_simplex = 1 : obj.n_simplex( type_x )
+            for i_simplex = 1 : ns
               [ x, y ] = global_quad( obj, i_test, i_trial, type_x, ...
                 rot_test, rot_trial, i_simplex, type_t );
               
@@ -350,16 +369,11 @@ classdef spacetime_be_assembler < handle
       
       %%%% regular in space
       %%%% no need to store three times for type_t=1,2,3
-      obj.x_ref{ 1 }{ 1 }{ 1 } = ...
-        zeros( obj.size_ff, 2 );
-      obj.y_ref{ 1 }{ 1 }{ 1 } = ...
-        zeros( obj.size_ff, 2 );
-      obj.w{ 1 }{ 1 }{ 1 } = ...
-        zeros( obj.size_ff, 1 );
-      obj.t_ref{ 1 }{ 1 }{ 1 } = ...
-        zeros( obj.size_ff, 1 );
-      obj.tau_ref{ 1 }{ 1 }{ 1 } = ...
-        zeros( obj.size_ff, 1 );
+      obj.x_ref{ 1 }{ 1 }{ 1 } = zeros( obj.size_ff, 2 );
+      obj.y_ref{ 1 }{ 1 }{ 1 } = zeros( obj.size_ff, 2 );
+      obj.w{ 1 }{ 1 }{ 1 } = zeros( obj.size_ff, 1 );
+      obj.t_ref{ 1 }{ 1 }{ 1 } = zeros( obj.size_ff, 1 );
+      obj.tau_ref{ 1 }{ 1 }{ 1 } = zeros( obj.size_ff, 1 );
       
       [ x_tri, w_tri, l_tri ] = quadratures.tri( obj.order_ff_x );
       [ t_t, w_t, l_t ] = quadratures.line( obj.order_ff_t );
@@ -373,8 +387,8 @@ classdef spacetime_be_assembler < handle
               obj.y_ref{ 1 }{ 1 }{ 1 }( counter, : ) = x_tri( i_y, : );
               obj.w{ 1 }{ 1 }{ 1 }( counter ) = ...
                 w_tri( i_x ) * w_tri( i_y ) * w_t( i_t ) * w_t( i_tau );
-              obj.t_ref{ 1 }{ 1 }{ 1 }( counter, : ) = t_t( i_t );
-              obj.tau_ref{ 1 }{ 1 }{ 1 }( counter, : ) = t_t( i_tau );
+              obj.t_ref{ 1 }{ 1 }{ 1 }( counter ) = t_t( i_t );
+              obj.tau_ref{ 1 }{ 1 }{ 1 }( counter ) = t_t( i_tau );
               counter = counter + 1;
             end
           end
@@ -396,6 +410,43 @@ classdef spacetime_be_assembler < handle
               zeros( obj.size_nf, 1 );
             obj.tau_ref{ type_t }{ type_x }{ i_simplex } = ...
               zeros( obj.size_nf, 1 );
+          end
+        end
+      end
+      
+      %%%% extra simplex for shared temporal vertex
+      %%%% not optimal, storing three times for type_x=2,3,4
+      for type_x = 2 : 4
+        ns = obj.n_simplex( type_x );
+        obj.x_ref{ 2 }{ type_x }{ ns + 1 } = zeros( obj.size_ff_t_tri, 2 );
+        obj.y_ref{ 2 }{ type_x }{ ns + 1 } = zeros( obj.size_ff_t_tri, 2 );
+        obj.w{ 2 }{ type_x }{ ns + 1 } = zeros( obj.size_ff_t_tri, 1 );
+        obj.t_ref{ 2 }{ type_x }{ ns + 1 } = zeros( obj.size_ff_t_tri, 1 );
+        obj.tau_ref{ 2 }{ type_x }{ ns + 1 } = zeros( obj.size_ff_t_tri, 1 );
+      end
+      
+      [ t_tri, w_t_tri, l_t_tri ] = quadratures.tri( obj.order_ff_t_tri );
+      %%%% Moving from [0 0], [1 0], [0 1] to [0 0], [1 0], [1 1]
+      t_tri_transf = ( [ 1 1; 0 1 ] * t_tri' )';
+      
+      counter = 1;
+      for i_t = 1 : l_t_tri
+        for i_x = 1 : l_tri
+          for i_y = 1 : l_tri
+            for type_x = 2 : 4
+              ns = obj.n_simplex( type_x );
+              obj.x_ref{ 2 }{ type_x }{ ns + 1 }( counter, : ) = ...
+                x_tri( i_x, : );
+              obj.y_ref{ 2 }{ type_x }{ ns + 1 }( counter, : ) = ...
+                x_tri( i_y, : );
+              obj.w{ 2 }{ type_x }{ ns + 1 }( counter ) = ...
+                w_tri( i_x ) * w_tri( i_y ) * w_t_tri( i_t ) * 0.5;
+              obj.t_ref{ 2 }{ type_x }{ ns + 1 }( counter ) = ...
+                t_tri_transf( i_t, 1 );
+              obj.tau_ref{ 2 }{ type_x }{ ns + 1 }( counter ) = ...
+                t_tri_transf( i_t, 2 );
+            end
+            counter = counter + 1;
           end
         end
       end
@@ -429,9 +480,9 @@ classdef spacetime_be_assembler < handle
                         obj.y_ref{ type_t }{ type_x }{ i_simplex }...
                           ( counter, : ) = y_single;
                         obj.t_ref{ type_t }{ type_x }{ i_simplex }...
-                          ( counter, : ) = t_single;
+                          ( counter ) = t_single;
                         obj.tau_ref{ type_t }{ type_x }{ i_simplex }...
-                          ( counter, : ) = tau_single;
+                          ( counter ) = tau_single;
                         obj.w{ type_t }{ type_x }{ i_simplex }...
                           ( counter ) = weight * jac;
                       end
@@ -483,12 +534,14 @@ classdef spacetime_be_assembler < handle
       if ( type_t == 3 )
         t = zeta2 + ( 1 - zeta2 ) * eta4;
         tau = ( 1 - zeta2 ) * eta4;
+        zeta_jac = zeta * ( 1 - zeta2 ) * 2;
       elseif ( type_t == 2 )
         t = zeta2 * ( 1 - eta4 );
         tau = 1 - zeta2 * eta4;
+        zeta_jac = zeta * zeta * zeta * 2;
       end
       jac = ksi * ksi * ksi * eta1 * eta1 * eta2 ...
-        * lambda * zeta * ( 1 - zeta2 ) * 2;
+        * lambda * zeta_jac;
       
       switch simplex
         case { 1, 7 }
@@ -540,12 +593,14 @@ classdef spacetime_be_assembler < handle
       if ( type_t == 3 )
         t = zeta2 + ( 1 - zeta2 ) * eta4;
         tau = ( 1 - zeta2 ) * eta4;
+        zeta_jac = zeta * ( 1 - zeta2 ) * 2;
       elseif ( type_t == 2 )
         t = zeta2 * ( 1 - eta4 );
         tau = 1 - zeta2 * eta4;
+        zeta_jac = zeta * zeta * zeta * 2;
       end
       jac = ksi * ksi * ksi * eta1 * eta1 ...
-        * lambda * zeta * ( 1 - zeta2 ) * 2;
+        * lambda * zeta_jac;
       
       switch simplex
         case { 1, 6 }
@@ -596,12 +651,14 @@ classdef spacetime_be_assembler < handle
       if ( type_t == 3 )
         t = zeta2 + ( 1 - zeta2 ) * eta4;
         tau = ( 1 - zeta2 ) * eta4;
+        zeta_jac = zeta * ( 1 - zeta2 ) * 2;
       elseif ( type_t == 2 )
         t = zeta2 * ( 1 - eta4 );
         tau = 1 - zeta2 * eta4;
+        zeta_jac = zeta * zeta * zeta * 2;
       end
       jac = ksi * ksi * ksi * eta2 ...
-        * lambda * zeta * ( 1 - zeta2 ) * 2;
+        * lambda * zeta_jac;
       
       switch simplex
         case { 1, 3 }
