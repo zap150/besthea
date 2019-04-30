@@ -32,7 +32,7 @@ classdef spacetime_kernel_heat_dl < spacetime_kernel & matlab.mixin.Copyable
   
   methods (Access = protected)
     function cp = copyElement( obj )
-      cp = kernel_heat_dl( obj.alpha );
+      cp = spacetime_kernel_heat_dl( obj.alpha );
       cp.ht = obj.ht;
       cp.d = obj.d;
     end  
