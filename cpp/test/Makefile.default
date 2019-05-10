@@ -41,4 +41,5 @@ help:
 	@echo "This makefile supports the following targets:"
 	@echo "    all  (default target, builds static library)"
 	@echo "    clean"
+	@echo "    distclean"
 	@echo "    help"
