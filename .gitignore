@@ -9,4 +9,5 @@
 *.synctex.gz
 *.toc
 *.xmpi
+*.DS_Store
 notes/integration/integration.pdf
