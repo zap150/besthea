@@ -11,31 +11,31 @@ LDLIBSOPTIONS=-fopenmp -L${MKLROOT}/lib -Wl,-rpath,'${MKLROOT}/lib' -lmkl_intel_
 #########################DO NOT MODIFY BELOW THIS LINE##########################
 ################################################################################
 
-COMPILELINE=${CXX} ${CXXFLAGS} -I./include -c
+DIRECTORY = $(wildcard */)
+
+TEST_CPP = $(shell find . -name \*.cpp -print)
+TEST_H = $(shell find . -name \*.hpp -print)
+EXECUTABLES = $(TEST_CPP:./%.cpp=%.exe)
+
+COMPILELINE=${CXX} ${CXXFLAGS} -I../include -c
 
 OBJECTDIR=build
 
-FILES=$(notdir $(wildcard src/*.cpp))
-CXXFILES=$(addprefix src/,${FILES})
+all: ${EXECUTABLES} ${TEST_CPP} ${TEST_H}
 
-OBJECTFILES=$(addprefix ${OBJECTDIR}/,$(FILES:.cpp=.o))
-
-all: libbesthea.a
-
-libbesthea.a: ${OBJECTFILES}
-	mkdir -p lib
-	ar -r lib/$@ $?
-
-${OBJECTDIR}/%.o: src/%.cpp
-	mkdir -p ${OBJECTDIR}
+%.o: %.cpp
 	rm -f "$@.d"
-	${COMPILELINE} -fPIC -MMD -MP -MF "$@.d" -o $@ $<
+	${COMPILELINE} -MMD -MP -MF "$@.d" -o $@ $<
+
+%.exe: %.o
+	$(CXX) -o $@ $< ${LDLIBSOPTIONS} -L../lib -lbesthea
 
 clean:
-	rm -rf build
+	$(foreach sd,${DIRECTORY}, rm -f ${sd}*.o.d;)
+	$(foreach sd,${DIRECTORY}, rm -f ${sd}*.o;)
 
 distclean: clean
-	rm -rf bin/besthea
+	$(foreach sd,${DIRECTORY}, rm -f ${sd}*.exe)
 	
 help:
 	@echo "This makefile supports the following targets:"

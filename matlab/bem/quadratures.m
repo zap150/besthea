@@ -63,6 +63,31 @@ classdef quadratures < handle
       0.085662246189585
       ];
     
+    line_x_10 = [
+      0.013046735741414
+      0.067468316655508
+      0.160295215850488
+      0.283302302935376
+      0.425562830509184
+      0.574437169490816
+      0.716697697064624
+      0.839704784149512
+      0.932531683344492
+      0.986953264258586
+      ]
+    line_w_10 = [
+      0.033335672154344
+      0.074725674575290
+      0.109543181257991
+      0.134633359654998
+      0.147762112357376
+      0.147762112357376
+      0.134633359654998
+      0.109543181257991
+      0.074725674575290
+      0.033335672154344
+      ];
+    
     line_x_32 = [
       0.0013680690752592150616
       0.0071942442273658091523
@@ -215,6 +240,8 @@ classdef quadratures < handle
           x = quadratures.line_x_5;
         case 6
           x = quadratures.line_x_6;
+        case 10
+          x = quadratures.line_x_10;
         case 32
           x = quadratures.line_x_32;
         otherwise
@@ -236,6 +263,8 @@ classdef quadratures < handle
           w = quadratures.line_w_5;
         case 6
           w = quadratures.line_w_6;
+        case 10
+          w = quadratures.line_w_10;
         case 32
           w = quadratures.line_w_32;
         otherwise
@@ -244,10 +273,10 @@ classdef quadratures < handle
     end
     
     function l = line_length( order )
-      if order > 0 && ( order < 7 || order == 32 )
+      if order > 0 && ( order < 7 || order == 10 || order == 32 )
         l = order;
       else
-        l = 1;
+        error( 'Order %d not supported.', order );
       end
     end
     
