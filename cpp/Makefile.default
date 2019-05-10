@@ -1,0 +1,49 @@
+EIGEN_INC=/path/to/Eigen
+SIMD=4
+
+#CXX=icpc
+#CXXFLAGS=-xHost -O3 -g -DDATA_WIDTH=${SIMD} -qopenmp -std=c++11 -w2 -I${MKLROOT}/include -I${EIGEN_INC}
+#LDLIBSOPTIONS=-qopenmp -L${MKLROOT}/lib/intel64 -Wl,-rpath,'${MKLROOT}/lib/intel64' -lmkl_core -lmkl_intel_thread -lmkl_intel_lp64
+
+CXX=g++
+CXXFLAGS=-fopenmp -O3 -g -std=c++11 -DDATA_WIDTH=${SIMD} -Wall -Wno-sign-compare -I${MKLROOT}/include -I${EIGEN_INC}
+LDLIBSOPTIONS=-fopenmp -L${MKLROOT}/lib/intel64 -Wl,-rpath,'${MKLROOT}/lib/intel64' -lmkl_intel_lp64 -lmkl_core -lmkl_gnu_thread
+
+#########################DO NOT MODIFY BELOW THIS LINE##########################
+################################################################################
+
+COMPILELINE=${CXX} ${CXXFLAGS} -I./include -I./src -c
+
+OBJECTDIR=build
+
+FILES=$(notdir $(wildcard src/*.cpp))
+
+CXXFILES=$(addprefix src/,${FILES})
+
+OBJECTFILES=$(addprefix ${OBJECTDIR}/,$(FILES:.cpp=.o))
+
+build: ${OBJECTFILES}
+	mkdir -p dist
+	$(CXX) -o dist/libheatdtn.so ${OBJECTFILES} ${LDLIBSOPTIONS} -shared -fPIC
+
+${OBJECTDIR}/%.o: src/%.cpp
+	mkdir -p ${OBJECTDIR}
+	rm -f "$@.d"
+	${COMPILELINE} -fPIC  -MMD -MP -MF "$@.d" -o $@ $<
+
+clean:
+	rm -rf build
+	rm -rf dist
+
+help:
+	@echo "This makefile supports the following targets:"
+	@echo "    build  (default target)"
+	@echo "    clean"
+	@echo "    help"
+	@echo ""
+	@echo "Makefile Usage:"
+	@echo "    make build"
+	@echo "    make clean"
+	@echo "    make help"
+	@echo ""
+	@echo ""
