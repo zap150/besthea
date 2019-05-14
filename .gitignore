@@ -10,4 +10,5 @@
 *.toc
 *.xmpi
 *.DS_Store
+cpp/doc/html
 notes/integration/integration.pdf
