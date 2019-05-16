@@ -5,9 +5,9 @@
  *      Author: zap150
  */
 
-#include <iostream>
-
 #include "besthea/spacetime_tp_mesh.h"
+
+#include <iostream>
 
 besthea::spacetime_tp_mesh::spacetime_tp_mesh() {
   std::cout << "creating mesh" << std::endl;

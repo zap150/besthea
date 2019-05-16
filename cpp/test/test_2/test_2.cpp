@@ -9,7 +9,7 @@
 
 #include "besthea/spacetime_tp_mesh.h"
 
-int main(int argc, char* argv[]) {
+int main( int argc, char * argv[] ) {
   std::cout << "test 2" << std::endl;
   besthea::spacetime_tp_mesh mesh;
 }
