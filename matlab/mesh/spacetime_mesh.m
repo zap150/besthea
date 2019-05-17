@@ -38,15 +38,15 @@ classdef spacetime_mesh < tri_mesh_3d
       if nargin < 2
         level = 1;
       end
-      obj = obj.refine_x( level );
-      obj = obj.refine_t( level * order );
+      obj.refine_x( level );
+      obj.refine_t( level * order );
     end
     
     function obj = refine_x( obj, level )
       if nargin < 2
         level = 1;
       end
-      obj = obj.refine( level );
+      obj.refine( level );
     end
     
     function obj = refine_t( obj, level )

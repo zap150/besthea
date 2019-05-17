@@ -19,7 +19,7 @@ classdef tri_mesh_3d < handle
   properties (Dependent)
     h;
   end
-    
+  
   methods
     function obj = tri_mesh_3d( file )
       fid = fopen( file );
@@ -50,15 +50,15 @@ classdef tri_mesh_3d < handle
       
       fclose( fid );
       
-      obj = obj.init_areas( );
-      obj = obj.init_normals( );  
-      obj = obj.init_edges( );
-      obj = obj.init_r_tinv( );
+      obj.init_areas( );
+      obj.init_normals( );
+      obj.init_edges( );
+      obj.init_r_tinv( );
     end
     
-%     function e = get_nodes( obj, i )
-%       e = obj.nodes( obj.elems( i, : ), : );
-%     end
+    %     function e = get_nodes( obj, i )
+    %       e = obj.nodes( obj.elems( i, : ), : );
+    %     end
     
     function h = get.h( obj )
       h = max( sqrt( obj.areas ) );
@@ -130,7 +130,7 @@ classdef tri_mesh_3d < handle
               new_elem_to_edges( 4 * i - 3, 1 ) + 1;
           else
             new_elem_to_edges( 4 * i - 2, 1 ) = ...
-              new_elem_to_edges( 4 * i - 2, 1 ) + 1;            
+              new_elem_to_edges( 4 * i - 2, 1 ) + 1;
           end
           
           if node1 > node3
@@ -158,17 +158,17 @@ classdef tri_mesh_3d < handle
         obj.edges = new_edges;
         obj.elem_to_edges = new_elem_to_edges;
       end
-    
-      obj = obj.init_areas( );
-      obj = obj.init_normals( );
-      obj = obj.init_r_tinv( );
+      
+      obj.init_areas( );
+      obj.init_normals( );
+      obj.init_r_tinv( );
     end
     
     function obj = map_to_unit_ball( obj )
       obj.nodes = obj.nodes ./ sqrt( ( obj.nodes .* obj.nodes ) * [ 1; 1; 1 ] );
-      obj = obj.init_areas( );
-      obj = obj.init_normals( );
-      obj = obj.init_r_tinv( );
+      obj.init_areas( );
+      obj.init_normals( );
+      obj.init_r_tinv( );
     end
     
     function plot( obj, data, name )
@@ -190,6 +190,40 @@ classdef tri_mesh_3d < handle
       title( name );
       axis vis3d;
     end
+    
+    function trim( obj, grid, keep_interior )
+      density = @( x ) ones( size( x, 1 ), 1 );
+      order_ff = 2;
+      beev_k_laplace = be_evaluator( obj, kernel_laplace_dl, p0( obj ), ...
+        density, grid.nodes, order_ff );
+      values = beev_k_laplace.evaluate( );
+      
+      tol = 0.2;
+      mask_nodes = abs( values + 1 ) < tol;
+      if( ~keep_interior )
+        mask_nodes = ~mask_nodes;
+      end
+      grid.nodes = grid.nodes( mask_nodes, : );
+      
+      mask_elems = mask_nodes( grid.elems( : , 1 ) ) ...
+        & mask_nodes( grid.elems( : , 2 ) ) ...
+        & mask_nodes( grid.elems( : , 3 ) );
+      new_idx = cumsum( mask_nodes );
+      grid.elems = new_idx( grid.elems( mask_elems, : ) );
+      
+      grid.n_nodes = size( grid.nodes, 1 );
+      grid.n_elems = size( grid.elems, 1 );
+      
+      grid.init_edges( );
+      grid.areas = grid.areas( mask_nodes, 1 );
+      grid.normals = grid.normals( mask_nodes, : );
+      grid.r_tinv = grid.r_tinv( mask_nodes );
+    end
+    
+    function obj = scale( obj, alpha )
+      obj.nodes = obj.nodes * alpha;
+    end
+    
   end
   
   methods (Access = private)
@@ -201,7 +235,7 @@ classdef tri_mesh_3d < handle
         v = e( 3, : ) - e( 1, : );
         s( 1 ) = u( 2 ) * v( 3 ) - u( 3 ) * v( 2 );
         s( 2 ) = u( 3 ) * v( 1 ) - u( 1 ) * v( 3 );
-        s( 3 ) = u( 1 ) * v( 2 ) - u( 2 ) * v( 1 );     
+        s( 3 ) = u( 1 ) * v( 2 ) - u( 2 ) * v( 1 );
         obj.areas( i ) = 0.5 * sqrt( s * s' );
       end
     end
