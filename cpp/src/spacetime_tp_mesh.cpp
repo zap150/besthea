@@ -9,10 +9,10 @@
 
 #include <iostream>
 
-besthea::spacetime_tp_mesh::spacetime_tp_mesh() {
+besthea::spacetime_tp_mesh::spacetime_tp_mesh( ) {
   std::cout << "creating mesh" << std::endl;
 }
 
-besthea::spacetime_tp_mesh::~spacetime_tp_mesh() {
+besthea::spacetime_tp_mesh::~spacetime_tp_mesh( ) {
   std::cout << "destroying mesh" << std::endl;
 }

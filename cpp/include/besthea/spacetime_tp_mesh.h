@@ -14,11 +14,11 @@ namespace besthea {
 
 class besthea::spacetime_tp_mesh {
  public:
-  spacetime_tp_mesh();
+  spacetime_tp_mesh( );
 
   spacetime_tp_mesh( const spacetime_tp_mesh & ) = delete;
 
-  ~spacetime_tp_mesh();
+  ~spacetime_tp_mesh( );
 };
 
 #endif /* INCLUDE_BESTHEA_SPACETIME_TP_MESH_H_ */
