@@ -1,7 +1,7 @@
 function ...
  [ dir, neu, neu_proj, repr, repr_interp, err_bnd, err_bnd_x, err_bnd_proj, ...
  err_bnd_proj_x, err_vol, err_vol_x ] = heat_dirichlet( level )
-%function [ V ] = heat_dirichlet( level )
+%function [ V, K ] = heat_dirichlet( level )
 
 if nargin < 1
   level = 0;

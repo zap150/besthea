@@ -40,19 +40,19 @@ classdef kernel_heat_sl_2 < kernel & matlab.mixin.Copyable
       cp.d = obj.d;
     end
 
-    function res = G_anti_tau_anti_t( obj, rr, delta )
+    function res = G_anti_tau_anti_t( obj, norm, delta )
       if( delta > 0 )
-        res = G_anti_tau_anti_t_regular( obj, rr, delta );
+        res = G_anti_tau_anti_t_regular( obj, norm, delta );
       else
-        res = G_anti_tau_anti_t_limit( obj, rr );
+        res = G_anti_tau_anti_t_limit( obj, norm );
       end     
     end
     
-    function res = G_anti_tau( obj, rr, delta )
+    function res = G_anti_tau( obj, norm, delta )
       if( delta > 0 )
-        res = G_anti_tau_regular( obj, rr, delta );
+        res = G_anti_tau_regular( obj, norm, delta );
       else
-        res = G_anti_tau_limit( obj, rr );
+        res = G_anti_tau_limit( obj, norm );
       end   
     end    
  
