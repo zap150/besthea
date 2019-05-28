@@ -51,7 +51,8 @@ tic;
 D2 = beas_d2_heat.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
 
-%D1 = D; return;
+%D1 = D; 
+%return;
 
 for i = 1 : stmesh.nt
   D{ i } = D{ i } + D2{ i };
