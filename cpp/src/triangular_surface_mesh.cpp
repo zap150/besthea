@@ -29,6 +29,7 @@
 #include "besthea/triangular_surface_mesh.h"
 
 #include <algorithm>
+#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -38,18 +39,19 @@
 besthea::mesh::triangular_surface_mesh::~triangular_surface_mesh( ) {
 }
 
-besthea::mesh::triangular_surface_mesh::triangular_surface_mesh( ) {
+besthea::mesh::triangular_surface_mesh::triangular_surface_mesh( )
+  : _n_nodes( 0 ), _n_elements( 0 ), _n_edges( 0 ) {
 }
 
 void besthea::mesh::triangular_surface_mesh::print_info( ) {
   std::cout << "besthea::mesh::triangular_surface_mesh" << std::endl;
-  std::cout << "  elements: " << this->_n_elements
-            << ", nodes: " << this->_n_nodes << std::endl;
+  std::cout << "  elements: " << _n_elements << ", nodes: " << _n_nodes
+            << std::endl;
 }
 
 besthea::mesh::triangular_surface_mesh::triangular_surface_mesh(
   const std::string & file ) {
-  this->load( file );
+  load( file );
 }
 
 bool besthea::mesh::triangular_surface_mesh::load( const std::string & file ) {
@@ -66,56 +68,89 @@ bool besthea::mesh::triangular_surface_mesh::load( const std::string & file ) {
   filestream >> dummy;  // nodes per element (3)
   filestream >> this->_n_nodes;
 
-  this->_nodes1.resize( this->_n_nodes );
-  this->_nodes2.resize( this->_n_nodes );
-  this->_nodes3.resize( this->_n_nodes );
+  _nodes.resize( 3 * _n_nodes );
 
-  for ( lo i = 0; i < this->_n_nodes; ++i ) {
-    filestream >> this->_nodes1[ i ];
-    filestream >> this->_nodes2[ i ];
-    filestream >> this->_nodes3[ i ];
+  for ( lo i = 0; i < _n_nodes; ++i ) {
+    filestream >> _nodes[ 3 * i ];
+    filestream >> _nodes[ 3 * i + 1 ];
+    filestream >> _nodes[ 3 * i + 2 ];
   }
 
   std::string line;
   std::stringstream linestream;
   lo n1, n2;
 
-  filestream >> this->_n_elements;
+  filestream >> _n_elements;
   filestream.ignore( std::numeric_limits< std::streamsize >::max( ), '\n' );
-  this->_elements.resize( this->_n_elements * 3 );
-  this->_orientation.first.resize( this->_n_elements );
-  this->_orientation.second.resize( this->_n_elements );
+  _elements.resize( _n_elements * 3 );
+  _orientation.first.resize( _n_elements );
+  _orientation.second.resize( _n_elements );
 
-  for ( lo i = 0; i < this->_n_elements; ++i ) {
+  for ( lo i = 0; i < _n_elements; ++i ) {
     std::getline( filestream, line );
     linestream.clear( );
     linestream.str( line );
-    linestream >> this->_elements[ 3 * i ];
-    linestream >> this->_elements[ 3 * i + 1 ];
-    linestream >> this->_elements[ 3 * i + 2 ];
+    linestream >> _elements[ 3 * i ];
+    linestream >> _elements[ 3 * i + 1 ];
+    linestream >> _elements[ 3 * i + 2 ];
 
     if ( linestream >> n1 >> n2 ) {
-      this->_orientation.first[ i ] = n1;
-      this->_orientation.second[ i ] = n2;
+      _orientation.first[ i ] = n1;
+      _orientation.second[ i ] = n2;
     } else {
-      this->_orientation.first[ i ] = 0;
-      this->_orientation.second[ i ] = 1;
+      _orientation.first[ i ] = 0;
+      _orientation.second[ i ] = 1;
     }
   }
 
   filestream.close( );
 
-  this->init_area( );
-  this->init_normals( );
-  this->init_edges( );
+  init_normals_and_areas( );
+  init_normals( );
+  init_edges( );
 
   return true;
 }
 
-void besthea::mesh::triangular_surface_mesh::init_area( ) {
+void besthea::mesh::triangular_surface_mesh::init_normals_and_areas( ) {
+  _areas.resize( _n_elements );
+
+  sc x21[ 3 ];
+  sc x31[ 3 ];
+  sc cross[ 3 ];
+  sc norm;
+
+  for ( lo i = 0; i < _n_elements; ++i ) {
+    x21[ 0 ] = _nodes[ 3 * _elements[ 3 * i_elem + 1 ] ]
+      - _nodes[ 3 * _elements[ 3 * i_elem ] ];
+    x21[ 1 ] = _nodes[ 3 * _elements[ 3 * i_elem + 1 ] + 1 ]
+      - _nodes[ 3 * _elements[ 3 * i_elem ] + 1 ];
+    x21[ 2 ] = _nodes[ 3 * _elements[ 3 * i_elem + 1 ] + 2 ]
+      - _nodes[ 3 * _elements[ 3 * i_elem ] + 2 ];
+
+    x31[ 0 ] = _nodes[ 3 * _elements[ 3 * i_elem + 2 ] ]
+      - _nodes[ 3 * _elements[ 3 * i_elem ] ];
+    x31[ 1 ] = _nodes[ 3 * _elements[ 3 * i_elem + 2 ] + 1 ]
+      - _nodes[ 3 * _elements[ 3 * i_elem ] + 1 ];
+    x31[ 2 ] = _nodes[ 3 * _elements[ 3 * i_elem + 2 ] + 2 ]
+      - _nodes[ 3 * _elements[ 3 * i_elem ] + 2 ];
+
+    cross[ 0 ] = x21[ 1 ] * x31[ 2 ] - x21[ 2 ] * x31[ 1 ];
+    cross[ 1 ] = x21[ 2 ] * x31[ 0 ] - x21[ 0 ] * x31[ 2 ];
+    cross[ 2 ] = x21[ 0 ] * x31[ 1 ] - x21[ 1 ] * x31[ 0 ];
+
+    norm = std::sqrt( cross[ 0 ] * cross[ 0 ] + cross[ 1 ] * cross[ 1 ]
+      + cross[ 2 ] * cross[ 2 ] );
+
+    _areas[ i ] = 0.5 * norm;
+    _normals[ 3 * i ] = cross[ 0 ] / norm;
+    _normals[ 3 * i + 1 ] = cross[ 1 ] / norm;
+    _normals[ 3 * i + 2 ] = cross[ 2 ] / norm;
+  }
 }
 
-void besthea::mesh::triangular_surface_mesh::init_normals( ) {
+sc besthea::mesh::triangular_surface_mesh::area( lo i_elem ) {
+  return _areas[ i_elem ];
 }
 
 void besthea::mesh::triangular_surface_mesh::init_edges( ) {

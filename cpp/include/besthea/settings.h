@@ -26,6 +26,9 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/** @file settings.h
+ * @brief Besthea settings.
+ */
 
 #ifndef INCLUDE_BESTHEA_SETTINGS_H_
 #define INCLUDE_BESTHEA_SETTINGS_H_

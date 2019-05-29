@@ -26,6 +26,10 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/** @file triangular_surface_mesh.h
+ * @brief Triangular mesh of a boundary of a 3D object.
+ */
+
 #ifndef INCLUDE_BESTHEA_TRIANGULAR_SURFACE_MESH_H_
 #define INCLUDE_BESTHEA_TRIANGULAR_SURFACE_MESH_H_
 
@@ -38,7 +42,7 @@ namespace besthea {
   namespace mesh {
     class triangular_surface_mesh;
   }
-}  // namespace besthea
+}
 
 using sc = besthea::scalar;
 using lo = besthea::index;
@@ -65,30 +69,51 @@ class besthea::mesh::triangular_surface_mesh {
    */
   void print_info( );
 
+  /**
+   * Loads mesh from a file.
+   * @param[in] file File name.
+   */
   bool load( const std::string & file );
 
+  /**
+   * Returns area of a single element.
+   * @param[in] i_elem Index of the element.
+   */
+  sc area( lo i_elem );
+
+  /**
+   * Returns number of elements.
+   */
+  lo get_n_elements( ) const {
+    return _n_elements;
+  }
+
+  /**
+   * Returns number of nodes.
+   */
+  lo get_n_nodes( ) const {
+    return _n_nodes;
+  }
+
  protected:
-  lo _n_nodes;     //!< number of nodes
-  lo _n_elements;  //!< number of elements
+  lo _n_nodes;               //!< number of nodes
+  std::vector< sc > _nodes;  //!< coordinates of nodes
 
-  std::vector< sc > _nodes1;  //!< first coordinates of all nodes
-  std::vector< sc > _nodes2;  //!< second coordinates of all nodes
-  std::vector< sc > _nodes3;  //!< third coordinates of all nodes
-
-  std::vector< lo > _elements;  //!< indices into _nodesX
-
+  lo _n_elements;               //!< number of elements
+  std::vector< lo > _elements;  //!< indices into #_nodes
   std::pair< std::vector< lo >, std::vector< lo > >
-    _orientation;  //!< orientation of n := (x2-x1)x(x3-x1) and -n
+    _orientation;              //!< orientation of n := (x2-x1)x(x3-x1) and -n
+  std::vector< sc > _areas;    //!< element areas
+  std::vector< sc > _normals;  //!< exterior normal vectors
+
+  lo _n_edges;                          //!< number of edges
+  std::vector< lo > _edges;             //!< indices into #_nodes
+  std::vector< lo > _element_to_edges;  //!< indices into #_edges
 
   /**
-   * Precomputes areas of elements.
+   * Precomputes exterior normals and areas of elements.
    */
-  void init_area( );
-
-  /**
-   * Precomputes exterior normal vectors of elements.
-   */
-  void init_normals( );
+  void init_normals_and_areas( );
 
   /**
    * Initializes edges.

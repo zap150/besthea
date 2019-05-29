@@ -26,6 +26,11 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/** @file uniform_spacetime_tensor_mesh.h
+ * @brief Tensor product spacetime mesh based on a triangular_surface_mesh.h and
+ * uniform time stepping.
+ */
+
 #ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_TENSOR_MESH_H_
 #define INCLUDE_BESTHEA_UNIFORM_SPACETIME_TENSOR_MESH_H_
 
@@ -33,7 +38,7 @@ namespace besthea {
   namespace mesh {
     class uniform_spacetime_tensor_mesh;
   }
-}  // namespace besthea
+}
 
 class besthea::mesh::uniform_spacetime_tensor_mesh {
  public:

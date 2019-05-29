@@ -46,4 +46,11 @@ int main( int argc, char * argv[] ) {
 
   mesh mesh( file );
   mesh.print_info( );
+
+  lo ne = mesh.get_n_elements( );
+
+  for ( lo i = 0; i < ne; ++i ) {
+    std::cout << mesh.area( i ) << std::endl;
+  }
+
 }

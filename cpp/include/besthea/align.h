@@ -26,6 +26,10 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/** @file align.h
+ * @brief Aligned memory allocation.
+ */
+
 #ifndef INCLUDE_BESTHEA_ALIGN_H_
 #define INCLUDE_BESTHEA_ALIGN_H_
 
@@ -36,7 +40,7 @@ namespace besthea {
   namespace memory {
     class align;
   }
-}  // namespace besthea
+}
 
 class besthea::memory::align {
  public:
