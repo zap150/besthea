@@ -30,9 +30,11 @@
 
 #include <iostream>
 
-using mesh = besthea::mesh::uniform_spacetime_tensor_mesh;
+besthea::mesh::uniform_spacetime_tensor_mesh::uniform_spacetime_tensor_mesh( ) {
+  std::cout << "creating mesh" << std::endl;
+}
 
-int main( int argc, char * argv[] ) {
-  std::cout << "test 2" << std::endl;
-  mesh mesh;
+besthea::mesh::uniform_spacetime_tensor_mesh::
+  ~uniform_spacetime_tensor_mesh( ) {
+  std::cout << "destroying mesh" << std::endl;
 }

@@ -26,13 +26,23 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "besthea/uniform_spacetime_tensor_mesh.h"
+#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_TENSOR_MESH_H_
+#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_TENSOR_MESH_H_
 
-#include <iostream>
+namespace besthea {
+  namespace mesh {
+    class uniform_spacetime_tensor_mesh;
+  }
+}  // namespace besthea
 
-using mesh = besthea::mesh::uniform_spacetime_tensor_mesh;
+class besthea::mesh::uniform_spacetime_tensor_mesh {
+ public:
+  uniform_spacetime_tensor_mesh( );
 
-int main( int argc, char * argv[] ) {
-  std::cout << "test 2" << std::endl;
-  mesh mesh;
-}
+  uniform_spacetime_tensor_mesh( const uniform_spacetime_tensor_mesh & )
+    = delete;
+
+  ~uniform_spacetime_tensor_mesh( );
+};
+
+#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_TENSOR_MESH_H_ */

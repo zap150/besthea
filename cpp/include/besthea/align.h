@@ -26,13 +26,55 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "besthea/uniform_spacetime_tensor_mesh.h"
+#ifndef INCLUDE_BESTHEA_ALIGN_H_
+#define INCLUDE_BESTHEA_ALIGN_H_
 
-#include <iostream>
+#include <cstddef>
+#include <cstdlib>
 
-using mesh = besthea::mesh::uniform_spacetime_tensor_mesh;
+namespace besthea {
+  namespace memory {
+    class align;
+  }
+}  // namespace besthea
 
-int main( int argc, char * argv[] ) {
-  std::cout << "test 2" << std::endl;
-  mesh mesh;
-}
+class besthea::memory::align {
+ public:
+  align( ) = delete;
+
+  align( const align & ) = delete;
+
+  ~align( );
+
+  /** Allocate aligned memory in a portable way.
+   *
+   * Memory allocated with aligned alloc *MUST* be freed using aligned_free.
+   *
+   * @param[in] alignment The number of bytes to which memory must be aligned.
+   * This value *must* be <= 255.
+   * @param[in] bytes The number of bytes to allocate.
+   * @param[in] zero If true, the returned memory will be zeroed. If false, the
+   *  contents of the returned memory are undefined.
+   * @returns A pointer to `size` bytes of memory, aligned to an
+   * `alignment`-byte boundary.
+   */
+  static void * aligned_alloc(
+    std::size_t alignment, std::size_t size, bool zero = false );
+
+  /** Free memory allocated with aligned_alloc */
+  static void aligned_free( void * aligned_ptr );
+
+  /** Allocate memory aligned to DATA_WIDTH in a portable way.
+   *
+   * Memory allocated with aligned alloc *MUST* be freed using aligned_free.
+   *
+   * @param[in] bytes The number of bytes to allocate.
+   * @param[in] zero If true, the returned memory will be zeroed. If false, the
+   *  contents of the returned memory are undefined.
+   * @returns A pointer to `size` bytes of memory, aligned to a
+   * `DATA_WIDTH`-byte boundary.
+   */
+  static void * aligned_alloc( std::size_t size, bool zero = false );
+};
+
+#endif

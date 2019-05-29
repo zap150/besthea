@@ -26,13 +26,34 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "besthea/uniform_spacetime_tensor_mesh.h"
+#include "besthea/align.h"
 
-#include <iostream>
+#include "besthea/settings.h"
 
-using mesh = besthea::mesh::uniform_spacetime_tensor_mesh;
+#include <cstdlib>
 
-int main( int argc, char * argv[] ) {
-  std::cout << "test 2" << std::endl;
-  mesh mesh;
+void * besthea::memory::align::aligned_alloc(
+  std::size_t alignment, std::size_t size, bool zero ) {
+  std::size_t request_size = size + alignment;
+  char * buf
+    = (char *) ( zero ? calloc( 1, request_size ) : malloc( request_size ) );
+
+  std::size_t remainder = ( (std::size_t) buf ) % alignment;
+  std::size_t offset = alignment - remainder;
+  char * ret = buf + (unsigned char) offset;
+
+  // store how many extra bytes we allocated in the byte just before the
+  // pointer we return
+  *(unsigned char *) ( ret - 1 ) = offset;
+
+  return (void *) ret;
+}
+
+void besthea::memory::align::aligned_free( void * aligned_ptr ) {
+  int offset = *( ( (char *) aligned_ptr ) - 1 );
+  free( ( (char *) aligned_ptr ) - offset );
+}
+
+void * besthea::memory::align::aligned_alloc( std::size_t size, bool zero ) {
+  return (void *) aligned_alloc( DATA_ALIGN, size, zero );
 }

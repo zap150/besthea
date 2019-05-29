@@ -26,13 +26,74 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "besthea/uniform_spacetime_tensor_mesh.h"
+#ifndef INCLUDE_BESTHEA_TRIANGULAR_SURFACE_MESH_H_
+#define INCLUDE_BESTHEA_TRIANGULAR_SURFACE_MESH_H_
 
-#include <iostream>
+#include "besthea/settings.h"
 
-using mesh = besthea::mesh::uniform_spacetime_tensor_mesh;
+#include <string>
+#include <vector>
 
-int main( int argc, char * argv[] ) {
-  std::cout << "test 2" << std::endl;
-  mesh mesh;
-}
+namespace besthea {
+  namespace mesh {
+    class triangular_surface_mesh;
+  }
+}  // namespace besthea
+
+using sc = besthea::scalar;
+using lo = besthea::index;
+
+/**
+ *  Class representing a triangular mesh of a 3D surface
+ */
+class besthea::mesh::triangular_surface_mesh {
+ public:
+  triangular_surface_mesh( );
+
+  /**
+   * Constructing mesh from a file.
+   * @param[in] file path to the file.
+   */
+  triangular_surface_mesh( const std::string & file );
+
+  triangular_surface_mesh( const triangular_surface_mesh & ) = delete;
+
+  ~triangular_surface_mesh( );
+
+  /**
+   * Prints info on the object.
+   */
+  void print_info( );
+
+  bool load( const std::string & file );
+
+ protected:
+  lo _n_nodes;     //!< number of nodes
+  lo _n_elements;  //!< number of elements
+
+  std::vector< sc > _nodes1;  //!< first coordinates of all nodes
+  std::vector< sc > _nodes2;  //!< second coordinates of all nodes
+  std::vector< sc > _nodes3;  //!< third coordinates of all nodes
+
+  std::vector< lo > _elements;  //!< indices into _nodesX
+
+  std::pair< std::vector< lo >, std::vector< lo > >
+    _orientation;  //!< orientation of n := (x2-x1)x(x3-x1) and -n
+
+  /**
+   * Precomputes areas of elements.
+   */
+  void init_area( );
+
+  /**
+   * Precomputes exterior normal vectors of elements.
+   */
+  void init_normals( );
+
+  /**
+   * Initializes edges.
+   */
+  void init_edges( );
+};
+
+#endif /* INCLUDE_BESTHEA_TRIANGULAR_SURFACE_MESH_H_ */
