@@ -56,7 +56,7 @@ class besthea::mesh::triangular_surface_mesh {
 
   /**
    * Constructing mesh from a file.
-   * @param[in] file path to the file.
+   * @param[in] file Path to the file.
    */
   triangular_surface_mesh( const std::string & file );
 
@@ -67,7 +67,13 @@ class besthea::mesh::triangular_surface_mesh {
   /**
    * Prints info on the object.
    */
-  void print_info( );
+  void print_info( ) const;
+
+  bool print_vtu( const std::string & file,
+    const std::vector< std::string > * node_labels = nullptr,
+    const std::vector< sc * > * node_data = nullptr,
+    const std::vector< std::string > * element_labels = nullptr,
+    const std::vector< sc * > * element_data = nullptr ) const;
 
   /**
    * Loads mesh from a file.
@@ -79,7 +85,9 @@ class besthea::mesh::triangular_surface_mesh {
    * Returns area of a single element.
    * @param[in] i_elem Index of the element.
    */
-  sc area( lo i_elem );
+  sc area( lo i_elem ) const {
+    return _areas[ i_elem ];
+  }
 
   /**
    * Returns number of elements.
@@ -94,6 +102,51 @@ class besthea::mesh::triangular_surface_mesh {
   lo get_n_nodes( ) const {
     return _n_nodes;
   }
+
+  /**
+   * Returns node indices of an element.
+   * @param[in] i_element Index of the element.
+   * @param[out] element Element indices.
+   */
+  void get_element( lo i_element, lo * element ) const {
+    element[ 0 ] = _elements[ 3 * i_element ];
+    element[ 1 ] = _elements[ 3 * i_element + 1 ];
+    element[ 2 ] = _elements[ 3 * i_element + 2 ];
+  }
+
+  /**
+   * Returns coordinates of a node.
+   * @param[in] i_node Index of the node.
+   * @param[out] node Element indices.
+   */
+  void get_node( lo i_node, sc * node ) const {
+    node[ 0 ] = _nodes[ 3 * i_node ];
+    node[ 1 ] = _nodes[ 3 * i_node + 1 ];
+    node[ 2 ] = _nodes[ 3 * i_node + 2 ];
+  }
+
+  /**
+   * Returns node indices of an edge.
+   * @param[in] i_edge Index of the edge.
+   * @param[out] edge Element indices.
+   */
+  void get_edge( lo i_edge, lo * edge ) const {
+    edge[ 0 ] = _edges[ 2 * i_edge ];
+    edge[ 1 ] = _edges[ 2 * i_edge + 1 ];
+  }
+
+  /**
+   * Returns edge indices of an element.
+   * @param[in] i_edge Index of the edge.
+   * @param[out] edge Element indices.
+   */
+  void get_edges( lo i_element, lo * edges ) const {
+    edges[ 0 ] = _element_to_edges[ 3 * i_element ];
+    edges[ 1 ] = _element_to_edges[ 3 * i_element + 1 ];
+    edges[ 2 ] = _element_to_edges[ 3 * i_element + 2 ];
+  }
+
+  void refine( int level );
 
  protected:
   lo _n_nodes;               //!< number of nodes
