@@ -69,6 +69,14 @@ class besthea::mesh::triangular_surface_mesh {
    */
   void print_info( ) const;
 
+  /**
+   * Prints the mesh into Paraview format.
+   * @param[in] file File name.
+   * @param[in] node_labels Labels for nodal data.
+   * @param[in] node_data Scalar nodal data.
+   * @param[in] element_labels Labels for elemental data.
+   * @param[in] element_data Scalar elemental data.
+   */
   bool print_vtu( const std::string & file,
     const std::vector< std::string > * node_labels = nullptr,
     const std::vector< sc * > * node_data = nullptr,
@@ -117,12 +125,23 @@ class besthea::mesh::triangular_surface_mesh {
   /**
    * Returns coordinates of a node.
    * @param[in] i_node Index of the node.
-   * @param[out] node Element indices.
+   * @param[out] node Element coordinates.
    */
   void get_node( lo i_node, sc * node ) const {
     node[ 0 ] = _nodes[ 3 * i_node ];
     node[ 1 ] = _nodes[ 3 * i_node + 1 ];
     node[ 2 ] = _nodes[ 3 * i_node + 2 ];
+  }
+
+  /**
+   * Sets coordinates of a node.
+   * @param[in] i_node Index of the node.
+   * @param[in] node Element coordinates.
+   */
+  void set_node( lo i_node, const sc * node ) {
+    _nodes[ 3 * i_node ] = node[ 0 ];
+    _nodes[ 3 * i_node + 1 ] = node[ 1 ];
+    _nodes[ 3 * i_node + 2 ] = node[ 2 ];
   }
 
   /**
@@ -146,7 +165,16 @@ class besthea::mesh::triangular_surface_mesh {
     edges[ 2 ] = _element_to_edges[ 3 * i_element + 2 ];
   }
 
+  /**
+   * Refines the mesh by quadrisection.
+   * @param[in] level Number of refinements.
+   */
   void refine( int level );
+
+  /**
+   * Maps the nodes to the unit sphere.
+   */
+  void map_to_unit_sphere( );
 
  protected:
   lo _n_nodes;               //!< number of nodes

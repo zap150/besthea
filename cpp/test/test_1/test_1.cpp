@@ -47,6 +47,8 @@ int main( int argc, char * argv[] ) {
   mesh mesh( file );
   mesh.print_info( );
 
-  mesh.refine( 2 );
+  mesh.refine( 6 );
+  mesh.map_to_unit_sphere( );
+  mesh.print_info( );
   mesh.print_vtu( "output.vtu" );
 }

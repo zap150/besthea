@@ -574,3 +574,16 @@ bool besthea::mesh::triangular_surface_mesh::print_vtu(
 
   return true;
 }
+
+void besthea::mesh::triangular_surface_mesh::map_to_unit_sphere( ) {
+  sc x[ 3 ];
+  sc norm;
+  for ( lo i_node = 0; i_node < _n_nodes; ++i_node ) {
+    get_node( i_node, x );
+    norm = std::sqrt( x[ 0 ] * x[ 0 ] + x[ 1 ] * x[ 1 ] + x[ 2 ] * x[ 2 ] );
+    x[ 0 ] /= norm;
+    x[ 1 ] /= norm;
+    x[ 2 ] /= norm;
+    set_node( i_node, x );
+  }
+}
