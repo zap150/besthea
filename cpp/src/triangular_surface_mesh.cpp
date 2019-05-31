@@ -35,6 +35,7 @@
 #include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
 besthea::mesh::triangular_surface_mesh::~triangular_surface_mesh( ) {
 }

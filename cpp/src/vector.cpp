@@ -26,25 +26,37 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file settings.h
- * @brief Besthea settings.
- */
+#include "besthea/vector.h"
 
-#ifndef INCLUDE_BESTHEA_SETTINGS_H_
-#define INCLUDE_BESTHEA_SETTINGS_H_
+#include <algorithm>
+#include <random>
 
-#include <cstddef>
+besthea::linear_algebra::vector::vector( ) : _size( 0 ), _data( 0 ) {
+}
 
-#ifndef DATA_ALIGN
-#define DATA_ALIGN ( 64 )
-#endif
+besthea::linear_algebra::vector::vector( const vector & that ) {
+  this->_size = that._size;
+  this->_data = that._data;
+}
 
-namespace besthea {
-  using scalar = double;
-  using index = std::size_t;
-};  // namespace besthea
+besthea::linear_algebra::vector::vector( sc size )
+  : _size( size ), _data( size ) {
+}
 
-using sc = besthea::scalar;
-using lo = besthea::index;
+besthea::linear_algebra::vector::~vector( ) {
+}
 
-#endif /* INCLUDE_BESTHEA_SETTINGS_H_ */
+void besthea::linear_algebra::vector::print( std::ostream & stream ) const {
+  for ( lo i = 0; i < _data.size( ); ++i ) {
+    stream << _data[ i ] << std::endl;
+  }
+  stream << std::endl;
+}
+
+void besthea::linear_algebra::vector::random_fill( sc lower, sc upper ) {
+  std::random_device rd;
+  std::mt19937 gen( rd( ) );
+  std::uniform_real_distribution< sc > dis( lower, upper );
+  std::generate(
+    _data.begin( ), _data.end( ), [&gen, &dis]( ) { return dis( gen ); } );
+}

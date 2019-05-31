@@ -29,26 +29,30 @@
 #include "besthea/align.h"
 #include "besthea/settings.h"
 #include "besthea/triangular_surface_mesh.h"
+#include "besthea/vector.h"
 
 #include <cstdlib>
 #include <iostream>
 
-using sc = besthea::scalar;
-using mesh = besthea::mesh::triangular_surface_mesh;
-using align = besthea::memory::align;
-
 int main( int argc, char * argv[] ) {
+  using b_mesh = besthea::mesh::triangular_surface_mesh;
+  using b_vector = besthea::linear_algebra::vector;
+
   std::string file = "../mesh_files/cube_12.txt";
 
   if ( argc > 1 ) {
     file.assign( argv[ 1 ] );
   }
 
-  mesh mesh( file );
+  b_mesh mesh( file );
   mesh.print_info( );
 
-  mesh.refine( 6 );
-  mesh.map_to_unit_sphere( );
-  mesh.print_info( );
-  mesh.print_vtu( "output.vtu" );
+  // mesh.refine( 6 );
+  // mesh.map_to_unit_sphere( );
+  // mesh.print_info( );
+  // mesh.print_vtu( "output.vtu" );
+
+  b_vector v( 10 );
+  v.random_fill( -1, 1 );
+  v.print( );
 }

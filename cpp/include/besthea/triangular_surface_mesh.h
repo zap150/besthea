@@ -44,13 +44,11 @@ namespace besthea {
   }
 }
 
-using sc = besthea::scalar;
-using lo = besthea::index;
-
 /**
  *  Class representing a triangular mesh of a 3D surface
  */
 class besthea::mesh::triangular_surface_mesh {
+
  public:
   triangular_surface_mesh( );
 
@@ -60,7 +58,7 @@ class besthea::mesh::triangular_surface_mesh {
    */
   triangular_surface_mesh( const std::string & file );
 
-  triangular_surface_mesh( const triangular_surface_mesh & ) = delete;
+  triangular_surface_mesh( const triangular_surface_mesh & that ) = delete;
 
   ~triangular_surface_mesh( );
 

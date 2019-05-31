@@ -26,25 +26,53 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file settings.h
- * @brief Besthea settings.
+/** @file vector.h
+ * @brief Vector of scalars.
  */
 
-#ifndef INCLUDE_BESTHEA_SETTINGS_H_
-#define INCLUDE_BESTHEA_SETTINGS_H_
+#ifndef INCLUDE_BESTHEA_VECTOR_H_
+#define INCLUDE_BESTHEA_VECTOR_H_
 
-#include <cstddef>
+#include "besthea/settings.h"
 
-#ifndef DATA_ALIGN
-#define DATA_ALIGN ( 64 )
-#endif
+#include <iostream>
+#include <vector>
 
 namespace besthea {
-  using scalar = double;
-  using index = std::size_t;
-};  // namespace besthea
+  namespace linear_algebra {
+    class vector;
+  }
+}
 
-using sc = besthea::scalar;
-using lo = besthea::index;
+/**
+ *  Class representing a vector of scalars.
+ */
+class besthea::linear_algebra::vector {
+ public:
+  vector( );
 
-#endif /* INCLUDE_BESTHEA_SETTINGS_H_ */
+  vector( const vector & that );
+
+  vector( sc size );
+
+  ~vector( );
+
+  /*!
+   * @brief Prints the vector.
+   * @param[in] stream
+   */
+  void print( std::ostream & stream = std::cout ) const;
+
+  /*!
+   * @brief Fills the vector with random numbers (uniform distribution).
+   * @param[in] lower Lower bound.
+   * @param[in] upper Upper bound.
+   */
+  void random_fill( sc lower, sc upper );
+
+ protected:
+  lo _size;
+  std::vector< sc > _data;
+};
+
+#endif /* INCLUDE_BESTHEA_VECTOR_H_ */

@@ -26,25 +26,44 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file settings.h
- * @brief Besthea settings.
+/** @file linear_operator.h
+ * @brief Parent class for linear operators.
  */
 
-#ifndef INCLUDE_BESTHEA_SETTINGS_H_
-#define INCLUDE_BESTHEA_SETTINGS_H_
+#ifndef INCLUDE_BESTHEA_LINEAR_OPERATOR_H_
+#define INCLUDE_BESTHEA_LINEAR_OPERATOR_H_
 
-#include <cstddef>
-
-#ifndef DATA_ALIGN
-#define DATA_ALIGN ( 64 )
-#endif
+#include "besthea/settings.h"
+#include "besthea/vector.h"
 
 namespace besthea {
-  using scalar = double;
-  using index = std::size_t;
-};  // namespace besthea
+  namespace linear_algebra {
+    class linear_operator;
+  }
+}
 
-using sc = besthea::scalar;
-using lo = besthea::index;
+/**
+ *  Class representing a linear operator.
+ */
+class besthea::linear_algebra::linear_operator {
+  using vector = besthea::linear_algebra::vector;
 
-#endif /* INCLUDE_BESTHEA_SETTINGS_H_ */
+ public:
+  /*!
+   * @brief y = beta * y + alpha * this * x.
+   * @param[in] A
+   * @param[in] x
+   * @param[in,out] y
+   * @param[in] alpha
+   * @param[in] beta
+   */
+  virtual void apply( vector const & x, vector & y, bool trans = false,
+    sc alpha = 1.0, sc beta = 0.0 )
+    = 0;
+
+ protected:
+  lo dim_domain;
+  lo dim_range;
+};
+
+#endif /* INCLUDE_BESTHEA_LINEAR_OPERATOR_H_ */
