@@ -42,6 +42,7 @@
 namespace besthea {
   using scalar = double;
   using index = std::size_t;
+  //using index = long;
 };  // namespace besthea
 
 using sc = besthea::scalar;

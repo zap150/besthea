@@ -27,16 +27,19 @@
  */
 
 #include "besthea/align.h"
+#include "besthea/full_matrix.h"
 #include "besthea/settings.h"
 #include "besthea/triangular_surface_mesh.h"
 #include "besthea/vector.h"
 
+#include <cmath>
 #include <cstdlib>
 #include <iostream>
 
 int main( int argc, char * argv[] ) {
   using b_mesh = besthea::mesh::triangular_surface_mesh;
   using b_vector = besthea::linear_algebra::vector;
+  using b_matrix = besthea::linear_algebra::full_matrix;
 
   std::string file = "../mesh_files/cube_12.txt";
 
@@ -55,4 +58,16 @@ int main( int argc, char * argv[] ) {
   b_vector v( 10 );
   v.random_fill( -1, 1 );
   v.print( );
+  v[ 0 ] = 1.0;
+  v[ 9 ] = -2.0;
+  v.print( );
+
+  std::cout << std::sqrt( v.dot( v ) ) << " " << v.norm( ) << std::endl;
+
+  b_matrix m( 10, 10 );
+  m.random_fill( 0.0, 1.0 );
+  m.print( );
+  std::cout << m(0,1) << std::endl;
+  m(0,1) = 2.0;
+  std::cout << m(0,1) << std::endl;
 }

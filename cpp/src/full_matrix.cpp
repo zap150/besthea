@@ -26,41 +26,68 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "besthea/vector.h"
+#include "besthea/full_matrix.h"
 
 #include "besthea/blas_lapack_wrapper.h"
 
 #include <algorithm>
 #include <random>
 
-besthea::linear_algebra::vector::vector( ) : _size( 1 ), _data( 1, 0.0 ) {
+besthea::linear_algebra::full_matrix::full_matrix( ) : _data( 1, 0.0 ) {
+  this->_n_rows = 1;
+  this->_n_columns = 1;
 }
 
-besthea::linear_algebra::vector::vector( const vector & that )
-  : _size( that._size ), _data( that._data ) {
+besthea::linear_algebra::full_matrix::full_matrix( const full_matrix & that )
+  : _data( that._data ) {
+  this->_n_rows = that._n_rows;
+  this->_n_columns = that._n_columns;
 }
 
-besthea::linear_algebra::vector::vector( lo size, bool zero )
-  : _size( size ), _data( size ) {
+besthea::linear_algebra::full_matrix::full_matrix(
+  lo n_rows, lo n_columns, bool zero )
+  : _data( n_rows * n_columns ) {
+  this->_n_rows = n_rows;
+  this->_n_columns = n_columns;
   if ( zero ) {
     fill( 0.0 );
   }
 }
 
-besthea::linear_algebra::vector::~vector( ) {
+besthea::linear_algebra::full_matrix::~full_matrix( ) {
 }
 
-void besthea::linear_algebra::vector::print( std::ostream & stream ) const {
-  for ( lo i = 0; i < _data.size( ); ++i ) {
-    stream << _data[ i ] << std::endl;
+void besthea::linear_algebra::full_matrix::print(
+  std::ostream & stream ) const {
+  for ( lo i_row = 0; i_row < _n_rows; ++i_row ) {
+    for ( lo i_col = 0; i_col < _n_columns; ++i_col ) {
+      stream << _data[ i_row + i_col * _n_rows ] << " ";
+    }
+    stream << std::endl;
   }
   stream << std::endl;
 }
 
-void besthea::linear_algebra::vector::random_fill( sc lower, sc upper ) {
+void besthea::linear_algebra::full_matrix::random_fill( sc lower, sc upper ) {
   std::random_device rd;
   std::mt19937 gen( rd( ) );
   std::uniform_real_distribution< sc > dis( lower, upper );
   std::generate(
     _data.begin( ), _data.end( ), [&gen, &dis]( ) { return dis( gen ); } );
+}
+
+void besthea::linear_algebra::full_matrix::random_fill_diag(
+  sc lower, sc upper ) {
+  std::random_device rd;
+  std::mt19937 gen( rd( ) );
+  std::uniform_real_distribution< sc > dis( lower, upper );
+  lo n = _n_rows < _n_columns ? _n_rows : _n_columns;
+  for ( lo i = 0; i < n; ++i ) {
+    _data[ i + i * _n_rows ] = dis( gen );
+  }
+}
+
+void besthea::linear_algebra::full_matrix::apply(
+  const vector & x, vector & y, bool trans, sc alpha, sc beta ) const {
+
 }

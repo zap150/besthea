@@ -50,20 +50,19 @@ class besthea::linear_algebra::linear_operator {
 
  public:
   /*!
-   * @brief y = beta * y + alpha * this * x.
-   * @param[in] A
+   * @brief y = beta * y + alpha * (this)^trans * x.
    * @param[in] x
    * @param[in,out] y
+   * @param[in] trans
    * @param[in] alpha
    * @param[in] beta
    */
   virtual void apply( vector const & x, vector & y, bool trans = false,
-    sc alpha = 1.0, sc beta = 0.0 )
-    = 0;
+    sc alpha = 1.0, sc beta = 0.0 ) const = 0;
 
  protected:
-  lo dim_domain;
-  lo dim_range;
+  lo _dim_domain;
+  lo _dim_range;
 };
 
 #endif /* INCLUDE_BESTHEA_LINEAR_OPERATOR_H_ */

@@ -35,92 +35,38 @@
 
 #include "besthea/settings.h"
 
+enum CBLAS_ORDER { CblasRowMajor = 101, CblasColMajor = 102 };
+enum CBLAS_TRANSPOSE {
+  CblasNoTrans = 111,
+  CblasTrans = 112,
+  CblasConjTrans = 113
+};
+enum CBLAS_UPLO { CblasUpper = 121, CblasLower = 122 };
+enum CBLAS_DIAG { CblasNonUnit = 131, CblasUnit = 132 };
+enum CBLAS_SIDE { CblasLeft = 141, CblasRight = 142 };
+
 // LEVEL 1 BLAS
 
-// scale a vector (matrix) by a scalar value
 extern "C" {
-void dscal_( lo * N, sc * ALPHA, sc * X, lo * INCX );
+sc cblas_ddot(
+  const lo N, const sc * X, const lo incX, const sc * Y, const lo incY );
 }
 
-// vector (matrix) addition y = y + alpha*x
 extern "C" {
-void daxpy_( lo * N, sc * A, sc * X, lo * INCX, sc * Y, lo * INCY );
-}
-
-// vector 2-norm
-extern "C" {
-sc dnrm2_( lo const * N, sc * X, lo * INCX );
-}
-
-// dot product
-extern "C" {
-sc ddot_( lo const * N, sc * X, lo * INCX, sc * Y, lo * INCY );
+sc cblas_dnrm2( const lo N, const sc * X, const lo incX );
 }
 
 // LEVEL 2 BLAS
 
-// BLAS matrix-vector multiplication
 extern "C" {
-void dgemv_( char * TRANS, lo * M, lo * N, sc * ALPHA, sc * A, lo * LDA, sc * X,
-  lo * INCX, sc * BETA, sc * Y, lo * INCY );
+void cblas_dgemv( const enum CBLAS_ORDER order,
+  const enum CBLAS_TRANSPOSE TransA, const lo M, const lo N, const sc alpha,
+  const sc * A, const lo lda, const sc * X, const lo incX, const sc beta,
+  sc * Y, const lo incY );
 }
 
 // LEVEL 3 BLAS
 
-// matrix-matrix multiplication
-extern "C" {
-void dgemm_( char * TRANSA, char * TRANSB, lo * M, lo * N, lo * K, sc * ALPHA,
-  sc * A, lo * LDA, sc * B, lo * LDB, sc * BETA, sc * C, lo * LDC );
-}
-
 // LAPACK
-
-// matrix norm
-extern "C" {
-sc dlange_( char * norm, lo const * M, lo const * N, sc const * A,
-  lo const * LDA, sc * WORK );
-}
-
-// LAPACK LU factorization of a general matrix
-extern "C" {
-void dgetrf_( lo * M, lo * N, sc * A, lo * LDA, lo * IPIV, lo * INFO );
-}
-
-extern "C" {  // LAPACK LU solver
-void dgetrs_( char * TRANS, lo * N, lo * NRHS, sc * A, lo * LDA, lo * IPIV,
-  sc * B, lo * LDB, lo * INFO );
-}
-
-// LAPACK Choleski factorization of a general matrix
-extern "C" {
-void dpotrf_( char * UPLO, lo * M, sc * A, lo * LDA, lo * INFO );
-}
-
-// LAPACK Choleski solver
-extern "C" {
-void dpotrs_( char * UPLO, lo * N, lo * NRHS, sc * A, lo * LDA, sc * B,
-  lo * LDB, lo * INFO );
-}
-
-// reduces real sc symmetric matrix to tridiagonal form
-extern "C" {
-void dsytrd_( char * UPLO, lo * N, sc * A, lo * LDA, sc * D, sc * E, sc * TAU,
-  sc * WORK, lo * LWORK, lo * INFO );
-}
-
-// computes selected eigenvalues and, optionally, eigenvectors of a real
-// symmetric matrix A
-extern "C" {
-void dsyevx_( char * JOBZ, char * RANGE, char * UPLO, lo * N, sc * A, lo * LDA,
-  sc * VL, sc * VU, lo * IL, lo * IU, sc * ABSTOL, lo * M, sc * W, sc * Z,
-  lo * LDZ, sc * WORK, lo * LWORK, lo * IWORK, lo * IFAIL, lo * INFO );
-}
-
-// computes Schur decomposition of a Hessenberg matrix H
-extern "C" {
-void dhseqr_( char * job, char * compz, lo * n, lo * ilo, lo * ihi, sc * h,
-  lo * ldh, sc * wr, sc * wi, sc * z, lo * ldz, sc * work, lo * lwork,
-  lo * info );
-}
 
 #endif /* INCLUDE_BESTHEA_BLAS_LAPACK_WRAPPER_H_ */
