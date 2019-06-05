@@ -1,6 +1,7 @@
 .cproject
 .project
 .settings
+external
 lib
 build
 Makefile

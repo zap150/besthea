@@ -26,29 +26,42 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file linear_operator.h
- * @brief Parent class for linear operators.
+/** @file sparse_matrix.h
+ * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_LINEAR_OPERATOR_H_
-#define INCLUDE_BESTHEA_LINEAR_OPERATOR_H_
+#ifndef INCLUDE_BESTHEA_SPARSE_MATRIX_H_
+#define INCLUDE_BESTHEA_SPARSE_MATRIX_H_
 
+#include "Eigen/Core"
+#include "Eigen/Sparse"
+#include "besthea/linear_operator.h"
 #include "besthea/settings.h"
-#include "besthea/vector.h"
 
 namespace besthea {
   namespace linear_algebra {
-    class linear_operator;
+    class sparse_matrix;
   }
 }
 
 /**
- *  Class representing a linear operator.
+ *  Class representing a sparse matrix.
  */
-class besthea::linear_algebra::linear_operator {
+class besthea::linear_algebra::sparse_matrix
+  : public besthea::linear_algebra::linear_operator {
   using vector = besthea::linear_algebra::vector;
 
  public:
+  sparse_matrix( );
+
+  /**
+   * Copy constructor.
+   * @param[in] that Matrix to be deep copied.
+   */
+  sparse_matrix( const sparse_matrix & that );
+
+  virtual ~sparse_matrix( );
+
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
    * @param[in] x
@@ -58,11 +71,9 @@ class besthea::linear_algebra::linear_operator {
    * @param[in] beta
    */
   virtual void apply( vector const & x, vector & y, bool trans = false,
-    sc alpha = 1.0, sc beta = 0.0 ) const = 0;
+    sc alpha = 1.0, sc beta = 0.0 ) const;
 
  protected:
-  lo _dim_domain; //!< domain dimension
-  lo _dim_range; //!< range dimension
 };
 
-#endif /* INCLUDE_BESTHEA_LINEAR_OPERATOR_H_ */
+#endif /* INCLUDE_BESTHEA_SPARSE_MATRIX_H_ */

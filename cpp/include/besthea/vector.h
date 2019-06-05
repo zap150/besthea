@@ -46,7 +46,7 @@ namespace besthea {
 }
 
 /**
- *  Class representing a vector of scalars.
+ *  Class representing a vector.
  */
 class besthea::linear_algebra::vector {
  public:
@@ -59,7 +59,7 @@ class besthea::linear_algebra::vector {
   vector( const vector & that );
 
   /**
-   * Constructing a vector of give length.
+   * Constructing a vector of the given size.
    * @param[in] size Length of the vector.
    * @param[in] zero Initialize to 0 if true.
    */
@@ -114,6 +114,22 @@ class besthea::linear_algebra::vector {
   }
 
   /*!
+   * @brief Overloads the () operator.
+   * @param[in] i Index.
+   */
+  sc operator( )( lo i ) const {
+    return _data[ i ];
+  }
+
+  /*!
+   * @brief Overloads the () operator.
+   * @param[in] i Index.
+   */
+  sc & operator( )( lo i ) {
+    return _data[ i ];
+  }
+
+  /*!
    * @brief Overloads the [] operator.
    * @param[in] i Index.
    */
@@ -135,17 +151,33 @@ class besthea::linear_algebra::vector {
     return _data.data( );
   }
 
+  /*!
+   * @brief Dot product.
+   * @param[in] v
+   */
   sc dot( vector const & v ) const {
     return cblas_ddot( _size, _data.data( ), 1, v._data.data( ), 1 );
   }
 
+  /*!
+   * @brief Euclidean norm.
+   */
   sc norm( ) {
     return cblas_dnrm2( _size, _data.data( ), 1 );
   }
 
+  /*!
+   * @brief Vector addition this += alpha * v.
+   * @param[in] v
+   * @param[in] alpha
+   */
+  void add( vector const & v, sc alpha = 1.0 ) {
+    cblas_daxpy( _size, alpha, v._data.data( ), 1, _data.data( ), 1 );
+  }
+
  protected:
-  lo _size;
-  std::vector< sc > _data;
+  lo _size; //!< vector size
+  std::vector< sc > _data; //!< raw data
 };
 
 #endif /* INCLUDE_BESTHEA_VECTOR_H_ */

@@ -87,7 +87,58 @@ void besthea::linear_algebra::full_matrix::random_fill_diag(
   }
 }
 
+void besthea::linear_algebra::full_matrix::fill_diag( sc value ) {
+  lo n = _n_rows < _n_columns ? _n_rows : _n_columns;
+  for ( lo i = 0; i < n; ++i ) {
+    _data[ i + i * _n_rows ] = value;
+  }
+}
+
 void besthea::linear_algebra::full_matrix::apply(
   const vector & x, vector & y, bool trans, sc alpha, sc beta ) const {
+  CBLAS_TRANSPOSE cblas_trans = trans ? CblasTrans : CblasNoTrans;
 
+  cblas_dgemv( CblasColMajor, cblas_trans, _n_rows, _n_columns, alpha,
+    _data.data( ), _n_rows, x.data( ), 1, beta, y.data( ), 1 );
+}
+
+void besthea::linear_algebra::full_matrix::apply_symmetric(
+  const vector & x, vector & y, sc alpha, sc beta ) const {
+  CBLAS_UPLO cblas_uplo = CblasUpper;
+
+  cblas_dsymv( CblasColMajor, cblas_uplo, _n_rows, alpha,
+    _data.data( ), _n_rows, x.data( ), 1, beta, y.data( ), 1 );
+}
+
+void besthea::linear_algebra::full_matrix::lu_decompose_solve(
+  vector & rhs, lo n_rhs, bool trans ) {
+  char lapacke_trans = trans ? 'T' : 'N';
+  lo ipiv_size = _n_rows < _n_columns ? _n_rows : _n_columns;
+
+  lo * ipiv = new lo[ ipiv_size ];
+  LAPACKE_dgetrf(
+    LAPACK_COL_MAJOR, _n_rows, _n_columns, _data.data( ), _n_rows, ipiv );
+  LAPACKE_dgetrs( LAPACK_COL_MAJOR, lapacke_trans, _n_rows, n_rhs,
+    _data.data( ), _n_rows, ipiv, rhs.data( ), _n_rows );
+  delete[] ipiv;
+}
+
+void besthea::linear_algebra::full_matrix::choleski_decompose_solve(
+  vector & rhs, lo n_rhs ) {
+  char uplo = 'U';
+  LAPACKE_dpotrf( LAPACK_COL_MAJOR, uplo, _n_rows, _data.data( ), _n_rows );
+  LAPACKE_dpotrs( LAPACK_COL_MAJOR, uplo, _n_rows, n_rhs, _data.data( ),
+    _n_rows, rhs.data( ), _n_rows );
+}
+
+void besthea::linear_algebra::full_matrix::choleski_decompose( ) {
+  char uplo = 'U';
+  LAPACKE_dpotrf( LAPACK_COL_MAJOR, uplo, _n_rows, _data.data( ), _n_rows );
+}
+
+void besthea::linear_algebra::full_matrix::choleski_solve(
+  vector & rhs, lo n_rhs ) {
+  char uplo = 'U';
+  LAPACKE_dpotrs( LAPACK_COL_MAJOR, uplo, _n_rows, n_rhs, _data.data( ),
+    _n_rows, rhs.data( ), _n_rows );
 }

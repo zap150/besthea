@@ -26,43 +26,18 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file linear_operator.h
- * @brief Parent class for linear operators.
- */
+#include "besthea/sparse_matrix.h"
 
-#ifndef INCLUDE_BESTHEA_LINEAR_OPERATOR_H_
-#define INCLUDE_BESTHEA_LINEAR_OPERATOR_H_
-
-#include "besthea/settings.h"
-#include "besthea/vector.h"
-
-namespace besthea {
-  namespace linear_algebra {
-    class linear_operator;
-  }
+besthea::linear_algebra::sparse_matrix::sparse_matrix( ) {
 }
 
-/**
- *  Class representing a linear operator.
- */
-class besthea::linear_algebra::linear_operator {
-  using vector = besthea::linear_algebra::vector;
+besthea::linear_algebra::sparse_matrix::sparse_matrix(
+  const sparse_matrix & that ) {
+}
 
- public:
-  /*!
-   * @brief y = beta * y + alpha * (this)^trans * x.
-   * @param[in] x
-   * @param[in,out] y
-   * @param[in] trans
-   * @param[in] alpha
-   * @param[in] beta
-   */
-  virtual void apply( vector const & x, vector & y, bool trans = false,
-    sc alpha = 1.0, sc beta = 0.0 ) const = 0;
+besthea::linear_algebra::sparse_matrix::~sparse_matrix( ) {
+}
 
- protected:
-  lo _dim_domain; //!< domain dimension
-  lo _dim_range; //!< range dimension
-};
-
-#endif /* INCLUDE_BESTHEA_LINEAR_OPERATOR_H_ */
+void besthea::linear_algebra::sparse_matrix::apply(
+  const vector & x, vector & y, bool trans, sc alpha, sc beta ) const {
+}

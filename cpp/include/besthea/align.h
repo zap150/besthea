@@ -56,7 +56,7 @@ class besthea::memory::align {
    *
    * @param[in] alignment The number of bytes to which memory must be aligned.
    * This value *must* be <= 255.
-   * @param[in] bytes The number of bytes to allocate.
+   * @param[in] size The number of bytes to allocate.
    * @param[in] zero If true, the returned memory will be zeroed. If false, the
    *  contents of the returned memory are undefined.
    * @returns A pointer to `size` bytes of memory, aligned to an
@@ -72,7 +72,7 @@ class besthea::memory::align {
    *
    * Memory allocated with aligned alloc *MUST* be freed using aligned_free.
    *
-   * @param[in] bytes The number of bytes to allocate.
+   * @param[in] size The number of bytes to allocate.
    * @param[in] zero If true, the returned memory will be zeroed. If false, the
    *  contents of the returned memory are undefined.
    * @returns A pointer to `size` bytes of memory, aligned to a

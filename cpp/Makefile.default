@@ -1,11 +1,12 @@
+EIGEN_INC=./external/eigen
 SIMD=4
 
 #CXX=icpc
-#CXXFLAGS=-xHost -O3 -g -DDATA_WIDTH=${SIMD} -qopenmp -std=c++11 -w2 -I${MKLROOT}/include
+#CXXFLAGS=-xHost -O3 -g -DDATA_WIDTH=${SIMD} -qopenmp -std=c++11 -w2 -I${MKLROOT}/include -I${EIGEN_INC}
 #LDLIBSOPTIONS=-qopenmp -L${MKLROOT}/lib/intel64 -Wl,-rpath,'${MKLROOT}/lib/intel64' -lmkl_core -lmkl_intel_thread -lmkl_intel_lp64
 
 CXX=g++
-CXXFLAGS=-fopenmp -O3 -g -std=c++11 -DDATA_WIDTH=${SIMD} -Wall -I${MKLROOT}/include
+CXXFLAGS=-fopenmp -O3 -g -std=c++11 -DDATA_WIDTH=${SIMD} -Wall -I${MKLROOT}/include -I${EIGEN_INC}
 LDLIBSOPTIONS=-fopenmp -L${MKLROOT}/lib -Wl,-rpath,'${MKLROOT}/lib' -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread -liomp5
 
 #########################DO NOT MODIFY BELOW THIS LINE##########################

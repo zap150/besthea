@@ -35,38 +35,60 @@
 
 #include "besthea/settings.h"
 
-enum CBLAS_ORDER { CblasRowMajor = 101, CblasColMajor = 102 };
-enum CBLAS_TRANSPOSE {
+enum CBLAS_ORDER : int { CblasRowMajor = 101, CblasColMajor = 102 };
+enum CBLAS_TRANSPOSE : int {
   CblasNoTrans = 111,
   CblasTrans = 112,
   CblasConjTrans = 113
 };
-enum CBLAS_UPLO { CblasUpper = 121, CblasLower = 122 };
-enum CBLAS_DIAG { CblasNonUnit = 131, CblasUnit = 132 };
-enum CBLAS_SIDE { CblasLeft = 141, CblasRight = 142 };
+enum CBLAS_UPLO : int { CblasUpper = 121, CblasLower = 122 };
+// enum CBLAS_DIAG : int { CblasNonUnit = 131, CblasUnit = 132 };
+// enum CBLAS_SIDE : int { CblasLeft = 141, CblasRight = 142 };
+
+//#ifndef LAPACK_ROW_MAJOR
+//#define LAPACK_ROW_MAJOR 101
+//#endif
+#ifndef LAPACK_COL_MAJOR
+#define LAPACK_COL_MAJOR 102
+#endif
+
+extern "C" {
 
 // LEVEL 1 BLAS
 
-extern "C" {
-sc cblas_ddot(
-  const lo N, const sc * X, const lo incX, const sc * Y, const lo incY );
-}
+void cblas_daxpy( lo N, sc alpha, const sc * X, lo incX, sc * Y, lo incY );
 
-extern "C" {
-sc cblas_dnrm2( const lo N, const sc * X, const lo incX );
-}
+sc cblas_ddot( lo N, const sc * X, lo incX, const sc * Y, lo incY );
+
+sc cblas_dnrm2( lo N, const sc * X, lo incX );
 
 // LEVEL 2 BLAS
 
-extern "C" {
-void cblas_dgemv( const enum CBLAS_ORDER order,
-  const enum CBLAS_TRANSPOSE TransA, const lo M, const lo N, const sc alpha,
-  const sc * A, const lo lda, const sc * X, const lo incX, const sc beta,
-  sc * Y, const lo incY );
-}
+void cblas_dgemv( CBLAS_ORDER order, CBLAS_TRANSPOSE TransA, lo M, lo N,
+  sc alpha, const sc * A, lo lda, const sc * X, lo incX, sc beta, sc * Y,
+  lo incY );
+
+void cblas_dsymv( CBLAS_ORDER order, CBLAS_UPLO Uplo, lo M, sc alpha,
+  const sc * A, lo lda, const sc * X, lo incX, sc beta, sc * Y, lo incY );
 
 // LEVEL 3 BLAS
 
 // LAPACK
+
+lo LAPACKE_dgetrf( int order, lo m, lo n, sc * a, lo lda, lo * ipiv );
+
+lo LAPACKE_dgetrf2( int order, lo m, lo n, sc * a, lo lda, lo * ipiv );
+
+lo LAPACKE_dgetrs( int order, char trans, lo n, lo nrhs, const sc * a, lo lda,
+  const lo * ipiv, sc * b, lo ldb );
+
+lo LAPACKE_dpotrf( int order, char uplo, lo n, sc * a, lo lda );
+
+lo LAPACKE_dpotrf2( int order, char uplo, lo n, sc * a, lo lda );
+
+lo LAPACKE_dpotrs(
+  int order, char uplo, lo n, lo nrhs, const sc * a, lo lda, sc * b, lo ldb );
+
+}  // extern "C"
 
 #endif /* INCLUDE_BESTHEA_BLAS_LAPACK_WRAPPER_H_ */

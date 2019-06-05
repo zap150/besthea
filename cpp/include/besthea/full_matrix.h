@@ -47,7 +47,7 @@ namespace besthea {
 }
 
 /**
- *  Class representing a vector of scalars.
+ *  Class representing a full matrix.
  */
 class besthea::linear_algebra::full_matrix
   : public besthea::linear_algebra::linear_operator {
@@ -63,7 +63,7 @@ class besthea::linear_algebra::full_matrix
   full_matrix( const full_matrix & that );
 
   /**
-   * Constructing a vector of give length.
+   * Constructing a matrix of the given dimension.
    * @param[in] n_rows Number of rows.
    * @param[in] n_columns Number of columns.
    * @param[in] zero Initialize to 0 if true.
@@ -85,6 +85,12 @@ class besthea::linear_algebra::full_matrix
   void fill( sc value ) {
     std::fill( _data.begin( ), _data.end( ), value );
   }
+
+  /*!
+   * @brief Fills the diagonal of the matrix with the given value.
+   * @param[in] value
+   */
+  void fill_diag( sc value );
 
   /*!
    * @brief Fills the matrix with random numbers (uniform distribution).
@@ -161,10 +167,48 @@ class besthea::linear_algebra::full_matrix
   virtual void apply( vector const & x, vector & y, bool trans = false,
     sc alpha = 1.0, sc beta = 0.0 ) const;
 
+  /*!
+   * @brief y = beta * y + alpha * (this)^trans * x.
+   * @param[in] x
+   * @param[in,out] y
+   * @param[in] trans
+   * @param[in] alpha
+   * @param[in] beta
+   */
+  void apply_symmetric(
+    vector const & x, vector & y, sc alpha = 1.0, sc beta = 0.0 ) const;
+
+  /*!
+   * @brief In-place LU decomposition and solution.
+   * @param[in,out] rhs Right-hand side overwritten by the result.
+   * @param[in] n_rhs Number of right-hand sides.
+   */
+  void lu_decompose_solve( vector & rhs, lo n_rhs = 1, bool trans = false );
+
+  /*!
+   * @brief In-place Choleski decomposition and solution.
+   * @param[in,out] rhs Right-hand side overwritten by the result.
+   * @param[in] n_rhs Number of right-hand sides.
+   */
+  void choleski_decompose_solve( vector & rhs, lo n_rhs = 1 );
+
+  /*!
+   * @brief In-place Choleski decomposition.
+   * @param[in,out] rhs Right-hand side overwritten by the result.
+   */
+  void choleski_decompose( );
+
+  /*!
+   * @brief Choleski solution
+   * @param[in,out] rhs Right-hand side overwritten by the result.
+   * @param[in] n_rhs Number of right-hand sides.
+   */
+  void choleski_solve( vector & rhs, lo n_rhs = 1 );
+
  protected:
   // {} instead of =, workaround because of bug in gcc
-  lo & _n_rows{ linear_operator::_dim_range };
-  lo & _n_columns{ linear_operator::_dim_domain };
+  lo & _n_rows{ linear_operator::_dim_range }; //!< number of rows (range dimension)
+  lo & _n_columns{ linear_operator::_dim_domain }; //!< number of columns (domain dimension)
   std::vector< sc > _data;
 };
 
