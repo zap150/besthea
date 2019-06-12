@@ -51,7 +51,7 @@ besthea::linear_algebra::vector::~vector( ) {
 }
 
 void besthea::linear_algebra::vector::print( std::ostream & stream ) const {
-  for ( lo i = 0; i < _data.size( ); ++i ) {
+  for ( lo i = 0; i < _size; ++i ) {
     stream << _data[ i ] << std::endl;
   }
   stream << std::endl;

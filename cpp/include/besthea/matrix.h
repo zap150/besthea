@@ -26,37 +26,52 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "besthea/uniform_spacetime_tensor_mesh.h"
+/** @file matrix.h
+ * @brief
+ */
 
-#include <iostream>
+#ifndef INCLUDE_BESTHEA_MATRIX_H_
+#define INCLUDE_BESTHEA_MATRIX_H_
 
-besthea::mesh::uniform_spacetime_tensor_mesh::uniform_spacetime_tensor_mesh(
-  triangular_surface_mesh & space_mesh, sc end_time, lo n_timesteps ) {
-  _space_mesh = &space_mesh;
-  _end_time = end_time;
-  _n_timesteps = n_timesteps;
-  _timestep = end_time / n_timesteps;
+#include "besthea/linear_operator.h"
+#include "besthea/settings.h"
+
+namespace besthea {
+  namespace linear_algebra {
+    class matrix;
+  }
 }
 
-besthea::mesh::uniform_spacetime_tensor_mesh::
-  ~uniform_spacetime_tensor_mesh( ) {
-}
+/**
+ *  Class representing a full matrix.
+ */
+class besthea::linear_algebra::matrix
+  : public besthea::linear_algebra::linear_operator {
+ public:
+  matrix( ) {
+    _n_rows = 0;
+    _n_columns = 0;
+  }
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine(
-  int level, int temporal_order ) {
-  refine_space( level );
-  refine_time( temporal_order * level );
-}
+  virtual ~matrix( ) {
+  }
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::map_to_unit_sphere( ) {
-  _space_mesh->map_to_unit_sphere( );
-}
+  lo get_n_rows( ) {
+    return _n_rows;
+  }
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine_space( int level ) {
-  _space_mesh->refine( level );
-}
+  lo get_n_columns( ) {
+    return _n_columns;
+  }
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine_time( int level ) {
-  _n_timesteps *= 1 << level;
-  _timestep = _end_time / _n_timesteps;
-}
+ protected:
+  // {} instead of =, workaround because of bug in gcc
+  lo & _n_rows{
+    linear_operator::_dim_range
+  };  //!< number of rows (range dimension)
+  lo & _n_columns{
+    linear_operator::_dim_domain
+  };  //!< number of columns (domain dimension)
+};
+
+#endif /* INCLUDE_BESTHEA_MATRIX_H_ */

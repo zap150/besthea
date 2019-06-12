@@ -26,37 +26,59 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "besthea/uniform_spacetime_tensor_mesh.h"
+/** @file basis_function.h
+ * @brief
+ */
 
-#include <iostream>
+#ifndef INCLUDE_BESTHEA_BASIS_FUNCTION_H_
+#define INCLUDE_BESTHEA_BASIS_FUNCTION_H_
 
-besthea::mesh::uniform_spacetime_tensor_mesh::uniform_spacetime_tensor_mesh(
-  triangular_surface_mesh & space_mesh, sc end_time, lo n_timesteps ) {
-  _space_mesh = &space_mesh;
-  _end_time = end_time;
-  _n_timesteps = n_timesteps;
-  _timestep = end_time / n_timesteps;
+#include "besthea/be_assembler.h"
+#include "besthea/full_matrix.h"
+#include "besthea/mesh.h"
+#include "besthea/settings.h"
+
+#include <vector>
+
+namespace besthea {
+  namespace bem {
+    class basis_function;
+  }
 }
 
-besthea::mesh::uniform_spacetime_tensor_mesh::
-  ~uniform_spacetime_tensor_mesh( ) {
-}
+/**
+ *  Class representing a basis function.
+ */
+class besthea::bem::basis_function {
+ protected:
+  using mesh_type = besthea::mesh::mesh;
+  using adjacency = besthea::bem::adjacency;
+  using matrix_type = besthea::linear_algebra::full_matrix;
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine(
-  int level, int temporal_order ) {
-  refine_space( level );
-  refine_time( temporal_order * level );
-}
+ public:
+  basis_function( ) : _mesh( nullptr ) {
+  }
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::map_to_unit_sphere( ) {
-  _space_mesh->map_to_unit_sphere( );
-}
+  basis_function( const basis_function & that ) = delete;
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine_space( int level ) {
-  _space_mesh->refine( level );
-}
+  virtual ~basis_function( ) {
+  }
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine_time( int level ) {
-  _n_timesteps *= 1 << level;
-  _timestep = _end_time / _n_timesteps;
-}
+  virtual lo dimension_local( lo i_elem ) = 0;
+
+  virtual lo dimension_global( ) = 0;
+
+  virtual void local_to_global( lo i_elem, adjacency type, int rotation,
+    bool swap, std::vector< lo > indices )
+    = 0;
+
+  virtual void evaluate( lo i_elem, const std::vector< sc > & x1_ref,
+    const std::vector< sc > & x2_ref, const sc * n, adjacency type,
+    int rotation, bool swap, std::vector< matrix_type > & values )
+    = 0;
+
+ protected:
+  mesh_type * _mesh;
+};
+
+#endif /* INCLUDE_BESTHEA_BASIS_FUNCTION_H_ */

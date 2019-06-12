@@ -26,37 +26,34 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "besthea/uniform_spacetime_tensor_mesh.h"
+/** @file mesh.h
+ * @brief
+ */
 
-#include <iostream>
+#ifndef INCLUDE_BESTHEA_MESH_H_
+#define INCLUDE_BESTHEA_MESH_H_
 
-besthea::mesh::uniform_spacetime_tensor_mesh::uniform_spacetime_tensor_mesh(
-  triangular_surface_mesh & space_mesh, sc end_time, lo n_timesteps ) {
-  _space_mesh = &space_mesh;
-  _end_time = end_time;
-  _n_timesteps = n_timesteps;
-  _timestep = end_time / n_timesteps;
+namespace besthea {
+  namespace mesh {
+    class mesh;
+    class triangular_surface_mesh;
+  }
 }
 
-besthea::mesh::uniform_spacetime_tensor_mesh::
-  ~uniform_spacetime_tensor_mesh( ) {
-}
+class besthea::mesh::mesh {
+ public:
+  mesh( ) {
+  }
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine(
-  int level, int temporal_order ) {
-  refine_space( level );
-  refine_time( temporal_order * level );
-}
+  mesh( const mesh & that ) {
+  }
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::map_to_unit_sphere( ) {
-  _space_mesh->map_to_unit_sphere( );
-}
+  virtual ~mesh( ) {
+  }
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine_space( int level ) {
-  _space_mesh->refine( level );
-}
+  virtual triangular_surface_mesh * get_spatial_mesh( ) = 0;
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine_time( int level ) {
-  _n_timesteps *= 1 << level;
-  _timestep = _end_time / _n_timesteps;
-}
+ protected:
+};
+
+#endif /* INCLUDE_BESTHEA_MESH_H_ */

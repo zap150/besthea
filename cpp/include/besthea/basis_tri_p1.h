@@ -26,37 +26,38 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "besthea/uniform_spacetime_tensor_mesh.h"
+/** @file basis_tri_p1.h
+ * @brief
+ */
 
-#include <iostream>
+#ifndef INCLUDE_BESTHEA_BASIS_TRI_P1_H_
+#define INCLUDE_BESTHEA_BASIS_TRI_P1_H_
 
-besthea::mesh::uniform_spacetime_tensor_mesh::uniform_spacetime_tensor_mesh(
-  triangular_surface_mesh & space_mesh, sc end_time, lo n_timesteps ) {
-  _space_mesh = &space_mesh;
-  _end_time = end_time;
-  _n_timesteps = n_timesteps;
-  _timestep = end_time / n_timesteps;
+#include "besthea/basis_function.h"
+#include "besthea/triangular_surface_mesh.h"
+
+namespace besthea {
+  namespace bem {
+    class basis_tri_p1;
+  }
 }
 
-besthea::mesh::uniform_spacetime_tensor_mesh::
-  ~uniform_spacetime_tensor_mesh( ) {
-}
+class besthea::bem::basis_tri_p1 : public besthea::bem::basis_function {
+ public:
+  basis_tri_p1( ) = delete;
+  basis_tri_p1( mesh_type & mesh );
+  virtual ~basis_tri_p1( );
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine(
-  int level, int temporal_order ) {
-  refine_space( level );
-  refine_time( temporal_order * level );
-}
+  virtual lo dimension_local( lo i_elem );
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::map_to_unit_sphere( ) {
-  _space_mesh->map_to_unit_sphere( );
-}
+  virtual lo dimension_global( );
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine_space( int level ) {
-  _space_mesh->refine( level );
-}
+  virtual void local_to_global( lo i_elem, adjacency type,
+    int rotation, bool swap, std::vector< lo > indices );
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine_time( int level ) {
-  _n_timesteps *= 1 << level;
-  _timestep = _end_time / _n_timesteps;
-}
+  virtual void evaluate( lo i_elem, const std::vector< sc > & x1_ref,
+    const std::vector< sc > & x2_ref, const sc * n, adjacency type,
+    int rotation, bool swap, std::vector< matrix_type > & values );
+};
+
+#endif /* INCLUDE_BESTHEA_BASIS_TRI_P1_H_ */

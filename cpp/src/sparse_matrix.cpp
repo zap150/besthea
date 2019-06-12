@@ -28,11 +28,33 @@
 
 #include "besthea/sparse_matrix.h"
 
-besthea::linear_algebra::sparse_matrix::sparse_matrix( ) {
+besthea::linear_algebra::sparse_matrix::sparse_matrix( ) : _data( ) {
+  _n_rows = 0;
+  _n_columns = 0;
 }
 
 besthea::linear_algebra::sparse_matrix::sparse_matrix(
-  const sparse_matrix & that ) {
+  const sparse_matrix & that )
+  : _data( that._data ) {
+  _n_rows = that._n_rows;
+  _n_columns = that._n_columns;
+}
+
+besthea::linear_algebra::sparse_matrix::sparse_matrix( los n_rows,
+  los n_columns, std::vector< los > & row_indices,
+  std::vector< los > & column_indices, std::vector< sc > & values )
+  : _data( n_rows, n_columns ) {
+  _n_rows = n_rows;
+  _n_columns = n_columns;
+  std::vector< Eigen::Triplet< sc, los > > tripletList;
+  tripletList.reserve( row_indices.size( ) );
+
+  for ( lou i = 0; i < row_indices.size( ); ++i ) {
+    tripletList.push_back( Eigen::Triplet< sc, los >(
+      row_indices[ i ], column_indices[ i ], values[ i ] ) );
+  }
+  _data.setFromTriplets( tripletList.begin( ), tripletList.end( ) );
+  _data.makeCompressed( );
 }
 
 besthea::linear_algebra::sparse_matrix::~sparse_matrix( ) {
@@ -40,4 +62,16 @@ besthea::linear_algebra::sparse_matrix::~sparse_matrix( ) {
 
 void besthea::linear_algebra::sparse_matrix::apply(
   const vector & x, vector & y, bool trans, sc alpha, sc beta ) const {
+  // converting raw arrays to Eigen type
+  typedef Eigen::Map< const Eigen::Matrix< sc, Eigen::Dynamic, 1 > > map_const;
+  typedef Eigen::Map< Eigen::Matrix< sc, Eigen::Dynamic, 1 > > map;
+
+  map_const x2map( x.data( ), x.size( ) );
+  map y2map( y.data( ), y.size( ) );
+
+  if ( trans ) {
+    y2map = beta * y2map + alpha * _data.transpose( ) * x2map;
+  } else {
+    y2map = beta * y2map + alpha * _data * x2map;
+  }
 }

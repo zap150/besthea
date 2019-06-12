@@ -31,6 +31,7 @@
 #include "besthea/settings.h"
 #include "besthea/sparse_matrix.h"
 #include "besthea/triangular_surface_mesh.h"
+#include "besthea/uniform_spacetime_tensor_mesh.h"
 #include "besthea/vector.h"
 
 #include <cmath>

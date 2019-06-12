@@ -34,7 +34,7 @@
 #define INCLUDE_BESTHEA_FULL_MATRIX_H_
 
 #include "besthea/blas_lapack_wrapper.h"
-#include "besthea/linear_operator.h"
+#include "besthea/matrix.h"
 #include "besthea/settings.h"
 
 #include <iostream>
@@ -50,7 +50,7 @@ namespace besthea {
  *  Class representing a full matrix.
  */
 class besthea::linear_algebra::full_matrix
-  : public besthea::linear_algebra::linear_operator {
+  : public besthea::linear_algebra::matrix {
  public:
   using vector = besthea::linear_algebra::vector;
 
@@ -206,9 +206,6 @@ class besthea::linear_algebra::full_matrix
   void choleski_solve( vector & rhs, lo n_rhs = 1 );
 
  protected:
-  // {} instead of =, workaround because of bug in gcc
-  lo & _n_rows{ linear_operator::_dim_range }; //!< number of rows (range dimension)
-  lo & _n_columns{ linear_operator::_dim_domain }; //!< number of columns (domain dimension)
   std::vector< sc > _data;
 };
 

@@ -33,6 +33,7 @@
 #ifndef INCLUDE_BESTHEA_TRIANGULAR_SURFACE_MESH_H_
 #define INCLUDE_BESTHEA_TRIANGULAR_SURFACE_MESH_H_
 
+#include "besthea/mesh.h"
 #include "besthea/settings.h"
 
 #include <string>
@@ -47,10 +48,9 @@ namespace besthea {
 /**
  *  Class representing a triangular mesh of a 3D surface
  */
-class besthea::mesh::triangular_surface_mesh {
-
+class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
  public:
-  triangular_surface_mesh( );
+  triangular_surface_mesh( ) = delete;
 
   /**
    * Constructing mesh from a file.
@@ -134,7 +134,7 @@ class besthea::mesh::triangular_surface_mesh {
   /**
    * Sets coordinates of a node.
    * @param[in] i_node Index of the node.
-   * @param[in] node Element coordinates.
+   * @param[in] node Node coordinates.
    */
   void set_node( lo i_node, const sc * node ) {
     _nodes[ 3 * i_node ] = node[ 0 ];
@@ -198,6 +198,10 @@ class besthea::mesh::triangular_surface_mesh {
    * Initializes edges.
    */
   void init_edges( );
+
+  virtual triangular_surface_mesh * get_spatial_mesh( ) {
+    return this;
+  }
 };
 
 #endif /* INCLUDE_BESTHEA_TRIANGULAR_SURFACE_MESH_H_ */

@@ -34,20 +34,150 @@
 #ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_TENSOR_MESH_H_
 #define INCLUDE_BESTHEA_UNIFORM_SPACETIME_TENSOR_MESH_H_
 
+#include "besthea/mesh.h"
+#include "besthea/triangular_surface_mesh.h"
+
 namespace besthea {
   namespace mesh {
     class uniform_spacetime_tensor_mesh;
   }
 }
 
-class besthea::mesh::uniform_spacetime_tensor_mesh {
+class besthea::mesh::uniform_spacetime_tensor_mesh
+  : public besthea::mesh::mesh {
  public:
-  uniform_spacetime_tensor_mesh( );
+  uniform_spacetime_tensor_mesh( ) = delete;
 
-  uniform_spacetime_tensor_mesh( const uniform_spacetime_tensor_mesh & )
+  /**
+   * Constructing mesh from a file.
+   * @param[in] space_mesh Reference to a triangular_surface_mesh.h.
+   * @param[in] end_time Temporal interval set to (0,end_time).
+   * @param[in] n_timesteps Number of timesteps.
+   */
+  uniform_spacetime_tensor_mesh(
+    triangular_surface_mesh & space_mesh, sc end_time, lo n_timesteps );
+
+  uniform_spacetime_tensor_mesh( const uniform_spacetime_tensor_mesh & that )
     = delete;
 
   ~uniform_spacetime_tensor_mesh( );
+
+  /**
+   * Refines the spatial mesh by quadrisection, temporal by bisection.
+   * @param[in] level Number of spatial refinements.
+   * @param[in] temporal_order Number of temporal refinements per single spatial
+   * refinement.
+   */
+  void refine( int level, int temporal_order = 1 );
+
+  /**
+   * Maps the spatial nodes to the unit sphere.
+   */
+  void map_to_unit_sphere( );
+
+  /**
+   * Returns number of spatial elements.
+   */
+  lo get_n_spatial_elements( ) const {
+    return _space_mesh->get_n_elements( );
+  }
+
+  /**
+   * Returns number of spatial nodes.
+   */
+  lo get_n_spatial_nodes( ) const {
+    return _space_mesh->get_n_nodes( );
+  }
+
+  /**
+   * Returns node indices of a spatial element.
+   * @param[in] i_element Index of the spatial element.
+   * @param[out] element Spatial element indices.
+   */
+  void get_spatial_element( lo i_element, lo * element ) const {
+    _space_mesh->get_element( i_element, element );
+  }
+
+  /**
+   * Returns coordinates of a spatial node.
+   * @param[in] i_node Index of the spatial node.
+   * @param[out] node Spatial node coordinates.
+   */
+  void get_spatial_node( lo i_node, sc * node ) const {
+    _space_mesh->get_node( i_node, node );
+  }
+
+  /**
+   * Returns number of temporal elements.
+   */
+  lo get_n_temporal_elements( ) const {
+    return _n_timesteps;
+  }
+
+  /**
+   * Returns number of temporal nodes.
+   */
+  lo get_n_temporal_nodes( ) const {
+    return _n_timesteps + 1;
+  }
+
+  /**
+   * Returns node indices of a temporal element.
+   * @param[in] i_element Index of the temporal element.
+   * @param[out] element Spatial temporal indices.
+   */
+  void get_temporal_element( lo i_element, lo * element ) const {
+    element[ 0 ] = i_element;
+    element[ 1 ] = i_element + 1;
+  }
+
+  /**
+   * Returns a coordinate of a temporal node.
+   * @param[in] i_node Index of the temporal node.
+   */
+  sc get_temporal_node( lo i_node ) const {
+    return i_node * _timestep;
+  }
+
+  /**
+   * Prints the mesh into Paraview format.
+   * @param[in] file File name.
+   * @param[in] node_labels Labels for nodal data.
+   * @param[in] node_data Scalar nodal data.
+   * @param[in] element_labels Labels for elemental data.
+   * @param[in] element_data Scalar elemental data.
+   */
+  bool print_vtu( const std::string & file,
+    const std::vector< std::string > * node_labels = nullptr,
+    const std::vector< sc * > * node_data = nullptr,
+    const std::vector< std::string > * element_labels = nullptr,
+    const std::vector< sc * > * element_data = nullptr ) const {
+    return _space_mesh->print_vtu(
+      file, node_labels, node_data, element_labels, element_data );
+  }
+
+  virtual triangular_surface_mesh * get_spatial_mesh( ) {
+    return _space_mesh;
+  }
+
+ protected:
+  /**
+   * Refines the spatial mesh by quadrisection.
+   * @param[in] level Number of spatial refinements.
+   */
+  void refine_space( int level );
+
+  /**
+   * Refines the temporal mesh by bisection.
+   * @param[in] level Number of temporal refinements.
+   */
+  void refine_time( int level );
+
+  triangular_surface_mesh *
+    _space_mesh;    //!< pointer to a triangular_surface_mesh.h
+  sc _end_time;     //!< temporal interval set to (0,end_time)
+  sc _timestep;     //!< size of the timestep
+  lo _n_timesteps;  //!< number of timesteps
 };
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_TENSOR_MESH_H_ */

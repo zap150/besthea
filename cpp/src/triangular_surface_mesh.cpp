@@ -40,10 +40,6 @@
 besthea::mesh::triangular_surface_mesh::~triangular_surface_mesh( ) {
 }
 
-besthea::mesh::triangular_surface_mesh::triangular_surface_mesh( )
-  : _n_nodes( 0 ), _n_elements( 0 ), _n_edges( 0 ) {
-}
-
 void besthea::mesh::triangular_surface_mesh::print_info( ) const {
   std::cout << "besthea::mesh::triangular_surface_mesh" << std::endl;
   std::cout << "  elements: " << _n_elements << ", nodes: " << _n_nodes
@@ -432,7 +428,8 @@ void besthea::mesh::triangular_surface_mesh::init_edges( ) {
   _edges.resize( 2 * _n_edges );
 
   for ( lo i = 0; i < _n_nodes; ++i ) {
-    for ( lo j = 0; j < local_edges[ i ].size( ); ++j ) {
+    for ( std::vector< lo >::size_type j = 0; j < local_edges[ i ].size( );
+          ++j ) {
       _edges[ 2 * ( offsets[ i ] + j ) ] = i;
       _edges[ 2 * ( offsets[ i ] + j ) + 1 ] = local_edges[ i ][ j ];
     }

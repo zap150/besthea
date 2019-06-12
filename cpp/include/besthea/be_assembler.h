@@ -26,37 +26,26 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "besthea/uniform_spacetime_tensor_mesh.h"
+/** @file be_assembler.h
+ * @brief
+ */
 
-#include <iostream>
+#ifndef INCLUDE_BESTHEA_BE_ASSEMBLER_H_
+#define INCLUDE_BESTHEA_BE_ASSEMBLER_H_
 
-besthea::mesh::uniform_spacetime_tensor_mesh::uniform_spacetime_tensor_mesh(
-  triangular_surface_mesh & space_mesh, sc end_time, lo n_timesteps ) {
-  _space_mesh = &space_mesh;
-  _end_time = end_time;
-  _n_timesteps = n_timesteps;
-  _timestep = end_time / n_timesteps;
+namespace besthea {
+  namespace bem {
+    enum class adjacency { disjoint = 0, vertex = 1, edge = 2, identical = 3 };
+
+    int map[] = { 0, 1, 2, 0, 1 };
+
+    class be_assembler;
+  }
 }
 
-besthea::mesh::uniform_spacetime_tensor_mesh::
-  ~uniform_spacetime_tensor_mesh( ) {
-}
+/**
+ *  Class representing a boundary element matrix assembler.
+ */
+class besthea::bem::be_assembler {};
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine(
-  int level, int temporal_order ) {
-  refine_space( level );
-  refine_time( temporal_order * level );
-}
-
-void besthea::mesh::uniform_spacetime_tensor_mesh::map_to_unit_sphere( ) {
-  _space_mesh->map_to_unit_sphere( );
-}
-
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine_space( int level ) {
-  _space_mesh->refine( level );
-}
-
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine_time( int level ) {
-  _n_timesteps *= 1 << level;
-  _timestep = _end_time / _n_timesteps;
-}
+#endif /* INCLUDE_BESTHEA_BE_ASSEMBLER_H_ */

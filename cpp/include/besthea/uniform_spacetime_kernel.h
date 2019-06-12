@@ -26,37 +26,26 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "besthea/uniform_spacetime_tensor_mesh.h"
+/** @file uniform_spacetime_kernel.h
+ * @brief Kernel for uniform_spacetime_tensor_mesh.h.
+ */
 
-#include <iostream>
+#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_KERNEL_H_
+#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_KERNEL_H_
 
-besthea::mesh::uniform_spacetime_tensor_mesh::uniform_spacetime_tensor_mesh(
-  triangular_surface_mesh & space_mesh, sc end_time, lo n_timesteps ) {
-  _space_mesh = &space_mesh;
-  _end_time = end_time;
-  _n_timesteps = n_timesteps;
-  _timestep = end_time / n_timesteps;
+namespace besthea {
+  namespace bem {
+    class uniform_spacetime_kernel;
+  }
 }
 
-besthea::mesh::uniform_spacetime_tensor_mesh::
-  ~uniform_spacetime_tensor_mesh( ) {
-}
+class besthea::bem::uniform_spacetime_kernel {
+ public:
+  uniform_spacetime_kernel( ) {
+  }
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine(
-  int level, int temporal_order ) {
-  refine_space( level );
-  refine_time( temporal_order * level );
-}
+  virtual ~uniform_spacetime_kernel( ) {
+  }
+};
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::map_to_unit_sphere( ) {
-  _space_mesh->map_to_unit_sphere( );
-}
-
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine_space( int level ) {
-  _space_mesh->refine( level );
-}
-
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine_time( int level ) {
-  _n_timesteps *= 1 << level;
-  _timestep = _end_time / _n_timesteps;
-}
+#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_KERNEL_H_ */

@@ -26,13 +26,22 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "besthea/triangular_surface_mesh.h"
 #include "besthea/uniform_spacetime_tensor_mesh.h"
 
 #include <iostream>
 
-using mesh = besthea::mesh::uniform_spacetime_tensor_mesh;
+using s_mesh = besthea::mesh::triangular_surface_mesh;
+using st_mesh = besthea::mesh::uniform_spacetime_tensor_mesh;
 
 int main( int argc, char * argv[] ) {
   std::cout << "test 2" << std::endl;
-  mesh mesh;
+  std::string file = "../mesh_files/cube_12.txt";
+
+  if ( argc > 1 ) {
+    file.assign( argv[ 1 ] );
+  }
+
+  s_mesh space_mesh( file );
+  st_mesh spacetime_mesh( space_mesh, 1.0, 8 );
 }

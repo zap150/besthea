@@ -35,7 +35,7 @@
 
 #include "Eigen/Core"
 #include "Eigen/Sparse"
-#include "besthea/linear_operator.h"
+#include "besthea/matrix.h"
 #include "besthea/settings.h"
 
 namespace besthea {
@@ -48,7 +48,7 @@ namespace besthea {
  *  Class representing a sparse matrix.
  */
 class besthea::linear_algebra::sparse_matrix
-  : public besthea::linear_algebra::linear_operator {
+  : public besthea::linear_algebra::matrix {
   using vector = besthea::linear_algebra::vector;
 
  public:
@@ -59,6 +59,9 @@ class besthea::linear_algebra::sparse_matrix
    * @param[in] that Matrix to be deep copied.
    */
   sparse_matrix( const sparse_matrix & that );
+
+  sparse_matrix( los n_rows, los n_columns, std::vector< los > & row_indices,
+    std::vector< los > & column_indices, std::vector< sc > & values );
 
   virtual ~sparse_matrix( );
 
@@ -74,6 +77,7 @@ class besthea::linear_algebra::sparse_matrix
     sc alpha = 1.0, sc beta = 0.0 ) const;
 
  protected:
+  Eigen::SparseMatrix< sc, Eigen::ColMajor, los > _data;
 };
 
 #endif /* INCLUDE_BESTHEA_SPARSE_MATRIX_H_ */

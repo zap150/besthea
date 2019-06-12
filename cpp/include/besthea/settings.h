@@ -34,6 +34,7 @@
 #define INCLUDE_BESTHEA_SETTINGS_H_
 
 #include <cstddef>
+#include <type_traits>
 
 #ifndef DATA_ALIGN
 #define DATA_ALIGN ( 64 )
@@ -41,11 +42,15 @@
 
 namespace besthea {
   using scalar = double;
-  using index = std::size_t;
-  //using index = long;
+  //using index = std::size_t;
+  using index = long;
+  using index_signed = std::make_signed< index >::type;
+  using index_unsigned = std::make_unsigned< index >::type;
 };  // namespace besthea
 
 using sc = besthea::scalar;
 using lo = besthea::index;
+using los = besthea::index_signed;
+using lou = besthea::index_unsigned;
 
 #endif /* INCLUDE_BESTHEA_SETTINGS_H_ */

@@ -26,37 +26,51 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/** @file be_space.h
+ * @brief
+ */
+
+#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_SPACE_H_
+#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_SPACE_H_
+
+#include "besthea/basis_function.h"
+#include "besthea/settings.h"
 #include "besthea/uniform_spacetime_tensor_mesh.h"
 
-#include <iostream>
-
-besthea::mesh::uniform_spacetime_tensor_mesh::uniform_spacetime_tensor_mesh(
-  triangular_surface_mesh & space_mesh, sc end_time, lo n_timesteps ) {
-  _space_mesh = &space_mesh;
-  _end_time = end_time;
-  _n_timesteps = n_timesteps;
-  _timestep = end_time / n_timesteps;
+namespace besthea {
+  namespace bem {
+    class uniform_spacetime_be_space;
+  }
 }
 
-besthea::mesh::uniform_spacetime_tensor_mesh::
-  ~uniform_spacetime_tensor_mesh( ) {
-}
+/**
+ *  Class representing a boundary element space.
+ */
+class besthea::bem::uniform_spacetime_be_space {
+  using st_mesh = besthea::mesh::uniform_spacetime_tensor_mesh;
+  using basis = besthea::bem::basis_function;
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine(
-  int level, int temporal_order ) {
-  refine_space( level );
-  refine_time( temporal_order * level );
-}
+ public:
+  uniform_spacetime_be_space( ) = delete;
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::map_to_unit_sphere( ) {
-  _space_mesh->map_to_unit_sphere( );
-}
+  uniform_spacetime_be_space( const uniform_spacetime_be_space & that )
+    = delete;
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine_space( int level ) {
-  _space_mesh->refine( level );
-}
+  ~uniform_spacetime_be_space( );
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine_time( int level ) {
-  _n_timesteps *= 1 << level;
-  _timestep = _end_time / _n_timesteps;
-}
+  /**
+   * Constructing mesh from a file.
+   * @param[in] space_mesh Reference to a triangular_surface_mesh.h.
+   * @param[in] end_time Temporal interval set to (0,end_time).
+   * @param[in] n_timesteps Number of timesteps.
+   */
+  uniform_spacetime_be_space(
+    st_mesh & spacetime_mesh, basis & test, basis & trial );
+
+ protected:
+  st_mesh * _spacetime_mesh;  //!< uniform spacetime tensor mesh
+  basis * _trial;             //!< spatial trial function (temporal is constant)
+  basis * _test;              //!< spatial test function (temporal is constant)
+};
+
+#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_SPACE_H_ */

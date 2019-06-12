@@ -152,7 +152,7 @@ class besthea::linear_algebra::vector {
   }
 
   /*!
-   * @brief Dot product.
+   * @brief Returns the euclidean dot product.
    * @param[in] v
    */
   sc dot( vector const & v ) const {
@@ -160,7 +160,7 @@ class besthea::linear_algebra::vector {
   }
 
   /*!
-   * @brief Euclidean norm.
+   * @brief The euclidean norm.
    */
   sc norm( ) {
     return cblas_dnrm2( _size, _data.data( ), 1 );
@@ -175,9 +175,16 @@ class besthea::linear_algebra::vector {
     cblas_daxpy( _size, alpha, v._data.data( ), 1, _data.data( ), 1 );
   }
 
+  /*!
+   * @brief Size of the vector.
+   */
+  lo size( ) const {
+    return _size;
+  }
+
  protected:
-  lo _size; //!< vector size
-  std::vector< sc > _data; //!< raw data
+  lo _size;                 //!< vector size
+  std::vector< sc > _data;  //!< raw data
 };
 
 #endif /* INCLUDE_BESTHEA_VECTOR_H_ */

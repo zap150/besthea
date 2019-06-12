@@ -26,37 +26,55 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "besthea/uniform_spacetime_tensor_mesh.h"
+#include "besthea/basis_tri_p1.h"
 
-#include <iostream>
-
-besthea::mesh::uniform_spacetime_tensor_mesh::uniform_spacetime_tensor_mesh(
-  triangular_surface_mesh & space_mesh, sc end_time, lo n_timesteps ) {
-  _space_mesh = &space_mesh;
-  _end_time = end_time;
-  _n_timesteps = n_timesteps;
-  _timestep = end_time / n_timesteps;
+besthea::bem::basis_tri_p1::basis_tri_p1( mesh_type & mesh ) {
+  _mesh = &mesh;
 }
 
-besthea::mesh::uniform_spacetime_tensor_mesh::
-  ~uniform_spacetime_tensor_mesh( ) {
+besthea::bem::basis_tri_p1::~basis_tri_p1( ) {
 }
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine(
-  int level, int temporal_order ) {
-  refine_space( level );
-  refine_time( temporal_order * level );
+lo besthea::bem::basis_tri_p1::dimension_local( lo i_elem ) {
+  return 3;
 }
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::map_to_unit_sphere( ) {
-  _space_mesh->map_to_unit_sphere( );
+lo besthea::bem::basis_tri_p1::dimension_global( ) {
+  return _mesh->get_spatial_mesh( )->get_n_nodes( );
 }
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine_space( int level ) {
-  _space_mesh->refine( level );
+void besthea::bem::basis_tri_p1::local_to_global( lo i_elem, adjacency type,
+  int rotation, bool swap, std::vector< lo > indices ) {
+  lo element[ 3 ];
+  _mesh->get_spatial_mesh( )->get_element( i_elem, element );
+
+  if ( type == adjacency::edge && swap ) {
+    indices[ 0 ] = element[ map[ rotation + 1 ] ];
+    indices[ 1 ] = element[ map[ rotation ] ];
+  } else {
+    indices[ 0 ] = element[ map[ rotation ] ];
+    indices[ 1 ] = element[ map[ rotation + 1 ] ];
+  }
+  indices[ 2 ] = element[ map[ rotation + 2 ] ];
 }
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine_time( int level ) {
-  _n_timesteps *= 1 << level;
-  _timestep = _end_time / _n_timesteps;
+void besthea::bem::basis_tri_p1::evaluate( lo i_elem,
+  const std::vector< sc > & x1_ref, const std::vector< sc > & x2_ref,
+  const sc * n, adjacency type, int rotation, bool swap,
+  std::vector< matrix_type > & values ) {
+  std::vector< sc >::size_type size = x1_ref.size( );
+
+  const sc * x1_ref_data = x1_ref.data( );
+  const sc * x2_ref_data = x2_ref.data( );
+
+  sc * values1_data = values[ 0 ].data( );
+  sc * values2_data = values[ 1 ].data( );
+  sc * values3_data = values[ 2 ].data( );
+
+#pragma omp simd simdlen( DATA_WIDTH )
+  for ( std::vector< sc >::size_type i = 0; i < size; ++i ) {
+    values1_data[ i ] = 1.0 - x1_ref_data[ i ] - x2_ref_data[ i ];
+    values2_data[ i ] = x1_ref_data[ i ];
+    values3_data[ i ] = x2_ref_data[ i ];
+  }
 }
