@@ -2,7 +2,7 @@ classdef cFMM_solver < handle
   %CFMM_SOLVER Summary of this class goes here
   %   Detailed explanation goes here
   
-  properties ( Access = private )  
+  properties ( Access = private )
     t_start
     t_end
     rhs_fun
@@ -66,33 +66,33 @@ classdef cFMM_solver < handle
       % assemble nearfield matrices
       assembler = full_assembler( );
       
-
+      
       obj.V1 = assembler.assemble_V( obj.leafs{1}.get_value( ), ...
         obj.leafs{1}.get_value( ) );
       obj.V2 = assembler.assemble_V( obj.leafs{2}.get_value( ), ...
         obj.leafs{1}.get_value( ) );
-% 
-%       t = t_start + obj.ht : obj.ht : t_end;
-%       plot( t, x);
-%       hold on
+      %
+      %       t = t_start + obj.ht : obj.ht : t_end;
+      %       plot( t, x);
+      %       hold on
     end
     
     function y = apply_fmm_matrix( obj, x )
       
-     % downward pass
-     parent = obj.leafs{ 1 };
-     for l = obj.L : -1 : 1 
+      % downward pass
+      parent = obj.leafs{ 1 };
+      for l = obj.L : -1 : 1
         parent = parent.get_parent( );
-     end
-     obj.reset( parent ); 
-     
-     y = zeros( size( obj.rhs_proj ) );
+      end
+      obj.reset( parent );
       
-     n = obj.N_steps;
-     y( 1 : n ) = obj.V1 * x( 1 : n );
-     y( n + 1 : 2 * n ) = obj.V1 * x( n + 1 : 2 * n ) + obj.V2 * x( 1 : n ) ;
+      y = zeros( size( obj.rhs_proj ) );
       
-     for m = 2 : 2^obj.L - 1 %  -1 ?
+      n = obj.N_steps;
+      y( 1 : n ) = obj.V1 * x( 1 : n );
+      y( n + 1 : 2 * n ) = obj.V1 * x( n + 1 : 2 * n ) + obj.V2 * x( 1 : n ) ;
+      
+      for m = 2 : 2^obj.L - 1 %  -1 ?
         % find the coarsest level where parents change
         lt = 2;
         
@@ -117,13 +117,13 @@ classdef cFMM_solver < handle
           parent_cluster = parent_node.get_value( );
           left_child = parent_cluster.get_left_child( );
           right_child = parent_cluster.get_right_child( );
-
+          
           % transfer up only if there are contributions from both descendants
           % included
-          if ( left_child.get_c_moments_count( ) == 2 ) 
+          if ( left_child.get_c_moments_count( ) == 2 )
             parent_cluster.apply_m2m_left( left_child.get_moments( ) );
           end
-
+          
           if ( right_child.get_c_moments_count( ) == 2 )
             parent_cluster.apply_m2m_right( right_child.get_moments( ) );
           end
@@ -132,9 +132,9 @@ classdef cFMM_solver < handle
         
         % interaction phase
         % go through interaction lists of the clusters and apply M2L
-        cluster = obj.leafs{ m + 1 }.get_value( ); 
+        cluster = obj.leafs{ m + 1 }.get_value( );
         parent_node = obj.leafs{ m + 1 };
-        for l = obj.L : -1 : lt 
+        for l = obj.L : -1 : lt
           cluster.apply_m2l( );
           parent_node = parent_node.get_parent( );
           cluster = parent_node.get_value( );
@@ -142,13 +142,13 @@ classdef cFMM_solver < handle
         
         % downward pass
         parent = obj.leafs{ m + 1 };
-        for l = obj.L : -1 : lt 
+        for l = obj.L : -1 : lt
           parent = parent.get_parent( );
         end
-
+        
         obj.downward_pass( parent, m );
-       
-        cluster = obj.leafs{ m + 1 }.get_value( ); 
+        
+        cluster = obj.leafs{ m + 1 }.get_value( );
         
         f = cluster.apply_l2p( );
         ind_start = obj.leafs{ m - 1 + 1 }.get_value( ).get_start_index( );
@@ -166,11 +166,164 @@ classdef cFMM_solver < handle
       
     end
     
+    
+    function y = apply_fmm_matrix_std( obj, x )
+      
+      % downward pass
+      parent = obj.leafs{ 1 };
+      for l = obj.L : -1 : 1
+        parent = parent.get_parent( );
+      end
+      obj.reset( parent );
+      
+      y = zeros( size( obj.rhs_proj ) );
+      
+      n = obj.N_steps;
+      y( 1 : n ) = obj.V1 * x( 1 : n );
+      y( n + 1 : 2 * n ) = obj.V1 * x( n + 1 : 2 * n ) + obj.V2 * x( 1 : n ) ;
+      
+      % compute moments in all leafs first
+      for m = 1 : 2^obj.L  %  -1 ?
+        cluster = obj.leafs{ m }.get_value( );
+        ind_start = cluster.get_start_index( );
+        ind_end = cluster.get_end_index( );
+        cluster.set_moments( cluster.apply_q2m( x( ind_start : ind_end ) ) );
+        %cluster.inc_c_moments_count( );
+        %cluster.inc_c_moments_count( );
+      end
+      
+      % upward pass
+      parent = obj.leafs{ 1 };
+      for l = obj.L : -1 : 1
+        parent = parent.get_parent( );
+      end
+      
+      obj.upward_pass( parent );
+      
+      parent = obj.leafs{ 1 };
+      for l = obj.L : -1 : 1
+        parent = parent.get_parent( );
+      end
+      obj.interaction( parent );
+      
+      parent = obj.leafs{ 1 };
+      for l = obj.L : -1 : 1
+        parent = parent.get_parent( );
+      end
+      obj.downward_pass_std( parent );
+      
+      for m = 3 : 2^obj.L
+        cluster = obj.leafs{ m }.get_value( );
+        f = cluster.apply_l2p( );
+        ind_start = obj.leafs{ m - 1 }.get_value( ).get_start_index( );
+        ind_end = obj.leafs{ m - 1  }.get_value( ).get_end_index( );
+        tst = obj.V2 * x( ind_start : ind_end );
+        f = f + tst; 
+        
+        ind_start = obj.leafs{ m }.get_value( ).get_start_index( );
+        ind_end = obj.leafs{ m }.get_value( ).get_end_index( );
+        tst = obj.V1 * x( ind_start : ind_end );
+        f = f + tst;
+        y( ind_start : ind_end ) = f;
+      end
+%         
+%         f = cluster.apply_l2p( );
+%         ind_start = obj.leafs{ m - 1 + 1 }.get_value( ).get_start_index( );
+%         ind_end = obj.leafs{ m - 1 + 1 }.get_value( ).get_end_index( );
+%         tst = obj.V2 * x( ind_start : ind_end );
+%         f = f + tst; %V2 * x( ind_start : ind_end );
+%         
+%         ind_start = obj.leafs{ m  + 1 }.get_value( ).get_start_index( );
+%         ind_end = obj.leafs{ m + 1 }.get_value( ).get_end_index( );
+%         tst = obj.V1 * x( ind_start : ind_end );
+%         f = f + tst;
+%         
+%         y( ind_start : ind_end ) = f; %V1 \ obj.rhs_proj( ind_start : ind_end );
+      
+%       for m = 2 : 2^obj.L - 1 %  -1 ?
+%         % find the coarsest level where parents change
+%         lt = 2;
+%         
+%         for i = 2 : obj.L - 1
+%           if obj.get_id_on_level( m - 1, i ) == obj.get_id_on_level( m, i )
+%             lt = lt + 1;
+%           end
+%         end
+%         
+%         % compute moments
+%         cluster = obj.leafs{ m - 2 + 1 }.get_value( );
+%         ind_start = cluster.get_start_index( );
+%         ind_end = cluster.get_end_index( );
+%         cluster.set_moments( cluster.apply_q2m( x( ind_start : ind_end ) ) );
+%         parent_node = obj.leafs{ m - 2 + 1 }.get_parent( );
+%         cluster.inc_c_moments_count( );
+%         cluster.inc_c_moments_count( );
+%         
+%         % upward path
+%         % transfer moments to the highest possible level
+%         for l = obj.L - 1 : -1 :  2
+%           parent_cluster = parent_node.get_value( );
+%           left_child = parent_cluster.get_left_child( );
+%           right_child = parent_cluster.get_right_child( );
+%           
+%           % transfer up only if there are contributions from both descendants
+%           % included
+%           if ( left_child.get_c_moments_count( ) == 2 )
+%             parent_cluster.apply_m2m_left( left_child.get_moments( ) );
+%           end
+%           
+%           if ( right_child.get_c_moments_count( ) == 2 )
+%             parent_cluster.apply_m2m_right( right_child.get_moments( ) );
+%           end
+%           parent_node = parent_node.get_parent( );
+%         end
+%         
+%         % interaction phase
+%         % go through interaction lists of the clusters and apply M2L
+%         cluster = obj.leafs{ m + 1 }.get_value( );
+%         parent_node = obj.leafs{ m + 1 };
+%         for l = obj.L : -1 : lt
+%           cluster.apply_m2l( );
+%           parent_node = parent_node.get_parent( );
+%           cluster = parent_node.get_value( );
+%         end
+%         
+%         % downward pass
+%         parent = obj.leafs{ m + 1 };
+%         for l = obj.L : -1 : lt
+%           parent = parent.get_parent( );
+%         end
+%         
+%         obj.downward_pass( parent, m );
+%         
+%         cluster = obj.leafs{ m + 1 }.get_value( );
+%         
+%         f = cluster.apply_l2p( );
+%         ind_start = obj.leafs{ m - 1 + 1 }.get_value( ).get_start_index( );
+%         ind_end = obj.leafs{ m - 1 + 1 }.get_value( ).get_end_index( );
+%         tst = obj.V2 * x( ind_start : ind_end );
+%         f = f + tst; %V2 * x( ind_start : ind_end );
+%         
+%         ind_start = obj.leafs{ m  + 1 }.get_value( ).get_start_index( );
+%         ind_end = obj.leafs{ m + 1 }.get_value( ).get_end_index( );
+%         tst = obj.V1 * x( ind_start : ind_end );
+%         f = f + tst;
+%         
+%         y( ind_start : ind_end ) = f; %V1 \ obj.rhs_proj( ind_start : ind_end );
+%       end
+      
+    end
+    
+    
     function x = solve_iterative( obj )
       x = gmres(@obj.apply_fmm_matrix, obj.rhs_proj, 100, 1e-4, 400);
     end
     
-    function x = solve_direct( obj ) 
+    function x = solve_iterative_std_fmm( obj )
+      x = gmres(@obj.apply_fmm_matrix_std, obj.rhs_proj, 100, 1e-4, 400);
+    end
+    
+    function x = solve_direct( obj )
       
       x = zeros( size( obj.rhs_proj ) );
       
@@ -204,13 +357,13 @@ classdef cFMM_solver < handle
           parent_cluster = parent_node.get_value( );
           left_child = parent_cluster.get_left_child( );
           right_child = parent_cluster.get_right_child( );
-
+          
           % transfer up only if there are contributions from both descendants
           % included
-          if ( left_child.get_c_moments_count( ) == 2 ) 
+          if ( left_child.get_c_moments_count( ) == 2 )
             parent_cluster.apply_m2m_left( left_child.get_moments( ) );
           end
-
+          
           if ( right_child.get_c_moments_count( ) == 2 )
             parent_cluster.apply_m2m_right( right_child.get_moments( ) );
           end
@@ -219,9 +372,9 @@ classdef cFMM_solver < handle
         
         % interaction phase
         % go through interaction lists of the clusters and apply M2L
-        cluster = obj.leafs{ m + 1 }.get_value( ); 
+        cluster = obj.leafs{ m + 1 }.get_value( );
         parent_node = obj.leafs{ m + 1 };
-        for l = obj.L : -1 : lt 
+        for l = obj.L : -1 : lt
           cluster.apply_m2l( );
           parent_node = parent_node.get_parent( );
           cluster = parent_node.get_value( );
@@ -229,13 +382,13 @@ classdef cFMM_solver < handle
         
         % downward pass
         parent = obj.leafs{ m + 1 };
-        for l = obj.L : -1 : lt 
+        for l = obj.L : -1 : lt
           parent = parent.get_parent( );
         end
-
+        
         obj.downward_pass( parent, m );
-       
-        cluster = obj.leafs{ m + 1 }.get_value( ); 
+        
+        cluster = obj.leafs{ m + 1 }.get_value( );
         f = cluster.apply_l2p( );
         ind_start = obj.leafs{ m - 1 + 1 }.get_value( ).get_start_index( );
         ind_end = obj.leafs{ m - 1 + 1 }.get_value( ).get_end_index( );
@@ -255,49 +408,49 @@ classdef cFMM_solver < handle
   methods ( Access = private )
     
     function construct_cluster_tree( obj, root )
-      if root.get_level() < obj.L 
+      if root.get_level() < obj.L
         
         % split current cluster (root) into two subclusters
         current_cluster = root.get_value( );
         start_index = current_cluster.get_start_index( );
         end_index = current_cluster.get_end_index( );
         middle_index = floor( ( start_index + end_index ) / 2 );
-      
+        
         % recursively create binary subtrees for left and right descendants
         left_cluster = temporal_cluster( obj.panels, start_index, ...
           middle_index, 2 * current_cluster.get_idx_nl( ) );
         root.set_left_child( left_cluster );
-        if ( root.get_level == obj.L - 1 ) 
+        if ( root.get_level == obj.L - 1 )
           obj.leafs{ 2 * current_cluster.get_idx_nl( ) + 1 } = ...
-            root.get_left_child( ); 
+            root.get_left_child( );
         end
         obj.construct_cluster_tree( root.get_left_child( ) );
-             
+        
         right_cluster = temporal_cluster( obj.panels, middle_index + 1, ...
           end_index, 2 * current_cluster.get_idx_nl( ) + 1 );
         root.set_right_child( right_cluster );
         current_cluster.set_children( left_cluster, right_cluster );
-        if ( root.get_level == obj.L - 1 ) 
+        if ( root.get_level == obj.L - 1 )
           obj.leafs{ 2 * current_cluster.get_idx_nl( ) + 2 } = ...
-            root.get_right_child( ); 
+            root.get_right_child( );
         end
         obj.construct_cluster_tree( root.get_right_child( ) );
       end
     end
     
     % computes moments from input vector
-    function compute_q2m( obj, root )   
+    function compute_q2m( obj, root )
       
       if ( root.get_left_child( ) ~= 0 && root.get_right_child( ) ~= 0 )
         % we only have to work on leaves
         obj.compute_q2m( root.get_left_child( ) );
         obj.compute_q2m( root.get_right_child( ) );
-      else 
+      else
         Lagrange = lagrange_interpolant( obj.L_order );
         q2m = zeros( obj.L_order + 1,  root.get_value( ).get_n_steps( ) );
         
         for i = root.get_value( ).get_start_index( ) : ...
-            root.get_value( ).get_end_index( )          
+            root.get_value( ).get_end_index( )
           for j = 0 : obj.L_order
             q2m( j + 1, i - root.get_value( ).get_start_index( ) + 1 ) = ...
               obj.integrate_lagrange( root.get_value( ), ...
@@ -309,7 +462,7 @@ classdef cFMM_solver < handle
     end
     
     % integrates Lagrange polynomials to assemble Q2M matrices
-    function result = integrate_lagrange( ~, cluster, t_start, t_end, ... 
+    function result = integrate_lagrange( ~, cluster, t_start, t_end, ...
         interpolant, b )
       [ x, w, l ] = quadratures.line( 4 );
       result = 0;
@@ -328,7 +481,7 @@ classdef cFMM_solver < handle
         obj.compute_m2m( root.get_right_child( ) );
       end
       
-      if ( root.get_left_child( ) ~= 0 && root.get_right_child( ) ~= 0 ) 
+      if ( root.get_left_child( ) ~= 0 && root.get_right_child( ) ~= 0 )
         Lagrange = lagrange_interpolant( obj.L_order );
         m2m_left = zeros( obj.L_order + 1, obj.L_order + 1 );
         m2m_right = zeros( obj.L_order + 1, obj.L_order + 1 );
@@ -349,25 +502,25 @@ classdef cFMM_solver < handle
     
     % assembles neighbor list, i.e., clusters on the same level with index m_l
     % and m_l - 1
-    function assemble_neighbor_lists( obj, root ) 
+    function assemble_neighbor_lists( obj, root )
       level = root.get_level( );
       idx = root.get_value( ).get_idx_nl( );
-      neighbors = {}; 
+      neighbors = {};
       neighbors(1, 1) = {root.get_value( )};
       if ( level > 0 && idx > 0 )
-        if mod( root.get_value( ).get_idx_nl( ), 2 ) == 1 
+        if mod( root.get_value( ).get_idx_nl( ), 2 ) == 1
           n = root.get_parent( ).get_left_child( ).get_value( );
         elseif root.get_value( ).get_idx_nl( ) ~= 0
           n = obj.search_neighbors( root, level, idx );
         end
         
         if n ~= -1
-          % if neighbor == -1 there is no neighbor except for the 
+          % if neighbor == -1 there is no neighbor except for the
           % same cluster
           neighbors(1, 2) = {n};
         end
       end
-     
+      
       root.get_value( ).set_neighbors( neighbors );
       if ( root.get_left_child ~= 0 && root.get_right_child ~= 0 )
         obj.assemble_neighbor_lists( root.get_left_child( ) );
@@ -376,14 +529,14 @@ classdef cFMM_solver < handle
       
     end
     
-%     % search for a neighboring clusters
+    %     % search for a neighboring clusters
     function neighbor = search_neighbors( obj, root, L, idx )
       % if neighbor == -1 there is no neighbor except for the same cluster
       neighbor = -1;
       
       node = root;
-      while node.get_parent( ).get_left_child( ).get_value( ).get_idx_nl( ) == ... 
-        node.get_value( ).get_idx_nl( )
+      while node.get_parent( ).get_left_child( ).get_value( ).get_idx_nl( ) == ...
+          node.get_value( ).get_idx_nl( )
         node = node.get_parent( );
       end
       
@@ -398,24 +551,24 @@ classdef cFMM_solver < handle
     end
     
     % search for a neighboring clusters
-%     function neighbor = search_neighbors( obj, root, L, idx )
-%       % if neighbor == -1 there is no neighbor except for the same cluster
-%       neighbor = -1;
-%       if ( root.get_value( ).get_idx_nl( ) == idx - 1 ) && ...
-%           ( root.get_level == L )
-%         neighbor = root.get_value( );
-%       elseif root.get_level( ) < L 
-%         neighbor = obj.search_neighbors( root.get_left_child( ), L, idx );
-%         if neighbor == -1
-%           neighbor = obj.search_neighbors( root.get_right_child( ), L, idx );
-%         end
-%       end
-%     end
+    %     function neighbor = search_neighbors( obj, root, L, idx )
+    %       % if neighbor == -1 there is no neighbor except for the same cluster
+    %       neighbor = -1;
+    %       if ( root.get_value( ).get_idx_nl( ) == idx - 1 ) && ...
+    %           ( root.get_level == L )
+    %         neighbor = root.get_value( );
+    %       elseif root.get_level( ) < L
+    %         neighbor = obj.search_neighbors( root.get_left_child( ), L, idx );
+    %         if neighbor == -1
+    %           neighbor = obj.search_neighbors( root.get_right_child( ), L, idx );
+    %         end
+    %       end
+    %     end
     
     % assembles interaction list of a cluster, i.e., parents' neighbors'
     % children which are not neighbors themselves
     function assemble_interaction_list( obj, root )
-      if root.get_level( ) > 1 
+      if root.get_level( ) > 1
         parent_neighbors = root.get_parent( ).get_value( ).get_neighbors( );
         sz = size( parent_neighbors );
         if sz( 1, 2 ) == 2
@@ -428,7 +581,7 @@ classdef cFMM_solver < handle
           end
           root.get_value( ).set_interaction_list( interaction_list );
         end
-
+        
       end
       
       if root.get_left_child( ) ~= 0 && root.get_right_child( ) ~= 0
@@ -453,7 +606,7 @@ classdef cFMM_solver < handle
           for a = 0 : obj.L_order
             for b = 0 : obj.L_order
               % variable from the local cluster
-              t = current_cluster.map_2_global( nodes( a + 1 ) ); 
+              t = current_cluster.map_2_global( nodes( a + 1 ) );
               % variable from the remote cluster
               tau = remote_cluster.map_2_global( nodes( b + 1 ) );
               m2l( a + 1, b + 1 ) = obj.eval_kernel( t - tau );
@@ -476,16 +629,16 @@ classdef cFMM_solver < handle
     end
     
     
-%     function binary_array = d2b( obj, decimal, len )
-%       binary_string = dec2bin( decimal );
-%       binary_array = zeros( 1, len );
-%       sz = size( binary_string, 2 );
-%       for i = 1 : sz
-%         binary_array( i ) = str2double( binary_string( sz - i + 1 ) );
-%       end
-%     end
+    %     function binary_array = d2b( obj, decimal, len )
+    %       binary_string = dec2bin( decimal );
+    %       binary_array = zeros( 1, len );
+    %       sz = size( binary_string, 2 );
+    %       for i = 1 : sz
+    %         binary_array( i ) = str2double( binary_string( sz - i + 1 ) );
+    %       end
+    %     end
     
-
+    
     
     % goes from the level 2 and transfers local expansion coefficients to
     % the lower levels
@@ -513,6 +666,50 @@ classdef cFMM_solver < handle
             obj.get_id_on_level( m, root.get_level( ) + 1 )
           obj.downward_pass( root.get_left_child( ), m );
         end
+      end
+    end
+    
+    % transfers moments upwards
+    function upward_pass( obj, root )
+      if ( root.get_left_child( ) ~= 0 && root.get_right_child( ) ~= 0 )
+        obj.upward_pass( root.get_left_child( ) );
+        obj.upward_pass( root.get_right_child( ) );
+      end
+      
+      if ( root.get_left_child( ) ~= 0 && root.get_right_child( ) ~= 0 )
+        parent_cluster = root.get_value( );
+        left_child = parent_cluster.get_left_child( );
+        right_child = parent_cluster.get_right_child( );
+        
+        parent_cluster.apply_m2m_left( left_child.get_moments( ) );
+        parent_cluster.apply_m2m_right( right_child.get_moments( ) );
+      end
+    end
+    
+    % interaction phase
+    function interaction( obj, root )
+      root.get_value().apply_m2l( );
+      if ( root.get_left_child( ) ~= 0 && root.get_right_child( ) ~= 0 )
+        obj.interaction( root.get_left_child( ) );
+        obj.interaction( root.get_right_child( ) );
+      end
+    end
+    
+    
+     % goes from the level 2 and transfers local expansion coefficients to
+    % the lower levels
+    function downward_pass_std( obj, root )
+      
+      if ( size( root.get_value( ).get_local_expansion( ), 1 ) ~= 0 )
+        left_exp = root.get_value( ).apply_l2l_left( );
+        root.get_left_child( ).get_value( ).add_expansion( left_exp );
+        right_exp = root.get_value( ).apply_l2l_right( );
+        root.get_right_child( ).get_value( ).add_expansion( right_exp );
+      end
+      
+      if root.get_level( ) < obj.L - 1
+        obj.downward_pass_std( root.get_right_child( ) );
+        obj.downward_pass_std( root.get_left_child( ) );       
       end
     end
     
@@ -544,9 +741,9 @@ classdef cFMM_solver < handle
     end
     
     
-      % computes M2L matrices for clusters from the interaction list of a
+    % computes M2L matrices for clusters from the interaction list of a
     % given cluster
-    function reset( obj, root )      
+    function reset( obj, root )
       current_cluster = root.get_value( );
       current_cluster.reset( );
       if root.get_left_child( ) ~= 0 && root.get_right_child( ) ~= 0
@@ -557,17 +754,17 @@ classdef cFMM_solver < handle
     
   end
   
-
+  
 end
 
 
 
 
-        % find the coarsest level where parents change
+% find the coarsest level where parents change
 %         a = obj.d2b( m - 1, obj.L + 1 );
 %         b = obj.d2b( m, obj.L + 1 );
 %         diff = xor( a, b );
-        %lt = 2;
+%lt = 2;
 %         for i = 2 : obj.L - 1
 %           if diff( obj.L - i + 1 ) == 0
 %             lt = lt + 1;
