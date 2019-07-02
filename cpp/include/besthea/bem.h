@@ -26,26 +26,14 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file uniform_spacetime_kernel.h
- * @brief Kernel for uniform_spacetime_tensor_mesh.h.
+/** @file bem.h
+ * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_KERNEL_H_
-#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_KERNEL_H_
+#ifndef INCLUDE_BESTHEA_BEM_H_
+#define INCLUDE_BESTHEA_BEM_H_
 
-namespace besthea {
-  namespace bem {
-    class uniform_spacetime_kernel;
-  }
-}
+#include "besthea/uniform_spacetime_be_space.h"
+#include "besthea/uniform_spacetime_heat_sl_kernel_antiderivative.h"
 
-class besthea::bem::uniform_spacetime_kernel {
- public:
-  uniform_spacetime_kernel( ) {
-  }
-
-  virtual ~uniform_spacetime_kernel( ) {
-  }
-};
-
-#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_KERNEL_H_ */
+#endif /* INCLUDE_BESTHEA_BEM_H_ */

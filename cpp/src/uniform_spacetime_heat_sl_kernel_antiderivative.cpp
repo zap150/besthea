@@ -26,31 +26,50 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file settings.h
- * @brief Besthea settings.
- */
+#include "besthea/uniform_spacetime_heat_sl_kernel_antiderivative.h"
 
-#ifndef INCLUDE_BESTHEA_SETTINGS_H_
-#define INCLUDE_BESTHEA_SETTINGS_H_
+#include "besthea/settings.h"
 
-#include <cstddef>
-#include <type_traits>
+#include <cmath>
 
-#ifndef DATA_ALIGN
-#define DATA_ALIGN ( 64 ) //!< Cache-line size in bytes.
-#endif
+#pragma omp declare simd uniform( nx, ny, delta ) simdlen( DATA_WIDTH )
+sc besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative::
+  anti_tau_anti_t(
+    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, lo delta ) {
+  sc value = 0.0;
+  sc norm = std::sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
+  sc sqrt_d = std::sqrt( delta );
+  sc sqrt_pi_a = sqrt( M_PI * _alpha );
 
-namespace besthea {
-  using scalar = double; //!< Floating point type.
-  //using index = std::size_t; //!< Indexing type.
-  using index = long; //!< Indexing type.
-  using index_signed = std::make_signed< index >::type; //!< Signed indexing type.
-  using index_unsigned = std::make_unsigned< index >::type; //!< Unsigned indexing type.
-};  // namespace besthea
+  if ( delta > 0 ) {
+    if ( norm > 0.0 ) {  //  delta > 0, norm > 0
+      value = ( delta / ( 4.0 * M_PI * _alpha * norm )
+                + norm / ( 8.0 * M_PI * _alpha * _alpha ) )
+          * std::erf( norm / ( 2.0 * sqrt_d * std::sqrt( _alpha ) ) )
+        + sqrt_d / ( 4.0 * M_PI * _alpha * sqrt_pi_a )
+          * std::exp( -( norm * norm ) / ( 4.0 * delta * _alpha ) );
+    } else {  //  delta > 0, limit for norm -> 0
+      value = sqrt_d / ( 2 * M_PI * _alpha * sqrt_pi_a );
+    }
+  } else {  // limit for delta -> 0, assuming norm > 0
+    value = norm / ( 8.0 * M_PI * _alpha * _alpha );
+  }
 
-using sc = besthea::scalar; //!< Floating point type.
-using lo = besthea::index; //!< Indexing type.
-using los = besthea::index_signed; //!< Signed indexing type.
-using lou = besthea::index_unsigned; //!< Unsigned indexing type.
+  return value;
+}
 
-#endif /* INCLUDE_BESTHEA_SETTINGS_H_ */
+#pragma omp declare simd uniform( nx, ny, delta ) simdlen( DATA_WIDTH )
+sc besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative::anti_tau(
+  sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, lo delta ) {
+  sc value = 0.0;
+  sc norm = std::sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
+
+  if ( delta > 0 ) {
+    value = std::erf( norm / sqrt( 4.0 * _alpha * delta ) )
+      / ( 4.0 * M_PI * _alpha * norm );
+  } else {
+    value = 1.0 / ( 4.0 * M_PI * _alpha * norm );
+  }
+
+  return value;
+}

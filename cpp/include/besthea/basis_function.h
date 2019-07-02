@@ -56,29 +56,61 @@ class besthea::bem::basis_function {
   using matrix_type = besthea::linear_algebra::full_matrix;
 
  public:
+  /**
+   * Default constructor.
+   */
   basis_function( ) : _mesh( nullptr ) {
   }
 
   basis_function( const basis_function & that ) = delete;
 
+  /**
+   * Destructor.
+   */
   virtual ~basis_function( ) {
   }
 
+  /**
+   * Returns number of basis functions supported on i_elem.
+   * @param[in] i_elem Element index.
+   */
   virtual lo dimension_local( lo i_elem ) = 0;
 
+  /**
+   * Returns number of basis functions on the whole mesh.
+   */
   virtual lo dimension_global( ) = 0;
 
+  /**
+   * Provides global indices for local contributions.
+   * @param[in] i_elem Element index.
+   * @param[in] type Type of element adjacency (regularized quadrature).
+   * @param[in] rotation Virtual element rotation (regularized quadrature).
+   * @param[in] swap Virtual element inversion (regularized quadrature).
+   * @param[out] indices Global indices for local contributions.
+   */
   virtual void local_to_global( lo i_elem, adjacency type, int rotation,
-    bool swap, std::vector< lo > indices )
+    bool swap, std::vector< lo > & indices )
     = 0;
 
-  virtual void evaluate( lo i_elem, const std::vector< sc > & x1_ref,
-    const std::vector< sc > & x2_ref, const sc * n, adjacency type,
-    int rotation, bool swap, std::vector< matrix_type > & values )
+  /**
+   * Evaluates the basis function.
+   * @param[in] i_elem Element index.
+   * @param[in] i_fun Local basis function index.
+   * @param[in] x1_ref First coordinate of reference quadrature point.
+   * @param[in] x2_ref Second coordinate of reference quadrature point.
+   * @param[in] n Element normal.
+   * @param[in] type Type of element adjacency (regularized quadrature).
+   * @param[in] rotation Virtual element rotation (regularized quadrature).
+   * @param[in] swap Virtual element inversion (regularized quadrature).
+   */
+#pragma omp declare simd uniform( i_elem, i_fun, n, type, rotation, swap ) simdlen( DATA_WIDTH )
+  virtual sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n,
+    adjacency type, int rotation, bool swap )
     = 0;
 
  protected:
-  mesh_type * _mesh;
+  mesh_type * _mesh; //!< Pointer to the mesh.
 };
 
 #endif /* INCLUDE_BESTHEA_BASIS_FUNCTION_H_ */

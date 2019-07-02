@@ -35,9 +35,18 @@
 
 namespace besthea {
   namespace bem {
-    enum class adjacency { disjoint = 0, vertex = 1, edge = 2, identical = 3 };
+  /**
+   * Type of element adjacency (regularized quadrature).
+   */
+    enum class adjacency {
+      disjoint = 0,
+      vertex = 1,
+      edge = 2,
+      identical = 3
+    };
 
-    int map[] = { 0, 1, 2, 0, 1 };
+    int map[] = { 0, 1, 2, 0, 1 };  //!< Auxiliary array for mapping DOFs under
+                                    // rotation (regularized quadrature).
 
     class be_assembler;
   }

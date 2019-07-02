@@ -26,54 +26,70 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file be_space.h
- * @brief
+/** @file uniform_spacetime_kernel.h
+ * @brief Kernel for uniform_spacetime_tensor_mesh.h.
  */
 
-#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_SPACE_H_
-#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_SPACE_H_
+#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_KERNEL_ANTIDERIVATIVE_H_
+#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_KERNEL_ANTIDERIVATIVE_H_
 
-#include "besthea/basis_function.h"
 #include "besthea/settings.h"
-#include "besthea/uniform_spacetime_tensor_mesh.h"
+
+#include <vector>
 
 namespace besthea {
   namespace bem {
-    class uniform_spacetime_be_space;
+    class uniform_spacetime_kernel_antiderivative;
   }
 }
 
-/**
- *  Class representing a boundary element space.
- */
-class besthea::bem::uniform_spacetime_be_space {
-  using st_mesh = besthea::mesh::uniform_spacetime_tensor_mesh;
-  using basis = besthea::bem::basis_function;
-
+class besthea::bem::uniform_spacetime_kernel_antiderivative {
  public:
-  uniform_spacetime_be_space( ) = delete;
+  uniform_spacetime_kernel_antiderivative( ) = delete;
 
-  uniform_spacetime_be_space( const uniform_spacetime_be_space & that )
-    = delete;
+  /**
+   * Constructor.
+   * @param[in] ht Time-step.
+   */
+  uniform_spacetime_kernel_antiderivative( sc ht ) : _ht( ht ) {
+  }
 
   /**
    * Destructor.
    */
-  ~uniform_spacetime_be_space( );
+  virtual ~uniform_spacetime_kernel_antiderivative( ) {
+  }
 
   /**
-   * Constructing mesh from a file.
-   * @param[in] spacetime_mesh Reference to uniform_spacetime_tensor_mesh.h.
-   * @param[in] test Test basis function.
-   * @param[in] trial Trial basis function.
+   * Evaluates the second antiderivative.
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] nx Normal in the `x` variable.
+   * @param[in] ny Normal in the `y` variable.
+   * @param[in] delta Difference of time intervals.
    */
-  uniform_spacetime_be_space(
-    st_mesh & spacetime_mesh, basis & test, basis & trial );
+#pragma omp declare simd uniform( nx, ny, delta ) simdlen( DATA_WIDTH )
+  virtual sc anti_tau_anti_t(
+    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, lo delta )
+    = 0;
+
+  /**
+   * Evaluates the first antiderivative.
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] nx Normal in the `x` variable.
+   * @param[in] ny Normal in the `y` variable.
+   * @param[in] delta Difference of time intervals.
+   */
+#pragma omp declare simd uniform( nx, ny, delta ) simdlen( DATA_WIDTH )
+  virtual sc anti_tau(
+    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, lo delta )
+    = 0;
 
  protected:
-  st_mesh * _spacetime_mesh;  //!< uniform spacetime tensor mesh
-  basis * _trial;             //!< spatial trial function (temporal is constant)
-  basis * _test;              //!< spatial test function (temporal is constant)
+  sc _ht; //!< Time step.
 };
 
-#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_SPACE_H_ */
+#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_KERNEL_ANTIDERIVATIVE_H_ */

@@ -49,6 +49,12 @@ class besthea::linear_algebra::linear_operator {
   using vector = besthea::linear_algebra::vector;
 
  public:
+  /**
+   * Destructor.
+   */
+  virtual ~linear_operator( ) {
+  }
+
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
    * @param[in] x
@@ -61,8 +67,8 @@ class besthea::linear_algebra::linear_operator {
     sc alpha = 1.0, sc beta = 0.0 ) const = 0;
 
  protected:
-  lo _dim_domain; //!< domain dimension
-  lo _dim_range; //!< range dimension
+  lo _dim_domain;  //!< domain dimension
+  lo _dim_range;   //!< range dimension
 };
 
 #endif /* INCLUDE_BESTHEA_LINEAR_OPERATOR_H_ */

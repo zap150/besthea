@@ -48,18 +48,30 @@ namespace besthea {
 class besthea::linear_algebra::matrix
   : public besthea::linear_algebra::linear_operator {
  public:
+  /**
+   * Default constructor.
+   */
   matrix( ) {
     _n_rows = 0;
     _n_columns = 0;
   }
 
+  /**
+   * Destructor.
+   */
   virtual ~matrix( ) {
   }
 
+  /**
+   * Returns number of rows.
+   */
   lo get_n_rows( ) {
     return _n_rows;
   }
 
+  /**
+   * Returns number of columns.
+   */
   lo get_n_columns( ) {
     return _n_columns;
   }

@@ -42,18 +42,21 @@ namespace besthea {
 
 class besthea::mesh::mesh {
  public:
+  /**
+   * Constructor.
+   */
   mesh( ) {
   }
 
-  mesh( const mesh & that ) {
-  }
+  mesh( const mesh & that ) = delete;
 
   virtual ~mesh( ) {
   }
 
+  /**
+   * Returns pointer to the surface mesh.
+   */
   virtual triangular_surface_mesh * get_spatial_mesh( ) = 0;
-
- protected:
 };
 
 #endif /* INCLUDE_BESTHEA_MESH_H_ */

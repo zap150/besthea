@@ -48,7 +48,7 @@ class besthea::memory::align {
 
   align( const align & ) = delete;
 
-  ~align( );
+  ~align( ) = delete;
 
   /** Allocate aligned memory in a portable way.
    *
@@ -65,7 +65,9 @@ class besthea::memory::align {
   static void * aligned_alloc(
     std::size_t alignment, std::size_t size, bool zero = false );
 
-  /** Free memory allocated with aligned_alloc */
+  /** Free memory allocated with aligned_alloc
+   * @param[in] aligned_ptr Data to be freed.
+   * */
   static void aligned_free( void * aligned_ptr );
 
   /** Allocate memory aligned to DATA_WIDTH in a portable way.
