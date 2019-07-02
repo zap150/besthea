@@ -24,6 +24,10 @@ classdef cFMM_solver < handle
     
     % leaf nodes of the tree
     leafs
+    
+    % nearfield
+    V1
+    V2
   end
   
   methods
@@ -58,26 +62,122 @@ classdef cFMM_solver < handle
       % RHS assembly
       obj.rhs_proj = obj.project_rhs( obj.rhs_fun, t_end - t_start, N_steps * 2^L );
       obj.rhs_proj = obj.rhs_proj * obj.ht;
+      
+      % assemble nearfield matrices
+      assembler = full_assembler( );
+      
+
+      obj.V1 = assembler.assemble_V( obj.leafs{1}.get_value( ), ...
+        obj.leafs{1}.get_value( ) );
+      obj.V2 = assembler.assemble_V( obj.leafs{2}.get_value( ), ...
+        obj.leafs{1}.get_value( ) );
 % 
 %       t = t_start + obj.ht : obj.ht : t_end;
 %       plot( t, x);
 %       hold on
     end
     
-    function x = solve( obj ) 
-      % assemble nearfield matrices
-      assembler = full_assembler( );
-      x = zeros( size( obj.rhs_proj ) );
+    function y = apply_fmm_matrix( obj, x )
+      
+     % downward pass
+     parent = obj.leafs{ 1 };
+     for l = obj.L : -1 : 1 
+        parent = parent.get_parent( );
+     end
+     obj.reset( parent ); 
+     
+     y = zeros( size( obj.rhs_proj ) );
+      
+     n = obj.N_steps;
+     y( 1 : n ) = obj.V1 * x( 1 : n );
+     y( n + 1 : 2 * n ) = obj.V1 * x( n + 1 : 2 * n ) + obj.V2 * x( 1 : n ) ;
+      
+     for m = 2 : 2^obj.L - 1 %  -1 ?
+        % find the coarsest level where parents change
+        lt = 2;
+        
+        for i = 2 : obj.L - 1
+          if obj.get_id_on_level( m - 1, i ) == obj.get_id_on_level( m, i )
+            lt = lt + 1;
+          end
+        end
+        
+        % compute moments
+        cluster = obj.leafs{ m - 2 + 1 }.get_value( );
+        ind_start = cluster.get_start_index( );
+        ind_end = cluster.get_end_index( );
+        cluster.set_moments( cluster.apply_q2m( x( ind_start : ind_end ) ) );
+        parent_node = obj.leafs{ m - 2 + 1 }.get_parent( );
+        cluster.inc_c_moments_count( );
+        cluster.inc_c_moments_count( );
+        
+        % upward path
+        % transfer moments to the highest possible level
+        for l = obj.L - 1 : -1 :  2
+          parent_cluster = parent_node.get_value( );
+          left_child = parent_cluster.get_left_child( );
+          right_child = parent_cluster.get_right_child( );
 
-      V1 = assembler.assemble_V( obj.leafs{1}.get_value( ), ...
-        obj.leafs{1}.get_value( ) );
-      V2 = assembler.assemble_V( obj.leafs{2}.get_value( ), ...
-        obj.leafs{1}.get_value( ) );
+          % transfer up only if there are contributions from both descendants
+          % included
+          if ( left_child.get_c_moments_count( ) == 2 ) 
+            parent_cluster.apply_m2m_left( left_child.get_moments( ) );
+          end
+
+          if ( right_child.get_c_moments_count( ) == 2 )
+            parent_cluster.apply_m2m_right( right_child.get_moments( ) );
+          end
+          parent_node = parent_node.get_parent( );
+        end
+        
+        % interaction phase
+        % go through interaction lists of the clusters and apply M2L
+        cluster = obj.leafs{ m + 1 }.get_value( ); 
+        parent_node = obj.leafs{ m + 1 };
+        for l = obj.L : -1 : lt 
+          cluster.apply_m2l( );
+          parent_node = parent_node.get_parent( );
+          cluster = parent_node.get_value( );
+        end
+        
+        % downward pass
+        parent = obj.leafs{ m + 1 };
+        for l = obj.L : -1 : lt 
+          parent = parent.get_parent( );
+        end
+
+        obj.downward_pass( parent, m );
+       
+        cluster = obj.leafs{ m + 1 }.get_value( ); 
+        
+        f = cluster.apply_l2p( );
+        ind_start = obj.leafs{ m - 1 + 1 }.get_value( ).get_start_index( );
+        ind_end = obj.leafs{ m - 1 + 1 }.get_value( ).get_end_index( );
+        tst = obj.V2 * x( ind_start : ind_end );
+        f = f + tst; %V2 * x( ind_start : ind_end );
+        
+        ind_start = obj.leafs{ m  + 1 }.get_value( ).get_start_index( );
+        ind_end = obj.leafs{ m + 1 }.get_value( ).get_end_index( );
+        tst = obj.V1 * x( ind_start : ind_end );
+        f = f + tst;
+        
+        y( ind_start : ind_end ) = f; %V1 \ obj.rhs_proj( ind_start : ind_end );
+      end
+      
+    end
+    
+    function x = solve_iterative( obj )
+      x = gmres(@obj.apply_fmm_matrix, obj.rhs_proj, 100, 1e-4, 400);
+    end
+    
+    function x = solve_direct( obj ) 
+      
+      x = zeros( size( obj.rhs_proj ) );
       
       n = obj.N_steps;
-      x( 1 : n ) = V1 \ obj.rhs_proj( 1 : n );
-      x( n + 1 : 2 * n ) = V1 \ ...
-        ( obj.rhs_proj( n + 1 : 2 * n ) - V2 * x( 1 : n ) );
+      x( 1 : n ) = obj.V1 \ obj.rhs_proj( 1 : n );
+      x( n + 1 : 2 * n ) = obj.V1 \ ...
+        ( obj.rhs_proj( n + 1 : 2 * n ) - obj.V2 * x( 1 : n ) );
       
       for m = 2 : 2^obj.L - 1 %  -1 ?
         % find the coarsest level where parents change
@@ -139,13 +239,13 @@ classdef cFMM_solver < handle
         f = cluster.apply_l2p( );
         ind_start = obj.leafs{ m - 1 + 1 }.get_value( ).get_start_index( );
         ind_end = obj.leafs{ m - 1 + 1 }.get_value( ).get_end_index( );
-        tst = V2 * x( ind_start : ind_end );
+        tst = obj.V2 * x( ind_start : ind_end );
         f = f + tst; %V2 * x( ind_start : ind_end );
         ind_start = obj.leafs{ m  + 1 }.get_value( ).get_start_index( );
         ind_end = obj.leafs{ m + 1 }.get_value( ).get_end_index( );
         obj.rhs_proj( ind_start : ind_end ) = ...
           obj.rhs_proj( ind_start : ind_end ) - f;
-        x( ind_start : ind_end ) = V1 \ obj.rhs_proj( ind_start : ind_end );
+        x( ind_start : ind_end ) = obj.V1 \ obj.rhs_proj( ind_start : ind_end );
       end
     end
     
@@ -443,8 +543,24 @@ classdef cFMM_solver < handle
       projection = M \ proj_rhs;
     end
     
+    
+      % computes M2L matrices for clusters from the interaction list of a
+    % given cluster
+    function reset( obj, root )      
+      current_cluster = root.get_value( );
+      current_cluster.reset( );
+      if root.get_left_child( ) ~= 0 && root.get_right_child( ) ~= 0
+        obj.reset( root.get_left_child( ) );
+        obj.reset( root.get_right_child( ) );
+      end
+    end
+    
   end
+  
+
 end
+
+
 
 
         % find the coarsest level where parents change

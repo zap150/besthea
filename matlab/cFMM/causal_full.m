@@ -1,4 +1,4 @@
-function [result] = causal_full( T, nT, rhs_fun )
+function [result, V] = causal_full( T, nT, rhs_fun )
 %CAUSAL_FULL Summary of this function goes here
 %   Detailed explanation goes here
 
