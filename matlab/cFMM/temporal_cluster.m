@@ -210,6 +210,13 @@ classdef temporal_cluster < handle
       potential = obj.q2m' * obj.local_expansion;
     end
     
+    function reset( obj )
+      obj.local_expansion = [];
+      obj.children_moments_count = 0;
+      obj.moments = [];
+      obj.left_child_translated = 0;
+    end
+    
   end
 end
 
