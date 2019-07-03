@@ -42,7 +42,8 @@ namespace besthea {
   }
 }
 
-class besthea::bem::basis_tri_p1 : public besthea::bem::basis_function {
+class besthea::bem::basis_tri_p1
+  : public besthea::bem::basis_function< besthea::bem::basis_tri_p1 > {
  public:
   basis_tri_p1( ) = delete;
 
@@ -76,8 +77,8 @@ class besthea::bem::basis_tri_p1 : public besthea::bem::basis_function {
    * @param[in] swap Virtual element inversion (regularized quadrature).
    * @param[out] indices Global indices for local contributions.
    */
-  virtual void local_to_global( lo i_elem, adjacency type, int rotation,
-    bool swap, std::vector< lo > indices );
+  void do_local_to_global( lo i_elem, adjacency type, int rotation, bool swap,
+    std::vector< lo > indices );
 
   /**
    * Evaluates the basis function.
@@ -92,7 +93,7 @@ class besthea::bem::basis_tri_p1 : public besthea::bem::basis_function {
    */
 #pragma omp declare simd uniform( i_elem, i_fun, n, type, rotation, swap ) \
   simdlen( DATA_WIDTH )
-  virtual sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n,
+  sc do_evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n,
     adjacency type, int rotation, bool swap );
 };
 

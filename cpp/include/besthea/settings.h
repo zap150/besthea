@@ -37,20 +37,26 @@
 #include <type_traits>
 
 #ifndef DATA_ALIGN
-#define DATA_ALIGN ( 64 ) //!< Cache-line size in bytes.
+#define DATA_ALIGN ( 64 )  //!< Cache-line size in bytes.
+#endif
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846 // pi
 #endif
 
 namespace besthea {
-  using scalar = double; //!< Floating point type.
-  //using index = std::size_t; //!< Indexing type.
-  using index = long; //!< Indexing type.
-  using index_signed = std::make_signed< index >::type; //!< Signed indexing type.
-  using index_unsigned = std::make_unsigned< index >::type; //!< Unsigned indexing type.
-};  // namespace besthea
+  using scalar = double;  //!< Floating point type.
+  // using index = std::size_t; //!< Indexing type.
+  using index = long;  //!< Indexing type.
+  using index_signed
+    = std::make_signed< index >::type;  //!< Signed indexing type.
+  using index_unsigned
+    = std::make_unsigned< index >::type;  //!< Unsigned indexing type.
+};                                        // namespace besthea
 
-using sc = besthea::scalar; //!< Floating point type.
-using lo = besthea::index; //!< Indexing type.
-using los = besthea::index_signed; //!< Signed indexing type.
-using lou = besthea::index_unsigned; //!< Unsigned indexing type.
+using sc = besthea::scalar;           //!< Floating point type.
+using lo = besthea::index;            //!< Indexing type.
+using los = besthea::index_signed;    //!< Signed indexing type.
+using lou = besthea::index_unsigned;  //!< Unsigned indexing type.
 
 #endif /* INCLUDE_BESTHEA_SETTINGS_H_ */

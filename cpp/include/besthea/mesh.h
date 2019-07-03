@@ -50,6 +50,9 @@ class besthea::mesh::mesh {
 
   mesh( const mesh & that ) = delete;
 
+  /**
+   * Destructor.
+   */
   virtual ~mesh( ) {
   }
 

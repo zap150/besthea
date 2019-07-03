@@ -39,10 +39,12 @@
 
 namespace besthea {
   namespace bem {
+    template< class derived_class >
     class uniform_spacetime_kernel_antiderivative;
   }
 }
 
+template< class derived_class >
 class besthea::bem::uniform_spacetime_kernel_antiderivative {
  public:
   uniform_spacetime_kernel_antiderivative( ) = delete;
@@ -60,6 +62,10 @@ class besthea::bem::uniform_spacetime_kernel_antiderivative {
   virtual ~uniform_spacetime_kernel_antiderivative( ) {
   }
 
+  derived_class & derived( ) {
+    return static_cast< derived_class & >( *this );
+  }
+
   /**
    * Evaluates the second antiderivative.
    * @param[in] xy1 First coordinate of `x - y`.
@@ -70,9 +76,10 @@ class besthea::bem::uniform_spacetime_kernel_antiderivative {
    * @param[in] delta Difference of time intervals.
    */
 #pragma omp declare simd uniform( nx, ny, delta ) simdlen( DATA_WIDTH )
-  virtual sc anti_tau_anti_t(
-    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, lo delta )
-    = 0;
+  sc anti_tau_anti_t(
+    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, lo delta ) {
+    return derived( ).do_anti_tau_anti_t( xy1, xy2, xy3, nx, ny, delta );
+  }
 
   /**
    * Evaluates the first antiderivative.
@@ -84,12 +91,13 @@ class besthea::bem::uniform_spacetime_kernel_antiderivative {
    * @param[in] delta Difference of time intervals.
    */
 #pragma omp declare simd uniform( nx, ny, delta ) simdlen( DATA_WIDTH )
-  virtual sc anti_tau(
-    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, lo delta )
-    = 0;
+  sc anti_tau(
+    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, lo delta ) {
+    return derived( ).do_anti_tau( xy1, xy2, xy3, nx, ny, delta );
+  }
 
  protected:
-  sc _ht; //!< Time step.
+  sc _ht;  //!< Time step.
 };
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_KERNEL_ANTIDERIVATIVE_H_ */

@@ -30,7 +30,6 @@
 #include "besthea/linear_algebra.h"
 #include "besthea/settings.h"
 #include "besthea/triangular_surface_mesh.h"
-#include "besthea/uniform_spacetime_heat_sl_kernel_antiderivative.h"
 #include "besthea/uniform_spacetime_tensor_mesh.h"
 
 #include <iostream>
@@ -41,20 +40,22 @@ using Vector = besthea::linear_algebra::vector;
 using Kernel = besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative;
 
 int main( int argc, char * argv[] ) {
-  /*
   std::string file = "../mesh_files/cube_12.txt";
   if ( argc > 1 ) {
     file.assign( argv[ 1 ] );
   }
   SMesh space_mesh( file );
   STMesh spacetime_mesh( space_mesh, 1.0, 8 );
-  */
 
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >
+    be_space( spacetime_mesh );
+
+  /*
   sc alpha = 2.5;
   sc ht = 0.125;
   Kernel kernel( ht, alpha );
 
-  lo size = 100000;
+  lo size = 100;
   Vector xy1( size, false );
   Vector xy2( size, false );
   Vector xy3( size, false );
@@ -76,5 +77,6 @@ int main( int argc, char * argv[] ) {
       xy1_data[ i ], xy2_data[ i ], xy3_data[ i ], nullptr, nullptr, delta );
   }
 
-  // value.print( );
+  value.print( );
+  */
 }

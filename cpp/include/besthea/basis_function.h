@@ -33,22 +33,30 @@
 #ifndef INCLUDE_BESTHEA_BASIS_FUNCTION_H_
 #define INCLUDE_BESTHEA_BASIS_FUNCTION_H_
 
-#include "besthea/be_assembler.h"
+//#include "besthea/uniform_spacetime_be_assembler.h"
 #include "besthea/full_matrix.h"
 #include "besthea/mesh.h"
 #include "besthea/settings.h"
 
+#include <array>
 #include <vector>
 
 namespace besthea {
   namespace bem {
+    template< class derived_class >
     class basis_function;
+
+    /**
+     * Type of element adjacency (regularized quadrature).
+     */
+    enum class adjacency { disjoint = 0, vertex = 1, edge = 2, identical = 3 };
   }
 }
 
 /**
  *  Class representing a basis function.
  */
+template< class derived_class >
 class besthea::bem::basis_function {
  protected:
   using mesh_type = besthea::mesh::mesh;
@@ -70,6 +78,10 @@ class besthea::bem::basis_function {
   virtual ~basis_function( ) {
   }
 
+  derived_class & derived( ) {
+    return static_cast< derived_class & >( *this );
+  }
+
   /**
    * Returns number of basis functions supported on i_elem.
    * @param[in] i_elem Element index.
@@ -89,9 +101,10 @@ class besthea::bem::basis_function {
    * @param[in] swap Virtual element inversion (regularized quadrature).
    * @param[out] indices Global indices for local contributions.
    */
-  virtual void local_to_global( lo i_elem, adjacency type, int rotation,
-    bool swap, std::vector< lo > & indices )
-    = 0;
+  void local_to_global( lo i_elem, adjacency type, int rotation, bool swap,
+    std::vector< lo > & indices ) {
+    derived( ).do_local_to_global( i_elem, type, rotation, swap, indices );
+  }
 
   /**
    * Evaluates the basis function.
@@ -104,13 +117,20 @@ class besthea::bem::basis_function {
    * @param[in] rotation Virtual element rotation (regularized quadrature).
    * @param[in] swap Virtual element inversion (regularized quadrature).
    */
-#pragma omp declare simd uniform( i_elem, i_fun, n, type, rotation, swap ) simdlen( DATA_WIDTH )
-  virtual sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n,
-    adjacency type, int rotation, bool swap )
-    = 0;
+#pragma omp declare simd uniform( i_elem, i_fun, n, type, rotation, swap ) \
+  simdlen( DATA_WIDTH )
+  sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n,
+    adjacency type, int rotation, bool swap ) {
+    return derived( ).do_evaluate(
+      i_elem, i_fun, x1_ref, x2_ref, n, type, rotation, swap );
+  }
 
  protected:
-  mesh_type * _mesh; //!< Pointer to the mesh.
+  mesh_type * _mesh;  //!< Pointer to the mesh.
+
+  const std::array< int, 5 > _map{ 0, 1, 2, 0,
+    1 };  //!< Auxiliary array for mapping DOFs under
+          // rotation (regularized quadrature).
 };
 
 #endif /* INCLUDE_BESTHEA_BASIS_FUNCTION_H_ */

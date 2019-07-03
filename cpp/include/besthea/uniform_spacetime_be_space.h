@@ -33,12 +33,14 @@
 #ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_SPACE_H_
 #define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_SPACE_H_
 
-#include "besthea/basis_function.h"
+#include "besthea/basis_tri_p0.h"
+#include "besthea/basis_tri_p1.h"
 #include "besthea/settings.h"
 #include "besthea/uniform_spacetime_tensor_mesh.h"
 
 namespace besthea {
   namespace bem {
+    template< class basis >
     class uniform_spacetime_be_space;
   }
 }
@@ -46,9 +48,9 @@ namespace besthea {
 /**
  *  Class representing a boundary element space.
  */
+template< class basis >
 class besthea::bem::uniform_spacetime_be_space {
   using st_mesh = besthea::mesh::uniform_spacetime_tensor_mesh;
-  using basis = besthea::bem::basis_function;
 
  public:
   uniform_spacetime_be_space( ) = delete;
@@ -67,13 +69,16 @@ class besthea::bem::uniform_spacetime_be_space {
    * @param[in] test Test basis function.
    * @param[in] trial Trial basis function.
    */
-  uniform_spacetime_be_space(
-    st_mesh & spacetime_mesh, basis & test, basis & trial );
+  uniform_spacetime_be_space( st_mesh & spacetime_mesh );
 
  protected:
   st_mesh * _spacetime_mesh;  //!< uniform spacetime tensor mesh
-  basis * _trial;             //!< spatial trial function (temporal is constant)
-  basis * _test;              //!< spatial test function (temporal is constant)
+  basis _basis;               //!< spatial basis function (temporal is constant)
 };
+
+template class besthea::bem::uniform_spacetime_be_space<
+  besthea::bem::basis_tri_p0 >;
+template class besthea::bem::uniform_spacetime_be_space<
+  besthea::bem::basis_tri_p1 >;
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_SPACE_H_ */

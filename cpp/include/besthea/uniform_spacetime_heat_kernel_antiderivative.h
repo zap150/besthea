@@ -41,12 +41,15 @@
 
 namespace besthea {
   namespace bem {
+    template< class derived_class >
     class uniform_spacetime_heat_kernel_antiderivative;
   }
 }
 
+template< class derived_class >
 class besthea::bem::uniform_spacetime_heat_kernel_antiderivative
-  : public besthea::bem::uniform_spacetime_kernel_antiderivative {
+  : public besthea::bem::uniform_spacetime_kernel_antiderivative<
+      derived_class > {
  public:
   uniform_spacetime_heat_kernel_antiderivative( ) = delete;
 
@@ -56,7 +59,16 @@ class besthea::bem::uniform_spacetime_heat_kernel_antiderivative
    * @param[in] alpha Heat conductivity.
    */
   uniform_spacetime_heat_kernel_antiderivative( sc ht, sc alpha )
-    : uniform_spacetime_kernel_antiderivative( ht ), _alpha( alpha ) {
+    : uniform_spacetime_kernel_antiderivative< derived_class >( ht ),
+      _alpha( alpha ),
+      _sqrt_alpha( std::sqrt( alpha ) ),
+      _pi( M_PI ),
+      _sqrt_pi( std::sqrt( M_PI ) ),
+      _zero( 0.0 ),
+      _one( 1.0 ),
+      _two( 2.0 ),
+      _four( 4.0 ),
+      _eight( 8.0 ) {
   }
 
   /**
@@ -65,36 +77,17 @@ class besthea::bem::uniform_spacetime_heat_kernel_antiderivative
   virtual ~uniform_spacetime_heat_kernel_antiderivative( ) {
   }
 
-  /**
-   * Evaluates the second antiderivative.
-   * @param[in] xy1 First coordinate of `x - y`.
-   * @param[in] xy2 Second coordinate of `x - y`.
-   * @param[in] xy3 Third coordinate of `x - y`.
-   * @param[in] nx Normal in the `x` variable.
-   * @param[in] ny Normal in the `y` variable.
-   * @param[in] delta Difference of time intervals.
-   */
-#pragma omp declare simd uniform( nx, ny, delta ) simdlen( DATA_WIDTH )
-  virtual sc anti_tau_anti_t(
-    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, lo delta )
-    = 0;
-
-  /**
-   * Evaluates the first antiderivative.
-   * @param[in] xy1 First coordinate of `x - y`.
-   * @param[in] xy2 Second coordinate of `x - y`.
-   * @param[in] xy3 Third coordinate of `x - y`.
-   * @param[in] nx Normal in the `x` variable.
-   * @param[in] ny Normal in the `y` variable.
-   * @param[in] delta Difference of time intervals.
-   */
-#pragma omp declare simd uniform( nx, ny, delta ) simdlen( DATA_WIDTH )
-  virtual sc anti_tau(
-    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, lo delta )
-    = 0;
-
  protected:
-  sc _alpha; //!< Heat conductivity.
+  sc _alpha;  //!< Heat conductivity.
+
+  sc _sqrt_alpha;  //! Auxiliary variable
+  sc _pi;          //! Auxiliary variable
+  sc _sqrt_pi;     //! Auxiliary variable
+  sc _zero;        //! Auxiliary variable
+  sc _one;         //! Auxiliary variable
+  sc _two;         //! Auxiliary variable
+  sc _four;        //! Auxiliary variable
+  sc _eight;       //! Auxiliary variable
 };
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_ */

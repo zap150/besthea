@@ -45,7 +45,8 @@ namespace besthea {
 }
 
 class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
-  : public besthea::bem::uniform_spacetime_heat_kernel_antiderivative {
+  : public besthea::bem::uniform_spacetime_heat_kernel_antiderivative<
+      uniform_spacetime_heat_sl_kernel_antiderivative > {
  public:
   uniform_spacetime_heat_sl_kernel_antiderivative( ) = delete;
 
@@ -55,7 +56,8 @@ class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
    * @param[in] alpha Heat conductivity.
    */
   uniform_spacetime_heat_sl_kernel_antiderivative( sc ht, sc alpha )
-    : uniform_spacetime_heat_kernel_antiderivative( ht, alpha ) {
+    : uniform_spacetime_heat_kernel_antiderivative<
+      uniform_spacetime_heat_sl_kernel_antiderivative >( ht, alpha ) {
   }
 
   /**
@@ -74,7 +76,7 @@ class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
    * @param[in] delta Difference of time intervals.
    */
 #pragma omp declare simd uniform( nx, ny, delta ) simdlen( DATA_WIDTH )
-  virtual sc anti_tau_anti_t(
+  sc do_anti_tau_anti_t(
     sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, lo delta );
 
   /**
@@ -87,7 +89,7 @@ class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
    * @param[in] delta Difference of time intervals.
    */
 #pragma omp declare simd uniform( nx, ny, delta ) simdlen( DATA_WIDTH )
-  virtual sc anti_tau(
+  sc do_anti_tau(
     sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, lo delta );
 };
 

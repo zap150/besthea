@@ -30,31 +30,44 @@
  * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_BE_ASSEMBLER_H_
-#define INCLUDE_BESTHEA_BE_ASSEMBLER_H_
+#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ASSEMBLER_H_
+#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ASSEMBLER_H_
+
+#include "besthea/basis_tri_p0.h"
+#include "besthea/basis_tri_p1.h"
+#include "besthea/uniform_spacetime_be_space.h"
+
+#include <array>
 
 namespace besthea {
   namespace bem {
-  /**
-   * Type of element adjacency (regularized quadrature).
-   */
-    enum class adjacency {
-      disjoint = 0,
-      vertex = 1,
-      edge = 2,
-      identical = 3
-    };
-
-    int map[] = { 0, 1, 2, 0, 1 };  //!< Auxiliary array for mapping DOFs under
-                                    // rotation (regularized quadrature).
-
-    class be_assembler;
+    template< class test, class trial, class kernel >
+    class uniform_spacetime_be_assembler;
   }
 }
 
 /**
  *  Class representing a boundary element matrix assembler.
  */
-class besthea::bem::be_assembler {};
+template< class test, class trial, class kernel >
+class besthea::bem::uniform_spacetime_be_assembler {
+ public:
+  uniform_spacetime_be_assembler( ) = delete;
 
-#endif /* INCLUDE_BESTHEA_BE_ASSEMBLER_H_ */
+  ~uniform_spacetime_be_assembler( );
+
+ private:
+  besthea::bem::uniform_spacetime_be_space< test >
+    _test_space;  //!< Boundary element test space.
+
+  besthea::bem::uniform_spacetime_be_space< trial >
+    _trial_space;  //!< Boundary element trial space.
+
+  kernel _kernel;
+
+  const std::array< int, 5 > _map{ 0, 1, 2, 0,
+    1 };  //!< Auxiliary array for mapping DOFs under
+          // rotation (regularized quadrature).
+};
+
+#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ASSEMBLER_H_ */

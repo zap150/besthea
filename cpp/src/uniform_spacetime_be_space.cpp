@@ -28,12 +28,14 @@
 
 #include "besthea/uniform_spacetime_be_space.h"
 
-besthea::bem::uniform_spacetime_be_space::uniform_spacetime_be_space(
-  st_mesh & spacetime_mesh, basis & test, basis & trial ) {
+template< class basis >
+besthea::bem::uniform_spacetime_be_space< basis >::uniform_spacetime_be_space(
+  st_mesh & spacetime_mesh )
+  : _basis( spacetime_mesh ) {
   _spacetime_mesh = &spacetime_mesh;
-  _test = &test;
-  _trial = &trial;
 }
 
-besthea::bem::uniform_spacetime_be_space::~uniform_spacetime_be_space( ) {
+template< class basis >
+besthea::bem::uniform_spacetime_be_space<
+  basis >::~uniform_spacetime_be_space( ) {
 }
