@@ -39,12 +39,12 @@
 
 namespace besthea {
   namespace bem {
-    template< class derived_class >
+    template< class derived_type >
     class uniform_spacetime_kernel_antiderivative;
   }
 }
 
-template< class derived_class >
+template< class derived_type >
 class besthea::bem::uniform_spacetime_kernel_antiderivative {
  public:
   uniform_spacetime_kernel_antiderivative( ) = delete;
@@ -53,7 +53,7 @@ class besthea::bem::uniform_spacetime_kernel_antiderivative {
    * Constructor.
    * @param[in] ht Time-step.
    */
-  uniform_spacetime_kernel_antiderivative( sc ht ) : _ht( ht ) {
+  uniform_spacetime_kernel_antiderivative( sc timestep ) : _timestep( timestep ) {
   }
 
   /**
@@ -62,8 +62,8 @@ class besthea::bem::uniform_spacetime_kernel_antiderivative {
   virtual ~uniform_spacetime_kernel_antiderivative( ) {
   }
 
-  derived_class & derived( ) {
-    return static_cast< derived_class & >( *this );
+  derived_type & derived( ) {
+    return static_cast< derived_type & >( *this );
   }
 
   /**
@@ -97,7 +97,7 @@ class besthea::bem::uniform_spacetime_kernel_antiderivative {
   }
 
  protected:
-  sc _ht;  //!< Time step.
+  sc _timestep;  //!< Time step.
 };
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_KERNEL_ANTIDERIVATIVE_H_ */

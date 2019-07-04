@@ -55,9 +55,9 @@ class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
    * @param[in] ht Time step.
    * @param[in] alpha Heat conductivity.
    */
-  uniform_spacetime_heat_sl_kernel_antiderivative( sc ht, sc alpha )
+  uniform_spacetime_heat_sl_kernel_antiderivative( sc timestep, sc alpha )
     : uniform_spacetime_heat_kernel_antiderivative<
-      uniform_spacetime_heat_sl_kernel_antiderivative >( ht, alpha ) {
+      uniform_spacetime_heat_sl_kernel_antiderivative >( timestep, alpha ) {
   }
 
   /**

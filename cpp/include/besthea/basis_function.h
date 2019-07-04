@@ -43,7 +43,7 @@
 
 namespace besthea {
   namespace bem {
-    template< class derived_class >
+    template< class derived_type >
     class basis_function;
 
     /**
@@ -56,7 +56,7 @@ namespace besthea {
 /**
  *  Class representing a basis function.
  */
-template< class derived_class >
+template< class derived_type >
 class besthea::bem::basis_function {
  protected:
   using mesh_type = besthea::mesh::mesh;
@@ -78,8 +78,8 @@ class besthea::bem::basis_function {
   virtual ~basis_function( ) {
   }
 
-  derived_class & derived( ) {
-    return static_cast< derived_class & >( *this );
+  derived_type & derived( ) {
+    return static_cast< derived_type & >( *this );
   }
 
   /**

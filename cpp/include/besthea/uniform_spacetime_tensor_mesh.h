@@ -83,6 +83,13 @@ class besthea::mesh::uniform_spacetime_tensor_mesh
   }
 
   /**
+   * Returns the uniform timestep.
+   */
+  sc get_timestep( ) {
+    return _timestep;
+  }
+
+  /**
    * Returns number of spatial nodes.
    */
   lo get_n_spatial_nodes( ) const {

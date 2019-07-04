@@ -48,7 +48,14 @@ int main( int argc, char * argv[] ) {
   STMesh spacetime_mesh( space_mesh, 1.0, 8 );
 
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >
-    be_space( spacetime_mesh );
+    test_space( spacetime_mesh );
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >
+    trial_space( spacetime_mesh );
+  sc alpha = 2.5;
+  besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative kernel(
+    spacetime_mesh.get_timestep( ), alpha );
+  besthea::bem::uniform_spacetime_be_assembler assembler(
+    kernel, test_space, trial_space );
 
   /*
   sc alpha = 2.5;

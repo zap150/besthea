@@ -27,3 +27,17 @@
  */
 
 #include "besthea/uniform_spacetime_be_assembler.h"
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::uniform_spacetime_be_assembler( kernel_type & kernel,
+  test_space_type & test_space, trial_space_type & trial_space )
+  : _kernel( &kernel ),
+    _test_space( &test_space ),
+    _trial_space( &trial_space ) {
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::~uniform_spacetime_be_assembler( ) {
+}

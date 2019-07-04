@@ -41,15 +41,15 @@
 
 namespace besthea {
   namespace bem {
-    template< class derived_class >
+    template< class derived_type >
     class uniform_spacetime_heat_kernel_antiderivative;
   }
 }
 
-template< class derived_class >
+template< class derived_type >
 class besthea::bem::uniform_spacetime_heat_kernel_antiderivative
   : public besthea::bem::uniform_spacetime_kernel_antiderivative<
-      derived_class > {
+	derived_type > {
  public:
   uniform_spacetime_heat_kernel_antiderivative( ) = delete;
 
@@ -58,8 +58,8 @@ class besthea::bem::uniform_spacetime_heat_kernel_antiderivative
    * @param[in] ht Time step.
    * @param[in] alpha Heat conductivity.
    */
-  uniform_spacetime_heat_kernel_antiderivative( sc ht, sc alpha )
-    : uniform_spacetime_kernel_antiderivative< derived_class >( ht ),
+  uniform_spacetime_heat_kernel_antiderivative( sc timestep, sc alpha )
+    : uniform_spacetime_kernel_antiderivative< derived_type >( timestep ),
       _alpha( alpha ),
       _sqrt_alpha( std::sqrt( alpha ) ),
       _pi( M_PI ),
