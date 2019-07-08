@@ -30,7 +30,7 @@
 
 template< class basis >
 besthea::bem::uniform_spacetime_be_space< basis >::uniform_spacetime_be_space(
-  st_mesh & spacetime_mesh )
+  st_mesh_type & spacetime_mesh )
   : _basis( spacetime_mesh ) {
   _spacetime_mesh = &spacetime_mesh;
 }

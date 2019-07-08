@@ -26,43 +26,79 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file mesh.h
- * @brief
+/** @file vector.h
+ * @brief Vector of scalars.
  */
 
-#ifndef INCLUDE_BESTHEA_MESH_H_
-#define INCLUDE_BESTHEA_MESH_H_
+#ifndef INCLUDE_BESTHEA_BLOCK_VECTOR_H_
+#define INCLUDE_BESTHEA_BLOCK_VECTOR_H_
+
+#include "besthea/settings.h"
+#include "besthea/vector.h"
+
+#include <iostream>
+#include <vector>
 
 namespace besthea {
-  namespace mesh {
-    class mesh;
-    class triangular_surface_mesh;
+  namespace linear_algebra {
+    class block_vector;
   }
 }
 
 /**
- *  Abstract class representing a mesh.
+ *  Class representing a vector.
  */
-class besthea::mesh::mesh {
+class besthea::linear_algebra::block_vector {
  public:
+  using vector_type = besthea::linear_algebra::vector; //!< Vector type.
+
+  block_vector( );
+
+  block_vector( const block_vector & that ) = delete;
+
   /**
-   * Constructor.
+   * Constructor with an initializer list.
+   * @param[in] block_size Number of blocks.
+   * @param[in] list Initializer list for vector.
    */
-  mesh( ) {
+  block_vector( lo block_size, std::initializer_list< sc > list );
+
+  /**
+   * Constructing a vector of the given size.
+   * @param[in] block_size Number of blocks.
+   * @param[in] size Length of the vector.
+   * @param[in] zero Initialize to 0 if true.
+   */
+  block_vector( lo block_size, lo size, bool zero = true );
+
+  ~block_vector( );
+
+  /**
+   * Returns a pointer to a single block.
+   * @param[in] d Index of the block.
+   */
+  vector_type & get_block( lo d ) {
+    return _data[ d ];
   }
 
-  mesh( const mesh & that ) = delete;
-
   /**
-   * Destructor.
+   * Returns a pointer to a single block.
+   * @param[in] d Index of the block.
    */
-  virtual ~mesh( ) {
+  const vector_type & get_block( lo d ) const {
+    return _data[ d ];
   }
 
-  /**
-   * Returns pointer to the surface mesh.
+  /*!
+   * @brief Prints the vector.
+   * @param[in] stream
    */
-  virtual triangular_surface_mesh * get_spatial_mesh( ) = 0;
+  void print( std::ostream & stream = std::cout ) const;
+
+ protected:
+  lo _block_size;                    //!< block size
+  lo _size;                          //!< vector size
+  std::vector< vector_type > _data;  //!< raw data
 };
 
-#endif /* INCLUDE_BESTHEA_MESH_H_ */
+#endif /* INCLUDE_BESTHEA_BLOCK_VECTOR_H_ */

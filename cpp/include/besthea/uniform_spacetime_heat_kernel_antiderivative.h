@@ -46,6 +46,9 @@ namespace besthea {
   }
 }
 
+/**
+ *  Class representing a first and second antiderivative of a spacetime heat kernel.
+ */
 template< class derived_type >
 class besthea::bem::uniform_spacetime_heat_kernel_antiderivative
   : public besthea::bem::uniform_spacetime_kernel_antiderivative<
@@ -55,7 +58,7 @@ class besthea::bem::uniform_spacetime_heat_kernel_antiderivative
 
   /**
    * Constructor.
-   * @param[in] ht Time step.
+   * @param[in] timestep Time step.
    * @param[in] alpha Heat conductivity.
    */
   uniform_spacetime_heat_kernel_antiderivative( sc timestep, sc alpha )
@@ -80,14 +83,14 @@ class besthea::bem::uniform_spacetime_heat_kernel_antiderivative
  protected:
   sc _alpha;  //!< Heat conductivity.
 
-  sc _sqrt_alpha;  //! Auxiliary variable
-  sc _pi;          //! Auxiliary variable
-  sc _sqrt_pi;     //! Auxiliary variable
-  sc _zero;        //! Auxiliary variable
-  sc _one;         //! Auxiliary variable
-  sc _two;         //! Auxiliary variable
-  sc _four;        //! Auxiliary variable
-  sc _eight;       //! Auxiliary variable
+  sc _sqrt_alpha;  //!< Auxiliary variable
+  sc _pi;          //!< Auxiliary variable
+  sc _sqrt_pi;     //!< Auxiliary variable
+  sc _zero;        //!< Auxiliary variable
+  sc _one;         //!< Auxiliary variable
+  sc _two;         //!< Auxiliary variable
+  sc _four;        //!< Auxiliary variable
+  sc _eight;       //!< Auxiliary variable
 };
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_ */

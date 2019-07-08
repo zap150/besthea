@@ -52,8 +52,7 @@ namespace besthea {
 class besthea::linear_algebra::full_matrix
   : public besthea::linear_algebra::matrix {
  public:
-  using vector = besthea::linear_algebra::vector;
-
+  using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
   /**
    * Default constructor.
    */
@@ -64,6 +63,14 @@ class besthea::linear_algebra::full_matrix
    * @param[in] that Matrix to be deep copied.
    */
   full_matrix( const full_matrix & that );
+
+  /**
+   * Constructor with an initializer list.
+   * @param[in] n_rows Number of rows.
+   * @param[in] n_columns Number of columns.
+   * @param[in] list Initializer list for std::vector.
+   */
+  full_matrix( lo n_rows, lo n_columns, std::initializer_list< sc > list );
 
   /**
    * Constructing a matrix of the given dimension.
@@ -172,8 +179,8 @@ class besthea::linear_algebra::full_matrix
    * @param[in] alpha
    * @param[in] beta
    */
-  virtual void apply( vector const & x, vector & y, bool trans = false,
-    sc alpha = 1.0, sc beta = 0.0 ) const;
+  virtual void apply( vector_type const & x, vector_type & y,
+    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
 
   /*!
    * @brief y = beta * y + alpha * this * x.
@@ -183,7 +190,7 @@ class besthea::linear_algebra::full_matrix
    * @param[in] beta
    */
   void apply_symmetric(
-    vector const & x, vector & y, sc alpha = 1.0, sc beta = 0.0 ) const;
+    vector const & x, vector_type & y, sc alpha = 1.0, sc beta = 0.0 ) const;
 
   /*!
    * @brief In-place LU decomposition and solution.
@@ -191,14 +198,15 @@ class besthea::linear_algebra::full_matrix
    * @param[in] n_rhs Number of right-hand sides.
    * @param[in] trans Flag for transpose.
    */
-  void lu_decompose_solve( vector & rhs, lo n_rhs = 1, bool trans = false );
+  void lu_decompose_solve(
+    vector_type & rhs, lo n_rhs = 1, bool trans = false );
 
   /*!
    * @brief In-place Choleski decomposition and solution.
    * @param[in,out] rhs Right-hand side overwritten by the result.
    * @param[in] n_rhs Number of right-hand sides.
    */
-  void choleski_decompose_solve( vector & rhs, lo n_rhs = 1 );
+  void choleski_decompose_solve( vector_type & rhs, lo n_rhs = 1 );
 
   /*!
    * @brief In-place Choleski decomposition.
@@ -210,10 +218,21 @@ class besthea::linear_algebra::full_matrix
    * @param[in,out] rhs Right-hand side overwritten by the result.
    * @param[in] n_rhs Number of right-hand sides.
    */
-  void choleski_solve( vector & rhs, lo n_rhs = 1 );
+  void choleski_solve( vector_type & rhs, lo n_rhs = 1 );
+
+  /*!
+   * Resizes the matrix.
+   * @param[in] n_rows Number of rows.
+   * @param[in] n_columns Number of columns.
+   */
+  void resize( lo n_rows, lo n_columns ) {
+    _data.resize( n_rows * n_columns );
+    _n_rows = n_rows;
+    _n_columns = n_columns;
+  }
 
  protected:
-  std::vector< sc > _data; //!< Raw data.
+  std::vector< sc > _data;  //!< Raw data.
 };
 
 #endif /* INCLUDE_BESTHEA_FULL_MATRIX_H_ */

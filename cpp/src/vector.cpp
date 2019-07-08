@@ -40,6 +40,10 @@ besthea::linear_algebra::vector::vector( const vector & that )
   : _size( that._size ), _data( that._data ) {
 }
 
+besthea::linear_algebra::vector::vector( std::initializer_list< sc > list )
+  : _size( list.size( ) ), _data( list ) {
+}
+
 besthea::linear_algebra::vector::vector( lo size, bool zero )
   : _size( size ), _data( size ) {
   if ( zero ) {
