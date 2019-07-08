@@ -54,6 +54,9 @@ class besthea::linear_algebra::full_matrix
  public:
   using vector = besthea::linear_algebra::vector;
 
+  /**
+   * Default constructor.
+   */
   full_matrix( );
 
   /**
@@ -70,6 +73,9 @@ class besthea::linear_algebra::full_matrix
    */
   full_matrix( lo n_rows, lo n_columns, bool zero = true );
 
+  /**
+   * Destructor.
+   */
   virtual ~full_matrix( );
 
   /*!
@@ -108,17 +114,19 @@ class besthea::linear_algebra::full_matrix
   void random_fill_diag( sc lower, sc upper );
 
   /*!
-   * @brief Returns the i-th element of the vector.
-   * @param[in] i
+   * @brief Returns the (i,j)-th element of the matrix.
+   * @param[in] i Row index.
+   * @param[in] j Column index.
    */
   sc get( lo i, lo j ) const {
     return _data[ i + j * _n_rows ];
   }
 
   /*!
-   * @brief Sets the i-th element of the vector.
-   * @param[in] i
-   * @param[in] value
+   * @brief Sets the (i,j)-th element of the vector.
+   * @param[in] i Row index.
+   * @param[in] j Column index.
+   * @param[in] value Value to be set.
    */
   void set( lo i, lo j, sc value ) {
     _data[ i + j * _n_rows ] = value;
@@ -160,7 +168,7 @@ class besthea::linear_algebra::full_matrix
    * @brief y = beta * y + alpha * (this)^trans * x.
    * @param[in] x
    * @param[in,out] y
-   * @param[in] trans
+   * @param[in] trans Flag for transpose.
    * @param[in] alpha
    * @param[in] beta
    */
@@ -168,10 +176,9 @@ class besthea::linear_algebra::full_matrix
     sc alpha = 1.0, sc beta = 0.0 ) const;
 
   /*!
-   * @brief y = beta * y + alpha * (this)^trans * x.
+   * @brief y = beta * y + alpha * this * x.
    * @param[in] x
    * @param[in,out] y
-   * @param[in] trans
    * @param[in] alpha
    * @param[in] beta
    */
@@ -182,6 +189,7 @@ class besthea::linear_algebra::full_matrix
    * @brief In-place LU decomposition and solution.
    * @param[in,out] rhs Right-hand side overwritten by the result.
    * @param[in] n_rhs Number of right-hand sides.
+   * @param[in] trans Flag for transpose.
    */
   void lu_decompose_solve( vector & rhs, lo n_rhs = 1, bool trans = false );
 
@@ -194,7 +202,6 @@ class besthea::linear_algebra::full_matrix
 
   /*!
    * @brief In-place Choleski decomposition.
-   * @param[in,out] rhs Right-hand side overwritten by the result.
    */
   void choleski_decompose( );
 
@@ -206,7 +213,7 @@ class besthea::linear_algebra::full_matrix
   void choleski_solve( vector & rhs, lo n_rhs = 1 );
 
  protected:
-  std::vector< sc > _data;
+  std::vector< sc > _data; //!< Raw data.
 };
 
 #endif /* INCLUDE_BESTHEA_FULL_MATRIX_H_ */

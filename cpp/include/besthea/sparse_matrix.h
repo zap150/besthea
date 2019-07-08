@@ -38,6 +38,8 @@
 #include "besthea/matrix.h"
 #include "besthea/settings.h"
 
+#include <vector>
+
 namespace besthea {
   namespace linear_algebra {
     class sparse_matrix;
@@ -52,6 +54,9 @@ class besthea::linear_algebra::sparse_matrix
   using vector = besthea::linear_algebra::vector;
 
  public:
+  /**
+   * Default constructor.
+   */
   sparse_matrix( );
 
   /**
@@ -60,6 +65,15 @@ class besthea::linear_algebra::sparse_matrix
    */
   sparse_matrix( const sparse_matrix & that );
 
+  /**
+   * Constructs sparse matrix from triplets.
+   * @param[in] n_rows Number of rows.
+   * @param[in] n_columns Number of columns.
+   * @param[in] row_indices Indices of rows.
+   * @param[in] column_indices Indices of columns.
+   * @param[in] values Values to be stored at positions specified by
+   * `row_indices` and `column_indices`.
+   */
   sparse_matrix( los n_rows, los n_columns, std::vector< los > & row_indices,
     std::vector< los > & column_indices, std::vector< sc > & values );
 
@@ -77,7 +91,7 @@ class besthea::linear_algebra::sparse_matrix
     sc alpha = 1.0, sc beta = 0.0 ) const;
 
  protected:
-  Eigen::SparseMatrix< sc, Eigen::ColMajor, los > _data;
+  Eigen::SparseMatrix< sc, Eigen::ColMajor, los > _data;  //!< Eigen data.
 };
 
 #endif /* INCLUDE_BESTHEA_SPARSE_MATRIX_H_ */

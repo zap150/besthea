@@ -26,16 +26,18 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/** @file bem.h
+ * @brief
+ */
+
+#ifndef INCLUDE_BESTHEA_BEM_H_
+#define INCLUDE_BESTHEA_BEM_H_
+
+#include "besthea/basis_function.h"
+#include "besthea/basis_tri_p0.h"
+#include "besthea/basis_tri_p1.h"
+#include "besthea/uniform_spacetime_be_assembler.h"
 #include "besthea/uniform_spacetime_be_space.h"
+#include "besthea/uniform_spacetime_heat_sl_kernel_antiderivative.h"
 
-template< class basis >
-besthea::bem::uniform_spacetime_be_space< basis >::uniform_spacetime_be_space(
-  st_mesh & spacetime_mesh )
-  : _basis( spacetime_mesh ) {
-  _spacetime_mesh = &spacetime_mesh;
-}
-
-template< class basis >
-besthea::bem::uniform_spacetime_be_space<
-  basis >::~uniform_spacetime_be_space( ) {
-}
+#endif /* INCLUDE_BESTHEA_BEM_H_ */

@@ -26,16 +26,15 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "besthea/uniform_spacetime_be_space.h"
+/** @file linear_algebra.h
+ * @brief
+ */
 
-template< class basis >
-besthea::bem::uniform_spacetime_be_space< basis >::uniform_spacetime_be_space(
-  st_mesh & spacetime_mesh )
-  : _basis( spacetime_mesh ) {
-  _spacetime_mesh = &spacetime_mesh;
-}
+#ifndef INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_
+#define INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_
 
-template< class basis >
-besthea::bem::uniform_spacetime_be_space<
-  basis >::~uniform_spacetime_be_space( ) {
-}
+#include "besthea/full_matrix.h"
+#include "besthea/sparse_matrix.h"
+#include "besthea/vector.h"
+
+#endif /* INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_ */

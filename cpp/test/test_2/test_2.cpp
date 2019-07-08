@@ -26,22 +26,64 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "besthea/bem.h"
+#include "besthea/linear_algebra.h"
+#include "besthea/settings.h"
 #include "besthea/triangular_surface_mesh.h"
 #include "besthea/uniform_spacetime_tensor_mesh.h"
 
 #include <iostream>
 
-using s_mesh = besthea::mesh::triangular_surface_mesh;
-using st_mesh = besthea::mesh::uniform_spacetime_tensor_mesh;
+using SMesh = besthea::mesh::triangular_surface_mesh;
+using STMesh = besthea::mesh::uniform_spacetime_tensor_mesh;
+using Vector = besthea::linear_algebra::vector;
+using Kernel = besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative;
 
 int main( int argc, char * argv[] ) {
-  std::cout << "test 2" << std::endl;
   std::string file = "../mesh_files/cube_12.txt";
-
   if ( argc > 1 ) {
     file.assign( argv[ 1 ] );
   }
+  SMesh space_mesh( file );
+  STMesh spacetime_mesh( space_mesh, 1.0, 8 );
 
-  s_mesh space_mesh( file );
-  st_mesh spacetime_mesh( space_mesh, 1.0, 8 );
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >
+    test_space( spacetime_mesh );
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >
+    trial_space( spacetime_mesh );
+  sc alpha = 2.5;
+  besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative kernel(
+    spacetime_mesh.get_timestep( ), alpha );
+  besthea::bem::uniform_spacetime_be_assembler assembler(
+    kernel, test_space, trial_space );
+
+  /*
+  sc alpha = 2.5;
+  sc ht = 0.125;
+  Kernel kernel( ht, alpha );
+
+  lo size = 100;
+  Vector xy1( size, false );
+  Vector xy2( size, false );
+  Vector xy3( size, false );
+  xy1.random_fill( 0.1, 2.0 );
+  xy2.random_fill( 0.1, 2.0 );
+  xy3.random_fill( 0.1, 2.0 );
+  Vector value( size, false );
+
+  const sc * xy1_data = xy1.data( );
+  const sc * xy2_data = xy2.data( );
+  const sc * xy3_data = xy3.data( );
+  sc * value_data = value.data( );
+
+  lo delta = 1;
+
+#pragma omp simd simdlen( DATA_WIDTH )
+  for ( lo i = 0; i < size; ++i ) {
+    value_data[ i ] = kernel.anti_tau_anti_t(
+      xy1_data[ i ], xy2_data[ i ], xy3_data[ i ], nullptr, nullptr, delta );
+  }
+
+  value.print( );
+  */
 }

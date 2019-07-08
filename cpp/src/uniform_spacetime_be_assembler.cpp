@@ -26,16 +26,18 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "besthea/uniform_spacetime_be_space.h"
+#include "besthea/uniform_spacetime_be_assembler.h"
 
-template< class basis >
-besthea::bem::uniform_spacetime_be_space< basis >::uniform_spacetime_be_space(
-  st_mesh & spacetime_mesh )
-  : _basis( spacetime_mesh ) {
-  _spacetime_mesh = &spacetime_mesh;
+template< class kernel_type, class test_space_type, class trial_space_type >
+besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::uniform_spacetime_be_assembler( kernel_type & kernel,
+  test_space_type & test_space, trial_space_type & trial_space )
+  : _kernel( &kernel ),
+    _test_space( &test_space ),
+    _trial_space( &trial_space ) {
 }
 
-template< class basis >
-besthea::bem::uniform_spacetime_be_space<
-  basis >::~uniform_spacetime_be_space( ) {
+template< class kernel_type, class test_space_type, class trial_space_type >
+besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::~uniform_spacetime_be_assembler( ) {
 }

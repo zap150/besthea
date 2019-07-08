@@ -26,61 +26,68 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file align.h
- * @brief Aligned memory allocation.
+/** @file uniform_spacetime_heat_kernel_antiderivative.h
+ * @brief Kernel for uniform_spacetime_tensor_mesh.h.
  */
 
-#ifndef INCLUDE_BESTHEA_ALIGN_H_
-#define INCLUDE_BESTHEA_ALIGN_H_
+#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_
+#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_
 
-#include <cstddef>
-#include <cstdlib>
+#include "besthea/settings.h"
+#include "besthea/uniform_spacetime_kernel_antiderivative.h"
+
+#include <cmath>
+#include <vector>
 
 namespace besthea {
-  namespace memory {
-    class align;
+  namespace bem {
+    template< class derived_type >
+    class uniform_spacetime_heat_kernel_antiderivative;
   }
 }
 
-class besthea::memory::align {
+template< class derived_type >
+class besthea::bem::uniform_spacetime_heat_kernel_antiderivative
+  : public besthea::bem::uniform_spacetime_kernel_antiderivative<
+	derived_type > {
  public:
-  align( ) = delete;
+  uniform_spacetime_heat_kernel_antiderivative( ) = delete;
 
-  align( const align & ) = delete;
-
-  ~align( ) = delete;
-
-  /** Allocate aligned memory in a portable way.
-   *
-   * Memory allocated with aligned alloc *MUST* be freed using aligned_free.
-   *
-   * @param[in] alignment The number of bytes to which memory must be aligned.
-   * This value *must* be <= 255.
-   * @param[in] size The number of bytes to allocate.
-   * @param[in] zero If true, the returned memory will be zeroed. If false, the
-   *  contents of the returned memory are undefined.
-   * @returns A pointer to `size` bytes of memory, aligned to an
-   * `alignment`-byte boundary.
+  /**
+   * Constructor.
+   * @param[in] ht Time step.
+   * @param[in] alpha Heat conductivity.
    */
-  static void * aligned_alloc(
-    std::size_t alignment, std::size_t size, bool zero = false );
+  uniform_spacetime_heat_kernel_antiderivative( sc timestep, sc alpha )
+    : uniform_spacetime_kernel_antiderivative< derived_type >( timestep ),
+      _alpha( alpha ),
+      _sqrt_alpha( std::sqrt( alpha ) ),
+      _pi( M_PI ),
+      _sqrt_pi( std::sqrt( M_PI ) ),
+      _zero( 0.0 ),
+      _one( 1.0 ),
+      _two( 2.0 ),
+      _four( 4.0 ),
+      _eight( 8.0 ) {
+  }
 
-  /** Free memory allocated with aligned_alloc
-   * @param[in] aligned_ptr Data to be freed.
-   * */
-  static void aligned_free( void * aligned_ptr );
-
-  /** Allocate memory aligned to DATA_WIDTH in a portable way.
-   *
-   * Memory allocated with aligned alloc *MUST* be freed using aligned_free.
-   *
-   * @param[in] size The number of bytes to allocate.
-   * @param[in] zero If true, the returned memory will be zeroed. If false, the
-   *  contents of the returned memory are undefined.
-   * @returns A pointer to `size` bytes of memory, aligned to a
-   * `DATA_WIDTH`-byte boundary.
+  /**
+   * Destructor.
    */
-  static void * aligned_alloc( std::size_t size, bool zero = false );
+  virtual ~uniform_spacetime_heat_kernel_antiderivative( ) {
+  }
+
+ protected:
+  sc _alpha;  //!< Heat conductivity.
+
+  sc _sqrt_alpha;  //! Auxiliary variable
+  sc _pi;          //! Auxiliary variable
+  sc _sqrt_pi;     //! Auxiliary variable
+  sc _zero;        //! Auxiliary variable
+  sc _one;         //! Auxiliary variable
+  sc _two;         //! Auxiliary variable
+  sc _four;        //! Auxiliary variable
+  sc _eight;       //! Auxiliary variable
 };
 
-#endif
+#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_ */

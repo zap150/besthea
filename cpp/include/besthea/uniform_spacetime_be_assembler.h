@@ -30,22 +30,55 @@
  * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_BE_ASSEMBLER_H_
-#define INCLUDE_BESTHEA_BE_ASSEMBLER_H_
+#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ASSEMBLER_H_
+#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ASSEMBLER_H_
+
+#include "besthea/basis_tri_p0.h"
+#include "besthea/basis_tri_p1.h"
+#include "besthea/uniform_spacetime_be_space.h"
+#include "besthea/uniform_spacetime_heat_sl_kernel_antiderivative.h"
+
+#include <array>
 
 namespace besthea {
   namespace bem {
-    enum class adjacency { disjoint = 0, vertex = 1, edge = 2, identical = 3 };
-
-    int map[] = { 0, 1, 2, 0, 1 };
-
-    class be_assembler;
+    template< class kernel_type, class test_space_type, class trial_space_type >
+    class uniform_spacetime_be_assembler;
   }
 }
 
 /**
  *  Class representing a boundary element matrix assembler.
  */
-class besthea::bem::be_assembler {};
+template< class kernel_type, class test_space_type, class trial_space_type >
+class besthea::bem::uniform_spacetime_be_assembler {
+ public:
+  uniform_spacetime_be_assembler( ) = delete;
 
-#endif /* INCLUDE_BESTHEA_BE_ASSEMBLER_H_ */
+  uniform_spacetime_be_assembler( kernel_type & kernel,
+    test_space_type & test_space, trial_space_type & trial_space );
+
+  ~uniform_spacetime_be_assembler( );
+
+ private:
+  kernel_type * _kernel;  //!< Kernel temporal antiderivative
+
+  test_space_type * _test_space;  //!< Boundary element test space.
+
+  trial_space_type * _trial_space;  //!< Boundary element trial space.
+
+  const std::array< int, 5 > _map{ 0, 1, 2, 0,
+    1 };  //!< Auxiliary array for mapping DOFs under
+          // rotation (regularized quadrature).
+};
+
+template class besthea::bem::uniform_spacetime_be_assembler<
+  besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
+template class besthea::bem::uniform_spacetime_be_assembler<
+  besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+
+#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ASSEMBLER_H_ */

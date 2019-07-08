@@ -42,22 +42,59 @@ namespace besthea {
   }
 }
 
-class besthea::bem::basis_tri_p0 : public besthea::bem::basis_function {
+class besthea::bem::basis_tri_p0
+  : public besthea::bem::basis_function< besthea::bem::basis_tri_p0 > {
  public:
   basis_tri_p0( ) = delete;
+
+  /**
+   * Constructor.
+   * @param[in] mesh Mesh.
+   */
   basis_tri_p0( mesh_type & mesh );
+
+  /**
+   * Destructor.
+   */
   virtual ~basis_tri_p0( );
 
+  /**
+   * Returns number of basis functions supported on i_elem.
+   * @param[in] i_elem Element index.
+   */
   virtual lo dimension_local( lo i_elem );
 
+  /**
+   * Returns number of basis functions on the whole mesh.
+   */
   virtual lo dimension_global( );
 
-  virtual void local_to_global( lo i_elem, adjacency type,
-    int rotation, bool swap, std::vector< lo > indices );
+  /**
+   * Provides global indices for local contributions.
+   * @param[in] i_elem Element index.
+   * @param[in] type Type of element adjacency (regularized quadrature).
+   * @param[in] rotation Virtual element rotation (regularized quadrature).
+   * @param[in] swap Virtual element inversion (regularized quadrature).
+   * @param[out] indices Global indices for local contributions.
+   */
+  void do_local_to_global( lo i_elem, adjacency type, int rotation,
+    bool swap, std::vector< lo > indices );
 
-  virtual void evaluate( lo i_elem, const std::vector< sc > & x1_ref,
-    const std::vector< sc > & x2_ref, const sc * n, adjacency type,
-    int rotation, bool swap, std::vector< matrix_type > & values );
+  /**
+   * Evaluates the basis function.
+   * @param[in] i_elem Element index.
+   * @param[in] i_fun Local basis function index.
+   * @param[in] x1_ref First coordinate of reference quadrature point.
+   * @param[in] x2_ref Second coordinate of reference quadrature point.
+   * @param[in] n Element normal.
+   * @param[in] type Type of element adjacency (regularized quadrature).
+   * @param[in] rotation Virtual element rotation (regularized quadrature).
+   * @param[in] swap Virtual element inversion (regularized quadrature).
+   */
+#pragma omp declare simd uniform( i_elem, i_fun, n, type, rotation, swap ) \
+  simdlen( DATA_WIDTH )
+  sc do_evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n,
+    adjacency type, int rotation, bool swap );
 };
 
 #endif /* INCLUDE_BESTHEA_BASIS_TRI_P0_H_ */

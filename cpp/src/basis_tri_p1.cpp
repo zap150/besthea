@@ -43,38 +43,34 @@ lo besthea::bem::basis_tri_p1::dimension_global( ) {
   return _mesh->get_spatial_mesh( )->get_n_nodes( );
 }
 
-void besthea::bem::basis_tri_p1::local_to_global( lo i_elem, adjacency type,
+void besthea::bem::basis_tri_p1::do_local_to_global( lo i_elem, adjacency type,
   int rotation, bool swap, std::vector< lo > indices ) {
   lo element[ 3 ];
   _mesh->get_spatial_mesh( )->get_element( i_elem, element );
 
   if ( type == adjacency::edge && swap ) {
-    indices[ 0 ] = element[ map[ rotation + 1 ] ];
-    indices[ 1 ] = element[ map[ rotation ] ];
+    indices[ 0 ] = element[ _map[ rotation + 1 ] ];
+    indices[ 1 ] = element[ _map[ rotation ] ];
   } else {
-    indices[ 0 ] = element[ map[ rotation ] ];
-    indices[ 1 ] = element[ map[ rotation + 1 ] ];
+    indices[ 0 ] = element[ _map[ rotation ] ];
+    indices[ 1 ] = element[ _map[ rotation + 1 ] ];
   }
-  indices[ 2 ] = element[ map[ rotation + 2 ] ];
+  indices[ 2 ] = element[ _map[ rotation + 2 ] ];
 }
 
-void besthea::bem::basis_tri_p1::evaluate( lo i_elem,
-  const std::vector< sc > & x1_ref, const std::vector< sc > & x2_ref,
-  const sc * n, adjacency type, int rotation, bool swap,
-  std::vector< matrix_type > & values ) {
-  std::vector< sc >::size_type size = x1_ref.size( );
+#pragma omp declare simd uniform( i_elem, i_fun, n, type, rotation, swap ) \
+  simdlen( DATA_WIDTH )
+sc besthea::bem::basis_tri_p1::do_evaluate( lo i_elem, lo i_fun, sc x1_ref,
+  sc x2_ref, const sc * n, adjacency type, int rotation, bool swap ) {
+  sc value = 0.0;
 
-  const sc * x1_ref_data = x1_ref.data( );
-  const sc * x2_ref_data = x2_ref.data( );
-
-  sc * values1_data = values[ 0 ].data( );
-  sc * values2_data = values[ 1 ].data( );
-  sc * values3_data = values[ 2 ].data( );
-
-#pragma omp simd simdlen( DATA_WIDTH )
-  for ( std::vector< sc >::size_type i = 0; i < size; ++i ) {
-    values1_data[ i ] = 1.0 - x1_ref_data[ i ] - x2_ref_data[ i ];
-    values2_data[ i ] = x1_ref_data[ i ];
-    values3_data[ i ] = x2_ref_data[ i ];
+  if ( i_fun == 0 ) {
+    value = 1 - x1_ref - x2_ref;
+  } else if ( i_fun == 1 ) {
+    value = x1_ref;
+  } else if ( i_fun == 2 ) {
+    value = x2_ref;
   }
+
+  return value;
 }

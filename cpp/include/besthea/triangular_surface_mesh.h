@@ -154,8 +154,8 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
 
   /**
    * Returns edge indices of an element.
-   * @param[in] i_edge Index of the edge.
-   * @param[out] edge Element indices.
+   * @param[in] i_element Index of an element.
+   * @param[out] edges Edge indices.
    */
   void get_edges( lo i_element, lo * edges ) const {
     edges[ 0 ] = _element_to_edges[ 3 * i_element ];
@@ -199,6 +199,9 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    */
   void init_edges( );
 
+  /**
+   * Returns the surface mesh.
+   */
   virtual triangular_surface_mesh * get_spatial_mesh( ) {
     return this;
   }
