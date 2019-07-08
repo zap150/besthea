@@ -7,7 +7,7 @@ N = 15;
 % end time
 T = 1;
 % order of the Lagrange interpolant
-order = 10;
+order = 3;
 % RHS function
 rhs_fun = @( t ) ( ( exp( t ) / 4 ) ...
   .* ( exp( 2 ) * erfc( ( 1 + t ) ./ ( sqrt( t ) ) ) ...
