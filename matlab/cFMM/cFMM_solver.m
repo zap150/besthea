@@ -28,6 +28,9 @@ classdef cFMM_solver < handle
     % nearfield
     V1
     V2
+    
+    % for preconditioning
+    V_diag
   end
   
   methods
@@ -71,10 +74,22 @@ classdef cFMM_solver < handle
         obj.leafs{1}.get_value( ) );
       obj.V2 = assembler.assemble_V( obj.leafs{2}.get_value( ), ...
         obj.leafs{1}.get_value( ) );
+      
+      % for preconditioning
+      obj.V_diag = repmat(diag( obj.V1 ), 2^L, 1 );
+      
       %
       %       t = t_start + obj.ht : obj.ht : t_end;
       %       plot( t, x);
       %       hold on
+    end
+    
+    function y = apply_diag_prec( obj, x )
+      loc_sz = size( obj.V1, 1 );
+      for i = 1 : length( x ) / loc_sz
+        y( ( i - 1 )  * loc_sz + 1 : i * loc_sz, 1 ) = ...
+          obj.V1 \ x( ( i - 1 )  * loc_sz + 1 : i * loc_sz );
+      end
     end
     
     function y = apply_fmm_matrix( obj, x )
@@ -226,101 +241,21 @@ classdef cFMM_solver < handle
         f = f + tst;
         y( ind_start : ind_end ) = f;
       end
-%         
-%         f = cluster.apply_l2p( );
-%         ind_start = obj.leafs{ m - 1 + 1 }.get_value( ).get_start_index( );
-%         ind_end = obj.leafs{ m - 1 + 1 }.get_value( ).get_end_index( );
-%         tst = obj.V2 * x( ind_start : ind_end );
-%         f = f + tst; %V2 * x( ind_start : ind_end );
-%         
-%         ind_start = obj.leafs{ m  + 1 }.get_value( ).get_start_index( );
-%         ind_end = obj.leafs{ m + 1 }.get_value( ).get_end_index( );
-%         tst = obj.V1 * x( ind_start : ind_end );
-%         f = f + tst;
-%         
-%         y( ind_start : ind_end ) = f; %V1 \ obj.rhs_proj( ind_start : ind_end );
-      
-%       for m = 2 : 2^obj.L - 1 %  -1 ?
-%         % find the coarsest level where parents change
-%         lt = 2;
-%         
-%         for i = 2 : obj.L - 1
-%           if obj.get_id_on_level( m - 1, i ) == obj.get_id_on_level( m, i )
-%             lt = lt + 1;
-%           end
-%         end
-%         
-%         % compute moments
-%         cluster = obj.leafs{ m - 2 + 1 }.get_value( );
-%         ind_start = cluster.get_start_index( );
-%         ind_end = cluster.get_end_index( );
-%         cluster.set_moments( cluster.apply_q2m( x( ind_start : ind_end ) ) );
-%         parent_node = obj.leafs{ m - 2 + 1 }.get_parent( );
-%         cluster.inc_c_moments_count( );
-%         cluster.inc_c_moments_count( );
-%         
-%         % upward path
-%         % transfer moments to the highest possible level
-%         for l = obj.L - 1 : -1 :  2
-%           parent_cluster = parent_node.get_value( );
-%           left_child = parent_cluster.get_left_child( );
-%           right_child = parent_cluster.get_right_child( );
-%           
-%           % transfer up only if there are contributions from both descendants
-%           % included
-%           if ( left_child.get_c_moments_count( ) == 2 )
-%             parent_cluster.apply_m2m_left( left_child.get_moments( ) );
-%           end
-%           
-%           if ( right_child.get_c_moments_count( ) == 2 )
-%             parent_cluster.apply_m2m_right( right_child.get_moments( ) );
-%           end
-%           parent_node = parent_node.get_parent( );
-%         end
-%         
-%         % interaction phase
-%         % go through interaction lists of the clusters and apply M2L
-%         cluster = obj.leafs{ m + 1 }.get_value( );
-%         parent_node = obj.leafs{ m + 1 };
-%         for l = obj.L : -1 : lt
-%           cluster.apply_m2l( );
-%           parent_node = parent_node.get_parent( );
-%           cluster = parent_node.get_value( );
-%         end
-%         
-%         % downward pass
-%         parent = obj.leafs{ m + 1 };
-%         for l = obj.L : -1 : lt
-%           parent = parent.get_parent( );
-%         end
-%         
-%         obj.downward_pass( parent, m );
-%         
-%         cluster = obj.leafs{ m + 1 }.get_value( );
-%         
-%         f = cluster.apply_l2p( );
-%         ind_start = obj.leafs{ m - 1 + 1 }.get_value( ).get_start_index( );
-%         ind_end = obj.leafs{ m - 1 + 1 }.get_value( ).get_end_index( );
-%         tst = obj.V2 * x( ind_start : ind_end );
-%         f = f + tst; %V2 * x( ind_start : ind_end );
-%         
-%         ind_start = obj.leafs{ m  + 1 }.get_value( ).get_start_index( );
-%         ind_end = obj.leafs{ m + 1 }.get_value( ).get_end_index( );
-%         tst = obj.V1 * x( ind_start : ind_end );
-%         f = f + tst;
-%         
-%         y( ind_start : ind_end ) = f; %V1 \ obj.rhs_proj( ind_start : ind_end );
-%       end
-      
+
     end
     
     
     function x = solve_iterative( obj )
-      x = gmres(@obj.apply_fmm_matrix, obj.rhs_proj, 100, 1e-4, 400);
+      x = gmres(@obj.apply_fmm_matrix, obj.rhs_proj, 100, 1e-5, 600 );
+
+      % x = gmres(@obj.apply_fmm_matrix, obj.rhs_proj, 100, 1e-5, 600, ...
+      % @obj.apply_diag_prec );
     end
     
     function x = solve_iterative_std_fmm( obj )
-      x = gmres(@obj.apply_fmm_matrix_std, obj.rhs_proj, 100, 1e-4, 400);
+      x = gmres(@obj.apply_fmm_matrix_std, obj.rhs_proj, 100, 1e-5, 600 );
+      %x = gmres(@obj.apply_fmm_matrix, obj.rhs_proj, 100, 1e-5, 600, ...
+      %  @obj.apply_diag_prec );
     end
     
     function x = solve_direct( obj )
