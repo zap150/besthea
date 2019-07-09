@@ -36,7 +36,8 @@ besthea::linear_algebra::block_vector::block_vector(
   lo block_size, std::initializer_list< sc > list )
   : _block_size( block_size ),
     _size( list.size( ) ),
-    _data( block_size, list ) {
+    //    _data( block_size, list ) { // Why does this work??
+    _data( block_size, vector_type( list ) ) {
 }
 
 besthea::linear_algebra::block_vector::block_vector(

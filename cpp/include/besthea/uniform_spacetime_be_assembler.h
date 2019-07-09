@@ -85,10 +85,14 @@ class besthea::bem::uniform_spacetime_be_assembler {
 
   trial_space_type * _trial_space;  //!< Boundary element trial space.
 
-  const std::array< int, 5 > _map{ 0, 1, 2, 0,
-    1 };  //!< Auxiliary array for mapping DOFs under
+  static const std::array< int, 5 >
+    map;  //!< Auxiliary array for mapping DOFs under
           // rotation (regularized quadrature).
 };
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+const std::array< int, 5 > besthea::bem::uniform_spacetime_be_assembler<
+  kernel_type, test_space_type, trial_space_type >::map{ 0, 1, 2, 0, 1 };
 
 template class besthea::bem::uniform_spacetime_be_assembler<
   besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
