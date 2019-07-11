@@ -107,7 +107,7 @@ classdef cFMM_solver < handle
       y( 1 : n ) = obj.V1 * x( 1 : n );
       y( n + 1 : 2 * n ) = obj.V1 * x( n + 1 : 2 * n ) + obj.V2 * x( 1 : n ) ;
       
-      for m = 2 : 2^obj.L - 1 %  -1 ?
+      for m = 2 : 2^obj.L - 1 %  
         % find the coarsest level where parents change
         lt = 2;
         
@@ -169,14 +169,14 @@ classdef cFMM_solver < handle
         ind_start = obj.leafs{ m - 1 + 1 }.get_value( ).get_start_index( );
         ind_end = obj.leafs{ m - 1 + 1 }.get_value( ).get_end_index( );
         tst = obj.V2 * x( ind_start : ind_end );
-        f = f + tst; %V2 * x( ind_start : ind_end );
+        f = f + tst; 
         
         ind_start = obj.leafs{ m  + 1 }.get_value( ).get_start_index( );
         ind_end = obj.leafs{ m + 1 }.get_value( ).get_end_index( );
         tst = obj.V1 * x( ind_start : ind_end );
         f = f + tst;
         
-        y( ind_start : ind_end ) = f; %V1 \ obj.rhs_proj( ind_start : ind_end );
+        y( ind_start : ind_end ) = f; 
       end
       
     end
@@ -246,16 +246,16 @@ classdef cFMM_solver < handle
     
     
     function x = solve_iterative( obj )
-      x = gmres(@obj.apply_fmm_matrix, obj.rhs_proj, 100, 1e-5, 600 );
+      %x = gmres(@obj.apply_fmm_matrix, obj.rhs_proj, 100, 1e-5, 600 );
 
-      % x = gmres(@obj.apply_fmm_matrix, obj.rhs_proj, 100, 1e-5, 600, ...
-      % @obj.apply_diag_prec );
+      x = gmres(@obj.apply_fmm_matrix, obj.rhs_proj, 100, 1e-5, 600, ...
+       @obj.apply_diag_prec );
     end
     
     function x = solve_iterative_std_fmm( obj )
-      x = gmres(@obj.apply_fmm_matrix_std, obj.rhs_proj, 100, 1e-5, 600 );
-      %x = gmres(@obj.apply_fmm_matrix, obj.rhs_proj, 100, 1e-5, 600, ...
-      %  @obj.apply_diag_prec );
+      %x = gmres(@obj.apply_fmm_matrix_std, obj.rhs_proj, 100, 1e-5, 600 );
+      x = gmres(@obj.apply_fmm_matrix, obj.rhs_proj, 100, 1e-5, 600, ...
+        @obj.apply_diag_prec );
     end
     
     function x = solve_direct( obj )
@@ -337,6 +337,20 @@ classdef cFMM_solver < handle
       end
     end
     
+    function error = l2_error( obj, sol, analytic, T, nT )
+      [ x, w, l ] = quadratures.line( 10 );
+      
+      h = T / nT;
+      error = 0;
+      for i = 1 : nT
+         for j = 1 : l
+           error = error + (sol( i ) - analytic((i - 1) * h ...
+             + x ( j ) * h) )^2 * w( j );
+         end
+      end
+      error = error * h;
+      error = sqrt(error);
+    end
     
   end
   
@@ -399,7 +413,7 @@ classdef cFMM_solver < handle
     % integrates Lagrange polynomials to assemble Q2M matrices
     function result = integrate_lagrange( ~, cluster, t_start, t_end, ...
         interpolant, b )
-      [ x, w, l ] = quadratures.line( 4 );
+      [ x, w, l ] = quadratures.line( 10 );
       result = 0;
       for j = 1 : l
         tau = t_start + ( t_end - t_start) * x( j );
@@ -661,19 +675,21 @@ classdef cFMM_solver < handle
     function projection = project_rhs( ~, rhs, T, nT )
       diag = ones( nT,1 ) * ( T / nT );
       M = spdiags( diag, 0, nT, nT );
-      [ x, w, l ] = quadratures.line( 4 );
+      [ x, w, l ] = quadratures.line( 10 );
       
       h = T / nT;
       proj_rhs = zeros( nT, 1 );
       for i = 1 : nT
-        for j = 1 : l
-          proj_rhs( i ) = proj_rhs( i ) + rhs( (i - 1) * h ...
-            + x (j ) * h ) * w( j );
-        end
-        proj_rhs(i) = proj_rhs(i) * h;
+         for j = 1 : l
+           proj_rhs( i ) = proj_rhs( i ) + rhs( (i - 1) * h ...
+             + x ( j ) * h ) * w( j );
+         end
+         proj_rhs(i) = proj_rhs(i) * h;
       end
       projection = M \ proj_rhs;
     end
+    
+
     
     
     % computes M2L matrices for clusters from the interaction list of a
