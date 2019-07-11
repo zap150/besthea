@@ -26,43 +26,82 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file mesh.h
+/** @file matrix.h
  * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_MESH_H_
-#define INCLUDE_BESTHEA_MESH_H_
+#ifndef INCLUDE_BESTHEA_BLOCK_MATRIX_H_
+#define INCLUDE_BESTHEA_BLOCK_MATRIX_H_
+
+#include "besthea/block_linear_operator.h"
+#include "besthea/settings.h"
 
 namespace besthea {
-  namespace mesh {
-    class mesh;
-    class triangular_surface_mesh;
+  namespace linear_algebra {
+    class block_matrix;
   }
 }
 
 /**
- *  Abstract class representing a mesh.
+ *  Class representing a full matrix.
  */
-class besthea::mesh::mesh {
+class besthea::linear_algebra::block_matrix
+  : public besthea::linear_algebra::block_linear_operator {
  public:
   /**
-   * Constructor.
+   * Default constructor.
    */
-  mesh( ) {
+  block_matrix( ) {
+    _block_dim = 0;
+    _n_rows = 0;
+    _n_columns = 0;
   }
 
-  mesh( const mesh & that ) = delete;
+  /**
+   * Constructor.
+   * @param[in] block_dim Block dimension.
+   * @param[in] n_rows Number of rows.
+   * @param[in] n_columns Number of columns.
+   */
+  block_matrix( lo block_dim, lo n_rows, lo n_columns )
+    : block_linear_operator( block_dim, n_columns, n_rows ) {
+  }
 
   /**
    * Destructor.
    */
-  virtual ~mesh( ) {
+  virtual ~block_matrix( ) {
   }
 
   /**
-   * Returns pointer to the surface mesh.
+   * Returns number of blocks in a row (column).
    */
-  virtual triangular_surface_mesh * get_spatial_mesh( ) = 0;
+  lo get_block_dim( ) {
+    return _block_dim;
+  }
+
+  /**
+   * Returns number of rows.
+   */
+  lo get_n_rows( ) {
+    return _n_rows;
+  }
+
+  /**
+   * Returns number of columns.
+   */
+  lo get_n_columns( ) {
+    return _n_columns;
+  }
+
+ protected:
+  // {} instead of =, workaround because of bug in gcc
+  lo & _n_rows{
+    block_linear_operator::_dim_range
+  };  //!< number of rows (range dimension)
+  lo & _n_columns{
+    block_linear_operator::_dim_domain
+  };  //!< number of columns (domain dimension)
 };
 
-#endif /* INCLUDE_BESTHEA_MESH_H_ */
+#endif /* INCLUDE_BESTHEA_BLOCK_MATRIX_H_ */

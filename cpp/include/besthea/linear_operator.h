@@ -46,7 +46,7 @@ namespace besthea {
  *  Class representing a linear operator.
  */
 class besthea::linear_algebra::linear_operator {
-  using vector = besthea::linear_algebra::vector;
+  using vector_type = besthea::linear_algebra::vector;
 
  public:
   /**
@@ -63,8 +63,8 @@ class besthea::linear_algebra::linear_operator {
    * @param[in] alpha
    * @param[in] beta
    */
-  virtual void apply( vector const & x, vector & y, bool trans = false,
-    sc alpha = 1.0, sc beta = 0.0 ) const = 0;
+  virtual void apply( vector_type const & x, vector_type & y,
+    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const = 0;
 
  protected:
   lo _dim_domain;  //!< domain dimension

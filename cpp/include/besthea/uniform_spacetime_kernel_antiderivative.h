@@ -26,7 +26,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file uniform_spacetime_kernel.h
+/** @file uniform_spacetime_kernel_antiderivative.h
  * @brief Kernel for uniform_spacetime_tensor_mesh.h.
  */
 
@@ -44,6 +44,9 @@ namespace besthea {
   }
 }
 
+/**
+ *  Class representing a first and second antiderivative of a spacetime kernel.
+ */
 template< class derived_type >
 class besthea::bem::uniform_spacetime_kernel_antiderivative {
  public:
@@ -51,7 +54,7 @@ class besthea::bem::uniform_spacetime_kernel_antiderivative {
 
   /**
    * Constructor.
-   * @param[in] ht Time-step.
+   * @param[in] timestep Timestep.
    */
   uniform_spacetime_kernel_antiderivative( sc timestep ) : _timestep( timestep ) {
   }
@@ -62,6 +65,9 @@ class besthea::bem::uniform_spacetime_kernel_antiderivative {
   virtual ~uniform_spacetime_kernel_antiderivative( ) {
   }
 
+  /**
+   * Returns this cast to the descendant's type.
+   */
   derived_type & derived( ) {
     return static_cast< derived_type & >( *this );
   }

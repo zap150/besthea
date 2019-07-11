@@ -26,7 +26,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file be_assembler.h
+/** @file uniform_spacetime_be_assembler.h
  * @brief
  */
 
@@ -35,6 +35,7 @@
 
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
+#include "besthea/block_lower_triangular_toeplitz_matrix.h"
 #include "besthea/uniform_spacetime_be_space.h"
 #include "besthea/uniform_spacetime_heat_sl_kernel_antiderivative.h"
 
@@ -55,10 +56,27 @@ class besthea::bem::uniform_spacetime_be_assembler {
  public:
   uniform_spacetime_be_assembler( ) = delete;
 
+  /**
+   * Constructor.
+   * @param[in] kernel Spcetime kernel antiderivative object.
+   * @param[in] test_space Test boundary element space.
+   * @param[in] trial_space Trial boundary element space.
+   */
   uniform_spacetime_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space );
 
+  /**
+   * Destructor.
+   */
   ~uniform_spacetime_be_assembler( );
+
+  /**
+   * Assembles the spacetime matrix.
+   * @param[out] global_matrix Block lower triangular Toeplitz matrix.
+   */
+  void assemble(
+    besthea::linear_algebra::block_lower_triangular_toeplitz_matrix &
+      global_matrix );
 
  private:
   kernel_type * _kernel;  //!< Kernel temporal antiderivative
@@ -67,10 +85,14 @@ class besthea::bem::uniform_spacetime_be_assembler {
 
   trial_space_type * _trial_space;  //!< Boundary element trial space.
 
-  const std::array< int, 5 > _map{ 0, 1, 2, 0,
-    1 };  //!< Auxiliary array for mapping DOFs under
+  static const std::array< int, 5 >
+    map;  //!< Auxiliary array for mapping DOFs under
           // rotation (regularized quadrature).
 };
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+const std::array< int, 5 > besthea::bem::uniform_spacetime_be_assembler<
+  kernel_type, test_space_type, trial_space_type >::map{ 0, 1, 2, 0, 1 };
 
 template class besthea::bem::uniform_spacetime_be_assembler<
   besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,

@@ -45,6 +45,13 @@ besthea::linear_algebra::full_matrix::full_matrix( const full_matrix & that )
 }
 
 besthea::linear_algebra::full_matrix::full_matrix(
+  lo n_rows, lo n_columns, std::initializer_list< sc > list )
+  : _data( list ) {
+  this->_n_rows = n_rows;
+  this->_n_columns = n_columns;
+}
+
+besthea::linear_algebra::full_matrix::full_matrix(
   lo n_rows, lo n_columns, bool zero )
   : _data( n_rows * n_columns ) {
   this->_n_rows = n_rows;
@@ -106,8 +113,8 @@ void besthea::linear_algebra::full_matrix::apply_symmetric(
   const vector & x, vector & y, sc alpha, sc beta ) const {
   CBLAS_UPLO cblas_uplo = CblasUpper;
 
-  cblas_dsymv( CblasColMajor, cblas_uplo, _n_rows, alpha,
-    _data.data( ), _n_rows, x.data( ), 1, beta, y.data( ), 1 );
+  cblas_dsymv( CblasColMajor, cblas_uplo, _n_rows, alpha, _data.data( ),
+    _n_rows, x.data( ), 1, beta, y.data( ), 1 );
 }
 
 void besthea::linear_algebra::full_matrix::lu_decompose_solve(

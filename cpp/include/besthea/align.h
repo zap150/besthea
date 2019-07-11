@@ -42,6 +42,9 @@ namespace besthea {
   }
 }
 
+/**
+ *  Class providing aligned allocation.
+ */
 class besthea::memory::align {
  public:
   align( ) = delete;

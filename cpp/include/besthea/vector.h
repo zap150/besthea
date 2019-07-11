@@ -59,6 +59,12 @@ class besthea::linear_algebra::vector {
   vector( const vector & that );
 
   /**
+   * Constructor with an initializer list.
+   * @param[in] list Initializer list for std::vector.
+   */
+  vector( std::initializer_list< sc > list );
+
+  /**
    * Constructing a vector of the given size.
    * @param[in] size Length of the vector.
    * @param[in] zero Initialize to 0 if true.

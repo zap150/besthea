@@ -59,9 +59,9 @@ namespace besthea {
 template< class derived_type >
 class besthea::bem::basis_function {
  protected:
-  using mesh_type = besthea::mesh::mesh;
-  using adjacency = besthea::bem::adjacency;
-  using matrix_type = besthea::linear_algebra::full_matrix;
+  using mesh_type = besthea::mesh::mesh; //!< Mesh type.
+  using adjacency = besthea::bem::adjacency; //!< Element adjacecny.
+  using matrix_type = besthea::linear_algebra::full_matrix; //!< Matrix type.
 
  public:
   /**
@@ -78,6 +78,9 @@ class besthea::bem::basis_function {
   virtual ~basis_function( ) {
   }
 
+  /**
+   * Returns this cast to the descendant's type.
+   */
   derived_type & derived( ) {
     return static_cast< derived_type & >( *this );
   }

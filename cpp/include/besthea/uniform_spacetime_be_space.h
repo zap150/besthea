@@ -26,7 +26,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file be_space.h
+/** @file uniform_spacetime_be_space.h
  * @brief
  */
 
@@ -50,7 +50,8 @@ namespace besthea {
  */
 template< class basis >
 class besthea::bem::uniform_spacetime_be_space {
-  using st_mesh = besthea::mesh::uniform_spacetime_tensor_mesh;
+  using st_mesh_type
+    = besthea::mesh::uniform_spacetime_tensor_mesh;  //!< Spacetime mesh type.
 
  public:
   uniform_spacetime_be_space( ) = delete;
@@ -66,14 +67,40 @@ class besthea::bem::uniform_spacetime_be_space {
   /**
    * Constructing mesh from a file.
    * @param[in] spacetime_mesh Reference to uniform_spacetime_tensor_mesh.h.
-   * @param[in] test Test basis function.
-   * @param[in] trial Trial basis function.
    */
-  uniform_spacetime_be_space( st_mesh & spacetime_mesh );
+  uniform_spacetime_be_space( st_mesh_type & spacetime_mesh );
+
+  /**
+   * Returns pointer to the mesh.
+   */
+  st_mesh_type * get_mesh( ) {
+    return _spacetime_mesh;
+  }
+
+  /**
+   * Returns pointer to the mesh.
+   */
+  const st_mesh_type * get_mesh( ) const {
+    return _spacetime_mesh;
+  }
+
+  /**
+   * Returns reference to the basis function.
+   */
+  basis & get_basis( ) {
+    return _basis;
+  }
+
+  /**
+   * Returns pointer to the basis function.
+   */
+  const basis & get_basis( ) const {
+    return _basis;
+  }
 
  protected:
-  st_mesh * _spacetime_mesh;  //!< uniform spacetime tensor mesh
-  basis _basis;               //!< spatial basis function (temporal is constant)
+  st_mesh_type * _spacetime_mesh;  //!< uniform spacetime tensor mesh
+  basis _basis;  //!< spatial basis function (temporal is constant)
 };
 
 template class besthea::bem::uniform_spacetime_be_space<

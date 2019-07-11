@@ -26,43 +26,66 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file mesh.h
- * @brief
+/** @file block_linear_operator.h
+ * @brief Parent class for block_linear operators.
  */
 
-#ifndef INCLUDE_BESTHEA_MESH_H_
-#define INCLUDE_BESTHEA_MESH_H_
+#ifndef INCLUDE_BESTHEA_BLOCK_LINEAR_OPERATOR_H_
+#define INCLUDE_BESTHEA_BLOCK_LINEAR_OPERATOR_H_
+
+#include "besthea/block_vector.h"
+#include "besthea/settings.h"
 
 namespace besthea {
-  namespace mesh {
-    class mesh;
-    class triangular_surface_mesh;
+  namespace linear_algebra {
+    class block_linear_operator;
   }
 }
 
 /**
- *  Abstract class representing a mesh.
+ *  Class representing a linear operator.
  */
-class besthea::mesh::mesh {
+class besthea::linear_algebra::block_linear_operator {
+  using vector_type = besthea::linear_algebra::block_vector;
+
  public:
-  /**
-   * Constructor.
-   */
-  mesh( ) {
+  block_linear_operator( )
+    : _block_dim( 0 ), _dim_domain( 0 ), _dim_range( 0 ) {
   }
 
-  mesh( const mesh & that ) = delete;
+  /*!
+   * @brief Constructor.
+   * @param[in] block_dim Block dimension.
+   * @param[in] dim_domain Dimension of domain per block.
+   * @param[in] dim_range Dimension of range per block.
+   */
+  block_linear_operator( lo block_dim, lo dim_domain, lo dim_range )
+    : _block_dim( block_dim ),
+      _dim_domain( dim_domain ),
+      _dim_range( dim_range ) {
+  }
 
   /**
    * Destructor.
    */
-  virtual ~mesh( ) {
+  virtual ~block_linear_operator( ) {
   }
 
-  /**
-   * Returns pointer to the surface mesh.
+  /*!
+   * @brief y = beta * y + alpha * (this)^trans * x.
+   * @param[in] x
+   * @param[in,out] y
+   * @param[in] trans
+   * @param[in] alpha
+   * @param[in] beta
    */
-  virtual triangular_surface_mesh * get_spatial_mesh( ) = 0;
+  virtual void apply( vector_type const & x, vector_type & y,
+    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const = 0;
+
+ protected:
+  lo _block_dim;   //!< Number of blocks in a row (column).
+  lo _dim_domain;  //!< domain dimension
+  lo _dim_range;   //!< range dimension
 };
 
-#endif /* INCLUDE_BESTHEA_MESH_H_ */
+#endif /* INCLUDE_BESTHEA_BLOCK_LINEAR_OPERATOR_H_ */

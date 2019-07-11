@@ -26,43 +26,33 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file mesh.h
- * @brief
- */
+#include "besthea/block_vector.h"
 
-#ifndef INCLUDE_BESTHEA_MESH_H_
-#define INCLUDE_BESTHEA_MESH_H_
-
-namespace besthea {
-  namespace mesh {
-    class mesh;
-    class triangular_surface_mesh;
-  }
+besthea::linear_algebra::block_vector::block_vector( )
+  : _block_size( 1 ), _size( 1 ), _data( 1, vector_type( 1, 0.0 ) ) {
 }
 
-/**
- *  Abstract class representing a mesh.
- */
-class besthea::mesh::mesh {
- public:
-  /**
-   * Constructor.
-   */
-  mesh( ) {
+besthea::linear_algebra::block_vector::block_vector(
+  lo block_size, std::initializer_list< sc > list )
+  : _block_size( block_size ),
+    _size( list.size( ) ),
+    //    _data( block_size, list ) { // Why does this work??
+    _data( block_size, vector_type( list ) ) {
+}
+
+besthea::linear_algebra::block_vector::block_vector(
+  lo block_size, lo size, bool zero )
+  : _block_size( block_size ),
+    _size( size ),
+    _data( block_size, vector_type( size, zero ) ) {
+}
+
+besthea::linear_algebra::block_vector::~block_vector( ) {
+}
+
+void besthea::linear_algebra::block_vector::print(
+  std::ostream & stream ) const {
+  for ( const vector_type & v : _data ) {
+    v.print( );
   }
-
-  mesh( const mesh & that ) = delete;
-
-  /**
-   * Destructor.
-   */
-  virtual ~mesh( ) {
-  }
-
-  /**
-   * Returns pointer to the surface mesh.
-   */
-  virtual triangular_surface_mesh * get_spatial_mesh( ) = 0;
-};
-
-#endif /* INCLUDE_BESTHEA_MESH_H_ */
+}

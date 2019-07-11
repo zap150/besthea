@@ -27,6 +27,7 @@
  */
 
 #include "besthea/uniform_spacetime_be_assembler.h"
+#include "besthea/quadrature.h"
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
@@ -40,4 +41,17 @@ besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 template< class kernel_type, class test_space_type, class trial_space_type >
 besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::~uniform_spacetime_be_assembler( ) {
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::assemble( besthea::linear_algebra::
+    block_lower_triangular_toeplitz_matrix & global_matrix ) {
+  lo block_dim = _test_space->get_mesh( )->get_n_temporal_elements( );
+  global_matrix.resize( block_dim );
+
+  lo n_rows = _test_space->get_basis( ).dimension_global( );
+  lo n_columns = _trial_space->get_basis( ).dimension_global( );
+  global_matrix.resize_blocks( n_rows, n_columns );
+
 }

@@ -42,6 +42,9 @@ namespace besthea {
   }
 }
 
+/**
+ *  Class representing a constant function on a triangular mesh.
+ */
 class besthea::bem::basis_tri_p0
   : public besthea::bem::basis_function< besthea::bem::basis_tri_p0 > {
  public:

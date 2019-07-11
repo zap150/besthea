@@ -33,6 +33,8 @@
 #ifndef INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_
 #define INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_
 
+#include "besthea/block_lower_triangular_toeplitz_matrix.h"
+#include "besthea/block_vector.h"
 #include "besthea/full_matrix.h"
 #include "besthea/sparse_matrix.h"
 #include "besthea/vector.h"
