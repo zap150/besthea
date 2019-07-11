@@ -104,6 +104,49 @@ class besthea::linear_algebra::block_lower_triangular_toeplitz_matrix
   }
 
   /*!
+   * @brief Returns the (i,j)-th element of the matrix.
+   * @param[in] d Index of the block.
+   * @param[in] i Row index.
+   * @param[in] j Column index.
+   */
+  sc get( lo d, lo i, lo j ) const {
+    return _data[ d ].get( i, j );
+  }
+
+  /*!
+   * @brief Sets the (i,j)-th element of the matrix.
+   * @param[in] d Index of the block.
+   * @param[in] i Row index.
+   * @param[in] j Column index.
+   * @param[in] value Value to be set.
+   */
+  void set( lo d, lo i, lo j, sc value ) {
+    _data[ d ].set( i, j, value );
+  }
+
+  /*!
+   * @brief Adds value to the (i,j)-th element of the matrix.
+   * @param[in] d Index of the block.
+   * @param[in] i Row index.
+   * @param[in] j Column index.
+   * @param[in] value Value to be set.
+   */
+  void add( lo d, lo i, lo j, sc value ) {
+    _data[ d ].add( i, j, value );
+  }
+
+  /*!
+   * @brief Atomically adds value to the (i,j)-th element of the matrix.
+   * @param[in] d Index of the block.
+   * @param[in] i Row index.
+   * @param[in] j Column index.
+   * @param[in] value Value to be set.
+   */
+  void add_atomic( lo d, lo i, lo j, sc value ) {
+    _data[ d ].add_atomic( i, j, value );
+  }
+
+  /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
    * @param[in] x
    * @param[in,out] y

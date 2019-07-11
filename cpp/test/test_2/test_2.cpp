@@ -53,8 +53,13 @@ int main( int argc, char * argv[] ) {
   sc alpha = 2.5;
   uniform_spacetime_heat_sl_kernel_antiderivative kernel(
     spacetime_mesh.get_timestep( ), alpha );
-  uniform_spacetime_be_assembler assembler( kernel, test_space, trial_space );
+  lo order_sing = 4;
+  lo order_reg = 4;
+  uniform_spacetime_be_assembler assembler(
+    kernel, test_space, trial_space, order_sing, order_reg );
 
   block_lower_triangular_toeplitz_matrix matrix;
   assembler.assemble( matrix );
+
+  matrix.print( );
 }

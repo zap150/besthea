@@ -87,9 +87,8 @@ class besthea::bem::basis_function {
 
   /**
    * Returns number of basis functions supported on i_elem.
-   * @param[in] i_elem Element index.
    */
-  virtual lo dimension_local( lo i_elem ) = 0;
+  virtual lo dimension_local( ) = 0;
 
   /**
    * Returns number of basis functions on the whole mesh.

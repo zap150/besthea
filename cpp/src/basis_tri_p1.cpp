@@ -35,7 +35,7 @@ besthea::bem::basis_tri_p1::basis_tri_p1( mesh_type & mesh ) {
 besthea::bem::basis_tri_p1::~basis_tri_p1( ) {
 }
 
-lo besthea::bem::basis_tri_p1::dimension_local( lo i_elem ) {
+lo besthea::bem::basis_tri_p1::dimension_local( ) {
   return 3;
 }
 

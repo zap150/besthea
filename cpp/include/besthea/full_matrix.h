@@ -130,13 +130,34 @@ class besthea::linear_algebra::full_matrix
   }
 
   /*!
-   * @brief Sets the (i,j)-th element of the vector.
+   * @brief Sets the (i,j)-th element of the matrix.
    * @param[in] i Row index.
    * @param[in] j Column index.
    * @param[in] value Value to be set.
    */
   void set( lo i, lo j, sc value ) {
     _data[ i + j * _n_rows ] = value;
+  }
+
+  /*!
+   * @brief Adds value to the (i,j)-th element of the matrix.
+   * @param[in] i Row index.
+   * @param[in] j Column index.
+   * @param[in] value Value to be set.
+   */
+  void add( lo i, lo j, sc value ) {
+    _data[ i + j * _n_rows ] += value;
+  }
+
+  /*!
+   * @brief Atomically adds value to the (i,j)-th element of the matrix.
+   * @param[in] i Row index.
+   * @param[in] j Column index.
+   * @param[in] value Value to be set.
+   */
+  void add_atomic( lo i, lo j, sc value ) {
+#pragma omp atomic update
+    _data[ i + j * _n_rows ] += value;
   }
 
   /*!

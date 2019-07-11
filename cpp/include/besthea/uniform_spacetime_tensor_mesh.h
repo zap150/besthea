@@ -118,6 +118,35 @@ class besthea::mesh::uniform_spacetime_tensor_mesh
   }
 
   /**
+   * Returns coordinates of all nodes of aspatial element.
+   * @param[in] i_element Index of the element.
+   * @param[out] node1 Coordinates of the first node.
+   * @param[out] node2 Coordinates of the second node.
+   * @param[out] node3 Coordinates of the third node.
+   */
+  void get_spatial_nodes(
+    lo i_element, sc * node1, sc * node2, sc * node3 ) const {
+    _space_mesh->get_nodes( i_element, node1, node2, node3 );
+  }
+
+  /**
+   * Returns element normal vector.
+   * @param[in] i_element Index of the element.
+   * @param[out] n Normal indices.
+   */
+  void get_spatial_normal( lo i_element, sc * n ) const {
+    _space_mesh->get_normal( i_element, n );
+  }
+
+  /**
+   * Returns area of a single spatial element.
+   * @param[in] i_elem Index of the element.
+   */
+  sc spatial_area( lo i_elem ) const {
+    return _space_mesh->area( i_elem );
+  }
+
+  /**
    * Returns number of temporal elements.
    */
   lo get_n_temporal_elements( ) const {

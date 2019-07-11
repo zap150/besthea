@@ -276,28 +276,28 @@ classdef be_assembler < handle
       end
       
       %%%% common edge
-      for i_trial = 1 : 3
-        for i_test = 1 : 3
+      for ii_trial = 1 : 3
+        for ii_test = 1 : 3
           if ( ...
-              ( elem_trial( i_trial ) == elem_test( obj.map( i_test + 1 ) ) ) ...
+              ( elem_trial( ii_trial ) == elem_test( obj.map( ii_test + 1 ) ) ) ...
               && ...
-              ( elem_trial( obj.map( i_trial + 1 ) ) == elem_test( i_test ) ) )
+              ( elem_trial( obj.map( ii_trial + 1 ) ) == elem_test( ii_test ) ) )
             
             type = 3;
-            rot_test = i_test - 1;
-            rot_trial = i_trial - 1;
+            rot_test = ii_test - 1;
+            rot_trial = ii_trial - 1;
             return;
           end
         end
       end
       
       %%%% common vertex
-      for i_trial = 1 : 3
-        for i_test = 1 : 3
-          if elem_test( i_test ) == elem_trial( i_trial )
+      for ii_trial = 1 : 3
+        for ii_test = 1 : 3
+          if elem_test( ii_test ) == elem_trial( ii_trial )
             type = 2;
-            rot_test = i_test - 1;
-            rot_trial = i_trial - 1;
+            rot_test = ii_test - 1;
+            rot_trial = ii_trial - 1;
             return;
           end
         end

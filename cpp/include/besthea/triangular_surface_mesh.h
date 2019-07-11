@@ -121,6 +121,17 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
   }
 
   /**
+   * Returns element normal vector.
+   * @param[in] i_element Index of the element.
+   * @param[out] n Normal indices.
+   */
+  void get_normal( lo i_element, sc * n ) const {
+    n[ 0 ] = _normals[ 3 * i_element ];
+    n[ 1 ] = _normals[ 3 * i_element + 1 ];
+    n[ 2 ] = _normals[ 3 * i_element + 2 ];
+  }
+
+  /**
    * Returns coordinates of a node.
    * @param[in] i_node Index of the node.
    * @param[out] node Element coordinates.
@@ -129,6 +140,25 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
     node[ 0 ] = _nodes[ 3 * i_node ];
     node[ 1 ] = _nodes[ 3 * i_node + 1 ];
     node[ 2 ] = _nodes[ 3 * i_node + 2 ];
+  }
+
+  /**
+   * Returns coordinates of all nodes of an element.
+   * @param[in] i_element Index of the element.
+   * @param[out] node1 Coordinates of the first node.
+   * @param[out] node2 Coordinates of the second node.
+   * @param[out] node3 Coordinates of the third node.
+   */
+  void get_nodes( lo i_element, sc * node1, sc * node2, sc * node3 ) const {
+    node1[ 0 ] = _nodes[ 3 * _elements[ 3 * i_element ] ];
+    node1[ 1 ] = _nodes[ 3 * _elements[ 3 * i_element ] + 1 ];
+    node1[ 2 ] = _nodes[ 3 * _elements[ 3 * i_element ] + 2 ];
+    node2[ 0 ] = _nodes[ 3 * _elements[ 3 * i_element + 1 ] ];
+    node2[ 1 ] = _nodes[ 3 * _elements[ 3 * i_element + 1 ] + 1 ];
+    node2[ 2 ] = _nodes[ 3 * _elements[ 3 * i_element + 1 ] + 2 ];
+    node3[ 0 ] = _nodes[ 3 * _elements[ 3 * i_element + 2 ] ];
+    node3[ 1 ] = _nodes[ 3 * _elements[ 3 * i_element + 2 ] + 1 ];
+    node3[ 2 ] = _nodes[ 3 * _elements[ 3 * i_element + 2 ] + 2 ];
   }
 
   /**

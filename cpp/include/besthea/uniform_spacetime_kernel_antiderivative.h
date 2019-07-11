@@ -56,7 +56,8 @@ class besthea::bem::uniform_spacetime_kernel_antiderivative {
    * Constructor.
    * @param[in] timestep Timestep.
    */
-  uniform_spacetime_kernel_antiderivative( sc timestep ) : _timestep( timestep ) {
+  uniform_spacetime_kernel_antiderivative( sc timestep )
+    : _timestep( timestep ) {
   }
 
   /**
@@ -81,10 +82,10 @@ class besthea::bem::uniform_spacetime_kernel_antiderivative {
    * @param[in] ny Normal in the `y` variable.
    * @param[in] delta Difference of time intervals.
    */
-#pragma omp declare simd uniform( nx, ny, delta ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( nx, ny, scaled_delta ) simdlen( DATA_WIDTH )
   sc anti_tau_anti_t(
-    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, lo delta ) {
-    return derived( ).do_anti_tau_anti_t( xy1, xy2, xy3, nx, ny, delta );
+    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, sc scaled_delta ) {
+    return derived( ).do_anti_tau_anti_t( xy1, xy2, xy3, nx, ny, scaled_delta );
   }
 
   /**
@@ -96,10 +97,10 @@ class besthea::bem::uniform_spacetime_kernel_antiderivative {
    * @param[in] ny Normal in the `y` variable.
    * @param[in] delta Difference of time intervals.
    */
-#pragma omp declare simd uniform( nx, ny, delta ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( nx, ny, scaled_delta ) simdlen( DATA_WIDTH )
   sc anti_tau(
-    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, lo delta ) {
-    return derived( ).do_anti_tau( xy1, xy2, xy3, nx, ny, delta );
+    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, sc scaled_delta ) {
+    return derived( ).do_anti_tau( xy1, xy2, xy3, nx, ny, scaled_delta );
   }
 
  protected:

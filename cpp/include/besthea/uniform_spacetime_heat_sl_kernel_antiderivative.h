@@ -79,9 +79,9 @@ class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
    * @param[in] ny Normal in the `y` variable.
    * @param[in] delta Difference of time intervals.
    */
-#pragma omp declare simd uniform( nx, ny, delta ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( nx, ny, scaled_delta ) simdlen( DATA_WIDTH )
   sc do_anti_tau_anti_t(
-    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, lo delta );
+    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, sc scaled_delta );
 
   /**
    * Evaluates the first antiderivative.
@@ -92,9 +92,9 @@ class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
    * @param[in] ny Normal in the `y` variable.
    * @param[in] delta Difference of time intervals.
    */
-#pragma omp declare simd uniform( nx, ny, delta ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( nx, ny, scaled_delta ) simdlen( DATA_WIDTH )
   sc do_anti_tau(
-    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, lo delta );
+    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, sc scaled_delta );
 };
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_SL_KERNEL_ANTIDERIVATIVE_H_ \

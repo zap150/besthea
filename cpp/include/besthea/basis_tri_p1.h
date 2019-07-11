@@ -65,7 +65,7 @@ class besthea::bem::basis_tri_p1
    * Returns number of basis functions supported on i_elem.
    * @param[in] i_elem Element index.
    */
-  virtual lo dimension_local( lo i_elem );
+  virtual lo dimension_local( );
 
   /**
    * Returns number of basis functions on the whole mesh.
