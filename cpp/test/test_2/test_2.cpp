@@ -39,17 +39,21 @@ using namespace besthea::linear_algebra;
 using namespace besthea::bem;
 
 int main( int argc, char * argv[] ) {
-  std::string file = "../mesh_files/cube_12.txt";
+  std::string file = "../mesh_files/cube_192.txt";
   int refine = 0;
+  lo n_timesteps = 8;
 
   if ( argc > 1 ) {
     file.assign( argv[ 1 ] );
   }
   if ( argc > 2 ) {
-    refine = atoi( argv[ 2 ] );
+    n_timesteps = atoi( argv[ 2 ] );
+  }
+  if ( argc > 3 ) {
+    refine = atoi( argv[ 3 ] );
   }
   triangular_surface_mesh space_mesh( file );
-  uniform_spacetime_tensor_mesh spacetime_mesh( space_mesh, 1.0, 8 );
+  uniform_spacetime_tensor_mesh spacetime_mesh( space_mesh, 1.0, n_timesteps );
   spacetime_mesh.refine( refine, 2 );
 
   uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > test_space(
