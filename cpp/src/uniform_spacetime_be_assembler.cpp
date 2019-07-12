@@ -117,6 +117,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 
         if ( delta == 0 ) {
           kernel1 = 0.0;
+#pragma omp simd reduction( + : kernel1 ) simdlen( DATA_WIDTH )
           for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
             kernel1 += _kernel->anti_tau_limit(
                          x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -129,6 +130,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
         }
 
         kernel2 = 0.0;
+#pragma omp simd reduction( + : kernel2 ) simdlen( DATA_WIDTH )
         for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
           kernel2 += _kernel->anti_tau_anti_t(
                        x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
