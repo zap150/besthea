@@ -53,6 +53,27 @@ namespace besthea {
  */
 template< class kernel_type, class test_space_type, class trial_space_type >
 class besthea::bem::uniform_spacetime_be_assembler {
+ private:
+  /**
+   * Wraps the mapped quadrature point so that they can be private for OpenMP
+   * threads
+   */
+  struct quadrature_wrapper {
+    std::array< std::vector< sc >, 4 >
+      _x1;  //!< First coordinates of quadrature nodes in the test element
+    std::array< std::vector< sc >, 4 >
+      _x2;  //!< Second coordinates of quadrature nodes in the test element
+    std::array< std::vector< sc >, 4 >
+      _x3;  //!< Third coordinates of quadrature nodes in  the test element
+
+    std::array< std::vector< sc >, 4 >
+      _y1;  //!< First coordinates of quadrature nodes in the trial element
+    std::array< std::vector< sc >, 4 >
+      _y2;  //!< Second coordinates of quadrature nodes in the trial element
+    std::array< std::vector< sc >, 4 >
+      _y3;  //!< Third coordinates of quadrature nodes in the trial element
+  };
+
  public:
   using full_matrix_type
     = besthea::linear_algebra::full_matrix;  //!< Full matrix type.
@@ -89,6 +110,11 @@ class besthea::bem::uniform_spacetime_be_assembler {
   void init_quadrature( );
 
   /**
+   * Initializes mapped quadrature structures.
+   */
+  void init_mapped_quadrature( quadrature_wrapper & mapped_xy );
+
+  /**
    * Determines the configuration of two triangular elements.
    * @param[in] i_test Index of the test element.
    * @param[in] i_trial Index of the trial element.
@@ -113,7 +139,7 @@ class besthea::bem::uniform_spacetime_be_assembler {
    */
   void triangles_to_geometry( const sc * x1, const sc * x2, const sc * x3,
     const sc * y1, const sc * y2, const sc * y3, int type_int, int rot_test,
-    int rot_trial );
+    int rot_trial, quadrature_wrapper & mapped_xy );
 
   /**
    * Maps quadratures nodes from hypercube to triangles
@@ -242,20 +268,6 @@ class besthea::bem::uniform_spacetime_be_assembler {
   std::array< std::vector< sc >, 4 >
     _y2_ref;  //!< Second coordinates of quadrature nodes in (0,1)x(0,1-x1) to
               //!< be mapped to the trial element
-
-  std::array< std::vector< sc >, 4 >
-    _x1;  //!< First coordinates of quadrature nodes in the test element
-  std::array< std::vector< sc >, 4 >
-    _x2;  //!< Second coordinates of quadrature nodes in the test element
-  std::array< std::vector< sc >, 4 >
-    _x3;  //!< Third coordinates of quadrature nodes in  the test element
-
-  std::array< std::vector< sc >, 4 >
-    _y1;  //!< First coordinates of quadrature nodes in the trial element
-  std::array< std::vector< sc >, 4 >
-    _y2;  //!< Second coordinates of quadrature nodes in the trial element
-  std::array< std::vector< sc >, 4 >
-    _y3;  //!< Third coordinates of quadrature nodes in the test element
 
   std::array< std::vector< sc >, 4 >
     _w;  //!< Quadrature weights including transformation Jacobians

@@ -64,92 +64,100 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   full_matrix_type local_matrix( n_loc_rows, n_loc_columns );
 
   lo n_elements = _test_space->get_mesh( )->get_n_spatial_elements( );
-  int type_int = 0;
-  int rot_test = 0;
-  int rot_trial = 0;
-
-  sc x1[ 3 ], x2[ 3 ], x3[ 3 ];
-  sc y1[ 3 ], y2[ 3 ], y3[ 3 ];
-  sc nx[ 3 ], ny[ 3 ];
-
-  sc * x1_mapped = nullptr;
-  sc * x2_mapped = nullptr;
-  sc * x3_mapped = nullptr;
-  sc * y1_mapped = nullptr;
-  sc * y2_mapped = nullptr;
-  sc * y3_mapped = nullptr;
-  sc * w = nullptr;
-
   lo n_timesteps = _test_space->get_mesh( )->get_n_temporal_elements( );
   sc ht = _test_space->get_mesh( )->get_timestep( );
   sc scaled_delta;
-  sc kernel2, kernel1;
-  sc test_area, trial_area;
-  lo size;
-  for ( lo delta = 0; delta <= n_timesteps; ++delta ) {
-    scaled_delta = ht * delta;
-    for ( lo i_test = 0; i_test < n_elements; ++i_test ) {
-      _test_space->get_mesh( )->get_spatial_nodes( i_test, x1, x2, x3 );
-      _test_space->get_mesh( )->get_spatial_normal( i_test, nx );
-      test_area = _test_space->get_mesh( )->spatial_area( i_test );
-      for ( lo i_trial = 0; i_trial < n_elements; ++i_trial ) {
-        if ( delta == 0 ) {
-          get_type( i_test, i_trial, type_int, rot_test, rot_trial );
-        } else {
-          type_int = 0;
-          rot_test = 0;
-          rot_trial = 0;
-        }
-        _trial_space->get_mesh( )->get_spatial_nodes( i_trial, y1, y2, y3 );
-        _trial_space->get_mesh( )->get_spatial_normal( i_trial, ny );
-        trial_area = _trial_space->get_mesh( )->spatial_area( i_trial );
-        triangles_to_geometry(
-          x1, x2, x3, y1, y2, y3, type_int, rot_test, rot_trial );
-        x1_mapped = _x1[ type_int ].data( );
-        x2_mapped = _x2[ type_int ].data( );
-        x3_mapped = _x3[ type_int ].data( );
-        y1_mapped = _y1[ type_int ].data( );
-        y2_mapped = _y2[ type_int ].data( );
-        y3_mapped = _y3[ type_int ].data( );
-        w = _w[ type_int ].data( );
 
-        size = _x1_ref[ type_int ].size( );
+#pragma omp parallel shared( global_matrix )
+  {
+    sc kernel2, kernel1;
+    sc test_area, trial_area;
+    lo size;
+    int type_int = 0;
+    int rot_test = 0;
+    int rot_trial = 0;
 
-        if ( delta == 0 ) {
-          kernel1 = 0.0;
+    sc x1[ 3 ], x2[ 3 ], x3[ 3 ];
+    sc y1[ 3 ], y2[ 3 ], y3[ 3 ];
+    sc nx[ 3 ], ny[ 3 ];
+
+    quadrature_wrapper xy_mapped;
+    init_mapped_quadrature( xy_mapped );
+    sc * x1_mapped = nullptr;
+    sc * x2_mapped = nullptr;
+    sc * x3_mapped = nullptr;
+    sc * y1_mapped = nullptr;
+    sc * y2_mapped = nullptr;
+    sc * y3_mapped = nullptr;
+    sc * w = nullptr;
+
+    for ( lo delta = 0; delta <= n_timesteps; ++delta ) {
+      scaled_delta = ht * delta;
+
+#pragma omp for schedule( dynamic, 16 )
+      for ( lo i_test = 0; i_test < n_elements; ++i_test ) {
+        _test_space->get_mesh( )->get_spatial_nodes( i_test, x1, x2, x3 );
+        _test_space->get_mesh( )->get_spatial_normal( i_test, nx );
+        test_area = _test_space->get_mesh( )->spatial_area( i_test );
+        for ( lo i_trial = 0; i_trial < n_elements; ++i_trial ) {
+          if ( delta == 0 ) {
+            get_type( i_test, i_trial, type_int, rot_test, rot_trial );
+          } else {
+            type_int = 0;
+            rot_test = 0;
+            rot_trial = 0;
+          }
+          _trial_space->get_mesh( )->get_spatial_nodes( i_trial, y1, y2, y3 );
+          _trial_space->get_mesh( )->get_spatial_normal( i_trial, ny );
+          trial_area = _trial_space->get_mesh( )->spatial_area( i_trial );
+          triangles_to_geometry(
+            x1, x2, x3, y1, y2, y3, type_int, rot_test, rot_trial, xy_mapped );
+          x1_mapped = xy_mapped._x1[ type_int ].data( );
+          x2_mapped = xy_mapped._x2[ type_int ].data( );
+          x3_mapped = xy_mapped._x3[ type_int ].data( );
+          y1_mapped = xy_mapped._y1[ type_int ].data( );
+          y2_mapped = xy_mapped._y2[ type_int ].data( );
+          y3_mapped = xy_mapped._y3[ type_int ].data( );
+          w = _w[ type_int ].data( );
+
+          size = _w[ type_int ].size( );
+
+          if ( delta == 0 ) {
+            kernel1 = 0.0;
 #pragma omp simd reduction( + : kernel1 ) simdlen( DATA_WIDTH )
+            for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+              kernel1 += _kernel->anti_tau_limit(
+                           x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                           x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                           x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny )
+                * w[ i_quad ];
+            }
+            global_matrix.add(
+              0, i_test, i_trial, ht * kernel1 * test_area * trial_area );
+          }
+
+          kernel2 = 0.0;
+#pragma omp simd reduction( + : kernel2 ) simdlen( DATA_WIDTH )
           for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-            kernel1 += _kernel->anti_tau_limit(
+            kernel2 += _kernel->anti_tau_anti_t(
                          x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                          x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                         x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny )
+                         x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny,
+                         scaled_delta )
               * w[ i_quad ];
           }
-          global_matrix.add(
-            0, i_test, i_trial, ht * kernel1 * test_area * trial_area );
-        }
-
-        kernel2 = 0.0;
-#pragma omp simd reduction( + : kernel2 ) simdlen( DATA_WIDTH )
-        for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-          kernel2 += _kernel->anti_tau_anti_t(
-                       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-                       x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                       x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny,
-                       scaled_delta )
-            * w[ i_quad ];
-        }
-        kernel2 *= test_area * trial_area;
-        if ( delta > 0 ) {
-          global_matrix.add( delta - 1, i_test, i_trial, -kernel2 );
-          if ( delta < n_timesteps ) {
-            global_matrix.add( delta, i_test, i_trial, 2.0 * kernel2 );
+          kernel2 *= test_area * trial_area;
+          if ( delta > 0 ) {
+            global_matrix.add( delta - 1, i_test, i_trial, -kernel2 );
+            if ( delta < n_timesteps ) {
+              global_matrix.add( delta, i_test, i_trial, 2.0 * kernel2 );
+            }
+          } else {
+            global_matrix.add( 0, i_test, i_trial, kernel2 );
           }
-        } else {
-          global_matrix.add( 0, i_test, i_trial, kernel2 );
-        }
-        if ( delta < n_timesteps - 1 ) {
-          global_matrix.add( delta + 1, i_test, i_trial, -kernel2 );
+          if ( delta < n_timesteps - 1 ) {
+            global_matrix.add( delta + 1, i_test, i_trial, -kernel2 );
+          }
         }
       }
     }
@@ -171,12 +179,6 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   _x2_ref[ type_int ].resize( tri_size2 );
   _y1_ref[ type_int ].resize( tri_size2 );
   _y2_ref[ type_int ].resize( tri_size2 );
-  _x1[ type_int ].resize( tri_size2 );
-  _x2[ type_int ].resize( tri_size2 );
-  _x3[ type_int ].resize( tri_size2 );
-  _y1[ type_int ].resize( tri_size2 );
-  _y2[ type_int ].resize( tri_size2 );
-  _y3[ type_int ].resize( tri_size2 );
   _w[ type_int ].resize( tri_size2 );
 
   lo counter = 0;
@@ -203,12 +205,6 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
     _x2_ref[ type_int ].resize( line_size4 * n_simplices[ type_int ] );
     _y1_ref[ type_int ].resize( line_size4 * n_simplices[ type_int ] );
     _y2_ref[ type_int ].resize( line_size4 * n_simplices[ type_int ] );
-    _x1[ type_int ].resize( line_size4 * n_simplices[ type_int ] );
-    _x2[ type_int ].resize( line_size4 * n_simplices[ type_int ] );
-    _x3[ type_int ].resize( line_size4 * n_simplices[ type_int ] );
-    _y1[ type_int ].resize( line_size4 * n_simplices[ type_int ] );
-    _y2[ type_int ].resize( line_size4 * n_simplices[ type_int ] );
-    _y3[ type_int ].resize( line_size4 * n_simplices[ type_int ] );
     _w[ type_int ].resize( line_size4 * n_simplices[ type_int ] );
 
     counter = 0;
@@ -237,9 +233,24 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::init_mapped_quadrature( quadrature_wrapper & mapped_xy ) {
+  lo size;
+  for ( int type_int = 0; type_int <= 3; ++type_int ) {
+    size = _w[ type_int ].size( );
+    mapped_xy._x1[ type_int ].resize( size );
+    mapped_xy._x2[ type_int ].resize( size );
+    mapped_xy._x3[ type_int ].resize( size );
+    mapped_xy._y1[ type_int ].resize( size );
+    mapped_xy._y2[ type_int ].resize( size );
+    mapped_xy._y3[ type_int ].resize( size );
+  }
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::triangles_to_geometry( const sc * x1, const sc * x2,
   const sc * x3, const sc * y1, const sc * y2, const sc * y3, int type_int,
-  int rot_test, int rot_trial ) {
+  int rot_test, int rot_trial, quadrature_wrapper & xy_mapped ) {
   const sc * x1rot = nullptr;
   const sc * x2rot = nullptr;
   const sc * x3rot = nullptr;
@@ -306,12 +317,12 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   const sc * y1_ref = _y1_ref[ type_int ].data( );
   const sc * y2_ref = _y2_ref[ type_int ].data( );
 
-  sc * x1_mapped = _x1[ type_int ].data( );
-  sc * x2_mapped = _x2[ type_int ].data( );
-  sc * x3_mapped = _x3[ type_int ].data( );
-  sc * y1_mapped = _y1[ type_int ].data( );
-  sc * y2_mapped = _y2[ type_int ].data( );
-  sc * y3_mapped = _y3[ type_int ].data( );
+  sc * x1_mapped = xy_mapped._x1[ type_int ].data( );
+  sc * x2_mapped = xy_mapped._x2[ type_int ].data( );
+  sc * x3_mapped = xy_mapped._x3[ type_int ].data( );
+  sc * y1_mapped = xy_mapped._y1[ type_int ].data( );
+  sc * y2_mapped = xy_mapped._y2[ type_int ].data( );
+  sc * y3_mapped = xy_mapped._y3[ type_int ].data( );
 
   lo size = _x1_ref[ type_int ].size( );
 
