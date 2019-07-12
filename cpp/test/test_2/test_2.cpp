@@ -54,7 +54,7 @@ int main( int argc, char * argv[] ) {
   }
   triangular_surface_mesh space_mesh( file );
   uniform_spacetime_tensor_mesh spacetime_mesh( space_mesh, 1.0, n_timesteps );
-  spacetime_mesh.refine( refine, 2 );
+  spacetime_mesh.refine( refine, 1 );
 
   uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > test_space(
     spacetime_mesh );
@@ -71,5 +71,5 @@ int main( int argc, char * argv[] ) {
   block_lower_triangular_toeplitz_matrix matrix;
   assembler.assemble( matrix );
 
-  matrix.print( );
+  //matrix.print( );
 }
