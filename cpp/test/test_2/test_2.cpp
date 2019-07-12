@@ -40,17 +40,23 @@ using namespace besthea::bem;
 
 int main( int argc, char * argv[] ) {
   std::string file = "../mesh_files/cube_12.txt";
+  int refine = 0;
+
   if ( argc > 1 ) {
     file.assign( argv[ 1 ] );
   }
+  if ( argc > 2 ) {
+    refine = atoi( argv[ 2 ] );
+  }
   triangular_surface_mesh space_mesh( file );
   uniform_spacetime_tensor_mesh spacetime_mesh( space_mesh, 1.0, 8 );
+  spacetime_mesh.refine( refine, 2 );
 
   uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > test_space(
     spacetime_mesh );
   uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > trial_space(
     spacetime_mesh );
-  sc alpha = 2.5;
+  sc alpha = 1.0;
   uniform_spacetime_heat_sl_kernel_antiderivative kernel(
     spacetime_mesh.get_timestep( ), alpha );
   lo order_sing = 4;
@@ -60,6 +66,4 @@ int main( int argc, char * argv[] ) {
 
   block_lower_triangular_toeplitz_matrix matrix;
   assembler.assemble( matrix );
-
-  matrix.print( );
 }

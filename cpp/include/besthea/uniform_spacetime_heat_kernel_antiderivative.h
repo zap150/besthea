@@ -81,11 +81,12 @@ class besthea::bem::uniform_spacetime_heat_kernel_antiderivative
 
   const sc _pi{ M_PI };                    //!< Auxiliary variable
   const sc _sqrt_pi{ std::sqrt( M_PI ) };  //!< Auxiliary variable
-  const sc _zero{ 0.0 };                   //!< Auxiliary variable
   const sc _one{ 1.0 };                    //!< Auxiliary variable
   const sc _two{ 2.0 };                    //!< Auxiliary variable
   const sc _four{ 4.0 };                   //!< Auxiliary variable
   const sc _eight{ 8.0 };                  //!< Auxiliary variable
+
+  const sc _eps{ 1e-12 };  //!< Auxiliary variable
 };
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_ */

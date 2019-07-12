@@ -118,11 +118,10 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
         if ( delta == 0 ) {
           kernel1 = 0.0;
           for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-            kernel1
-              += _kernel->anti_tau( x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-                   x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                   x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny,
-                   scaled_delta )
+            kernel1 += _kernel->anti_tau_limit(
+                         x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                         x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                         x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny )
               * w[ i_quad ];
           }
           global_matrix.add(
@@ -138,20 +137,17 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
                        scaled_delta )
             * w[ i_quad ];
         }
+        kernel2 *= test_area * trial_area;
         if ( delta > 0 ) {
-          global_matrix.add(
-            delta - 1, i_test, i_trial, -kernel2 * test_area * trial_area );
+          global_matrix.add( delta - 1, i_test, i_trial, -kernel2 );
           if ( delta < n_timesteps ) {
-            global_matrix.add(
-              delta, i_test, i_trial, 2.0 * kernel2 * test_area * trial_area );
+            global_matrix.add( delta, i_test, i_trial, 2.0 * kernel2 );
           }
         } else {
-          global_matrix.add(
-            0, i_test, i_trial, kernel2 * test_area * trial_area );
+          global_matrix.add( 0, i_test, i_trial, kernel2 );
         }
         if ( delta < n_timesteps - 1 ) {
-          global_matrix.add(
-            delta + 1, i_test, i_trial, -kernel2 * test_area * trial_area );
+          global_matrix.add( delta + 1, i_test, i_trial, -kernel2 );
         }
       }
     }
@@ -320,21 +316,21 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 #pragma omp simd simdlen( DATA_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     x1_mapped[ i ] = x1rot[ 0 ] + ( x2rot[ 0 ] - x1rot[ 0 ] ) * x1_ref[ i ]
-      + ( x3rot[ 0 ] - x2rot[ 0 ] ) * x2_ref[ i ];
+      + ( x3rot[ 0 ] - x1rot[ 0 ] ) * x2_ref[ i ];
     x2_mapped[ i ] = x1rot[ 1 ] + ( x2rot[ 1 ] - x1rot[ 1 ] ) * x1_ref[ i ]
-      + ( x3rot[ 1 ] - x2rot[ 1 ] ) * x2_ref[ i ];
+      + ( x3rot[ 1 ] - x1rot[ 1 ] ) * x2_ref[ i ];
     x3_mapped[ i ] = x1rot[ 2 ] + ( x2rot[ 2 ] - x1rot[ 2 ] ) * x1_ref[ i ]
-      + ( x3rot[ 2 ] - x2rot[ 2 ] ) * x2_ref[ i ];
+      + ( x3rot[ 2 ] - x1rot[ 2 ] ) * x2_ref[ i ];
   }
 
 #pragma omp simd simdlen( DATA_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     y1_mapped[ i ] = y1rot[ 0 ] + ( y2rot[ 0 ] - y1rot[ 0 ] ) * y1_ref[ i ]
-      + ( y3rot[ 0 ] - y2rot[ 0 ] ) * y2_ref[ i ];
+      + ( y3rot[ 0 ] - y1rot[ 0 ] ) * y2_ref[ i ];
     y2_mapped[ i ] = y1rot[ 1 ] + ( y2rot[ 1 ] - y1rot[ 1 ] ) * y1_ref[ i ]
-      + ( y3rot[ 1 ] - y2rot[ 1 ] ) * y2_ref[ i ];
+      + ( y3rot[ 1 ] - y1rot[ 1 ] ) * y2_ref[ i ];
     y3_mapped[ i ] = y1rot[ 2 ] + ( y2rot[ 2 ] - y1rot[ 2 ] ) * y1_ref[ i ]
-      + ( y3rot[ 2 ] - y2rot[ 2 ] ) * y2_ref[ i ];
+      + ( y3rot[ 2 ] - y1rot[ 2 ] ) * y2_ref[ i ];
   }
 }
 

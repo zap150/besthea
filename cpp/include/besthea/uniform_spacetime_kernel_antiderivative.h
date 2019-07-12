@@ -80,7 +80,7 @@ class besthea::bem::uniform_spacetime_kernel_antiderivative {
    * @param[in] xy3 Third coordinate of `x - y`.
    * @param[in] nx Normal in the `x` variable.
    * @param[in] ny Normal in the `y` variable.
-   * @param[in] delta Difference of time intervals.
+   * @param[in] scaled_delta Difference of time intervals.
    */
 #pragma omp declare simd uniform( nx, ny, scaled_delta ) simdlen( DATA_WIDTH )
   sc anti_tau_anti_t(
@@ -95,12 +95,26 @@ class besthea::bem::uniform_spacetime_kernel_antiderivative {
    * @param[in] xy3 Third coordinate of `x - y`.
    * @param[in] nx Normal in the `x` variable.
    * @param[in] ny Normal in the `y` variable.
-   * @param[in] delta Difference of time intervals.
+   * @param[in] scaled_delta Difference of time intervals.
    */
 #pragma omp declare simd uniform( nx, ny, scaled_delta ) simdlen( DATA_WIDTH )
   sc anti_tau(
     sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, sc scaled_delta ) {
     return derived( ).do_anti_tau( xy1, xy2, xy3, nx, ny, scaled_delta );
+  }
+
+  /**
+   * Evaluates the first antiderivative.
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] nx Normal in the `x` variable.
+   * @param[in] ny Normal in the `y` variable.
+   */
+#pragma omp declare simd uniform( nx, ny ) simdlen( DATA_WIDTH )
+  sc anti_tau_limit(
+    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny ) {
+    return derived( ).do_anti_tau_limit( xy1, xy2, xy3, nx, ny );
   }
 
  protected:
