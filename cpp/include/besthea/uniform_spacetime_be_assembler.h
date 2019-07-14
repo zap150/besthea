@@ -60,6 +60,23 @@ class besthea::bem::uniform_spacetime_be_assembler {
    */
   struct quadrature_wrapper {
     std::array< std::vector< sc >, 4 >
+      _x1_ref;  //!< First coordinates of quadrature nodes in (0,1)x(0,1-x1) to
+                //!< be mapped to the test element
+    std::array< std::vector< sc >, 4 >
+      _x2_ref;  //!< Second coordinates of quadrature nodes in (0,1)x(0,1-x1) to
+                //!< be mapped to the test element
+
+    std::array< std::vector< sc >, 4 >
+      _y1_ref;  //!< First coordinates of quadrature nodes in (0,1)x(0,1-x1) to
+                //!< be mapped to the trial element
+    std::array< std::vector< sc >, 4 >
+      _y2_ref;  //!< Second coordinates of quadrature nodes in (0,1)x(0,1-x1) to
+                //!< be mapped to the trial element
+
+    std::array< std::vector< sc >, 4 >
+      _w;  //!< Quadrature weights including transformation Jacobians
+
+    std::array< std::vector< sc >, 4 >
       _x1;  //!< First coordinates of quadrature nodes in the test element
     std::array< std::vector< sc >, 4 >
       _x2;  //!< Second coordinates of quadrature nodes in the test element
@@ -107,12 +124,7 @@ class besthea::bem::uniform_spacetime_be_assembler {
   /**
    * Initializes quadrature structures.
    */
-  void init_quadrature( );
-
-  /**
-   * Initializes mapped quadrature structures.
-   */
-  void init_mapped_quadrature( quadrature_wrapper & mapped_xy );
+  void init_quadrature( quadrature_wrapper & my_quadrature );
 
   /**
    * Determines the configuration of two triangular elements.
@@ -254,23 +266,6 @@ class besthea::bem::uniform_spacetime_be_assembler {
   int _order_singular;  //!< Line quadrature order for the singular integrals.
 
   int _order_regular;  //!< Triangle quadrature order for the regular integrals.
-
-  std::array< std::vector< sc >, 4 >
-    _x1_ref;  //!< First coordinates of quadrature nodes in (0,1)x(0,1-x1) to be
-              //!< mapped to the test element
-  std::array< std::vector< sc >, 4 >
-    _x2_ref;  //!< Second coordinates of quadrature nodes in (0,1)x(0,1-x1) to
-              //!< be mapped to the test element
-
-  std::array< std::vector< sc >, 4 >
-    _y1_ref;  //!< First coordinates of quadrature nodes in (0,1)x(0,1-x1) to be
-              //!< mapped to the trial element
-  std::array< std::vector< sc >, 4 >
-    _y2_ref;  //!< Second coordinates of quadrature nodes in (0,1)x(0,1-x1) to
-              //!< be mapped to the trial element
-
-  std::array< std::vector< sc >, 4 >
-    _w;  //!< Quadrature weights including transformation Jacobians
 
   static constexpr std::array< int, 5 > map{ 0, 1, 2, 0,
     1 };  //!< Auxiliary array for mapping DOFs under

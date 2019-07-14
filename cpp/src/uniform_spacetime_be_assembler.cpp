@@ -40,7 +40,6 @@ besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
     _trial_space( &trial_space ),
     _order_singular( order_singular ),
     _order_regular( order_regular ) {
-  init_quadrature( );
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -81,8 +80,8 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
     sc y1[ 3 ], y2[ 3 ], y3[ 3 ];
     sc nx[ 3 ], ny[ 3 ];
 
-    quadrature_wrapper xy_mapped;
-    init_mapped_quadrature( xy_mapped );
+    quadrature_wrapper my_quadrature;
+    init_quadrature( my_quadrature );
     sc * x1_mapped = nullptr;
     sc * x2_mapped = nullptr;
     sc * x3_mapped = nullptr;
@@ -110,17 +109,17 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
           _trial_space->get_mesh( )->get_spatial_nodes( i_trial, y1, y2, y3 );
           _trial_space->get_mesh( )->get_spatial_normal( i_trial, ny );
           trial_area = _trial_space->get_mesh( )->spatial_area( i_trial );
-          triangles_to_geometry(
-            x1, x2, x3, y1, y2, y3, type_int, rot_test, rot_trial, xy_mapped );
-          x1_mapped = xy_mapped._x1[ type_int ].data( );
-          x2_mapped = xy_mapped._x2[ type_int ].data( );
-          x3_mapped = xy_mapped._x3[ type_int ].data( );
-          y1_mapped = xy_mapped._y1[ type_int ].data( );
-          y2_mapped = xy_mapped._y2[ type_int ].data( );
-          y3_mapped = xy_mapped._y3[ type_int ].data( );
-          w = _w[ type_int ].data( );
+          triangles_to_geometry( x1, x2, x3, y1, y2, y3, type_int, rot_test,
+            rot_trial, my_quadrature );
+          x1_mapped = my_quadrature._x1[ type_int ].data( );
+          x2_mapped = my_quadrature._x2[ type_int ].data( );
+          x3_mapped = my_quadrature._x3[ type_int ].data( );
+          y1_mapped = my_quadrature._y1[ type_int ].data( );
+          y2_mapped = my_quadrature._y2[ type_int ].data( );
+          y3_mapped = my_quadrature._y3[ type_int ].data( );
+          w = my_quadrature._w[ type_int ].data( );
 
-          size = _w[ type_int ].size( );
+          size = my_quadrature._w[ type_int ].size( );
 
           if ( delta == 0 ) {
             kernel1 = 0.0;
@@ -166,7 +165,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
-  trial_space_type >::init_quadrature( ) {
+  trial_space_type >::init_quadrature( quadrature_wrapper & my_quadrature ) {
   // Use triangle rules for disjoint elements
   const std::vector< sc > & tri_x1 = quadrature::triangle_x1( _order_regular );
   const std::vector< sc > & tri_x2 = quadrature::triangle_x2( _order_regular );
@@ -175,20 +174,20 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   lo tri_size2 = tri_size * tri_size;
 
   int type_int = 0;
-  _x1_ref[ type_int ].resize( tri_size2 );
-  _x2_ref[ type_int ].resize( tri_size2 );
-  _y1_ref[ type_int ].resize( tri_size2 );
-  _y2_ref[ type_int ].resize( tri_size2 );
-  _w[ type_int ].resize( tri_size2 );
+  my_quadrature._x1_ref[ type_int ].resize( tri_size2 );
+  my_quadrature._x2_ref[ type_int ].resize( tri_size2 );
+  my_quadrature._y1_ref[ type_int ].resize( tri_size2 );
+  my_quadrature._y2_ref[ type_int ].resize( tri_size2 );
+  my_quadrature._w[ type_int ].resize( tri_size2 );
 
   lo counter = 0;
   for ( lo i_x = 0; i_x < tri_size; ++i_x ) {
     for ( lo i_y = 0; i_y < tri_size; ++i_y ) {
-      _x1_ref[ type_int ][ counter ] = tri_x1[ i_x ];
-      _x2_ref[ type_int ][ counter ] = tri_x2[ i_x ];
-      _y1_ref[ type_int ][ counter ] = tri_x1[ i_y ];
-      _y2_ref[ type_int ][ counter ] = tri_x2[ i_y ];
-      _w[ type_int ][ counter ] = tri_w[ i_x ] * tri_w[ i_y ];
+      my_quadrature._x1_ref[ type_int ][ counter ] = tri_x1[ i_x ];
+      my_quadrature._x2_ref[ type_int ][ counter ] = tri_x2[ i_x ];
+      my_quadrature._y1_ref[ type_int ][ counter ] = tri_x1[ i_y ];
+      my_quadrature._y2_ref[ type_int ][ counter ] = tri_x2[ i_y ];
+      my_quadrature._w[ type_int ][ counter ] = tri_w[ i_x ] * tri_w[ i_y ];
       ++counter;
     }
   }
@@ -201,11 +200,15 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   sc jacobian = 0.0;
 
   for ( type_int = 1; type_int <= 3; ++type_int ) {
-    _x1_ref[ type_int ].resize( line_size4 * n_simplices[ type_int ] );
-    _x2_ref[ type_int ].resize( line_size4 * n_simplices[ type_int ] );
-    _y1_ref[ type_int ].resize( line_size4 * n_simplices[ type_int ] );
-    _y2_ref[ type_int ].resize( line_size4 * n_simplices[ type_int ] );
-    _w[ type_int ].resize( line_size4 * n_simplices[ type_int ] );
+    my_quadrature._x1_ref[ type_int ].resize(
+      line_size4 * n_simplices[ type_int ] );
+    my_quadrature._x2_ref[ type_int ].resize(
+      line_size4 * n_simplices[ type_int ] );
+    my_quadrature._y1_ref[ type_int ].resize(
+      line_size4 * n_simplices[ type_int ] );
+    my_quadrature._y2_ref[ type_int ].resize(
+      line_size4 * n_simplices[ type_int ] );
+    my_quadrature._w[ type_int ].resize( line_size4 * n_simplices[ type_int ] );
 
     counter = 0;
     for ( int i_simplex = 0; i_simplex < n_simplices[ type_int ];
@@ -217,11 +220,13 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
               hypercube_to_triangles( line_x[ i_ksi ], line_x[ i_eta1 ],
                 line_x[ i_eta2 ], line_x[ i_eta3 ],
                 static_cast< besthea::bem::adjacency >( type_int ), i_simplex,
-                _x1_ref[ type_int ][ counter ], _x2_ref[ type_int ][ counter ],
-                _y1_ref[ type_int ][ counter ], _y2_ref[ type_int ][ counter ],
-                jacobian );
-              _w[ type_int ][ counter ] = 4.0 * jacobian * line_w[ i_ksi ]
-                * line_w[ i_eta1 ] * line_w[ i_eta2 ] * line_w[ i_eta3 ];
+                my_quadrature._x1_ref[ type_int ][ counter ],
+                my_quadrature._x2_ref[ type_int ][ counter ],
+                my_quadrature._y1_ref[ type_int ][ counter ],
+                my_quadrature._y2_ref[ type_int ][ counter ], jacobian );
+              my_quadrature._w[ type_int ][ counter ] = 4.0 * jacobian
+                * line_w[ i_ksi ] * line_w[ i_eta1 ] * line_w[ i_eta2 ]
+                * line_w[ i_eta3 ];
               ++counter;
             }
           }
@@ -229,20 +234,16 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
       }
     }
   }
-}
 
-template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
-  trial_space_type >::init_mapped_quadrature( quadrature_wrapper & mapped_xy ) {
   lo size;
   for ( int type_int = 0; type_int <= 3; ++type_int ) {
-    size = _w[ type_int ].size( );
-    mapped_xy._x1[ type_int ].resize( size );
-    mapped_xy._x2[ type_int ].resize( size );
-    mapped_xy._x3[ type_int ].resize( size );
-    mapped_xy._y1[ type_int ].resize( size );
-    mapped_xy._y2[ type_int ].resize( size );
-    mapped_xy._y3[ type_int ].resize( size );
+    size = my_quadrature._w[ type_int ].size( );
+    my_quadrature._x1[ type_int ].resize( size );
+    my_quadrature._x2[ type_int ].resize( size );
+    my_quadrature._x3[ type_int ].resize( size );
+    my_quadrature._y1[ type_int ].resize( size );
+    my_quadrature._y2[ type_int ].resize( size );
+    my_quadrature._y3[ type_int ].resize( size );
   }
 }
 
@@ -250,7 +251,7 @@ template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::triangles_to_geometry( const sc * x1, const sc * x2,
   const sc * x3, const sc * y1, const sc * y2, const sc * y3, int type_int,
-  int rot_test, int rot_trial, quadrature_wrapper & xy_mapped ) {
+  int rot_test, int rot_trial, quadrature_wrapper & my_quadrature ) {
   const sc * x1rot = nullptr;
   const sc * x2rot = nullptr;
   const sc * x3rot = nullptr;
@@ -312,19 +313,19 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
       break;
   }
 
-  const sc * x1_ref = _x1_ref[ type_int ].data( );
-  const sc * x2_ref = _x2_ref[ type_int ].data( );
-  const sc * y1_ref = _y1_ref[ type_int ].data( );
-  const sc * y2_ref = _y2_ref[ type_int ].data( );
+  const sc * x1_ref = my_quadrature._x1_ref[ type_int ].data( );
+  const sc * x2_ref = my_quadrature._x2_ref[ type_int ].data( );
+  const sc * y1_ref = my_quadrature._y1_ref[ type_int ].data( );
+  const sc * y2_ref = my_quadrature._y2_ref[ type_int ].data( );
 
-  sc * x1_mapped = xy_mapped._x1[ type_int ].data( );
-  sc * x2_mapped = xy_mapped._x2[ type_int ].data( );
-  sc * x3_mapped = xy_mapped._x3[ type_int ].data( );
-  sc * y1_mapped = xy_mapped._y1[ type_int ].data( );
-  sc * y2_mapped = xy_mapped._y2[ type_int ].data( );
-  sc * y3_mapped = xy_mapped._y3[ type_int ].data( );
+  sc * x1_mapped = my_quadrature._x1[ type_int ].data( );
+  sc * x2_mapped = my_quadrature._x2[ type_int ].data( );
+  sc * x3_mapped = my_quadrature._x3[ type_int ].data( );
+  sc * y1_mapped = my_quadrature._y1[ type_int ].data( );
+  sc * y2_mapped = my_quadrature._y2[ type_int ].data( );
+  sc * y3_mapped = my_quadrature._y3[ type_int ].data( );
 
-  lo size = _x1_ref[ type_int ].size( );
+  lo size = my_quadrature._w[ type_int ].size( );
 
 #pragma omp simd simdlen( DATA_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
