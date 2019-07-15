@@ -33,6 +33,7 @@
 #include "besthea/uniform_spacetime_tensor_mesh.h"
 
 #include <iostream>
+#include <cstdlib>
 
 using namespace besthea::mesh;
 using namespace besthea::linear_algebra;
@@ -47,10 +48,10 @@ int main( int argc, char * argv[] ) {
     file.assign( argv[ 1 ] );
   }
   if ( argc > 2 ) {
-    n_timesteps = atoi( argv[ 2 ] );
+    n_timesteps = std::atoi( argv[ 2 ] );
   }
   if ( argc > 3 ) {
-    refine = atoi( argv[ 3 ] );
+    refine = std::atoi( argv[ 3 ] );
   }
   triangular_surface_mesh space_mesh( file );
   uniform_spacetime_tensor_mesh spacetime_mesh( space_mesh, 1.0, n_timesteps );
@@ -71,5 +72,5 @@ int main( int argc, char * argv[] ) {
   block_lower_triangular_toeplitz_matrix matrix;
   assembler.assemble( matrix );
 
-  //matrix.print( );
+  matrix.print( );
 }

@@ -51,25 +51,41 @@ template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::assemble( besthea::linear_algebra::
     block_lower_triangular_toeplitz_matrix & global_matrix ) {
-  lo block_dim = _test_space->get_mesh( )->get_n_temporal_elements( );
-  global_matrix.resize( block_dim );
+  auto & test_basis = _test_space->get_basis( );
+  auto & trial_basis = _trial_space->get_basis( );
+  auto test_mesh = _test_space->get_mesh( );
+  auto trial_mesh = _trial_space->get_mesh( );
 
-  lo n_rows = _test_space->get_basis( ).dimension_global( );
-  lo n_columns = _trial_space->get_basis( ).dimension_global( );
+  // number of temporal elements and timestep should be the same for test and
+  // trial meshes
+  lo n_timesteps = test_mesh->get_n_temporal_elements( );
+  sc ht = test_mesh->get_timestep( );
+  lo n_rows = test_basis.dimension_global( );
+  lo n_columns = trial_basis.dimension_global( );
+  global_matrix.resize( n_timesteps );
   global_matrix.resize_blocks( n_rows, n_columns );
 
-  lo n_loc_rows = _test_space->get_basis( ).dimension_local( );
-  lo n_loc_columns = _trial_space->get_basis( ).dimension_local( );
-  full_matrix_type local_matrix( n_loc_rows, n_loc_columns );
+  lo n_loc_rows = test_basis.dimension_local( );
+  lo n_loc_columns = trial_basis.dimension_local( );
 
-  lo n_elements = _test_space->get_mesh( )->get_n_spatial_elements( );
-  lo n_timesteps = _test_space->get_mesh( )->get_n_temporal_elements( );
-  sc ht = _test_space->get_mesh( )->get_timestep( );
+  lo n_test_elements = test_mesh->get_n_spatial_elements( );
+  lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
   sc scaled_delta;
 
-#pragma omp parallel shared( global_matrix )
+  //#pragma omp parallel shared( global_matrix )
   {
-    sc kernel2, kernel1;
+    full_matrix_type local_matrix( n_loc_rows, n_loc_columns, true );
+    sc * local_matrix_data = local_matrix.data( );
+
+    std::vector< lo > test_l2g( n_loc_rows );
+    std::vector< lo > trial_l2g( n_loc_columns );
+    std::vector< sc > test_values( n_loc_rows );
+    std::vector< sc > trial_values( n_loc_columns );
+    sc * test_data = test_values.data( );
+    sc * trial_data = trial_values.data( );
+
+    sc kernel1 = 0.0;
+    sc kernel2 = 0.0;
     sc test_area, trial_area;
     lo size;
     int type_int = 0;
@@ -82,6 +98,10 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 
     quadrature_wrapper my_quadrature;
     init_quadrature( my_quadrature );
+    sc * x1_ref = nullptr;
+    sc * x2_ref = nullptr;
+    sc * y1_ref = nullptr;
+    sc * y2_ref = nullptr;
     sc * x1_mapped = nullptr;
     sc * x2_mapped = nullptr;
     sc * x3_mapped = nullptr;
@@ -94,11 +114,11 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
       scaled_delta = ht * delta;
 
 #pragma omp for schedule( dynamic, 16 )
-      for ( lo i_test = 0; i_test < n_elements; ++i_test ) {
-        _test_space->get_mesh( )->get_spatial_nodes( i_test, x1, x2, x3 );
-        _test_space->get_mesh( )->get_spatial_normal( i_test, nx );
-        test_area = _test_space->get_mesh( )->spatial_area( i_test );
-        for ( lo i_trial = 0; i_trial < n_elements; ++i_trial ) {
+      for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
+        test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
+        test_mesh->get_spatial_normal( i_test, nx );
+        test_area = test_mesh->spatial_area( i_test );
+        for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
           if ( delta == 0 ) {
             get_type( i_test, i_trial, type_int, rot_test, rot_trial );
           } else {
@@ -106,11 +126,23 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
             rot_test = 0;
             rot_trial = 0;
           }
-          _trial_space->get_mesh( )->get_spatial_nodes( i_trial, y1, y2, y3 );
-          _trial_space->get_mesh( )->get_spatial_normal( i_trial, ny );
-          trial_area = _trial_space->get_mesh( )->spatial_area( i_trial );
+          trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
+          trial_mesh->get_spatial_normal( i_trial, ny );
+          trial_area = trial_mesh->spatial_area( i_trial );
+
+          test_basis.local_to_global( i_test,
+            static_cast< besthea::bem::adjacency >( type_int ), rot_test, false,
+            test_l2g );
+          trial_basis.local_to_global( i_trial,
+            static_cast< besthea::bem::adjacency >( type_int ), rot_trial, true,
+            trial_l2g );
+
           triangles_to_geometry( x1, x2, x3, y1, y2, y3, type_int, rot_test,
             rot_trial, my_quadrature );
+          x1_ref = my_quadrature._x1_ref[ type_int ].data( );
+          x2_ref = my_quadrature._x2_ref[ type_int ].data( );
+          y1_ref = my_quadrature._y1_ref[ type_int ].data( );
+          y2_ref = my_quadrature._y2_ref[ type_int ].data( );
           x1_mapped = my_quadrature._x1[ type_int ].data( );
           x2_mapped = my_quadrature._x2[ type_int ].data( );
           x3_mapped = my_quadrature._x3[ type_int ].data( );
@@ -122,17 +154,53 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
           size = my_quadrature._w[ type_int ].size( );
 
           if ( delta == 0 ) {
-            kernel1 = 0.0;
-#pragma omp simd reduction( + : kernel1 ) simdlen( DATA_WIDTH )
+            //            kernel1 = 0.0;
+            //#pragma omp simd reduction( + : kernel1 ) simdlen( DATA_WIDTH )
+            //            for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+            //              kernel1 += _kernel->anti_tau_limit(
+            //                           x1_mapped[ i_quad ] - y1_mapped[ i_quad
+            //                           ], x2_mapped[ i_quad ] - y2_mapped[
+            //                           i_quad ], x3_mapped[ i_quad ] -
+            //                           y3_mapped[ i_quad ], nx, ny )
+            //                * w[ i_quad ];
+            //            }
+            //            global_matrix.add(
+            //              0, i_test, i_trial, ht * kernel1 * test_area *
+            //              trial_area );
+            local_matrix.fill( 0.0 );
+#pragma omp simd \
+	reduction( + : local_matrix_data [ 0 : n_loc_rows * n_loc_columns ] ) \
+	simdlen( DATA_WIDTH )
             for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-              kernel1 += _kernel->anti_tau_limit(
-                           x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-                           x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                           x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny )
-                * w[ i_quad ];
+              kernel1 = _kernel->anti_tau_limit(
+                x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny );
+              test_basis.evaluate( i_test, x1_ref[ i_quad ], x2_ref[ i_quad ],
+                nx, static_cast< besthea::bem::adjacency >( type_int ),
+                rot_test, false, test_values );
+              trial_basis.evaluate( i_trial, y1_ref[ i_quad ], y2_ref[ i_quad ],
+                ny, static_cast< besthea::bem::adjacency >( type_int ),
+                rot_trial, true, trial_values );
+              for ( lo i_loc_test = 0; i_loc_test < n_loc_rows; ++i_loc_test ) {
+                for ( lo i_loc_trial = 0; i_loc_trial < n_loc_columns;
+                      ++i_loc_trial ) {
+                  local_matrix_data[ i_loc_test + i_loc_trial * n_loc_rows ]
+                    += w[ i_quad ] * kernel1 * test_data[ i_loc_test ]
+                    * trial_data[ i_loc_trial ];
+                }
+              }
             }
-            global_matrix.add(
-              0, i_test, i_trial, ht * kernel1 * test_area * trial_area );
+            for ( lo i_loc_test = 0; i_loc_test < n_loc_rows; ++i_loc_test ) {
+              for ( lo i_loc_trial = 0; i_loc_trial < n_loc_columns;
+                    ++i_loc_trial ) {
+                global_matrix.add_atomic( 0, test_l2g[ i_loc_test ],
+                  trial_l2g[ i_loc_trial ],
+                  ht
+                    * local_matrix_data[ i_loc_test + i_loc_trial * n_loc_rows ]
+                    * test_area * trial_area );
+              }
+            }
           }
 
           kernel2 = 0.0;
@@ -157,6 +225,13 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
           if ( delta < n_timesteps - 1 ) {
             global_matrix.add( delta + 1, i_test, i_trial, -kernel2 );
           }
+
+          test_basis.local_to_global( i_test,
+            static_cast< besthea::bem::adjacency >( type_int ), rot_test, false,
+            test_l2g );
+          trial_basis.local_to_global( i_trial,
+            static_cast< besthea::bem::adjacency >( type_int ), rot_trial, true,
+            trial_l2g );
         }
       }
     }

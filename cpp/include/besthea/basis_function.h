@@ -59,9 +59,9 @@ namespace besthea {
 template< class derived_type >
 class besthea::bem::basis_function {
  protected:
-  using mesh_type = besthea::mesh::mesh; //!< Mesh type.
-  using adjacency = besthea::bem::adjacency; //!< Element adjacecny.
-  using matrix_type = besthea::linear_algebra::full_matrix; //!< Matrix type.
+  using mesh_type = besthea::mesh::mesh;      //!< Mesh type.
+  using adjacency = besthea::bem::adjacency;  //!< Element adjacecny.
+  using matrix_type = besthea::linear_algebra::full_matrix;  //!< Matrix type.
 
  public:
   /**
@@ -106,6 +106,25 @@ class besthea::bem::basis_function {
   void local_to_global( lo i_elem, adjacency type, int rotation, bool swap,
     std::vector< lo > & indices ) {
     derived( ).do_local_to_global( i_elem, type, rotation, swap, indices );
+  }
+
+  /**
+   * Evaluates the basis function.
+   * @param[in] i_elem Element index.
+   * @param[in] x1_ref First coordinate of reference quadrature point.
+   * @param[in] x2_ref Second coordinate of reference quadrature point.
+   * @param[in] n Element normal.
+   * @param[in] type Type of element adjacency (regularized quadrature).
+   * @param[in] rotation Virtual element rotation (regularized quadrature).
+   * @param[in] swap Virtual element inversion (regularized quadrature).
+   * @param[in] values Values of all basis functions supported on i_elem.
+   */
+#pragma omp declare simd uniform( i_elem, n, type, rotation, swap ) \
+  simdlen( DATA_WIDTH )
+  void evaluate( lo i_elem, sc x1_ref, sc x2_ref, const sc * n, adjacency type,
+    int rotation, bool swap, std::vector< sc > & values ) {
+    derived( ).do_evaluate(
+      i_elem, x1_ref, x2_ref, n, type, rotation, swap, values );
   }
 
   /**

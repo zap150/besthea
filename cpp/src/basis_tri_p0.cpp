@@ -46,8 +46,16 @@ lo besthea::bem::basis_tri_p0::dimension_global( ) {
 }
 
 void besthea::bem::basis_tri_p0::do_local_to_global( lo i_elem, adjacency type,
-  int rotation, bool swap, std::vector< lo > indices ) {
+  int rotation, bool swap, std::vector< lo > & indices ) {
   indices[ 0 ] = i_elem;
+}
+
+#pragma omp declare simd uniform( i_elem, n, type, rotation, swap ) \
+  simdlen( DATA_WIDTH )
+void besthea::bem::basis_tri_p0::do_evaluate( lo i_elem, sc x1_ref, sc x2_ref,
+  const sc * n, adjacency type, int rotation, bool swap,
+  std::vector< sc > & values ) {
+  values[ 0 ] = 1.0;
 }
 
 #pragma omp declare simd uniform( i_elem, i_fun, n, type, rotation, swap ) \
