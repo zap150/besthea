@@ -19,7 +19,10 @@ CXXFILES=$(addprefix src/,${FILES})
 
 OBJECTFILES=$(addprefix ${OBJECTDIR}/,$(FILES:.cpp=.o))
 
-all: libbesthea.a
+all: test
+
+test: libbesthea.a
+	cd test && ${MAKE}
 
 libbesthea.a: ${OBJECTFILES}
 	mkdir -p lib
@@ -32,9 +35,11 @@ ${OBJECTDIR}/%.o: src/%.cpp
 
 clean:
 	rm -rf build
+	cd test && ${MAKE} clean
 
 distclean: clean
 	rm -rf lib
+	cd test && ${MAKE} distclean
 	
 help:
 	@echo "This makefile supports the following targets:"
