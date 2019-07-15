@@ -91,10 +91,6 @@ class besthea::bem::uniform_spacetime_be_assembler {
       _y3;  //!< Third coordinates of quadrature nodes in the trial element
 
     std::vector< sc > _kernel_values;  //!< Buffer for storing kernel values.
-    std::vector< sc >
-      _test_values;  //!< Buffer for storing test function values.
-    std::vector< sc >
-      _trial_values;  //!< Buffer for storing trial function values.
   };
 
  public:
