@@ -30,6 +30,8 @@
 
 #include "besthea/quadrature.h"
 
+#include <algorithm>
+
 template< class kernel_type, class test_space_type, class trial_space_type >
 besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::uniform_spacetime_be_assembler( kernel_type & kernel,
@@ -47,6 +49,119 @@ besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::~uniform_spacetime_be_assembler( ) {
 }
 
+///*
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::assemble( besthea::linear_algebra::
+    block_lower_triangular_toeplitz_matrix & global_matrix ) {
+  lo block_dim = _test_space->get_mesh( )->get_n_temporal_elements( );
+  global_matrix.resize( block_dim );
+
+  lo n_rows = _test_space->get_basis( ).dimension_global( );
+  lo n_columns = _trial_space->get_basis( ).dimension_global( );
+  global_matrix.resize_blocks( n_rows, n_columns );
+
+  lo n_loc_rows = _test_space->get_basis( ).dimension_local( );
+  lo n_loc_columns = _trial_space->get_basis( ).dimension_local( );
+  full_matrix_type local_matrix( n_loc_rows, n_loc_columns );
+
+  lo n_elements = _test_space->get_mesh( )->get_n_spatial_elements( );
+  lo n_timesteps = _test_space->get_mesh( )->get_n_temporal_elements( );
+  sc ht = _test_space->get_mesh( )->get_timestep( );
+  sc scaled_delta;
+
+#pragma omp parallel shared( global_matrix )
+  {
+    sc kernel2, kernel1;
+    sc test_area, trial_area;
+    lo size;
+    int type_int = 0;
+    int rot_test = 0;
+    int rot_trial = 0;
+
+    sc x1[ 3 ], x2[ 3 ], x3[ 3 ];
+    sc y1[ 3 ], y2[ 3 ], y3[ 3 ];
+    sc nx[ 3 ], ny[ 3 ];
+
+    quadrature_wrapper my_quadrature;
+    init_quadrature( my_quadrature );
+    sc * x1_mapped = my_quadrature._x1.data( );
+    sc * x2_mapped = my_quadrature._x2.data( );
+    sc * x3_mapped = my_quadrature._x3.data( );
+    sc * y1_mapped = my_quadrature._y1.data( );
+    sc * y2_mapped = my_quadrature._y2.data( );
+    sc * y3_mapped = my_quadrature._y3.data( );
+    sc * w = nullptr;
+
+    for ( lo delta = 0; delta <= n_timesteps; ++delta ) {
+      scaled_delta = ht * delta;
+
+#pragma omp for schedule( dynamic, 16 )
+      for ( lo i_test = 0; i_test < n_elements; ++i_test ) {
+        _test_space->get_mesh( )->get_spatial_nodes( i_test, x1, x2, x3 );
+        _test_space->get_mesh( )->get_spatial_normal( i_test, nx );
+        test_area = _test_space->get_mesh( )->spatial_area( i_test );
+        for ( lo i_trial = 0; i_trial < n_elements; ++i_trial ) {
+          if ( delta == 0 ) {
+            get_type( i_test, i_trial, type_int, rot_test, rot_trial );
+          } else {
+            type_int = 0;
+            rot_test = 0;
+            rot_trial = 0;
+          }
+          _trial_space->get_mesh( )->get_spatial_nodes( i_trial, y1, y2, y3 );
+          _trial_space->get_mesh( )->get_spatial_normal( i_trial, ny );
+          trial_area = _trial_space->get_mesh( )->spatial_area( i_trial );
+          triangles_to_geometry( x1, x2, x3, y1, y2, y3, type_int, rot_test,
+            rot_trial, my_quadrature );
+
+          w = my_quadrature._w[ type_int ].data( );
+
+          size = my_quadrature._w[ type_int ].size( );
+
+          if ( delta == 0 ) {
+            kernel1 = 0.0;
+#pragma omp simd reduction( + : kernel1 ) simdlen( DATA_WIDTH )
+            for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+              kernel1 += _kernel->anti_tau_limit(
+                           x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                           x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                           x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny )
+                * w[ i_quad ];
+            }
+            global_matrix.add(
+              0, i_test, i_trial, ht * kernel1 * test_area * trial_area );
+          }
+
+          kernel2 = 0.0;
+#pragma omp simd reduction( + : kernel2 ) simdlen( DATA_WIDTH )
+          for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+            kernel2 += _kernel->anti_tau_anti_t(
+                         x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                         x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                         x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny,
+                         scaled_delta )
+              * w[ i_quad ];
+          }
+          kernel2 *= test_area * trial_area;
+          if ( delta > 0 ) {
+            global_matrix.add( delta - 1, i_test, i_trial, -kernel2 );
+            if ( delta < n_timesteps ) {
+              global_matrix.add( delta, i_test, i_trial, 2.0 * kernel2 );
+            }
+          } else {
+            global_matrix.add( 0, i_test, i_trial, kernel2 );
+          }
+          if ( delta < n_timesteps - 1 ) {
+            global_matrix.add( delta + 1, i_test, i_trial, -kernel2 );
+          }
+        }
+      }
+    }
+  }
+}
+//*/
+/*
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::assemble( besthea::linear_algebra::
@@ -102,13 +217,16 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
     sc * x2_ref = nullptr;
     sc * y1_ref = nullptr;
     sc * y2_ref = nullptr;
-    sc * x1_mapped = nullptr;
-    sc * x2_mapped = nullptr;
-    sc * x3_mapped = nullptr;
-    sc * y1_mapped = nullptr;
-    sc * y2_mapped = nullptr;
-    sc * y3_mapped = nullptr;
     sc * w = nullptr;
+    sc * x1_mapped = my_quadrature._x1.data( );
+    sc * x2_mapped = my_quadrature._x2.data( );
+    sc * x3_mapped = my_quadrature._x3.data( );
+    sc * y1_mapped = my_quadrature._y1.data( );
+    sc * y2_mapped = my_quadrature._y2.data( );
+    sc * y3_mapped = my_quadrature._y3.data( );
+    sc * kernel_data = my_quadrature._kernel_values.data( );
+    sc * test_data = my_quadrature._test_values.data( );
+    sc * trial_data = my_quadrature._trial_values.data( );
 
     for ( lo delta = 0; delta <= n_timesteps; ++delta ) {
       scaled_delta = ht * delta;
@@ -143,24 +261,15 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
           x2_ref = my_quadrature._x2_ref[ type_int ].data( );
           y1_ref = my_quadrature._y1_ref[ type_int ].data( );
           y2_ref = my_quadrature._y2_ref[ type_int ].data( );
-          x1_mapped = my_quadrature._x1[ type_int ].data( );
-          x2_mapped = my_quadrature._x2[ type_int ].data( );
-          x3_mapped = my_quadrature._x3[ type_int ].data( );
-          y1_mapped = my_quadrature._y1[ type_int ].data( );
-          y2_mapped = my_quadrature._y2[ type_int ].data( );
-          y3_mapped = my_quadrature._y3[ type_int ].data( );
           w = my_quadrature._w[ type_int ].data( );
 
           size = my_quadrature._w[ type_int ].size( );
 
           if ( delta == 0 ) {
             local_matrix.fill( 0.0 );
-#pragma omp simd \
-	private( kernel1 ) \
-	reduction( + : local_matrix_data [ 0 : n_loc_rows * n_loc_columns ] ) \
-	simdlen( DATA_WIDTH )
+#pragma omp simd simdlen( DATA_WIDTH )
             for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-              kernel1 = _kernel->anti_tau_limit(
+              kernel_data[ i_quad ] = _kernel->anti_tau_limit(
                 x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                 x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
                 x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny );
@@ -193,9 +302,9 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 
           local_matrix.fill( 0.0 );
 #pragma omp simd \
-	private( kernel2 ) \
-	reduction( + : local_matrix_data [ 0 : n_loc_rows * n_loc_columns ] ) \
-	simdlen( DATA_WIDTH )
+        private( kernel2 ) \
+        reduction( + : local_matrix_data [ 0 : n_loc_rows * n_loc_columns ] ) \
+        simdlen( DATA_WIDTH )
           for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
             kernel2 = _kernel->anti_tau_anti_t(
               x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -253,7 +362,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
     }
   }
 }
-
+*/
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::init_quadrature( quadrature_wrapper & my_quadrature ) {
@@ -326,16 +435,18 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
     }
   }
 
-  lo size;
-  for ( int type_int = 0; type_int <= 3; ++type_int ) {
-    size = my_quadrature._w[ type_int ].size( );
-    my_quadrature._x1[ type_int ].resize( size );
-    my_quadrature._x2[ type_int ].resize( size );
-    my_quadrature._x3[ type_int ].resize( size );
-    my_quadrature._y1[ type_int ].resize( size );
-    my_quadrature._y2[ type_int ].resize( size );
-    my_quadrature._y3[ type_int ].resize( size );
-  }
+  lo size = std::max( tri_size2,
+    *std::max_element( n_simplices.begin( ), n_simplices.end( ) )
+      * line_size4 );
+  my_quadrature._x1.resize( size );
+  my_quadrature._x2.resize( size );
+  my_quadrature._x3.resize( size );
+  my_quadrature._y1.resize( size );
+  my_quadrature._y2.resize( size );
+  my_quadrature._y3.resize( size );
+  my_quadrature._kernel_values.resize( size );
+  my_quadrature._test_values.resize( size );
+  my_quadrature._trial_values.resize( size );
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -409,12 +520,12 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   const sc * y1_ref = my_quadrature._y1_ref[ type_int ].data( );
   const sc * y2_ref = my_quadrature._y2_ref[ type_int ].data( );
 
-  sc * x1_mapped = my_quadrature._x1[ type_int ].data( );
-  sc * x2_mapped = my_quadrature._x2[ type_int ].data( );
-  sc * x3_mapped = my_quadrature._x3[ type_int ].data( );
-  sc * y1_mapped = my_quadrature._y1[ type_int ].data( );
-  sc * y2_mapped = my_quadrature._y2[ type_int ].data( );
-  sc * y3_mapped = my_quadrature._y3[ type_int ].data( );
+  sc * x1_mapped = my_quadrature._x1.data( );
+  sc * x2_mapped = my_quadrature._x2.data( );
+  sc * x3_mapped = my_quadrature._x3.data( );
+  sc * y1_mapped = my_quadrature._y1.data( );
+  sc * y2_mapped = my_quadrature._y2.data( );
+  sc * y3_mapped = my_quadrature._y3.data( );
 
   lo size = my_quadrature._w[ type_int ].size( );
 

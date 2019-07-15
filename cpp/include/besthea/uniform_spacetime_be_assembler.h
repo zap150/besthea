@@ -76,19 +76,25 @@ class besthea::bem::uniform_spacetime_be_assembler {
     std::array< std::vector< sc >, 4 >
       _w;  //!< Quadrature weights including transformation Jacobians
 
-    std::array< std::vector< sc >, 4 >
+    std::vector< sc >
       _x1;  //!< First coordinates of quadrature nodes in the test element
-    std::array< std::vector< sc >, 4 >
+    std::vector< sc >
       _x2;  //!< Second coordinates of quadrature nodes in the test element
-    std::array< std::vector< sc >, 4 >
+    std::vector< sc >
       _x3;  //!< Third coordinates of quadrature nodes in  the test element
 
-    std::array< std::vector< sc >, 4 >
+    std::vector< sc >
       _y1;  //!< First coordinates of quadrature nodes in the trial element
-    std::array< std::vector< sc >, 4 >
+    std::vector< sc >
       _y2;  //!< Second coordinates of quadrature nodes in the trial element
-    std::array< std::vector< sc >, 4 >
+    std::vector< sc >
       _y3;  //!< Third coordinates of quadrature nodes in the trial element
+
+    std::vector< sc > _kernel_values;  //!< Buffer for storing kernel values.
+    std::vector< sc >
+      _test_values;  //!< Buffer for storing test function values.
+    std::vector< sc >
+      _trial_values;  //!< Buffer for storing trial function values.
   };
 
  public:
