@@ -156,6 +156,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
           if ( delta == 0 ) {
             local_matrix.fill( 0.0 );
 #pragma omp simd \
+	private( kernel1 ) \
 	reduction( + : local_matrix_data [ 0 : n_loc_rows * n_loc_columns ] ) \
 	simdlen( DATA_WIDTH )
             for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
@@ -192,6 +193,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 
           local_matrix.fill( 0.0 );
 #pragma omp simd \
+	private( kernel2 ) \
 	reduction( + : local_matrix_data [ 0 : n_loc_rows * n_loc_columns ] ) \
 	simdlen( DATA_WIDTH )
           for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
