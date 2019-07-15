@@ -175,7 +175,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   // number of temporal elements and timestep should be the same for test and
   // trial meshes
   lo n_timesteps = test_mesh->get_n_temporal_elements( );
-  sc ht = test_mesh->get_timestep( );
+  sc timestep = test_mesh->get_timestep( );
   lo n_rows = test_basis.dimension_global( );
   lo n_columns = trial_basis.dimension_global( );
   global_matrix.resize( n_timesteps );
@@ -190,14 +190,12 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 
 #pragma omp parallel shared( global_matrix )
   {
-    full_matrix_type local_matrix( n_loc_rows, n_loc_columns, true );
-    sc * local_matrix_data = local_matrix.data( );
-
     std::vector< lo > test_l2g( n_loc_rows );
     std::vector< lo > trial_l2g( n_loc_columns );
 
     sc test = 0.0;
     sc trial = 0.0;
+    sc value = 0.0;
     sc test_area, trial_area;
     lo size;
     int type_int = 0;
@@ -224,9 +222,9 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
     sc * kernel_data = my_quadrature._kernel_values.data( );
 
     for ( lo delta = 0; delta <= n_timesteps; ++delta ) {
-      scaled_delta = ht * delta;
+      scaled_delta = timestep * delta;
 
-#pragma omp for schedule( dynamic, 16 )
+#pragma omp for schedule( dynamic )
       for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
         test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
         test_mesh->get_spatial_normal( i_test, nx );
@@ -269,14 +267,12 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
                 x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny );
             }
 
-            local_matrix.fill( 0.0 );
+            value = 0.0;
             for ( lo i_loc_test = 0; i_loc_test < n_loc_rows; ++i_loc_test ) {
               for ( lo i_loc_trial = 0; i_loc_trial < n_loc_columns;
                     ++i_loc_trial ) {
-#pragma omp simd \
-private( test, trial ) \
-reduction( + : local_matrix_data [ 0 : n_loc_rows * n_loc_columns ] ) \
-simdlen( DATA_WIDTH )
+#pragma omp simd private( test, trial ) reduction( + : value ) \
+	simdlen( DATA_WIDTH )
                 for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
                   test = test_basis.evaluate( i_test, i_loc_test,
                     x1_ref[ i_quad ], x2_ref[ i_quad ], nx,
@@ -287,14 +283,11 @@ simdlen( DATA_WIDTH )
                     static_cast< besthea::bem::adjacency >( type_int ),
                     rot_trial, true );
 
-                  local_matrix_data[ i_loc_test + i_loc_trial * n_loc_rows ]
-                    += w[ i_quad ] * kernel_data[ i_quad ] * test * trial;
+                  value += w[ i_quad ] * kernel_data[ i_quad ] * test * trial;
                 }
                 global_matrix.add_atomic( 0, test_l2g[ i_loc_test ],
                   trial_l2g[ i_loc_trial ],
-                  ht
-                    * local_matrix_data[ i_loc_test + i_loc_trial * n_loc_rows ]
-                    * test_area * trial_area );
+                  timestep * value * test_area * trial_area );
               }
             }
           }
@@ -307,14 +300,12 @@ simdlen( DATA_WIDTH )
               x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny, scaled_delta );
           }
 
-          local_matrix.fill( 0.0 );
           for ( lo i_loc_test = 0; i_loc_test < n_loc_rows; ++i_loc_test ) {
             for ( lo i_loc_trial = 0; i_loc_trial < n_loc_columns;
                   ++i_loc_trial ) {
-#pragma omp simd \
-private( test, trial ) \
-reduction( + : local_matrix_data [ 0 : n_loc_rows * n_loc_columns ] ) \
-simdlen( DATA_WIDTH )
+              value = 0.0;
+#pragma omp simd private( test, trial ) reduction( + : value ) \
+	simdlen( DATA_WIDTH )
               for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
                 test = test_basis.evaluate( i_test, i_loc_test,
                   x1_ref[ i_quad ], x2_ref[ i_quad ], nx,
@@ -324,39 +315,24 @@ simdlen( DATA_WIDTH )
                   y1_ref[ i_quad ], y2_ref[ i_quad ], ny,
                   static_cast< besthea::bem::adjacency >( type_int ), rot_trial,
                   true );
-                for ( lo i_loc_test = 0; i_loc_test < n_loc_rows;
-                      ++i_loc_test ) {
-                  for ( lo i_loc_trial = 0; i_loc_trial < n_loc_columns;
-                        ++i_loc_trial ) {
-                    local_matrix_data[ i_loc_test + i_loc_trial * n_loc_rows ]
-                      += w[ i_quad ] * kernel_data[ i_quad ] * test * trial;
-                  }
-                }
+
+                value += w[ i_quad ] * kernel_data[ i_quad ] * test * trial;
               }
+              value *= test_area * trial_area;
               if ( delta > 0 ) {
                 global_matrix.add_atomic( delta - 1, test_l2g[ i_loc_test ],
-                  trial_l2g[ i_loc_trial ],
-                  -local_matrix_data[ i_loc_test + i_loc_trial * n_loc_rows ]
-                    * test_area * trial_area );
+                  trial_l2g[ i_loc_trial ], -value );
                 if ( delta < n_timesteps ) {
                   global_matrix.add_atomic( delta, test_l2g[ i_loc_test ],
-                    trial_l2g[ i_loc_trial ],
-                    2.0
-                      * local_matrix_data[ i_loc_test
-                        + i_loc_trial * n_loc_rows ]
-                      * test_area * trial_area );
+                    trial_l2g[ i_loc_trial ], 2.0 * value );
                 }
               } else {
-                global_matrix.add_atomic( 0, test_l2g[ i_loc_test ],
-                  trial_l2g[ i_loc_trial ],
-                  local_matrix_data[ i_loc_test + i_loc_trial * n_loc_rows ]
-                    * test_area * trial_area );
+                global_matrix.add_atomic(
+                  0, test_l2g[ i_loc_test ], trial_l2g[ i_loc_trial ], value );
               }
               if ( delta < n_timesteps - 1 ) {
                 global_matrix.add_atomic( delta + 1, test_l2g[ i_loc_test ],
-                  trial_l2g[ i_loc_trial ],
-                  -local_matrix_data[ i_loc_test + i_loc_trial * n_loc_rows ]
-                    * test_area * trial_area );
+                  trial_l2g[ i_loc_trial ], -value );
               }
             }
           }
