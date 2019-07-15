@@ -154,19 +154,6 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
           size = my_quadrature._w[ type_int ].size( );
 
           if ( delta == 0 ) {
-            //            kernel1 = 0.0;
-            //#pragma omp simd reduction( + : kernel1 ) simdlen( DATA_WIDTH )
-            //            for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-            //              kernel1 += _kernel->anti_tau_limit(
-            //                           x1_mapped[ i_quad ] - y1_mapped[ i_quad
-            //                           ], x2_mapped[ i_quad ] - y2_mapped[
-            //                           i_quad ], x3_mapped[ i_quad ] -
-            //                           y3_mapped[ i_quad ], nx, ny )
-            //                * w[ i_quad ];
-            //            }
-            //            global_matrix.add(
-            //              0, i_test, i_trial, ht * kernel1 * test_area *
-            //              trial_area );
             local_matrix.fill( 0.0 );
 #pragma omp simd \
 	reduction( + : local_matrix_data [ 0 : n_loc_rows * n_loc_columns ] ) \
@@ -203,35 +190,62 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
             }
           }
 
-          kernel2 = 0.0;
-#pragma omp simd reduction( + : kernel2 ) simdlen( DATA_WIDTH )
+          local_matrix.fill( 0.0 );
+#pragma omp simd \
+	reduction( + : local_matrix_data [ 0 : n_loc_rows * n_loc_columns ] ) \
+	simdlen( DATA_WIDTH )
           for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-            kernel2 += _kernel->anti_tau_anti_t(
-                         x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-                         x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                         x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny,
-                         scaled_delta )
-              * w[ i_quad ];
-          }
-          kernel2 *= test_area * trial_area;
-          if ( delta > 0 ) {
-            global_matrix.add( delta - 1, i_test, i_trial, -kernel2 );
-            if ( delta < n_timesteps ) {
-              global_matrix.add( delta, i_test, i_trial, 2.0 * kernel2 );
+            kernel2 = _kernel->anti_tau_anti_t(
+              x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+              x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+              x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny, scaled_delta );
+            test_basis.evaluate( i_test, x1_ref[ i_quad ], x2_ref[ i_quad ], nx,
+              static_cast< besthea::bem::adjacency >( type_int ), rot_test,
+              false, test_values );
+            trial_basis.evaluate( i_trial, y1_ref[ i_quad ], y2_ref[ i_quad ],
+              ny, static_cast< besthea::bem::adjacency >( type_int ), rot_trial,
+              true, trial_values );
+            for ( lo i_loc_test = 0; i_loc_test < n_loc_rows; ++i_loc_test ) {
+              for ( lo i_loc_trial = 0; i_loc_trial < n_loc_columns;
+                    ++i_loc_trial ) {
+                local_matrix_data[ i_loc_test + i_loc_trial * n_loc_rows ]
+                  += w[ i_quad ] * kernel2 * test_data[ i_loc_test ]
+                  * trial_data[ i_loc_trial ];
+              }
             }
-          } else {
-            global_matrix.add( 0, i_test, i_trial, kernel2 );
-          }
-          if ( delta < n_timesteps - 1 ) {
-            global_matrix.add( delta + 1, i_test, i_trial, -kernel2 );
           }
 
-          test_basis.local_to_global( i_test,
-            static_cast< besthea::bem::adjacency >( type_int ), rot_test, false,
-            test_l2g );
-          trial_basis.local_to_global( i_trial,
-            static_cast< besthea::bem::adjacency >( type_int ), rot_trial, true,
-            trial_l2g );
+          kernel2 *= test_area * trial_area;
+          for ( lo i_loc_test = 0; i_loc_test < n_loc_rows; ++i_loc_test ) {
+            for ( lo i_loc_trial = 0; i_loc_trial < n_loc_columns;
+                  ++i_loc_trial ) {
+              if ( delta > 0 ) {
+                global_matrix.add_atomic( delta - 1, test_l2g[ i_loc_test ],
+                  trial_l2g[ i_loc_trial ],
+                  -local_matrix_data[ i_loc_test + i_loc_trial * n_loc_rows ]
+                    * test_area * trial_area );
+                if ( delta < n_timesteps ) {
+                  global_matrix.add_atomic( delta, test_l2g[ i_loc_test ],
+                    trial_l2g[ i_loc_trial ],
+                    2.0
+                      * local_matrix_data[ i_loc_test
+                        + i_loc_trial * n_loc_rows ]
+                      * test_area * trial_area );
+                }
+              } else {
+                global_matrix.add_atomic( 0, test_l2g[ i_loc_test ],
+                  trial_l2g[ i_loc_trial ],
+                  local_matrix_data[ i_loc_test + i_loc_trial * n_loc_rows ]
+                    * test_area * trial_area );
+              }
+              if ( delta < n_timesteps - 1 ) {
+                global_matrix.add_atomic( delta + 1, test_l2g[ i_loc_test ],
+                  trial_l2g[ i_loc_trial ],
+                  -local_matrix_data[ i_loc_test + i_loc_trial * n_loc_rows ]
+                    * test_area * trial_area );
+              }
+            }
+          }
         }
       }
     }
