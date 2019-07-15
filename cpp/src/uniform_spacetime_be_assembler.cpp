@@ -72,7 +72,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
   sc scaled_delta;
 
-  //#pragma omp parallel shared( global_matrix )
+#pragma omp parallel shared( global_matrix )
   {
     full_matrix_type local_matrix( n_loc_rows, n_loc_columns, true );
     sc * local_matrix_data = local_matrix.data( );

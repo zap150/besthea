@@ -72,5 +72,5 @@ int main( int argc, char * argv[] ) {
   block_lower_triangular_toeplitz_matrix matrix;
   assembler.assemble( matrix );
 
-  matrix.print( );
+  //matrix.print( );
 }
