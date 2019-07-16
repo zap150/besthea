@@ -37,8 +37,8 @@
 #include "besthea/basis_tri_p1.h"
 #include "besthea/block_lower_triangular_toeplitz_matrix.h"
 #include "besthea/uniform_spacetime_be_space.h"
-#include "besthea/uniform_spacetime_heat_sl_kernel_antiderivative.h"
 #include "besthea/uniform_spacetime_heat_dl_kernel_antiderivative.h"
+#include "besthea/uniform_spacetime_heat_sl_kernel_antiderivative.h"
 
 #include <array>
 
@@ -60,38 +60,39 @@ class besthea::bem::uniform_spacetime_be_assembler {
    * threads
    */
   struct quadrature_wrapper {
-    std::array< std::vector< sc >, 4 >
+    std::array< std::vector< sc, besthea::allocator_type< sc > >, 4 >
       _x1_ref;  //!< First coordinates of quadrature nodes in (0,1)x(0,1-x1) to
                 //!< be mapped to the test element
-    std::array< std::vector< sc >, 4 >
+    std::array< std::vector< sc, besthea::allocator_type< sc > >, 4 >
       _x2_ref;  //!< Second coordinates of quadrature nodes in (0,1)x(0,1-x1) to
                 //!< be mapped to the test element
 
-    std::array< std::vector< sc >, 4 >
+    std::array< std::vector< sc, besthea::allocator_type< sc > >, 4 >
       _y1_ref;  //!< First coordinates of quadrature nodes in (0,1)x(0,1-x1) to
                 //!< be mapped to the trial element
-    std::array< std::vector< sc >, 4 >
+    std::array< std::vector< sc, besthea::allocator_type< sc > >, 4 >
       _y2_ref;  //!< Second coordinates of quadrature nodes in (0,1)x(0,1-x1) to
                 //!< be mapped to the trial element
 
-    std::array< std::vector< sc >, 4 >
+    std::array< std::vector< sc, besthea::allocator_type< sc > >, 4 >
       _w;  //!< Quadrature weights including transformation Jacobians
 
-    std::vector< sc >
+    std::vector< sc, besthea::allocator_type< sc > >
       _x1;  //!< First coordinates of quadrature nodes in the test element
-    std::vector< sc >
+    std::vector< sc, besthea::allocator_type< sc > >
       _x2;  //!< Second coordinates of quadrature nodes in the test element
-    std::vector< sc >
+    std::vector< sc, besthea::allocator_type< sc > >
       _x3;  //!< Third coordinates of quadrature nodes in  the test element
 
-    std::vector< sc >
+    std::vector< sc, besthea::allocator_type< sc > >
       _y1;  //!< First coordinates of quadrature nodes in the trial element
-    std::vector< sc >
+    std::vector< sc, besthea::allocator_type< sc > >
       _y2;  //!< Second coordinates of quadrature nodes in the trial element
-    std::vector< sc >
+    std::vector< sc, besthea::allocator_type< sc > >
       _y3;  //!< Third coordinates of quadrature nodes in the trial element
 
-    std::vector< sc > _kernel_values;  //!< Buffer for storing kernel values.
+    std::vector< sc, besthea::allocator_type< sc > >
+      _kernel_values;  //!< Buffer for storing kernel values.
   };
 
  public:
