@@ -260,10 +260,12 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
           if ( delta == 0 ) {
 #pragma omp simd simdlen( DATA_WIDTH )
             for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-              kernel_data[ i_quad ] = _kernel->anti_tau_limit(
-                x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-                x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny );
+              kernel_data[ i_quad ]
+                = _kernel->anti_tau_limit(
+                    x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                    x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                    x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny )
+                * w[ i_quad ];
             }
 
             value = 0.0;
@@ -280,7 +282,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
                     y1_ref[ i_quad ], y2_ref[ i_quad ], ny, n_shared_vertices,
                     rot_trial, true );
 
-                  value += w[ i_quad ] * kernel_data[ i_quad ] * test * trial;
+                  value += kernel_data[ i_quad ] * test * trial;
                 }
                 global_matrix.add_atomic( 0, test_l2g[ i_loc_test ],
                   trial_l2g[ i_loc_trial ],
@@ -292,9 +294,11 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 #pragma omp simd simdlen( DATA_WIDTH )
           for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
             kernel_data[ i_quad ] = _kernel->anti_tau_anti_t(
-              x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-              x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-              x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny, scaled_delta );
+                                      x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                                      x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                                      x3_mapped[ i_quad ] - y3_mapped[ i_quad ],
+                                      nx, ny, scaled_delta )
+              * w[ i_quad ];
           }
 
           for ( lo i_loc_test = 0; i_loc_test < n_loc_rows; ++i_loc_test ) {
@@ -311,7 +315,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
                   y1_ref[ i_quad ], y2_ref[ i_quad ], ny, n_shared_vertices,
                   rot_trial, true );
 
-                value += w[ i_quad ] * kernel_data[ i_quad ] * test * trial;
+                value += kernel_data[ i_quad ] * test * trial;
               }
               value *= test_area * trial_area;
               if ( delta > 0 ) {
