@@ -32,8 +32,8 @@
 #include "besthea/triangular_surface_mesh.h"
 #include "besthea/uniform_spacetime_tensor_mesh.h"
 
-#include <iostream>
 #include <cstdlib>
+#include <iostream>
 
 using namespace besthea::mesh;
 using namespace besthea::linear_algebra;
@@ -43,6 +43,10 @@ int main( int argc, char * argv[] ) {
   std::string file = "../mesh_files/cube_192.txt";
   int refine = 0;
   lo n_timesteps = 8;
+
+  sc alpha = 1.0;
+  lo order_sing = 4;
+  lo order_reg = 4;
 
   if ( argc > 1 ) {
     file.assign( argv[ 1 ] );
@@ -57,20 +61,27 @@ int main( int argc, char * argv[] ) {
   uniform_spacetime_tensor_mesh spacetime_mesh( space_mesh, 1.0, n_timesteps );
   spacetime_mesh.refine( refine, 1 );
 
-  uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > test_space(
+  block_lower_triangular_toeplitz_matrix matrix;
+/*
+  uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > test_space_v(
     spacetime_mesh );
-  uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > trial_space(
+  uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > trial_space_v(
     spacetime_mesh );
-  sc alpha = 1.0;
   uniform_spacetime_heat_sl_kernel_antiderivative kernel(
     spacetime_mesh.get_timestep( ), alpha );
-  lo order_sing = 4;
-  lo order_reg = 4;
   uniform_spacetime_be_assembler assembler(
-    kernel, test_space, trial_space, order_sing, order_reg );
-
-  block_lower_triangular_toeplitz_matrix matrix;
+    kernel, test_space_v, trial_space_v, order_sing, order_reg );
+  assembler.assemble( matrix );
+*/
+  uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > test_space_k(
+    spacetime_mesh );
+  uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > trial_space_k(
+    spacetime_mesh );
+  uniform_spacetime_heat_dl_kernel_antiderivative kernel(
+    spacetime_mesh.get_timestep( ), alpha );
+  uniform_spacetime_be_assembler assembler(
+    kernel, test_space_k, trial_space_k, order_sing, order_reg );
   assembler.assemble( matrix );
 
-  matrix.print( );
+  //matrix.print( );
 }

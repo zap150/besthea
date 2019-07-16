@@ -38,6 +38,7 @@
 #include "besthea/block_lower_triangular_toeplitz_matrix.h"
 #include "besthea/uniform_spacetime_be_space.h"
 #include "besthea/uniform_spacetime_heat_sl_kernel_antiderivative.h"
+#include "besthea/uniform_spacetime_heat_dl_kernel_antiderivative.h"
 
 #include <array>
 
@@ -286,6 +287,19 @@ template class besthea::bem::uniform_spacetime_be_assembler<
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
 template class besthea::bem::uniform_spacetime_be_assembler<
   besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+
+template class besthea::bem::uniform_spacetime_be_assembler<
+  besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
+template class besthea::bem::uniform_spacetime_be_assembler<
+  besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+template class besthea::bem::uniform_spacetime_be_assembler<
+  besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
 

@@ -30,8 +30,8 @@
  * @brief Kernel for uniform_spacetime_tensor_mesh.h.
  */
 
-#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_SL_KERNEL_ANTIDERIVATIVE_H_
-#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_SL_KERNEL_ANTIDERIVATIVE_H_
+#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_DL_KERNEL_ANTIDERIVATIVE_H_
+#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_DL_KERNEL_ANTIDERIVATIVE_H_
 
 #include "besthea/settings.h"
 #include "besthea/uniform_spacetime_heat_kernel_antiderivative.h"
@@ -40,34 +40,34 @@
 
 namespace besthea {
   namespace bem {
-    class uniform_spacetime_heat_sl_kernel_antiderivative;
+    class uniform_spacetime_heat_dl_kernel_antiderivative;
   }
 }
 
 /**
- *  Class representing a first and second antiderivative of the single-layer
+ *  Class representing a first and second antiderivative of the double-layer
  * spacetime kernel.
  */
-class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
+class besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative
   : public besthea::bem::uniform_spacetime_heat_kernel_antiderivative<
-      uniform_spacetime_heat_sl_kernel_antiderivative > {
+      uniform_spacetime_heat_dl_kernel_antiderivative > {
  public:
-  uniform_spacetime_heat_sl_kernel_antiderivative( ) = delete;
+  uniform_spacetime_heat_dl_kernel_antiderivative( ) = delete;
 
   /**
    * Constructor.
    * @param[in] timestep Time step.
    * @param[in] alpha Heat conductivity.
    */
-  uniform_spacetime_heat_sl_kernel_antiderivative( sc timestep, sc alpha )
+  uniform_spacetime_heat_dl_kernel_antiderivative( sc timestep, sc alpha )
     : uniform_spacetime_heat_kernel_antiderivative<
-      uniform_spacetime_heat_sl_kernel_antiderivative >( timestep, alpha ) {
+      uniform_spacetime_heat_dl_kernel_antiderivative >( timestep, alpha ) {
   }
 
   /**
    * Destructor.
    */
-  virtual ~uniform_spacetime_heat_sl_kernel_antiderivative( ) {
+  virtual ~uniform_spacetime_heat_dl_kernel_antiderivative( ) {
   }
 
   /**
@@ -83,21 +83,23 @@ class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
   sc do_anti_tau_anti_t(
     sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, sc scaled_delta ) {
     sc value;
-    sc norm = std::sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
+    sc norm2 = xy1 * xy1 + xy2 * xy2 + xy3 * xy3;
+    sc norm = std::sqrt( norm2 );
+    sc dot = xy1 * ny[ 0 ] + xy2 * ny[ 1 ] + xy3 * ny[ 2 ];
     sc sqrt_d = std::sqrt( scaled_delta );
 
     if ( scaled_delta > _eps ) {
-      if ( norm > _eps ) {  //  delta > 0, norm > 0
-        value = ( scaled_delta / ( _four * _pi * _alpha * norm )
-                  + norm / ( _eight * _pi * _alpha * _alpha ) )
-            * std::erf( norm / ( _two * sqrt_d * _sqrt_alpha ) )
-          + sqrt_d / ( _four * _pi * _alpha * _sqrt_pi * _sqrt_alpha )
-            * std::exp( -( norm * norm ) / ( _four * scaled_delta * _alpha ) );
+      if ( std::abs( dot ) > _eps ) {  //  delta > 0, norm > 0
+        value = -dot / ( _four * _pi * norm )
+          * ( ( _one / ( _two * _alpha ) - scaled_delta / norm2 )
+              * std::erf( norm / ( _two * sqrt_d * _sqrt_alpha ) )
+            + sqrt_d / ( _sqrt_pi * _sqrt_alpha * norm )
+              * std::exp( -norm2 / ( _four * _alpha * scaled_delta ) ) );
       } else {  //  delta > 0, limit for norm -> 0
-        value = sqrt_d / ( _two * _pi * _alpha * _sqrt_pi * _sqrt_alpha );
+        value = 0.0;
       }
     } else {  // limit for delta -> 0, assuming norm > 0
-      value = norm / ( _eight * _pi * _alpha * _alpha );
+      value = -dot / ( _eight * _pi * norm * _alpha );
     }
 
     return value;
@@ -116,13 +118,18 @@ class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
   sc do_anti_tau(
     sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, sc scaled_delta ) {
     sc value;
-    sc norm = std::sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
+    sc norm2 = xy1 * xy1 + xy2 * xy2 + xy3 * xy3;
+    sc norm = std::sqrt( norm2 );
+    sc dot = xy1 * ny[ 0 ] + xy2 * ny[ 1 ] + xy3 * ny[ 2 ];
+    sc sqrt_d = std::sqrt( scaled_delta );
 
     if ( scaled_delta > _eps ) {  //  delta > 0, norm > 0
-      value = std::erf( norm / std::sqrt( _four * _alpha * scaled_delta ) )
-        / ( _four * _pi * _alpha * norm );
+      value = dot / ( _four * _pi * norm2 )
+        * ( std::erf( norm / ( _two * sqrt_d * _sqrt_alpha ) ) / norm
+          - _one / ( _sqrt_pi * sqrt_d * _sqrt_alpha )
+            * std::exp( -norm2 / ( _four * scaled_delta * _alpha ) ) );
     } else {  // limit for delta -> 0, assuming norm > 0
-      value = _one / ( _four * _pi * _alpha * norm );
+      value = dot / ( _four * _pi * norm2 * norm );
     }
 
     return value;
@@ -138,13 +145,15 @@ class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
  */
 #pragma omp declare simd uniform( nx, ny ) simdlen( DATA_WIDTH )
   sc do_anti_tau_limit( sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny ) {
-    sc norm = std::sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
+    sc norm2 = xy1 * xy1 + xy2 * xy2 + xy3 * xy3;
+    sc norm = std::sqrt( norm2 );
+    sc dot = xy1 * ny[ 0 ] + xy2 * ny[ 1 ] + xy3 * ny[ 2 ];
 
-    sc value = _one / ( _four * _pi * _alpha * norm );
+    sc value = dot / ( _four * _pi * norm2 * norm );
 
     return value;
   }
 };
 
-#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_SL_KERNEL_ANTIDERIVATIVE_H_ \
+#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_DL_KERNEL_ANTIDERIVATIVE_H_ \
         */
