@@ -26,7 +26,6 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "besthea/align.h"
 #include "besthea/full_matrix.h"
 #include "besthea/settings.h"
 #include "besthea/sparse_matrix.h"

@@ -1,13 +1,13 @@
-%function ...
-% [ dir, neu, neu_proj, repr, repr_interp, err_bnd, err_bnd_x, err_bnd_proj, ...
-% err_bnd_proj_x, err_vol, err_vol_x ] = heat_dirichlet( level )
-function [ V, K ] = heat_dirichlet( level )
+function ...
+ [ dir, neu, neu_proj, repr, repr_interp, err_bnd, err_bnd_x, err_bnd_proj, ...
+ err_bnd_proj_x, err_vol, err_vol_x ] = heat_dirichlet( level )
+%function [ V, K ] = heat_dirichlet( level )
 
 if nargin < 1
   level = 0;
 end
 
-file='./input/cube_12.txt';
+file='./input/cube_192.txt';
 stmesh = spacetime_mesh( file, 1, 8 );
 stmesh = stmesh.refine_xt( level, 2 );
 % stmesh = spacetime_mesh( file, 1, 3 );
@@ -49,8 +49,6 @@ fprintf( 1, 'Assembling K\n' );
 tic;
 K = beas_k_heat.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
-
-return;
 
 fprintf( 1, 'Assembling M\n' );
 tic;

@@ -1,11 +1,12 @@
 EIGEN_INC=./external/eigen
+BOOST_INC=./external
 SIMD=4
 
 #CXX=icpc
-#CXXFLAGS=-xHost -O3 -g -DDATA_WIDTH=${SIMD} -qopenmp -std=c++17 -w2 -I${MKLROOT}/include -I${EIGEN_INC}
+#CXXFLAGS=-xHost -O3 -g -DDATA_WIDTH=${SIMD} -qopenmp -std=c++17 -w2 -I${MKLROOT}/include -I${EIGEN_INC} -I${BOOST_INC}
 
 CXX=g++
-CXXFLAGS=-fopenmp -O3 -g -std=c++17 -DDATA_WIDTH=${SIMD} -Wall -I${MKLROOT}/include -I${EIGEN_INC}
+CXXFLAGS=-fopenmp -O3 -g -std=c++17 -DDATA_WIDTH=${SIMD} -Wall -I${MKLROOT}/include -I${EIGEN_INC} -I${BOOST_INC}
 
 #########################DO NOT MODIFY BELOW THIS LINE##########################
 ################################################################################

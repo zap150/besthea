@@ -33,6 +33,8 @@
 #ifndef INCLUDE_BESTHEA_SETTINGS_H_
 #define INCLUDE_BESTHEA_SETTINGS_H_
 
+#include "boost/align.hpp"
+
 #include <cstddef>
 #include <type_traits>
 
@@ -41,7 +43,7 @@
 #endif
 
 #ifndef M_PI
-#define M_PI 3.14159265358979323846 //!< pi
+#define M_PI 3.14159265358979323846  //!< pi
 #endif
 
 namespace besthea {
@@ -52,7 +54,11 @@ namespace besthea {
     = std::make_signed< index >::type;  //!< Signed indexing type.
   using index_unsigned
     = std::make_unsigned< index >::type;  //!< Unsigned indexing type.
-};                                        // namespace besthea
+
+  template< class T >
+  using allocator_type = boost::alignment::aligned_allocator< T,
+    DATA_ALIGN >;  //!< Aligned allocator.
+};                 // namespace besthea
 
 using sc = besthea::scalar;           //!< Floating point type.
 using lo = besthea::index;            //!< Indexing type.
