@@ -268,10 +268,10 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
                 * w[ i_quad ];
             }
 
-            value = 0.0;
             for ( lo i_loc_test = 0; i_loc_test < n_loc_rows; ++i_loc_test ) {
               for ( lo i_loc_trial = 0; i_loc_trial < n_loc_columns;
                     ++i_loc_trial ) {
+                value = 0.0;
 #pragma omp simd private( test, trial ) reduction( + : value ) \
 	simdlen( DATA_WIDTH )
                 for ( lo i_quad = 0; i_quad < size; ++i_quad ) {

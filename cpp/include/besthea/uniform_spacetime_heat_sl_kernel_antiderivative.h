@@ -103,7 +103,6 @@ class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
  * @param[in] xy3 Third coordinate of `x - y`.
  * @param[in] nx Normal in the `x` variable.
  * @param[in] ny Normal in the `y` variable.
- * @param[in] delta Difference of time intervals.
  */
 #pragma omp declare simd uniform( nx, ny ) simdlen( DATA_WIDTH )
   sc do_anti_tau_limit( sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny );

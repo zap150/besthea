@@ -104,6 +104,8 @@ class besthea::bem::uniform_spacetime_be_assembler {
    * @param[in] kernel Spcetime kernel antiderivative object.
    * @param[in] test_space Test boundary element space.
    * @param[in] trial_space Trial boundary element space.
+   * @param[in] order_singular Line quadrature order for regularized quadrature.
+   * @param[in] order_regular Triangle quadrature order for regular quadrature.
    */
   uniform_spacetime_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,

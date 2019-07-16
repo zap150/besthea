@@ -63,7 +63,6 @@ class besthea::bem::basis_tri_p1
 
   /**
    * Returns number of basis functions supported on i_elem.
-   * @param[in] i_elem Element index.
    */
   virtual lo dimension_local( );
 
@@ -75,7 +74,8 @@ class besthea::bem::basis_tri_p1
   /**
    * Provides global indices for local contributions.
    * @param[in] i_elem Element index.
-   * @param[in] type Type of element adjacency (regularized quadrature).
+   * @param[in] n_shared_vertices Number of shared vertives in currect elements
+   * (regularized quadrature).
    * @param[in] rotation Virtual element rotation (regularized quadrature).
    * @param[in] swap Virtual element inversion (regularized quadrature).
    * @param[out] indices Global indices for local contributions.
@@ -89,7 +89,8 @@ class besthea::bem::basis_tri_p1
    * @param[in] x1_ref First coordinate of reference quadrature point.
    * @param[in] x2_ref Second coordinate of reference quadrature point.
    * @param[in] n Element normal.
-   * @param[in] type Type of element adjacency (regularized quadrature).
+   * @param[in] n_shared_vertices Number of shared vertives in currect elements
+   * (regularized quadrature).
    * @param[in] rotation Virtual element rotation (regularized quadrature).
    * @param[in] swap Virtual element inversion (regularized quadrature).
    * @param[in] values Values of all basis functions supported on i_elem.
@@ -107,7 +108,8 @@ class besthea::bem::basis_tri_p1
    * @param[in] x1_ref First coordinate of reference quadrature point.
    * @param[in] x2_ref Second coordinate of reference quadrature point.
    * @param[in] n Element normal.
-   * @param[in] type Type of element adjacency (regularized quadrature).
+   * @param[in] n_shared_vertices Number of shared vertives in currect elements
+   * (regularized quadrature).
    * @param[in] rotation Virtual element rotation (regularized quadrature).
    * @param[in] swap Virtual element inversion (regularized quadrature).
    */
