@@ -54,19 +54,23 @@ template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::assemble( besthea::linear_algebra::
     block_lower_triangular_toeplitz_matrix & global_matrix ) {
-  lo block_dim = _test_space->get_mesh( )->get_n_temporal_elements( );
-  global_matrix.resize( block_dim );
+  auto & test_basis = _test_space->get_basis( );
+  auto & trial_basis = _trial_space->get_basis( );
+  auto test_mesh = _test_space->get_mesh( );
+  auto trial_mesh = _trial_space->get_mesh( );
 
-  lo n_rows = _test_space->get_basis( ).dimension_global( );
-  lo n_columns = _trial_space->get_basis( ).dimension_global( );
+  lo n_timesteps = test_mesh->get_n_temporal_elements( );
+  sc timestep = test_mesh->get_timestep( );
+  lo n_rows = test_basis.dimension_global( );
+  lo n_columns = trial_basis.dimension_global( );
+  global_matrix.resize( n_timesteps );
   global_matrix.resize_blocks( n_rows, n_columns );
 
-  lo n_loc_rows = _test_space->get_basis( ).dimension_local( );
-  lo n_loc_columns = _trial_space->get_basis( ).dimension_local( );
+  lo n_loc_rows = test_basis.dimension_local( );
+  lo n_loc_columns = trial_basis.dimension_local( );
 
-  lo n_elements = _test_space->get_mesh( )->get_n_spatial_elements( );
-  lo n_timesteps = _test_space->get_mesh( )->get_n_temporal_elements( );
-  sc ht = _test_space->get_mesh( )->get_timestep( );
+  lo n_test_elements = test_mesh->get_n_spatial_elements( );
+  lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
   sc scaled_delta;
 
 #pragma omp parallel shared( global_matrix )
@@ -76,7 +80,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
     sc kernel2, kernel1;
     sc test_area, trial_area;
     lo size;
-    int type_int = 0;
+    int n_shared_vertices = 0;
     int rot_test = 0;
     int rot_trial = 0;
 
@@ -95,30 +99,30 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
     sc * w = nullptr;
 
     for ( lo delta = 0; delta <= n_timesteps; ++delta ) {
-      scaled_delta = ht * delta;
+      scaled_delta = timestep * delta;
 
-#pragma omp for schedule( dynamic, 16 )
-      for ( lo i_test = 0; i_test < n_elements; ++i_test ) {
-        _test_space->get_mesh( )->get_spatial_nodes( i_test, x1, x2, x3 );
-        _test_space->get_mesh( )->get_spatial_normal( i_test, nx );
-        test_area = _test_space->get_mesh( )->spatial_area( i_test );
-        for ( lo i_trial = 0; i_trial < n_elements; ++i_trial ) {
+#pragma omp for schedule( dynamic )
+      for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
+        test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
+        test_mesh->get_spatial_normal( i_test, nx );
+        test_area = test_mesh->spatial_area( i_test );
+        for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
           if ( delta == 0 ) {
-            get_type( i_test, i_trial, type_int, rot_test, rot_trial );
+            get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
           } else {
-            type_int = 0;
+            n_shared_vertices = 0;
             rot_test = 0;
             rot_trial = 0;
           }
-          _trial_space->get_mesh( )->get_spatial_nodes( i_trial, y1, y2, y3 );
-          _trial_space->get_mesh( )->get_spatial_normal( i_trial, ny );
-          trial_area = _trial_space->get_mesh( )->spatial_area( i_trial );
-          triangles_to_geometry( x1, x2, x3, y1, y2, y3, type_int, rot_test,
-            rot_trial, my_quadrature );
+          trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
+          trial_mesh->get_spatial_normal( i_trial, ny );
+          trial_area = trial_mesh->spatial_area( i_trial );
+          triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices,
+rot_test, rot_trial, my_quadrature );
 
-          w = my_quadrature._w[ type_int ].data( );
+          w = my_quadrature._w[ n_shared_vertices ].data( );
 
-          size = my_quadrature._w[ type_int ].size( );
+          size = my_quadrature._w[ n_shared_vertices ].size( );
 
           if ( delta == 0 ) {
             kernel1 = 0.0;
@@ -131,7 +135,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
                 * w[ i_quad ];
             }
             global_matrix.add(
-              0, i_test, i_trial, ht * kernel1 * test_area * trial_area );
+              0, i_test, i_trial, timestep * kernel1 * test_area * trial_area );
           }
 
           kernel2 = 0.0;
@@ -193,12 +197,9 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
     std::vector< lo > test_l2g( n_loc_rows );
     std::vector< lo > trial_l2g( n_loc_columns );
 
-    sc test = 0.0;
-    sc trial = 0.0;
-    sc value = 0.0;
-    sc test_area, trial_area;
+    sc test, trial, value, test_area, trial_area;
     lo size;
-    int type_int = 0;
+    int n_shared_vertices = 0;
     int rot_test = 0;
     int rot_trial = 0;
 
@@ -231,9 +232,9 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
         test_area = test_mesh->spatial_area( i_test );
         for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
           if ( delta == 0 ) {
-            get_type( i_test, i_trial, type_int, rot_test, rot_trial );
+            get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
           } else {
-            type_int = 0;
+            n_shared_vertices = 0;
             rot_test = 0;
             rot_trial = 0;
           }
@@ -241,22 +242,20 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
           trial_mesh->get_spatial_normal( i_trial, ny );
           trial_area = trial_mesh->spatial_area( i_trial );
 
-          test_basis.local_to_global( i_test,
-            static_cast< besthea::bem::adjacency >( type_int ), rot_test, false,
-            test_l2g );
-          trial_basis.local_to_global( i_trial,
-            static_cast< besthea::bem::adjacency >( type_int ), rot_trial, true,
-            trial_l2g );
+          test_basis.local_to_global(
+            i_test, n_shared_vertices, rot_test, false, test_l2g );
+          trial_basis.local_to_global(
+            i_trial, n_shared_vertices, rot_trial, true, trial_l2g );
 
-          triangles_to_geometry( x1, x2, x3, y1, y2, y3, type_int, rot_test,
-            rot_trial, my_quadrature );
-          x1_ref = my_quadrature._x1_ref[ type_int ].data( );
-          x2_ref = my_quadrature._x2_ref[ type_int ].data( );
-          y1_ref = my_quadrature._y1_ref[ type_int ].data( );
-          y2_ref = my_quadrature._y2_ref[ type_int ].data( );
-          w = my_quadrature._w[ type_int ].data( );
+          triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices,
+            rot_test, rot_trial, my_quadrature );
+          x1_ref = my_quadrature._x1_ref[ n_shared_vertices ].data( );
+          x2_ref = my_quadrature._x2_ref[ n_shared_vertices ].data( );
+          y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
+          y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
+          w = my_quadrature._w[ n_shared_vertices ].data( );
 
-          size = my_quadrature._w[ type_int ].size( );
+          size = my_quadrature._w[ n_shared_vertices ].size( );
 
           if ( delta == 0 ) {
 #pragma omp simd simdlen( DATA_WIDTH )
@@ -275,12 +274,10 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 	simdlen( DATA_WIDTH )
                 for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
                   test = test_basis.evaluate( i_test, i_loc_test,
-                    x1_ref[ i_quad ], x2_ref[ i_quad ], nx,
-                    static_cast< besthea::bem::adjacency >( type_int ),
+                    x1_ref[ i_quad ], x2_ref[ i_quad ], nx, n_shared_vertices,
                     rot_test, false );
                   trial = trial_basis.evaluate( i_trial, i_loc_trial,
-                    y1_ref[ i_quad ], y2_ref[ i_quad ], ny,
-                    static_cast< besthea::bem::adjacency >( type_int ),
+                    y1_ref[ i_quad ], y2_ref[ i_quad ], ny, n_shared_vertices,
                     rot_trial, true );
 
                   value += w[ i_quad ] * kernel_data[ i_quad ] * test * trial;
@@ -307,14 +304,12 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 #pragma omp simd private( test, trial ) reduction( + : value ) \
 	simdlen( DATA_WIDTH )
               for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-                test = test_basis.evaluate( i_test, i_loc_test,
-                  x1_ref[ i_quad ], x2_ref[ i_quad ], nx,
-                  static_cast< besthea::bem::adjacency >( type_int ), rot_test,
-                  false );
+                test
+                  = test_basis.evaluate( i_test, i_loc_test, x1_ref[ i_quad ],
+                    x2_ref[ i_quad ], nx, n_shared_vertices, rot_test, false );
                 trial = trial_basis.evaluate( i_trial, i_loc_trial,
-                  y1_ref[ i_quad ], y2_ref[ i_quad ], ny,
-                  static_cast< besthea::bem::adjacency >( type_int ), rot_trial,
-                  true );
+                  y1_ref[ i_quad ], y2_ref[ i_quad ], ny, n_shared_vertices,
+                  rot_trial, true );
 
                 value += w[ i_quad ] * kernel_data[ i_quad ] * test * trial;
               }
@@ -352,21 +347,22 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   lo tri_size = tri_x1.size( );
   lo tri_size2 = tri_size * tri_size;
 
-  int type_int = 0;
-  my_quadrature._x1_ref[ type_int ].resize( tri_size2 );
-  my_quadrature._x2_ref[ type_int ].resize( tri_size2 );
-  my_quadrature._y1_ref[ type_int ].resize( tri_size2 );
-  my_quadrature._y2_ref[ type_int ].resize( tri_size2 );
-  my_quadrature._w[ type_int ].resize( tri_size2 );
+  int n_shared_vertices = 0;
+  my_quadrature._x1_ref[ n_shared_vertices ].resize( tri_size2 );
+  my_quadrature._x2_ref[ n_shared_vertices ].resize( tri_size2 );
+  my_quadrature._y1_ref[ n_shared_vertices ].resize( tri_size2 );
+  my_quadrature._y2_ref[ n_shared_vertices ].resize( tri_size2 );
+  my_quadrature._w[ n_shared_vertices ].resize( tri_size2 );
 
   lo counter = 0;
   for ( lo i_x = 0; i_x < tri_size; ++i_x ) {
     for ( lo i_y = 0; i_y < tri_size; ++i_y ) {
-      my_quadrature._x1_ref[ type_int ][ counter ] = tri_x1[ i_x ];
-      my_quadrature._x2_ref[ type_int ][ counter ] = tri_x2[ i_x ];
-      my_quadrature._y1_ref[ type_int ][ counter ] = tri_x1[ i_y ];
-      my_quadrature._y2_ref[ type_int ][ counter ] = tri_x2[ i_y ];
-      my_quadrature._w[ type_int ][ counter ] = tri_w[ i_x ] * tri_w[ i_y ];
+      my_quadrature._x1_ref[ n_shared_vertices ][ counter ] = tri_x1[ i_x ];
+      my_quadrature._x2_ref[ n_shared_vertices ][ counter ] = tri_x2[ i_x ];
+      my_quadrature._y1_ref[ n_shared_vertices ][ counter ] = tri_x1[ i_y ];
+      my_quadrature._y2_ref[ n_shared_vertices ][ counter ] = tri_x2[ i_y ];
+      my_quadrature._w[ n_shared_vertices ][ counter ]
+        = tri_w[ i_x ] * tri_w[ i_y ];
       ++counter;
     }
   }
@@ -378,32 +374,34 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   lo line_size4 = line_size * line_size * line_size * line_size;
   sc jacobian = 0.0;
 
-  for ( type_int = 1; type_int <= 3; ++type_int ) {
-    my_quadrature._x1_ref[ type_int ].resize(
-      line_size4 * n_simplices[ type_int ] );
-    my_quadrature._x2_ref[ type_int ].resize(
-      line_size4 * n_simplices[ type_int ] );
-    my_quadrature._y1_ref[ type_int ].resize(
-      line_size4 * n_simplices[ type_int ] );
-    my_quadrature._y2_ref[ type_int ].resize(
-      line_size4 * n_simplices[ type_int ] );
-    my_quadrature._w[ type_int ].resize( line_size4 * n_simplices[ type_int ] );
+  for ( n_shared_vertices = 1; n_shared_vertices <= 3; ++n_shared_vertices ) {
+    my_quadrature._x1_ref[ n_shared_vertices ].resize(
+      line_size4 * n_simplices[ n_shared_vertices ] );
+    my_quadrature._x2_ref[ n_shared_vertices ].resize(
+      line_size4 * n_simplices[ n_shared_vertices ] );
+    my_quadrature._y1_ref[ n_shared_vertices ].resize(
+      line_size4 * n_simplices[ n_shared_vertices ] );
+    my_quadrature._y2_ref[ n_shared_vertices ].resize(
+      line_size4 * n_simplices[ n_shared_vertices ] );
+    my_quadrature._w[ n_shared_vertices ].resize(
+      line_size4 * n_simplices[ n_shared_vertices ] );
 
     counter = 0;
-    for ( int i_simplex = 0; i_simplex < n_simplices[ type_int ];
+    for ( int i_simplex = 0; i_simplex < n_simplices[ n_shared_vertices ];
           ++i_simplex ) {
       for ( lo i_ksi = 0; i_ksi < line_size; ++i_ksi ) {
         for ( lo i_eta1 = 0; i_eta1 < line_size; ++i_eta1 ) {
           for ( lo i_eta2 = 0; i_eta2 < line_size; ++i_eta2 ) {
             for ( lo i_eta3 = 0; i_eta3 < line_size; ++i_eta3 ) {
               hypercube_to_triangles( line_x[ i_ksi ], line_x[ i_eta1 ],
-                line_x[ i_eta2 ], line_x[ i_eta3 ],
-                static_cast< besthea::bem::adjacency >( type_int ), i_simplex,
-                my_quadrature._x1_ref[ type_int ][ counter ],
-                my_quadrature._x2_ref[ type_int ][ counter ],
-                my_quadrature._y1_ref[ type_int ][ counter ],
-                my_quadrature._y2_ref[ type_int ][ counter ], jacobian );
-              my_quadrature._w[ type_int ][ counter ] = 4.0 * jacobian
+                line_x[ i_eta2 ], line_x[ i_eta3 ], n_shared_vertices,
+                i_simplex,
+                my_quadrature._x1_ref[ n_shared_vertices ][ counter ],
+                my_quadrature._x2_ref[ n_shared_vertices ][ counter ],
+                my_quadrature._y1_ref[ n_shared_vertices ][ counter ],
+                my_quadrature._y2_ref[ n_shared_vertices ][ counter ],
+                jacobian );
+              my_quadrature._w[ n_shared_vertices ][ counter ] = 4.0 * jacobian
                 * line_w[ i_ksi ] * line_w[ i_eta1 ] * line_w[ i_eta2 ]
                 * line_w[ i_eta3 ];
               ++counter;
@@ -429,8 +427,9 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::triangles_to_geometry( const sc * x1, const sc * x2,
-  const sc * x3, const sc * y1, const sc * y2, const sc * y3, int type_int,
-  int rot_test, int rot_trial, quadrature_wrapper & my_quadrature ) {
+  const sc * x3, const sc * y1, const sc * y2, const sc * y3,
+  int n_shared_vertices, int rot_test, int rot_trial,
+  quadrature_wrapper & my_quadrature ) {
   const sc * x1rot = nullptr;
   const sc * x2rot = nullptr;
   const sc * x3rot = nullptr;
@@ -458,7 +457,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 
   switch ( rot_trial ) {
     case 0:
-      if ( type_int == 2 ) {
+      if ( n_shared_vertices == 2 ) {
         y1rot = y2;
         y2rot = y1;
         y3rot = y3;
@@ -469,7 +468,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
       }
       break;
     case 1:
-      if ( type_int == 2 ) {
+      if ( n_shared_vertices == 2 ) {
         y1rot = y3;
         y2rot = y2;
         y3rot = y1;
@@ -480,7 +479,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
       }
       break;
     case 2:
-      if ( type_int == 2 ) {
+      if ( n_shared_vertices == 2 ) {
         y1rot = y1;
         y2rot = y3;
         y3rot = y2;
@@ -492,10 +491,10 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
       break;
   }
 
-  const sc * x1_ref = my_quadrature._x1_ref[ type_int ].data( );
-  const sc * x2_ref = my_quadrature._x2_ref[ type_int ].data( );
-  const sc * y1_ref = my_quadrature._y1_ref[ type_int ].data( );
-  const sc * y2_ref = my_quadrature._y2_ref[ type_int ].data( );
+  const sc * x1_ref = my_quadrature._x1_ref[ n_shared_vertices ].data( );
+  const sc * x2_ref = my_quadrature._x2_ref[ n_shared_vertices ].data( );
+  const sc * y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
+  const sc * y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
 
   sc * x1_mapped = my_quadrature._x1.data( );
   sc * x2_mapped = my_quadrature._x2.data( );
@@ -504,7 +503,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   sc * y2_mapped = my_quadrature._y2.data( );
   sc * y3_mapped = my_quadrature._y3.data( );
 
-  lo size = my_quadrature._w[ type_int ].size( );
+  lo size = my_quadrature._w[ n_shared_vertices ].size( );
 
 #pragma omp simd simdlen( DATA_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
@@ -597,11 +596,11 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
-  trial_space_type >::get_type( lo i_test, lo i_trial, int & type_int,
+  trial_space_type >::get_type( lo i_test, lo i_trial, int & n_shared_vertices,
   int & rot_test, int & rot_trial ) const {
   // check for identical
   if ( i_test == i_trial ) {
-    type_int = 3;
+    n_shared_vertices = 3;
     rot_test = 0;
     rot_trial = 0;
     return;
@@ -620,7 +619,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
              == test_elem[ map[ ( i_rot_test + 1 ) ] ] )
         && ( trial_elem[ map[ ( i_rot_trial + 1 ) ] ]
           == test_elem[ i_rot_test ] ) ) {
-        type_int = 2;
+        n_shared_vertices = 2;
         rot_test = i_rot_test;
         rot_trial = i_rot_trial;
         return;
@@ -632,7 +631,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   for ( int i_rot_test = 0; i_rot_test < 3; ++i_rot_test ) {
     for ( int i_rot_trial = 0; i_rot_trial < 3; ++i_rot_trial ) {
       if ( test_elem[ i_rot_test ] == trial_elem[ i_rot_trial ] ) {
-        type_int = 1;
+        n_shared_vertices = 1;
         rot_test = i_rot_test;
         rot_trial = i_rot_trial;
         return;
@@ -641,7 +640,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   }
 
   // disjoint
-  type_int = 0;
+  n_shared_vertices = 0;
   rot_test = 0;
   rot_trial = 0;
 }

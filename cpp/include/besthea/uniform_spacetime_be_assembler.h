@@ -175,22 +175,22 @@ class besthea::bem::uniform_spacetime_be_assembler {
    * @param[out] jacobian Jacobian of the transformation.
    */
   void hypercube_to_triangles( sc ksi, sc eta1, sc eta2, sc eta3,
-    besthea::bem::adjacency type, int simplex, sc & x1_ref, sc & x2_ref,
-    sc & y1_ref, sc & y2_ref, sc & jacobian ) const {
-    switch ( type ) {
-      case besthea::bem::adjacency::vertex:
+    int n_shared_vertices, int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref,
+    sc & y2_ref, sc & jacobian ) const {
+    switch ( n_shared_vertices ) {
+      case 1:
         hypercube_to_triangles_vertex( ksi, eta1, eta2, eta3, simplex, x1_ref,
           x2_ref, y1_ref, y2_ref, jacobian );
         break;
-      case besthea::bem::adjacency::edge:
+      case 2:
         hypercube_to_triangles_edge( ksi, eta1, eta2, eta3, simplex, x1_ref,
           x2_ref, y1_ref, y2_ref, jacobian );
         break;
-      case besthea::bem::adjacency::identical:
+      case 3:
         hypercube_to_triangles_identical( ksi, eta1, eta2, eta3, simplex,
           x1_ref, x2_ref, y1_ref, y2_ref, jacobian );
         break;
-      case besthea::bem::adjacency::disjoint:
+      case 0:
       default:
         return;
     }

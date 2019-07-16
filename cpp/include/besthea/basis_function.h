@@ -45,11 +45,6 @@ namespace besthea {
   namespace bem {
     template< class derived_type >
     class basis_function;
-
-    /**
-     * Type of element adjacency (regularized quadrature).
-     */
-    enum class adjacency { disjoint = 0, vertex = 1, edge = 2, identical = 3 };
   }
 }
 
@@ -59,8 +54,7 @@ namespace besthea {
 template< class derived_type >
 class besthea::bem::basis_function {
  protected:
-  using mesh_type = besthea::mesh::mesh;      //!< Mesh type.
-  using adjacency = besthea::bem::adjacency;  //!< Element adjacecny.
+  using mesh_type = besthea::mesh::mesh;                     //!< Mesh type.
   using matrix_type = besthea::linear_algebra::full_matrix;  //!< Matrix type.
 
  public:
@@ -103,9 +97,10 @@ class besthea::bem::basis_function {
    * @param[in] swap Virtual element inversion (regularized quadrature).
    * @param[out] indices Global indices for local contributions.
    */
-  void local_to_global( lo i_elem, adjacency type, int rotation, bool swap,
-    std::vector< lo > & indices ) {
-    derived( ).do_local_to_global( i_elem, type, rotation, swap, indices );
+  void local_to_global( lo i_elem, int n_shared_vertices, int rotation,
+    bool swap, std::vector< lo > & indices ) {
+    derived( ).do_local_to_global(
+      i_elem, n_shared_vertices, rotation, swap, indices );
   }
 
   /**
@@ -119,12 +114,13 @@ class besthea::bem::basis_function {
    * @param[in] swap Virtual element inversion (regularized quadrature).
    * @param[in] values Values of all basis functions supported on i_elem.
    */
-#pragma omp declare simd uniform( i_elem, n, type, rotation, swap ) \
-  simdlen( DATA_WIDTH )
-  void evaluate( lo i_elem, sc x1_ref, sc x2_ref, const sc * n, adjacency type,
-    int rotation, bool swap, std::vector< sc > & values ) {
+#pragma omp declare simd uniform( \
+  i_elem, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
+  void evaluate( lo i_elem, sc x1_ref, sc x2_ref, const sc * n,
+    int n_shared_vertices, int rotation, bool swap,
+    std::vector< sc > & values ) {
     derived( ).do_evaluate(
-      i_elem, x1_ref, x2_ref, n, type, rotation, swap, values );
+      i_elem, x1_ref, x2_ref, n, n_shared_vertices, rotation, swap, values );
   }
 
   /**
@@ -138,12 +134,12 @@ class besthea::bem::basis_function {
    * @param[in] rotation Virtual element rotation (regularized quadrature).
    * @param[in] swap Virtual element inversion (regularized quadrature).
    */
-#pragma omp declare simd uniform( i_elem, i_fun, n, type, rotation, swap ) \
-  simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( \
+  i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
   sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n,
-    adjacency type, int rotation, bool swap ) {
+    int n_shared_vertices, int rotation, bool swap ) {
     return derived( ).do_evaluate(
-      i_elem, i_fun, x1_ref, x2_ref, n, type, rotation, swap );
+      i_elem, i_fun, x1_ref, x2_ref, n, n_shared_vertices, rotation, swap );
   }
 
  protected:

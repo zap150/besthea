@@ -80,8 +80,8 @@ class besthea::bem::basis_tri_p0
    * @param[in] swap Virtual element inversion (regularized quadrature).
    * @param[out] indices Global indices for local contributions.
    */
-  void do_local_to_global( lo i_elem, adjacency type, int rotation, bool swap,
-    std::vector< lo > & indices );
+  void do_local_to_global( lo i_elem, int n_shared_vertices, int rotation,
+    bool swap, std::vector< lo > & indices );
 
   /**
    * Evaluates the basis function.
@@ -94,10 +94,11 @@ class besthea::bem::basis_tri_p0
    * @param[in] swap Virtual element inversion (regularized quadrature).
    * @param[in] values Values of all basis functions supported on i_elem.
    */
-#pragma omp declare simd uniform( i_elem, n, type, rotation, swap ) \
-  simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( \
+  i_elem, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
   void do_evaluate( lo i_elem, sc x1_ref, sc x2_ref, const sc * n,
-    adjacency type, int rotation, bool swap, std::vector< sc > & values );
+    int n_shared_vertices, int rotation, bool swap,
+    std::vector< sc > & values );
 
   /**
    * Evaluates the basis function.
@@ -110,10 +111,10 @@ class besthea::bem::basis_tri_p0
    * @param[in] rotation Virtual element rotation (regularized quadrature).
    * @param[in] swap Virtual element inversion (regularized quadrature).
    */
-#pragma omp declare simd uniform( i_elem, i_fun, n, type, rotation, swap ) \
-  simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( \
+  i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
   sc do_evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n,
-    adjacency type, int rotation, bool swap );
+    int n_shared_vertices, int rotation, bool swap );
 };
 
 #endif /* INCLUDE_BESTHEA_BASIS_TRI_P0_H_ */

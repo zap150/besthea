@@ -43,12 +43,13 @@ lo besthea::bem::basis_tri_p1::dimension_global( ) {
   return _mesh->get_spatial_mesh( )->get_n_nodes( );
 }
 
-void besthea::bem::basis_tri_p1::do_local_to_global( lo i_elem, adjacency type,
-  int rotation, bool swap, std::vector< lo > & indices ) {
+void besthea::bem::basis_tri_p1::do_local_to_global( lo i_elem,
+  int n_shared_vertices, int rotation, bool swap,
+  std::vector< lo > & indices ) {
   lo element[ 3 ];
   _mesh->get_spatial_mesh( )->get_element( i_elem, element );
 
-  if ( type == adjacency::edge && swap ) {
+  if ( n_shared_vertices == 2 && swap ) {
     indices[ 0 ] = element[ _map[ rotation + 1 ] ];
     indices[ 1 ] = element[ _map[ rotation ] ];
   } else {
@@ -58,20 +59,20 @@ void besthea::bem::basis_tri_p1::do_local_to_global( lo i_elem, adjacency type,
   indices[ 2 ] = element[ _map[ rotation + 2 ] ];
 }
 
-#pragma omp declare simd uniform( i_elem, n, type, rotation, swap ) \
-  simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( \
+  i_elem, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
 void besthea::bem::basis_tri_p1::do_evaluate( lo i_elem, sc x1_ref, sc x2_ref,
-  const sc * n, adjacency type, int rotation, bool swap,
+  const sc * n, int n_shared_vertices, int rotation, bool swap,
   std::vector< sc > & values ) {
   values[ 0 ] = 1 - x1_ref - x2_ref;
   values[ 1 ] = x1_ref;
   values[ 2 ] = x2_ref;
 }
 
-#pragma omp declare simd uniform( i_elem, i_fun, n, type, rotation, swap ) \
-  simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( \
+  i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
 sc besthea::bem::basis_tri_p1::do_evaluate( lo i_elem, lo i_fun, sc x1_ref,
-  sc x2_ref, const sc * n, adjacency type, int rotation, bool swap ) {
+  sc x2_ref, const sc * n, int n_shared_vertices, int rotation, bool swap ) {
   sc value = 0.0;
 
   if ( i_fun == 0 ) {
