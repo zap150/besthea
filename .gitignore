@@ -1,3 +1,4 @@
+*.optrpt
 *.vtu
 *.exe
 *.o.d
