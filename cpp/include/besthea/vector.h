@@ -189,8 +189,8 @@ class besthea::linear_algebra::vector {
   }
 
  protected:
-  lo _size;                 //!< vector size
-  std::vector< sc > _data;  //!< raw data
+  lo _size;                                                //!< vector size
+  std::vector< sc, besthea::allocator_type< sc > > _data;  //!< raw data
 };
 
 #endif /* INCLUDE_BESTHEA_VECTOR_H_ */

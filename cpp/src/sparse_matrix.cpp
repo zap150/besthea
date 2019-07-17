@@ -46,14 +46,14 @@ besthea::linear_algebra::sparse_matrix::sparse_matrix( los n_rows,
   : _data( n_rows, n_columns ) {
   _n_rows = n_rows;
   _n_columns = n_columns;
-  std::vector< Eigen::Triplet< sc, los > > tripletList;
-  tripletList.reserve( row_indices.size( ) );
+  std::vector< Eigen::Triplet< sc, los > > triplet_list;
+  triplet_list.reserve( row_indices.size( ) );
 
   for ( lou i = 0; i < row_indices.size( ); ++i ) {
-    tripletList.push_back( Eigen::Triplet< sc, los >(
+    triplet_list.push_back( Eigen::Triplet< sc, los >(
       row_indices[ i ], column_indices[ i ], values[ i ] ) );
   }
-  _data.setFromTriplets( tripletList.begin( ), tripletList.end( ) );
+  _data.setFromTriplets( triplet_list.begin( ), triplet_list.end( ) );
   _data.makeCompressed( );
 }
 

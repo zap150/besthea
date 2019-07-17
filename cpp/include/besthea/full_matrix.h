@@ -253,7 +253,7 @@ class besthea::linear_algebra::full_matrix
   }
 
  protected:
-  std::vector< sc > _data;  //!< Raw data.
+  std::vector< sc, besthea::allocator_type< sc > > _data;  //!< Raw data.
 };
 
 #endif /* INCLUDE_BESTHEA_FULL_MATRIX_H_ */
