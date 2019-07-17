@@ -262,7 +262,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
                           : data_align )                  \
   aligned( y1_mapped, y2_mapped, y3_mapped                \
            : data_align ) aligned( kernel_data, w         \
-                                   : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                                   : data_align ) simdlen( DATA_WIDTH )
             for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
               kernel_data[ i_quad ]
                 = _kernel->anti_tau_limit(
@@ -301,7 +301,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped \
                           : data_align )                  \
   aligned( y1_mapped, y2_mapped, y3_mapped                \
-           : DATA_ALIGN ) aligned( kernel_data, w         \
+           : data_align ) aligned( kernel_data, w         \
                                    : data_align ) simdlen( DATA_WIDTH )
           for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
             kernel_data[ i_quad ] = _kernel->anti_tau_anti_t(
