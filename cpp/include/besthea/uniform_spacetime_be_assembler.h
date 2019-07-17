@@ -273,6 +273,8 @@ class besthea::bem::uniform_spacetime_be_assembler {
 
   int _order_regular;  //!< Triangle quadrature order for the regular integrals.
 
+  static const int data_align{ DATA_ALIGN };
+
   static constexpr std::array< int, 5 > map{ 0, 1, 2, 0,
     1 };  //!< Auxiliary array for mapping DOFs under
           // rotation (regularized quadrature). Performs fast modulo 3.
