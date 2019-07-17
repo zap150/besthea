@@ -29,6 +29,7 @@
 #include "besthea/bem.h"
 #include "besthea/linear_algebra.h"
 #include "besthea/settings.h"
+#include "besthea/timer.h"
 #include "besthea/triangular_surface_mesh.h"
 #include "besthea/uniform_spacetime_tensor_mesh.h"
 
@@ -38,6 +39,7 @@
 using namespace besthea::mesh;
 using namespace besthea::linear_algebra;
 using namespace besthea::bem;
+using namespace besthea::tools;
 
 int main( int argc, char * argv[] ) {
   std::string file = "../mesh_files/cube_192.txt";
@@ -61,6 +63,8 @@ int main( int argc, char * argv[] ) {
   uniform_spacetime_tensor_mesh spacetime_mesh( space_mesh, 1.0, n_timesteps );
   spacetime_mesh.refine( refine, 1 );
 
+  timer t;
+
   ///*
   block_lower_triangular_toeplitz_matrix V;
   uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > test_space_v(
@@ -71,8 +75,10 @@ int main( int argc, char * argv[] ) {
     spacetime_mesh.get_timestep( ), alpha );
   uniform_spacetime_be_assembler assembler_v(
     kernel_v, test_space_v, trial_space_v, order_sing, order_reg );
+  t.reset( "V" );
   assembler_v.assemble( V );
-  V.print( );
+  t.measure( );
+  // V.print( );
   //*/
   ///*
   block_lower_triangular_toeplitz_matrix K;
@@ -84,8 +90,9 @@ int main( int argc, char * argv[] ) {
     spacetime_mesh.get_timestep( ), alpha );
   uniform_spacetime_be_assembler assembler_k(
     kernel_k, test_space_k, trial_space_k, order_sing, order_reg );
+  t.reset( "K" );
   assembler_k.assemble( K );
+  t.measure( );
   // K.print( );
   //*/
-
 }
