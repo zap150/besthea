@@ -54,8 +54,6 @@ class besthea::bem::uniform_spacetime_be_space {
     = besthea::mesh::uniform_spacetime_tensor_mesh;  //!< Spacetime mesh type.
 
  public:
-  uniform_spacetime_be_space( ) = delete;
-
   uniform_spacetime_be_space( const uniform_spacetime_be_space & that )
     = delete;
 

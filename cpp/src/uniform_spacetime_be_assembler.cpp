@@ -170,7 +170,7 @@ rot_test, rot_trial, my_quadrature );
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::assemble( besthea::linear_algebra::
-    block_lower_triangular_toeplitz_matrix & global_matrix ) {
+    block_lower_triangular_toeplitz_matrix & global_matrix ) const {
   auto & test_basis = _test_space->get_basis( );
   auto & trial_basis = _trial_space->get_basis( );
   auto test_mesh = _test_space->get_mesh( );
@@ -358,7 +358,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 //*/
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
-  trial_space_type >::init_quadrature( quadrature_wrapper & my_quadrature ) {
+  trial_space_type >::init_quadrature( quadrature_wrapper & my_quadrature ) const {
   // Use triangle rules for disjoint elements
   const std::vector< sc > & tri_x1 = quadrature::triangle_x1( _order_regular );
   const std::vector< sc > & tri_x2 = quadrature::triangle_x2( _order_regular );
@@ -448,7 +448,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::triangles_to_geometry( const sc * x1, const sc * x2,
   const sc * x3, const sc * y1, const sc * y2, const sc * y3,
   int n_shared_vertices, int rot_test, int rot_trial,
-  quadrature_wrapper & my_quadrature ) {
+  quadrature_wrapper & my_quadrature ) const {
   const sc * x1rot = nullptr;
   const sc * x2rot = nullptr;
   const sc * x3rot = nullptr;

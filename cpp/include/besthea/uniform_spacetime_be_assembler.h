@@ -99,8 +99,6 @@ class besthea::bem::uniform_spacetime_be_assembler {
   using full_matrix_type
     = besthea::linear_algebra::full_matrix;  //!< Full matrix type.
 
-  uniform_spacetime_be_assembler( ) = delete;
-
   /**
    * Constructor.
    * @param[in] kernel Spcetime kernel antiderivative object.
@@ -113,6 +111,9 @@ class besthea::bem::uniform_spacetime_be_assembler {
     test_space_type & test_space, trial_space_type & trial_space,
     int order_singular = 4, int order_regular = 4 );
 
+  uniform_spacetime_be_assembler( const uniform_spacetime_be_assembler & that )
+    = delete;
+
   /**
    * Destructor.
    */
@@ -124,13 +125,13 @@ class besthea::bem::uniform_spacetime_be_assembler {
    */
   void assemble(
     besthea::linear_algebra::block_lower_triangular_toeplitz_matrix &
-      global_matrix );
+      global_matrix ) const;
 
  private:
   /**
    * Initializes quadrature structures.
    */
-  void init_quadrature( quadrature_wrapper & my_quadrature );
+  void init_quadrature( quadrature_wrapper & my_quadrature ) const;
 
   /**
    * Determines the configuration of two triangular elements.
@@ -157,7 +158,7 @@ class besthea::bem::uniform_spacetime_be_assembler {
    */
   void triangles_to_geometry( const sc * x1, const sc * x2, const sc * x3,
     const sc * y1, const sc * y2, const sc * y3, int type_int, int rot_test,
-    int rot_trial, quadrature_wrapper & mapped_xy );
+    int rot_trial, quadrature_wrapper & mapped_xy ) const;
 
   /**
    * Maps quadratures nodes from hypercube to triangles

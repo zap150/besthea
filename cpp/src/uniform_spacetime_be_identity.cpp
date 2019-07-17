@@ -26,49 +26,31 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file linear_operator.h
- * @brief Parent class for linear operators.
- */
+#include "besthea/uniform_spacetime_be_identity.h"
 
-#ifndef INCLUDE_BESTHEA_LINEAR_OPERATOR_H_
-#define INCLUDE_BESTHEA_LINEAR_OPERATOR_H_
-
-#include "besthea/settings.h"
-#include "besthea/vector.h"
-
-namespace besthea {
-  namespace linear_algebra {
-    class linear_operator;
-  }
+template< class test_space_type, class trial_space_type >
+besthea::bem::uniform_spacetime_be_identity< test_space_type,
+  trial_space_type >::uniform_spacetime_be_identity( test_space_type &
+                                                       test_space,
+  trial_space_type & trial_space, int order_regular )
+  : _test_space( &test_space ),
+    _trial_space( &trial_space ),
+    _order_regular( order_regular ),
+    _data( ) {
 }
 
-/**
- *  Class representing a linear operator.
- */
-class besthea::linear_algebra::linear_operator {
-  using vector_type = besthea::linear_algebra::vector;
+template< class test_space_type, class trial_space_type >
+besthea::bem::uniform_spacetime_be_identity< test_space_type,
+  trial_space_type >::~uniform_spacetime_be_identity( ) {
+}
 
- public:
-  /**
-   * Destructor.
-   */
-  virtual ~linear_operator( ) {
-  }
+template< class test_space_type, class trial_space_type >
+void besthea::bem::uniform_spacetime_be_identity< test_space_type,
+  trial_space_type >::assemble( ) {
+}
 
-  /*!
-   * @brief y = beta * y + alpha * (this)^trans * x.
-   * @param[in] x
-   * @param[in,out] y
-   * @param[in] trans
-   * @param[in] alpha
-   * @param[in] beta
-   */
-  virtual void apply( const vector_type & x, vector_type & y,
-    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const = 0;
-
- protected:
-  lo _dim_domain;  //!< domain dimension
-  lo _dim_range;   //!< range dimension
-};
-
-#endif /* INCLUDE_BESTHEA_LINEAR_OPERATOR_H_ */
+template< class test_space_type, class trial_space_type >
+void besthea::bem::uniform_spacetime_be_identity< test_space_type,
+  trial_space_type >::apply( const block_vector_type & x, block_vector_type & y,
+  bool trans, sc alpha, sc beta ) const {
+}

@@ -95,7 +95,6 @@ class besthea::linear_algebra::block_matrix
   }
 
  protected:
-  // {} instead of =, workaround because of bug in gcc
   lo & _n_rows{
     block_linear_operator::_dim_range
   };  //!< number of rows (range dimension)

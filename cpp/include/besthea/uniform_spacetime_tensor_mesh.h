@@ -49,8 +49,6 @@ namespace besthea {
 class besthea::mesh::uniform_spacetime_tensor_mesh
   : public besthea::mesh::mesh {
  public:
-  uniform_spacetime_tensor_mesh( ) = delete;
-
   /**
    * Constructing mesh from a file.
    * @param[in] space_mesh Reference to a triangular_surface_mesh.h.

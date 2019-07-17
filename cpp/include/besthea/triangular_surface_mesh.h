@@ -50,8 +50,6 @@ namespace besthea {
  */
 class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
  public:
-  triangular_surface_mesh( ) = delete;
-
   /**
    * Constructing mesh from a file.
    * @param[in] file Path to the file.

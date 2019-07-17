@@ -26,34 +26,43 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file linear_operator.h
- * @brief Parent class for linear operators.
+/** @file uniform_spacetime_be_identity.h
+ * @brief Discretized identity operator.
  */
 
-#ifndef INCLUDE_BESTHEA_LINEAR_OPERATOR_H_
-#define INCLUDE_BESTHEA_LINEAR_OPERATOR_H_
+#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_IDENTITY_H_
+#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_IDENTITY_H_
 
-#include "besthea/settings.h"
-#include "besthea/vector.h"
+#include "besthea/block_matrix.h"
+#include "besthea/sparse_matrix.h"
 
 namespace besthea {
-  namespace linear_algebra {
-    class linear_operator;
+  namespace bem {
+    template< class test_space_type, class trial_space_type >
+    class uniform_spacetime_be_identity;
   }
 }
 
 /**
- *  Class representing a linear operator.
+ *  Class representing a boundary element identity operator.
  */
-class besthea::linear_algebra::linear_operator {
-  using vector_type = besthea::linear_algebra::vector;
-
+template< class test_space_type, class trial_space_type >
+class besthea::bem::uniform_spacetime_be_identity
+  : public besthea::linear_algebra::block_matrix {
  public:
+  using matrix_type = besthea::linear_algebra::sparse_matrix;  //!< Matrix type.
+  using block_vector_type
+    = besthea::linear_algebra::block_vector;  //!< Block vector type.
+
+  uniform_spacetime_be_identity( test_space_type & test_space,
+    trial_space_type & trial_space, int order_regular = 4 );
+
+  ~uniform_spacetime_be_identity( );
+
   /**
-   * Destructor.
+   * Assembles the identity matrix.
    */
-  virtual ~linear_operator( ) {
-  }
+  void assemble( );
 
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
@@ -63,12 +72,17 @@ class besthea::linear_algebra::linear_operator {
    * @param[in] alpha
    * @param[in] beta
    */
-  virtual void apply( const vector_type & x, vector_type & y,
-    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const = 0;
+  void apply( const block_vector_type & x, block_vector_type & y,
+    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
 
- protected:
-  lo _dim_domain;  //!< domain dimension
-  lo _dim_range;   //!< range dimension
+ private:
+  matrix_type _data;  //!< Raw matrix data.
+
+  test_space_type * _test_space;  //!< Boundary element test space.
+
+  trial_space_type * _trial_space;  //!< Boundary element trial space.
+
+  int _order_regular;  //!< Triangle quadrature order for the regular integrals.
 };
 
-#endif /* INCLUDE_BESTHEA_LINEAR_OPERATOR_H_ */
+#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_IDENTITY_H_ */

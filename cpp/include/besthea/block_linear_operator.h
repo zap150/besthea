@@ -46,7 +46,8 @@ namespace besthea {
  *  Class representing a linear operator.
  */
 class besthea::linear_algebra::block_linear_operator {
-  using vector_type = besthea::linear_algebra::block_vector;
+  using block_vector_type
+    = besthea::linear_algebra::block_vector;  //!< Block vector type.
 
  public:
   block_linear_operator( )
@@ -79,7 +80,7 @@ class besthea::linear_algebra::block_linear_operator {
    * @param[in] alpha
    * @param[in] beta
    */
-  virtual void apply( vector_type const & x, vector_type & y,
+  virtual void apply( const block_vector_type & x, block_vector_type & y,
     bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const = 0;
 
  protected:

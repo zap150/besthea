@@ -155,7 +155,7 @@ class besthea::linear_algebra::block_lower_triangular_toeplitz_matrix
    * @param[in] alpha
    * @param[in] beta
    */
-  virtual void apply( block_vector_type const & x, block_vector_type & y,
+  virtual void apply( const block_vector_type & x, block_vector_type & y,
     bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
 
   /*!

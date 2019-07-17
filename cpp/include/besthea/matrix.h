@@ -77,7 +77,6 @@ class besthea::linear_algebra::matrix
   }
 
  protected:
-  // {} instead of =, workaround because of bug in gcc
   lo & _n_rows{
     linear_operator::_dim_range
   };  //!< number of rows (range dimension)

@@ -200,7 +200,7 @@ class besthea::linear_algebra::full_matrix
    * @param[in] alpha
    * @param[in] beta
    */
-  virtual void apply( vector_type const & x, vector_type & y,
+  virtual void apply( const vector_type & x, vector_type & y,
     bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
 
   /*!

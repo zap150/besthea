@@ -52,8 +52,6 @@ class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
   : public besthea::bem::uniform_spacetime_heat_kernel_antiderivative<
       uniform_spacetime_heat_sl_kernel_antiderivative > {
  public:
-  uniform_spacetime_heat_sl_kernel_antiderivative( ) = delete;
-
   /**
    * Constructor.
    * @param[in] timestep Time step.

@@ -50,8 +50,6 @@ namespace besthea {
 template< class derived_type >
 class besthea::bem::uniform_spacetime_kernel_antiderivative {
  public:
-  uniform_spacetime_kernel_antiderivative( ) = delete;
-
   /**
    * Constructor.
    * @param[in] timestep Timestep.
@@ -112,8 +110,7 @@ class besthea::bem::uniform_spacetime_kernel_antiderivative {
    * @param[in] ny Normal in the `y` variable.
    */
 #pragma omp declare simd uniform( nx, ny ) simdlen( DATA_WIDTH )
-  sc anti_tau_limit(
-    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny ) {
+  sc anti_tau_limit( sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny ) {
     return derived( ).do_anti_tau_limit( xy1, xy2, xy3, nx, ny );
   }
 

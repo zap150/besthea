@@ -48,8 +48,6 @@ namespace besthea {
 class besthea::bem::basis_tri_p1
   : public besthea::bem::basis_function< besthea::bem::basis_tri_p1 > {
  public:
-  basis_tri_p1( ) = delete;
-
   /**
    * Constructor.
    * @param[in] mesh Mesh.
