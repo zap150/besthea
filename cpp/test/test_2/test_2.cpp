@@ -72,7 +72,7 @@ int main( int argc, char * argv[] ) {
   uniform_spacetime_be_assembler assembler_v(
     kernel_v, test_space_v, trial_space_v, order_sing, order_reg );
   assembler_v.assemble( V );
-  // V.print( );
+  V.print( );
   //*/
   ///*
   block_lower_triangular_toeplitz_matrix K;

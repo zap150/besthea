@@ -192,7 +192,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
   sc scaled_delta;
 
-#pragma omp parallel shared( global_matrix )
+#pragma omp parallel
   {
     std::vector< lo > test_l2g( n_loc_rows );
     std::vector< lo > trial_l2g( n_loc_columns );
@@ -223,6 +223,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
     sc * kernel_data = my_quadrature._kernel_values.data( );
 
     for ( lo delta = 0; delta <= n_timesteps; ++delta ) {
+#pragma omp single
       scaled_delta = timestep * delta;
 
 #pragma omp for schedule( dynamic )
