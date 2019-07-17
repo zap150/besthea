@@ -54,6 +54,12 @@ class besthea::bem::uniform_spacetime_be_identity
   using block_vector_type
     = besthea::linear_algebra::block_vector;  //!< Block vector type.
 
+  /**
+   * Constructor.
+   * @param[in] test_space Test boundary element space.
+   * @param[in] trial_space Trial boundary element space.
+   * @param[in] order_regular Triangle quadrature order for regular quadrature.
+   */
   uniform_spacetime_be_identity( test_space_type & test_space,
     trial_space_type & trial_space, int order_regular = 4 );
 

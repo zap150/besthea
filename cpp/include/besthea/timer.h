@@ -49,23 +49,40 @@ namespace besthea {
  */
 class besthea::tools::timer {
  public:
-  using clock_type = std::chrono::high_resolution_clock;
-  using unit_type = std::chrono::milliseconds;
+  using clock_type = std::chrono::high_resolution_clock;  //!< Clock type.
+  using unit_type = std::chrono::milliseconds;            //!< Unit type.
 
+  /**
+   * Constructor taking a message to display.
+   * @param[in] msg Message to be displayed.
+   */
   timer( const std::string & msg = "" ) {
-    _start = clock_type::now( );
+    reset( msg );
   }
 
   timer( const timer & that ) = delete;
 
+  /**
+   * Destructor.
+   */
   ~timer( ) {
   }
 
+  /**
+   * Resets the timer.
+   * @param[in] msg Message to be displayed.
+   */
   void reset( const std::string & msg = "" ) {
-    std::cout << msg << std::endl;
+    if ( !msg.empty( ) ) {
+      std::cout << msg << std::endl;
+    }
     _start = clock_type::now( );
   }
 
+  /**
+   * Returns elapsed time since the last reset (or construction).
+   * @param[in] print Prints to stdout if 'true'.
+   */
   std::string measure( bool print = true ) {
     clock_type::time_point now = clock_type::now( );
     unit_type ms = std::chrono::duration_cast< unit_type >( now - _start );
@@ -80,7 +97,7 @@ class besthea::tools::timer {
   }
 
  private:
-  clock_type::time_point _start;
+  clock_type::time_point _start;  //!< Starting time point.
 };
 
 #endif /* INCLUDE_BESTHEA_TIMER_H_ */
