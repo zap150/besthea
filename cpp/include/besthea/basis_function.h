@@ -92,6 +92,15 @@ class besthea::bem::basis_function {
   /**
    * Provides global indices for local contributions.
    * @param[in] i_elem Element index.
+   * @param[out] indices Global indices for local contributions.
+   */
+  void local_to_global( lo i_elem, std::vector< lo > & indices ) {
+    derived( ).do_local_to_global( i_elem, indices );
+  }
+
+  /**
+   * Provides global indices for local contributions.
+   * @param[in] i_elem Element index.
    * @param[in] n_shared_vertices Number of shared vertives in currect elements
    * (regularized quadrature).
    * @param[in] rotation Virtual element rotation (regularized quadrature).
@@ -107,22 +116,14 @@ class besthea::bem::basis_function {
   /**
    * Evaluates the basis function.
    * @param[in] i_elem Element index.
+   * @param[in] i_fun Local basis function index.
    * @param[in] x1_ref First coordinate of reference quadrature point.
    * @param[in] x2_ref Second coordinate of reference quadrature point.
    * @param[in] n Element normal.
-   * @param[in] n_shared_vertices Number of shared vertives in currect elements
-   * (regularized quadrature).
-   * @param[in] rotation Virtual element rotation (regularized quadrature).
-   * @param[in] swap Virtual element inversion (regularized quadrature).
-   * @param[in] values Values of all basis functions supported on i_elem.
    */
-#pragma omp declare simd uniform( \
-  i_elem, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
-  void evaluate( lo i_elem, sc x1_ref, sc x2_ref, const sc * n,
-    int n_shared_vertices, int rotation, bool swap,
-    std::vector< sc > & values ) {
-    derived( ).do_evaluate(
-      i_elem, x1_ref, x2_ref, n, n_shared_vertices, rotation, swap, values );
+#pragma omp declare simd uniform( i_elem, i_fun, n ) simdlen( DATA_WIDTH )
+  sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n ) {
+    return derived( ).do_evaluate( i_elem, i_fun, x1_ref, x2_ref, n );
   }
 
   /**

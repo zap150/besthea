@@ -49,7 +49,7 @@ besthea::linear_algebra::sparse_matrix::sparse_matrix( los n_rows,
   std::vector< Eigen::Triplet< sc, los > > triplet_list;
   triplet_list.reserve( row_indices.size( ) );
 
-  for ( lou i = 0; i < row_indices.size( ); ++i ) {
+  for ( std::vector< los >::size_type i = 0; i < row_indices.size( ); ++i ) {
     triplet_list.push_back( Eigen::Triplet< sc, los >(
       row_indices[ i ], column_indices[ i ], values[ i ] ) );
   }
@@ -58,6 +58,23 @@ besthea::linear_algebra::sparse_matrix::sparse_matrix( los n_rows,
 }
 
 besthea::linear_algebra::sparse_matrix::~sparse_matrix( ) {
+}
+
+void besthea::linear_algebra::sparse_matrix::set_from_triplets( los n_rows,
+  los n_columns, std::vector< los > & row_indices,
+  std::vector< los > & column_indices, std::vector< sc > & values ) {
+  _n_rows = n_rows;
+  _n_columns = n_columns;
+  _data.resize( n_rows, n_columns );
+  std::vector< Eigen::Triplet< sc, los > > triplet_list;
+  triplet_list.reserve( row_indices.size( ) );
+
+  for ( std::vector< los >::size_type i = 0; i < row_indices.size( ); ++i ) {
+    triplet_list.push_back( Eigen::Triplet< sc, los >(
+      row_indices[ i ], column_indices[ i ], values[ i ] ) );
+  }
+  _data.setFromTriplets( triplet_list.begin( ), triplet_list.end( ) );
+  _data.makeCompressed( );
 }
 
 void besthea::linear_algebra::sparse_matrix::apply(

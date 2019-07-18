@@ -145,7 +145,7 @@ class besthea::bem::uniform_spacetime_be_assembler {
     int & rot_trial ) const;
 
   /**
-   * Maps the quadrature nodes from reference triangle to the actual geometry.
+   * Maps the quadrature nodes from reference triangles to the actual geometry.
    * @param[in] x1 Coordinates of the first node of the test element.
    * @param[in] x2 Coordinates of the second node of the test element.
    * @param[in] x3 Coordinates of the third node of the test element.
@@ -155,10 +155,11 @@ class besthea::bem::uniform_spacetime_be_assembler {
    * @param[in] type_int Type of the configuration (number of vertices shared).
    * @param[in] rot_test Virtual rotation of the test element.
    * @param[in] rot_trial Virtual rotation of the trial element.
+   * @param[in] my_quadrature Structure holding the quadrature nodes.
    */
   void triangles_to_geometry( const sc * x1, const sc * x2, const sc * x3,
     const sc * y1, const sc * y2, const sc * y3, int type_int, int rot_test,
-    int rot_trial, quadrature_wrapper & mapped_xy ) const;
+    int rot_trial, quadrature_wrapper & my_quadrature ) const;
 
   /**
    * Maps quadratures nodes from hypercube to triangles
@@ -284,27 +285,5 @@ class besthea::bem::uniform_spacetime_be_assembler {
     6 };  //!< Number of simplices for all configurations (disjoint, shared
           // vertex, shared edge, identical)
 };
-
-template class besthea::bem::uniform_spacetime_be_assembler<
-  besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
-template class besthea::bem::uniform_spacetime_be_assembler<
-  besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
-
-template class besthea::bem::uniform_spacetime_be_assembler<
-  besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
-template class besthea::bem::uniform_spacetime_be_assembler<
-  besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
-template class besthea::bem::uniform_spacetime_be_assembler<
-  besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ASSEMBLER_H_ */

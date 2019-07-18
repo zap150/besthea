@@ -29,7 +29,7 @@
 #include "besthea/bem.h"
 #include "besthea/linear_algebra.h"
 #include "besthea/settings.h"
-#include "besthea/timer.h"
+#include "besthea/tools.h"
 #include "besthea/triangular_surface_mesh.h"
 #include "besthea/uniform_spacetime_tensor_mesh.h"
 
@@ -63,18 +63,21 @@ int main( int argc, char * argv[] ) {
   uniform_spacetime_tensor_mesh spacetime_mesh( space_mesh, 1.0, n_timesteps );
   spacetime_mesh.refine( refine, 1 );
 
+  spacetime_mesh.print_info( );
+
   timer t;
+
+  uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > space_p0(
+    spacetime_mesh );
+  uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > space_p1(
+    spacetime_mesh );
 
   ///*
   block_lower_triangular_toeplitz_matrix V;
-  uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > test_space_v(
-    spacetime_mesh );
-  uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > trial_space_v(
-    spacetime_mesh );
   uniform_spacetime_heat_sl_kernel_antiderivative kernel_v(
     spacetime_mesh.get_timestep( ), alpha );
   uniform_spacetime_be_assembler assembler_v(
-    kernel_v, test_space_v, trial_space_v, order_sing, order_reg );
+    kernel_v, space_p0, space_p0, order_sing, order_reg );
   t.reset( "V" );
   assembler_v.assemble( V );
   t.measure( );
@@ -82,17 +85,19 @@ int main( int argc, char * argv[] ) {
   //*/
   ///*
   block_lower_triangular_toeplitz_matrix K;
-  uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > test_space_k(
-    spacetime_mesh );
-  uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > trial_space_k(
-    spacetime_mesh );
   uniform_spacetime_heat_dl_kernel_antiderivative kernel_k(
     spacetime_mesh.get_timestep( ), alpha );
   uniform_spacetime_be_assembler assembler_k(
-    kernel_k, test_space_k, trial_space_k, order_sing, order_reg );
+    kernel_k, space_p0, space_p1, order_sing, order_reg );
   t.reset( "K" );
   assembler_k.assemble( K );
   t.measure( );
   // K.print( );
+  //*/
+  ///*
+  sparse_matrix M;
+  uniform_spacetime_be_identity identity( space_p0, space_p1, 1 );
+  identity.assemble( M );
+  M.print( );
   //*/
 }

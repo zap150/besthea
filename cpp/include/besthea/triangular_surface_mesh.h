@@ -108,6 +108,13 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
   }
 
   /**
+   * Returns number of edges.
+   */
+  lo get_n_edges( ) const {
+    return _n_edges;
+  }
+
+  /**
    * Returns node indices of an element.
    * @param[in] i_element Index of the element.
    * @param[out] element Element indices.

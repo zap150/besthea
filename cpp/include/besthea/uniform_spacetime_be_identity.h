@@ -35,6 +35,7 @@
 
 #include "besthea/block_matrix.h"
 #include "besthea/sparse_matrix.h"
+#include "besthea/uniform_spacetime_be_space.h"
 
 namespace besthea {
   namespace bem {
@@ -70,6 +71,11 @@ class besthea::bem::uniform_spacetime_be_identity
    */
   void assemble( );
 
+  /**
+   * Assembles the identity matrix.
+   */
+  void assemble( matrix_type & global_matrix );
+
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
    * @param[in] x
@@ -82,6 +88,15 @@ class besthea::bem::uniform_spacetime_be_identity
     bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
 
  private:
+  /**
+   * Assembles the triplets for the sparse identity matrix.
+   * @param[in] ii Row indices.
+   * @param[in] jj Column indices.
+   * @param[in] vv Values.
+   */
+  void assemble_triplets(
+    std::vector< los > & ii, std::vector< los > & jj, std::vector< sc > & vv );
+
   matrix_type _data;  //!< Raw matrix data.
 
   test_space_type * _test_space;  //!< Boundary element test space.

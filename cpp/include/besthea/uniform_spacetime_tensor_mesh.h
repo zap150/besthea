@@ -64,6 +64,11 @@ class besthea::mesh::uniform_spacetime_tensor_mesh
   ~uniform_spacetime_tensor_mesh( );
 
   /**
+   * Prints info on the object.
+   */
+  void print_info( ) const;
+
+  /**
    * Refines the spatial mesh by quadrisection, temporal by bisection.
    * @param[in] level Number of spatial refinements.
    * @param[in] temporal_order Number of temporal refinements per single spatial
@@ -95,6 +100,13 @@ class besthea::mesh::uniform_spacetime_tensor_mesh
    */
   lo get_n_spatial_nodes( ) const {
     return _space_mesh->get_n_nodes( );
+  }
+
+  /**
+   * Returns number of spatial edges.
+   */
+  lo get_n_spatial_edges( ) const {
+    return _space_mesh->get_n_edges( );
   }
 
   /**

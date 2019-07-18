@@ -43,6 +43,11 @@ lo besthea::bem::basis_tri_p1::dimension_global( ) {
   return _mesh->get_spatial_mesh( )->get_n_nodes( );
 }
 
+void besthea::bem::basis_tri_p1::do_local_to_global(
+  lo i_elem, std::vector< lo > & indices ) {
+  _mesh->get_spatial_mesh( )->get_element( i_elem, indices.data( ) );
+}
+
 void besthea::bem::basis_tri_p1::do_local_to_global( lo i_elem,
   int n_shared_vertices, int rotation, bool swap,
   std::vector< lo > & indices ) {
@@ -59,14 +64,20 @@ void besthea::bem::basis_tri_p1::do_local_to_global( lo i_elem,
   indices[ 2 ] = element[ _map[ rotation + 2 ] ];
 }
 
-#pragma omp declare simd uniform( \
-  i_elem, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
-void besthea::bem::basis_tri_p1::do_evaluate( lo i_elem, sc x1_ref, sc x2_ref,
-  const sc * n, int n_shared_vertices, int rotation, bool swap,
-  std::vector< sc > & values ) {
-  values[ 0 ] = 1 - x1_ref - x2_ref;
-  values[ 1 ] = x1_ref;
-  values[ 2 ] = x2_ref;
+#pragma omp declare simd uniform( i_elem, i_fun, n ) simdlen( DATA_WIDTH )
+sc besthea::bem::basis_tri_p1::do_evaluate(
+  lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n ) {
+  sc value = 0.0;
+
+  if ( i_fun == 0 ) {
+    value = 1 - x1_ref - x2_ref;
+  } else if ( i_fun == 1 ) {
+    value = x1_ref;
+  } else if ( i_fun == 2 ) {
+    value = x2_ref;
+  }
+
+  return value;
 }
 
 #pragma omp declare simd uniform( \

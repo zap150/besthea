@@ -32,6 +32,28 @@
 
 #include <algorithm>
 
+template class besthea::bem::uniform_spacetime_be_assembler<
+  besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
+template class besthea::bem::uniform_spacetime_be_assembler<
+  besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+
+template class besthea::bem::uniform_spacetime_be_assembler<
+  besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
+template class besthea::bem::uniform_spacetime_be_assembler<
+  besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+template class besthea::bem::uniform_spacetime_be_assembler<
+  besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+
 template< class kernel_type, class test_space_type, class trial_space_type >
 besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::uniform_spacetime_be_assembler( kernel_type & kernel,
@@ -358,12 +380,13 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 //*/
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
-  trial_space_type >::init_quadrature( quadrature_wrapper & my_quadrature ) const {
+  trial_space_type >::init_quadrature( quadrature_wrapper & my_quadrature )
+  const {
   // Use triangle rules for disjoint elements
   const std::vector< sc > & tri_x1 = quadrature::triangle_x1( _order_regular );
   const std::vector< sc > & tri_x2 = quadrature::triangle_x2( _order_regular );
   const std::vector< sc > & tri_w = quadrature::triangle_w( _order_regular );
-  lo tri_size = tri_x1.size( );
+  lo tri_size = tri_w.size( );
   lo tri_size2 = tri_size * tri_size;
 
   int n_shared_vertices = 0;

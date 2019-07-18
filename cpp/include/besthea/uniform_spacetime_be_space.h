@@ -101,9 +101,4 @@ class besthea::bem::uniform_spacetime_be_space {
   basis _basis;  //!< spatial basis function (temporal is constant)
 };
 
-template class besthea::bem::uniform_spacetime_be_space<
-  besthea::bem::basis_tri_p0 >;
-template class besthea::bem::uniform_spacetime_be_space<
-  besthea::bem::basis_tri_p1 >;
-
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_SPACE_H_ */

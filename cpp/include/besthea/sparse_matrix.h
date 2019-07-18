@@ -79,6 +79,19 @@ class besthea::linear_algebra::sparse_matrix
 
   virtual ~sparse_matrix( );
 
+  /**
+   * Sets the sparse matrix from triplets.
+   * @param[in] n_rows Number of rows.
+   * @param[in] n_columns Number of columns.
+   * @param[in] row_indices Indices of rows.
+   * @param[in] column_indices Indices of columns.
+   * @param[in] values Values to be stored at positions specified by
+   * `row_indices` and `column_indices`.
+   */
+  void set_from_triplets( los n_rows, los n_columns,
+    std::vector< los > & row_indices, std::vector< los > & column_indices,
+    std::vector< sc > & values );
+
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
    * @param[in] x
@@ -89,6 +102,22 @@ class besthea::linear_algebra::sparse_matrix
    */
   virtual void apply( vector const & x, vector & y, bool trans = false,
     sc alpha = 1.0, sc beta = 0.0 ) const;
+
+  /**
+   * Prints the triplets.
+   * @param[in] stream Stream to print to.
+   */
+  void print( std::ostream & stream = std::cout ) const {
+    using iterator_type =
+      typename Eigen::SparseMatrix< sc, Eigen::ColMajor, los >::InnerIterator;
+
+    for ( Eigen::Index k = 0; k < _data.outerSize( ); ++k )
+      for ( iterator_type it( _data, k ); it; ++it ) {
+        std::cout << it.row( ) << " ";  // row index
+        std::cout << it.col( ) << " ";  // col index (here it is equal to k)
+        std::cout << it.value( ) << std::endl;
+      }
+  }
 
  protected:
   Eigen::SparseMatrix< sc, Eigen::ColMajor, los > _data;  //!< Eigen data.

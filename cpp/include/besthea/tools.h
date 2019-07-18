@@ -26,21 +26,13 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "besthea/uniform_spacetime_be_space.h"
+/** @file tools.h
+ * @brief
+ */
 
-template class besthea::bem::uniform_spacetime_be_space<
-  besthea::bem::basis_tri_p0 >;
-template class besthea::bem::uniform_spacetime_be_space<
-  besthea::bem::basis_tri_p1 >;
+#ifndef INCLUDE_BESTHEA_TOOLS_H_
+#define INCLUDE_BESTHEA_TOOLS_H_
 
-template< class basis >
-besthea::bem::uniform_spacetime_be_space< basis >::uniform_spacetime_be_space(
-  st_mesh_type & spacetime_mesh )
-  : _basis( spacetime_mesh ) {
-  _spacetime_mesh = &spacetime_mesh;
-}
+#include "besthea/timer.h"
 
-template< class basis >
-besthea::bem::uniform_spacetime_be_space<
-  basis >::~uniform_spacetime_be_space( ) {
-}
+#endif /* INCLUDE_BESTHEA_TOOLS_H_ */
