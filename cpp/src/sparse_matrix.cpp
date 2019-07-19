@@ -28,6 +28,8 @@
 
 #include "besthea/sparse_matrix.h"
 
+#include "Eigen/IterativeLinearSolvers"
+
 besthea::linear_algebra::sparse_matrix::sparse_matrix( ) : _data( ) {
   _n_rows = 0;
   _n_columns = 0;
@@ -80,15 +82,34 @@ void besthea::linear_algebra::sparse_matrix::set_from_triplets( los n_rows,
 void besthea::linear_algebra::sparse_matrix::apply(
   const vector & x, vector & y, bool trans, sc alpha, sc beta ) const {
   // converting raw arrays to Eigen type
-  typedef Eigen::Map< const Eigen::Matrix< sc, Eigen::Dynamic, 1 > > map_const;
-  typedef Eigen::Map< Eigen::Matrix< sc, Eigen::Dynamic, 1 > > map;
-
-  map_const x2map( x.data( ), x.size( ) );
-  map y2map( y.data( ), y.size( ) );
+  Eigen::Map< const Eigen::Matrix< sc, Eigen::Dynamic, 1 > > x2map(
+    x.data( ), x.size( ) );
+  Eigen::Map< Eigen::Matrix< sc, Eigen::Dynamic, 1 > > y2map(
+    y.data( ), y.size( ) );
 
   if ( trans ) {
     y2map = beta * y2map + alpha * _data.transpose( ) * x2map;
   } else {
     y2map = beta * y2map + alpha * _data * x2map;
   }
+}
+
+void besthea::linear_algebra::sparse_matrix::eigen_cg_solve( const vector & rhs,
+  vector & solution, sc & relative_residual_error, lo & n_iterations ) {
+  Eigen::ConjugateGradient< Eigen::SparseMatrix< sc, Eigen::ColMajor, los >,
+    Eigen::Lower | Eigen::Upper >
+    cg( _data );
+
+  cg.setMaxIterations( static_cast< Eigen::Index >( n_iterations ) );
+  cg.setTolerance( relative_residual_error );
+
+  Eigen::Map< const Eigen::Matrix< sc, Eigen::Dynamic, 1 > > rhs_map(
+    rhs.data( ), rhs.size( ) );
+  Eigen::Map< Eigen::Matrix< sc, Eigen::Dynamic, 1 > > solution_map(
+    solution.data( ), solution.size( ) );
+
+  solution_map = cg.solve( rhs_map );
+
+  relative_residual_error = static_cast< sc >( cg.error( ) );
+  n_iterations = static_cast< lo >( cg.iterations( ) );
 }

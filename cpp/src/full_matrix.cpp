@@ -33,9 +33,9 @@
 #include <algorithm>
 #include <random>
 
-besthea::linear_algebra::full_matrix::full_matrix( ) : _data( 1, 0.0 ) {
-  this->_n_rows = 1;
-  this->_n_columns = 1;
+besthea::linear_algebra::full_matrix::full_matrix( ) : _data( ) {
+  this->_n_rows = 0;
+  this->_n_columns = 0;
 }
 
 besthea::linear_algebra::full_matrix::full_matrix( const full_matrix & that )

@@ -100,7 +100,7 @@ class besthea::linear_algebra::sparse_matrix
    * @param[in] alpha
    * @param[in] beta
    */
-  virtual void apply( vector const & x, vector & y, bool trans = false,
+  virtual void apply( const vector & x, vector & y, bool trans = false,
     sc alpha = 1.0, sc beta = 0.0 ) const;
 
   /**
@@ -118,6 +118,17 @@ class besthea::linear_algebra::sparse_matrix
         std::cout << it.value( ) << std::endl;
       }
   }
+
+  /**
+   * CG as implemented in Eigen.
+   * @param[in] rhs Right-hand side vector.
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring decrease of
+   * |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on exit.
+   */
+  void eigen_cg_solve( const vector & rhs, vector & solution,
+    sc & relative_residual_error, lo & n_iterations );
 
  protected:
   Eigen::SparseMatrix< sc, Eigen::ColMajor, los > _data;  //!< Eigen data.

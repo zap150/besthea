@@ -97,7 +97,10 @@ int main( int argc, char * argv[] ) {
   ///*
   sparse_matrix M;
   uniform_spacetime_be_identity identity( space_p0, space_p1, 1 );
+  t.reset( "M" );
   identity.assemble( M );
-  M.print( );
+  t.measure( );
+  // M.print( );
   //*/
+
 }

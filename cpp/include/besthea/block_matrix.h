@@ -26,7 +26,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file matrix.h
+/** @file block_matrix.h
  * @brief
  */
 

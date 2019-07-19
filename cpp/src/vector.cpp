@@ -33,7 +33,7 @@
 #include <algorithm>
 #include <random>
 
-besthea::linear_algebra::vector::vector( ) : _size( 1 ), _data( 1, 0.0 ) {
+besthea::linear_algebra::vector::vector( ) : _size( 0 ), _data( ) {
 }
 
 besthea::linear_algebra::vector::vector( const vector & that )

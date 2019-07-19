@@ -73,8 +73,8 @@ class besthea::linear_algebra::vector {
 
   ~vector( );
 
-  /*!
-   * @brief Prints the vector.
+  /**
+   * Prints the vector.
    * @param[in] stream
    */
   void print( std::ostream & stream = std::cout ) const;
@@ -87,8 +87,17 @@ class besthea::linear_algebra::vector {
     std::fill( _data.begin( ), _data.end( ), value );
   }
 
-  /*!
-   * @brief Fills the vector with random numbers (uniform distribution).
+  /**
+   * Resizes the vector.
+   * @param[in] size New size.
+   */
+  void resize( lo size ) {
+    _data.resize( size );
+    _size = size;
+  }
+
+  /**
+   * Fills the vector with random numbers (uniform distribution).
    * @param[in] lower Lower bound.
    * @param[in] upper Upper bound.
    */
