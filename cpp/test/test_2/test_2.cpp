@@ -41,6 +41,10 @@ using namespace besthea::linear_algebra;
 using namespace besthea::bem;
 using namespace besthea::tools;
 
+sc dirichlet( sc * x, sc * n ) {
+  return 1.0;
+}
+
 int main( int argc, char * argv[] ) {
   std::string file = "../mesh_files/cube_192.txt";
   int refine = 0;
@@ -103,4 +107,6 @@ int main( int argc, char * argv[] ) {
   // M.print( );
   //*/
 
+  block_vector bv;
+  space_p1.l2_projection( dirichlet, bv );
 }

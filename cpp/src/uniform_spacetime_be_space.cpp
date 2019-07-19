@@ -44,3 +44,10 @@ template< class basis >
 besthea::bem::uniform_spacetime_be_space<
   basis >::~uniform_spacetime_be_space( ) {
 }
+
+template< class basis >
+void besthea::bem::uniform_spacetime_be_space< basis >::l2_projection(
+  sc ( *f )( sc *, sc * ), const block_vector_type & projection,
+  int order_matrix, int order_rhs ) {
+  std::cout << f( nullptr, nullptr ) << std::endl;
+}

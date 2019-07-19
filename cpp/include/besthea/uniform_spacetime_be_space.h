@@ -35,6 +35,7 @@
 
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
+#include "besthea/block_vector.h"
 #include "besthea/settings.h"
 #include "besthea/uniform_spacetime_tensor_mesh.h"
 
@@ -52,6 +53,8 @@ template< class basis >
 class besthea::bem::uniform_spacetime_be_space {
   using st_mesh_type
     = besthea::mesh::uniform_spacetime_tensor_mesh;  //!< Spacetime mesh type.
+  using block_vector_type
+    = besthea::linear_algebra::block_vector;  //!< Block vector type.
 
  public:
   uniform_spacetime_be_space( const uniform_spacetime_be_space & that )
@@ -95,6 +98,17 @@ class besthea::bem::uniform_spacetime_be_space {
   const basis & get_basis( ) const {
     return _basis;
   }
+
+  /**
+   * Projects a function to the boundary element space.
+   * @param[in] f Function to be projected.
+   * @param[out] projection Projection vector.
+   * @param[in] order_matrix Order to assemble the mass matrix.
+   * @param[in] order_rhs Order to assemble the right-hand side.
+   */
+  void l2_projection( sc ( *f )( sc *, sc * ),
+    const block_vector_type & projection, int order_matrix = 2,
+    int order_rhs = 4 );
 
  protected:
   st_mesh_type * _spacetime_mesh;  //!< uniform spacetime tensor mesh
