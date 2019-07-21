@@ -28,10 +28,9 @@
 
 #include "besthea/uniform_spacetime_be_space.h"
 
-template class besthea::bem::uniform_spacetime_be_space<
-  besthea::bem::basis_tri_p0 >;
-template class besthea::bem::uniform_spacetime_be_space<
-  besthea::bem::basis_tri_p1 >;
+#include "besthea/quadrature.h"
+#include "besthea/sparse_matrix.h"
+#include "besthea/uniform_spacetime_be_identity.h"
 
 template< class basis >
 besthea::bem::uniform_spacetime_be_space< basis >::uniform_spacetime_be_space(
@@ -47,7 +46,31 @@ besthea::bem::uniform_spacetime_be_space<
 
 template< class basis >
 void besthea::bem::uniform_spacetime_be_space< basis >::l2_projection(
-  sc ( *f )( sc *, sc * ), const block_vector_type & projection,
-  int order_matrix, int order_rhs ) {
-  std::cout << f( nullptr, nullptr ) << std::endl;
+  sc ( *f )( sc *, sc *, sc ), block_vector_type & projection, int order_matrix,
+  int order_rhs_spatial, int order_rhs_temporal ) {
+  besthea::linear_algebra::sparse_matrix M;
+  besthea::bem::uniform_spacetime_be_identity identity(
+    *this, *this, order_matrix );
+  identity.assemble( M );
+
+  lo n_timesteps = _spacetime_mesh->get_n_temporal_elements( );
+  sc timestep = _spacetime_mesh->get_timestep( );
+
+  lo n_loc_rows = _basis.dimension_local( );
+  std::vector< lo > basis_l2g( n_loc_rows );
+
+  sc x1[ 3 ], x2[ 3 ], x3[ 3 ], n[ 3 ];
+
+  const std::vector< sc > & tri_x1
+    = quadrature::triangle_x1( order_rhs_spatial );
+  const std::vector< sc > & tri_x2
+    = quadrature::triangle_x2( order_rhs_spatial );
+  const std::vector< sc > & tri_w = quadrature::triangle_w( order_rhs_spatial );
+  const std::vector< sc > & line_x = quadrature::line_x( order_rhs_temporal );
+  const std::vector< sc > & line_w = quadrature::line_w( order_rhs_temporal );
 }
+
+template class besthea::bem::uniform_spacetime_be_space<
+  besthea::bem::basis_tri_p0 >;
+template class besthea::bem::uniform_spacetime_be_space<
+  besthea::bem::basis_tri_p1 >;

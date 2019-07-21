@@ -41,16 +41,23 @@ using namespace besthea::linear_algebra;
 using namespace besthea::bem;
 using namespace besthea::tools;
 
-sc dirichlet( sc * x, sc * n ) {
-  return 1.0;
-}
+struct cauchy_data {
+  static sc dirichlet( sc * x, sc * n, sc t ) {
+    return 1.0;
+  }
+
+  static sc neumann( sc * x, sc * n, sc t ) {
+    return 1.0;
+  }
+
+  static constexpr sc alpha{ 2.5 };
+};
 
 int main( int argc, char * argv[] ) {
   std::string file = "../mesh_files/cube_192.txt";
   int refine = 0;
   lo n_timesteps = 8;
 
-  sc alpha = 1.0;
   lo order_sing = 4;
   lo order_reg = 4;
 
@@ -79,7 +86,7 @@ int main( int argc, char * argv[] ) {
   ///*
   block_lower_triangular_toeplitz_matrix V;
   uniform_spacetime_heat_sl_kernel_antiderivative kernel_v(
-    spacetime_mesh.get_timestep( ), alpha );
+    spacetime_mesh.get_timestep( ), cauchy_data::alpha );
   uniform_spacetime_be_assembler assembler_v(
     kernel_v, space_p0, space_p0, order_sing, order_reg );
   t.reset( "V" );
@@ -90,7 +97,7 @@ int main( int argc, char * argv[] ) {
   ///*
   block_lower_triangular_toeplitz_matrix K;
   uniform_spacetime_heat_dl_kernel_antiderivative kernel_k(
-    spacetime_mesh.get_timestep( ), alpha );
+    spacetime_mesh.get_timestep( ), cauchy_data::alpha );
   uniform_spacetime_be_assembler assembler_k(
     kernel_k, space_p0, space_p1, order_sing, order_reg );
   t.reset( "K" );
@@ -108,5 +115,5 @@ int main( int argc, char * argv[] ) {
   //*/
 
   block_vector bv;
-  space_p1.l2_projection( dirichlet, bv );
+  space_p1.l2_projection( cauchy_data::dirichlet, bv );
 }

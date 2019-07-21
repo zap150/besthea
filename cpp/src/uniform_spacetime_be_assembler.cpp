@@ -32,28 +32,6 @@
 
 #include <algorithm>
 
-template class besthea::bem::uniform_spacetime_be_assembler<
-  besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
-template class besthea::bem::uniform_spacetime_be_assembler<
-  besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
-
-template class besthea::bem::uniform_spacetime_be_assembler<
-  besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
-template class besthea::bem::uniform_spacetime_be_assembler<
-  besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
-template class besthea::bem::uniform_spacetime_be_assembler<
-  besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
-
 template< class kernel_type, class test_space_type, class trial_space_type >
 besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::uniform_spacetime_be_assembler( kernel_type & kernel,
@@ -739,3 +717,25 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
       break;
   }
 }
+
+template class besthea::bem::uniform_spacetime_be_assembler<
+  besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
+template class besthea::bem::uniform_spacetime_be_assembler<
+  besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+
+template class besthea::bem::uniform_spacetime_be_assembler<
+  besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
+template class besthea::bem::uniform_spacetime_be_assembler<
+  besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+template class besthea::bem::uniform_spacetime_be_assembler<
+  besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;

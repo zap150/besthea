@@ -103,12 +103,16 @@ class besthea::bem::uniform_spacetime_be_space {
    * Projects a function to the boundary element space.
    * @param[in] f Function to be projected.
    * @param[out] projection Projection vector.
-   * @param[in] order_matrix Order to assemble the mass matrix.
-   * @param[in] order_rhs Order to assemble the right-hand side.
+   * @param[in] order_matrix Spatial quadrature order to assemble the mass
+   * matrix.
+   * @param[in] order_rhs_spatial Spatial triangular quadrature order to
+   * assemble the right-hand side.
+   * @param[in] order_rhs_temporal Temporal line quadrature order to assemble
+   * the right-hand side.
    */
-  void l2_projection( sc ( *f )( sc *, sc * ),
-    const block_vector_type & projection, int order_matrix = 2,
-    int order_rhs = 4 );
+  void l2_projection( sc ( *f )( sc *, sc *, sc ),
+    block_vector_type & projection, int order_matrix = 2,
+    int order_rhs_spatial = 4, int order_rhs_temporal = 4 );
 
  protected:
   st_mesh_type * _spacetime_mesh;  //!< uniform spacetime tensor mesh
