@@ -361,9 +361,12 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::init_quadrature( quadrature_wrapper & my_quadrature )
   const {
   // Use triangle rules for disjoint elements
-  const std::vector< sc > & tri_x1 = quadrature::triangle_x1( _order_regular );
-  const std::vector< sc > & tri_x2 = quadrature::triangle_x2( _order_regular );
-  const std::vector< sc > & tri_w = quadrature::triangle_w( _order_regular );
+  const std::vector< sc, besthea::allocator_type< sc > > & tri_x1
+    = quadrature::triangle_x1( _order_regular );
+  const std::vector< sc, besthea::allocator_type< sc > > & tri_x2
+    = quadrature::triangle_x2( _order_regular );
+  const std::vector< sc, besthea::allocator_type< sc > > & tri_w
+    = quadrature::triangle_w( _order_regular );
   lo tri_size = tri_w.size( );
   lo tri_size2 = tri_size * tri_size;
 
@@ -388,8 +391,10 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   }
 
   // Use tensor Gauss rules for singular configurations
-  const std::vector< sc > & line_x = quadrature::line_x( _order_singular );
-  const std::vector< sc > & line_w = quadrature::line_w( _order_singular );
+  const std::vector< sc, besthea::allocator_type< sc > > & line_x
+    = quadrature::line_x( _order_singular );
+  const std::vector< sc, besthea::allocator_type< sc > > & line_w
+    = quadrature::line_w( _order_singular );
   lo line_size = line_x.size( );
   lo line_size4 = line_size * line_size * line_size * line_size;
   sc jacobian = 0.0;

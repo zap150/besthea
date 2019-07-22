@@ -93,9 +93,12 @@ void besthea::bem::uniform_spacetime_be_identity< test_space_type,
   jj.reserve( n_elements * n_loc_rows * n_loc_columns );
   vv.reserve( n_elements * n_loc_rows * n_loc_columns );
 
-  const std::vector< sc > & x1_ref = quadrature::triangle_x1( _order_regular );
-  const std::vector< sc > & x2_ref = quadrature::triangle_x2( _order_regular );
-  const std::vector< sc > & w = quadrature::triangle_w( _order_regular );
+  const std::vector< sc, besthea::allocator_type< sc > > & x1_ref
+    = quadrature::triangle_x1( _order_regular );
+  const std::vector< sc, besthea::allocator_type< sc > > & x2_ref
+    = quadrature::triangle_x2( _order_regular );
+  const std::vector< sc, besthea::allocator_type< sc > > & w
+    = quadrature::triangle_w( _order_regular );
   lo size = w.size( );
 
   sc value, test, trial, area;
@@ -129,6 +132,10 @@ template< class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_identity< test_space_type,
   trial_space_type >::apply( const block_vector_type & x, block_vector_type & y,
   bool trans, sc alpha, sc beta ) const {
+  lo block_dim = _test_space->get_mesh( )->get_n_temporal_elements( );
+  for ( lo diag = 0; diag < block_dim; ++diag ) {
+    _data.apply( x.get_block( diag ), y.get_block( diag ), trans, alpha, beta );
+  }
 }
 
 template class besthea::bem::uniform_spacetime_be_identity<

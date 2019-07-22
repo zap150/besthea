@@ -42,21 +42,32 @@ using namespace besthea::bem;
 using namespace besthea::tools;
 
 struct cauchy_data {
-  static sc dirichlet( sc * x, sc * n, sc t ) {
-    return 1.0;
+  static sc dirichlet( sc x1, sc x2, sc x3, sc * n, sc t ) {
+    sc norm2 = ( x1 - y[ 0 ] ) * ( x1 - y[ 0 ] )
+      + ( x2 - y[ 1 ] ) * ( x2 - y[ 1 ] ) + ( x3 - y[ 2 ] ) * ( x3 - y[ 2 ] );
+    sc value = std::pow( 4.0 * M_PI * alpha * t, -1.5 )
+      * std::exp( -norm2 / ( 4.0 * alpha * t ) );
+
+    return value;
   }
 
-  static sc neumann( sc * x, sc * n, sc t ) {
-    return 1.0;
+  static sc neumann( sc x1, sc x2, sc x3, sc * n, sc t ) {
+    sc dot = ( x1 - y[ 0 ] ) * n[ 0 ] + ( x2 - y[ 1 ] ) * n[ 1 ]
+      + ( x3 - y[ 2 ] ) * n[ 2 ];
+    sc value = ( -1.0 / ( 2.0 * t ) ) * dot * dirichlet( x1, x2, x3, n, t );
+
+    return value;
   }
 
-  static constexpr sc alpha{ 2.5 };
+  static constexpr sc alpha{ 0.5 };
+  static constexpr std::array< sc, 3 > y{ 0.0, 0.0, 1.5 };
 };
 
 int main( int argc, char * argv[] ) {
   std::string file = "../mesh_files/cube_192.txt";
   int refine = 0;
   lo n_timesteps = 8;
+  sc end_time = 1.0;
 
   lo order_sing = 4;
   lo order_reg = 4;
@@ -68,10 +79,14 @@ int main( int argc, char * argv[] ) {
     n_timesteps = std::atoi( argv[ 2 ] );
   }
   if ( argc > 3 ) {
-    refine = std::atoi( argv[ 3 ] );
+    end_time = std::atoi( argv[ 3 ] );
+  }
+  if ( argc > 4 ) {
+    refine = std::atoi( argv[ 4 ] );
   }
   triangular_surface_mesh space_mesh( file );
-  uniform_spacetime_tensor_mesh spacetime_mesh( space_mesh, 1.0, n_timesteps );
+  uniform_spacetime_tensor_mesh spacetime_mesh(
+    space_mesh, end_time, n_timesteps );
   spacetime_mesh.refine( refine, 1 );
 
   spacetime_mesh.print_info( );
@@ -83,7 +98,7 @@ int main( int argc, char * argv[] ) {
   uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > space_p1(
     spacetime_mesh );
 
-  ///*
+  /*
   block_lower_triangular_toeplitz_matrix V;
   uniform_spacetime_heat_sl_kernel_antiderivative kernel_v(
     spacetime_mesh.get_timestep( ), cauchy_data::alpha );
@@ -93,8 +108,7 @@ int main( int argc, char * argv[] ) {
   assembler_v.assemble( V );
   t.measure( );
   // V.print( );
-  //*/
-  ///*
+
   block_lower_triangular_toeplitz_matrix K;
   uniform_spacetime_heat_dl_kernel_antiderivative kernel_k(
     spacetime_mesh.get_timestep( ), cauchy_data::alpha );
@@ -104,16 +118,30 @@ int main( int argc, char * argv[] ) {
   assembler_k.assemble( K );
   t.measure( );
   // K.print( );
-  //*/
-  ///*
+
   sparse_matrix M;
   uniform_spacetime_be_identity identity( space_p0, space_p1, 1 );
   t.reset( "M" );
   identity.assemble( M );
   t.measure( );
   // M.print( );
-  //*/
+  */
 
-  block_vector bv;
-  space_p1.l2_projection( cauchy_data::dirichlet, bv );
+  block_vector bv_dir, bv_neu;
+  space_p1.l2_projection( cauchy_data::dirichlet, bv_dir );
+  space_p0.l2_projection( cauchy_data::neumann, bv_neu );
+  std::vector< std::string > node_labels{ "Dirichlet" };
+  std::vector< std::string > elem_labels{ "Neumann" };
+  ///*
+  std::stringstream ss;
+  for ( lo d = 0; d < spacetime_mesh.get_n_temporal_elements( ); ++d ) {
+    ss.str( "" );
+    ss.clear( );
+    ss << "output.vtu." << d;
+    std::vector< sc * > node_data{ bv_dir.get_block( d ).data( ) };
+    std::vector< sc * > elem_data{ bv_neu.get_block( d ).data( ) };
+    spacetime_mesh.print_vtu(
+      ss.str( ), &node_labels, &node_data, &elem_labels, &elem_data );
+  }
+  //*/
 }

@@ -82,7 +82,7 @@ class besthea::bem::uniform_spacetime_be_assembler {
     std::vector< sc, besthea::allocator_type< sc > >
       _x2;  //!< Second coordinates of quadrature nodes in the test element
     std::vector< sc, besthea::allocator_type< sc > >
-      _x3;  //!< Third coordinates of quadrature nodes in  the test element
+      _x3;  //!< Third coordinates of quadrature nodes in the test element
 
     std::vector< sc, besthea::allocator_type< sc > >
       _y1;  //!< First coordinates of quadrature nodes in the trial element
@@ -130,6 +130,7 @@ class besthea::bem::uniform_spacetime_be_assembler {
  private:
   /**
    * Initializes quadrature structures.
+   * @param[out] my_quadrature Wrapper holding quadrature data.
    */
   void init_quadrature( quadrature_wrapper & my_quadrature ) const;
 
@@ -155,7 +156,7 @@ class besthea::bem::uniform_spacetime_be_assembler {
    * @param[in] type_int Type of the configuration (number of vertices shared).
    * @param[in] rot_test Virtual rotation of the test element.
    * @param[in] rot_trial Virtual rotation of the trial element.
-   * @param[in] my_quadrature Structure holding the quadrature nodes.
+   * @param[in,out] my_quadrature Structure holding the quadrature nodes.
    */
   void triangles_to_geometry( const sc * x1, const sc * x2, const sc * x3,
     const sc * y1, const sc * y2, const sc * y3, int type_int, int rot_test,
@@ -275,7 +276,9 @@ class besthea::bem::uniform_spacetime_be_assembler {
 
   int _order_regular;  //!< Triangle quadrature order for the regular integrals.
 
-  static const int data_align{ DATA_ALIGN };
+  static const int data_align{
+    DATA_ALIGN
+  };  //!< Intel cannot work with DATA_ALIGN directly
 
   static constexpr std::array< int, 5 > map{ 0, 1, 2, 0,
     1 };  //!< Auxiliary array for mapping DOFs under

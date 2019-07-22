@@ -1,5 +1,5 @@
 *.optrpt
-*.vtu
+*.vtu.*
 *.exe
 *.o.d
 *.bbl
@@ -14,5 +14,6 @@
 *.toc
 *.xmpi
 *.DS_Store
+*Makefile.debug
 cpp/doc/html
 notes/integration/integration.pdf

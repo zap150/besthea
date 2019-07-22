@@ -52,7 +52,8 @@ class besthea::bem::quadrature {
    * Returns the line quadrature nodes in (0,1)
    * @param[in] order Quadrature order.
    */
-  static const std::vector< sc > & line_x( int order ) {
+  static const std::vector< sc, besthea::allocator_type< sc > > & line_x(
+    int order ) {
     switch ( order ) {
       case 1:
         return line_x_1;
@@ -75,7 +76,8 @@ class besthea::bem::quadrature {
    * Returns the line quadrature weights in (0,1)
    * @param[in] order Quadrature order.
    */
-  static const std::vector< sc > & line_w( int order ) {
+  static const std::vector< sc, besthea::allocator_type< sc > > & line_w(
+    int order ) {
     switch ( order ) {
       case 1:
         return line_w_1;
@@ -99,7 +101,8 @@ class besthea::bem::quadrature {
    * (0,1)x(0,1-x1)
    * @param[in] order Quadrature order.
    */
-  static const std::vector< sc > & triangle_x1( int order ) {
+  static const std::vector< sc, besthea::allocator_type< sc > > & triangle_x1(
+    int order ) {
     switch ( order ) {
       case 1:
         return triangle_x1_1;
@@ -121,7 +124,8 @@ class besthea::bem::quadrature {
    * (0,1)x(0,1-x1)
    * @param[in] order Quadrature order.
    */
-  static const std::vector< sc > & triangle_x2( int order ) {
+  static const std::vector< sc, besthea::allocator_type< sc > > & triangle_x2(
+    int order ) {
     switch ( order ) {
       case 1:
         return triangle_x2_1;
@@ -143,7 +147,8 @@ class besthea::bem::quadrature {
    * (0,1)x(0,1-x1)
    * @param[in] order Quadrature order.
    */
-  static const std::vector< sc > & triangle_w( int order ) {
+  static const std::vector< sc, besthea::allocator_type< sc > > & triangle_w(
+    int order ) {
     switch ( order ) {
       case 1:
         return triangle_w_1;
@@ -161,79 +166,84 @@ class besthea::bem::quadrature {
   }
 
  private:
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
     line_x_1;  //!< Quadrature nodes in (0,1), order 1
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
     line_w_1;  //!< Quadrature weights in (0,1), order 1
 
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
     line_x_2;  //!< Quadrature nodes in (0,1), order 2
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
     line_w_2;  //!< Quadrature weights in (0,1), order 2
 
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
     line_x_3;  //!< Quadrature nodes in (0,1), order 3
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
     line_w_3;  //!< Quadrature weights in (0,1), order 3
 
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
     line_x_4;  //!< Quadrature nodes in (0,1), order 4
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
     line_w_4;  //!< Quadrature weights in (0,1), order 4
 
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
     line_x_5;  //!< Quadrature nodes in (0,1), order 5
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
     line_w_5;  //!< Quadrature weights in (0,1), order 5
 
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
     line_x_6;  //!< Quadrature nodes in (0,1), order 6
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
     line_w_6;  //!< Quadrature weights in (0,1), order 6
 
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
     triangle_x1_1;  //!< First coordinates of quadrature nodes in
                     //!< (0,1)x(0,1-x1), order 1
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
     triangle_x2_1;  //!< Second coordinates of quadrature nodes in
                     //!< (0,1)x(0,1-x1), order 1
-  static const std::vector< sc > triangle_w_1;  //!< Quadrature weights in
-                                                //!< (0,1)x(0,1-x1), order 1
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    triangle_w_1;  //!< Quadrature weights in
+                   //!< (0,1)x(0,1-x1), order 1
 
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
     triangle_x1_2;  //!< First coordinates of quadrature nodes in
                     //!< (0,1)x(0,1-x1), order 2
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
     triangle_x2_2;  //!< Second coordinates of quadrature nodes in
                     //!< (0,1)x(0,1-x1), order 2
-  static const std::vector< sc > triangle_w_2;  //!< Quadrature weights in
-                                                //!< (0,1)x(0,1-x1), order 2
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    triangle_w_2;  //!< Quadrature weights in
+                   //!< (0,1)x(0,1-x1), order 2
 
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
     triangle_x1_3;  //!< First coordinates of quadrature nodes in
                     //!< (0,1)x(0,1-x1), order 3
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
     triangle_x2_3;  //!< Second coordinates of quadrature nodes in
                     //!< (0,1)x(0,1-x1), order 3
-  static const std::vector< sc > triangle_w_3;  //!< Quadrature weights in
-                                                //!< (0,1)x(0,1-x1), order 3
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    triangle_w_3;  //!< Quadrature weights in
+                   //!< (0,1)x(0,1-x1), order 3
+  static const std::vector< sc, besthea::allocator_type< sc > >
     triangle_x1_4;  //!< First coordinates of quadrature nodes in
                     //!< (0,1)x(0,1-x1), order 4
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
     triangle_x2_4;  //!< Second coordinates of quadrature nodes in
                     //!< (0,1)x(0,1-x1), order 4
-  static const std::vector< sc > triangle_w_4;  //!< Quadrature weights in
-                                                //!< (0,1)x(0,1-x1), order 4
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    triangle_w_4;  //!< Quadrature weights in
+                   //!< (0,1)x(0,1-x1), order 4
 
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
     triangle_x1_5;  //!< First coordinates of quadrature nodes in
                     //!< (0,1)x(0,1-x1), order 5
-  static const std::vector< sc >
+  static const std::vector< sc, besthea::allocator_type< sc > >
     triangle_x2_5;  //!< Second coordinates of quadrature nodes in
                     //!< (0,1)x(0,1-x1), order 5
-  static const std::vector< sc > triangle_w_5;  //!< Quadrature weights in
-                                                //!< (0,1)x(0,1-x1), order 5
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    triangle_w_5;  //!< Quadrature weights in
+                   //!< (0,1)x(0,1-x1), order 5
 };
 
 #endif /* INCLUDE_BESTHEA_QUADRATURE_H_ */

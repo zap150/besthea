@@ -50,7 +50,7 @@ namespace besthea {
  */
 class besthea::linear_algebra::block_vector {
  public:
-  using vector_type = besthea::linear_algebra::vector; //!< Vector type.
+  using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
 
   block_vector( );
 
@@ -87,6 +87,26 @@ class besthea::linear_algebra::block_vector {
    */
   const vector_type & get_block( lo d ) const {
     return _data[ d ];
+  }
+
+  /**
+   * Resizes the block vector.
+   * @param[in] size New size.
+   */
+  void resize( lo block_size ) {
+    _data.resize( block_size );
+    _block_size = block_size;
+  }
+
+  /**
+   * Resizes the vector blocks.
+   * @param[in] size New size.
+   */
+  void resize_blocks( lo size ) {
+    for ( vector_type & v : _data ) {
+      v.resize( size );
+    }
+    _size = size;
   }
 
   /*!

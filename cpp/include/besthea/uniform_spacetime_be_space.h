@@ -51,12 +51,42 @@ namespace besthea {
  */
 template< class basis >
 class besthea::bem::uniform_spacetime_be_space {
+ private:
+  /**
+   * Wraps the mapped quadrature point so that they can be private for OpenMP
+   * threads
+   */
+  struct quadrature_wrapper {
+    std::vector< sc, besthea::allocator_type< sc > >
+      _wx;  //!< Spatial quadrature weights
+    std::vector< sc, besthea::allocator_type< sc > >
+      _x1_ref;  //!< First coordinates of quadrature nodes in the reference
+                //!< spatial element
+    std::vector< sc, besthea::allocator_type< sc > >
+      _x2_ref;  //!< Second coordinates of quadrature nodes in the reference
+                //!< spatial element
+    std::vector< sc, besthea::allocator_type< sc > >
+      _x1;  //!< First coordinates of quadrature nodes in the spatial element
+    std::vector< sc, besthea::allocator_type< sc > >
+      _x2;  //!< Second coordinates of quadrature nodes in the spatial element
+    std::vector< sc, besthea::allocator_type< sc > >
+      _x3;  //!< Third coordinates of quadrature nodes in the spatial element
+
+    std::vector< sc, besthea::allocator_type< sc > >
+      _wt;  //!< Temporal quadrature weights
+    std::vector< sc, besthea::allocator_type< sc > >
+      _t_ref;  //!< Coordinates of quadrature nodes in the reference temporal
+               //!< element
+    std::vector< sc, besthea::allocator_type< sc > >
+      _t;  //!< Coordinates of quadrature nodes in the temporal element
+  };
+
+ public:
   using st_mesh_type
     = besthea::mesh::uniform_spacetime_tensor_mesh;  //!< Spacetime mesh type.
   using block_vector_type
     = besthea::linear_algebra::block_vector;  //!< Block vector type.
 
- public:
   uniform_spacetime_be_space( const uniform_spacetime_be_space & that )
     = delete;
 
@@ -110,13 +140,46 @@ class besthea::bem::uniform_spacetime_be_space {
    * @param[in] order_rhs_temporal Temporal line quadrature order to assemble
    * the right-hand side.
    */
-  void l2_projection( sc ( *f )( sc *, sc *, sc ),
+  void l2_projection( sc ( *f )( sc, sc, sc, sc *, sc ),
     block_vector_type & projection, int order_matrix = 2,
-    int order_rhs_spatial = 4, int order_rhs_temporal = 4 );
+    int order_rhs_spatial = 5, int order_rhs_temporal = 4 );
 
  protected:
+  /**
+   * Initializes quadrature structures.
+   * @param[in] order_rhs_spatial Triangle spatial quadrature order for RHS.
+   * @param[in] order_rhs_temporal Line temporal quadrature order for RHS.
+   * @param[out] my_quadrature Wrapper holding quadrature data.
+   */
+  void init_quadrature( int order_rhs_spatial, int order_rhs_temporal,
+    quadrature_wrapper & my_quadrature ) const;
+
+  /**
+   * Maps the quadrature nodes from the reference triangle to the actual
+   * geometry.
+   * @param[in] x1 Coordinates of the first node of the test element.
+   * @param[in] x2 Coordinates of the second node of the test element.
+   * @param[in] x3 Coordinates of the third node of the test element.
+   * @param[in,out] my_quadrature Structure holding the quadrature nodes.
+   */
+  void triangle_to_geometry( const sc * x1, const sc * x2, const sc * x3,
+    quadrature_wrapper & my_quadrature ) const;
+
+  /**
+   * Maps the quadrature nodes from reference interval to the actual time.
+   * @param[in] d Index of time interval/
+   * @param[in,out] my_quadrature Structure holding the quadrature nodes.
+   */
+  void line_to_time(
+    lo d, sc timestep, quadrature_wrapper & my_quadrature ) const;
+
   st_mesh_type * _spacetime_mesh;  //!< uniform spacetime tensor mesh
+
   basis _basis;  //!< spatial basis function (temporal is constant)
+
+  static const int data_align{
+    DATA_ALIGN
+  };  //!< Intel cannot work with DATA_ALIGN directly
 };
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_SPACE_H_ */
