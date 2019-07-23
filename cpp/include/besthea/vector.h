@@ -91,8 +91,11 @@ class besthea::linear_algebra::vector {
    * Resizes the vector.
    * @param[in] size New size.
    */
-  void resize( lo size ) {
+  void resize( lo size, bool zero = true ) {
     _data.resize( size );
+    if ( zero ) {
+      fill( 0.0 );
+    }
     _size = size;
   }
 

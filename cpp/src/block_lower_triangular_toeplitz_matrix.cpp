@@ -82,6 +82,8 @@ void besthea::linear_algebra::block_lower_triangular_toeplitz_matrix::
   for ( matrix_type & m : _data ) {
     m.resize( n_rows, n_columns );
   }
+  _n_rows = n_rows;
+  _n_columns = n_columns;
 }
 
 void besthea::linear_algebra::block_lower_triangular_toeplitz_matrix::resize(

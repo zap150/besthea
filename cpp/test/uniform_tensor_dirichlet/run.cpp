@@ -69,9 +69,6 @@ int main( int argc, char * argv[] ) {
   lo n_timesteps = 8;
   sc end_time = 1.0;
 
-  lo order_sing = 4;
-  lo order_reg = 4;
-
   if ( argc > 1 ) {
     file.assign( argv[ 1 ] );
   }
@@ -98,7 +95,9 @@ int main( int argc, char * argv[] ) {
   uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > space_p1(
     spacetime_mesh );
 
-  /*
+  //*
+  lo order_sing = 4;
+  lo order_reg = 4;
   block_lower_triangular_toeplitz_matrix V;
   uniform_spacetime_heat_sl_kernel_antiderivative kernel_v(
     spacetime_mesh.get_timestep( ), cauchy_data::alpha );
@@ -125,27 +124,36 @@ int main( int argc, char * argv[] ) {
   identity.assemble( M );
   t.measure( );
   // M.print( );
-  */
+  //*/
 
-  block_vector bv_dir, bv_neu;
-  space_p1.l2_projection( cauchy_data::dirichlet, bv_dir );
-  space_p0.l2_projection( cauchy_data::neumann, bv_neu );
-  std::cout << "Dirichlet L2 relative projection error: "
-            << space_p1.l2_relative_error( cauchy_data::dirichlet, bv_dir )
+  block_vector bv_dir_proj, bv_neu_proj, bv_neu;
+  space_p1.l2_projection( cauchy_data::dirichlet, bv_dir_proj );
+  space_p0.l2_projection( cauchy_data::neumann, bv_neu_proj );
+  std::cout << "Dirichlet L2 projection relative error: "
+            << space_p1.l2_relative_error( cauchy_data::dirichlet, bv_dir_proj )
             << std::endl;
-  std::cout << "Neumann L2 relative projection error: "
+  std::cout << "Neumann L2 projection relative error: "
+            << space_p0.l2_relative_error( cauchy_data::neumann, bv_neu_proj )
+            << std::endl;
+
+  t.reset( "Solving the system" );
+  uniform_spacetime_be_solver::time_marching_dirichlet(
+    V, K, M, bv_dir_proj, bv_neu );
+  std::cout << "Neumann L2 relative error: "
             << space_p0.l2_relative_error( cauchy_data::neumann, bv_neu )
             << std::endl;
+  t.measure( );
+
+  /*
   std::vector< std::string > node_labels{ "Dirichlet" };
   std::vector< std::string > elem_labels{ "Neumann" };
-  /*
   std::stringstream ss;
   for ( lo d = 0; d < spacetime_mesh.get_n_temporal_elements( ); ++d ) {
     ss.str( "" );
     ss.clear( );
     ss << "output.vtu." << d;
-    std::vector< sc * > node_data{ bv_dir.get_block( d ).data( ) };
-    std::vector< sc * > elem_data{ bv_neu.get_block( d ).data( ) };
+    std::vector< sc * > node_data{ bv_dir_proj.get_block( d ).data( ) };
+    std::vector< sc * > elem_data{ bv_neu_proj.get_block( d ).data( ) };
     spacetime_mesh.print_vtu(
       ss.str( ), &node_labels, &node_data, &elem_labels, &elem_data );
   }

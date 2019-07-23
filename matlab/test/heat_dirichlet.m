@@ -16,7 +16,7 @@ stmesh = stmesh.refine_xt( level, 2 );
 order_nf = 4;
 order_ff = 4;
 
-alpha = 1.0;
+alpha = 0.5;
 y = [ 0 0 1.5 ];
 
 dir_fun = @( x, t, ~ ) ( 4 * pi * alpha * t )^( -3 / 2 ) ...

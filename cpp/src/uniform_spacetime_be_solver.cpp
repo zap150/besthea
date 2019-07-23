@@ -26,21 +26,36 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file bem.h
- * @brief
- */
-
-#ifndef INCLUDE_BESTHEA_BEM_H_
-#define INCLUDE_BESTHEA_BEM_H_
-
-#include "besthea/basis_function.h"
-#include "besthea/basis_tri_p0.h"
-#include "besthea/basis_tri_p1.h"
-#include "besthea/uniform_spacetime_be_assembler.h"
-#include "besthea/uniform_spacetime_be_identity.h"
 #include "besthea/uniform_spacetime_be_solver.h"
-#include "besthea/uniform_spacetime_be_space.h"
-#include "besthea/uniform_spacetime_heat_dl_kernel_antiderivative.h"
-#include "besthea/uniform_spacetime_heat_sl_kernel_antiderivative.h"
 
-#endif /* INCLUDE_BESTHEA_BEM_H_ */
+void besthea::bem::uniform_spacetime_be_solver::time_marching_dirichlet(
+  block_matrix_type & V, const block_matrix_type & K,
+  const sparse_matrix_type & M, const block_vector_type & dirichlet,
+  block_vector_type & neumann ) {
+  lo n_timesteps = V.get_block_dim( );
+  lo n_dofs = V.get_n_rows( );
+  neumann.resize( n_timesteps );
+  neumann.resize_blocks( n_dofs, true );
+
+  V.get_block( 0 ).choleski_decompose( );
+
+  for ( lo d = 0; d < n_timesteps; ++d ) {
+	auto & rhs = neumann.get_block( d );
+    M.apply( dirichlet.get_block( d ), rhs, false, 0.5, 0.0 );
+    for ( lo j = 0; j <= d; ++j ) {
+      K.get_block( j ).apply(
+        dirichlet.get_block( d - j ), rhs, false, 1.0, 1.0 );
+    }
+    for ( lo j = 1; j <= d; ++j ) {
+      V.get_block( j ).apply(
+        neumann.get_block( d - j ), rhs, false, -1.0, 1.0 );
+    }
+    V.get_block( 0 ).choleski_solve( rhs );
+  }
+}
+
+void besthea::bem::uniform_spacetime_be_solver::time_marching_neumann(
+  block_matrix_type & D, const block_matrix_type & K,
+  const sparse_matrix_type & M, const block_vector_type & neumann,
+  block_vector_type & dirichlet ) {
+}
