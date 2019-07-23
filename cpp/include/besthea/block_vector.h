@@ -91,7 +91,7 @@ class besthea::linear_algebra::block_vector {
 
   /**
    * Resizes the block vector.
-   * @param[in] size New size.
+   * @param[in] block_size New size.
    */
   void resize( lo block_size ) {
     _data.resize( block_size );

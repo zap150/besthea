@@ -467,8 +467,9 @@ bool besthea::mesh::triangular_surface_mesh::print_vtu(
            << std::endl;
 
   for ( lo i = 0; i < _n_nodes; ++i ) {
-    file_vtu << "          " << _nodes[ 3 * i ] << " " << _nodes[ 3 * i + 1 ]
-             << " " << _nodes[ 3 * i + 2 ] << std::endl;
+    file_vtu << "          " << static_cast< float >( _nodes[ 3 * i ] ) << " "
+             << static_cast< float >( _nodes[ 3 * i + 1 ] ) << " "
+             << static_cast< float >( _nodes[ 3 * i + 2 ] ) << std::endl;
   }
 
   file_vtu << "        </DataArray>" << std::endl;
@@ -504,12 +505,14 @@ bool besthea::mesh::triangular_surface_mesh::print_vtu(
   file_vtu << "        </DataArray>" << std::endl;
   file_vtu << "      </Cells>" << std::endl;
 
+  float eps = std::numeric_limits< float >::min( );
   int n_nodal = 0;
   if ( node_data )
     n_nodal = node_data->size( );
 
   std::string header, vheader;
   if ( n_nodal > 0 ) {
+    float data;
     file_vtu << "      <PointData ";
 
     if ( n_nodal > 0 ) {
@@ -526,7 +529,11 @@ bool besthea::mesh::triangular_surface_mesh::print_vtu(
           + ( *node_labels )[ j ] + "\" format=\"ascii\">"
                << std::endl;
       for ( lo i = 0; i < _n_nodes; i++ ) {
-        file_vtu << "          " << ( *node_data )[ j ][ i ] << std::endl;
+        data = static_cast< float >( ( *node_data )[ j ][ i ] );
+        if ( std::abs( data ) < eps ) {
+          data = 0.0f;
+        }
+        file_vtu << "          " << data << std::endl;
       }
       file_vtu << "        </DataArray>" << std::endl;
     }
@@ -539,6 +546,7 @@ bool besthea::mesh::triangular_surface_mesh::print_vtu(
     n_element = element_data->size( );
 
   if ( n_element > 0 ) {
+    float data;
     file_vtu << "      <CellData ";
 
     if ( n_element > 0 ) {
@@ -555,7 +563,11 @@ bool besthea::mesh::triangular_surface_mesh::print_vtu(
           + ( *element_labels )[ j ] + "\" format=\"ascii\">"
                << std::endl;
       for ( lo i = 0; i < _n_elements; i++ ) {
-        file_vtu << "          " << ( *element_data )[ j ][ i ] << std::endl;
+        data = static_cast< float >( ( *element_data )[ j ][ i ] );
+        if ( std::abs( data ) < eps ) {
+          data = 0.0f;
+        }
+        file_vtu << "          " << data << std::endl;
       }
       file_vtu << "        </DataArray>" << std::endl;
     }

@@ -144,6 +144,19 @@ class besthea::bem::uniform_spacetime_be_space {
     block_vector_type & projection, int order_matrix = 2,
     int order_rhs_spatial = 5, int order_rhs_temporal = 4 );
 
+  /**
+   * Returns the .
+   * @param[in] f Function in infinite dimensional space.
+   * @param[out] approximation Function in finite dimensional space.
+   * @param[in] order_rhs_spatial Spatial triangular quadrature order to
+   * assemble the right-hand side.
+   * @param[in] order_rhs_temporal Temporal line quadrature order to assemble
+   * the right-hand side.
+   */
+  sc l2_relative_error( sc ( *f )( sc, sc, sc, sc *, sc ),
+    block_vector_type & approximation, int order_rhs_spatial = 5,
+    int order_rhs_temporal = 4 );
+
  protected:
   /**
    * Initializes quadrature structures.
@@ -167,7 +180,8 @@ class besthea::bem::uniform_spacetime_be_space {
 
   /**
    * Maps the quadrature nodes from reference interval to the actual time.
-   * @param[in] d Index of time interval/
+   * @param[in] d Index of time interval.
+   * @param[in] timestep Timestep size.
    * @param[in,out] my_quadrature Structure holding the quadrature nodes.
    */
   void line_to_time(

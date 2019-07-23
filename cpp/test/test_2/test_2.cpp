@@ -79,7 +79,7 @@ int main( int argc, char * argv[] ) {
     n_timesteps = std::atoi( argv[ 2 ] );
   }
   if ( argc > 3 ) {
-    end_time = std::atoi( argv[ 3 ] );
+    end_time = std::atof( argv[ 3 ] );
   }
   if ( argc > 4 ) {
     refine = std::atoi( argv[ 4 ] );
@@ -130,9 +130,15 @@ int main( int argc, char * argv[] ) {
   block_vector bv_dir, bv_neu;
   space_p1.l2_projection( cauchy_data::dirichlet, bv_dir );
   space_p0.l2_projection( cauchy_data::neumann, bv_neu );
+  std::cout << "Dirichlet L2 relative projection error: "
+            << space_p1.l2_relative_error( cauchy_data::dirichlet, bv_dir )
+            << std::endl;
+  std::cout << "Neumann L2 relative projection error: "
+            << space_p0.l2_relative_error( cauchy_data::neumann, bv_neu )
+            << std::endl;
   std::vector< std::string > node_labels{ "Dirichlet" };
   std::vector< std::string > elem_labels{ "Neumann" };
-  ///*
+  /*
   std::stringstream ss;
   for ( lo d = 0; d < spacetime_mesh.get_n_temporal_elements( ); ++d ) {
     ss.str( "" );
@@ -143,5 +149,5 @@ int main( int argc, char * argv[] ) {
     spacetime_mesh.print_vtu(
       ss.str( ), &node_labels, &node_data, &elem_labels, &elem_data );
   }
-  //*/
+  */
 }

@@ -116,6 +116,70 @@ void besthea::bem::uniform_spacetime_be_space< basis >::l2_projection(
 }
 
 template< class basis >
+sc besthea::bem::uniform_spacetime_be_space< basis >::l2_relative_error(
+  sc ( *f )( sc, sc, sc, sc *, sc ), block_vector_type & approximation,
+  int order_rhs_spatial, int order_rhs_temporal ) {
+  lo n_timesteps = _spacetime_mesh->get_n_temporal_elements( );
+  sc timestep = _spacetime_mesh->get_timestep( );
+  lo n_elements = _spacetime_mesh->get_n_spatial_elements( );
+
+  lo local_dim = _basis.dimension_local( );
+  std::vector< lo > l2g( local_dim );
+
+  sc x1[ 3 ], x2[ 3 ], x3[ 3 ], n[ 3 ];
+  sc area_xt, basis_val, fun_val;
+  sc l2_err = 0.0;
+  sc l2_norm = 0.0;
+  sc local_value;
+  sc absdiff, absf;
+
+  quadrature_wrapper my_quadrature;
+  init_quadrature( order_rhs_spatial, order_rhs_temporal, my_quadrature );
+  lo size_t = my_quadrature._wt.size( );
+  lo size_x = my_quadrature._wx.size( );
+  sc * x1_ref = my_quadrature._x1_ref.data( );
+  sc * x2_ref = my_quadrature._x2_ref.data( );
+  sc * wx = my_quadrature._wx.data( );
+  sc * x1_mapped = my_quadrature._x1.data( );
+  sc * x2_mapped = my_quadrature._x2.data( );
+  sc * x3_mapped = my_quadrature._x3.data( );
+  sc * wt = my_quadrature._wt.data( );
+  sc * t_mapped = my_quadrature._t.data( );
+  lo * l2g_data = l2g.data( );
+  sc * approximation_data = nullptr;
+
+  for ( lo d = 0; d < n_timesteps; ++d ) {
+    line_to_time( d, timestep, my_quadrature );
+    approximation_data = approximation.get_block( d ).data( );
+    for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
+      _spacetime_mesh->get_spatial_nodes( i_elem, x1, x2, x3 );
+      triangle_to_geometry( x1, x2, x3, my_quadrature );
+      _basis.local_to_global( i_elem, l2g );
+      _spacetime_mesh->get_spatial_normal( i_elem, n );
+      area_xt = _spacetime_mesh->spatial_area( i_elem ) * timestep;
+      for ( lo i_x = 0; i_x < size_x; ++i_x ) {
+        local_value = 0.0;
+        for ( lo i_loc = 0; i_loc < local_dim; ++i_loc ) {
+          basis_val
+            = _basis.evaluate( i_elem, i_loc, x1_ref[ i_x ], x2_ref[ i_x ], n );
+          local_value += approximation_data[ l2g_data[ i_loc ] ] * basis_val;
+        }
+        for ( lo i_t = 0; i_t < size_t; ++i_t ) {
+          fun_val = f( x1_mapped[ i_x ], x2_mapped[ i_x ], x3_mapped[ i_x ], n,
+            t_mapped[ i_t ] );
+          absdiff = std::abs( fun_val - local_value );
+          absf = std::abs( fun_val );
+          l2_err += absdiff * absdiff * wx[ i_x ] * wt[ i_t ] * area_xt;
+          l2_norm += absf * absf * wx[ i_x ] * wt[ i_t ] * area_xt;
+        }
+      }
+    }
+  }
+  sc result = std::sqrt( l2_err / l2_norm );
+  return result;
+}
+
+template< class basis >
 void besthea::bem::uniform_spacetime_be_space< basis >::init_quadrature(
   int order_rhs_spatial, int order_rhs_temporal,
   quadrature_wrapper & my_quadrature ) const {
