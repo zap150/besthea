@@ -41,6 +41,7 @@
 #include "besthea/uniform_spacetime_be_solver.h"
 #include "besthea/uniform_spacetime_be_space.h"
 #include "besthea/uniform_spacetime_heat_dl_kernel_antiderivative.h"
+#include "besthea/uniform_spacetime_heat_hs_kernel_antiderivative.h"
 #include "besthea/uniform_spacetime_heat_sl_kernel_antiderivative.h"
 
 #endif /* INCLUDE_BESTHEA_BEM_H_ */

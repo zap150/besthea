@@ -1,13 +1,13 @@
-function ...
-  [ dir, neu, dir_proj, repr, repr_interp, err_bnd, err_bnd_x, err_bnd_proj, ...
-  err_bnd_proj_x, err_vol, err_vol_x ] = heat_neumann( level )
-%function [ D1, D2 ] = heat_neumann( level )
+%function ...
+%  [ dir, neu, dir_proj, repr, repr_interp, err_bnd, err_bnd_x, err_bnd_proj, ...
+%  err_bnd_proj_x, err_vol, err_vol_x ] = heat_neumann( level )
+function [ D1, D2 ] = heat_neumann( level )
 
 if nargin < 1
   level = 0;
 end
 
-file='./input/cube_192.txt';
+file='./input/cube_12.txt';
 stmesh = spacetime_mesh( file, 1, 8 );
 stmesh = stmesh.refine_xt( level, 2 );
 % stmesh = spacetime_mesh( file, 1, 3 );
@@ -37,28 +37,28 @@ basis_p1 = p1( stmesh );
 basis_p0 = p0( stmesh );
 basis_curl_p1 = curl_p1( stmesh );
 
-beas_d1_heat = be_assembler( stmesh, kernel_heat_hs1( alpha ), ...
+beas_d1_heat = be_assembler( stmesh, kernel_heat_hs1_2( alpha ), ...
   basis_curl_p1, basis_curl_p1, order_nf, order_ff );
 fprintf( 1, 'Assembling D1\n' );
 tic;
 D = beas_d1_heat.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
 
-beas_d2_heat = be_assembler( stmesh, kernel_heat_hs2( alpha ), ...
+beas_d2_heat = be_assembler( stmesh, kernel_heat_hs2_2( alpha ), ...
   basis_p1, basis_p1, order_nf, order_ff );
 fprintf( 1, 'Assembling D2\n' );
 tic;
 D2 = beas_d2_heat.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
 
-%D1 = D; 
-%return;
+D1 = D; 
+return;
 
 for i = 1 : stmesh.nt
   D{ i } = D{ i } + D2{ i };
 end
 
-beas_k_heat = be_assembler( stmesh, kernel_heat_dl( alpha ), ...
+beas_k_heat = be_assembler( stmesh, kernel_heat_dl_2( alpha ), ...
   basis_p0, basis_p1, order_nf, order_ff );
 fprintf( 1, 'Assembling K\n' );
 tic;

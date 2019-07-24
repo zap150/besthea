@@ -98,15 +98,15 @@ int main( int argc, char * argv[] ) {
   //*
   lo order_sing = 4;
   lo order_reg = 4;
-  block_lower_triangular_toeplitz_matrix V;
-  uniform_spacetime_heat_sl_kernel_antiderivative kernel_v(
+  block_lower_triangular_toeplitz_matrix D;
+  uniform_spacetime_heat_hs_kernel_antiderivative kernel_d(
     spacetime_mesh.get_timestep( ), cauchy_data::alpha );
-  uniform_spacetime_be_assembler assembler_v(
-    kernel_v, space_p0, space_p0, order_sing, order_reg );
-  t.reset( "V" );
-  assembler_v.assemble( V );
+  uniform_spacetime_be_assembler assembler_d(
+    kernel_d, space_p1, space_p1, order_sing, order_reg );
+  t.reset( "D" );
+  assembler_d.assemble( D );
   t.measure( );
-  // V.print( );
+  D.print( );
 
   block_lower_triangular_toeplitz_matrix K;
   uniform_spacetime_heat_dl_kernel_antiderivative kernel_k(
@@ -126,7 +126,7 @@ int main( int argc, char * argv[] ) {
   // M.print( );
   //*/
 
-  block_vector bv_dir_proj, bv_neu_proj, bv_neu;
+  block_vector bv_dir_proj, bv_neu_proj, bv_dir;
   space_p1.l2_projection( cauchy_data::dirichlet, bv_dir_proj );
   space_p0.l2_projection( cauchy_data::neumann, bv_neu_proj );
   std::cout << "Dirichlet L2 projection relative error: "
@@ -137,25 +137,25 @@ int main( int argc, char * argv[] ) {
             << std::endl;
 
   t.reset( "Solving the system" );
-  uniform_spacetime_be_solver::time_marching_dirichlet(
-    V, K, M, bv_dir_proj, bv_neu );
+  uniform_spacetime_be_solver::time_marching_neumann(
+    D, K, M, bv_neu_proj, bv_dir );
   t.measure( );
-  std::cout << "Neumann L2 relative error: "
-            << space_p0.l2_relative_error( cauchy_data::neumann, bv_neu )
+  std::cout << "Dirichlet L2 relative error: "
+            << space_p1.l2_relative_error( cauchy_data::dirichlet, bv_dir )
             << std::endl;
 
   /*
-  std::vector< std::string > node_labels{ "Dirichlet_projection" };
-  std::vector< std::string > elem_labels{ "Neumann_projection",
-    "Neumann_result" };
+  std::vector< std::string > node_labels{ "Dirichlet_projection",
+    "Dirichlet_result" };
+  std::vector< std::string > elem_labels{ "Neumann_projection" };
   std::stringstream ss;
   for ( lo d = 0; d < spacetime_mesh.get_n_temporal_elements( ); ++d ) {
     ss.str( "" );
     ss.clear( );
     ss << "output.vtu." << d;
-    std::vector< sc * > node_data{ bv_dir_proj.get_block( d ).data( ) };
-    std::vector< sc * > elem_data{ bv_neu_proj.get_block( d ).data( ),
-      bv_neu.get_block( d ).data( ) };
+    std::vector< sc * > node_data{ bv_dir_proj.get_block( d ).data( ),
+      bv_dir.get_block( d ).data( ) };
+    std::vector< sc * > elem_data{ bv_neu_proj.get_block( d ).data( ) };
     spacetime_mesh.print_vtu(
       ss.str( ), &node_labels, &node_data, &elem_labels, &elem_data );
   }

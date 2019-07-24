@@ -63,7 +63,8 @@ class besthea::bem::uniform_spacetime_heat_kernel_antiderivative
   uniform_spacetime_heat_kernel_antiderivative( sc timestep, sc alpha )
     : uniform_spacetime_kernel_antiderivative< derived_type >( timestep ),
       _alpha( alpha ),
-      _sqrt_alpha( std::sqrt( alpha ) ) {
+      _sqrt_alpha( std::sqrt( alpha ) ),
+      _alpha2( alpha * alpha ) {
   }
 
   /**
@@ -76,9 +77,11 @@ class besthea::bem::uniform_spacetime_heat_kernel_antiderivative
   sc _alpha;  //!< Heat conductivity.
 
   sc _sqrt_alpha;  //!< Auxiliary variable
+  sc _alpha2;      //!< Auxiliary variable
 
   const sc _pi{ M_PI };                    //!< Auxiliary variable
   const sc _sqrt_pi{ std::sqrt( M_PI ) };  //!< Auxiliary variable
+  const sc _zero{ 0.0 };                   //!< Auxiliary variable
   const sc _one{ 1.0 };                    //!< Auxiliary variable
   const sc _two{ 2.0 };                    //!< Auxiliary variable
   const sc _four{ 4.0 };                   //!< Auxiliary variable

@@ -40,7 +40,7 @@ void besthea::bem::uniform_spacetime_be_solver::time_marching_dirichlet(
   V.get_block( 0 ).choleski_decompose( );
 
   for ( lo d = 0; d < n_timesteps; ++d ) {
-	auto & rhs = neumann.get_block( d );
+    auto & rhs = neumann.get_block( d );
     M.apply( dirichlet.get_block( d ), rhs, false, 0.5, 0.0 );
     for ( lo j = 0; j <= d; ++j ) {
       K.get_block( j ).apply(
@@ -58,4 +58,24 @@ void besthea::bem::uniform_spacetime_be_solver::time_marching_neumann(
   block_matrix_type & D, const block_matrix_type & K,
   const sparse_matrix_type & M, const block_vector_type & neumann,
   block_vector_type & dirichlet ) {
+  lo n_timesteps = D.get_block_dim( );
+  lo n_dofs = D.get_n_rows( );
+  dirichlet.resize( n_timesteps );
+  dirichlet.resize_blocks( n_dofs, true );
+
+  D.get_block( 0 ).choleski_decompose( );
+
+  for ( lo d = 0; d < n_timesteps; ++d ) {
+    auto & rhs = dirichlet.get_block( d );
+    M.apply( neumann.get_block( d ), rhs, true, 0.5, 0.0 );
+    for ( lo j = 0; j <= d; ++j ) {
+      K.get_block( j ).apply(
+        neumann.get_block( d - j ), rhs, true, -1.0, 1.0 );
+    }
+    for ( lo j = 1; j <= d; ++j ) {
+      D.get_block( j ).apply(
+        dirichlet.get_block( d - j ), rhs, false, -1.0, 1.0 );
+    }
+    D.get_block( 0 ).choleski_solve( rhs );
+  }
 }
