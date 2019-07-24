@@ -51,9 +51,11 @@ besthea::mesh::temporal_mesh::temporal_mesh(
   }
 
   for ( lo i_elem = 0; i_elem < _n_timesteps; ++i_elem ) {
-    _elements[ 2 * i_elem ] = _nodes[ i_elem ];
-    _elements[ 2 * i_elem + 1 ] = _nodes[ i_elem + 1 ];
+    _elements[ 2 * i_elem ] = 2 * i_elem;
+    _elements[ 2 * i_elem + 1 ] = 2 * i_elem + 1;
   }
+
+  init_lenghts();
 }
 
 besthea::mesh::temporal_mesh::~temporal_mesh( ) {
@@ -111,4 +113,34 @@ void besthea::mesh::temporal_mesh::init_lengths( ) {
     _lengths[ i_elem ] = _nodes[ _elements[ 2 * i_elem + 1 ] ]
       - _nodes[ _elements[ 2 * i_elem ] ];
   }
+}
+
+void besthea::mesh::temporal_mesh::refine( int level ) {
+  lo new_n_nodes, new_n_timesteps;
+
+  for ( lo l = 0; l < level; ++l ) {
+    new_n_nodes = 2 * _n_temporal_nodes - 1;
+    new_n_timesteps = 2 * _n_timesteps;
+
+    _nodes.resize( new_n_nodes );
+    for ( lo i_node = 0; i_node < _n_temporal_nodes - 1; ++i_node ) {
+      _nodes[ new_n_nodes - 2 * i_node - 1 ]
+        = _nodes[ _n_temporal_nodes - i_node - 1 ];
+      _nodes[ new_n_nodes - 2 * i_node - 2 ]
+        = ( _nodes[ _n_temporal_nodes - i_node - 1 ]
+            + _nodes[ _n_temporal_nodes - i_node - 1 ] )
+        / 2;
+    }
+
+    _elements.resize( new_n_timesteps );
+    for ( lo i_elem = 0; i_elem < new_n_timesteps; ++i_elem ) {
+      _elements[ 2 * i_elem ] = 2 * i_elem;
+      _elements[ 2 * i_elem + 1 ] = 2 * i_elem + 1;
+    }
+
+    _n_temporal_nodes = new_n_nodes;
+    _n_timesteps = new_n_timesteps;
+  }
+
+  init_lengths( );
 }

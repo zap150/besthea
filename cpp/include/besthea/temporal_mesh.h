@@ -35,10 +35,10 @@
 
 #include "besthea/settings.h"
 
-#include <string>
-#include <fstream>
 #include <algorithm>
 #include <cmath>
+#include <fstream>
+#include <string>
 #include <vector>
 
 namespace besthea {
@@ -136,6 +136,12 @@ class besthea::mesh::temporal_mesh {
     node1[ 0 ] = _nodes[ _elements[ 2 * i_element ] ];
     node2[ 0 ] = _nodes[ _elements[ 2 * i_element + 1 ] ];
   }
+
+  /**
+   * Refines the mesh by bisection.
+   * @param[in] level Number of refinements.
+   */
+  void refine( int level );
 
  protected:
   sc _start_time;  //!< temporal interval set to (start_time, end_time)
