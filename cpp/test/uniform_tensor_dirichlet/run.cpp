@@ -139,10 +139,10 @@ int main( int argc, char * argv[] ) {
   t.reset( "Solving the system" );
   uniform_spacetime_be_solver::time_marching_dirichlet(
     V, K, M, bv_dir_proj, bv_neu );
+  t.measure( );
   std::cout << "Neumann L2 relative error: "
             << space_p0.l2_relative_error( cauchy_data::neumann, bv_neu )
             << std::endl;
-  t.measure( );
 
   /*
   std::vector< std::string > node_labels{ "Dirichlet" };
