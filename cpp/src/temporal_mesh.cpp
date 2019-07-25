@@ -51,8 +51,8 @@ besthea::mesh::temporal_mesh::temporal_mesh(
   }
 
   for ( lo i_elem = 0; i_elem < _n_timesteps; ++i_elem ) {
-    _elements[ 2 * i_elem ] = 2 * i_elem;
-    _elements[ 2 * i_elem + 1 ] = 2 * i_elem + 1;
+    _elements[ 2 * i_elem ] = i_elem;
+    _elements[ 2 * i_elem + 1 ] = i_elem + 1;
   }
 
   init_lengths( );
@@ -67,11 +67,12 @@ void besthea::mesh::temporal_mesh::print_info( ) const {
             << std::endl;
 
   for ( lo i = 0; i < _n_temporal_nodes; ++i ) {
-	  std::cout << _nodes[ i ] << std::endl;
+    std::cout << _nodes[ i ] << std::endl;
   }
 
-  for ( lo i = 0 ; i < _n_timesteps; ++ i ) {
-	  std::cout << _elements[ 2 * i ] << " " << _elements[2*i + 1 ] << std::endl;
+  for ( lo i = 0; i < _n_timesteps; ++i ) {
+    std::cout << _elements[ 2 * i ] << " " << _elements[ 2 * i + 1 ]
+              << std::endl;
   }
 }
 
