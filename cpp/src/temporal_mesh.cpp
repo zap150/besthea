@@ -65,9 +65,17 @@ void besthea::mesh::temporal_mesh::print_info( ) const {
   std::cout << "besthea::mesh::temporal_mesh" << std::endl;
   std::cout << " elements: " << _n_timesteps << ", nodes: " << _n_temporal_nodes
             << std::endl;
+
+  for ( lo i = 0; i < _n_temporal_nodes; ++i ) {
+	  std::cout << _nodes[ i ] << std::endl;
+  }
+
+  for ( lo i = 0 ; i < _n_timesteps; ++ i ) {
+	  std::cout << _elements[ 2 * i ] << " " << _elements[2*i + 1 ] << std::endl;
+  }
 }
 
-void besthea::mesh::temporal_mesh( const std::string & file ) {
+besthea::mesh::temporal_mesh::temporal_mesh( const std::string & file ) {
   load( file );
 }
 
@@ -75,7 +83,7 @@ bool besthea::mesh::temporal_mesh::load( const std::string & file ) {
   std::ifstream filestream( file.c_str( ) );
 
   if ( !filestream.is_open( ) ) {
-    std::cerr << "File could not be opened!" std::endl;
+    std::cerr << "File could not be opened!" << std::endl;
     return false;
   }
   lo dummy;
@@ -106,9 +114,12 @@ bool besthea::mesh::temporal_mesh::load( const std::string & file ) {
   }
 
   init_lengths( );
+
+  return true;
 }
 
 void besthea::mesh::temporal_mesh::init_lengths( ) {
+  _lengths.resize( _n_timesteps );
   for ( lo i_elem = 0; i_elem < _n_timesteps; ++i_elem ) {
     _lengths[ i_elem ] = _nodes[ _elements[ 2 * i_elem + 1 ] ]
       - _nodes[ _elements[ 2 * i_elem ] ];
@@ -128,14 +139,14 @@ void besthea::mesh::temporal_mesh::refine( int level ) {
         = _nodes[ _n_temporal_nodes - i_node - 1 ];
       _nodes[ new_n_nodes - 2 * i_node - 2 ]
         = ( _nodes[ _n_temporal_nodes - i_node - 1 ]
-            + _nodes[ _n_temporal_nodes - i_node - 1 ] )
+            + _nodes[ _n_temporal_nodes - i_node - 2 ] )
         / 2;
     }
 
-    _elements.resize( new_n_timesteps );
+    _elements.resize( 2 * new_n_timesteps );
     for ( lo i_elem = 0; i_elem < new_n_timesteps; ++i_elem ) {
-      _elements[ 2 * i_elem ] = 2 * i_elem;
-      _elements[ 2 * i_elem + 1 ] = 2 * i_elem + 1;
+      _elements[ 2 * i_elem ] = i_elem;
+      _elements[ 2 * i_elem + 1 ] = i_elem + 1;
     }
 
     _n_temporal_nodes = new_n_nodes;
