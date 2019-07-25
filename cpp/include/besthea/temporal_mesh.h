@@ -61,6 +61,12 @@ class besthea::mesh::temporal_mesh {
    */
   temporal_mesh( sc start_time, sc end_time, lo n_timesteps );
 
+  /**
+   * Constructor loading temporal mesh data from a file.
+   * @param[in] file Name of the source file.
+   */
+  temporal_mesh( const std::string & file );
+
   temporal_mesh( const temporal_mesh & that ) = delete;
 
   ~temporal_mesh( );
@@ -156,7 +162,7 @@ class besthea::mesh::temporal_mesh {
   std::vector< sc > _lengths;  //!< lengths of temporal elements
 
   /**
-   * Precomputes lenghts of temporal elements
+   * Precomputes lengths of temporal elements
    */
   void init_lengths( );
 };
