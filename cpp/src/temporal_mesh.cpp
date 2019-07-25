@@ -55,7 +55,7 @@ besthea::mesh::temporal_mesh::temporal_mesh(
     _elements[ 2 * i_elem + 1 ] = 2 * i_elem + 1;
   }
 
-  init_lenghts( );
+  init_lengths( );
 }
 
 besthea::mesh::temporal_mesh::~temporal_mesh( ) {
