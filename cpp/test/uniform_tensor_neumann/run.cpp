@@ -106,7 +106,7 @@ int main( int argc, char * argv[] ) {
   t.reset( "D" );
   assembler_d.assemble( D );
   t.measure( );
-  D.print( );
+  // D.print( );
 
   block_lower_triangular_toeplitz_matrix K;
   uniform_spacetime_heat_dl_kernel_antiderivative kernel_k(

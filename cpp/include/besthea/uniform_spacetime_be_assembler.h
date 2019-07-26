@@ -93,6 +93,8 @@ class besthea::bem::uniform_spacetime_be_assembler {
 
     std::vector< sc, besthea::allocator_type< sc > >
       _kernel_values;  //!< Buffer for storing kernel values.
+    std::vector< sc, besthea::allocator_type< sc > >
+      _kernel_values_2;  //!< Buffer for storing additional kernel values.
   };
 
  public:

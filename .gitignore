@@ -1,5 +1,6 @@
 *.optrpt
 *.vtu.*
+*.vtu
 *.exe
 *.o.d
 *.bbl

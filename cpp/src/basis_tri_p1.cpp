@@ -96,3 +96,67 @@ sc besthea::bem::basis_tri_p1::do_evaluate( lo i_elem, lo i_fun, sc x1_ref,
 
   return value;
 }
+
+#pragma omp declare simd uniform( \
+  i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
+void besthea::bem::basis_tri_p1::evaluate_curl( lo i_elem, lo i_fun, sc x1_ref,
+  sc x2_ref, const sc * n, int n_shared_vertices, int rotation, bool swap,
+  sc & c1, sc & c2, sc & c3 ) {
+  lo element[ 3 ];
+  sc x1rot[ 3 ], x2rot[ 3 ], x3rot[ 3 ];
+
+  _mesh->get_spatial_mesh( )->get_element( i_elem, element );
+
+  if ( n_shared_vertices == 2 && swap ) {
+    _mesh->get_spatial_mesh( )->get_node(
+      element[ _map[ rotation + 1 ] ], x1rot );
+    _mesh->get_spatial_mesh( )->get_node( element[ _map[ rotation ] ], x2rot );
+  } else {
+    _mesh->get_spatial_mesh( )->get_node( element[ _map[ rotation ] ], x1rot );
+    _mesh->get_spatial_mesh( )->get_node(
+      element[ _map[ rotation + 1 ] ], x2rot );
+  }
+  _mesh->get_spatial_mesh( )->get_node(
+    element[ _map[ rotation + 2 ] ], x3rot );
+
+  // first two rows of R^\trans, third is n
+  sc a11 = x2rot[ 0 ] - x1rot[ 0 ];
+  sc a12 = x2rot[ 1 ] - x1rot[ 1 ];
+  sc a13 = x2rot[ 2 ] - x1rot[ 2 ];
+  sc a21 = x3rot[ 0 ] - x1rot[ 0 ];
+  sc a22 = x3rot[ 1 ] - x1rot[ 1 ];
+  sc a23 = x3rot[ 2 ] - x1rot[ 2 ];
+
+  // determinant to invert the matrix
+  sc det = n[ 0 ] * ( a12 * a23 - a13 * a22 )
+    + n[ 1 ] * ( a13 * a21 - a11 * a23 ) + n[ 2 ] * ( a11 * a22 - a21 * a12 );
+
+  // gradient in actual triangle
+  sc g1 = 0.0;
+  sc g2 = 0.0;
+  sc g3 = 0.0;
+  if ( i_fun == 0 ) {
+    // R^{-\trans} * [-1;-1;0]
+    g1 = -n[ 2 ] * a22 + n[ 1 ] * a23 + n[ 2 ] * a12 - n[ 1 ] * a13;
+    g2 = n[ 2 ] * a21 - n[ 0 ] * a23 - n[ 2 ] * a11 + n[ 0 ] * a13;
+    g3 = -n[ 1 ] * a21 + n[ 0 ] * a22 + n[ 1 ] * a11 - n[ 0 ] * a12;
+  } else if ( i_fun == 1 ) {
+    // R^{-\trans} * [1;0;0]
+    g1 = n[ 2 ] * a22 - n[ 1 ] * a23;
+    g2 = -n[ 2 ] * a21 + n[ 0 ] * a23;
+    g3 = n[ 1 ] * a21 - n[ 0 ] * a22;
+  } else if ( i_fun == 2 ) {
+    // R^{-\trans} * [0;1;0]
+    g1 = -n[ 2 ] * a12 + n[ 1 ] * a13;
+    g2 = n[ 2 ] * a11 - n[ 0 ] * a13;
+    g3 = -n[ 1 ] * a11 + n[ 0 ] * a12;
+  }
+
+  // n x gradient
+  c1 = n[ 1 ] * g3 - n[ 2 ] * g2;
+  c2 = n[ 2 ] * g1 - n[ 0 ] * g3;
+  c3 = n[ 0 ] * g2 - n[ 1 ] * g1;
+  c1 /= det;
+  c2 /= det;
+  c3 /= det;
+}

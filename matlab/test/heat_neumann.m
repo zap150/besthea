@@ -1,13 +1,13 @@
-%function ...
-%  [ dir, neu, dir_proj, repr, repr_interp, err_bnd, err_bnd_x, err_bnd_proj, ...
-%  err_bnd_proj_x, err_vol, err_vol_x ] = heat_neumann( level )
-function [ D1, D2 ] = heat_neumann( level )
+function ...
+  [ dir, neu, dir_proj, repr, repr_interp, err_bnd, err_bnd_x, err_bnd_proj, ...
+  err_bnd_proj_x, err_vol, err_vol_x ] = heat_neumann( level )
+%function [ D1, D2 ] = heat_neumann( level )
 
 if nargin < 1
   level = 0;
 end
 
-file='./input/cube_12.txt';
+file='./input/cube_192.txt';
 stmesh = spacetime_mesh( file, 1, 8 );
 stmesh = stmesh.refine_xt( level, 2 );
 % stmesh = spacetime_mesh( file, 1, 3 );
@@ -51,8 +51,8 @@ tic;
 D2 = beas_d2_heat.assemble( );
 fprintf( 1, '  done in %f s.\n', toc );
 
-D1 = D; 
-return;
+%D1 = D;
+%return;
 
 for i = 1 : stmesh.nt
   D{ i } = D{ i } + D2{ i };

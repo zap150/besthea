@@ -9,7 +9,7 @@ classdef be_assembler < handle
     size_nf;
     order_ff;
     size_ff;
-        
+    
     x_ref = cell( 4, 1 );
     y_ref = cell( 4, 1 );
     w = cell( 4, 1 );
@@ -81,7 +81,7 @@ classdef be_assembler < handle
       
       msg = sprintf( 'assembling %s', class( obj.kernel ) );
       f = waitbar( 0, msg );
-      f.Children.Title.Interpreter = 'none';      
+      f.Children.Title.Interpreter = 'none';
       
       for i_trial = 1 : n_elems
         waitbar( ( i_trial - 1 ) / n_elems, f );
@@ -109,7 +109,7 @@ classdef be_assembler < handle
                   A_local( i_loc_test, i_loc_trial ) = ...
                     A_local( i_loc_test, i_loc_trial ) ...
                     + ( test_fun( ( i_loc_test - 1 ) * 3 + 1 : ...
-                    i_loc_test * 3 ) ... 
+                    i_loc_test * 3 ) ...
                     * trial_fun( ( i_loc_trial - 1 ) * 3 + 1 : ...
                     i_loc_trial * 3 )' ) * ( obj.w{ type }{ i_simplex } )' * k;
                 end
@@ -157,11 +157,11 @@ classdef be_assembler < handle
       
       my_kernel = obj.kernel;
       A_local = zeros( dim_test, dim_trial );
-      for d = 0 : nt - 1      
-%       parfor d = 0 : nt - 1      
-%         my_kernel = copy( obj.kernel );
-%         A_local = zeros( dim_test, dim_trial );   
-
+      for d = 0 : nt - 1
+        %       parfor d = 0 : nt - 1
+        %         my_kernel = copy( obj.kernel );
+        %         A_local = zeros( dim_test, dim_trial );
+        
         my_kernel.d = d;
         msgd = [ msg sprintf( ', d = %d/%d', d + 1, nt ) ];
         waitbar( d / nt, f, msgd );
@@ -169,7 +169,7 @@ classdef be_assembler < handle
         for i_trial = 1 : n_elems
           waitbar( ( d + ( i_trial - 1 ) / n_elems ) / nt, f );
           for i_test = 1 : n_elems
-
+            
             if d <= 1
               [ type, rot_test, rot_trial ] = get_type( obj, i_test, i_trial );
             else
@@ -259,7 +259,7 @@ classdef be_assembler < handle
       
       rot_test = 0;
       rot_trial = 0;
-
+      
       elem_test = obj.mesh.elems( i_test, : );
       elem_trial = obj.mesh.elems( i_trial, : );
       
