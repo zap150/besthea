@@ -33,8 +33,6 @@
 #ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_EVALUATOR_H_
 #define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_EVALUATOR_H_
 
-#include "besthea/basis_tri_p0.h"
-#include "besthea/basis_tri_p1.h"
 #include "besthea/uniform_spacetime_be_space.h"
 
 #include <array>

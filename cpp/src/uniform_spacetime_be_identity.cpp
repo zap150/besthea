@@ -28,6 +28,8 @@
 
 #include "besthea/uniform_spacetime_be_identity.h"
 
+#include "besthea/basis_tri_p0.h"
+#include "besthea/basis_tri_p1.h"
 #include "besthea/quadrature.h"
 
 template< class test_space_type, class trial_space_type >

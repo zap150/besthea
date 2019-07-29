@@ -33,8 +33,6 @@
 #ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ASSEMBLER_H_
 #define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ASSEMBLER_H_
 
-#include "besthea/basis_tri_p0.h"
-#include "besthea/basis_tri_p1.h"
 #include "besthea/block_lower_triangular_toeplitz_matrix.h"
 #include "besthea/uniform_spacetime_be_space.h"
 

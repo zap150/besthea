@@ -28,6 +28,8 @@
 
 #include "besthea/uniform_spacetime_be_space.h"
 
+#include "besthea/basis_tri_p0.h"
+#include "besthea/basis_tri_p1.h"
 #include "besthea/quadrature.h"
 #include "besthea/sparse_matrix.h"
 #include "besthea/uniform_spacetime_be_identity.h"
