@@ -438,13 +438,18 @@ void besthea::mesh::triangular_surface_mesh::init_edges( ) {
 }
 
 bool besthea::mesh::triangular_surface_mesh::print_vtu(
-  const std::string & file, const std::vector< std::string > * node_labels,
-  const std::vector< sc * > * node_data,
+  const std::string & directory, const std::vector< std::string > * node_labels,
+  const std::vector< linear_algebra::vector * > * node_data,
   const std::vector< std::string > * element_labels,
-  const std::vector< sc * > * element_data ) const {
-  std::cout << "Printing '" << file << "' ... ";
-  std::cout.flush( );
-  std::ofstream file_vtu( file.c_str( ) );
+  const std::vector< linear_algebra::vector * > * element_data,
+  std::optional< lo > postfix ) const {
+  std::stringstream file;
+  file << directory << "/output.vtu";
+  if ( postfix ) {
+    file << '.' << std::setw( 4 ) << std::setfill( '0' ) << postfix.value( );
+  }
+
+  std::ofstream file_vtu( file.str( ).c_str( ) );
 
   file_vtu.setf( std::ios::showpoint | std::ios::scientific );
   file_vtu.precision( 6 );
@@ -453,6 +458,9 @@ bool besthea::mesh::triangular_surface_mesh::print_vtu(
     std::cout << "File could not be opened!" << std::endl;
     return false;
   }
+
+  std::cout << "Printing '" << file.str( ) << "' ... ";
+  std::cout.flush( );
 
   file_vtu << "<?xml version=\"1.0\"?>" << std::endl;
   file_vtu << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\">"
@@ -530,7 +538,7 @@ bool besthea::mesh::triangular_surface_mesh::print_vtu(
           + ( *node_labels )[ j ] + "\" format=\"ascii\">"
                << std::endl;
       for ( lo i = 0; i < _n_nodes; i++ ) {
-        data = static_cast< float >( ( *node_data )[ j ][ i ] );
+        data = static_cast< float >( node_data->at( j )->get( i ) );
         if ( std::abs( data ) < eps ) {
           data = 0.0f;
         }
@@ -564,7 +572,7 @@ bool besthea::mesh::triangular_surface_mesh::print_vtu(
           + ( *element_labels )[ j ] + "\" format=\"ascii\">"
                << std::endl;
       for ( lo i = 0; i < _n_elements; i++ ) {
-        data = static_cast< float >( ( *element_data )[ j ][ i ] );
+        data = static_cast< float >( element_data->at( j )->get( i ) );
         if ( std::abs( data ) < eps ) {
           data = 0.0f;
         }
@@ -598,6 +606,9 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_case(
     std::cout << "File '" << filename << "' could not be opened!" << std::endl;
     return false;
   }
+
+  std::cout << "Printing '" << filename << "' ... ";
+  std::cout.flush( );
 
   case_file << "FORMAT\n"
             << "type: ensight gold\n\n"
@@ -649,6 +660,8 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_case(
 
   case_file.close( );
 
+  std::cout << "done." << std::endl;
+
   return true;
 }
 
@@ -663,6 +676,9 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_geometry(
     std::cout << "File '" << filename << "' could not be opened!" << std::endl;
     return false;
   }
+
+  std::cout << "Printing '" << filename << "' ... ";
+  std::cout.flush( );
 
   std::vector< std::string > strings
     = { "C Binary", "Decription line 1", "Decription line 2", "node id off",
@@ -728,6 +744,8 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_geometry(
 
   geometry_file.close( );
 
+  std::cout << "done." << std::endl;
+
   return true;
 }
 
@@ -758,6 +776,9 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_datafiles(
       return false;
     }
 
+    std::cout << "Printing '" << filename.str( ) << "' ... ";
+    std::cout.flush( );
+
     std::vector< std::string > strings
       = { ( *node_labels )[ i ], "part", "coordinates" };
 
@@ -781,6 +802,8 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_datafiles(
     }
 
     data_file.close( );
+
+    std::cout << "done." << std::endl;
   }
 
   for ( lo i = 0; i < n_element; ++i ) {
@@ -800,6 +823,9 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_datafiles(
                 << std::endl;
       return false;
     }
+
+    std::cout << "Printing '" << filename.str( ) << "' ... ";
+    std::cout.flush( );
 
     std::vector< std::string > strings
       = { ( *element_labels )[ i ], "part", "tria3" };
@@ -824,6 +850,8 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_datafiles(
     }
 
     data_file.close( );
+
+    std::cout << "done." << std::endl;
   }
 
   return true;

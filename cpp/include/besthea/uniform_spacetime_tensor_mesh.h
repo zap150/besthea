@@ -197,14 +197,13 @@ class besthea::mesh::uniform_spacetime_tensor_mesh
    * @param[in] element_labels Labels for elemental data.
    * @param[in] element_data Scalar elemental data.
    */
-  bool print_vtu( const std::string & file,
+  bool print_vtu( const std::string & directory,
     const std::vector< std::string > * node_labels = nullptr,
-    const std::vector< sc * > * node_data = nullptr,
+    const std::vector< linear_algebra::block_vector * > * node_data = nullptr,
     const std::vector< std::string > * element_labels = nullptr,
-    const std::vector< sc * > * element_data = nullptr ) const {
-    return _space_mesh->print_vtu(
-      file, node_labels, node_data, element_labels, element_data );
-  }
+    const std::vector< linear_algebra::block_vector * > * element_data
+    = nullptr,
+    lo time_stride = 1 ) const;
 
   /**
    * Prints the EnSight Gold case file.

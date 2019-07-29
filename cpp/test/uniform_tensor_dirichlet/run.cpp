@@ -34,6 +34,7 @@
 #include "besthea/uniform_spacetime_tensor_mesh.h"
 
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
 
 using namespace besthea::mesh;
@@ -144,20 +145,25 @@ int main( int argc, char * argv[] ) {
             << space_p0.l2_relative_error( cauchy_data::neumann, bv_neu )
             << std::endl;
 
-  /*
   std::vector< std::string > node_labels{ "Dirichlet_projection" };
   std::vector< std::string > elem_labels{ "Neumann_projection",
     "Neumann_result" };
-  std::stringstream ss;
-  for ( lo d = 0; d < spacetime_mesh.get_n_temporal_elements( ); ++d ) {
-    ss.str( "" );
-    ss.clear( );
-    ss << "output.vtu." << d;
-    std::vector< sc * > node_data{ bv_dir_proj.get_block( d ).data( ) };
-    std::vector< sc * > elem_data{ bv_neu_proj.get_block( d ).data( ),
-      bv_neu.get_block( d ).data( ) };
-    spacetime_mesh.print_vtu(
-      ss.str( ), &node_labels, &node_data, &elem_labels, &elem_data );
-  }
+  std::vector< block_vector * > node_data{ &bv_dir_proj };
+  std::vector< block_vector * > elem_data{ &bv_neu_proj, &bv_neu };
+
+  /*
+  std::string paraview_dir = "paraview";
+  std::filesystem::create_directory( paraview_dir );
+  spacetime_mesh.print_vtu(
+    paraview_dir, &node_labels, &node_data, &elem_labels, &elem_data );
+  */
+
+  /*
+  std::string ensight_dir = "ensight";
+  std::filesystem::create_directory( ensight_dir );
+  spacetime_mesh.print_ensight_case( ensight_dir, &node_labels, &elem_labels );
+  spacetime_mesh.print_ensight_geometry( ensight_dir );
+  spacetime_mesh.print_ensight_datafiles(
+    ensight_dir, &node_labels, &node_data, &elem_labels, &elem_data );
   */
 }
