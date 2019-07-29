@@ -35,6 +35,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <filesystem>
 
 using namespace besthea::mesh;
 using namespace besthea::linear_algebra;
@@ -168,6 +169,7 @@ int main( int argc, char * argv[] ) {
   std::vector< block_vector * > node_data{ &bv_dir_proj, &bv_dir };
   std::vector< block_vector * > elem_data{ &bv_neu_proj };
   std::string ensight_dir = "ensight";
+  std::filesystem::create_directory( ensight_dir );
   spacetime_mesh.print_ensight_case( ensight_dir, &node_labels, &elem_labels );
   spacetime_mesh.print_ensight_geometry( ensight_dir );
   spacetime_mesh.print_ensight_datafiles(
