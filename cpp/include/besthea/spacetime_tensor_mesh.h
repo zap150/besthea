@@ -301,7 +301,7 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    */
   void map_index( lo i_element, lo & i_space_element, lo & i_time_element ) const {
     i_space_element = i_element % get_n_spatial_elements( );
-    i_time_element = i_element / get_n_temporal_elements( );
+    i_time_element = i_element / get_n_spatial_elements( );
   }
 
   triangular_surface_mesh *
