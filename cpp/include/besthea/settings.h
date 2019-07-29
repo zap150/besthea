@@ -39,7 +39,7 @@
 #include <type_traits>
 
 #ifndef DATA_ALIGN
-#define DATA_ALIGN ( 64 )  //!< Cache-line size in bytes.
+#define DATA_ALIGN 64  //!< Cache-line size in bytes.
 #endif
 
 #ifndef M_PI

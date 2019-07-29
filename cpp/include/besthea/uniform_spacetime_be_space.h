@@ -190,10 +190,6 @@ class besthea::bem::uniform_spacetime_be_space {
   st_mesh_type * _spacetime_mesh;  //!< uniform spacetime tensor mesh
 
   basis _basis;  //!< spatial basis function (temporal is constant)
-
-  static const int data_align{
-    DATA_ALIGN
-  };  //!< Intel cannot work with DATA_ALIGN directly
 };
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_SPACE_H_ */

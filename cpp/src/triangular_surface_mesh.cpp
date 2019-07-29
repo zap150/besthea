@@ -30,6 +30,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -590,6 +591,15 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_case(
   const std::string & directory, const std::vector< std::string > * node_labels,
   const std::vector< std::string > * element_labels, lo n_timesteps,
   sc timestep_size ) const {
+  /*
+std::error_code ec;
+if ( !std::filesystem::create_directory( directory, ec ) && !ec.value( ) ) {
+std::cout << "Directory '" << directory << "' could not be created!"
+        << std::endl;
+return false;
+}
+*/
+
   std::string filename = directory + "/output.case";
 
   std::ofstream case_file( filename.c_str( ) );
@@ -654,6 +664,15 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_case(
 
 bool besthea::mesh::triangular_surface_mesh::print_ensight_geometry(
   const std::string & directory ) const {
+  /*
+std::error_code ec;
+if ( !std::filesystem::create_directory( directory, ec ) && !ec.value( ) ) {
+std::cout << "Directory '" << directory << "' could not be created!"
+        << std::endl;
+return false;
+}
+*/
+
   std::string filename = directory + "/mesh.geo";
 
   std::ofstream geometry_file(
@@ -737,6 +756,15 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_datafiles(
   const std::vector< std::string > * element_labels,
   const std::vector< linear_algebra::vector * > * element_data,
   std::optional< lo > timestep ) const {
+  /*
+std::error_code ec;
+if ( !std::filesystem::create_directory( directory, ec ) && !ec.value( ) ) {
+std::cout << "Directory '" << directory << "' could not be created!"
+        << std::endl;
+return false;
+}
+*/
+
   int n_nodal = node_labels ? node_labels->size( ) : 0;
   int n_element = element_labels ? element_labels->size( ) : 0;
 

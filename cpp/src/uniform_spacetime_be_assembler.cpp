@@ -264,7 +264,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
           if ( delta == 0 ) {
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
                           y2_mapped, y3_mapped, kernel_data, w        \
-                          : data_align ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
             for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
               kernel_data[ i_quad ]
                 = _kernel->anti_tau_limit(
@@ -279,7 +279,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
                     ++i_loc_trial ) {
                 value = 0.0;
 #pragma omp simd \
-	aligned( x1_ref, x2_ref, y1_ref, y2_ref, kernel_data : data_align ) \
+	aligned( x1_ref, x2_ref, y1_ref, y2_ref, kernel_data : DATA_ALIGN ) \
 	private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
                 for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
                   test = test_basis.evaluate( i_test, i_loc_test,
@@ -300,7 +300,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
                           y2_mapped, y3_mapped, kernel_data, w        \
-                          : data_align ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
           for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
             kernel_data[ i_quad ] = _kernel->anti_tau_anti_t(
                                       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -315,7 +315,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
                   ++i_loc_trial ) {
               value = 0.0;
 #pragma omp simd \
-	aligned( x1_ref, x2_ref, y1_ref, y2_ref, kernel_data : data_align ) \
+	aligned( x1_ref, x2_ref, y1_ref, y2_ref, kernel_data : DATA_ALIGN ) \
 	private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
               for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
                 test
@@ -455,7 +455,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
           if ( delta == 0 ) {
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
                           y2_mapped, y3_mapped, kernel_data, w        \
-                          : data_align ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
             for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
               kernel_data[ i_quad ]
                 = _kernel->anti_tau_limit(
@@ -483,7 +483,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
                   + test_curls[ test_curl_offset + 2 ]
                     * trial_curls[ trial_curl_offset + 2 ];
 
-#pragma omp simd aligned( kernel_data : data_align ) reduction( + : value ) \
+#pragma omp simd aligned( kernel_data : DATA_ALIGN ) reduction( + : value ) \
 	simdlen( DATA_WIDTH )
                 for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
                   value += kernel_data[ i_quad ] * curl_dot;
@@ -497,7 +497,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
 
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped,         \
                           y2_mapped, y3_mapped, kernel_data, kernel_data_2, w \
-                          : data_align ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
           for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
             _kernel->anti_tau_anti_t_and_anti_t(
               x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -528,7 +528,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
                   * trial_curls[ trial_curl_offset + 2 ];
 
 #pragma omp simd \
-	aligned( x1_ref, x2_ref, y1_ref, y2_ref, kernel_data, kernel_data_2 : data_align ) \
+	aligned( x1_ref, x2_ref, y1_ref, y2_ref, kernel_data, kernel_data_2 : DATA_ALIGN ) \
 	private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
               for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
                 test
@@ -741,8 +741,8 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   lo size = my_quadrature._w[ n_shared_vertices ].size( );
 
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped        \
-                          : data_align ) aligned( x1_ref, x2_ref \
-                                                  : data_align ) \
+                          : DATA_ALIGN ) aligned( x1_ref, x2_ref \
+                                                  : DATA_ALIGN ) \
   simdlen( DATA_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     x1_mapped[ i ] = x1rot[ 0 ] + ( x2rot[ 0 ] - x1rot[ 0 ] ) * x1_ref[ i ]
@@ -754,8 +754,8 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   }
 
 #pragma omp simd aligned( y1_mapped, y2_mapped, y3_mapped        \
-                          : data_align ) aligned( y1_ref, y2_ref \
-                                                  : data_align ) \
+                          : DATA_ALIGN ) aligned( y1_ref, y2_ref \
+                                                  : DATA_ALIGN ) \
   simdlen( DATA_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     y1_mapped[ i ] = y1rot[ 0 ] + ( y2rot[ 0 ] - y1rot[ 0 ] ) * y1_ref[ i ]

@@ -214,7 +214,7 @@ void besthea::bem::uniform_spacetime_be_space< basis >::triangle_to_geometry(
   lo size = my_quadrature._wx.size( );
 
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, x1_ref, x2_ref \
-                          : data_align ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     x1_mapped[ i ] = x1[ 0 ] + ( x2[ 0 ] - x1[ 0 ] ) * x1_ref[ i ]
       + ( x3[ 0 ] - x1[ 0 ] ) * x2_ref[ i ];

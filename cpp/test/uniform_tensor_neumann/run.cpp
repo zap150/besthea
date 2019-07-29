@@ -160,4 +160,17 @@ int main( int argc, char * argv[] ) {
       ss.str( ), &node_labels, &node_data, &elem_labels, &elem_data );
   }
   */
+
+  ///*
+  std::vector< std::string > node_labels{ "Dirichlet_projection",
+    "Dirichlet_result" };
+  std::vector< std::string > elem_labels{ "Neumann_projection" };
+  std::vector< block_vector * > node_data{ &bv_dir_proj, &bv_dir };
+  std::vector< block_vector * > elem_data{ &bv_neu_proj };
+  std::string ensight_dir = "ensight";
+  spacetime_mesh.print_ensight_case( ensight_dir, &node_labels, &elem_labels );
+  spacetime_mesh.print_ensight_geometry( ensight_dir );
+  spacetime_mesh.print_ensight_datafiles(
+    ensight_dir, &node_labels, &node_data, &elem_labels, &elem_data );
+  //*/
 }

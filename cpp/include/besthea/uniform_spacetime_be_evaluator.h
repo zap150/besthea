@@ -128,10 +128,6 @@ class besthea::bem::uniform_spacetime_be_evaluator {
   space_type * _space;  //!< Boundary element space.
 
   int _order_regular;  //!< Triangle quadrature order for the regular integrals.
-
-  static const int data_align{
-    DATA_ALIGN
-  };  //!< Intel cannot work with DATA_ALIGN directly
 };
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_EVALUATOR_H_ */
