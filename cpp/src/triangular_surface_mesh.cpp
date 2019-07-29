@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <cmath>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -583,6 +584,260 @@ bool besthea::mesh::triangular_surface_mesh::print_vtu(
   std::cout << "done." << std::endl;
 
   return true;
+}
+
+bool besthea::mesh::triangular_surface_mesh::print_ensight_case(
+  const std::string & directory, const std::vector< std::string > * node_labels,
+  const std::vector< std::string > * element_labels, lo n_timesteps,
+  sc timestep_size ) const {
+  std::string filename = directory + "/output.case";
+
+  std::ofstream case_file( filename.c_str( ) );
+
+  if ( !case_file.is_open( ) ) {
+    std::cout << "File '" << filename << "' could not be opened!" << std::endl;
+    return false;
+  }
+
+  case_file << "FORMAT\n"
+            << "type: ensight gold\n\n"
+
+            << "GEOMETRY\n"
+            << "model: mesh.geo"
+            << "\n\n";
+
+  int n_nodal = node_labels ? node_labels->size( ) : 0;
+  int n_element = element_labels ? element_labels->size( ) : 0;
+
+  if ( n_nodal > 0 || n_element > 0 ) {
+    case_file << "VARIABLE\n";
+  }
+
+  for ( lo i = 0; i < n_nodal; ++i ) {
+    case_file << "scalar per node: " << ( *node_labels )[ i ] << " node_data_"
+              << i;
+    if ( n_timesteps > 0 ) {
+      case_file << ".****";
+    }
+    case_file << "\n";
+  }
+
+  for ( lo i = 0; i < n_element; ++i ) {
+    case_file << "scalar per element: " << ( *element_labels )[ i ]
+              << " elem_data_" << i;
+    if ( n_timesteps > 0 ) {
+      case_file << ".****";
+    }
+    case_file << "\n";
+  }
+
+  if ( n_timesteps > 0 ) {
+    case_file << "\n"
+              << "TIME\n"
+              << "time set: 1\n"
+              << "number of steps: " << n_timesteps << "\n"
+              << "filename start number: 0\n"
+              << "filename increment: 1\n"
+              << "time values:\n";
+
+    sc t = 0.5 * timestep_size;
+    for ( lo i = 0; i < n_timesteps; ++i ) {
+      case_file << std::setw( 12 ) << std::setprecision( 5 ) << t << "\n";
+      t += timestep_size;
+    }
+  }
+
+  case_file.close( );
+
+  return true;
+}
+
+bool besthea::mesh::triangular_surface_mesh::print_ensight_geometry(
+  const std::string & directory ) const {
+  std::string filename = directory + "/mesh.geo";
+
+  std::ofstream geometry_file(
+    filename.c_str( ), std::ios::out | std::ios::binary );
+
+  if ( !geometry_file.is_open( ) ) {
+    std::cout << "File '" << filename << "' could not be opened!" << std::endl;
+    return false;
+  }
+
+  std::vector< std::string > strings
+    = { "C Binary", "Decription line 1", "Decription line 2", "node id off",
+        "element id off", "part", "Description", "coordinates", "tria3" };
+
+  for ( auto & line : strings ) {
+    line.resize( 80, ' ' );
+  }
+
+  for ( size_t i = 0; i < 5; ++i ) {
+    geometry_file.write( strings[ i ].c_str( ), 80 );
+  }
+
+  geometry_file.write( strings[ 5 ].c_str( ), 80 );
+
+  int part_number = 1;
+  geometry_file.write(
+    reinterpret_cast< const char * >( &part_number ), sizeof( int ) );
+
+  geometry_file.write( strings[ 6 ].c_str( ), 80 );
+  geometry_file.write( strings[ 7 ].c_str( ), 80 );
+
+  geometry_file.write(
+    reinterpret_cast< const char * >( &_n_nodes ), sizeof( int ) );
+
+  // Write coordinates of nodes:
+  // first all of x coordinates then y's and z's
+
+  // x-coordinates
+  for ( lo i = 0; i < _n_nodes; ++i ) {
+    float x = static_cast< float >( _nodes[ 3 * i + 0 ] );
+    geometry_file.write(
+      reinterpret_cast< const char * >( &x ), sizeof( float ) );
+  }
+
+  // y-coordinates
+  for ( lo i = 0; i < _n_nodes; ++i ) {
+    float y = static_cast< float >( _nodes[ 3 * i + 1 ] );
+    geometry_file.write(
+      reinterpret_cast< const char * >( &y ), sizeof( float ) );
+  }
+
+  // z-coordinates
+  for ( lo i = 0; i < _n_nodes; ++i ) {
+    float z = static_cast< float >( _nodes[ 3 * i + 2 ] );
+    geometry_file.write(
+      reinterpret_cast< const char * >( &z ), sizeof( float ) );
+  }
+
+  geometry_file.write( strings[ 8 ].c_str( ), 80 );
+
+  geometry_file.write(
+    reinterpret_cast< const char * >( &_n_elements ), sizeof( int ) );
+
+  for ( lo i = 0; i < _n_elements; ++i ) {
+    // ensight indices start at ONE not zero
+    for ( lo offset = 0; offset < 3; ++offset ) {
+      int element_index = _elements[ 3 * i + offset ] + 1;
+      geometry_file.write(
+        reinterpret_cast< const char * >( &element_index ), sizeof( int ) );
+    }
+  }
+
+  geometry_file.close( );
+
+  return true;
+}
+
+bool besthea::mesh::triangular_surface_mesh::print_ensight_datafiles(
+  const std::string & directory, const std::vector< std::string > * node_labels,
+  const std::vector< linear_algebra::vector * > * node_data,
+  const std::vector< std::string > * element_labels,
+  const std::vector< linear_algebra::vector * > * element_data,
+  std::optional< lo > timestep ) const {
+  int n_nodal = node_labels ? node_labels->size( ) : 0;
+  int n_element = element_labels ? element_labels->size( ) : 0;
+
+  for ( lo i = 0; i < n_nodal; ++i ) {
+    std::stringstream filename;
+    filename << directory << "/node_data_" << i;
+
+    if ( timestep ) {
+      filename << '.' << std::setw( 4 ) << std::setfill( '0' )
+               << timestep.value( );
+    }
+
+    std::ofstream data_file(
+      filename.str( ), std::ios::out | std::ios::binary );
+
+    if ( !data_file.is_open( ) ) {
+      std::cout << "File '" << filename.str( ) << "' could not be opened!"
+                << std::endl;
+      return false;
+    }
+
+    std::vector< std::string > strings
+      = { ( *node_labels )[ i ], "part", "coordinates" };
+
+    for ( auto & line : strings ) {
+      line.resize( 80, ' ' );
+    }
+
+    data_file.write( strings[ 0 ].c_str( ), 80 );
+    data_file.write( strings[ 1 ].c_str( ), 80 );
+
+    int part_number = 1;
+    data_file.write(
+      reinterpret_cast< const char * >( &part_number ), sizeof( int ) );
+
+    data_file.write( strings[ 2 ].c_str( ), 80 );
+
+    for ( lo j = 0; j < _n_nodes; ++j ) {
+      float value = ( *node_data )[ i ]->get( j );
+      data_file.write(
+        reinterpret_cast< const char * >( &value ), sizeof( float ) );
+    }
+
+    data_file.close( );
+  }
+
+  for ( lo i = 0; i < n_element; ++i ) {
+    std::stringstream filename;
+    filename << directory << "/elem_data_" << i;
+
+    if ( timestep ) {
+      filename << '.' << std::setw( 4 ) << std::setfill( '0' )
+               << timestep.value( );
+    }
+
+    std::ofstream data_file(
+      filename.str( ), std::ios::out | std::ios::binary );
+
+    if ( !data_file.is_open( ) ) {
+      std::cout << "File '" << filename.str( ) << "' could not be opened!"
+                << std::endl;
+      return false;
+    }
+
+    std::vector< std::string > strings
+      = { ( *element_labels )[ i ], "part", "tria3" };
+
+    for ( auto & line : strings ) {
+      line.resize( 80, ' ' );
+    }
+
+    data_file.write( strings[ 0 ].c_str( ), 80 );
+    data_file.write( strings[ 1 ].c_str( ), 80 );
+
+    int part_number = 1;
+    data_file.write(
+      reinterpret_cast< const char * >( &part_number ), sizeof( int ) );
+
+    data_file.write( strings[ 2 ].c_str( ), 80 );
+
+    for ( lo j = 0; j < _n_elements; ++j ) {
+      float value = ( *element_data )[ i ]->get( j );
+      data_file.write(
+        reinterpret_cast< const char * >( &value ), sizeof( float ) );
+    }
+
+    data_file.close( );
+  }
+
+  return true;
+}
+
+bool besthea::mesh::triangular_surface_mesh::print_ensight(
+  const std::string & directory, const std::vector< std::string > * node_labels,
+  const std::vector< linear_algebra::vector * > * node_data,
+  const std::vector< std::string > * element_labels,
+  const std::vector< linear_algebra::vector * > * element_data ) const {
+  return print_ensight_case( directory, node_labels, element_labels )
+    && print_ensight_geometry( directory )
+    && print_ensight_datafiles(
+      directory, node_labels, node_data, element_labels, element_data );
 }
 
 void besthea::mesh::triangular_surface_mesh::map_to_unit_sphere( ) {
