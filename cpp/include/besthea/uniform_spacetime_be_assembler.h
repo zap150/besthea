@@ -37,8 +37,6 @@
 #include "besthea/basis_tri_p1.h"
 #include "besthea/block_lower_triangular_toeplitz_matrix.h"
 #include "besthea/uniform_spacetime_be_space.h"
-#include "besthea/uniform_spacetime_heat_dl_kernel_antiderivative.h"
-#include "besthea/uniform_spacetime_heat_sl_kernel_antiderivative.h"
 
 #include <array>
 
@@ -268,7 +266,7 @@ class besthea::bem::uniform_spacetime_be_assembler {
     int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref, sc & y2_ref,
     sc & jacobian ) const;
 
-  kernel_type * _kernel;  //!< Kernel temporal antiderivative
+  kernel_type * _kernel;  //!< Kernel temporal antiderivative.
 
   test_space_type * _test_space;  //!< Boundary element test space.
 
@@ -288,7 +286,7 @@ class besthea::bem::uniform_spacetime_be_assembler {
 
   static constexpr std::array< int, 4 > n_simplices{ 1, 2, 5,
     6 };  //!< Number of simplices for all configurations (disjoint, shared
-          // vertex, shared edge, identical)
+          // vertex, shared edge, identical).
 };
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ASSEMBLER_H_ */

@@ -29,7 +29,9 @@
 #include "besthea/uniform_spacetime_be_assembler.h"
 
 #include "besthea/quadrature.h"
+#include "besthea/uniform_spacetime_heat_dl_kernel_antiderivative.h"
 #include "besthea/uniform_spacetime_heat_hs_kernel_antiderivative.h"
+#include "besthea/uniform_spacetime_heat_sl_kernel_antiderivative.h"
 
 #include <algorithm>
 
