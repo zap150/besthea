@@ -33,9 +33,11 @@
 #ifndef INCLUDE_BESTHEA_TRIANGULAR_SURFACE_MESH_H_
 #define INCLUDE_BESTHEA_TRIANGULAR_SURFACE_MESH_H_
 
+#include "besthea/linear_algebra.h"
 #include "besthea/mesh.h"
 #include "besthea/settings.h"
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -78,6 +80,56 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
     const std::vector< sc * > * node_data = nullptr,
     const std::vector< std::string > * element_labels = nullptr,
     const std::vector< sc * > * element_data = nullptr ) const;
+
+  /**
+   * Prints the EnSight Gold case file.
+   * @param[in] directory Directory to which the case file is saved.
+   * @param[in] node_labels Labels for nodal data.
+   * @param[in] element_labels Labels for elemental data.
+   * @param[in] n_timesteps Number of time steps.
+   * @param[in] timestep_size Size of the timestep.
+   */
+  bool print_ensight_case( const std::string & directory,
+    const std::vector< std::string > * node_labels = nullptr,
+    const std::vector< std::string > * element_labels = nullptr,
+    lo n_timesteps = 0, sc timestep_size = 0 ) const;
+
+  /**
+   * Prints the EnSight Gold geometry file.
+   * @param[in] directory Directory to which the geometry file is saved.
+   */
+  bool print_ensight_geometry( const std::string & directory ) const;
+
+  /**
+   * Prints the EnSight Variable files for per element and per node data.
+   * @param[in] directory Directory that datafile are printed to.
+   * @param[in] node_labels Labels for nodal data.
+   * @param[in] node_data Scalar nodal data.
+   * @param[in] element_labels Labels for elemental data.
+   * @param[in] element_data Scalar elemental data.
+   * @param[in] timestep Time step index
+   */
+  bool print_ensight_datafiles( const std::string & directory,
+    const std::vector< std::string > * node_labels = nullptr,
+    const std::vector< linear_algebra::vector * > * node_data = nullptr,
+    const std::vector< std::string > * element_labels = nullptr,
+    const std::vector< linear_algebra::vector * > * element_data = nullptr,
+    std::optional< lo > timestep = std::nullopt ) const;
+
+  /**
+   * Prints the mesh into Ensight gold format.
+   * @param[in] directory Directory name
+   * @param[in] node_labels Labels for nodal data.
+   * @param[in] node_data Scalar nodal data.
+   * @param[in] element_labels Labels for elemental data.
+   * @param[in] element_data Scalar elemental data.
+   */
+  bool print_ensight( const std::string & directory,
+    const std::vector< std::string > * node_labels = nullptr,
+    const std::vector< linear_algebra::vector * > * node_data = nullptr,
+    const std::vector< std::string > * element_labels = nullptr,
+    const std::vector< linear_algebra::vector * > * element_data
+    = nullptr ) const;
 
   /**
    * Loads mesh from a file.
