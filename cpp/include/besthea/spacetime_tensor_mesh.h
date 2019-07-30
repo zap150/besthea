@@ -172,7 +172,7 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
   }
 
   /**
-   * Returns coordinates of all nodes of aspatial element.
+   * Returns coordinates of all nodes of a spatial element.
    * @param[in] i_element Index of the element.
    * @param[out] node1 Coordinates of the first node.
    * @param[out] node2 Coordinates of the second node.
