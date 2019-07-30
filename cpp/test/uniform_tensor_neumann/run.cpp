@@ -65,10 +65,12 @@ struct cauchy_data {
 };
 
 int main( int argc, char * argv[] ) {
-  std::string file = "../mesh_files/cube_192.txt";
+  std::string file = "./mesh_files/cube_192.txt";
   int refine = 0;
   lo n_timesteps = 8;
   sc end_time = 1.0;
+  std::string grid_file = "./mesh_files/grid_xy.txt";
+  int grid_refine = 2;
 
   if ( argc > 1 ) {
     file.assign( argv[ 1 ] );
@@ -81,6 +83,12 @@ int main( int argc, char * argv[] ) {
   }
   if ( argc > 4 ) {
     refine = std::atoi( argv[ 4 ] );
+  }
+  if ( argc > 5 ) {
+    grid_file.assign( argv[ 5 ] );
+  }
+  if ( argc > 6 ) {
+    grid_refine = std::atoi( argv[ 6 ] );
   }
   triangular_surface_mesh space_mesh( file );
   uniform_spacetime_tensor_mesh spacetime_mesh(
@@ -127,43 +135,68 @@ int main( int argc, char * argv[] ) {
   // M.print( );
   //*/
 
-  block_vector bv_dir_proj, bv_neu_proj, bv_dir;
-  space_p1.l2_projection( cauchy_data::dirichlet, bv_dir_proj );
-  space_p0.l2_projection( cauchy_data::neumann, bv_neu_proj );
+  block_vector dir_proj, neu_proj, dir;
+  space_p1.l2_projection( cauchy_data::dirichlet, dir_proj );
+  space_p0.l2_projection( cauchy_data::neumann, neu_proj );
   std::cout << "Dirichlet L2 projection relative error: "
-            << space_p1.l2_relative_error( cauchy_data::dirichlet, bv_dir_proj )
+            << space_p1.l2_relative_error( cauchy_data::dirichlet, dir_proj )
             << std::endl;
   std::cout << "Neumann L2 projection relative error: "
-            << space_p0.l2_relative_error( cauchy_data::neumann, bv_neu_proj )
+            << space_p0.l2_relative_error( cauchy_data::neumann, neu_proj )
             << std::endl;
 
   t.reset( "Solving the system" );
-  uniform_spacetime_be_solver::time_marching_neumann(
-    D, K, M, bv_neu_proj, bv_dir );
+  uniform_spacetime_be_solver::time_marching_neumann( D, K, M, neu_proj, dir );
   t.measure( );
   std::cout << "Dirichlet L2 relative error: "
-            << space_p1.l2_relative_error( cauchy_data::dirichlet, bv_dir )
+            << space_p1.l2_relative_error( cauchy_data::dirichlet, dir )
             << std::endl;
 
+  triangular_surface_mesh grid_space_mesh( grid_file );
+  grid_space_mesh.scale( 0.95 );
+  grid_space_mesh.refine( grid_refine );
+  uniform_spacetime_tensor_mesh grid_spacetime_mesh(
+    grid_space_mesh, end_time, n_timesteps );
+
+  block_vector slp;
+  uniform_spacetime_heat_sl_kernel_antiderivative kernel_v(
+    spacetime_mesh.get_timestep( ), cauchy_data::alpha );
+  uniform_spacetime_be_evaluator evaluator_v( kernel_v, space_p0, order_reg );
+  t.reset( "SLP" );
+  evaluator_v.evaluate( grid_space_mesh.get_nodes( ), neu_proj, slp );
+  t.measure( );
+
+  block_vector dlp;
+  uniform_spacetime_be_evaluator evaluator_k( kernel_k, space_p1, order_reg );
+  t.reset( "DLP" );
+  evaluator_k.evaluate( grid_space_mesh.get_nodes( ), dir, dlp );
+  t.measure( );
+
+  slp.add( dlp, -1.0 );
+
+  /*
   std::vector< std::string > node_labels{ "Dirichlet_projection",
     "Dirichlet_result" };
   std::vector< std::string > elem_labels{ "Neumann_projection" };
-  std::vector< block_vector * > node_data{ &bv_dir_proj, &bv_dir };
-  std::vector< block_vector * > elem_data{ &bv_neu_proj };
+  std::vector< block_vector * > node_data{ &dir_proj, &dir };
+  std::vector< block_vector * > elem_data{ &neu_proj };
 
-  /*
-  std::string paraview_dir = "paraview";
-  std::filesystem::create_directory( paraview_dir );
-  spacetime_mesh.print_vtu(
-    paraview_dir, &node_labels, &node_data, &elem_labels, &elem_data );
-  */
-
-  /*
-  std::string ensight_dir = "ensight";
+  std::string ensight_dir = "ensight_surface";
   std::filesystem::create_directory( ensight_dir );
   spacetime_mesh.print_ensight_case( ensight_dir, &node_labels, &elem_labels );
   spacetime_mesh.print_ensight_geometry( ensight_dir );
   spacetime_mesh.print_ensight_datafiles(
     ensight_dir, &node_labels, &node_data, &elem_labels, &elem_data );
   */
+  ///*
+  std::vector< std::string > grid_node_labels{ "Temperature" };
+  std::vector< block_vector * > grid_node_data{ &slp };
+
+  std::string ensight_grid_dir = "ensight_grid";
+  std::filesystem::create_directory( ensight_grid_dir );
+  grid_spacetime_mesh.print_ensight_case( ensight_grid_dir, &grid_node_labels );
+  grid_spacetime_mesh.print_ensight_geometry( ensight_grid_dir );
+  grid_spacetime_mesh.print_ensight_datafiles(
+    ensight_grid_dir, &grid_node_labels, &grid_node_data, nullptr, nullptr );
+  //*/
 }

@@ -33,6 +33,7 @@
 #ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_EVALUATOR_H_
 #define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_EVALUATOR_H_
 
+#include "besthea/block_vector.h"
 #include "besthea/uniform_spacetime_be_space.h"
 
 #include <array>
@@ -49,6 +50,9 @@ namespace besthea {
  */
 template< class kernel_type, class space_type >
 class besthea::bem::uniform_spacetime_be_evaluator {
+  using block_vector_type
+    = linear_algebra::block_vector;  //!< Block vector type.
+
  private:
   /**
    * Wraps the mapped quadrature point so that they can be private for OpenMP
@@ -69,14 +73,6 @@ class besthea::bem::uniform_spacetime_be_evaluator {
       _x2;  //!< Second coordinates of quadrature nodes in the spatial element
     std::vector< sc, besthea::allocator_type< sc > >
       _x3;  //!< Third coordinates of quadrature nodes in the spatial element
-
-    std::vector< sc, besthea::allocator_type< sc > >
-      _wt;  //!< Temporal quadrature weights
-    std::vector< sc, besthea::allocator_type< sc > >
-      _t_ref;  //!< Coordinates of quadrature nodes in the reference temporal
-               //!< element
-    std::vector< sc, besthea::allocator_type< sc > >
-      _t;  //!< Coordinates of quadrature nodes in the temporal element
   };
 
  public:
@@ -87,7 +83,7 @@ class besthea::bem::uniform_spacetime_be_evaluator {
    * @param[in] order_regular Triangle quadrature order for regular quadrature.
    */
   uniform_spacetime_be_evaluator(
-    kernel_type & kernel, space_type & space, int order_regular = 4 );
+    kernel_type & kernel, space_type & space, int order_spatial = 4 );
 
   uniform_spacetime_be_evaluator( const uniform_spacetime_be_evaluator & that )
     = delete;
@@ -99,13 +95,16 @@ class besthea::bem::uniform_spacetime_be_evaluator {
 
   /**
    * Assembles the spacetime matrix.
-   * @param[out] x Point coordinates.
+   * @param[in] x Point coordinates.
+   * @param[out] result Result in the given points.
    */
-  void evaluate( std::vector< sc > & x ) const;
+  void evaluate( const std::vector< sc > & x, const block_vector_type & density,
+    block_vector_type & result ) const;
 
  private:
   /**
    * Initializes quadrature structures.
+   * @param[in] order_spatial Triangle spatial quadrature order.
    * @param[out] my_quadrature Wrapper holding quadrature data.
    */
   void init_quadrature( quadrature_wrapper & my_quadrature ) const;
@@ -125,7 +124,8 @@ class besthea::bem::uniform_spacetime_be_evaluator {
 
   space_type * _space;  //!< Boundary element space.
 
-  int _order_regular;  //!< Triangle quadrature order for the regular integrals.
+  int _order_spatial;  //!< Spatial triangle quadrature order for the regular
+                       //!< integrals.
 };
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_EVALUATOR_H_ */

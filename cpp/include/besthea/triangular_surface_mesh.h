@@ -220,6 +220,20 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
   }
 
   /**
+   * Returns reference to the node coordinates.
+   */
+  std::vector< sc > & get_nodes( ) {
+    return _nodes;
+  }
+
+  /**
+   * Returns reference to the node coordinates.
+   */
+  const std::vector< sc > & get_nodes( ) const {
+    return _nodes;
+  }
+
+  /**
    * Sets coordinates of a node.
    * @param[in] i_node Index of the node.
    * @param[in] node Node coordinates.
@@ -250,6 +264,12 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
     edges[ 1 ] = _element_to_edges[ 3 * i_element + 1 ];
     edges[ 2 ] = _element_to_edges[ 3 * i_element + 2 ];
   }
+
+  /**
+   * Scales the mesh around its centroid.
+   * @param[in] factor Scaling multiplier.
+   */
+  void scale( sc factor );
 
   /**
    * Refines the mesh by quadrisection.
@@ -286,6 +306,12 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    * Initializes edges.
    */
   void init_edges( );
+
+  /**
+   * Returns the centroid of the mesh.
+   * @param[out] centroid Allocated array containing the centroid on return.
+   */
+  void get_centroid( sc * centroid );
 
   /**
    * Returns the surface mesh.

@@ -34,20 +34,20 @@
 #include "besthea/sparse_matrix.h"
 #include "besthea/uniform_spacetime_be_identity.h"
 
-template< class basis >
-besthea::bem::uniform_spacetime_be_space< basis >::uniform_spacetime_be_space(
-  st_mesh_type & spacetime_mesh )
+template< class basis_type >
+besthea::bem::uniform_spacetime_be_space<
+basis_type >::uniform_spacetime_be_space( st_mesh_type & spacetime_mesh )
   : _basis( spacetime_mesh ) {
   _spacetime_mesh = &spacetime_mesh;
 }
 
-template< class basis >
+template< class basis_type >
 besthea::bem::uniform_spacetime_be_space<
-  basis >::~uniform_spacetime_be_space( ) {
+basis_type >::~uniform_spacetime_be_space( ) {
 }
 
-template< class basis >
-void besthea::bem::uniform_spacetime_be_space< basis >::l2_projection(
+template< class basis_type >
+void besthea::bem::uniform_spacetime_be_space< basis_type >::l2_projection(
   sc ( *f )( sc, sc, sc, sc *, sc ), block_vector_type & projection,
   int order_matrix, int order_rhs_spatial, int order_rhs_temporal ) {
   besthea::linear_algebra::sparse_matrix M;
@@ -117,8 +117,8 @@ void besthea::bem::uniform_spacetime_be_space< basis >::l2_projection(
   }
 }
 
-template< class basis >
-sc besthea::bem::uniform_spacetime_be_space< basis >::l2_relative_error(
+template< class basis_type >
+sc besthea::bem::uniform_spacetime_be_space< basis_type >::l2_relative_error(
   sc ( *f )( sc, sc, sc, sc *, sc ), block_vector_type & approximation,
   int order_rhs_spatial, int order_rhs_temporal ) {
   lo n_timesteps = _spacetime_mesh->get_n_temporal_elements( );
@@ -181,8 +181,8 @@ sc besthea::bem::uniform_spacetime_be_space< basis >::l2_relative_error(
   return result;
 }
 
-template< class basis >
-void besthea::bem::uniform_spacetime_be_space< basis >::init_quadrature(
+template< class basis_type >
+void besthea::bem::uniform_spacetime_be_space< basis_type >::init_quadrature(
   int order_rhs_spatial, int order_rhs_temporal,
   quadrature_wrapper & my_quadrature ) const {
   // calling copy constructor of std::vector
@@ -203,10 +203,10 @@ void besthea::bem::uniform_spacetime_be_space< basis >::init_quadrature(
   my_quadrature._t.resize( size );
 }
 
-template< class basis >
-void besthea::bem::uniform_spacetime_be_space< basis >::triangle_to_geometry(
-  const sc * x1, const sc * x2, const sc * x3,
-  quadrature_wrapper & my_quadrature ) const {
+template< class basis_type >
+void besthea::bem::uniform_spacetime_be_space<
+  basis_type >::triangle_to_geometry( const sc * x1, const sc * x2,
+  const sc * x3, quadrature_wrapper & my_quadrature ) const {
   const sc * x1_ref = my_quadrature._x1_ref.data( );
   const sc * x2_ref = my_quadrature._x2_ref.data( );
   sc * x1_mapped = my_quadrature._x1.data( );
@@ -227,8 +227,8 @@ void besthea::bem::uniform_spacetime_be_space< basis >::triangle_to_geometry(
   }
 }
 
-template< class basis >
-void besthea::bem::uniform_spacetime_be_space< basis >::line_to_time(
+template< class basis_type >
+void besthea::bem::uniform_spacetime_be_space< basis_type >::line_to_time(
   lo d, sc timestep, quadrature_wrapper & my_quadrature ) const {
   const sc * t_ref = my_quadrature._t_ref.data( );
   sc * t_mapped = my_quadrature._t.data( );

@@ -127,29 +127,29 @@ int main( int argc, char * argv[] ) {
   // M.print( );
   //*/
 
-  block_vector bv_dir_proj, bv_neu_proj, bv_neu;
-  space_p1.l2_projection( cauchy_data::dirichlet, bv_dir_proj );
-  space_p0.l2_projection( cauchy_data::neumann, bv_neu_proj );
+  block_vector dir_proj, neu_proj, neu;
+  space_p1.l2_projection( cauchy_data::dirichlet, dir_proj );
+  space_p0.l2_projection( cauchy_data::neumann, neu_proj );
   std::cout << "Dirichlet L2 projection relative error: "
-            << space_p1.l2_relative_error( cauchy_data::dirichlet, bv_dir_proj )
+            << space_p1.l2_relative_error( cauchy_data::dirichlet, dir_proj )
             << std::endl;
   std::cout << "Neumann L2 projection relative error: "
-            << space_p0.l2_relative_error( cauchy_data::neumann, bv_neu_proj )
+            << space_p0.l2_relative_error( cauchy_data::neumann, neu_proj )
             << std::endl;
 
   t.reset( "Solving the system" );
   uniform_spacetime_be_solver::time_marching_dirichlet(
-    V, K, M, bv_dir_proj, bv_neu );
+    V, K, M, dir_proj, neu );
   t.measure( );
   std::cout << "Neumann L2 relative error: "
-            << space_p0.l2_relative_error( cauchy_data::neumann, bv_neu )
+            << space_p0.l2_relative_error( cauchy_data::neumann, neu )
             << std::endl;
 
   std::vector< std::string > node_labels{ "Dirichlet_projection" };
   std::vector< std::string > elem_labels{ "Neumann_projection",
     "Neumann_result" };
-  std::vector< block_vector * > node_data{ &bv_dir_proj };
-  std::vector< block_vector * > elem_data{ &bv_neu_proj, &bv_neu };
+  std::vector< block_vector * > node_data{ &dir_proj };
+  std::vector< block_vector * > elem_data{ &neu_proj, &neu };
 
   /*
   std::string paraview_dir = "paraview";

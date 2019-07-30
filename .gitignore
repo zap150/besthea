@@ -19,4 +19,6 @@
 *Makefile.release
 cpp/doc/html
 cpp/test/ensight
+cpp/test/ensight_surface
+cpp/test/ensight_grid
 notes/integration/integration.pdf

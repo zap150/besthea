@@ -110,6 +110,17 @@ class besthea::linear_algebra::block_vector {
   }
 
   /*!
+   * @brief Vector addition this += alpha * v.
+   * @param[in] v
+   * @param[in] alpha
+   */
+  void add( block_vector const & v, sc alpha = 1.0 ) {
+    for ( lo i = 0; i < _block_size; ++i ) {
+      _data[ i ].add( v._data[ i ], alpha );
+    }
+  }
+
+  /*!
    * @brief Prints the vector.
    * @param[in] stream
    */

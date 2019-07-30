@@ -39,16 +39,21 @@
 
 namespace besthea {
   namespace bem {
-    template< class basis >
+    template< class basis_type >
     class uniform_spacetime_be_space;
+    template< class kernel_type, class space_type >
+    class uniform_spacetime_be_evaluator;
   }
 }
 
 /**
  *  Class representing a boundary element space.
  */
-template< class basis >
+template< class basis_type >
 class besthea::bem::uniform_spacetime_be_space {
+  template< class, class >
+  friend class besthea::bem::uniform_spacetime_be_evaluator;
+
  private:
   /**
    * Wraps the mapped quadrature point so that they can be private for OpenMP
@@ -116,14 +121,14 @@ class besthea::bem::uniform_spacetime_be_space {
   /**
    * Returns reference to the basis function.
    */
-  basis & get_basis( ) {
+  basis_type & get_basis( ) {
     return _basis;
   }
 
   /**
    * Returns pointer to the basis function.
    */
-  const basis & get_basis( ) const {
+  const basis_type & get_basis( ) const {
     return _basis;
   }
 
@@ -187,7 +192,7 @@ class besthea::bem::uniform_spacetime_be_space {
 
   st_mesh_type * _spacetime_mesh;  //!< uniform spacetime tensor mesh
 
-  basis _basis;  //!< spatial basis function (temporal is constant)
+  basis_type _basis;  //!< spatial basis function (temporal is constant)
 };
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_SPACE_H_ */

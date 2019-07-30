@@ -311,6 +311,20 @@ void besthea::mesh::triangular_surface_mesh::refine( int level ) {
   init_normals_and_areas( );
 }
 
+void besthea::mesh::triangular_surface_mesh::scale( sc factor ) {
+  sc centroid[ 3 ];
+  get_centroid( centroid );
+  for ( lo i_node = 0; i_node < _n_nodes; ++i_node ) {
+    _nodes[ 3 * i_node ]
+      = ( _nodes[ 3 * i_node ] - centroid[ 0 ] ) * factor + centroid[ 0 ];
+    _nodes[ 3 * i_node + 1 ]
+      = ( _nodes[ 3 * i_node + 1 ] - centroid[ 1 ] ) * factor + centroid[ 1 ];
+    _nodes[ 3 * i_node + 2 ]
+      = ( _nodes[ 3 * i_node + 2 ] - centroid[ 2 ] ) * factor + centroid[ 2 ];
+  }
+  init_normals_and_areas( );
+}
+
 void besthea::mesh::triangular_surface_mesh::init_edges( ) {
   // allocate class variables
   _element_to_edges.clear( );
@@ -879,4 +893,18 @@ void besthea::mesh::triangular_surface_mesh::map_to_unit_sphere( ) {
     x[ 2 ] /= norm;
     set_node( i_node, x );
   }
+}
+
+void besthea::mesh::triangular_surface_mesh::get_centroid( sc * centroid ) {
+  sc x[ 3 ];
+  centroid[ 0 ] = centroid[ 1 ] = centroid[ 2 ] = 0.0;
+  for ( lo i_node = 0; i_node < _n_nodes; ++i_node ) {
+    get_node( i_node, x );
+    centroid[ 0 ] += x[ 0 ];
+    centroid[ 1 ] += x[ 1 ];
+    centroid[ 2 ] += x[ 2 ];
+  }
+  centroid[ 0 ] /= _n_nodes;
+  centroid[ 1 ] /= _n_nodes;
+  centroid[ 2 ] /= _n_nodes;
 }

@@ -37,6 +37,7 @@
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
 #include "besthea/uniform_spacetime_be_assembler.h"
+#include "besthea/uniform_spacetime_be_evaluator.h"
 #include "besthea/uniform_spacetime_be_identity.h"
 #include "besthea/uniform_spacetime_be_solver.h"
 #include "besthea/uniform_spacetime_be_space.h"
