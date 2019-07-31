@@ -160,6 +160,20 @@ class besthea::bem::uniform_spacetime_be_space {
     block_vector_type & approximation, int order_rhs_spatial = 5,
     int order_rhs_temporal = 4 );
 
+  /**
+   * Projects a function to the boundary element space.
+   * @param[in] f Function to be projected.
+   * @param[out] projection Projection vector.
+   * @param[in] order_matrix Spatial quadrature order to assemble the mass
+   * matrix.
+   * @param[in] order_rhs_spatial Spatial triangular quadrature order to
+   * assemble the right-hand side.
+   * @param[in] order_rhs_temporal Temporal line quadrature order to assemble
+   * the right-hand side.
+   */
+  void interpolation(
+    sc ( *f )( sc, sc, sc, sc *, sc ), block_vector_type & interpolation );
+
  protected:
   /**
    * Initializes quadrature structures.

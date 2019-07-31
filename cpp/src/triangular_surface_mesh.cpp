@@ -105,8 +105,22 @@ bool besthea::mesh::triangular_surface_mesh::load( const std::string & file ) {
 
   init_normals_and_areas( );
   init_edges( );
+  init_node_to_elements( );
 
   return true;
+}
+
+void besthea::mesh::triangular_surface_mesh::init_node_to_elements( ) {
+  _node_to_elements.clear( );
+  _node_to_elements.resize( _n_nodes );
+
+  lo element[ 3 ];
+  for ( lo i_elem = 0; i_elem < _n_elements; ++i_elem ) {
+    get_element( i_elem, element );
+    _node_to_elements[ element[ 0 ] ].push_back( i_elem );
+    _node_to_elements[ element[ 1 ] ].push_back( i_elem );
+    _node_to_elements[ element[ 2 ] ].push_back( i_elem );
+  }
 }
 
 void besthea::mesh::triangular_surface_mesh::init_normals_and_areas( ) {
@@ -309,6 +323,7 @@ void besthea::mesh::triangular_surface_mesh::refine( int level ) {
   }
 
   init_normals_and_areas( );
+  init_node_to_elements( );
 }
 
 void besthea::mesh::triangular_surface_mesh::scale( sc factor ) {

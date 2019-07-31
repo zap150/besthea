@@ -110,6 +110,16 @@ class besthea::linear_algebra::block_vector {
   }
 
   /*!
+   * @brief Sets the i-th element of the vector.
+   * @param[in] d Block index.
+   * @param[in] i Element index.
+   * @param[in] value Value to be set.
+   */
+  void set( lo d, lo i, sc value ) {
+    _data[ d ][ i ] = value;
+  }
+
+  /*!
    * @brief Vector addition this += alpha * v.
    * @param[in] v
    * @param[in] alpha

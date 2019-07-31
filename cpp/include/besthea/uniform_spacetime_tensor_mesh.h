@@ -150,6 +150,15 @@ class besthea::mesh::uniform_spacetime_tensor_mesh
   }
 
   /**
+   * Returns nodal normal vector.
+   * @param[in] i_node Index of the node.
+   * @param[out] n Normal indices.
+   */
+  void get_spatial_nodal_normal( lo i_node, sc * n ) const {
+    _space_mesh->get_nodal_normal( i_node, n );
+  }
+
+  /**
    * Returns area of a single spatial element.
    * @param[in] i_elem Index of the element.
    */
@@ -187,6 +196,20 @@ class besthea::mesh::uniform_spacetime_tensor_mesh
    */
   sc get_temporal_node( lo i_node ) const {
     return i_node * _timestep;
+  }
+
+  /**
+   * Returns the centroid of the mesh.
+   * @param[in] i_elem element index.
+   * @param[out] centroid Allocated array containing the element centroid on
+   * return.
+   */
+  void get_spatial_centroid( lo i_elem, sc * centroid ) {
+    sc x1[ 3 ], x2[ 3 ], x3[ 3 ];
+    _space_mesh->get_nodes( i_elem, x1, x2, x3 );
+    centroid[ 0 ] = ( x1[ 0 ] + x2[ 0 ] + x3[ 0 ] ) / 3.0;
+    centroid[ 1 ] = ( x1[ 1 ] + x2[ 1 ] + x3[ 1 ] ) / 3.0;
+    centroid[ 2 ] = ( x1[ 2 ] + x2[ 2 ] + x3[ 2 ] ) / 3.0;
   }
 
   /**

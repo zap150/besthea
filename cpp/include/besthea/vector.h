@@ -116,8 +116,8 @@ class besthea::linear_algebra::vector {
 
   /*!
    * @brief Sets the i-th element of the vector.
-   * @param[in] i
-   * @param[in] value
+   * @param[in] i Element index.
+   * @param[in] value Value to be set.
    */
   void set( lo i, sc value ) {
     _data[ i ] = value;
