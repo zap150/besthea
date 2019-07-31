@@ -190,6 +190,31 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
   }
 
   /**
+   * Returns element normal vector.
+   * @param[in] i_element Index of the node.
+   * @param[out] n Normal indices.
+   */
+  void get_nodal_normal( lo i_node, sc * n ) const {
+    n[ 0 ] = n[ 1 ] = n[ 2 ] = 0.0;
+    lo size = _node_to_elements[ i_node ].size( );
+    sc nn[ 3 ];
+    lo i_elem;
+
+    for ( lo i = 0; i < size; ++i ) {
+      i_elem = _node_to_elements[ i_node ][ i ];
+      get_normal( i_elem, nn );
+      n[ 0 ] += _areas[ i_elem ] * nn[ 0 ];
+      n[ 1 ] += _areas[ i_elem ] * nn[ 1 ];
+      n[ 2 ] += _areas[ i_elem ] * nn[ 2 ];
+    }
+
+    sc norm = std::sqrt( n[ 0 ] * n[ 0 ] + n[ 1 ] * n[ 1 ] + n[ 2 ] * n[ 2 ] );
+    n[ 0 ] /= norm;
+    n[ 1 ] /= norm;
+    n[ 2 ] /= norm;
+  }
+
+  /**
    * Returns coordinates of a node.
    * @param[in] i_node Index of the node.
    * @param[out] node Element coordinates.
@@ -266,6 +291,20 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
   }
 
   /**
+   * Returns the centroid of the mesh.
+   * @param[in] i_elem element index.
+   * @param[out] centroid Allocated array containing the element centroid on
+   * return.
+   */
+  void get_centroid( lo i_elem, sc * centroid ) {
+    sc x1[ 3 ], x2[ 3 ], x3[ 3 ];
+    get_nodes( i_elem, x1, x2, x3 );
+    centroid[ 0 ] = ( x1[ 0 ] + x2[ 0 ] + x3[ 0 ] ) / 3.0;
+    centroid[ 1 ] = ( x1[ 1 ] + x2[ 1 ] + x3[ 1 ] ) / 3.0;
+    centroid[ 2 ] = ( x1[ 2 ] + x2[ 2 ] + x3[ 2 ] ) / 3.0;
+  }
+
+  /**
    * Scales the mesh around its centroid.
    * @param[in] factor Scaling multiplier.
    */
@@ -285,6 +324,8 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
  protected:
   lo _n_nodes;               //!< number of nodes
   std::vector< sc > _nodes;  //!< coordinates of nodes
+  std::vector< std::vector< lo > >
+    _node_to_elements;  //!< mapping from nodes to elements
 
   lo _n_elements;               //!< number of elements
   std::vector< lo > _elements;  //!< indices into #_nodes
@@ -306,6 +347,11 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    * Initializes edges.
    */
   void init_edges( );
+
+  /**
+   * Initializes the mapping from nodes to elements.
+   */
+  void init_node_to_elements( );
 
   /**
    * Returns the centroid of the mesh.

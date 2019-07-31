@@ -36,14 +36,14 @@
 
 template< class basis_type >
 besthea::bem::uniform_spacetime_be_space<
-basis_type >::uniform_spacetime_be_space( st_mesh_type & spacetime_mesh )
+  basis_type >::uniform_spacetime_be_space( st_mesh_type & spacetime_mesh )
   : _basis( spacetime_mesh ) {
   _spacetime_mesh = &spacetime_mesh;
 }
 
 template< class basis_type >
 besthea::bem::uniform_spacetime_be_space<
-basis_type >::~uniform_spacetime_be_space( ) {
+  basis_type >::~uniform_spacetime_be_space( ) {
 }
 
 template< class basis_type >
@@ -179,6 +179,59 @@ sc besthea::bem::uniform_spacetime_be_space< basis_type >::l2_relative_error(
   }
   sc result = std::sqrt( l2_err / l2_norm );
   return result;
+}
+
+template< class basis_type >
+void besthea::bem::uniform_spacetime_be_space< basis_type >::interpolation(
+  sc ( *f )( sc, sc, sc, sc *, sc ), block_vector_type & interpolation ) {
+  std::cout << "Only use specialized templates!" << std::endl;
+}
+
+template<>
+void besthea::bem::uniform_spacetime_be_space<
+  besthea::bem::basis_tri_p0 >::interpolation( sc ( *f )( sc, sc, sc, sc *,
+                                                 sc ),
+  block_vector_type & interpolation ) {
+  lo n_timesteps = _spacetime_mesh->get_n_temporal_elements( );
+  sc timestep = _spacetime_mesh->get_timestep( );
+  lo n_elements = _spacetime_mesh->get_n_spatial_elements( );
+
+  interpolation.resize( n_timesteps );
+  interpolation.resize_blocks( n_elements );
+  sc centroid[ 3 ], n[ 3 ];
+
+  for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
+    _spacetime_mesh->get_spatial_centroid( i_elem, centroid );
+    _spacetime_mesh->get_spatial_normal( i_elem, n );
+    for ( lo d = 0; d < n_timesteps; ++d ) {
+      interpolation.set( d, i_elem,
+        f( centroid[ 0 ], centroid[ 1 ], centroid[ 2 ], n,
+          ( d + 0.5 ) * timestep ) );
+    }
+  }
+}
+
+template<>
+void besthea::bem::uniform_spacetime_be_space<
+  besthea::bem::basis_tri_p1 >::interpolation( sc ( *f )( sc, sc, sc, sc *,
+                                                 sc ),
+  block_vector_type & interpolation ) {
+  lo n_timesteps = _spacetime_mesh->get_n_temporal_elements( );
+  sc timestep = _spacetime_mesh->get_timestep( );
+  lo n_nodes = _spacetime_mesh->get_n_spatial_nodes( );
+
+  interpolation.resize( n_timesteps );
+  interpolation.resize_blocks( n_nodes );
+  sc x[ 3 ], n[ 3 ];
+
+  for ( lo i_node = 0; i_node < n_nodes; ++i_node ) {
+    _spacetime_mesh->get_spatial_node( i_node, x );
+    _spacetime_mesh->get_spatial_nodal_normal( i_node, n );
+    for ( lo d = 0; d < n_timesteps; ++d ) {
+      interpolation.set(
+        d, i_node, f( x[ 0 ], x[ 1 ], x[ 2 ], n, ( d + 0.5 ) * timestep ) );
+    }
+  }
 }
 
 template< class basis_type >

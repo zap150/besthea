@@ -59,8 +59,7 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
   sc timestep = mesh->get_timestep( );
   lo n_points = x.size( ) / 3;
 
-  // result[ 0 ] holds the initial condition
-  result.resize( n_timesteps + 1 );
+  result.resize( n_timesteps );
   result.resize_blocks( n_points, true );
 
 #pragma omp parallel

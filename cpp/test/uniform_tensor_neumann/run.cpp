@@ -174,6 +174,11 @@ int main( int argc, char * argv[] ) {
 
   slp.add( dlp, -1.0 );
 
+  block_vector sol_interp;
+  uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > grid_space_p1(
+    grid_spacetime_mesh );
+  grid_space_p1.interpolation( cauchy_data::dirichlet, sol_interp );
+
   /*
   std::vector< std::string > node_labels{ "Dirichlet_projection",
     "Dirichlet_result" };
@@ -183,14 +188,15 @@ int main( int argc, char * argv[] ) {
 
   std::string ensight_dir = "ensight_surface";
   std::filesystem::create_directory( ensight_dir );
-  spacetime_mesh.print_ensight_case( ensight_dir, &node_labels, &elem_labels );
-  spacetime_mesh.print_ensight_geometry( ensight_dir );
+  spacetime_mesh.print_ensight_case( ensight_dir, &node_labels, &elem_labels
+  ); spacetime_mesh.print_ensight_geometry( ensight_dir );
   spacetime_mesh.print_ensight_datafiles(
     ensight_dir, &node_labels, &node_data, &elem_labels, &elem_data );
   */
   ///*
-  std::vector< std::string > grid_node_labels{ "Temperature" };
-  std::vector< block_vector * > grid_node_data{ &slp };
+  std::vector< std::string > grid_node_labels{ "Temperature_interpolation",
+    "Temperature_result" };
+  std::vector< block_vector * > grid_node_data{ &sol_interp, &slp };
 
   std::string ensight_grid_dir = "ensight_grid";
   std::filesystem::create_directory( ensight_grid_dir );
