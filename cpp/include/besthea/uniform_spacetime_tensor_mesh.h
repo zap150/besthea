@@ -45,7 +45,7 @@ namespace besthea {
 }
 
 /**
- *  Class representing a tensor product spacetime mesh with a uniform timestep.
+ *  Class representing a tensor product space-time mesh with a uniform timestep.
  */
 class besthea::mesh::uniform_spacetime_tensor_mesh
   : public besthea::mesh::mesh {
