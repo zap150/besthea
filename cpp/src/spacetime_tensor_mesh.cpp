@@ -63,3 +63,32 @@ void besthea::mesh::spacetime_tensor_mesh::refine_time( int level ) {
   _time_mesh->refine( level );
 }
 
+bool besthea::mesh::spacetime_tensor_mesh::print_vtu(
+  const std::string & directory, const std::vector< std::string > * node_labels,
+  const std::vector< linear_algebra::block_vector * > * node_data,
+  const std::vector< std::string > * element_labels,
+  const std::vector< linear_algebra::block_vector * > * element_data,
+  lo time_stride ) const {
+  lo n_nodal = node_data ? node_data->size( ) : 0;
+  lo n_elem = element_data ? element_data->size( ) : 0;
+  std::vector< linear_algebra::vector * > node_data_for_one_ts( n_nodal );
+  std::vector< linear_algebra::vector * > elem_data_for_one_ts( n_elem );
+
+  lo counter = 0;
+  for ( lo ts = 0; ts < _time_mesh->get_n_elements( ); ts += time_stride ) {
+    for ( lo i = 0; i < n_nodal; ++i ) {
+      node_data_for_one_ts[ i ] = &( *node_data )[ i ]->get_block( ts );
+    }
+
+    for ( lo i = 0; i < n_elem; ++i ) {
+      elem_data_for_one_ts[ i ] = &( *element_data )[ i ]->get_block( ts );
+    }
+
+    if ( !_space_mesh->print_vtu( directory, node_labels, &node_data_for_one_ts,
+           element_labels, &elem_data_for_one_ts, counter++ ) ) {
+      return false;
+    }
+  }
+
+  return true;
+}

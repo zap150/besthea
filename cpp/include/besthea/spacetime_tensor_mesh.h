@@ -263,14 +263,12 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * @param[in] element_labels Labels for elemental data.
    * @param[in] element_data Scalar elemental data.
    */
-  bool print_vtu( const std::string & file,
-    const std::vector< std::string > * node_labels = nullptr,
-    const std::vector< sc * > * node_data = nullptr,
-    const std::vector< std::string > * element_labels = nullptr,
-    const std::vector< sc * > * element_data = nullptr ) const {
-    return _space_mesh->print_vtu(
-      file, node_labels, node_data, element_labels, element_data );
-  }
+  bool print_vtu( const std::string & directory,
+    const std::vector< std::string > * node_labels,
+    const std::vector< linear_algebra::block_vector * > * node_data,
+    const std::vector< std::string > * element_labels,
+    const std::vector< linear_algebra::block_vector * > * element_data,
+    lo time_stride ) const;
 
   virtual triangular_surface_mesh * get_spatial_mesh( ) {
     return _space_mesh;
