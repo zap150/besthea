@@ -60,19 +60,29 @@ class besthea::bem::uniform_spacetime_be_evaluator {
    */
   struct quadrature_wrapper {
     std::vector< sc, besthea::allocator_type< sc > >
-      _wx;  //!< Spatial quadrature weights
+      _wy;  //!< Spatial quadrature weights
     std::vector< sc, besthea::allocator_type< sc > >
-      _x1_ref;  //!< First coordinates of quadrature nodes in the reference
+      _y1_ref;  //!< First coordinates of quadrature nodes in the reference
                 //!< spatial element
     std::vector< sc, besthea::allocator_type< sc > >
-      _x2_ref;  //!< Second coordinates of quadrature nodes in the reference
+      _y2_ref;  //!< Second coordinates of quadrature nodes in the reference
                 //!< spatial element
     std::vector< sc, besthea::allocator_type< sc > >
-      _x1;  //!< First coordinates of quadrature nodes in the spatial element
+      _y1;  //!< First coordinates of quadrature nodes in the spatial element
     std::vector< sc, besthea::allocator_type< sc > >
-      _x2;  //!< Second coordinates of quadrature nodes in the spatial element
+      _y2;  //!< Second coordinates of quadrature nodes in the spatial element
     std::vector< sc, besthea::allocator_type< sc > >
-      _x3;  //!< Third coordinates of quadrature nodes in the spatial element
+      _y3;  //!< Third coordinates of quadrature nodes in the spatial element
+
+    std::vector< sc, besthea::allocator_type< sc > >
+      _x1;  //!< First coordinates of evaluation points
+    std::vector< sc, besthea::allocator_type< sc > >
+      _x2;  //!< Second coordinates of evaluation points
+    std::vector< sc, besthea::allocator_type< sc > >
+      _x3;  //!< Third coordinates of evaluation points.
+
+    std::vector< sc, besthea::allocator_type< sc > >
+      _kernel_values;  //!< Buffer for storing kernel values.
   };
 
  public:

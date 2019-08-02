@@ -62,19 +62,19 @@ class besthea::bem::basis_tri_p0
   /**
    * Returns number of basis functions supported on i_elem.
    */
-  virtual lo dimension_local( );
+  virtual lo dimension_local( ) const;
 
   /**
    * Returns number of basis functions on the whole mesh.
    */
-  virtual lo dimension_global( );
+  virtual lo dimension_global( ) const;
 
   /**
    * Provides global indices for local contributions.
    * @param[in] i_elem Element index.
    * @param[out] indices Global indices for local contributions.
    */
-  void do_local_to_global( lo i_elem, std::vector< lo > & indices );
+  void do_local_to_global( lo i_elem, std::vector< lo > & indices ) const;
 
   /**
    * Provides global indices for local contributions.
@@ -86,7 +86,7 @@ class besthea::bem::basis_tri_p0
    * @param[out] indices Global indices for local contributions.
    */
   void do_local_to_global( lo i_elem, int n_shared_vertices, int rotation,
-    bool swap, std::vector< lo > & indices );
+    bool swap, std::vector< lo > & indices ) const;
 
   /**
    * Evaluates the basis function.
@@ -97,7 +97,8 @@ class besthea::bem::basis_tri_p0
    * @param[in] n Element normal.
    */
 #pragma omp declare simd uniform( i_elem, i_fun, n ) simdlen( DATA_WIDTH )
-  sc do_evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n );
+  sc do_evaluate(
+    lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n ) const;
 
   /**
    * Evaluates the basis function.
@@ -114,7 +115,7 @@ class besthea::bem::basis_tri_p0
 #pragma omp declare simd uniform( \
   i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
   sc do_evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n,
-    int n_shared_vertices, int rotation, bool swap );
+    int n_shared_vertices, int rotation, bool swap ) const;
 };
 
 #endif /* INCLUDE_BESTHEA_BASIS_TRI_P0_H_ */

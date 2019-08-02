@@ -74,7 +74,7 @@ class besthea::bem::uniform_spacetime_be_identity
   /**
    * Assembles the identity matrix.
    */
-  void assemble( matrix_type & global_matrix );
+  void assemble( matrix_type & global_matrix ) const;
 
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
@@ -94,14 +94,14 @@ class besthea::bem::uniform_spacetime_be_identity
    * @param[in] jj Column indices.
    * @param[in] vv Values.
    */
-  void assemble_triplets(
-    std::vector< los > & ii, std::vector< los > & jj, std::vector< sc > & vv );
+  void assemble_triplets( std::vector< los > & ii, std::vector< los > & jj,
+    std::vector< sc > & vv ) const;
 
   matrix_type _data;  //!< Raw matrix data.
 
-  test_space_type * _test_space;  //!< Boundary element test space.
+  const test_space_type * _test_space;  //!< Boundary element test space.
 
-  trial_space_type * _trial_space;  //!< Boundary element trial space.
+  const trial_space_type * _trial_space;  //!< Boundary element trial space.
 
   int _order_regular;  //!< Triangle quadrature order for the regular integrals.
 };

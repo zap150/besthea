@@ -81,6 +81,29 @@ class besthea::linear_algebra::block_vector {
     return _data[ d ];
   }
 
+  /*!
+   * @brief Returns the i-th element of the d-th block.
+   * @param[in] d Block index.
+   * @param[in] i Element index.
+   */
+  sc get( lo d, lo i ) const {
+    return _data[ d ][ i ];
+  }
+
+  /**
+   * Returns the block dimension.
+   */
+  lo get_block_size( ) const {
+    return _block_size;
+  }
+
+  /**
+   * Returns the dimension of a single block
+   */
+  lo get_size( ) const {
+    return _size;
+  }
+
   /**
    * Returns a pointer to a single block.
    * @param[in] d Index of the block.
@@ -110,7 +133,7 @@ class besthea::linear_algebra::block_vector {
   }
 
   /*!
-   * @brief Sets the i-th element of the vector.
+   * @brief Sets the i-th element of the d-th block.
    * @param[in] d Block index.
    * @param[in] i Element index.
    * @param[in] value Value to be set.

@@ -143,22 +143,30 @@ class besthea::bem::uniform_spacetime_be_space {
    * @param[in] order_rhs_temporal Temporal line quadrature order to assemble
    * the right-hand side.
    */
-  void l2_projection( sc ( *f )( sc, sc, sc, sc *, sc ),
+  void L2_projection( sc ( *f )( sc, sc, sc, sc *, sc ),
     block_vector_type & projection, int order_matrix = 2,
-    int order_rhs_spatial = 5, int order_rhs_temporal = 4 );
+    int order_rhs_spatial = 5, int order_rhs_temporal = 4 ) const;
 
   /**
-   * Returns the .
+   * Returns the L2 relative error |f-approximation|/|f|.
    * @param[in] f Function in infinite dimensional space.
-   * @param[out] approximation Function in finite dimensional space.
+   * @param[in] approximation Function in finite dimensional space.
    * @param[in] order_rhs_spatial Spatial triangular quadrature order to
    * assemble the right-hand side.
    * @param[in] order_rhs_temporal Temporal line quadrature order to assemble
    * the right-hand side.
    */
-  sc l2_relative_error( sc ( *f )( sc, sc, sc, sc *, sc ),
-    block_vector_type & approximation, int order_rhs_spatial = 5,
-    int order_rhs_temporal = 4 );
+  sc L2_relative_error( sc ( *f )( sc, sc, sc, sc *, sc ),
+    const block_vector_type & approximation, int order_rhs_spatial = 5,
+    int order_rhs_temporal = 4 ) const;
+
+  /**
+   * Returns the l2 relative error |f-approximation|/|f|.
+   * @param[in] f Function in finite dimensional space.
+   * @param[out] approximation Function in finite dimensional space.
+   */
+  sc l2_relative_error( const block_vector_type & f,
+    const block_vector_type & approximation ) const;
 
   /**
    * Projects a function to the boundary element space.
@@ -171,8 +179,8 @@ class besthea::bem::uniform_spacetime_be_space {
    * @param[in] order_rhs_temporal Temporal line quadrature order to assemble
    * the right-hand side.
    */
-  void interpolation(
-    sc ( *f )( sc, sc, sc, sc *, sc ), block_vector_type & interpolation );
+  void interpolation( sc ( *f )( sc, sc, sc, sc *, sc ),
+    block_vector_type & interpolation ) const;
 
  protected:
   /**

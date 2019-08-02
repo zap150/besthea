@@ -47,9 +47,9 @@ besthea::bem::uniform_spacetime_be_space<
 }
 
 template< class basis_type >
-void besthea::bem::uniform_spacetime_be_space< basis_type >::l2_projection(
+void besthea::bem::uniform_spacetime_be_space< basis_type >::L2_projection(
   sc ( *f )( sc, sc, sc, sc *, sc ), block_vector_type & projection,
-  int order_matrix, int order_rhs_spatial, int order_rhs_temporal ) {
+  int order_matrix, int order_rhs_spatial, int order_rhs_temporal ) const {
   besthea::linear_algebra::sparse_matrix M;
   besthea::bem::uniform_spacetime_be_identity identity(
     *this, *this, order_matrix );
@@ -118,9 +118,9 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::l2_projection(
 }
 
 template< class basis_type >
-sc besthea::bem::uniform_spacetime_be_space< basis_type >::l2_relative_error(
-  sc ( *f )( sc, sc, sc, sc *, sc ), block_vector_type & approximation,
-  int order_rhs_spatial, int order_rhs_temporal ) {
+sc besthea::bem::uniform_spacetime_be_space< basis_type >::L2_relative_error(
+  sc ( *f )( sc, sc, sc, sc *, sc ), const block_vector_type & approximation,
+  int order_rhs_spatial, int order_rhs_temporal ) const {
   lo n_timesteps = _spacetime_mesh->get_n_temporal_elements( );
   sc timestep = _spacetime_mesh->get_timestep( );
   lo n_elements = _spacetime_mesh->get_n_spatial_elements( );
@@ -148,7 +148,7 @@ sc besthea::bem::uniform_spacetime_be_space< basis_type >::l2_relative_error(
   sc * wt = my_quadrature._wt.data( );
   sc * t_mapped = my_quadrature._t.data( );
   lo * l2g_data = l2g.data( );
-  sc * approximation_data = nullptr;
+  const sc * approximation_data = nullptr;
 
   for ( lo d = 0; d < n_timesteps; ++d ) {
     line_to_time( d, timestep, my_quadrature );
@@ -183,7 +183,7 @@ sc besthea::bem::uniform_spacetime_be_space< basis_type >::l2_relative_error(
 
 template< class basis_type >
 void besthea::bem::uniform_spacetime_be_space< basis_type >::interpolation(
-  sc ( *f )( sc, sc, sc, sc *, sc ), block_vector_type & interpolation ) {
+  sc ( *f )( sc, sc, sc, sc *, sc ), block_vector_type & interpolation ) const {
   std::cout << "Only use specialized templates!" << std::endl;
 }
 
@@ -191,7 +191,7 @@ template<>
 void besthea::bem::uniform_spacetime_be_space<
   besthea::bem::basis_tri_p0 >::interpolation( sc ( *f )( sc, sc, sc, sc *,
                                                  sc ),
-  block_vector_type & interpolation ) {
+  block_vector_type & interpolation ) const {
   lo n_timesteps = _spacetime_mesh->get_n_temporal_elements( );
   sc timestep = _spacetime_mesh->get_timestep( );
   lo n_elements = _spacetime_mesh->get_n_spatial_elements( );
@@ -215,7 +215,7 @@ template<>
 void besthea::bem::uniform_spacetime_be_space<
   besthea::bem::basis_tri_p1 >::interpolation( sc ( *f )( sc, sc, sc, sc *,
                                                  sc ),
-  block_vector_type & interpolation ) {
+  block_vector_type & interpolation ) const {
   lo n_timesteps = _spacetime_mesh->get_n_temporal_elements( );
   sc timestep = _spacetime_mesh->get_timestep( );
   lo n_nodes = _spacetime_mesh->get_n_spatial_nodes( );
@@ -281,6 +281,27 @@ void besthea::bem::uniform_spacetime_be_space<
 }
 
 template< class basis_type >
+sc besthea::bem::uniform_spacetime_be_space< basis_type >::l2_relative_error(
+  const block_vector_type & f, const block_vector_type & approximation ) const {
+  lo block_size = f.get_block_size( );
+  lo size = f.get_size( );
+  sc l2diffnorm = 0.0;
+  sc l2norm = 0.0;
+  sc aux;
+
+  for ( lo i_block = 0; i_block < block_size; ++i_block ) {
+    for ( lo i_elem = 0; i_elem < size; ++i_elem ) {
+      aux = f.get( i_block, i_elem );
+      l2norm += aux * aux;
+      aux -= approximation.get( i_block, i_elem );
+      l2diffnorm += aux * aux;
+    }
+  }
+
+  return std::sqrt( l2diffnorm / l2norm );
+}
+
+template< class basis_type >
 void besthea::bem::uniform_spacetime_be_space< basis_type >::line_to_time(
   lo d, sc timestep, quadrature_wrapper & my_quadrature ) const {
   const sc * t_ref = my_quadrature._t_ref.data( );
@@ -298,3 +319,9 @@ template class besthea::bem::uniform_spacetime_be_space<
   besthea::bem::basis_tri_p0 >;
 template class besthea::bem::uniform_spacetime_be_space<
   besthea::bem::basis_tri_p1 >;
+
+// const instantiation
+template class besthea::bem::uniform_spacetime_be_space<
+  const besthea::bem::basis_tri_p0 >;
+template class besthea::bem::uniform_spacetime_be_space<
+  const besthea::bem::basis_tri_p1 >;

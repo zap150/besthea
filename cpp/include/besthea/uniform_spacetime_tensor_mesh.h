@@ -92,7 +92,7 @@ class besthea::mesh::uniform_spacetime_tensor_mesh
   /**
    * Returns the uniform timestep.
    */
-  sc get_timestep( ) {
+  sc get_timestep( ) const {
     return _timestep;
   }
 

@@ -272,7 +272,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
                 = _kernel->anti_tau_limit(
                     x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                     x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                    x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny )
+                    x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny )
                 * w[ i_quad ];
             }
 
@@ -304,11 +304,11 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
                           y2_mapped, y3_mapped, kernel_data, w        \
                           : DATA_ALIGN ) simdlen( DATA_WIDTH )
           for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-            kernel_data[ i_quad ] = _kernel->anti_tau_anti_t(
-                                      x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-                                      x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                                      x3_mapped[ i_quad ] - y3_mapped[ i_quad ],
-                                      nx, ny, scaled_delta )
+            kernel_data[ i_quad ]
+              = _kernel->anti_tau_anti_t(
+                  x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                  x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                  x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny, scaled_delta )
               * w[ i_quad ];
           }
 
@@ -463,7 +463,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
                 = _kernel->anti_tau_limit(
                     x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                     x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                    x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny )
+                    x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny )
                 * w[ i_quad ];
             }
 
@@ -961,3 +961,43 @@ template class besthea::bem::uniform_spacetime_be_assembler<
   besthea::bem::uniform_spacetime_heat_hs_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+
+// const instantiation
+template class besthea::bem::uniform_spacetime_be_assembler<
+  const besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
+  const besthea::bem::uniform_spacetime_be_space<
+    const besthea::bem::basis_tri_p0 >,
+  const besthea::bem::uniform_spacetime_be_space<
+    const besthea::bem::basis_tri_p0 > >;
+template class besthea::bem::uniform_spacetime_be_assembler<
+  const besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
+  const besthea::bem::uniform_spacetime_be_space<
+    const besthea::bem::basis_tri_p1 >,
+  const besthea::bem::uniform_spacetime_be_space<
+    const besthea::bem::basis_tri_p1 > >;
+
+template class besthea::bem::uniform_spacetime_be_assembler<
+  const besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
+  const besthea::bem::uniform_spacetime_be_space<
+    const besthea::bem::basis_tri_p0 >,
+  const besthea::bem::uniform_spacetime_be_space<
+    const besthea::bem::basis_tri_p0 > >;
+template class besthea::bem::uniform_spacetime_be_assembler<
+  const besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
+  const besthea::bem::uniform_spacetime_be_space<
+    const besthea::bem::basis_tri_p0 >,
+  const besthea::bem::uniform_spacetime_be_space<
+    const besthea::bem::basis_tri_p1 > >;
+template class besthea::bem::uniform_spacetime_be_assembler<
+  const besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
+  const besthea::bem::uniform_spacetime_be_space<
+    const besthea::bem::basis_tri_p1 >,
+  const besthea::bem::uniform_spacetime_be_space<
+    const besthea::bem::basis_tri_p1 > >;
+
+template class besthea::bem::uniform_spacetime_be_assembler<
+  const besthea::bem::uniform_spacetime_heat_hs_kernel_antiderivative,
+  const besthea::bem::uniform_spacetime_be_space<
+    const besthea::bem::basis_tri_p1 >,
+  const besthea::bem::uniform_spacetime_be_space<
+    const besthea::bem::basis_tri_p1 > >;

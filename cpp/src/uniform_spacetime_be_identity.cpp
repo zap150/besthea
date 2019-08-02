@@ -64,7 +64,7 @@ void besthea::bem::uniform_spacetime_be_identity< test_space_type,
 
 template< class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_identity< test_space_type,
-  trial_space_type >::assemble( matrix_type & global_matrix ) {
+  trial_space_type >::assemble( matrix_type & global_matrix ) const {
   std::vector< los > ii;
   std::vector< los > jj;
   std::vector< sc > vv;
@@ -79,7 +79,7 @@ void besthea::bem::uniform_spacetime_be_identity< test_space_type,
 template< class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_identity< test_space_type,
   trial_space_type >::assemble_triplets( std::vector< los > & ii,
-  std::vector< los > & jj, std::vector< sc > & vv ) {
+  std::vector< los > & jj, std::vector< sc > & vv ) const {
   auto & test_basis = _test_space->get_basis( );
   auto & trial_basis = _trial_space->get_basis( );
   auto mesh = _test_space->get_mesh( );
@@ -149,3 +149,34 @@ template class besthea::bem::uniform_spacetime_be_identity<
 template class besthea::bem::uniform_spacetime_be_identity<
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+
+//// const instantiation
+template class besthea::bem::uniform_spacetime_be_identity<
+  const besthea::bem::uniform_spacetime_be_space<
+    const besthea::bem::basis_tri_p0 >,
+  const besthea::bem::uniform_spacetime_be_space<
+    const besthea::bem::basis_tri_p0 > >;
+template class besthea::bem::uniform_spacetime_be_identity<
+  const besthea::bem::uniform_spacetime_be_space<
+    const besthea::bem::basis_tri_p0 >,
+  const besthea::bem::uniform_spacetime_be_space<
+    const besthea::bem::basis_tri_p1 > >;
+template class besthea::bem::uniform_spacetime_be_identity<
+  const besthea::bem::uniform_spacetime_be_space<
+    const besthea::bem::basis_tri_p1 >,
+  const besthea::bem::uniform_spacetime_be_space<
+    const besthea::bem::basis_tri_p1 > >;
+
+// why??
+template class besthea::bem::uniform_spacetime_be_identity<
+  const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  const besthea::bem::uniform_spacetime_be_space<
+    besthea::bem::basis_tri_p0 > >;
+template class besthea::bem::uniform_spacetime_be_identity<
+  const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  const besthea::bem::uniform_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >;
+template class besthea::bem::uniform_spacetime_be_identity<
+  const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  const besthea::bem::uniform_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >;

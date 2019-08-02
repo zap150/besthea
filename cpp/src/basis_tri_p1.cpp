@@ -35,22 +35,22 @@ besthea::bem::basis_tri_p1::basis_tri_p1( mesh_type & mesh ) {
 besthea::bem::basis_tri_p1::~basis_tri_p1( ) {
 }
 
-lo besthea::bem::basis_tri_p1::dimension_local( ) {
+lo besthea::bem::basis_tri_p1::dimension_local( ) const {
   return 3;
 }
 
-lo besthea::bem::basis_tri_p1::dimension_global( ) {
+lo besthea::bem::basis_tri_p1::dimension_global( ) const {
   return _mesh->get_spatial_mesh( )->get_n_nodes( );
 }
 
 void besthea::bem::basis_tri_p1::do_local_to_global(
-  lo i_elem, std::vector< lo > & indices ) {
+  lo i_elem, std::vector< lo > & indices ) const {
   _mesh->get_spatial_mesh( )->get_element( i_elem, indices.data( ) );
 }
 
 void besthea::bem::basis_tri_p1::do_local_to_global( lo i_elem,
   int n_shared_vertices, int rotation, bool swap,
-  std::vector< lo > & indices ) {
+  std::vector< lo > & indices ) const {
   lo element[ 3 ];
   _mesh->get_spatial_mesh( )->get_element( i_elem, element );
 
@@ -66,7 +66,7 @@ void besthea::bem::basis_tri_p1::do_local_to_global( lo i_elem,
 
 #pragma omp declare simd uniform( i_elem, i_fun, n ) simdlen( DATA_WIDTH )
 sc besthea::bem::basis_tri_p1::do_evaluate(
-  lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n ) {
+  lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n ) const {
   sc value = 0.0;
 
   if ( i_fun == 0 ) {
@@ -83,7 +83,7 @@ sc besthea::bem::basis_tri_p1::do_evaluate(
 #pragma omp declare simd uniform( \
   i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
 sc besthea::bem::basis_tri_p1::do_evaluate( lo i_elem, lo i_fun, sc x1_ref,
-  sc x2_ref, const sc * n, int n_shared_vertices, int rotation, bool swap ) {
+  sc x2_ref, const sc * n, int n_shared_vertices, int rotation, bool swap ) const {
   sc value = 0.0;
 
   if ( i_fun == 0 ) {
@@ -101,7 +101,7 @@ sc besthea::bem::basis_tri_p1::do_evaluate( lo i_elem, lo i_fun, sc x1_ref,
   i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
 void besthea::bem::basis_tri_p1::evaluate_curl( lo i_elem, lo i_fun,
   const sc * n, int n_shared_vertices, int rotation, bool swap, sc & c1,
-  sc & c2, sc & c3 ) {
+  sc & c2, sc & c3 ) const {
   lo element[ 3 ];
   sc x1rot[ 3 ], x2rot[ 3 ], x3rot[ 3 ];
 
@@ -162,7 +162,7 @@ void besthea::bem::basis_tri_p1::evaluate_curl( lo i_elem, lo i_fun,
 }
 
 void besthea::bem::basis_tri_p1::evaluate_curl( lo i_elem, const sc * n,
-  int n_shared_vertices, int rotation, bool swap, sc * curls ) {
+  int n_shared_vertices, int rotation, bool swap, sc * curls ) const {
   lo element[ 3 ];
   sc x1rot[ 3 ], x2rot[ 3 ], x3rot[ 3 ];
 

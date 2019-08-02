@@ -110,14 +110,14 @@ l = size( line, 1 );
 [ X, Y ] = meshgrid( line, line );
 z = 0;
 points = [ reshape( X, l^2, 1 ) reshape( Y, l^2, 1 ) z * ones( l^2, 1 ) ];
-beev_v_heat = be_evaluator( stmesh, kernel_heat_sl( alpha ), basis_p0, ...
+beev_v_heat = be_evaluator( stmesh, kernel_heat_sl_2( alpha ), basis_p0, ...
   neu, points, order_ff );
 fprintf( 1, 'Evaluating V\n' );
 tic;
 repr = beev_v_heat.evaluate( );
 fprintf( 1, '  done in %f s.\n', toc );
 
-beev_w_heat = be_evaluator( stmesh, kernel_heat_dl( alpha ), basis_p1, ...
+beev_w_heat = be_evaluator( stmesh, kernel_heat_dl_2( alpha ), basis_p1, ...
   dir, points, order_ff );
 fprintf( 1, 'Evaluating W\n' );
 pot_k = beev_w_heat.evaluate( );
