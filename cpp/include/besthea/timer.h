@@ -83,7 +83,7 @@ class besthea::tools::timer {
    * Returns elapsed time since the last reset (or construction).
    * @param[in] print Prints to stdout if 'true'.
    */
-  std::string measure( bool print = true ) {
+  std::string measure( bool print = true ) const {
     clock_type::time_point now = clock_type::now( );
     unit_type ms = std::chrono::duration_cast< unit_type >( now - _start );
     std::stringstream str;

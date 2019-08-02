@@ -76,21 +76,21 @@ class besthea::linear_algebra::block_matrix
   /**
    * Returns number of blocks in a row (column).
    */
-  lo get_block_dim( ) {
+  lo get_block_dim( ) const {
     return _block_dim;
   }
 
   /**
    * Returns number of rows.
    */
-  lo get_n_rows( ) {
+  lo get_n_rows( ) const {
     return _n_rows;
   }
 
   /**
    * Returns number of columns.
    */
-  lo get_n_columns( ) {
+  lo get_n_columns( ) const {
     return _n_columns;
   }
 

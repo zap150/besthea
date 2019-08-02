@@ -63,6 +63,11 @@ class besthea::mesh::mesh {
    * Returns pointer to the surface mesh.
    */
   virtual triangular_surface_mesh * get_spatial_mesh( ) = 0;
+
+  /**
+   * Returns pointer to the surface mesh.
+   */
+  virtual const triangular_surface_mesh * get_spatial_mesh( ) const = 0;
 };
 
 #endif /* INCLUDE_BESTHEA_MESH_H_ */

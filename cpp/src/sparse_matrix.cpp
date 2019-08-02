@@ -95,7 +95,7 @@ void besthea::linear_algebra::sparse_matrix::apply(
 }
 
 void besthea::linear_algebra::sparse_matrix::eigen_cg_solve( const vector & rhs,
-  vector & solution, sc & relative_residual_error, lo & n_iterations ) {
+  vector & solution, sc & relative_residual_error, lo & n_iterations ) const {
   Eigen::ConjugateGradient< Eigen::SparseMatrix< sc, Eigen::ColMajor, los >,
     Eigen::Lower | Eigen::Upper >
     cg( _data );

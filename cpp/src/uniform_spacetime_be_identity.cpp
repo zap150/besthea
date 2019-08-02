@@ -150,24 +150,7 @@ template class besthea::bem::uniform_spacetime_be_identity<
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
 
-//// const instantiation
-template class besthea::bem::uniform_spacetime_be_identity<
-  const besthea::bem::uniform_spacetime_be_space<
-    const besthea::bem::basis_tri_p0 >,
-  const besthea::bem::uniform_spacetime_be_space<
-    const besthea::bem::basis_tri_p0 > >;
-template class besthea::bem::uniform_spacetime_be_identity<
-  const besthea::bem::uniform_spacetime_be_space<
-    const besthea::bem::basis_tri_p0 >,
-  const besthea::bem::uniform_spacetime_be_space<
-    const besthea::bem::basis_tri_p1 > >;
-template class besthea::bem::uniform_spacetime_be_identity<
-  const besthea::bem::uniform_spacetime_be_space<
-    const besthea::bem::basis_tri_p1 >,
-  const besthea::bem::uniform_spacetime_be_space<
-    const besthea::bem::basis_tri_p1 > >;
-
-// why??
+// Needed for L2 projection which is const
 template class besthea::bem::uniform_spacetime_be_identity<
   const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   const besthea::bem::uniform_spacetime_be_space<

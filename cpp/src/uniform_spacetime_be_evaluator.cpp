@@ -277,22 +277,3 @@ template class besthea::bem::uniform_spacetime_be_evaluator<
 template class besthea::bem::uniform_spacetime_be_evaluator<
   besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
-
-// const instantiation
-template class besthea::bem::uniform_spacetime_be_evaluator<
-  const besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
-  const besthea::bem::uniform_spacetime_be_space<
-    const besthea::bem::basis_tri_p0 > >;
-template class besthea::bem::uniform_spacetime_be_evaluator<
-  const besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
-  const besthea::bem::uniform_spacetime_be_space<
-    const besthea::bem::basis_tri_p1 > >;
-
-template class besthea::bem::uniform_spacetime_be_evaluator<
-  const besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
-  const besthea::bem::uniform_spacetime_be_space<
-    const besthea::bem::basis_tri_p0 > >;
-template class besthea::bem::uniform_spacetime_be_evaluator<
-  const besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
-  const besthea::bem::uniform_spacetime_be_space<
-    const besthea::bem::basis_tri_p1 > >;

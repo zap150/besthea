@@ -74,10 +74,18 @@ class besthea::linear_algebra::block_vector {
   ~block_vector( );
 
   /**
-   * Returns a pointer to a single block.
+   * Returns a reference to a single block.
    * @param[in] d Index of the block.
    */
   vector_type & get_block( lo d ) {
+    return _data[ d ];
+  }
+
+  /**
+   * Returns a reference to a single block.
+   * @param[in] d Index of the block.
+   */
+  const vector_type & get_block( lo d ) const {
     return _data[ d ];
   }
 
@@ -102,14 +110,6 @@ class besthea::linear_algebra::block_vector {
    */
   lo get_size( ) const {
     return _size;
-  }
-
-  /**
-   * Returns a pointer to a single block.
-   * @param[in] d Index of the block.
-   */
-  const vector_type & get_block( lo d ) const {
-    return _data[ d ];
   }
 
   /**

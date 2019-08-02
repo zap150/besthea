@@ -88,7 +88,7 @@ class besthea::linear_algebra::block_lower_triangular_toeplitz_matrix
   virtual ~block_lower_triangular_toeplitz_matrix( );
 
   /**
-   * Returns a pointer to a single block.
+   * Returns a reference to a single block.
    * @param[in] d Index of the block.
    */
   matrix_type & get_block( lo d ) {
@@ -96,7 +96,7 @@ class besthea::linear_algebra::block_lower_triangular_toeplitz_matrix
   }
 
   /**
-   * Returns a pointer to a single block.
+   * Returns a reference to a single block.
    * @param[in] d Index of the block.
    */
   const matrix_type & get_block( lo d ) const {

@@ -319,9 +319,3 @@ template class besthea::bem::uniform_spacetime_be_space<
   besthea::bem::basis_tri_p0 >;
 template class besthea::bem::uniform_spacetime_be_space<
   besthea::bem::basis_tri_p1 >;
-
-// const instantiation
-template class besthea::bem::uniform_spacetime_be_space<
-  const besthea::bem::basis_tri_p0 >;
-template class besthea::bem::uniform_spacetime_be_space<
-  const besthea::bem::basis_tri_p1 >;

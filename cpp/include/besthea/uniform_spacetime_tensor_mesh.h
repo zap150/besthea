@@ -204,7 +204,7 @@ class besthea::mesh::uniform_spacetime_tensor_mesh
    * @param[out] centroid Allocated array containing the element centroid on
    * return.
    */
-  void get_spatial_centroid( lo i_elem, sc * centroid ) {
+  void get_spatial_centroid( lo i_elem, sc * centroid ) const {
     sc x1[ 3 ], x2[ 3 ], x3[ 3 ];
     _space_mesh->get_nodes( i_elem, x1, x2, x3 );
     centroid[ 0 ] = ( x1[ 0 ] + x2[ 0 ] + x3[ 0 ] ) / 3.0;
@@ -292,6 +292,10 @@ class besthea::mesh::uniform_spacetime_tensor_mesh
   }
 
   virtual triangular_surface_mesh * get_spatial_mesh( ) {
+    return _space_mesh;
+  }
+
+  virtual const triangular_surface_mesh * get_spatial_mesh( ) const {
     return _space_mesh;
   }
 
