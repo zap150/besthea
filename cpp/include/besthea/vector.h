@@ -90,6 +90,7 @@ class besthea::linear_algebra::vector {
   /**
    * Resizes the vector.
    * @param[in] size New size.
+   * @param[in] zero Initialize to 0 if true.
    */
   void resize( lo size, bool zero = true ) {
     _data.resize( size );

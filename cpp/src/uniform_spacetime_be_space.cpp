@@ -187,6 +187,11 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::interpolation(
   std::cout << "Only use specialized templates!" << std::endl;
 }
 
+/**
+ * Projects a function to the piecewise constant boundary element space.
+ * @param[in] f Function to be projected.
+ * @param[out] interpolation Interpolation vector.
+ */
 template<>
 void besthea::bem::uniform_spacetime_be_space<
   besthea::bem::basis_tri_p0 >::interpolation( sc ( *f )( sc, sc, sc, sc *,
@@ -211,6 +216,11 @@ void besthea::bem::uniform_spacetime_be_space<
   }
 }
 
+/**
+ * Projects a function to the piecewise linear boundary element space.
+ * @param[in] f Function to be projected.
+ * @param[out] interpolation Interpolation vector.
+ */
 template<>
 void besthea::bem::uniform_spacetime_be_space<
   besthea::bem::basis_tri_p1 >::interpolation( sc ( *f )( sc, sc, sc, sc *,

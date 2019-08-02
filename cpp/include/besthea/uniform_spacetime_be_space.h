@@ -169,15 +169,10 @@ class besthea::bem::uniform_spacetime_be_space {
     const block_vector_type & approximation ) const;
 
   /**
-   * Projects a function to the boundary element space.
+   * Projects a function to the boundary element space. ONLY USE SPECIALIZED
+   * FUNCTIONS!
    * @param[in] f Function to be projected.
-   * @param[out] projection Projection vector.
-   * @param[in] order_matrix Spatial quadrature order to assemble the mass
-   * matrix.
-   * @param[in] order_rhs_spatial Spatial triangular quadrature order to
-   * assemble the right-hand side.
-   * @param[in] order_rhs_temporal Temporal line quadrature order to assemble
-   * the right-hand side.
+   * @param[out] interpolation Interpolation vector.
    */
   void interpolation( sc ( *f )( sc, sc, sc, sc *, sc ),
     block_vector_type & interpolation ) const;

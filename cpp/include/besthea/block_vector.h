@@ -124,6 +124,7 @@ class besthea::linear_algebra::block_vector {
   /**
    * Resizes the vector blocks.
    * @param[in] size New size.
+   * @param[in] zero Initialize to 0 if true.
    */
   void resize_blocks( lo size, bool zero = true ) {
     for ( vector_type & v : _data ) {

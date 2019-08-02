@@ -69,18 +69,19 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
 
   /**
    * Prints the mesh into Paraview format.
-   * @param[in] directiory Directory name.
+   * @param[in] directory Directory name.
    * @param[in] node_labels Labels for nodal data.
    * @param[in] node_data Scalar nodal data.
    * @param[in] element_labels Labels for elemental data.
    * @param[in] element_data Scalar elemental data.
+   * @param[in] suffix Suffix for the filename.
    */
   bool print_vtu( const std::string & directory,
     const std::vector< std::string > * node_labels = nullptr,
     const std::vector< linear_algebra::vector * > * node_data = nullptr,
     const std::vector< std::string > * element_labels = nullptr,
     const std::vector< linear_algebra::vector * > * element_data = nullptr,
-    std::optional< lo > postfix = std::nullopt ) const;
+    std::optional< lo > suffix = std::nullopt ) const;
 
   /**
    * Prints the EnSight Gold case file.
@@ -191,7 +192,7 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
 
   /**
    * Returns element normal vector.
-   * @param[in] i_element Index of the node.
+   * @param[in] i_node Index of the node.
    * @param[out] n Normal indices.
    */
   void get_nodal_normal( lo i_node, sc * n ) const {

@@ -138,9 +138,6 @@ class besthea::bem::basis_tri_p1
   /**
    * Evaluates surface curl of the basis function.
    * @param[in] i_elem Element index.
-   * @param[in] i_fun Local basis function index.
-   * @param[in] x1_ref First coordinate of reference quadrature point.
-   * @param[in] x2_ref Second coordinate of reference quadrature point.
    * @param[in] n Element normal.
    * @param[in] n_shared_vertices Number of shared vertives in currect elements
    * (regularized quadrature).

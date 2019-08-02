@@ -471,11 +471,11 @@ bool besthea::mesh::triangular_surface_mesh::print_vtu(
   const std::vector< linear_algebra::vector * > * node_data,
   const std::vector< std::string > * element_labels,
   const std::vector< linear_algebra::vector * > * element_data,
-  std::optional< lo > postfix ) const {
+  std::optional< lo > suffix ) const {
   std::stringstream file;
   file << directory << "/output.vtu";
-  if ( postfix ) {
-    file << '.' << std::setw( 4 ) << std::setfill( '0' ) << postfix.value( );
+  if ( suffix ) {
+    file << '.' << std::setw( 4 ) << std::setfill( '0' ) << suffix.value( );
   }
 
   std::ofstream file_vtu( file.str( ).c_str( ) );

@@ -214,11 +214,12 @@ class besthea::mesh::uniform_spacetime_tensor_mesh
 
   /**
    * Prints the mesh into Paraview format.
-   * @param[in] file File name.
+   * @param[in] directory Directory to which the vtu file is saved.
    * @param[in] node_labels Labels for nodal data.
    * @param[in] node_data Scalar nodal data.
    * @param[in] element_labels Labels for elemental data.
    * @param[in] element_data Scalar elemental data.
+   * @param[in] time_stride Stride for printed time steps.
    */
   bool print_vtu( const std::string & directory,
     const std::vector< std::string > * node_labels = nullptr,

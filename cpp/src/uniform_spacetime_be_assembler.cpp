@@ -354,7 +354,10 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 }
 //*/
 
-// specialization for hypersingular operator with piecewise linear functions
+/**
+ * Specialization for hypersingular operator with piecewise linear functions.
+ * @param[out] global_matrix Block lower triangular Toeplitz matrix.
+ */
 template<>
 void besthea::bem::uniform_spacetime_be_assembler<
   besthea::bem::uniform_spacetime_heat_hs_kernel_antiderivative,

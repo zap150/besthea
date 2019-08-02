@@ -90,7 +90,7 @@ class besthea::bem::uniform_spacetime_be_evaluator {
    * Constructor.
    * @param[in] kernel Spacetime kernel antiderivative object.
    * @param[in] space Boundary element space.
-   * @param[in] order_regular Triangle quadrature order for regular quadrature.
+   * @param[in] order_spatial Triangle quadrature order for regular quadrature.
    */
   uniform_spacetime_be_evaluator(
     kernel_type & kernel, space_type & space, int order_spatial = 4 );
@@ -106,6 +106,7 @@ class besthea::bem::uniform_spacetime_be_evaluator {
   /**
    * Assembles the spacetime matrix.
    * @param[in] x Point coordinates.
+   * @param[in] density Density of the potential.
    * @param[out] result Result in the given points.
    */
   void evaluate( const std::vector< sc > & x, const block_vector_type & density,
