@@ -235,7 +235,7 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
   lo loc_dim = basis.dimension_local( );
 
   result.resize( n_timesteps );
-  result.resize_blocks( n_points, true );
+  result.resize_blocks( n_points, false );
 
   int max_threads = omp_get_max_threads( );
 
@@ -292,6 +292,14 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
     }
 
     const sc * my_x_data = x.data( ) + 3 * my_offset;
+
+    // first touch
+    for ( lo d = 0; d < n_timesteps; ++d ) {
+      my_result_data = result.get_block( d ).data( ) + my_offset;
+      for ( lo i_point = 0; i_point < my_n_points; ++i_point ) {
+        my_result_data[ i_point ] = 0.0;
+      }
+    }
 
     lo size_chunk = my_quadrature._kernel_values.size( );
     lo my_n_chunks = my_n_points / size_chunk;
