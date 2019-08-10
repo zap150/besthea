@@ -48,7 +48,7 @@ template< class kernel_type, class space_type >
 besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
   space_type >::~uniform_spacetime_be_evaluator( ) {
 }
-///*
+/*
 template< class kernel_type, class space_type >
 void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
   space_type >::evaluate( const std::vector< sc > & x,
@@ -219,8 +219,8 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
     }      // i_chunk
   }        // omp parallel
 }
-//*/
-/*
+*/
+///*
 template< class kernel_type, class space_type >
 void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
   space_type >::evaluate( const std::vector< sc > & x,
@@ -280,9 +280,7 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
       * my_n_points;  // all preceding threads have at least as many points as
                       // this (except for the scalar part)
     // adding the additional vectors
-    if ( thread_num < n_vectors_rest ) {
-      my_offset += thread_num * sc_width;
-    } else {
+    if ( thread_num >= n_vectors_rest ) {
       my_offset += n_vectors_rest * sc_width;
     }
 
@@ -430,7 +428,7 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
     }      // i_chunk
   }        // omp parallel
 }
-*/
+//*/
 template< class kernel_type, class space_type >
 void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
   space_type >::init_quadrature( quadrature_wrapper & my_quadrature ) const {
