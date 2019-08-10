@@ -48,7 +48,7 @@ template< class kernel_type, class space_type >
 besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
   space_type >::~uniform_spacetime_be_evaluator( ) {
 }
-/*
+///*
 template< class kernel_type, class space_type >
 void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
   space_type >::evaluate( const std::vector< sc > & x,
@@ -219,8 +219,8 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
     }      // i_chunk
   }        // omp parallel
 }
-*/
-///*
+//*/
+/*
 template< class kernel_type, class space_type >
 void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
   space_type >::evaluate( const std::vector< sc > & x,
@@ -430,7 +430,7 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
     }      // i_chunk
   }        // omp parallel
 }
-//*/
+*/
 template< class kernel_type, class space_type >
 void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
   space_type >::init_quadrature( quadrature_wrapper & my_quadrature ) const {

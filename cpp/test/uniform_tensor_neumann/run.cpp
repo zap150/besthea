@@ -154,7 +154,7 @@ int main( int argc, char * argv[] ) {
   grid_space_mesh.refine( grid_refine );
   uniform_spacetime_tensor_mesh grid_spacetime_mesh(
     grid_space_mesh, end_time, spacetime_mesh.get_n_temporal_elements( ) );
-  grid_space_mesh.print_info( );
+  grid_spacetime_mesh.print_info( );
 
   block_vector slp;
   uniform_spacetime_heat_sl_kernel_antiderivative kernel_v(
