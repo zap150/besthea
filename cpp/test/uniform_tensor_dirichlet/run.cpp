@@ -156,6 +156,7 @@ int main( int argc, char * argv[] ) {
   grid_space_mesh.refine( grid_refine );
   uniform_spacetime_tensor_mesh grid_spacetime_mesh(
     grid_space_mesh, end_time, spacetime_mesh.get_n_temporal_elements( ) );
+  grid_space_mesh.print_info( );
 
   block_vector slp;
   uniform_spacetime_be_evaluator evaluator_v( kernel_v, space_p0, order_reg );
@@ -181,7 +182,8 @@ int main( int argc, char * argv[] ) {
   ///*
   t.reset( "Printing Ensight surface" );
   std::vector< std::string > node_labels{ "Dirichlet_projection" };
-  std::vector< std::string > elem_labels{ "Neumann_projection", "Neumann_result" };
+  std::vector< std::string > elem_labels{ "Neumann_projection",
+    "Neumann_result" };
   std::vector< block_vector * > node_data{ &dir_proj };
   std::vector< block_vector * > elem_data{ &neu_proj, &neu };
   std::string ensight_dir = "ensight_surface";
