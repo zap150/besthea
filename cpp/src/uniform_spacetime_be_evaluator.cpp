@@ -436,7 +436,8 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
   my_quadrature._y2.resize( size );
   my_quadrature._y3.resize( size );
 
-  lo size_chunk = DATA_WIDTH * 32;
+  // has to be a multiple of cache line size
+  lo size_chunk = DATA_ALIGN / sizeof( sc ) * 32;
   my_quadrature._kernel_values.resize( size_chunk );
   my_quadrature._x1.resize( size_chunk );
   my_quadrature._x2.resize( size_chunk );
