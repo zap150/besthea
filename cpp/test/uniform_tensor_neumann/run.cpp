@@ -112,7 +112,7 @@ int main( int argc, char * argv[] ) {
   uniform_spacetime_be_assembler assembler_d(
     kernel_d, space_p1, space_p1, order_sing, order_reg );
   t.reset( "D" );
-  // assembler_d.assemble( D );
+  assembler_d.assemble( D );
   t.measure( );
   // D.print( );
 
@@ -122,7 +122,7 @@ int main( int argc, char * argv[] ) {
   uniform_spacetime_be_assembler assembler_k(
     kernel_k, space_p0, space_p1, order_sing, order_reg );
   t.reset( "K" );
-  // assembler_k.assemble( K );
+  assembler_k.assemble( K );
   t.measure( );
   // K.print( );
 
@@ -142,13 +142,14 @@ int main( int argc, char * argv[] ) {
   std::cout << "Neumann L2 projection relative error: "
             << space_p0.L2_relative_error( cauchy_data::neumann, neu_proj )
             << std::endl;
-  /*
-    t.reset( "Solving the system" );
-    uniform_spacetime_be_solver::time_marching_neumann( D, K, M, neu_proj, dir
-    ); t.measure( ); std::cout << "Dirichlet L2 relative error: "
-              << space_p1.L2_relative_error( cauchy_data::dirichlet, dir )
-              << std::endl;
-  */
+
+  t.reset( "Solving the system" );
+  uniform_spacetime_be_solver::time_marching_neumann( D, K, M, neu_proj, dir );
+  t.measure( );
+  std::cout << "Dirichlet L2 relative error: "
+            << space_p1.L2_relative_error( cauchy_data::dirichlet, dir )
+            << std::endl;
+
   triangular_surface_mesh grid_space_mesh( grid_file );
   grid_space_mesh.scale( 0.95 );
   grid_space_mesh.refine( grid_refine );
@@ -167,8 +168,7 @@ int main( int argc, char * argv[] ) {
   block_vector dlp;
   uniform_spacetime_be_evaluator evaluator_k( kernel_k, space_p1, order_reg );
   t.reset( "DLP" );
-  // evaluator_k.evaluate( grid_space_mesh.get_nodes( ), dir, dlp );
-  evaluator_k.evaluate( grid_space_mesh.get_nodes( ), dir_proj, dlp );
+  evaluator_k.evaluate( grid_space_mesh.get_nodes( ), dir, dlp );
   t.measure( );
 
   slp.add( dlp, -1.0 );
