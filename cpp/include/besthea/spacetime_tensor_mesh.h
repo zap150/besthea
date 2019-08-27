@@ -51,6 +51,14 @@ namespace besthea {
 class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
  public:
   /**
+   * Constructor
+   */
+  spacetime_tensor_mesh( ) {
+    _space_mesh = nullptr;
+    _time_mesh = nullptr;
+  }
+
+  /**
    * Constructing tensor product mesh from spatial and temporal meshes.
    * @param[in] space_mesh Reference to a triangular_surface_mesh object.
    * @param[in] time_mesh Reference to a temporal_mesh object.
@@ -65,7 +73,7 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
   /**
    * Prints info on the object.
    */
-  void print_info( ) const;
+  virtual void print_info( ) const;
 
   /**
    * Refines the spatial mesh by quadrisection, temporal by bisection.
@@ -73,7 +81,7 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * @param[in] temporal_order Number of temporal refinements per single spatial
    * refinement.
    */
-  void refine( int level, int temporal_order = 1 );
+  virtual void refine( int level, int temporal_order = 1 );
 
   /**
    * Maps the spatial nodes to the unit sphere.
@@ -83,7 +91,7 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
   /**
    * Returns number of space-time elements.
    */
-  lo get_n_elements( ) const {
+  virtual lo get_n_elements( ) const {
     return _space_mesh->get_n_elements( ) * _time_mesh->get_n_elements( );
   }
 
@@ -94,7 +102,11 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
     return _space_mesh->get_n_nodes( ) * _time_mesh->get_n_nodes( );
   }
 
-  sc area( lo i_element ) const {
+  /**
+   * Return an area of a space-time element
+   * @param[in] i_element Index of a space-time element.
+   */
+  virtual sc area( lo i_element ) const {
     lo space_elem_idx;
     lo time_elem_idx;
     map_index( i_element, space_elem_idx, time_elem_idx );
@@ -136,7 +148,7 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * Returns number of spatial elements.
    */
   lo get_n_spatial_elements( ) const {
-    return _space_mesh->get_n_elements( );
+    return this->_space_mesh->get_n_elements( );
   }
 
   /**
@@ -190,6 +202,15 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    */
   void get_spatial_normal( lo i_element, sc * n ) const {
     _space_mesh->get_normal( i_element, n );
+  }
+
+  /**
+   * Returns nodal normal vector.
+   * @param[in] i_node Index of the node.
+   * @param[out] n Normal indices.
+   */
+  void get_spatial_nodal_normal( lo i_node, sc * n ) const {
+    _space_mesh->get_nodal_normal( i_node, n );
   }
 
   /**
@@ -247,12 +268,26 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * @param[out] node2 Coordinate of the second node (end of the temporal
    * subinterval).
    */
-  void get_nodes( lo i_element, sc * node1, sc * node2 ) const {
+  void get_temporal_nodes( lo i_element, sc * node1, sc * node2 ) const {
     _time_mesh->get_nodes( i_element, node1, node2 );
   }
 
   sc temporal_length( lo i_element ) const {
     return _time_mesh->length( i_element );
+  }
+
+  /**
+   * Returns the centroid of the mesh.
+   * @param[in] i_elem element index.
+   * @param[out] centroid Allocated array containing the element centroid on
+   * return.
+   */
+  void get_spatial_centroid( lo i_elem, sc * centroid ) {
+    sc x1[ 3 ], x2[ 3 ], x3[ 3 ];
+    _space_mesh->get_nodes( i_elem, x1, x2, x3 );
+    centroid[ 0 ] = ( x1[ 0 ] + x2[ 0 ] + x3[ 0 ] ) / 3.0;
+    centroid[ 1 ] = ( x1[ 1 ] + x2[ 1 ] + x3[ 1 ] ) / 3.0;
+    centroid[ 2 ] = ( x1[ 2 ] + x2[ 2 ] + x3[ 2 ] ) / 3.0;
   }
 
   /**
@@ -264,16 +299,64 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * @param[in] element_data Scalar elemental data.
    */
   bool print_vtu( const std::string & directory,
-    const std::vector< std::string > * node_labels,
-    const std::vector< linear_algebra::block_vector * > * node_data,
-    const std::vector< std::string > * element_labels,
-    const std::vector< linear_algebra::block_vector * > * element_data,
-    lo time_stride ) const;
+    const std::vector< std::string > * node_labels = nullptr,
+    const std::vector< linear_algebra::block_vector * > * node_data = nullptr,
+    const std::vector< std::string > * element_labels = nullptr,
+    const std::vector< linear_algebra::block_vector * > * element_data
+    = nullptr,
+    lo time_stride = 1 ) const;
 
+  /**
+   * Prints the EnSight Gold case file.
+   * @param[in] directory Directory to which the case file is saved.
+   * @param[in] node_labels Labels for nodal data.
+   * @param[in] element_labels Labels for elemental data.
+   * @param[in] time_stride Stride for time steps
+   */
+  virtual bool print_ensight_case( const std::string & directory,
+    const std::vector< std::string > * node_labels = nullptr,
+    const std::vector< std::string > * element_labels = nullptr,
+    lo time_stride = 1 ) const {
+    return false;
+  }
+
+  /**
+   * Prints the EnSight Gold geometry file.
+   * @param[in] directory Directory to which the geometry file is saved.
+   */
+  virtual bool print_ensight_geometry( const std::string & directory ) const {
+    return false;
+  }
+
+  /**
+   * Prints the EnSight Variable files for per element and per node data.
+   * @param[in] directory Directory that datafile are printed to.
+   * @param[in] node_labels Labels for nodal data.
+   * @param[in] node_data Scalar nodal data.
+   * @param[in] element_labels Labels for elemental data.
+   * @param[in] element_data Scalar elemental data.
+   * @param[in] time_stride Stride for time steps.
+   */
+  virtual bool print_ensight_datafiles( const std::string & directory,
+    const std::vector< std::string > * node_labels = nullptr,
+    const std::vector< linear_algebra::block_vector * > * node_data = nullptr,
+    const std::vector< std::string > * element_labels = nullptr,
+    const std::vector< linear_algebra::block_vector * > * element_data
+    = nullptr,
+    lo time_stride = 1 ) const {
+    return false;
+  }
+
+  /**
+   * Returns a pointer to the internally stored spatial mesh.
+   */
   virtual triangular_surface_mesh * get_spatial_mesh( ) {
     return _space_mesh;
   }
 
+  /**
+   * Return a pointer to the internally stored temporal mesh.
+   */
   virtual temporal_mesh * get_temporal_mesh( ) {
     return _time_mesh;
   }
@@ -283,13 +366,13 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * Refines the spatial mesh by quadrisection.
    * @param[in] level Number of spatial refinements.
    */
-  void refine_space( int level );
+  virtual void refine_space( int level );
 
   /**
    * Refines the temporal mesh by bisection.
    * @param[in] level Number of temporal refinements.
    */
-  void refine_time( int level );
+  virtual void refine_time( int level );
 
   /**
    * Maps global space-time index to separate space and time indices.

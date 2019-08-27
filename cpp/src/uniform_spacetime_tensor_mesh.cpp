@@ -33,69 +33,40 @@
 
 besthea::mesh::uniform_spacetime_tensor_mesh::uniform_spacetime_tensor_mesh(
   triangular_surface_mesh & space_mesh, sc end_time, lo n_timesteps ) {
-  _space_mesh = &space_mesh;
+  this->_space_mesh = &space_mesh;
   _end_time = end_time;
   _n_timesteps = n_timesteps;
   _timestep = end_time / n_timesteps;
+  _time_mesh = new temporal_mesh( 0.0, end_time, n_timesteps );
 }
 
 besthea::mesh::uniform_spacetime_tensor_mesh::
   ~uniform_spacetime_tensor_mesh( ) {
+  delete _time_mesh;
 }
 
 void besthea::mesh::uniform_spacetime_tensor_mesh::refine(
   int level, int temporal_order ) {
   refine_space( level );
   refine_time( temporal_order * level );
-}
-
-void besthea::mesh::uniform_spacetime_tensor_mesh::map_to_unit_sphere( ) {
-  _space_mesh->map_to_unit_sphere( );
-}
-
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine_space( int level ) {
-  _space_mesh->refine( level );
-}
-
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine_time( int level ) {
-  _n_timesteps *= 1 << level;
+  _n_timesteps = _time_mesh->get_n_elements( );
   _timestep = _end_time / _n_timesteps;
 }
+
+// void besthea::mesh::uniform_spacetime_tensor_mesh::refine_space( int level )
+// {
+//  _space_mesh->refine( level );
+//}
+//
+// void besthea::mesh::uniform_spacetime_tensor_mesh::refine_time( int level ) {
+//  _n_timesteps *= 1 << level;
+//  _timestep = _end_time / _n_timesteps;
+//}
 
 void besthea::mesh::uniform_spacetime_tensor_mesh::print_info( ) const {
   std::cout << "besthea::mesh::uniform_spacetime_tensor_mesh" << std::endl;
   std::cout << "  spatial elements: " << get_n_spatial_elements( ) << std::endl;
   std::cout << "  spatial nodes: " << get_n_spatial_nodes( ) << std::endl;
   std::cout << "  spatial edges: " << get_n_spatial_edges( ) << std::endl;
-  std::cout << "  timesteps: " << _n_timesteps << std::endl;
-}
-
-bool besthea::mesh::uniform_spacetime_tensor_mesh::print_vtu(
-  const std::string & directory, const std::vector< std::string > * node_labels,
-  const std::vector< linear_algebra::block_vector * > * node_data,
-  const std::vector< std::string > * element_labels,
-  const std::vector< linear_algebra::block_vector * > * element_data,
-  lo time_stride ) const {
-  lo n_nodal = node_data ? node_data->size( ) : 0;
-  lo n_elem = element_data ? element_data->size( ) : 0;
-  std::vector< linear_algebra::vector * > node_data_for_one_ts( n_nodal );
-  std::vector< linear_algebra::vector * > elem_data_for_one_ts( n_elem );
-
-  lo counter = 0;
-  for ( lo ts = 0; ts < _n_timesteps; ts += time_stride ) {
-    for ( lo i = 0; i < n_nodal; ++i ) {
-      node_data_for_one_ts[ i ] = &( *node_data )[ i ]->get_block( ts );
-    }
-
-    for ( lo i = 0; i < n_elem; ++i ) {
-      elem_data_for_one_ts[ i ] = &( *element_data )[ i ]->get_block( ts );
-    }
-
-    if ( !_space_mesh->print_vtu( directory, node_labels, &node_data_for_one_ts,
-           element_labels, &elem_data_for_one_ts, counter++ ) ) {
-      return false;
-    }
-  }
-
-  return true;
+  std::cout << "  timesteps: " << get_n_temporal_elements( ) << std::endl;
 }
