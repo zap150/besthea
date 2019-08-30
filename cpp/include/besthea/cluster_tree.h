@@ -26,39 +26,65 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file spacetime_slice.h
- * @brief Represents a slice of a space-time mesh decomposition in a temporal
- * dimension.
+/** @file cluster_tree.h
+ * @brief Octree of spatial clusters
  */
 
-#ifndef INCLUDE_BESTHEA_SPACETIME_SLICE_H_
-#define INCLUDE_BESTHEA_SPACETIME_SLICE_H_
+#ifndef INCLUDE_BESTHEA_CLUSTER_TREE_H_
+#define INCLUDE_BESTHEA_CLUSTER_TREE_H_
 
-#include "besthea/spacetime_tensor_mesh.h"
+#include "besthea/settings.h"
+#include "besthea/space_cluster.h"
+#include "besthea/triangular_surface_mesh.h"
+#include "besthea/vector.h"
 
 namespace besthea {
   namespace mesh {
-    class spacetime_slice;
+    class cluster_tree;
   }
 }
 
-/**
- * Class representing a slice of a space-time mesh decomposition in a temporal
- * dimension.
- */
-class besthea::mesh::spacetime_slice {
+class besthea::mesh::cluster_tree {
  public:
-  spacetime_slice(
-    const std::string & space_file, const std::string & time_file )
-    : _space_mesh( space_file ),
-      _time_mesh( time_file ),
-      _spacetime_mesh( _space_mesh, _time_mesh ) {
+  using vector_type = besthea::linear_algebra::vector;
+
+  /**
+   * Constructor.
+   * param[in] triangular_surface_mesh Reference to the underlying mesh.
+   *
+   */
+  cluster_tree( const triangular_surface_mesh & mesh, lo levels );
+
+  /**
+   * Destructor
+   */
+  virtual ~cluster_tree( ) {
+    delete _root;
   }
 
- protected:
-  triangular_surface_mesh _space_mesh;
-  temporal_mesh _time_mesh;
-  spacetime_tensor_mesh _spacetime_mesh;
+ private:
+  space_cluster * _root;                  //!< root cluster of the tree
+  const triangular_surface_mesh & _mesh;  //!< underlying mesh
+  lo _levels;                             //!< number of levels in the tree
+
+  /**
+   * Computes the bounding box of the underlying mesh.
+   * param[in,out] xmin Minimum x coordinate of element's centroids.
+   * param[in,out] xmax Maximum x coordinate of element's centroids.
+   * param[in,out] ymin Minimum y coordinate of element's centroids.
+   * param[in,out] ymax Maximum y coordinate of element's centroids.
+   * param[in,out] zmin Minimum z coordinate of element's centroids.
+   * param[in,out] zmax Maximum z coordinate of element's centroids.
+   */
+  void compute_bounding_box(
+    sc & xmin, sc & xmax, sc & ymin, sc & ymax, sc & zmin, sc & zmax );
+
+  /**
+   * Builds tree recursively
+   * param[in] root Node to stem from.
+   * param[in] level Current level.
+   */
+  void build_tree( space_cluster & root, lo level );
 };
 
-#endif /* INCLUDE_BESTHEA_SPACETIME_SLICE_H_ */
+#endif /* INCLUDE_BESTHEA_CLUSTER_TREE_H_ */
