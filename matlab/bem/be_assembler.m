@@ -56,7 +56,7 @@ classdef be_assembler < handle
         obj.w{ i } = cell( obj.n_simplex( i ), 1 );
       end
       
-      obj = init_quadrature_data( obj );
+      init_quadrature_data( obj );
     end
     
     function A = assemble( obj )

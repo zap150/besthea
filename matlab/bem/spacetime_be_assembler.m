@@ -109,7 +109,7 @@ classdef spacetime_be_assembler < handle
         obj.tau_ref{ 3 }{ i_type_x } = cell( obj.n_simplex( i_type_x ), 1 );
       end
       
-      obj = init_quadrature_data( obj );
+      init_quadrature_data( obj );
     end
     
     function A = assemble( obj )
