@@ -149,6 +149,29 @@ class besthea::mesh::temporal_mesh {
    */
   void refine( int level );
 
+  /**
+   * Returns the start of the temporal interval.
+   */
+  sc get_start( ) const {
+    return _start_time;
+  }
+
+  /**
+   * Returns the start of the temporal interval.
+   */
+  sc get_end( ) const {
+    return _end_time;
+  }
+
+  /**
+   * Returns centroid of the i-th element.
+   */
+  sc get_centroid( lo i_elem ) const {
+    sc left, right;
+    get_nodes( i_elem, &left, &right );
+    return ( left + right ) / 2.0;
+  }
+
  protected:
   sc _start_time;  //!< temporal interval set to (start_time, end_time)
   sc _end_time;    //!< temporal interval set to (start_time, end_time)

@@ -93,24 +93,6 @@ class besthea::mesh::uniform_spacetime_tensor_mesh
   }
 
   /**
-   * Returns node indices of a temporal element.
-   * @param[in] i_element Index of the temporal element.
-   * @param[out] element Spatial temporal indices.
-   */
-  virtual void get_temporal_element( lo i_element, lo * element ) const {
-    element[ 0 ] = i_element;
-    element[ 1 ] = i_element + 1;
-  }
-
-  /**
-   * Returns a coordinate of a temporal node.
-   * @param[in] i_node Index of the temporal node.
-   */
-  virtual sc get_temporal_node( lo i_node ) const {
-    return i_node * _timestep;
-  }
-
-  /**
    * Prints the EnSight Gold case file.
    * @param[in] directory Directory to which the case file is saved.
    * @param[in] node_labels Labels for nodal data.

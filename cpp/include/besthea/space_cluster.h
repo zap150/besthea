@@ -58,17 +58,19 @@ class besthea::mesh::space_cluster {
    * @param[in] half_size Half size of the cluster's face.
    * @param[in] n_elements Number of spatial elements in the cluster.
    * @param[in] parent Pointer to the cluster's parent cluster.
+   * @param[in] level Level within the cluster tree.
    * @param[in] mesh Reference to the underlying spatial surface mesh.
    */
   space_cluster( const vector_type & center, const vector_type & half_size,
-    lo n_elements, space_cluster * parent,
+    lo n_elements, space_cluster * parent, lo level,
     const triangular_surface_mesh & mesh )
     : _n_elements( n_elements ),
       _center( center ),
       _half_size( half_size ),
-      _elements( _n_elements ),
       _parent( parent ),
+      _level( level ),
       _mesh( mesh ) {
+    _elements.reserve( _n_elements );
   }
 
   space_cluster( const space_cluster & that ) = delete;
@@ -111,8 +113,8 @@ class besthea::mesh::space_cluster {
   }
 
   /**
-   * Returns center of the cluster.
-   * param[out] center Coordinates of the cluster's centroid.
+   * Returns half sizes of the cluster.
+   * param[out] half_size Half-sizes in individual directions.
    */
   void get_half_size( vector_type & half_size ) {
     half_size[ 0 ] = _half_size[ 0 ];
@@ -200,7 +202,8 @@ class besthea::mesh::space_cluster {
   space_cluster * _parent;                   //!< parent of the cluster
   std::vector< space_cluster * > _children;  //!< children of the cluster
   const triangular_surface_mesh &
-    _mesh;  //!< spatial mesh associated with the cluster
+    _mesh;    //!< spatial mesh associated with the cluster
+  lo _level;  //!< level within the cluster tree
 };
 
 #endif /* INCLUDE_BESTHEA_SPACE_CLUSTER_H_ */

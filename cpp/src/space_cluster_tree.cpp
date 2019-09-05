@@ -26,14 +26,14 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "besthea/cluster_tree.h"
+#include "besthea/space_cluster_tree.h"
 
 #include <cstdlib>
 #include <limits>
 
-besthea::mesh::cluster_tree::cluster_tree(
+besthea::mesh::space_cluster_tree::space_cluster_tree(
   const triangular_surface_mesh & mesh, lo levels )
-  : _mesh( mesh ), _levels( levels ) {
+  : _mesh( mesh ), _levels( levels ), _non_empty_nodes( _levels ) {
   sc xmin, xmax, ymin, ymax, zmin, zmax;
   compute_bounding_box( xmin, xmax, ymin, ymax, zmin, zmax );
 
@@ -42,11 +42,26 @@ besthea::mesh::cluster_tree::cluster_tree(
   vector_type half_sizes = { std::abs( xmax - xmin ) / 2.0,
     std::abs( ymax - ymin ) / 2.0, std::abs( zmax - zmin ) / 2.0 };
 
+  // create a root cluster and call recursive tree building
   _root = new space_cluster(
-    center, half_sizes, _mesh.get_n_elements( ), nullptr, _mesh );
+    center, half_sizes, _mesh.get_n_elements( ), nullptr, 0, _mesh );
+
+  for ( lo i = 0; i < _mesh.get_n_elements( ); ++i ) {
+    _root->add_element( i );
+  }
+
+  _non_empty_nodes[ 0 ].push_back( _root );
+  this->build_tree( *_root, 1 );
 }
 
-void besthea::mesh::cluster_tree::build_tree( space_cluster & root, lo level ) {
+void besthea::mesh::space_cluster_tree::build_tree(
+  space_cluster & root, lo level ) {
+  // stop recursion if maximum number of tree levels is reached
+  if ( level > _levels - 1 ) {
+    return;
+  }
+
+  // allocate children's and temporary data
   vector_type center( 3 );
   vector_type half_size( 3 );
   sc el_centroid[ 3 ];
@@ -59,7 +74,9 @@ void besthea::mesh::cluster_tree::build_tree( space_cluster & root, lo level ) {
   // first count the number of elements in octants for data preallocation
   for ( lo i = 0; i < root.get_n_elements( ); ++i ) {
     elem_idx = root.get_element( i );
+
     _mesh.get_centroid( elem_idx, el_centroid );
+
     if ( el_centroid[ 0 ] >= center( 0 ) && el_centroid[ 1 ] >= center( 1 )
       && el_centroid[ 2 ] >= center( 2 ) ) {
       ++oct_sizes[ 0 ];
@@ -95,7 +112,8 @@ void besthea::mesh::cluster_tree::build_tree( space_cluster & root, lo level ) {
       root.compute_suboctant( i, new_center, new_half_size );
       ++n_clusters;
       clusters[ i ] = new space_cluster(
-        new_center, new_half_size, oct_sizes[ i ], &root, _mesh );
+        new_center, new_half_size, oct_sizes[ i ], &root, level, _mesh );
+      _non_empty_nodes[ level ].push_back( clusters[ i ] );
     } else {
       clusters[ i ] = nullptr;
     }
@@ -137,11 +155,12 @@ void besthea::mesh::cluster_tree::build_tree( space_cluster & root, lo level ) {
   for ( lo i = 0; i < 8; ++i ) {
     if ( clusters[ i ] != nullptr ) {
       root.add_child( clusters[ i ] );
+      this->build_tree( *clusters[ i ], level + 1 );
     }
   }
 }
 
-void besthea::mesh::cluster_tree::compute_bounding_box(
+void besthea::mesh::space_cluster_tree::compute_bounding_box(
   sc & xmin, sc & xmax, sc & ymin, sc & ymax, sc & zmin, sc & zmax ) {
   xmin = ymin = zmin = std::numeric_limits< sc >::max( );
   xmax = ymax = zmax = std::numeric_limits< sc >::min( );

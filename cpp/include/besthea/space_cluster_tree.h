@@ -26,12 +26,12 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file cluster_tree.h
+/** @file space_cluster_tree.h
  * @brief Octree of spatial clusters
  */
 
-#ifndef INCLUDE_BESTHEA_CLUSTER_TREE_H_
-#define INCLUDE_BESTHEA_CLUSTER_TREE_H_
+#ifndef INCLUDE_BESTHEA_SPACE_CLUSTER_TREE_H_
+#define INCLUDE_BESTHEA_SPACE_CLUSTER_TREE_H_
 
 #include "besthea/settings.h"
 #include "besthea/space_cluster.h"
@@ -40,25 +40,29 @@
 
 namespace besthea {
   namespace mesh {
-    class cluster_tree;
+    class space_cluster_tree;
   }
 }
 
-class besthea::mesh::cluster_tree {
+/**
+ * Class representing an octree of spatial clusters.
+ */
+class besthea::mesh::space_cluster_tree {
  public:
   using vector_type = besthea::linear_algebra::vector;
 
   /**
    * Constructor.
    * param[in] triangular_surface_mesh Reference to the underlying mesh.
+   * param[in] levels Maximum number of levels in the tree.
    *
    */
-  cluster_tree( const triangular_surface_mesh & mesh, lo levels );
+  space_cluster_tree( const triangular_surface_mesh & mesh, lo levels );
 
   /**
-   * Destructor
+   * Destructor.
    */
-  virtual ~cluster_tree( ) {
+  virtual ~space_cluster_tree( ) {
     delete _root;
   }
 
@@ -66,6 +70,9 @@ class besthea::mesh::cluster_tree {
   space_cluster * _root;                  //!< root cluster of the tree
   const triangular_surface_mesh & _mesh;  //!< underlying mesh
   lo _levels;                             //!< number of levels in the tree
+  std::vector< std::vector< space_cluster * > >
+    _non_empty_nodes;  //!< vectors of nonempty tree
+                       //!< nodes in each level
 
   /**
    * Computes the bounding box of the underlying mesh.
@@ -87,4 +94,4 @@ class besthea::mesh::cluster_tree {
   void build_tree( space_cluster & root, lo level );
 };
 
-#endif /* INCLUDE_BESTHEA_CLUSTER_TREE_H_ */
+#endif /* INCLUDE_BESTHEA_SPACE_CLUSTER_TREE_H_ */
