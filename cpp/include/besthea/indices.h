@@ -26,93 +26,87 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file coordinates.h
- * @brief Coordinates of an n-dimensional point or vector.
+/** @file indices.h
+ * @brief Indices to and array.
  */
 
-#ifndef INCLUDE_BESTHEA_COORDINATES_H_
-#define INCLUDE_BESTHEA_COORDINATES_H_
+#ifndef INCLUDE_BESTHEA_INDICES_H_
+#define INCLUDE_BESTHEA_INDICES_H_
 
 #include "besthea/settings.h"
 
-#include <cmath>
 #include <iostream>
 
 namespace besthea {
   namespace linear_algebra {
     template< std::size_t dimension >
-    class coordinates;
+    class indices;
   }
 }
 
 /**
- *  Class representing an n-dimensional point or vector.
+ *  Class representing indices to an array.
  */
 template< std::size_t dimension >
-class besthea::linear_algebra::coordinates {
+class besthea::linear_algebra::indices {
  public:
+  indices( const indices & that ) = delete;
+
   /**
-   * Copy constructor.
-   * @param[in] that Coordinates to be deep copied.
+   * Constructor.
    */
-  coordinates( const coordinates & that );
+  indices( bool zero = true );
 
   /**
    * Constructor with an initializer list.
    * @param[in] list Initializer list.
    */
-  coordinates( std::initializer_list< sc > list );
-
-  /**
-   * Constructing coordinates of the given size.
-   * @param[in] zero Initialize to 0 if true.
-   */
-  coordinates( bool zero = true );
+  indices( std::initializer_list< lo > list );
 
   /**
    * Destructor
    */
-  ~coordinates( );
+  ~indices( );
 
   /**
    * Returns a pointer to the raw data.
    */
-  sc * data( ) {
+  lo * data( ) {
     return begin( );
   }
 
   /**
    * Returns a const pointer to the raw data.
    */
-  const sc * data( ) const {
+  const lo * data( ) const {
     return begin( );
   }
 
   /**
    * Returns a pointer to the first element.
    */
-  sc * begin( ) {
+  lo * begin( ) {
     return &( _data[ 0 ] );
   }
 
   /**
    * Returns a pointer to the element following the last element.
    */
-  sc * end( ) {
+  lo * end( ) {
     return &( _data[ 0 ] ) + dimension;
   }
 
   /**
    * Returns a const pointer to the first element.
    */
-  const sc * begin( ) const {
+  const lo * begin( ) const {
     return &( _data[ 0 ] );
   }
 
   /**
    * Returns a const pointer to the element following the last element.
    */
-  const sc * end( ) const {
+  const lo * end( ) const {
     return &( _data[ 0 ] ) + dimension;
   }
 
@@ -125,13 +119,13 @@ class besthea::linear_algebra::coordinates {
   }
 
   /**
-   * Prints the coordinates.
+   * Prints the indices.
    * @param[in] stream
    */
   void print( std::ostream & stream = std::cout ) const;
 
   /*!
-   * @brief Returns the i-th element of the coordinates.
+   * @brief Returns the i-th element of the indices.
    * @param[in] i
    */
   sc get( lo i ) const {
@@ -139,11 +133,11 @@ class besthea::linear_algebra::coordinates {
   }
 
   /*!
-   * @brief Sets the i-th element of the coordinates.
+   * @brief Sets the i-th element of the indices.
    * @param[in] i Element index.
    * @param[in] value Value to be set.
    */
-  void set( lo i, sc value ) {
+  void set( lo i, lo value ) {
     _data[ i ] = value;
   }
 
@@ -151,7 +145,7 @@ class besthea::linear_algebra::coordinates {
    * @brief Overloads the [] operator.
    * @param[in] i Index.
    */
-  sc & operator[]( lo i ) {
+  lo & operator[]( lo i ) {
     return _data[ i ];
   }
 
@@ -159,7 +153,7 @@ class besthea::linear_algebra::coordinates {
    * @brief Overloads the () operator.
    * @param[in] i Index.
    */
-  sc operator( )( lo i ) const {
+  lo operator( )( lo i ) const {
     return _data[ i ];
   }
 
@@ -167,7 +161,7 @@ class besthea::linear_algebra::coordinates {
    * @brief Overloads the () operator.
    * @param[in] i Index.
    */
-  sc & operator( )( lo i ) {
+  lo & operator( )( lo i ) {
     return _data[ i ];
   }
 
@@ -175,59 +169,13 @@ class besthea::linear_algebra::coordinates {
    * @brief Overloads the [] operator.
    * @param[in] i Index.
    */
-  sc operator[]( lo i ) const {
+  lo operator[]( lo i ) const {
     return _data[ i ];
   }
 
-  /*!
-   * @brief Returns the euclidean dot product.
-   * @param[in] c
-   */
-  sc dot( coordinates< dimension > const & c ) const {
-    sc value = 0.0;
-    for ( lo i = 0; i < _dimension; ++i ) {
-      value += c._data[ i ] * _data[ i ];
-    }
-    return value;
-  }
-
-  /*!
-   * @brief The euclidean norm.
-   */
-  sc norm( ) {
-    sc value = 0.0;
-    for ( lo i = 0; i < _dimension; ++i ) {
-      value += _data[ i ] * _data[ i ];
-    }
-    value = std::sqrt( value );
-    return value;
-  }
-
-  /*!
-   * @brief The squared euclidean norm.
-   */
-  sc norm_squared( ) {
-    sc value = 0.0;
-    for ( lo i = 0; i < _dimension; ++i ) {
-      value += _data[ i ] * _data[ i ];
-    }
-    return value;
-  }
-
-  /*!
-   * @brief Coordinate addition this += alpha * v.
-   * @param[in] c
-   * @param[in] alpha
-   */
-  void add( coordinates< dimension > const & c, sc alpha = 1.0 ) {
-    for ( lo i = 0; i < _dimension; ++i ) {
-      _data[ i ] += alpha * c._data[ i ];
-    }
-  }
-
  protected:
-  lo _dimension;                                //!< coordinates dimension
-  alignas( DATA_ALIGN ) sc _data[ dimension ];  //!< raw data
+  lo _dimension;                                //!< indices dimension
+  alignas( DATA_ALIGN ) lo _data[ dimension ];  //!< raw data
 };
 
-#endif /* INCLUDE_BESTHEA_COORDINATES_H_ */
+#endif /* INCLUDE_BESTHEA_INDICES_H_ */
