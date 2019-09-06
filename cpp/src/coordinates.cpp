@@ -26,18 +26,42 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file linear_algebra.h
- * @brief
- */
+#include <besthea/coordinates.h>
 
-#ifndef INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_
-#define INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_
+template< std::size_t dimension >
+besthea::linear_algebra::coordinates< dimension >::coordinates(
+  const coordinates & that )
+  : _dimension( that._dimension ) {
+  std::copy( that.begin( ), that.end( ), this->begin( ) );
+}
 
-#include "besthea/block_lower_triangular_toeplitz_matrix.h"
-#include "besthea/block_vector.h"
-#include "besthea/coordinates.h"
-#include "besthea/full_matrix.h"
-#include "besthea/sparse_matrix.h"
-#include "besthea/vector.h"
+template< std::size_t dimension >
+besthea::linear_algebra::coordinates< dimension >::coordinates(
+  std::initializer_list< sc > list )
+  : _dimension( list.size( ) ) {
+  std::copy( list.begin( ), list.end( ), this->begin( ) );
+}
 
-#endif /* INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_ */
+template< std::size_t dimension >
+besthea::linear_algebra::coordinates< dimension >::coordinates( bool zero )
+  : _dimension( dimension ) {
+  if ( zero ) {
+    fill( 0.0 );
+  }
+}
+
+template< std::size_t dimension >
+besthea::linear_algebra::coordinates< dimension >::~coordinates( ) {
+}
+
+template< std::size_t dimension >
+void besthea::linear_algebra::coordinates< dimension >::print(
+  std::ostream & stream ) const {
+  for ( lo i = 0; i < _dimension; ++i ) {
+    stream << _data[ i ] << " ";
+  }
+  stream << std::endl;
+}
+
+template class besthea::linear_algebra::coordinates< 3 >;
+template class besthea::linear_algebra::coordinates< 4 >;

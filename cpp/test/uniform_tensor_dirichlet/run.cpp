@@ -179,7 +179,7 @@ int main( int argc, char * argv[] ) {
   std::cout << "Solution l2 relative error: "
             << space_p1.l2_relative_error( sol_interp, slp ) << std::endl;
 
-  /*
+  ///*
   t.reset( "Printing Ensight surface" );
   std::vector< std::string > node_labels{ "Dirichlet_projection" };
   std::vector< std::string > elem_labels{ "Neumann_projection",
@@ -193,8 +193,8 @@ int main( int argc, char * argv[] ) {
   spacetime_mesh.print_ensight_datafiles(
     ensight_dir, &node_labels, &node_data, &elem_labels, &elem_data );
   t.measure( );
-  */
-  /*
+  //*/
+  ///*
   t.reset( "Printing Ensight grid" );
   std::vector< std::string > grid_node_labels{ "Temperature_interpolation",
     "Temperature_result" };
@@ -206,5 +206,5 @@ int main( int argc, char * argv[] ) {
   grid_spacetime_mesh.print_ensight_datafiles(
     ensight_grid_dir, &grid_node_labels, &grid_node_data, nullptr, nullptr );
   t.measure( );
-  */
+  //*/
 }

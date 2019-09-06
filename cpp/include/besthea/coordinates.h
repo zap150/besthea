@@ -26,92 +26,113 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file vector.h
- * @brief Vector of scalars.
+/** @file coordinates.h
+ * @brief Coordinates of an n-dimensional point or vector.
  */
 
-#ifndef INCLUDE_BESTHEA_VECTOR_H_
-#define INCLUDE_BESTHEA_VECTOR_H_
+#ifndef INCLUDE_BESTHEA_COORDINATES_H_
+#define INCLUDE_BESTHEA_COORDINATES_H_
 
-#include "besthea/blas_lapack_wrapper.h"
 #include "besthea/settings.h"
 
+#include <array>
+#include <cmath>
 #include <iostream>
-#include <vector>
 
 namespace besthea {
   namespace linear_algebra {
-    class vector;
+    template< std::size_t dimension >
+    class coordinates;
   }
 }
 
 /**
- *  Class representing a vector.
+ *  Class representing an n-dimensional point or vector.
  */
-class besthea::linear_algebra::vector {
+template< std::size_t dimension >
+class besthea::linear_algebra::coordinates {
  public:
-  vector( );
-
   /**
    * Copy constructor.
-   * @param[in] that Vector to be deep copied.
+   * @param[in] that Coordinates to be deep copied.
    */
-  vector( const vector & that );
+  coordinates( const coordinates & that );
 
   /**
    * Constructor with an initializer list.
-   * @param[in] list Initializer list for std::vector.
+   * @param[in] list Initializer list for std::array.
    */
-  vector( std::initializer_list< sc > list );
+  coordinates( std::initializer_list< sc > list );
 
   /**
-   * Constructing a vector of the given size.
-   * @param[in] size Length of the vector.
+   * Constructing coordinates of the given size.
    * @param[in] zero Initialize to 0 if true.
    */
-  vector( lo size, bool zero = true );
+  coordinates( bool zero = true );
 
   /**
    * Destructor
    */
-  ~vector( );
+  ~coordinates( );
 
   /**
-   * Prints the vector.
+   * Returns a pointer to the raw data.
+   */
+  sc * data( ) {
+    return begin( );
+  }
+
+  /**
+   * Returns a const pointer to the raw data.
+   */
+  const sc * data( ) const {
+    return begin( );
+  }
+
+  /**
+   * Returns a pointer to the first element.
+   */
+  sc * begin( ) {
+    return &( _data[ 0 ] );
+  }
+
+  /**
+   * Returns a pointer to the element following the last element.
+   */
+  sc * end( ) {
+    return &( _data[ 0 ] ) + dimension;
+  }
+
+  /**
+   * Returns a const pointer to the first element.
+   */
+  const sc * begin( ) const {
+    return &( _data[ 0 ] );
+  }
+
+  /**
+   * Returns a const pointer to the element following the last element.
+   */
+  const sc * end( ) const {
+    return &( _data[ 0 ] ) + dimension;
+  }
+
+  /*!
+   * @brief Fills the coordinates with the given value.
+   * @param[in] value
+   */
+  void fill( sc value ) {
+    std::fill( begin( ), end( ), value );
+  }
+
+  /**
+   * Prints the coordinates.
    * @param[in] stream
    */
   void print( std::ostream & stream = std::cout ) const;
 
   /*!
-   * @brief Fills the vector with the given value.
-   * @param[in] value
-   */
-  void fill( sc value ) {
-    std::fill( _data.begin( ), _data.end( ), value );
-  }
-
-  /**
-   * Resizes the vector.
-   * @param[in] size New size.
-   * @param[in] zero Initialize to 0 if true.
-   */
-  void resize( lo size, bool zero = true ) {
-    _data.resize( size );
-    if ( zero ) {
-      fill( 0.0 );
-    }
-    _size = size;
-  }
-
-  /**
-   * Fills the vector with random numbers (uniform distribution).
-   * @param[in] lower Lower bound.
-   * @param[in] upper Upper bound.
-   */
-  void random_fill( sc lower, sc upper );
-
-  /*!
-   * @brief Returns the i-th element of the vector.
+   * @brief Returns the i-th element of the coordinates.
    * @param[in] i
    */
   sc get( lo i ) const {
@@ -119,7 +140,7 @@ class besthea::linear_algebra::vector {
   }
 
   /*!
-   * @brief Sets the i-th element of the vector.
+   * @brief Sets the i-th element of the coordinates.
    * @param[in] i Element index.
    * @param[in] value Value to be set.
    */
@@ -160,53 +181,54 @@ class besthea::linear_algebra::vector {
   }
 
   /*!
-   * @brief Returns the raw data.
-   */
-  sc * data( ) {
-    return _data.data( );
-  }
-
-  /*!
-   * @brief Returns the raw data.
-   */
-  const sc * data( ) const {
-    return _data.data( );
-  }
-
-  /*!
    * @brief Returns the euclidean dot product.
-   * @param[in] v
+   * @param[in] c
    */
-  sc dot( vector const & v ) const {
-    return cblas_ddot( _size, _data.data( ), 1, v._data.data( ), 1 );
+  sc dot( coordinates< dimension > const & c ) const {
+    sc value = 0.0;
+    for ( lo i = 0; i < _dimension; ++i ) {
+      value += c._data[ i ] * _data[ i ];
+    }
+    return value;
   }
 
   /*!
    * @brief The euclidean norm.
    */
   sc norm( ) {
-    return cblas_dnrm2( _size, _data.data( ), 1 );
+    sc value = 0.0;
+    for ( lo i = 0; i < _dimension; ++i ) {
+      value += _data[ i ] * _data[ i ];
+    }
+    value = std::sqrt( value );
+    return value;
   }
 
   /*!
-   * @brief Vector addition this += alpha * v.
-   * @param[in] v
+   * @brief The squared euclidean norm.
+   */
+  sc norm_squared( ) {
+    sc value = 0.0;
+    for ( lo i = 0; i < _dimension; ++i ) {
+      value += _data[ i ] * _data[ i ];
+    }
+    return value;
+  }
+
+  /*!
+   * @brief Coordinate addition this += alpha * v.
+   * @param[in] c
    * @param[in] alpha
    */
-  void add( vector const & v, sc alpha = 1.0 ) {
-    cblas_daxpy( _size, alpha, v._data.data( ), 1, _data.data( ), 1 );
-  }
-
-  /*!
-   * @brief Size of the vector.
-   */
-  lo size( ) const {
-    return _size;
+  void add( coordinates< dimension > const & c, sc alpha = 1.0 ) {
+    for ( lo i = 0; i < _dimension; ++i ) {
+      _data[ i ] += alpha * c._data[ i ];
+    }
   }
 
  protected:
-  lo _size;                                                //!< vector size
-  std::vector< sc, besthea::allocator_type< sc > > _data;  //!< raw data
+  lo _dimension;                                //!< coordinates dimension
+  alignas( DATA_ALIGN ) sc _data[ dimension ];  //!< raw data
 };
 
-#endif /* INCLUDE_BESTHEA_VECTOR_H_ */
+#endif /* INCLUDE_BESTHEA_COORDINATES_H_ */
