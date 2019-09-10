@@ -84,7 +84,7 @@ class besthea::mesh::time_cluster {
 
   /**
    * Adds temporal element to the cluster.
-   * param[in] idx Index of the temporal element in the underlying mesh.
+   * @param[in] idx Index of the temporal element in the underlying mesh.
    */
   void add_element( lo idx ) {
     _elements.push_back( idx );
@@ -92,7 +92,7 @@ class besthea::mesh::time_cluster {
 
   /**
    * Adds cluster's child to the list
-   * param[in] child Child cluster.
+   * @param[in] child Child cluster.
    */
   void add_child( time_cluster * child ) {
     _children.push_back( child );

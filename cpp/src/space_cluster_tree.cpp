@@ -32,8 +32,12 @@
 #include <limits>
 
 besthea::mesh::space_cluster_tree::space_cluster_tree(
-  const triangular_surface_mesh & mesh, lo levels )
-  : _mesh( mesh ), _levels( levels ), _non_empty_nodes( _levels ) {
+  const triangular_surface_mesh & mesh, lo levels, lo n_min_elems )
+  : _mesh( mesh ),
+    _levels( levels ),
+    _n_min_elems( n_min_elems ),
+    _non_empty_nodes( _levels ),
+    _paddings( _levels, 0.0 ) {
   sc xmin, xmax, ymin, ymax, zmin, zmax;
   compute_bounding_box( xmin, xmax, ymin, ymax, zmin, zmax );
 
@@ -44,7 +48,7 @@ besthea::mesh::space_cluster_tree::space_cluster_tree(
 
   // create a root cluster and call recursive tree building
   _root = new space_cluster(
-    center, half_sizes, _mesh.get_n_elements( ), nullptr, 0, _mesh );
+    center, half_sizes, _mesh.get_n_elements( ), nullptr, 0, 0, _mesh );
 
   for ( lo i = 0; i < _mesh.get_n_elements( ); ++i ) {
     _root->add_element( i );
@@ -52,12 +56,17 @@ besthea::mesh::space_cluster_tree::space_cluster_tree(
 
   _non_empty_nodes[ 0 ].push_back( _root );
   this->build_tree( *_root, 1 );
+  this->compute_padding( *_root );
+  for ( auto it = _paddings.begin( ); it != _paddings.end( ); ++it ) {
+    std::cout << *it << std::endl;
+  }
 }
 
 void besthea::mesh::space_cluster_tree::build_tree(
   space_cluster & root, lo level ) {
   // stop recursion if maximum number of tree levels is reached
-  if ( level > _levels - 1 ) {
+  if ( level > _levels - 1 || root.get_n_elements( ) < _n_min_elems ) {
+    root.set_n_children( 0 );
     return;
   }
 
@@ -107,12 +116,12 @@ void besthea::mesh::space_cluster_tree::build_tree(
   lo n_clusters = 0;
   vector_type new_center( 3 );
   vector_type new_half_size( 3 );
-  for ( lo i = 0; i < 8; ++i ) {
+  for ( short i = 0; i < 8; ++i ) {
     if ( oct_sizes[ i ] > 0 ) {
       root.compute_suboctant( i, new_center, new_half_size );
       ++n_clusters;
       clusters[ i ] = new space_cluster(
-        new_center, new_half_size, oct_sizes[ i ], &root, level, _mesh );
+        new_center, new_half_size, oct_sizes[ i ], &root, level, i, _mesh );
       _non_empty_nodes[ level ].push_back( clusters[ i ] );
     } else {
       clusters[ i ] = nullptr;
@@ -150,6 +159,8 @@ void besthea::mesh::space_cluster_tree::build_tree(
     }
   }
 
+  // finally, add new children to cluster's children list and call the method
+  // recursively on them
   root.set_n_children( n_clusters );
 
   for ( lo i = 0; i < 8; ++i ) {
@@ -158,6 +169,9 @@ void besthea::mesh::space_cluster_tree::build_tree(
       this->build_tree( *clusters[ i ], level + 1 );
     }
   }
+
+  // shrink internal data storage for child clusters
+  root.shrink_children( );
 }
 
 void besthea::mesh::space_cluster_tree::compute_bounding_box(
@@ -165,23 +179,49 @@ void besthea::mesh::space_cluster_tree::compute_bounding_box(
   xmin = ymin = zmin = std::numeric_limits< sc >::max( );
   xmax = ymax = zmax = std::numeric_limits< sc >::min( );
 
-  sc centroid[ 3 ];
-  for ( lo i = 0; i < _mesh.get_n_elements( ); ++i ) {
-    _mesh.get_centroid( i, centroid );
+  sc node[ 3 ];
+  for ( lo i = 0; i < _mesh.get_n_nodes( ); ++i ) {
+    _mesh.get_node( i, node );
 
-    if ( centroid[ 0 ] < xmin )
-      xmin = centroid[ 0 ];
-    if ( centroid[ 0 ] > xmax )
-      xmax = centroid[ 0 ];
+    if ( node[ 0 ] < xmin )
+      xmin = node[ 0 ];
+    if ( node[ 0 ] > xmax )
+      xmax = node[ 0 ];
 
-    if ( centroid[ 1 ] < ymin )
-      ymin = centroid[ 1 ];
-    if ( centroid[ 1 ] > ymax )
-      ymax = centroid[ 1 ];
+    if ( node[ 1 ] < ymin )
+      ymin = node[ 1 ];
+    if ( node[ 1 ] > ymax )
+      ymax = node[ 1 ];
 
-    if ( centroid[ 2 ] < zmin )
-      zmin = centroid[ 2 ];
-    if ( centroid[ 2 ] > zmax )
-      zmax = centroid[ 2 ];
+    if ( node[ 2 ] < zmin )
+      zmin = node[ 2 ];
+    if ( node[ 2 ] > zmax )
+      zmax = node[ 2 ];
   }
+}
+
+sc besthea::mesh::space_cluster_tree::compute_padding( space_cluster & root ) {
+  std::vector< space_cluster * > * children = root.get_children( );
+  sc padding = -1.0;
+  sc tmp_padding;
+
+  if ( children != nullptr ) {
+    // for non-leaf clusters, find the largest padding of its descendants
+    for ( auto it = children->begin( ); it != children->end( ); ++it ) {
+      tmp_padding = this->compute_padding( **it );
+      if ( tmp_padding > padding ) {
+        padding = tmp_padding;
+      }
+    }
+    if ( padding > _paddings[ root.get_level( ) ] ) {
+      _paddings[ root.get_level( ) ] = padding;
+    }
+  } else {
+    // for leaf clusters, compute padding directly
+    padding = root.compute_padding( );
+    if ( padding > _paddings[ root.get_level( ) ] ) {
+      _paddings[ root.get_level( ) ] = padding;
+    }
+  }
+  return padding;
 }

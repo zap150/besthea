@@ -62,13 +62,16 @@ class besthea::mesh::space_cluster {
    * @param[in] mesh Reference to the underlying spatial surface mesh.
    */
   space_cluster( const vector_type & center, const vector_type & half_size,
-    lo n_elements, space_cluster * parent, lo level,
+    lo n_elements, space_cluster * parent, lo level, short octant,
     const triangular_surface_mesh & mesh )
     : _n_elements( n_elements ),
       _center( center ),
       _half_size( half_size ),
       _parent( parent ),
+      _children( nullptr ),
       _level( level ),
+      _octant( octant ),
+      _padding( 0.0 ),
       _mesh( mesh ) {
     _elements.reserve( _n_elements );
   }
@@ -79,16 +82,19 @@ class besthea::mesh::space_cluster {
    * Destructor.
    */
   virtual ~space_cluster( ) {
-    for ( auto it = _children.begin( ); it != _children.end( ); ++it ) {
-      if ( *it != nullptr ) {
-        delete *it;
+    if ( _children != nullptr ) {
+      for ( auto it = _children->begin( ); it != _children->end( ); ++it ) {
+        if ( *it != nullptr ) {
+          delete *it;
+        }
       }
+      delete _children;
     }
   }
 
   /**
    * Adds surface element to the cluster.
-   * param[in] idx Index of the surface element in the underlying mesh.
+   * @param[in] idx Index of the surface element in the underlying mesh.
    */
   void add_element( lo idx ) {
     _elements.push_back( idx );
@@ -96,17 +102,38 @@ class besthea::mesh::space_cluster {
 
   /**
    * Adds cluster's child to the list
-   * param[in] child Child cluster.
+   * @param[in] child Child cluster.
    */
   void add_child( space_cluster * child ) {
-    _children.push_back( child );
+    if ( _children == nullptr ) {
+      _children = new std::vector< space_cluster * >( );
+    }
+    _children->push_back( child );
+  }
+
+  /**
+   * Returns list of cluster's children
+   */
+  std::vector< space_cluster * > * get_children( ) {
+    return _children;
+  }
+
+  /**
+   * Returns number of cluster's children.
+   */
+  lo get_n_children( ) {
+    if ( _children != nullptr ) {
+      return _children->size( );
+    } else {
+      return 0;
+    }
   }
 
   /**
    * Returns center of the cluster.
-   * param[out] center Coordinates of the cluster's centroid.
+   * @param[out] center Coordinates of the cluster's centroid.
    */
-  void get_center( vector_type & center ) {
+  void get_center( vector_type & center ) const {
     center[ 0 ] = _center[ 0 ];
     center[ 1 ] = _center[ 1 ];
     center[ 2 ] = _center[ 2 ];
@@ -114,9 +141,9 @@ class besthea::mesh::space_cluster {
 
   /**
    * Returns half sizes of the cluster.
-   * param[out] half_size Half-sizes in individual directions.
+   * @param[out] half_size Half-sizes in individual directions.
    */
-  void get_half_size( vector_type & half_size ) {
+  void get_half_size( vector_type & half_size ) const {
     half_size[ 0 ] = _half_size[ 0 ];
     half_size[ 1 ] = _half_size[ 1 ];
     half_size[ 2 ] = _half_size[ 2 ];
@@ -125,31 +152,49 @@ class besthea::mesh::space_cluster {
   /**
    * Returns number of elements in the cluster.
    */
-  lo get_n_elements( ) {
+  lo get_n_elements( ) const {
     return _n_elements;
   }
 
   /**
    * Returns element index in the mesh.
-   * param[in] idx Index of element in the cluster's internal storage.
+   * @param[in] idx Index of element in the cluster's internal storage.
    */
-  lo get_element( lo idx ) {
+  lo get_element( lo idx ) const {
     return _elements[ idx ];
   }
 
   /**
    * Sets a number of children and allocates vector of pointers to children.
-   * param[in] n_children Number of cluster's children clusters.
+   * @param[in] n_children Number of cluster's children clusters.
    */
   void set_n_children( lo n_children ) {
-    _children.reserve( n_children );
+    if ( n_children > 0 ) {
+      _children = new std::vector< space_cluster * >( );
+      _children->reserve( n_children );
+    } else {
+      _children = nullptr;
+    }
+  }
+
+  /**
+   * Shrinks data in children list.
+   */
+  void shrink_children( ) {
+    if ( _children != nullptr ) {
+      _children->shrink_to_fit( );
+    }
+  }
+
+  short get_octant( ) const {
+    return _octant;
   }
 
   /**
    * Computes center and half-sizes of the child in a given octant
-   * param[in] octant Suboctant of the cluster.
-   * param[out] center Center of the suboctant.
-   * param[out] half_size Half-size of the suboctant.
+   * @param[in] octant Suboctant of the cluster.
+   * @param[out] center Center of the suboctant.
+   * @param[out] half_size Half-size of the suboctant.
    */
   void compute_suboctant(
     lo octant, vector_type & new_center, vector_type & new_half_size ) {
@@ -192,6 +237,75 @@ class besthea::mesh::space_cluster {
     }
   }
 
+  /**
+   * Computes padding of the cluster (distance of the farthest point to the
+   * cluster's boundary)
+   *
+   */
+  sc compute_padding( ) const {
+    sc node[ 9 ];
+    sc * curr_node;
+    sc xmin, ymin, zmin, xmax, ymax, zmax;
+
+    sc padding = 0.0;
+
+    // loop over elements in cluster
+    for ( lo i = 0; i < _n_elements; ++i ) {
+      _mesh.get_nodes( _elements[ i ], node, node + 3, node + 6 );
+      // loop over triangle's nodes
+      for ( lo j = 0; j < 3; ++j ) {
+        curr_node = node + j * 3;
+        if ( ( ( _center[ 0 ] - _half_size[ 0 ] ) - curr_node[ 0 ]
+               > padding ) ) {
+          padding = _center[ 0 ] - _half_size[ 0 ] - curr_node[ 0 ];
+        }
+        if ( ( curr_node[ 0 ] - ( _center[ 0 ] + _half_size[ 0 ] )
+               > padding ) ) {
+          padding = _center[ 0 ] - ( _center[ 0 ] + _half_size[ 0 ] );
+        }
+        if ( ( ( _center[ 1 ] - _half_size[ 1 ] ) - curr_node[ 1 ]
+               > padding ) ) {
+          padding = _center[ 1 ] - _half_size[ 1 ] - curr_node[ 1 ];
+        }
+        if ( ( curr_node[ 1 ] - ( _center[ 1 ] + _half_size[ 1 ] )
+               > padding ) ) {
+          padding = _center[ 1 ] - ( _center[ 1 ] + _half_size[ 1 ] );
+        }
+        if ( ( ( _center[ 2 ] - _half_size[ 2 ] ) - curr_node[ 2 ]
+               > padding ) ) {
+          padding = _center[ 2 ] - _half_size[ 2 ] - curr_node[ 2 ];
+        }
+        if ( ( curr_node[ 2 ] - ( _center[ 2 ] + _half_size[ 2 ] )
+               > padding ) ) {
+          padding = _center[ 2 ] - ( _center[ 2 ] + _half_size[ 2 ] );
+        }
+      }
+    }
+    return padding;
+  }
+
+  /**
+   * Sets padding of the cluster.
+   * @param[in] padding Padding of the cluster.
+   */
+  void set_padding( sc padding ) {
+    _padding = padding;
+  }
+
+  /**
+   * Returns padding of the cluster.
+   */
+  sc get_padding( ) const {
+    return _padding;
+  }
+
+  /*
+   * Returns level of the cluster in the cluster tree.
+   */
+  lo get_level( ) const {
+    return _level;
+  }
+
  private:
   lo _n_elements;          //!< number of elements in the cluster
   vector_type _center;     //!< center of the cluster
@@ -199,11 +313,13 @@ class besthea::mesh::space_cluster {
                            //!< directions)
   std::vector< lo >
     _elements;  //!< indices of the cluster's elements within the spatial mesh
-  space_cluster * _parent;                   //!< parent of the cluster
-  std::vector< space_cluster * > _children;  //!< children of the cluster
+  space_cluster * _parent;                     //!< parent of the cluster
+  std::vector< space_cluster * > * _children;  //!< children of the cluster
   const triangular_surface_mesh &
-    _mesh;    //!< spatial mesh associated with the cluster
-  lo _level;  //!< level within the cluster tree
+    _mesh;        //!< spatial mesh associated with the cluster
+  lo _level;      //!< level within the cluster tree
+  short _octant;  //!< octant of the parent cluster
+  sc _padding;    //!< padding of the cluster
 };
 
 #endif /* INCLUDE_BESTHEA_SPACE_CLUSTER_H_ */

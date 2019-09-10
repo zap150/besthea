@@ -53,11 +53,13 @@ class besthea::mesh::space_cluster_tree {
 
   /**
    * Constructor.
-   * param[in] triangular_surface_mesh Reference to the underlying mesh.
-   * param[in] levels Maximum number of levels in the tree.
+   * @param[in] triangular_surface_mesh Reference to the underlying mesh.
+   * @param[in] levels Maximum number of levels in the tree.
+   *
    *
    */
-  space_cluster_tree( const triangular_surface_mesh & mesh, lo levels );
+  space_cluster_tree(
+    const triangular_surface_mesh & mesh, lo levels, lo n_min_elems );
 
   /**
    * Destructor.
@@ -70,28 +72,37 @@ class besthea::mesh::space_cluster_tree {
   space_cluster * _root;                  //!< root cluster of the tree
   const triangular_surface_mesh & _mesh;  //!< underlying mesh
   lo _levels;                             //!< number of levels in the tree
+  lo _n_min_elems;  //!< minimum number of elements so that cluster can be split
+                    //!< into octants
   std::vector< std::vector< space_cluster * > >
-    _non_empty_nodes;  //!< vectors of nonempty tree
-                       //!< nodes in each level
+    _non_empty_nodes;           //!< vectors of nonempty tree
+                                //!< nodes in each level
+  std::vector< sc > _paddings;  //!< vector of paddings on each level
 
   /**
    * Computes the bounding box of the underlying mesh.
-   * param[in,out] xmin Minimum x coordinate of element's centroids.
-   * param[in,out] xmax Maximum x coordinate of element's centroids.
-   * param[in,out] ymin Minimum y coordinate of element's centroids.
-   * param[in,out] ymax Maximum y coordinate of element's centroids.
-   * param[in,out] zmin Minimum z coordinate of element's centroids.
-   * param[in,out] zmax Maximum z coordinate of element's centroids.
+   * @param[in,out] xmin Minimum x coordinate of element's centroids.
+   * @param[in,out] xmax Maximum x coordinate of element's centroids.
+   * @param[in,out] ymin Minimum y coordinate of element's centroids.
+   * @param[in,out] ymax Maximum y coordinate of element's centroids.
+   * @param[in,out] zmin Minimum z coordinate of element's centroids.
+   * @param[in,out] zmax Maximum z coordinate of element's centroids.
    */
   void compute_bounding_box(
     sc & xmin, sc & xmax, sc & ymin, sc & ymax, sc & zmin, sc & zmax );
 
   /**
    * Builds tree recursively
-   * param[in] root Node to stem from.
-   * param[in] level Current level.
+   * @param[in] root Node to stem from.
+   * @param[in] level Current level.
    */
   void build_tree( space_cluster & root, lo level );
+
+  /**
+   * Recursively computes padding of clusters in the tree.
+   * @param[in] root Node to stem from.
+   */
+  sc compute_padding( space_cluster & root );
 };
 
 #endif /* INCLUDE_BESTHEA_SPACE_CLUSTER_TREE_H_ */
