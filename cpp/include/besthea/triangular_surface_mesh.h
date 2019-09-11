@@ -173,7 +173,8 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    * @param[in] i_element Index of the element.
    * @param[out] element Element indices.
    */
-  void get_element( lo i_element, lo * element ) const {
+  void get_element(
+    lo i_element, linear_algebra::indices< 3 > & element ) const {
     element[ 0 ] = _elements[ 3 * i_element ];
     element[ 1 ] = _elements[ 3 * i_element + 1 ];
     element[ 2 ] = _elements[ 3 * i_element + 2 ];
@@ -184,7 +185,7 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    * @param[in] i_element Index of the element.
    * @param[out] n Normal indices.
    */
-  void get_normal( lo i_element, sc * n ) const {
+  void get_normal( lo i_element, linear_algebra::coordinates< 3 > & n ) const {
     n[ 0 ] = _normals[ 3 * i_element ];
     n[ 1 ] = _normals[ 3 * i_element + 1 ];
     n[ 2 ] = _normals[ 3 * i_element + 2 ];
@@ -195,10 +196,11 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    * @param[in] i_node Index of the node.
    * @param[out] n Normal indices.
    */
-  void get_nodal_normal( lo i_node, sc * n ) const {
+  void get_nodal_normal(
+    lo i_node, linear_algebra::coordinates< 3 > & n ) const {
     n[ 0 ] = n[ 1 ] = n[ 2 ] = 0.0;
     lo size = _node_to_elements[ i_node ].size( );
-    sc nn[ 3 ];
+    linear_algebra::coordinates< 3 > nn;
     lo i_elem;
 
     for ( lo i = 0; i < size; ++i ) {
@@ -220,7 +222,7 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    * @param[in] i_node Index of the node.
    * @param[out] node Element coordinates.
    */
-  void get_node( lo i_node, sc * node ) const {
+  void get_node( lo i_node, linear_algebra::coordinates< 3 > & node ) const {
     node[ 0 ] = _nodes[ 3 * i_node ];
     node[ 1 ] = _nodes[ 3 * i_node + 1 ];
     node[ 2 ] = _nodes[ 3 * i_node + 2 ];
@@ -233,7 +235,9 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    * @param[out] node2 Coordinates of the second node.
    * @param[out] node3 Coordinates of the third node.
    */
-  void get_nodes( lo i_element, sc * node1, sc * node2, sc * node3 ) const {
+  void get_nodes( lo i_element, linear_algebra::coordinates< 3 > & node1,
+    linear_algebra::coordinates< 3 > & node2,
+    linear_algebra::coordinates< 3 > & node3 ) const {
     node1[ 0 ] = _nodes[ 3 * _elements[ 3 * i_element ] ];
     node1[ 1 ] = _nodes[ 3 * _elements[ 3 * i_element ] + 1 ];
     node1[ 2 ] = _nodes[ 3 * _elements[ 3 * i_element ] + 2 ];
@@ -264,7 +268,7 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    * @param[in] i_node Index of the node.
    * @param[in] node Node coordinates.
    */
-  void set_node( lo i_node, const sc * node ) {
+  void set_node( lo i_node, const linear_algebra::coordinates< 3 > & node ) {
     _nodes[ 3 * i_node ] = node[ 0 ];
     _nodes[ 3 * i_node + 1 ] = node[ 1 ];
     _nodes[ 3 * i_node + 2 ] = node[ 2 ];
@@ -275,7 +279,7 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    * @param[in] i_edge Index of the edge.
    * @param[out] edge Element indices.
    */
-  void get_edge( lo i_edge, lo * edge ) const {
+  void get_edge( lo i_edge, linear_algebra::indices< 2 > & edge ) const {
     edge[ 0 ] = _edges[ 2 * i_edge ];
     edge[ 1 ] = _edges[ 2 * i_edge + 1 ];
   }
@@ -285,7 +289,7 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    * @param[in] i_element Index of an element.
    * @param[out] edges Edge indices.
    */
-  void get_edges( lo i_element, lo * edges ) const {
+  void get_edges( lo i_element, linear_algebra::indices< 3 > & edges ) const {
     edges[ 0 ] = _element_to_edges[ 3 * i_element ];
     edges[ 1 ] = _element_to_edges[ 3 * i_element + 1 ];
     edges[ 2 ] = _element_to_edges[ 3 * i_element + 2 ];
@@ -297,8 +301,9 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    * @param[out] centroid Allocated array containing the element centroid on
    * return.
    */
-  void get_centroid( lo i_elem, sc * centroid ) const {
-    sc x1[ 3 ], x2[ 3 ], x3[ 3 ];
+  void get_centroid(
+    lo i_elem, linear_algebra::coordinates< 3 > & centroid ) const {
+    linear_algebra::coordinates< 3 > x1, x2, x3;
     get_nodes( i_elem, x1, x2, x3 );
     centroid[ 0 ] = ( x1[ 0 ] + x2[ 0 ] + x3[ 0 ] ) / 3.0;
     centroid[ 1 ] = ( x1[ 1 ] + x2[ 1 ] + x3[ 1 ] ) / 3.0;
@@ -358,7 +363,7 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    * Returns the centroid of the mesh.
    * @param[out] centroid Allocated array containing the centroid on return.
    */
-  void get_centroid( sc * centroid );
+  void get_centroid( linear_algebra::coordinates< 3 > & centroid );
 
   /**
    * Returns the surface mesh.

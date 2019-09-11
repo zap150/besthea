@@ -156,8 +156,12 @@ class besthea::bem::uniform_spacetime_be_assembler {
    * @param[in] rot_trial Virtual rotation of the trial element.
    * @param[in,out] my_quadrature Structure holding the quadrature nodes.
    */
-  void triangles_to_geometry( const sc * x1, const sc * x2, const sc * x3,
-    const sc * y1, const sc * y2, const sc * y3, int type_int, int rot_test,
+  void triangles_to_geometry( const linear_algebra::coordinates< 3 > & x1,
+    const linear_algebra::coordinates< 3 > & x2,
+    const linear_algebra::coordinates< 3 > & x3,
+    const linear_algebra::coordinates< 3 > & y1,
+    const linear_algebra::coordinates< 3 > & y2,
+    const linear_algebra::coordinates< 3 > & y3, int type_int, int rot_test,
     int rot_trial, quadrature_wrapper & my_quadrature ) const;
 
   /**

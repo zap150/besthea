@@ -97,8 +97,8 @@ class besthea::bem::basis_tri_p1
    * @param[in] n Element normal.
    */
 #pragma omp declare simd uniform( i_elem, i_fun, n ) simdlen( DATA_WIDTH )
-  sc do_evaluate(
-    lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n ) const;
+  sc do_evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref,
+    const linear_algebra::coordinates< 3 > & n ) const;
 
   /**
    * Evaluates the basis function.
@@ -114,8 +114,9 @@ class besthea::bem::basis_tri_p1
    */
 #pragma omp declare simd uniform( \
   i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
-  sc do_evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n,
-    int n_shared_vertices, int rotation, bool swap ) const;
+  sc do_evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref,
+    const linear_algebra::coordinates< 3 > & n, int n_shared_vertices,
+    int rotation, bool swap ) const;
 
   /**
    * Evaluates surface curl of the basis function.
@@ -132,7 +133,8 @@ class besthea::bem::basis_tri_p1
    */
 #pragma omp declare simd uniform( \
   i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
-  void evaluate_curl( lo i_elem, lo i_fun, const sc * n, int n_shared_vertices,
+  void evaluate_curl( lo i_elem, lo i_fun,
+    const linear_algebra::coordinates< 3 > & n, int n_shared_vertices,
     int rotation, bool swap, sc & c1, sc & c2, sc & c3 ) const;
 
   /**
@@ -145,8 +147,8 @@ class besthea::bem::basis_tri_p1
    * @param[in] swap Virtual element inversion (regularized quadrature).
    * @param[out] curls Curls of all three shape functions.
    */
-  void evaluate_curl( lo i_elem, const sc * n, int n_shared_vertices,
-    int rotation, bool swap, sc * curls ) const;
+  void evaluate_curl( lo i_elem, const linear_algebra::coordinates< 3 > & n,
+    int n_shared_vertices, int rotation, bool swap, sc * curls ) const;
 };
 
 #endif /* INCLUDE_BESTHEA_BASIS_TRI_P1_H_ */

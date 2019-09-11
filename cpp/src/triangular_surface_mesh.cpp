@@ -114,7 +114,7 @@ void besthea::mesh::triangular_surface_mesh::init_node_to_elements( ) {
   _node_to_elements.clear( );
   _node_to_elements.resize( _n_nodes );
 
-  lo element[ 3 ];
+  linear_algebra::indices< 3 > element;
   for ( lo i_elem = 0; i_elem < _n_elements; ++i_elem ) {
     get_element( i_elem, element );
     _node_to_elements[ element[ 0 ] ].push_back( i_elem );
@@ -163,8 +163,9 @@ void besthea::mesh::triangular_surface_mesh::init_normals_and_areas( ) {
 
 void besthea::mesh::triangular_surface_mesh::refine( int level ) {
   lo new_n_nodes, new_n_elements, new_n_edges;
-  sc x1[ 3 ], x2[ 3 ];
-  lo edge[ 2 ], edges[ 3 ], element[ 3 ];
+  linear_algebra::coordinates< 3 > x1, x2;
+  linear_algebra::indices< 2 > edge;
+  linear_algebra::indices< 3 > edges, element;
   lo node1, node2, node3, node4, node5, node6;
 
   for ( int l = 0; l < level; ++l ) {
@@ -327,7 +328,7 @@ void besthea::mesh::triangular_surface_mesh::refine( int level ) {
 }
 
 void besthea::mesh::triangular_surface_mesh::scale( sc factor ) {
-  sc centroid[ 3 ];
+  linear_algebra::coordinates< 3 > centroid;
   get_centroid( centroid );
   for ( lo i_node = 0; i_node < _n_nodes; ++i_node ) {
     _nodes[ 3 * i_node ]
@@ -346,7 +347,7 @@ void besthea::mesh::triangular_surface_mesh::init_edges( ) {
   _element_to_edges.resize( 3 * _n_elements );
 
   // allocate aux. variables
-  lo element[ 3 ];
+  linear_algebra::indices< 3 > element;
 
   std::vector< std::vector< lo > > local_edges;
   local_edges.resize( _n_nodes );
@@ -488,8 +489,8 @@ bool besthea::mesh::triangular_surface_mesh::print_vtu(
     return false;
   }
 
-  //std::cout << "Printing '" << file.str( ) << "' ... ";
-  //std::cout.flush( );
+  // std::cout << "Printing '" << file.str( ) << "' ... ";
+  // std::cout.flush( );
 
   file_vtu << "<?xml version=\"1.0\"?>" << std::endl;
   file_vtu << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\">"
@@ -618,7 +619,7 @@ bool besthea::mesh::triangular_surface_mesh::print_vtu(
   file_vtu << "</VTKFile>" << std::endl;
   file_vtu.close( );
 
-  //std::cout << "done." << std::endl;
+  // std::cout << "done." << std::endl;
 
   return true;
 }
@@ -636,8 +637,8 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_case(
     return false;
   }
 
-  //std::cout << "Printing '" << filename << "' ... ";
-  //std::cout.flush( );
+  // std::cout << "Printing '" << filename << "' ... ";
+  // std::cout.flush( );
 
   case_file << "FORMAT\n"
             << "type: ensight gold\n\n"
@@ -689,7 +690,7 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_case(
 
   case_file.close( );
 
-  //std::cout << "done." << std::endl;
+  // std::cout << "done." << std::endl;
 
   return true;
 }
@@ -706,8 +707,8 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_geometry(
     return false;
   }
 
-  //std::cout << "Printing '" << filename << "' ... ";
-  //std::cout.flush( );
+  // std::cout << "Printing '" << filename << "' ... ";
+  // std::cout.flush( );
 
   std::vector< std::string > strings
     = { "C Binary", "Decription line 1", "Decription line 2", "node id off",
@@ -773,7 +774,7 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_geometry(
 
   geometry_file.close( );
 
-  //std::cout << "done." << std::endl;
+  // std::cout << "done." << std::endl;
 
   return true;
 }
@@ -805,8 +806,8 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_datafiles(
       return false;
     }
 
-    //std::cout << "Printing '" << filename.str( ) << "' ... ";
-    //std::cout.flush( );
+    // std::cout << "Printing '" << filename.str( ) << "' ... ";
+    // std::cout.flush( );
 
     std::vector< std::string > strings
       = { ( *node_labels )[ i ], "part", "coordinates" };
@@ -832,7 +833,7 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_datafiles(
 
     data_file.close( );
 
-    //std::cout << "done." << std::endl;
+    // std::cout << "done." << std::endl;
   }
 
   for ( lo i = 0; i < n_element; ++i ) {
@@ -853,8 +854,8 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_datafiles(
       return false;
     }
 
-    //std::cout << "Printing '" << filename.str( ) << "' ... ";
-    //std::cout.flush( );
+    // std::cout << "Printing '" << filename.str( ) << "' ... ";
+    // std::cout.flush( );
 
     std::vector< std::string > strings
       = { ( *element_labels )[ i ], "part", "tria3" };
@@ -880,7 +881,7 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_datafiles(
 
     data_file.close( );
 
-    //std::cout << "done." << std::endl;
+    // std::cout << "done." << std::endl;
   }
 
   return true;
@@ -898,7 +899,7 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight(
 }
 
 void besthea::mesh::triangular_surface_mesh::map_to_unit_sphere( ) {
-  sc x[ 3 ];
+  linear_algebra::coordinates< 3 > x;
   sc norm;
   for ( lo i_node = 0; i_node < _n_nodes; ++i_node ) {
     get_node( i_node, x );
@@ -910,8 +911,9 @@ void besthea::mesh::triangular_surface_mesh::map_to_unit_sphere( ) {
   }
 }
 
-void besthea::mesh::triangular_surface_mesh::get_centroid( sc * centroid ) {
-  sc x[ 3 ];
+void besthea::mesh::triangular_surface_mesh::get_centroid(
+  linear_algebra::coordinates< 3 > & centroid ) {
+  linear_algebra::coordinates< 3 > x;
   centroid[ 0 ] = centroid[ 1 ] = centroid[ 2 ] = 0.0;
   for ( lo i_node = 0; i_node < _n_nodes; ++i_node ) {
     get_node( i_node, x );

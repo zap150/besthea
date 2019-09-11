@@ -43,7 +43,7 @@ using namespace besthea::bem;
 using namespace besthea::tools;
 
 struct cauchy_data {
-  static sc dirichlet( sc x1, sc x2, sc x3, sc * n, sc t ) {
+  static sc dirichlet( sc x1, sc x2, sc x3, const coordinates< 3 > & n, sc t ) {
     sc norm2 = ( x1 - y[ 0 ] ) * ( x1 - y[ 0 ] )
       + ( x2 - y[ 1 ] ) * ( x2 - y[ 1 ] ) + ( x3 - y[ 2 ] ) * ( x3 - y[ 2 ] );
     sc value = std::pow( 4.0 * M_PI * alpha * t, -1.5 )
@@ -52,7 +52,7 @@ struct cauchy_data {
     return value;
   }
 
-  static sc neumann( sc x1, sc x2, sc x3, sc * n, sc t ) {
+  static sc neumann( sc x1, sc x2, sc x3, const coordinates< 3 > & n, sc t ) {
     sc dot = ( x1 - y[ 0 ] ) * n[ 0 ] + ( x2 - y[ 1 ] ) * n[ 1 ]
       + ( x3 - y[ 2 ] ) * n[ 2 ];
     sc value = ( -1.0 / ( 2.0 * t ) ) * dot * dirichlet( x1, x2, x3, n, t );
