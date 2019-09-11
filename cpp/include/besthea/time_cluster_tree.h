@@ -50,8 +50,8 @@ class besthea::mesh::time_cluster_tree {
  public:
   /**
    * Constructor
-   * param[in] mesh Reference to the underlying mesh.
-   * param[in] levels Maximum number of levels in the tree.
+   * @param[in] mesh Reference to the underlying mesh.
+   * @param[in] levels Maximum number of levels in the tree.
    */
   time_cluster_tree( const temporal_mesh & mesh, lo levels );
 
@@ -69,8 +69,8 @@ class besthea::mesh::time_cluster_tree {
 
   /**
    * Builds tree recursively
-   * param[in] root Node to stem from.
-   * param[in] level Current level.
+   * @param[in] root Node to stem from.
+   * @param[in] level Current level.
    */
   void build_tree( time_cluster & root, lo level );
 };

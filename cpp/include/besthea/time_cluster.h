@@ -121,7 +121,7 @@ class besthea::mesh::time_cluster {
 
   /**
    * Returns element index in the mesh.
-   * param[in] idx Index of element in the cluster's internal storage.
+   * @param[in] idx Index of element in the cluster's internal storage.
    */
   lo get_element( lo idx ) const {
     return _elements[ idx ];
@@ -129,7 +129,7 @@ class besthea::mesh::time_cluster {
 
   /**
    * Sets a number of children and allocates vector of pointers to children.
-   * param[in] n_children Number of cluster's children clusters.
+   * @param[in] n_children Number of cluster's children clusters.
    */
   void set_n_children( lo n_children ) {
     _children.reserve( n_children );

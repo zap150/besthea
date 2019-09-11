@@ -29,7 +29,13 @@
 #include "besthea/space_cluster_tree.h"
 
 #include <cstdlib>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <iterator>
 #include <limits>
+#include <sstream>
+#include <string>
 
 besthea::mesh::space_cluster_tree::space_cluster_tree(
   const triangular_surface_mesh & mesh, lo levels, lo n_min_elems )
@@ -37,7 +43,8 @@ besthea::mesh::space_cluster_tree::space_cluster_tree(
     _levels( levels ),
     _n_min_elems( n_min_elems ),
     _non_empty_nodes( _levels ),
-    _paddings( _levels, 0.0 ) {
+    _paddings( _levels, 0.0 ),
+    _n_nonempty_nodes( 0 ) {
   sc xmin, xmax, ymin, ymax, zmin, zmax;
   compute_bounding_box( xmin, xmax, ymin, ymax, zmin, zmax );
 
@@ -55,6 +62,7 @@ besthea::mesh::space_cluster_tree::space_cluster_tree(
   }
 
   _non_empty_nodes[ 0 ].push_back( _root );
+  ++_n_nonempty_nodes;
   this->build_tree( *_root, 1 );
   this->compute_padding( *_root );
   for ( auto it = _paddings.begin( ); it != _paddings.end( ); ++it ) {
@@ -123,6 +131,7 @@ void besthea::mesh::space_cluster_tree::build_tree(
       clusters[ i ] = new space_cluster(
         new_center, new_half_size, oct_sizes[ i ], &root, level, i, _mesh );
       _non_empty_nodes[ level ].push_back( clusters[ i ] );
+      ++_n_nonempty_nodes;
     } else {
       clusters[ i ] = nullptr;
     }
@@ -224,4 +233,131 @@ sc besthea::mesh::space_cluster_tree::compute_padding( space_cluster & root ) {
     }
   }
   return padding;
+}
+
+bool besthea::mesh::space_cluster_tree::print_tree(
+  const std::string & directory, bool include_padding, lo level ) const {
+  std::stringstream file;
+  file << directory << "/tree.vtu";
+
+  std::ofstream file_vtu( file.str( ).c_str( ) );
+
+  file_vtu.setf( std::ios::showpoint | std::ios::scientific );
+  file_vtu.precision( 6 );
+
+  if ( !file_vtu.is_open( ) ) {
+    std::cout << "File could not be opened!" << std::endl;
+    return false;
+  }
+
+  lo n_nodes = 0;
+  if ( level == -1 ) {
+    n_nodes = _n_nonempty_nodes;
+  } else {
+    n_nodes = _non_empty_nodes[ level ].size( );
+  }
+
+  std::cout << "Printing '" << file.str( ) << "' ... ";
+  std::cout.flush( );
+
+  file_vtu << "<?xml version=\"1.0\"?>" << std::endl;
+  file_vtu << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\">"
+           << std::endl;
+  file_vtu << "  <UnstructuredGrid>" << std::endl;
+
+  file_vtu << "    <Piece NumberOfPoints=\"" << n_nodes << "\" NumberOfCells=\""
+           << 0 << "\">" << std::endl;
+
+  file_vtu << "      <Points>" << std::endl;
+  file_vtu << "        <DataArray type=\"Float32\" Name=\"points\""
+              " NumberOfComponents=\"3\" format=\"ascii\">"
+           << std::endl;
+
+  vector_type center( 3 );
+
+  for ( auto it = _non_empty_nodes.begin( ); it != _non_empty_nodes.end( );
+        ++it ) {
+    if ( level != -1
+      && std::distance( _non_empty_nodes.begin( ), it ) != level ) {
+      continue;
+    }
+    for ( auto itt = ( *it ).begin( ); itt != ( *it ).end( ); ++itt ) {
+      ( *itt )->get_center( center );
+
+      file_vtu << "          " << static_cast< float >( center[ 0 ] ) << " "
+               << static_cast< float >( center[ 1 ] ) << " "
+               << static_cast< float >( center[ 2 ] ) << std::endl;
+    }
+  }
+
+  file_vtu << "        </DataArray>" << std::endl;
+  file_vtu << "      </Points>" << std::endl;
+
+  file_vtu << "      <Cells>" << std::endl;
+  file_vtu << "        <DataArray type=\"Int32\" Name=\"connectivity\""
+              " format=\"ascii\">"
+           << std::endl;
+
+  file_vtu << "        </DataArray>" << std::endl;
+  file_vtu
+    << "        <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">"
+    << std::endl;
+
+  file_vtu << "        </DataArray>" << std::endl;
+  file_vtu
+    << "        <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">"
+    << std::endl;
+
+  file_vtu << "        </DataArray>" << std::endl;
+  file_vtu << "      </Cells>" << std::endl;
+
+  file_vtu << "      <PointData Vectors=\"Half_sizes\">" << std::endl;
+
+  file_vtu << "        <DataArray type=\"Float32\" Name=\"Half_sizes\" "
+              "format=\"ascii\" NumberOfComponents=\"3\">"
+           << std::endl;
+  ;
+
+  vector_type half_size( 3 );
+  sc x_half_size, y_half_size, z_half_size;
+
+  for ( auto it = _non_empty_nodes.begin( ); it != _non_empty_nodes.end( );
+        ++it ) {
+    if ( level != -1
+      && std::distance( _non_empty_nodes.begin( ), it ) != level ) {
+      continue;
+    }
+    for ( auto itt = ( *it ).begin( ); itt != ( *it ).end( ); ++itt ) {
+      ( *itt )->get_half_size( half_size );
+
+      x_half_size = half_size[ 0 ];
+      y_half_size = half_size[ 1 ];
+      z_half_size = half_size[ 2 ];
+
+      if ( include_padding ) {
+        x_half_size
+          += _paddings[ std::distance( _non_empty_nodes.begin( ), it ) ];
+        y_half_size
+          += _paddings[ std::distance( _non_empty_nodes.begin( ), it ) ];
+        z_half_size
+          += _paddings[ std::distance( _non_empty_nodes.begin( ), it ) ];
+      }
+
+      file_vtu << "          " << static_cast< float >( 2.0 * x_half_size )
+               << " " << static_cast< float >( 2.0 * y_half_size ) << " "
+               << static_cast< float >( 2.0 * z_half_size ) << std::endl;
+    }
+  }
+
+  file_vtu << "        </DataArray>" << std::endl;
+  file_vtu << "      </PointData>" << std::endl;
+
+  file_vtu << "    </Piece>" << std::endl;
+  file_vtu << "  </UnstructuredGrid>" << std::endl;
+  file_vtu << "</VTKFile>" << std::endl;
+  file_vtu.close( );
+
+  std::cout << "done." << std::endl;
+
+  return true;
 }
