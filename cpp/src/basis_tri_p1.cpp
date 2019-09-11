@@ -102,6 +102,7 @@ sc besthea::bem::basis_tri_p1::do_evaluate( lo i_elem, lo i_fun, sc x1_ref,
   return value;
 }
 
+/*
 #pragma omp declare simd uniform( \
   i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
 void besthea::bem::basis_tri_p1::evaluate_curl( lo i_elem, lo i_fun,
@@ -165,6 +166,7 @@ void besthea::bem::basis_tri_p1::evaluate_curl( lo i_elem, lo i_fun,
   c2 /= det;
   c3 /= det;
 }
+*/
 
 void besthea::bem::basis_tri_p1::evaluate_curl( lo i_elem,
   const linear_algebra::coordinates< 3 > & n, int n_shared_vertices,

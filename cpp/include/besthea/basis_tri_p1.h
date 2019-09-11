@@ -117,23 +117,13 @@ class besthea::bem::basis_tri_p1
   sc do_evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n,
     int n_shared_vertices, int rotation, bool swap ) const;
 
-  /**
-   * Evaluates surface curl of the basis function.
-   * @param[in] i_elem Element index.
-   * @param[in] i_fun Local basis function index.
-   * @param[in] n Element normal.
-   * @param[in] n_shared_vertices Number of shared vertives in currect elements
-   * (regularized quadrature).
-   * @param[in] rotation Virtual element rotation (regularized quadrature).
-   * @param[in] swap Virtual element inversion (regularized quadrature).
-   * @param[out] c1 First component of curl.
-   * @param[out] c2 Second component of curl.
-   * @param[out] c3 Third component of curl.
-   */
-#pragma omp declare simd uniform( \
-  i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
-  void evaluate_curl( lo i_elem, lo i_fun, const sc * n, int n_shared_vertices,
-    int rotation, bool swap, sc & c1, sc & c2, sc & c3 ) const;
+  // Intel 19.0.4 cannot compile...
+  /*
+  #pragma omp declare simd uniform( \
+    i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
+    void evaluate_curl( lo i_elem, lo i_fun, const sc * n, int
+  n_shared_vertices, int rotation, bool swap, sc & c1, sc & c2, sc & c3 ) const;
+  */
 
   /**
    * Evaluates surface curl of the basis function.
