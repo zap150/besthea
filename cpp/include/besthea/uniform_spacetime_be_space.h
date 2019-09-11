@@ -143,7 +143,8 @@ class besthea::bem::uniform_spacetime_be_space {
    * @param[in] order_rhs_temporal Temporal line quadrature order to assemble
    * the right-hand side.
    */
-  void L2_projection( sc ( *f )( sc, sc, sc, sc *, sc ),
+  void L2_projection(
+    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
     block_vector_type & projection, int order_matrix = 2,
     int order_rhs_spatial = 5, int order_rhs_temporal = 4 ) const;
 
@@ -156,7 +157,8 @@ class besthea::bem::uniform_spacetime_be_space {
    * @param[in] order_rhs_temporal Temporal line quadrature order to assemble
    * the right-hand side.
    */
-  sc L2_relative_error( sc ( *f )( sc, sc, sc, sc *, sc ),
+  sc L2_relative_error(
+    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
     const block_vector_type & approximation, int order_rhs_spatial = 5,
     int order_rhs_temporal = 4 ) const;
 
@@ -174,7 +176,8 @@ class besthea::bem::uniform_spacetime_be_space {
    * @param[in] f Function to be projected.
    * @param[out] interpolation Interpolation vector.
    */
-  void interpolation( sc ( *f )( sc, sc, sc, sc *, sc ),
+  void interpolation(
+    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
     block_vector_type & interpolation ) const;
 
  protected:
@@ -195,7 +198,9 @@ class besthea::bem::uniform_spacetime_be_space {
    * @param[in] x3 Coordinates of the third node of the test element.
    * @param[in,out] my_quadrature Structure holding the quadrature nodes.
    */
-  void triangle_to_geometry( const sc * x1, const sc * x2, const sc * x3,
+  void triangle_to_geometry( const linear_algebra::coordinates< 3 > & x1,
+    const linear_algebra::coordinates< 3 > & x2,
+    const linear_algebra::coordinates< 3 > & x3,
     quadrature_wrapper & my_quadrature ) const;
 
   /**

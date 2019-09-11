@@ -128,7 +128,9 @@ class besthea::bem::uniform_spacetime_be_evaluator {
    * @param[in] x3 Coordinates of the third node of the test element.
    * @param[in,out] my_quadrature Structure holding the quadrature nodes.
    */
-  void triangle_to_geometry( const sc * x1, const sc * x2, const sc * x3,
+  void triangle_to_geometry( const linear_algebra::coordinates< 3 > & x1,
+    const linear_algebra::coordinates< 3 > & x2,
+    const linear_algebra::coordinates< 3 > & x3,
     quadrature_wrapper & my_quadrature ) const;
 
   kernel_type * _kernel;  //!< Kernel temporal antiderivative.

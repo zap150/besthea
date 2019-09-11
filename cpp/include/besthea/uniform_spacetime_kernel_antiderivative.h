@@ -87,7 +87,8 @@ class besthea::bem::uniform_spacetime_kernel_antiderivative {
    * @param[in] scaled_delta Difference of time intervals.
    */
 #pragma omp declare simd uniform( ny, scaled_delta ) simdlen( DATA_WIDTH )
-  sc anti_tau_anti_t( sc xy1, sc xy2, sc xy3, const sc * ny, sc scaled_delta ) const {
+  sc anti_tau_anti_t( sc xy1, sc xy2, sc xy3,
+    const linear_algebra::coordinates< 3 > & ny, sc scaled_delta ) const {
     return derived( )->do_anti_tau_anti_t( xy1, xy2, xy3, ny, scaled_delta );
   }
 
@@ -99,7 +100,8 @@ class besthea::bem::uniform_spacetime_kernel_antiderivative {
    * @param[in] ny Normal in the `y` variable.
    */
 #pragma omp declare simd uniform( ny ) simdlen( DATA_WIDTH )
-  sc anti_tau_limit( sc xy1, sc xy2, sc xy3, const sc * ny ) const {
+  sc anti_tau_limit( sc xy1, sc xy2, sc xy3,
+    const linear_algebra::coordinates< 3 > & ny ) const {
     return derived( )->do_anti_tau_limit( xy1, xy2, xy3, ny );
   }
 
@@ -112,8 +114,8 @@ class besthea::bem::uniform_spacetime_kernel_antiderivative {
    * @param[in] scaled_delta Difference of time intervals.
    */
 #pragma omp declare simd uniform( ny, scaled_delta ) simdlen( DATA_WIDTH )
-  sc anti_tau_regular(
-    sc xy1, sc xy2, sc xy3, const sc * ny, sc scaled_delta ) const {
+  sc anti_tau_regular( sc xy1, sc xy2, sc xy3,
+    const linear_algebra::coordinates< 3 > & ny, sc scaled_delta ) const {
     return derived( )->do_anti_tau_regular( xy1, xy2, xy3, ny, scaled_delta );
   }
 

@@ -125,7 +125,7 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
     lo chunk_offset;
 
     sc scaled_delta, area, basis_value, density_value;
-    sc y1[ 3 ], y2[ 3 ], y3[ 3 ], ny[ 3 ];
+    linear_algebra::coordinates< 3 > y1, y2, y3, ny;
     std::vector< lo > l2g( loc_dim );
 
     for ( lo i_chunk = 0; i_chunk <= my_n_chunks; ++i_chunk ) {
@@ -273,8 +273,11 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
 
 template< class kernel_type, class space_type >
 void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
-  space_type >::triangle_to_geometry( const sc * x1, const sc * x2,
-  const sc * x3, quadrature_wrapper & my_quadrature ) const {
+  space_type >::triangle_to_geometry( const linear_algebra::coordinates< 3 > &
+                                        x1,
+  const linear_algebra::coordinates< 3 > & x2,
+  const linear_algebra::coordinates< 3 > & x3,
+  quadrature_wrapper & my_quadrature ) const {
   const sc * y1_ref = my_quadrature._y1_ref.data( );
   const sc * y2_ref = my_quadrature._y2_ref.data( );
   sc * y1_mapped = my_quadrature._y1.data( );

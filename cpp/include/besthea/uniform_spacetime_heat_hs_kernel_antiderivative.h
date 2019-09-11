@@ -77,8 +77,8 @@ class besthea::bem::uniform_spacetime_heat_hs_kernel_antiderivative
    * @param[in] scaled_delta Difference of time intervals.
    */
 #pragma omp declare simd uniform( ny, scaled_delta ) simdlen( DATA_WIDTH )
-  sc do_anti_tau_anti_t(
-    sc xy1, sc xy2, sc xy3, const sc * ny, sc scaled_delta ) const {
+  sc do_anti_tau_anti_t( sc xy1, sc xy2, sc xy3,
+    const linear_algebra::coordinates< 3 > & ny, sc scaled_delta ) const {
     return _zero;
   }
 
@@ -92,8 +92,8 @@ class besthea::bem::uniform_spacetime_heat_hs_kernel_antiderivative
    * @param[in] scaled_delta Difference of time intervals.
    */
 #pragma omp declare simd uniform( ny, scaled_delta ) simdlen( DATA_WIDTH )
-  sc do_anti_tau_regular(
-    sc xy1, sc xy2, sc xy3, const sc * ny, sc scaled_delta ) const {
+  sc do_anti_tau_regular( sc xy1, sc xy2, sc xy3,
+    const linear_algebra::coordinates< 3 > & ny, sc scaled_delta ) const {
     return _zero;
   }
 
@@ -105,7 +105,8 @@ class besthea::bem::uniform_spacetime_heat_hs_kernel_antiderivative
  * @param[in] ny Normal in the `y` variable.
  */
 #pragma omp declare simd uniform( ny ) simdlen( DATA_WIDTH )
-  sc do_anti_tau_limit( sc xy1, sc xy2, sc xy3, const sc * ny ) const {
+  sc do_anti_tau_limit( sc xy1, sc xy2, sc xy3,
+    const linear_algebra::coordinates< 3 > & ny ) const {
     sc norm = std::sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
 
     sc value = _one / ( _four * _pi * _alpha * norm );
@@ -126,8 +127,10 @@ class besthea::bem::uniform_spacetime_heat_hs_kernel_antiderivative
  * @param[out] value2 Return value for anti_t part.
  */
 #pragma omp declare simd uniform( nx, ny, scaled_delta ) simdlen( DATA_WIDTH )
-  void anti_tau_anti_t_and_anti_t( sc xy1, sc xy2, sc xy3, const sc * nx,
-    const sc * ny, sc scaled_delta, sc & value1, sc & value2 ) const {
+  void anti_tau_anti_t_and_anti_t( sc xy1, sc xy2, sc xy3,
+    const linear_algebra::coordinates< 3 > & nx,
+    const linear_algebra::coordinates< 3 > & ny, sc scaled_delta, sc & value1,
+    sc & value2 ) const {
     sc dot = nx[ 0 ] * ny[ 0 ] + nx[ 1 ] * ny[ 1 ] + nx[ 2 ] * ny[ 2 ];
 
     sc norm = std::sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );

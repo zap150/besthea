@@ -208,9 +208,9 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
     int rot_test = 0;
     int rot_trial = 0;
 
-    sc x1[ 3 ], x2[ 3 ], x3[ 3 ];
-    sc y1[ 3 ], y2[ 3 ], y3[ 3 ];
-    sc nx[ 3 ], ny[ 3 ];
+    linear_algebra::coordinates< 3 > x1, x2, x3;
+    linear_algebra::coordinates< 3 > y1, y2, y3;
+    linear_algebra::coordinates< 3 > nx, ny;
 
     quadrature_wrapper my_quadrature;
     init_quadrature( my_quadrature );
@@ -397,9 +397,9 @@ void besthea::bem::uniform_spacetime_be_assembler<
     int rot_test = 0;
     int rot_trial = 0;
 
-    sc x1[ 3 ], x2[ 3 ], x3[ 3 ];
-    sc y1[ 3 ], y2[ 3 ], y3[ 3 ];
-    sc nx[ 3 ], ny[ 3 ];
+    linear_algebra::coordinates< 3 > x1, x2, x3;
+    linear_algebra::coordinates< 3 > y1, y2, y3;
+    linear_algebra::coordinates< 3 > nx, ny;
     sc test_curls[ 9 ], trial_curls[ 9 ];
     lo test_curl_offset, trial_curl_offset;
     sc curl_dot;
@@ -666,10 +666,14 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
-  trial_space_type >::triangles_to_geometry( const sc * x1, const sc * x2,
-  const sc * x3, const sc * y1, const sc * y2, const sc * y3,
-  int n_shared_vertices, int rot_test, int rot_trial,
-  quadrature_wrapper & my_quadrature ) const {
+  trial_space_type >::
+  triangles_to_geometry( const linear_algebra::coordinates< 3 > & x1,
+    const linear_algebra::coordinates< 3 > & x2,
+    const linear_algebra::coordinates< 3 > & x3,
+    const linear_algebra::coordinates< 3 > & y1,
+    const linear_algebra::coordinates< 3 > & y2,
+    const linear_algebra::coordinates< 3 > & y3, int n_shared_vertices,
+    int rot_test, int rot_trial, quadrature_wrapper & my_quadrature ) const {
   const sc * x1rot = nullptr;
   const sc * x2rot = nullptr;
   const sc * x3rot = nullptr;
@@ -679,54 +683,54 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 
   switch ( rot_test ) {
     case 0:
-      x1rot = x1;
-      x2rot = x2;
-      x3rot = x3;
+      x1rot = x1.data( );
+      x2rot = x2.data( );
+      x3rot = x3.data( );
       break;
     case 1:
-      x1rot = x2;
-      x2rot = x3;
-      x3rot = x1;
+      x1rot = x2.data( );
+      x2rot = x3.data( );
+      x3rot = x1.data( );
       break;
     case 2:
-      x1rot = x3;
-      x2rot = x1;
-      x3rot = x2;
+      x1rot = x3.data( );
+      x2rot = x1.data( );
+      x3rot = x2.data( );
       break;
   }
 
   switch ( rot_trial ) {
     case 0:
       if ( n_shared_vertices == 2 ) {
-        y1rot = y2;
-        y2rot = y1;
-        y3rot = y3;
+        y1rot = y2.data( );
+        y2rot = y1.data( );
+        y3rot = y3.data( );
       } else {
-        y1rot = y1;
-        y2rot = y2;
-        y3rot = y3;
+        y1rot = y1.data( );
+        y2rot = y2.data( );
+        y3rot = y3.data( );
       }
       break;
     case 1:
       if ( n_shared_vertices == 2 ) {
-        y1rot = y3;
-        y2rot = y2;
-        y3rot = y1;
+        y1rot = y3.data( );
+        y2rot = y2.data( );
+        y3rot = y1.data( );
       } else {
-        y1rot = y2;
-        y2rot = y3;
-        y3rot = y1;
+        y1rot = y2.data( );
+        y2rot = y3.data( );
+        y3rot = y1.data( );
       }
       break;
     case 2:
       if ( n_shared_vertices == 2 ) {
-        y1rot = y1;
-        y2rot = y3;
-        y3rot = y2;
+        y1rot = y1.data( );
+        y2rot = y3.data( );
+        y3rot = y2.data( );
       } else {
-        y1rot = y3;
-        y2rot = y1;
-        y3rot = y2;
+        y1rot = y3.data( );
+        y2rot = y1.data( );
+        y3rot = y2.data( );
       }
       break;
   }
@@ -852,8 +856,8 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
     return;
   }
 
-  lo test_elem[ 3 ];
-  lo trial_elem[ 3 ];
+  linear_algebra::indices< 3 > test_elem;
+  linear_algebra::indices< 3 > trial_elem;
 
   _test_space->get_mesh( )->get_spatial_element( i_test, test_elem );
   _trial_space->get_mesh( )->get_spatial_element( i_trial, trial_elem );

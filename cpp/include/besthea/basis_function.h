@@ -33,10 +33,10 @@
 #ifndef INCLUDE_BESTHEA_BASIS_FUNCTION_H_
 #define INCLUDE_BESTHEA_BASIS_FUNCTION_H_
 
-//#include "besthea/uniform_spacetime_be_assembler.h"
 #include "besthea/full_matrix.h"
 #include "besthea/mesh.h"
 #include "besthea/settings.h"
+#include "besthea/coordinates.h"
 
 #include <array>
 #include <vector>
@@ -129,7 +129,8 @@ class besthea::bem::basis_function {
    * @param[in] n Element normal.
    */
 #pragma omp declare simd uniform( i_elem, i_fun, n ) simdlen( DATA_WIDTH )
-  sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n ) const {
+  sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref,
+    const linear_algebra::coordinates< 3 > & n ) const {
     return derived( )->do_evaluate( i_elem, i_fun, x1_ref, x2_ref, n );
   }
 
@@ -147,8 +148,9 @@ class besthea::bem::basis_function {
    */
 #pragma omp declare simd uniform( \
   i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
-  sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n,
-    int n_shared_vertices, int rotation, bool swap ) const {
+  sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref,
+    const linear_algebra::coordinates< 3 > & n, int n_shared_vertices,
+    int rotation, bool swap ) const {
     return derived( )->do_evaluate(
       i_elem, i_fun, x1_ref, x2_ref, n, n_shared_vertices, rotation, swap );
   }

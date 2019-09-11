@@ -48,8 +48,9 @@ besthea::bem::uniform_spacetime_be_space<
 
 template< class basis_type >
 void besthea::bem::uniform_spacetime_be_space< basis_type >::L2_projection(
-  sc ( *f )( sc, sc, sc, sc *, sc ), block_vector_type & projection,
-  int order_matrix, int order_rhs_spatial, int order_rhs_temporal ) const {
+  sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
+  block_vector_type & projection, int order_matrix, int order_rhs_spatial,
+  int order_rhs_temporal ) const {
   besthea::linear_algebra::sparse_matrix M;
   besthea::bem::uniform_spacetime_be_identity identity(
     *this, *this, order_matrix );
@@ -68,7 +69,7 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::L2_projection(
   lo local_dim = _basis.dimension_local( );
   std::vector< lo > l2g( local_dim );
 
-  sc x1[ 3 ], x2[ 3 ], x3[ 3 ], n[ 3 ];
+  linear_algebra::coordinates< 3 > x1, x2, x3, n;
   sc area_xt, basis_val, fun_val;
   sc cg_eps;
   lo n_iter;
@@ -119,8 +120,9 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::L2_projection(
 
 template< class basis_type >
 sc besthea::bem::uniform_spacetime_be_space< basis_type >::L2_relative_error(
-  sc ( *f )( sc, sc, sc, sc *, sc ), const block_vector_type & approximation,
-  int order_rhs_spatial, int order_rhs_temporal ) const {
+  sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
+  const block_vector_type & approximation, int order_rhs_spatial,
+  int order_rhs_temporal ) const {
   lo n_timesteps = _spacetime_mesh->get_n_temporal_elements( );
   sc timestep = _spacetime_mesh->get_timestep( );
   lo n_elements = _spacetime_mesh->get_n_spatial_elements( );
@@ -128,7 +130,7 @@ sc besthea::bem::uniform_spacetime_be_space< basis_type >::L2_relative_error(
   lo local_dim = _basis.dimension_local( );
   std::vector< lo > l2g( local_dim );
 
-  sc x1[ 3 ], x2[ 3 ], x3[ 3 ], n[ 3 ];
+  linear_algebra::coordinates< 3 > x1, x2, x3, n;
   sc area_xt, basis_val, fun_val;
   sc l2_err = 0.0;
   sc l2_norm = 0.0;
@@ -183,7 +185,8 @@ sc besthea::bem::uniform_spacetime_be_space< basis_type >::L2_relative_error(
 
 template< class basis_type >
 void besthea::bem::uniform_spacetime_be_space< basis_type >::interpolation(
-  sc ( *f )( sc, sc, sc, sc *, sc ), block_vector_type & interpolation ) const {
+  sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
+  block_vector_type & interpolation ) const {
   std::cout << "Only use specialized templates!" << std::endl;
 }
 
@@ -193,17 +196,17 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::interpolation(
  * @param[out] interpolation Interpolation vector.
  */
 template<>
-void besthea::bem::uniform_spacetime_be_space<
-  besthea::bem::basis_tri_p0 >::interpolation( sc ( *f )( sc, sc, sc, sc *,
-                                                 sc ),
-  block_vector_type & interpolation ) const {
+void besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >::
+  interpolation(
+    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
+    block_vector_type & interpolation ) const {
   lo n_timesteps = _spacetime_mesh->get_n_temporal_elements( );
   sc timestep = _spacetime_mesh->get_timestep( );
   lo n_elements = _spacetime_mesh->get_n_spatial_elements( );
 
   interpolation.resize( n_timesteps );
   interpolation.resize_blocks( n_elements );
-  sc centroid[ 3 ], n[ 3 ];
+  linear_algebra::coordinates< 3 > centroid, n;
 
   for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
     _spacetime_mesh->get_spatial_centroid( i_elem, centroid );
@@ -222,17 +225,17 @@ void besthea::bem::uniform_spacetime_be_space<
  * @param[out] interpolation Interpolation vector.
  */
 template<>
-void besthea::bem::uniform_spacetime_be_space<
-  besthea::bem::basis_tri_p1 >::interpolation( sc ( *f )( sc, sc, sc, sc *,
-                                                 sc ),
-  block_vector_type & interpolation ) const {
+void besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >::
+  interpolation(
+    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
+    block_vector_type & interpolation ) const {
   lo n_timesteps = _spacetime_mesh->get_n_temporal_elements( );
   sc timestep = _spacetime_mesh->get_timestep( );
   lo n_nodes = _spacetime_mesh->get_n_spatial_nodes( );
 
   interpolation.resize( n_timesteps );
   interpolation.resize_blocks( n_nodes );
-  sc x[ 3 ], n[ 3 ];
+  linear_algebra::coordinates< 3 > x, n;
 
   for ( lo i_node = 0; i_node < n_nodes; ++i_node ) {
     _spacetime_mesh->get_spatial_node( i_node, x );
@@ -267,9 +270,11 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::init_quadrature(
 }
 
 template< class basis_type >
-void besthea::bem::uniform_spacetime_be_space<
-  basis_type >::triangle_to_geometry( const sc * x1, const sc * x2,
-  const sc * x3, quadrature_wrapper & my_quadrature ) const {
+void besthea::bem::uniform_spacetime_be_space< basis_type >::
+  triangle_to_geometry( const linear_algebra::coordinates< 3 > & x1,
+    const linear_algebra::coordinates< 3 > & x2,
+    const linear_algebra::coordinates< 3 > & x3,
+    quadrature_wrapper & my_quadrature ) const {
   const sc * x1_ref = my_quadrature._x1_ref.data( );
   const sc * x2_ref = my_quadrature._x2_ref.data( );
   sc * x1_mapped = my_quadrature._x1.data( );

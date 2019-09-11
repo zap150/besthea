@@ -104,7 +104,7 @@ void besthea::bem::uniform_spacetime_be_identity< test_space_type,
   lo size = w.size( );
 
   sc value, test, trial, area;
-  sc n[ 3 ];
+  linear_algebra::coordinates< 3 > n;
   for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
     mesh->get_spatial_normal( i_elem, n );
     area = mesh->spatial_area( i_elem );
