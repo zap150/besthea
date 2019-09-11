@@ -98,7 +98,7 @@ class besthea::bem::basis_tri_p0
    */
 #pragma omp declare simd uniform( i_elem, i_fun, n ) simdlen( DATA_WIDTH )
   sc do_evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref,
-    const linear_algebra::coordinates< 3 > & n ) const;
+    const sc * n ) const;
 
   /**
    * Evaluates the basis function.
@@ -115,7 +115,7 @@ class besthea::bem::basis_tri_p0
 #pragma omp declare simd uniform( \
   i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
   sc do_evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref,
-    const linear_algebra::coordinates< 3 > & n, int n_shared_vertices,
+    const sc * n, int n_shared_vertices,
     int rotation, bool swap ) const;
 };
 

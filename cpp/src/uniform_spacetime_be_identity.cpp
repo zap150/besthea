@@ -116,9 +116,9 @@ void besthea::bem::uniform_spacetime_be_identity< test_space_type,
         value = 0.0;
         for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
           test = test_basis.evaluate(
-            i_elem, i_loc_test, x1_ref[ i_quad ], x2_ref[ i_quad ], n );
-          trial = trial_basis.evaluate(
-            i_elem, i_loc_trial, x1_ref[ i_quad ], x2_ref[ i_quad ], n );
+            i_elem, i_loc_test, x1_ref[ i_quad ], x2_ref[ i_quad ], n.data( ) );
+          trial = trial_basis.evaluate( i_elem, i_loc_trial, x1_ref[ i_quad ],
+            x2_ref[ i_quad ], n.data( ) );
 
           value += w[ i_quad ] * test * trial;
         }

@@ -126,6 +126,7 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
 
     sc scaled_delta, area, basis_value, density_value;
     linear_algebra::coordinates< 3 > y1, y2, y3, ny;
+    sc * ny_data = ny.data( );
     std::vector< lo > l2g( loc_dim );
 
     for ( lo i_chunk = 0; i_chunk <= my_n_chunks; ++i_chunk ) {
@@ -167,13 +168,13 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
                   = _kernel->anti_tau_limit(
                       x1[ i_point ] - y1_mapped[ i_quad ],
                       x2[ i_point ] - y2_mapped[ i_quad ],
-                      x3[ i_point ] - y3_mapped[ i_quad ], ny )
+                      x3[ i_point ] - y3_mapped[ i_quad ], ny_data )
                   * wy[ i_quad ];
               }  // i_point
 
               for ( lo i_loc = 0; i_loc < loc_dim; ++i_loc ) {
                 basis_value = basis.evaluate(
-                  i_elem, i_loc, y1_ref[ i_quad ], y2_ref[ i_quad ], ny );
+                  i_elem, i_loc, y1_ref[ i_quad ], y2_ref[ i_quad ], ny_data );
                 basis_value *= area;
 
                 // adding + values
@@ -202,13 +203,13 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
                 = _kernel->anti_tau_regular(
                     x1[ i_point ] - y1_mapped[ i_quad ],
                     x2[ i_point ] - y2_mapped[ i_quad ],
-                    x3[ i_point ] - y3_mapped[ i_quad ], ny, scaled_delta )
+                    x3[ i_point ] - y3_mapped[ i_quad ], ny_data, scaled_delta )
                 * wy[ i_quad ];
             }  // i_point
 
             for ( lo i_loc = 0; i_loc < loc_dim; ++i_loc ) {
               basis_value = basis.evaluate(
-                i_elem, i_loc, y1_ref[ i_quad ], y2_ref[ i_quad ], ny );
+                i_elem, i_loc, y1_ref[ i_quad ], y2_ref[ i_quad ], ny_data );
               basis_value *= area;
 
               // adding + values

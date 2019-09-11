@@ -105,7 +105,7 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::L2_projection(
             * wx[ i_x ] * wt[ i_t ] * area_xt;
           for ( lo i_loc = 0; i_loc < local_dim; ++i_loc ) {
             basis_val = _basis.evaluate(
-              i_elem, i_loc, x1_ref[ i_x ], x2_ref[ i_x ], n );
+              i_elem, i_loc, x1_ref[ i_x ], x2_ref[ i_x ], n.data( ) );
             rhs_data[ l2g_data[ i_loc ] ] += basis_val * fun_val;
           }
         }
@@ -164,8 +164,8 @@ sc besthea::bem::uniform_spacetime_be_space< basis_type >::L2_relative_error(
       for ( lo i_x = 0; i_x < size_x; ++i_x ) {
         local_value = 0.0;
         for ( lo i_loc = 0; i_loc < local_dim; ++i_loc ) {
-          basis_val
-            = _basis.evaluate( i_elem, i_loc, x1_ref[ i_x ], x2_ref[ i_x ], n );
+          basis_val = _basis.evaluate(
+            i_elem, i_loc, x1_ref[ i_x ], x2_ref[ i_x ], n.data( ) );
           local_value += approximation_data[ l2g_data[ i_loc ] ] * basis_val;
         }
         for ( lo i_t = 0; i_t < size_t; ++i_t ) {
