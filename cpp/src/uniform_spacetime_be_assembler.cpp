@@ -54,124 +54,6 @@ besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::~uniform_spacetime_be_assembler( ) {
 }
 
-/*
-template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
-  trial_space_type >::assemble( besthea::linear_algebra::
-    block_lower_triangular_toeplitz_matrix & global_matrix ) {
-  auto & test_basis = _test_space->get_basis( );
-  auto & trial_basis = _trial_space->get_basis( );
-  auto test_mesh = _test_space->get_mesh( );
-  auto trial_mesh = _trial_space->get_mesh( );
-
-  lo n_timesteps = test_mesh->get_n_temporal_elements( );
-  sc timestep = test_mesh->get_timestep( );
-  lo n_rows = test_basis.dimension_global( );
-  lo n_columns = trial_basis.dimension_global( );
-  global_matrix.resize( n_timesteps );
-  global_matrix.resize_blocks( n_rows, n_columns );
-
-  lo n_loc_rows = test_basis.dimension_local( );
-  lo n_loc_columns = trial_basis.dimension_local( );
-
-  lo n_test_elements = test_mesh->get_n_spatial_elements( );
-  lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
-  sc scaled_delta;
-
-#pragma omp parallel shared( global_matrix )
-  {
-    full_matrix_type local_matrix( n_loc_rows, n_loc_columns );
-
-    sc kernel2, kernel1;
-    sc test_area, trial_area;
-    lo size;
-    int n_shared_vertices = 0;
-    int rot_test = 0;
-    int rot_trial = 0;
-
-    sc x1[ 3 ], x2[ 3 ], x3[ 3 ];
-    sc y1[ 3 ], y2[ 3 ], y3[ 3 ];
-    sc nx[ 3 ], ny[ 3 ];
-
-    quadrature_wrapper my_quadrature;
-    init_quadrature( my_quadrature );
-    sc * x1_mapped = my_quadrature._x1.data( );
-    sc * x2_mapped = my_quadrature._x2.data( );
-    sc * x3_mapped = my_quadrature._x3.data( );
-    sc * y1_mapped = my_quadrature._y1.data( );
-    sc * y2_mapped = my_quadrature._y2.data( );
-    sc * y3_mapped = my_quadrature._y3.data( );
-    sc * w = nullptr;
-
-    for ( lo delta = 0; delta <= n_timesteps; ++delta ) {
-      scaled_delta = timestep * delta;
-
-#pragma omp for schedule( dynamic )
-      for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
-        test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
-        test_mesh->get_spatial_normal( i_test, nx );
-        test_area = test_mesh->spatial_area( i_test );
-        for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
-          if ( delta == 0 ) {
-            get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
-          } else {
-            n_shared_vertices = 0;
-            rot_test = 0;
-            rot_trial = 0;
-          }
-          trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
-          trial_mesh->get_spatial_normal( i_trial, ny );
-          trial_area = trial_mesh->spatial_area( i_trial );
-          triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices,
-rot_test, rot_trial, my_quadrature );
-
-          w = my_quadrature._w[ n_shared_vertices ].data( );
-
-          size = my_quadrature._w[ n_shared_vertices ].size( );
-
-          if ( delta == 0 ) {
-            kernel1 = 0.0;
-#pragma omp simd reduction( + : kernel1 ) simdlen( DATA_WIDTH )
-            for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-              kernel1 += _kernel->anti_tau_limit(
-                           x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-                           x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                           x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny )
-                * w[ i_quad ];
-            }
-            global_matrix.add(
-              0, i_test, i_trial, timestep * kernel1 * test_area * trial_area );
-          }
-
-          kernel2 = 0.0;
-#pragma omp simd reduction( + : kernel2 ) simdlen( DATA_WIDTH )
-          for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-            kernel2 += _kernel->anti_tau_anti_t(
-                         x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-                         x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                         x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx, ny,
-                         scaled_delta )
-              * w[ i_quad ];
-          }
-          kernel2 *= test_area * trial_area;
-          if ( delta > 0 ) {
-            global_matrix.add( delta - 1, i_test, i_trial, -kernel2 );
-            if ( delta < n_timesteps ) {
-              global_matrix.add( delta, i_test, i_trial, 2.0 * kernel2 );
-            }
-          } else {
-            global_matrix.add( 0, i_test, i_trial, kernel2 );
-          }
-          if ( delta < n_timesteps - 1 ) {
-            global_matrix.add( delta + 1, i_test, i_trial, -kernel2 );
-          }
-        }
-      }
-    }
-  }
-}
-*/
-///*
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::assemble( besthea::linear_algebra::
@@ -352,7 +234,6 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
     }
   }
 }
-//*/
 
 /**
  * Specialization for hypersingular operator with piecewise linear functions.
