@@ -65,9 +65,6 @@ besthea::mesh::space_cluster_tree::space_cluster_tree(
   ++_n_nonempty_nodes;
   this->build_tree( *_root, 1 );
   this->compute_padding( *_root );
-  for ( auto it = _paddings.begin( ); it != _paddings.end( ); ++it ) {
-    std::cout << *it << std::endl;
-  }
 }
 
 void besthea::mesh::space_cluster_tree::build_tree(

@@ -186,6 +186,17 @@ class besthea::mesh::space_cluster {
     }
   }
 
+  /**
+   * Returns parent's octant of the cluster.
+   *
+   * For parent cluster with center at (0, 0, 0) the following octant ordering
+   * holds:
+   *
+   * oct/coord	1 2 3 4 5 6 7 8
+   * 	x		+ - - + + - - +
+   * 	y		+ + - - + + - -
+   * 	z		+ + + + - - - -
+   */
   short get_octant( ) const {
     return _octant;
   }
@@ -320,6 +331,8 @@ class besthea::mesh::space_cluster {
   lo _level;      //!< level within the cluster tree
   short _octant;  //!< octant of the parent cluster
   sc _padding;    //!< padding of the cluster
+  std::vector< slou >
+    box_coordinate;  //!< coordinate of the box within boxes on given level
 };
 
 #endif /* INCLUDE_BESTHEA_SPACE_CLUSTER_H_ */
