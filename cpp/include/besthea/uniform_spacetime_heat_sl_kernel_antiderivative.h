@@ -73,13 +73,12 @@ class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
    * @param[in] xy1 First coordinate of `x - y`.
    * @param[in] xy2 Second coordinate of `x - y`.
    * @param[in] xy3 Third coordinate of `x - y`.
-   * @param[in] nx Normal in the `x` variable.
    * @param[in] ny Normal in the `y` variable.
    * @param[in] scaled_delta Difference of time intervals.
    */
-#pragma omp declare simd uniform( nx, ny, scaled_delta ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, ny, scaled_delta ) simdlen( DATA_WIDTH )
   sc do_anti_tau_anti_t(
-    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, sc scaled_delta ) {
+    sc xy1, sc xy2, sc xy3, const sc * ny, sc scaled_delta ) const {
     sc value;
     sc norm = std::sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
     sc sqrt_d = std::sqrt( scaled_delta );
@@ -102,30 +101,32 @@ class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
   }
 
   /**
-   * ONLY NEEDED FOR POTENTIALS, NOT USED FOR BIO!
    * @param[in] xy1 First coordinate of `x - y`.
    * @param[in] xy2 Second coordinate of `x - y`.
    * @param[in] xy3 Third coordinate of `x - y`.
-   * @param[in] nx Normal in the `x` variable.
    * @param[in] ny Normal in the `y` variable.
    * @param[in] scaled_delta Difference of time intervals.
    */
-#pragma omp declare simd uniform( nx, ny, scaled_delta ) simdlen( DATA_WIDTH )
-  sc do_anti_tau(
-    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, sc scaled_delta ) {
-    return 0.0;
+#pragma omp declare simd uniform( this, ny, scaled_delta ) simdlen( DATA_WIDTH )
+  sc do_anti_tau_regular(
+    sc xy1, sc xy2, sc xy3, const sc * ny, sc scaled_delta ) const {
+    sc norm = std::sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
+    sc sqrt_d = std::sqrt( scaled_delta );
+
+    sc value = std::erf( norm / ( _two * _sqrt_alpha * sqrt_d ) )
+      / ( _four * _pi * _alpha * norm );
+
+    return value;
   }
 
-/**
- * Evaluates the first antiderivative.
- * @param[in] xy1 First coordinate of `x - y`.
- * @param[in] xy2 Second coordinate of `x - y`.
- * @param[in] xy3 Third coordinate of `x - y`.
- * @param[in] nx Normal in the `x` variable.
- * @param[in] ny Normal in the `y` variable.
- */
-#pragma omp declare simd uniform( nx, ny ) simdlen( DATA_WIDTH )
-  sc do_anti_tau_limit( sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny ) {
+  /**
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] ny Normal in the `y` variable.
+   */
+#pragma omp declare simd uniform( this, ny ) simdlen( DATA_WIDTH )
+  sc do_anti_tau_limit( sc xy1, sc xy2, sc xy3, const sc * ny ) const {
     sc norm = std::sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
 
     sc value = _one / ( _four * _pi * _alpha * norm );

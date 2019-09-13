@@ -33,10 +33,10 @@
 #ifndef INCLUDE_BESTHEA_BASIS_FUNCTION_H_
 #define INCLUDE_BESTHEA_BASIS_FUNCTION_H_
 
-//#include "besthea/uniform_spacetime_be_assembler.h"
 #include "besthea/full_matrix.h"
 #include "besthea/mesh.h"
 #include "besthea/settings.h"
+#include "besthea/coordinates.h"
 
 #include <array>
 #include <vector>
@@ -75,27 +75,34 @@ class besthea::bem::basis_function {
   /**
    * Returns this cast to the descendant's type.
    */
-  derived_type & derived( ) {
-    return static_cast< derived_type & >( *this );
+  derived_type * derived( ) {
+    return static_cast< derived_type * >( this );
+  }
+
+  /**
+   * Returns this cast to the descendant's type.
+   */
+  const derived_type * derived( ) const {
+    return static_cast< const derived_type * >( this );
   }
 
   /**
    * Returns number of basis functions supported on i_elem.
    */
-  virtual lo dimension_local( ) = 0;
+  virtual lo dimension_local( ) const = 0;
 
   /**
    * Returns number of basis functions on the whole mesh.
    */
-  virtual lo dimension_global( ) = 0;
+  virtual lo dimension_global( ) const = 0;
 
   /**
    * Provides global indices for local contributions.
    * @param[in] i_elem Element index.
    * @param[out] indices Global indices for local contributions.
    */
-  void local_to_global( lo i_elem, std::vector< lo > & indices ) {
-    derived( ).do_local_to_global( i_elem, indices );
+  void local_to_global( lo i_elem, std::vector< lo > & indices ) const {
+    derived( )->do_local_to_global( i_elem, indices );
   }
 
   /**
@@ -108,8 +115,8 @@ class besthea::bem::basis_function {
    * @param[out] indices Global indices for local contributions.
    */
   void local_to_global( lo i_elem, int n_shared_vertices, int rotation,
-    bool swap, std::vector< lo > & indices ) {
-    derived( ).do_local_to_global(
+    bool swap, std::vector< lo > & indices ) const {
+    derived( )->do_local_to_global(
       i_elem, n_shared_vertices, rotation, swap, indices );
   }
 
@@ -122,8 +129,9 @@ class besthea::bem::basis_function {
    * @param[in] n Element normal.
    */
 #pragma omp declare simd uniform( i_elem, i_fun, n ) simdlen( DATA_WIDTH )
-  sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n ) {
-    return derived( ).do_evaluate( i_elem, i_fun, x1_ref, x2_ref, n );
+  sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref,
+    const sc * n ) const {
+    return derived( )->do_evaluate( i_elem, i_fun, x1_ref, x2_ref, n );
   }
 
   /**
@@ -140,9 +148,10 @@ class besthea::bem::basis_function {
    */
 #pragma omp declare simd uniform( \
   i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
-  sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n,
-    int n_shared_vertices, int rotation, bool swap ) {
-    return derived( ).do_evaluate(
+  sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref,
+    const sc * n, int n_shared_vertices,
+    int rotation, bool swap ) const {
+    return derived( )->do_evaluate(
       i_elem, i_fun, x1_ref, x2_ref, n, n_shared_vertices, rotation, swap );
   }
 

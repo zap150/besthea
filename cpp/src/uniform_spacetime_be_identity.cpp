@@ -64,7 +64,7 @@ void besthea::bem::uniform_spacetime_be_identity< test_space_type,
 
 template< class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_identity< test_space_type,
-  trial_space_type >::assemble( matrix_type & global_matrix ) {
+  trial_space_type >::assemble( matrix_type & global_matrix ) const {
   std::vector< los > ii;
   std::vector< los > jj;
   std::vector< sc > vv;
@@ -79,7 +79,7 @@ void besthea::bem::uniform_spacetime_be_identity< test_space_type,
 template< class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_identity< test_space_type,
   trial_space_type >::assemble_triplets( std::vector< los > & ii,
-  std::vector< los > & jj, std::vector< sc > & vv ) {
+  std::vector< los > & jj, std::vector< sc > & vv ) const {
   auto & test_basis = _test_space->get_basis( );
   auto & trial_basis = _trial_space->get_basis( );
   auto mesh = _test_space->get_mesh( );
@@ -104,7 +104,7 @@ void besthea::bem::uniform_spacetime_be_identity< test_space_type,
   lo size = w.size( );
 
   sc value, test, trial, area;
-  sc n[ 3 ];
+  linear_algebra::coordinates< 3 > n;
   for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
     mesh->get_spatial_normal( i_elem, n );
     area = mesh->spatial_area( i_elem );
@@ -116,9 +116,9 @@ void besthea::bem::uniform_spacetime_be_identity< test_space_type,
         value = 0.0;
         for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
           test = test_basis.evaluate(
-            i_elem, i_loc_test, x1_ref[ i_quad ], x2_ref[ i_quad ], n );
-          trial = trial_basis.evaluate(
-            i_elem, i_loc_trial, x1_ref[ i_quad ], x2_ref[ i_quad ], n );
+            i_elem, i_loc_test, x1_ref[ i_quad ], x2_ref[ i_quad ], n.data( ) );
+          trial = trial_basis.evaluate( i_elem, i_loc_trial, x1_ref[ i_quad ],
+            x2_ref[ i_quad ], n.data( ) );
 
           value += w[ i_quad ] * test * trial;
         }
@@ -149,3 +149,17 @@ template class besthea::bem::uniform_spacetime_be_identity<
 template class besthea::bem::uniform_spacetime_be_identity<
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+
+// Needed for L2 projection which is const
+template class besthea::bem::uniform_spacetime_be_identity<
+  const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  const besthea::bem::uniform_spacetime_be_space<
+    besthea::bem::basis_tri_p0 > >;
+template class besthea::bem::uniform_spacetime_be_identity<
+  const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  const besthea::bem::uniform_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >;
+template class besthea::bem::uniform_spacetime_be_identity<
+  const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  const besthea::bem::uniform_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >;

@@ -74,7 +74,7 @@ class besthea::linear_algebra::block_vector {
   ~block_vector( );
 
   /**
-   * Returns a pointer to a single block.
+   * Returns a reference to a single block.
    * @param[in] d Index of the block.
    */
   vector_type & get_block( lo d ) {
@@ -82,11 +82,34 @@ class besthea::linear_algebra::block_vector {
   }
 
   /**
-   * Returns a pointer to a single block.
+   * Returns a reference to a single block.
    * @param[in] d Index of the block.
    */
   const vector_type & get_block( lo d ) const {
     return _data[ d ];
+  }
+
+  /*!
+   * @brief Returns the i-th element of the d-th block.
+   * @param[in] d Block index.
+   * @param[in] i Element index.
+   */
+  sc get( lo d, lo i ) const {
+    return _data[ d ][ i ];
+  }
+
+  /**
+   * Returns the block dimension.
+   */
+  lo get_block_size( ) const {
+    return _block_size;
+  }
+
+  /**
+   * Returns the dimension of a single block
+   */
+  lo get_size( ) const {
+    return _size;
   }
 
   /**
@@ -101,6 +124,7 @@ class besthea::linear_algebra::block_vector {
   /**
    * Resizes the vector blocks.
    * @param[in] size New size.
+   * @param[in] zero Initialize to 0 if true.
    */
   void resize_blocks( lo size, bool zero = true ) {
     for ( vector_type & v : _data ) {
@@ -110,7 +134,7 @@ class besthea::linear_algebra::block_vector {
   }
 
   /*!
-   * @brief Sets the i-th element of the vector.
+   * @brief Sets the i-th element of the d-th block.
    * @param[in] d Block index.
    * @param[in] i Element index.
    * @param[in] value Value to be set.

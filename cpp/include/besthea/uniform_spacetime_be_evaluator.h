@@ -60,19 +60,29 @@ class besthea::bem::uniform_spacetime_be_evaluator {
    */
   struct quadrature_wrapper {
     std::vector< sc, besthea::allocator_type< sc > >
-      _wx;  //!< Spatial quadrature weights
+      _wy;  //!< Spatial quadrature weights
     std::vector< sc, besthea::allocator_type< sc > >
-      _x1_ref;  //!< First coordinates of quadrature nodes in the reference
+      _y1_ref;  //!< First coordinates of quadrature nodes in the reference
                 //!< spatial element
     std::vector< sc, besthea::allocator_type< sc > >
-      _x2_ref;  //!< Second coordinates of quadrature nodes in the reference
+      _y2_ref;  //!< Second coordinates of quadrature nodes in the reference
                 //!< spatial element
     std::vector< sc, besthea::allocator_type< sc > >
-      _x1;  //!< First coordinates of quadrature nodes in the spatial element
+      _y1;  //!< First coordinates of quadrature nodes in the spatial element
     std::vector< sc, besthea::allocator_type< sc > >
-      _x2;  //!< Second coordinates of quadrature nodes in the spatial element
+      _y2;  //!< Second coordinates of quadrature nodes in the spatial element
     std::vector< sc, besthea::allocator_type< sc > >
-      _x3;  //!< Third coordinates of quadrature nodes in the spatial element
+      _y3;  //!< Third coordinates of quadrature nodes in the spatial element
+
+    std::vector< sc, besthea::allocator_type< sc > >
+      _x1;  //!< First coordinates of evaluation points
+    std::vector< sc, besthea::allocator_type< sc > >
+      _x2;  //!< Second coordinates of evaluation points
+    std::vector< sc, besthea::allocator_type< sc > >
+      _x3;  //!< Third coordinates of evaluation points.
+
+    std::vector< sc, besthea::allocator_type< sc > >
+      _kernel_values;  //!< Buffer for storing kernel values.
   };
 
  public:
@@ -80,7 +90,7 @@ class besthea::bem::uniform_spacetime_be_evaluator {
    * Constructor.
    * @param[in] kernel Spacetime kernel antiderivative object.
    * @param[in] space Boundary element space.
-   * @param[in] order_regular Triangle quadrature order for regular quadrature.
+   * @param[in] order_spatial Triangle quadrature order for regular quadrature.
    */
   uniform_spacetime_be_evaluator(
     kernel_type & kernel, space_type & space, int order_spatial = 4 );
@@ -96,6 +106,7 @@ class besthea::bem::uniform_spacetime_be_evaluator {
   /**
    * Assembles the spacetime matrix.
    * @param[in] x Point coordinates.
+   * @param[in] density Density of the potential.
    * @param[out] result Result in the given points.
    */
   void evaluate( const std::vector< sc > & x, const block_vector_type & density,
@@ -117,7 +128,9 @@ class besthea::bem::uniform_spacetime_be_evaluator {
    * @param[in] x3 Coordinates of the third node of the test element.
    * @param[in,out] my_quadrature Structure holding the quadrature nodes.
    */
-  void triangle_to_geometry( const sc * x1, const sc * x2, const sc * x3,
+  void triangle_to_geometry( const linear_algebra::coordinates< 3 > & x1,
+    const linear_algebra::coordinates< 3 > & x2,
+    const linear_algebra::coordinates< 3 > & x3,
     quadrature_wrapper & my_quadrature ) const;
 
   kernel_type * _kernel;  //!< Kernel temporal antiderivative.

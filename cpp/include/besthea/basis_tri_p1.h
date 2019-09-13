@@ -62,19 +62,19 @@ class besthea::bem::basis_tri_p1
   /**
    * Returns number of basis functions supported on i_elem.
    */
-  virtual lo dimension_local( );
+  virtual lo dimension_local( ) const;
 
   /**
    * Returns number of basis functions on the whole mesh.
    */
-  virtual lo dimension_global( );
+  virtual lo dimension_global( ) const;
 
   /**
    * Provides global indices for local contributions.
    * @param[in] i_elem Element index.
    * @param[out] indices Global indices for local contributions.
    */
-  void do_local_to_global( lo i_elem, std::vector< lo > & indices );
+  void do_local_to_global( lo i_elem, std::vector< lo > & indices ) const;
 
   /**
    * Provides global indices for local contributions.
@@ -86,7 +86,7 @@ class besthea::bem::basis_tri_p1
    * @param[out] indices Global indices for local contributions.
    */
   void do_local_to_global( lo i_elem, int n_shared_vertices, int rotation,
-    bool swap, std::vector< lo > & indices );
+    bool swap, std::vector< lo > & indices ) const;
 
   /**
    * Evaluates the basis function.
@@ -96,8 +96,21 @@ class besthea::bem::basis_tri_p1
    * @param[in] x2_ref Second coordinate of reference quadrature point.
    * @param[in] n Element normal.
    */
-#pragma omp declare simd uniform( i_elem, i_fun, n ) simdlen( DATA_WIDTH )
-  sc do_evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n );
+#pragma omp declare simd uniform( this, i_elem, i_fun, n ) simdlen( DATA_WIDTH )
+  sc do_evaluate(
+    lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n ) const {
+    sc value = 0.0;
+
+    if ( i_fun == 0 ) {
+      value = 1 - x1_ref - x2_ref;
+    } else if ( i_fun == 1 ) {
+      value = x1_ref;
+    } else if ( i_fun == 2 ) {
+      value = x2_ref;
+    }
+
+    return value;
+  }
 
   /**
    * Evaluates the basis function.
@@ -111,35 +124,26 @@ class besthea::bem::basis_tri_p1
    * @param[in] rotation Virtual element rotation (regularized quadrature).
    * @param[in] swap Virtual element inversion (regularized quadrature).
    */
-#pragma omp declare simd uniform( \
-  i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, i_elem, i_fun, n, n_shared_vertices, \
+  rotation, swap ) simdlen( DATA_WIDTH )
   sc do_evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n,
-    int n_shared_vertices, int rotation, bool swap );
+    int n_shared_vertices, int rotation, bool swap ) const {
+    sc value = 0.0;
+
+    if ( i_fun == 0 ) {
+      value = 1 - x1_ref - x2_ref;
+    } else if ( i_fun == 1 ) {
+      value = x1_ref;
+    } else if ( i_fun == 2 ) {
+      value = x2_ref;
+    }
+
+    return value;
+  }
 
   /**
    * Evaluates surface curl of the basis function.
    * @param[in] i_elem Element index.
-   * @param[in] i_fun Local basis function index.
-   * @param[in] n Element normal.
-   * @param[in] n_shared_vertices Number of shared vertives in currect elements
-   * (regularized quadrature).
-   * @param[in] rotation Virtual element rotation (regularized quadrature).
-   * @param[in] swap Virtual element inversion (regularized quadrature).
-   * @param[out] c1 First component of curl.
-   * @param[out] c2 Second component of curl.
-   * @param[out] c3 Third component of curl.
-   */
-#pragma omp declare simd uniform( \
-  i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
-  void evaluate_curl( lo i_elem, lo i_fun, const sc * n, int n_shared_vertices,
-    int rotation, bool swap, sc & c1, sc & c2, sc & c3 );
-
-  /**
-   * Evaluates surface curl of the basis function.
-   * @param[in] i_elem Element index.
-   * @param[in] i_fun Local basis function index.
-   * @param[in] x1_ref First coordinate of reference quadrature point.
-   * @param[in] x2_ref Second coordinate of reference quadrature point.
    * @param[in] n Element normal.
    * @param[in] n_shared_vertices Number of shared vertives in currect elements
    * (regularized quadrature).
@@ -147,8 +151,8 @@ class besthea::bem::basis_tri_p1
    * @param[in] swap Virtual element inversion (regularized quadrature).
    * @param[out] curls Curls of all three shape functions.
    */
-  void evaluate_curl( lo i_elem, const sc * n, int n_shared_vertices,
-    int rotation, bool swap, sc * curls );
+  void evaluate_curl( lo i_elem, const linear_algebra::coordinates< 3 > & n,
+    int n_shared_vertices, int rotation, bool swap, sc * curls ) const;
 };
 
 #endif /* INCLUDE_BESTHEA_BASIS_TRI_P1_H_ */

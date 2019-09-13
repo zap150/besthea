@@ -65,14 +65,14 @@ class besthea::linear_algebra::matrix
   /**
    * Returns number of rows.
    */
-  lo get_n_rows( ) {
+  lo get_n_rows( ) const {
     return _n_rows;
   }
 
   /**
    * Returns number of columns.
    */
-  lo get_n_columns( ) {
+  lo get_n_columns( ) const {
     return _n_columns;
   }
 

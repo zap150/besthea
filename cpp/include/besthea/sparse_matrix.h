@@ -128,7 +128,7 @@ class besthea::linear_algebra::sparse_matrix
    * @param[in,out] n_iterations Maximal number of iterations, actual value on exit.
    */
   void eigen_cg_solve( const vector & rhs, vector & solution,
-    sc & relative_residual_error, lo & n_iterations );
+    sc & relative_residual_error, lo & n_iterations ) const;
 
  protected:
   Eigen::SparseMatrix< sc, Eigen::ColMajor, los > _data;  //!< Eigen data.
