@@ -155,17 +155,17 @@ class besthea::bem::uniform_spacetime_heat_hs_kernel_antiderivative
     return value;
   }
 
-/**
- * Evaluates the second antiderivative.
- * @param[in] xy1 First coordinate of `x - y`.
- * @param[in] xy2 Second coordinate of `x - y`.
- * @param[in] xy3 Third coordinate of `x - y`.
- * @param[in] nx Normal in the `x` variable.
- * @param[in] ny Normal in the `y` variable.
- * @param[in] scaled_delta Difference of time intervals.
- * @param[out] value1 Return value for anti_tau_anti_t part.
- * @param[out] value2 Return value for anti_t part.
- */
+  /**
+   * Evaluates the second antiderivative.
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] nx Normal in the `x` variable.
+   * @param[in] ny Normal in the `y` variable.
+   * @param[in] scaled_delta Difference of time intervals.
+   * @param[out] value1 Return value for anti_tau_anti_t part.
+   * @param[out] value2 Return value for anti_t part.
+   */
 #pragma omp declare simd uniform( this, nx, ny, scaled_delta ) \
   simdlen( DATA_WIDTH )
   void anti_tau_anti_t_and_anti_t( sc xy1, sc xy2, sc xy3, const sc * nx,
