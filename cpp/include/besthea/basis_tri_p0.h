@@ -96,9 +96,11 @@ class besthea::bem::basis_tri_p0
    * @param[in] x2_ref Second coordinate of reference quadrature point.
    * @param[in] n Element normal.
    */
-#pragma omp declare simd uniform( i_elem, i_fun, n ) simdlen( DATA_WIDTH )
-  sc do_evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref,
-    const sc * n ) const;
+#pragma omp declare simd uniform( this, i_elem, i_fun, n ) simdlen( DATA_WIDTH )
+  sc do_evaluate(
+    lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n ) const {
+    return 1.0;
+  }
 
   /**
    * Evaluates the basis function.
@@ -112,11 +114,12 @@ class besthea::bem::basis_tri_p0
    * @param[in] rotation Virtual element rotation (regularized quadrature).
    * @param[in] swap Virtual element inversion (regularized quadrature).
    */
-#pragma omp declare simd uniform( \
-  i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
-  sc do_evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref,
-    const sc * n, int n_shared_vertices,
-    int rotation, bool swap ) const;
+#pragma omp declare simd uniform( this, i_elem, i_fun, n, n_shared_vertices, \
+  rotation, swap ) simdlen( DATA_WIDTH )
+  sc do_evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n,
+    int n_shared_vertices, int rotation, bool swap ) const {
+    return 1.0;
+  }
 };
 
 #endif /* INCLUDE_BESTHEA_BASIS_TRI_P0_H_ */

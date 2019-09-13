@@ -96,9 +96,21 @@ class besthea::bem::basis_tri_p1
    * @param[in] x2_ref Second coordinate of reference quadrature point.
    * @param[in] n Element normal.
    */
-#pragma omp declare simd uniform( i_elem, i_fun, n ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, i_elem, i_fun, n ) simdlen( DATA_WIDTH )
   sc do_evaluate(
-    lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n ) const;
+    lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n ) const {
+    sc value = 0.0;
+
+    if ( i_fun == 0 ) {
+      value = 1 - x1_ref - x2_ref;
+    } else if ( i_fun == 1 ) {
+      value = x1_ref;
+    } else if ( i_fun == 2 ) {
+      value = x2_ref;
+    }
+
+    return value;
+  }
 
   /**
    * Evaluates the basis function.
@@ -112,18 +124,22 @@ class besthea::bem::basis_tri_p1
    * @param[in] rotation Virtual element rotation (regularized quadrature).
    * @param[in] swap Virtual element inversion (regularized quadrature).
    */
-#pragma omp declare simd uniform( \
-  i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, i_elem, i_fun, n, n_shared_vertices, \
+  rotation, swap ) simdlen( DATA_WIDTH )
   sc do_evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n,
-    int n_shared_vertices, int rotation, bool swap ) const;
+    int n_shared_vertices, int rotation, bool swap ) const {
+    sc value = 0.0;
 
-  // Intel 19.0.4 cannot compile...
-  /*
-  #pragma omp declare simd uniform( \
-    i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
-    void evaluate_curl( lo i_elem, lo i_fun, const sc * n, int
-  n_shared_vertices, int rotation, bool swap, sc & c1, sc & c2, sc & c3 ) const;
-  */
+    if ( i_fun == 0 ) {
+      value = 1 - x1_ref - x2_ref;
+    } else if ( i_fun == 1 ) {
+      value = x1_ref;
+    } else if ( i_fun == 2 ) {
+      value = x2_ref;
+    }
+
+    return value;
+  }
 
   /**
    * Evaluates surface curl of the basis function.
