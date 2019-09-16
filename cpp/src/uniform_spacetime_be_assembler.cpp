@@ -269,6 +269,157 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 }
 
 /**
+ * Specialization for single-layer operator with piecewise constant functions.
+ * @param[out] global_matrix Block lower triangular Toeplitz matrix.
+ */
+template<>
+void besthea::bem::uniform_spacetime_be_assembler<
+  besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
+  assemble( besthea::linear_algebra::block_lower_triangular_toeplitz_matrix &
+      global_matrix ) const {
+  auto test_mesh = _test_space->get_mesh( );
+  auto trial_mesh = _trial_space->get_mesh( );
+
+  lo n_test_elements = test_mesh->get_n_spatial_elements( );
+  lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
+
+  // number of temporal elements and timestep should be the same for test and
+  // trial meshes
+  lo n_timesteps = test_mesh->get_n_temporal_elements( );
+  sc timestep = test_mesh->get_timestep( );
+  lo n_rows = n_test_elements;
+  lo n_columns = n_trial_elements;
+  global_matrix.resize( n_timesteps );
+  global_matrix.resize_blocks( n_rows, n_columns );
+
+  sc scaled_delta;
+
+#pragma omp parallel
+  {
+    sc value, test_area, trial_area;
+    lo size;
+    int n_shared_vertices = 0;
+    int rot_test = 0;
+    int rot_trial = 0;
+
+    linear_algebra::coordinates< 3 > x1, x2, x3;
+    linear_algebra::coordinates< 3 > y1, y2, y3;
+
+    quadrature_wrapper my_quadrature;
+    init_quadrature( my_quadrature );
+    sc * w = nullptr;
+    sc * x1_mapped = my_quadrature._x1.data( );
+    sc * x2_mapped = my_quadrature._x2.data( );
+    sc * x3_mapped = my_quadrature._x3.data( );
+    sc * y1_mapped = my_quadrature._y1.data( );
+    sc * y2_mapped = my_quadrature._y2.data( );
+    sc * y3_mapped = my_quadrature._y3.data( );
+
+    for ( lo delta = 0; delta <= n_timesteps; ++delta ) {
+#pragma omp single
+      scaled_delta = timestep * delta;
+
+#pragma omp for schedule( dynamic )
+      for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
+        test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
+        test_area = test_mesh->spatial_area( i_test );
+        for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
+          if ( delta == 0 ) {
+            get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
+          } else {
+            n_shared_vertices = 0;
+            rot_test = 0;
+            rot_trial = 0;
+          }
+          trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
+          trial_area = trial_mesh->spatial_area( i_trial );
+
+          triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices,
+            rot_test, rot_trial, my_quadrature );
+          w = my_quadrature._w[ n_shared_vertices ].data( );
+
+          size = my_quadrature._w[ n_shared_vertices ].size( );
+
+          if ( delta == 0 ) {
+            value = 0.0;
+
+#pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
+                          y2_mapped, y3_mapped, w : DATA_ALIGN ) \
+						  reduction( + : value ) simdlen( DATA_WIDTH )
+            for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+              value += _kernel->anti_tau_limit(
+                         x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                         x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                         x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nullptr )
+                * w[ i_quad ];
+            }
+
+            global_matrix.add(
+              0, i_test, i_trial, timestep * value * test_area * trial_area );
+          }
+
+          value = 0.0;
+          if ( delta == 0 ) {
+#pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
+                          y2_mapped, y3_mapped, w : DATA_ALIGN ) \
+						  reduction( + : value ) simdlen( DATA_WIDTH )
+            for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+              value += _kernel->anti_tau_anti_t_limit_in_time_regular_in_space(
+                         x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                         x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                         x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nullptr )
+                * w[ i_quad ];
+            }
+          } else {
+            if ( delta == 0 || i_test != i_trial ) {
+#pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
+                          y2_mapped, y3_mapped, w : DATA_ALIGN ) \
+						  reduction( + : value ) simdlen( DATA_WIDTH )
+              for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+                value
+                  += _kernel->anti_tau_anti_t_regular_in_time_regular_in_space(
+                       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                       x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                       x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nullptr,
+                       scaled_delta )
+                  * w[ i_quad ];
+              }
+            } else {
+#pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
+                          y2_mapped, y3_mapped, w : DATA_ALIGN ) \
+						  reduction( + : value ) simdlen( DATA_WIDTH )
+              for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+                value += _kernel->anti_tau_anti_t_regular_in_time(
+                           x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                           x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                           x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nullptr,
+                           scaled_delta )
+                  * w[ i_quad ];
+              }
+            }
+          }
+
+          value *= test_area * trial_area;
+          if ( delta > 0 ) {
+            global_matrix.add( delta - 1, i_test, i_trial, -value );
+            if ( delta < n_timesteps ) {
+              global_matrix.add( delta, i_test, i_trial, 2.0 * value );
+            }
+          } else {
+            global_matrix.add( 0, i_test, i_trial, value );
+          }
+          if ( delta < n_timesteps - 1 ) {
+            global_matrix.add( delta + 1, i_test, i_trial, -value );
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
  * Specialization for hypersingular operator with piecewise linear functions.
  * @param[out] global_matrix Block lower triangular Toeplitz matrix.
  */
