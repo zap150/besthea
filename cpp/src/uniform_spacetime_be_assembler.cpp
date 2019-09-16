@@ -431,6 +431,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
   assemble( besthea::linear_algebra::block_lower_triangular_toeplitz_matrix &
       global_matrix ) const {
+  auto & trial_basis = _trial_space->get_basis( );
   auto test_mesh = _test_space->get_mesh( );
   auto trial_mesh = _trial_space->get_mesh( );
 
@@ -451,6 +452,8 @@ void besthea::bem::uniform_spacetime_be_assembler<
 
 #pragma omp parallel
   {
+    std::vector< lo > trial_l2g( 3 );
+
     sc value1, value2, value3;
     sc kernel, test_area, trial_area;
     lo size;
@@ -461,7 +464,6 @@ void besthea::bem::uniform_spacetime_be_assembler<
     linear_algebra::coordinates< 3 > x1, x2, x3;
     linear_algebra::coordinates< 3 > y1, y2, y3;
     linear_algebra::coordinates< 3 > ny;
-    linear_algebra::indices< 3 > trial_element;
 
     sc * ny_data = ny.data( );
 
@@ -493,10 +495,12 @@ void besthea::bem::uniform_spacetime_be_assembler<
             rot_test = 0;
             rot_trial = 0;
           }
-          trial_mesh->get_spatial_element( i_trial, trial_element );
           trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
           trial_mesh->get_spatial_normal( i_trial, ny );
           trial_area = trial_mesh->spatial_area( i_trial );
+
+          trial_basis.local_to_global(
+            i_trial, n_shared_vertices, rot_trial, true, trial_l2g );
 
           triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices,
             rot_test, rot_trial, my_quadrature );
@@ -524,11 +528,11 @@ void besthea::bem::uniform_spacetime_be_assembler<
               value3 += kernel * y2_ref[ i_quad ];
             }
 
-            global_matrix.add( 0, i_test, trial_element[ 0 ],
+            global_matrix.add( 0, i_test, trial_l2g[ 0 ],
               timestep * value1 * test_area * trial_area );
-            global_matrix.add( 0, i_test, trial_element[ 1 ],
+            global_matrix.add( 0, i_test, trial_l2g[ 1 ],
               timestep * value2 * test_area * trial_area );
-            global_matrix.add( 0, i_test, trial_element[ 2 ],
+            global_matrix.add( 0, i_test, trial_l2g[ 2 ],
               timestep * value3 * test_area * trial_area );
           }
 
@@ -592,26 +596,23 @@ void besthea::bem::uniform_spacetime_be_assembler<
           value2 *= test_area * trial_area;
           value3 *= test_area * trial_area;
           if ( delta > 0 ) {
-            global_matrix.add( delta - 1, i_test, trial_element[ 0 ], -value1 );
-            global_matrix.add( delta - 1, i_test, trial_element[ 1 ], -value2 );
-            global_matrix.add( delta - 1, i_test, trial_element[ 2 ], -value3 );
+            global_matrix.add( delta - 1, i_test, trial_l2g[ 0 ], -value1 );
+            global_matrix.add( delta - 1, i_test, trial_l2g[ 1 ], -value2 );
+            global_matrix.add( delta - 1, i_test, trial_l2g[ 2 ], -value3 );
             if ( delta < n_timesteps ) {
-              global_matrix.add(
-                delta, i_test, trial_element[ 0 ], 2.0 * value1 );
-              global_matrix.add(
-                delta, i_test, trial_element[ 1 ], 2.0 * value2 );
-              global_matrix.add(
-                delta, i_test, trial_element[ 2 ], 2.0 * value3 );
+              global_matrix.add( delta, i_test, trial_l2g[ 0 ], 2.0 * value1 );
+              global_matrix.add( delta, i_test, trial_l2g[ 1 ], 2.0 * value2 );
+              global_matrix.add( delta, i_test, trial_l2g[ 2 ], 2.0 * value3 );
             }
           } else {
-            global_matrix.add( 0, i_test, trial_element[ 0 ], value1 );
-            global_matrix.add( 0, i_test, trial_element[ 1 ], value2 );
-            global_matrix.add( 0, i_test, trial_element[ 2 ], value3 );
+            global_matrix.add( 0, i_test, trial_l2g[ 0 ], value1 );
+            global_matrix.add( 0, i_test, trial_l2g[ 1 ], value2 );
+            global_matrix.add( 0, i_test, trial_l2g[ 2 ], value3 );
           }
           if ( delta < n_timesteps - 1 ) {
-            global_matrix.add( delta + 1, i_test, trial_element[ 0 ], -value1 );
-            global_matrix.add( delta + 1, i_test, trial_element[ 1 ], -value2 );
-            global_matrix.add( delta + 1, i_test, trial_element[ 2 ], -value3 );
+            global_matrix.add( delta + 1, i_test, trial_l2g[ 0 ], -value1 );
+            global_matrix.add( delta + 1, i_test, trial_l2g[ 1 ], -value2 );
+            global_matrix.add( delta + 1, i_test, trial_l2g[ 2 ], -value3 );
           }
         }
       }
