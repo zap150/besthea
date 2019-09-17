@@ -1006,8 +1006,8 @@ void besthea::bem::uniform_spacetime_be_assembler<
           value31 = value32 = value33 = 0.0;
           if ( delta == 0 ) {
 #pragma omp simd \
-        aligned( x1_mapped, x2_mapped, x3_mapped : DATA_ALIGN ) \
-        aligned( y1_mapped, y2_mapped, y3_mapped, w : DATA_ALIGN ) \
+        aligned( x1_mapped, x2_mapped, x3_mapped, x1_ref, x2_ref : DATA_ALIGN ) \
+        aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, w : DATA_ALIGN ) \
         private( kernel1, kernel2, phi1x, phi1y ) \
         reduction( + : value11, value12, value13 ) \
         reduction( + : value21, value22, value23 ) \
@@ -1055,8 +1055,8 @@ void besthea::bem::uniform_spacetime_be_assembler<
           } else {
             if ( i_test != i_trial ) {
 #pragma omp simd \
-        aligned( x1_mapped, x2_mapped, x3_mapped : DATA_ALIGN ) \
-        aligned( y1_mapped, y2_mapped, y3_mapped, w : DATA_ALIGN ) \
+        aligned( x1_mapped, x2_mapped, x3_mapped, x1_ref, x2_ref : DATA_ALIGN ) \
+        aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, w : DATA_ALIGN ) \
         private( kernel1, kernel2, phi1x, phi1y ) \
         reduction( + : value11, value12, value13 ) \
         reduction( + : value21, value22, value23 ) \
@@ -1103,8 +1103,8 @@ void besthea::bem::uniform_spacetime_be_assembler<
               }
             } else {
 #pragma omp simd \
-        aligned( x1_mapped, x2_mapped, x3_mapped : DATA_ALIGN ) \
-        aligned( y1_mapped, y2_mapped, y3_mapped, w : DATA_ALIGN ) \
+        aligned( x1_mapped, x2_mapped, x3_mapped, x1_ref, x2_ref : DATA_ALIGN ) \
+        aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, w : DATA_ALIGN ) \
         private( kernel1, kernel2, phi1x, phi1y ) \
         reduction( + : value11, value12, value13 ) \
         reduction( + : value21, value22, value23 ) \
