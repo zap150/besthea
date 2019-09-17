@@ -437,14 +437,13 @@ void besthea::bem::uniform_spacetime_be_assembler<
 
   lo n_test_elements = test_mesh->get_n_spatial_elements( );
   lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
-  lo n_trial_nodes = trial_mesh->get_n_spatial_nodes( );
 
   // number of temporal elements and timestep should be the same for test and
   // trial meshes
   lo n_timesteps = test_mesh->get_n_temporal_elements( );
   sc timestep = test_mesh->get_timestep( );
   lo n_rows = n_test_elements;
-  lo n_columns = n_trial_nodes;
+  lo n_columns = trial_basis.dimension_global( );
   global_matrix.resize( n_timesteps );
   global_matrix.resize_blocks( n_rows, n_columns );
 
@@ -741,7 +740,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
             }
 
             test_basis.evaluate_curl(
-              i_test, nx_data, n_shared_vertices, rot_test, false, test_curls );
+              i_test, nx, n_shared_vertices, rot_test, false, test_curls );
             trial_basis.evaluate_curl(
               i_trial, ny, n_shared_vertices, rot_trial, true, trial_curls );
 
@@ -785,9 +784,9 @@ void besthea::bem::uniform_spacetime_be_assembler<
           }
 
           test_basis.evaluate_curl(
-            i_test, nx_data, n_shared_vertices, rot_test, false, test_curls );
+            i_test, nx, n_shared_vertices, rot_test, false, test_curls );
           trial_basis.evaluate_curl(
-            i_trial, ny_data, n_shared_vertices, rot_trial, true, trial_curls );
+            i_trial, ny, n_shared_vertices, rot_trial, true, trial_curls );
 
           for ( lo i_loc_test = 0; i_loc_test < n_loc_rows; ++i_loc_test ) {
             for ( lo i_loc_trial = 0; i_loc_trial < n_loc_columns;
