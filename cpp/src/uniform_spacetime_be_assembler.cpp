@@ -1019,7 +1019,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
                   x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                   x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
                   x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data,
-                  kernel1, kernel2 );
+                  &kernel1, &kernel2 );
 
               phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
               phi1y = (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ];
@@ -1068,7 +1068,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
                     x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                     x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
                     x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data,
-                    scaled_delta, kernel1, kernel2 );
+                    scaled_delta, &kernel1, &kernel2 );
 
                 phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
                 phi1y = (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ];
@@ -1115,7 +1115,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
                   x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                   x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
                   x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data,
-                  scaled_delta, kernel1, kernel2 );
+                  scaled_delta, &kernel1, &kernel2 );
 
                 phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
                 phi1y = (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ];
