@@ -373,7 +373,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
                 * w[ i_quad ];
             }
           } else {
-            if ( delta == 0 || i_test != i_trial ) {
+            if ( i_test != i_trial ) {
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
                           y2_mapped, y3_mapped, w : DATA_ALIGN ) \
 						  reduction( + : value ) simdlen( DATA_WIDTH )
@@ -553,7 +553,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
               value3 += kernel * y2_ref[ i_quad ];
             }
           } else {
-            if ( delta == 0 || i_test != i_trial ) {
+            if ( i_test != i_trial ) {
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
                           y2_mapped, y3_mapped, w : DATA_ALIGN ) \
 						  private( kernel ) reduction( + : value1, value2, value3 ) \
@@ -623,6 +623,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
  * Specialization for hypersingular operator with piecewise linear functions.
  * @param[out] global_matrix Block lower triangular Toeplitz matrix.
  */
+/*
 template<>
 void besthea::bem::uniform_spacetime_be_assembler<
   besthea::bem::uniform_spacetime_heat_hs_kernel_antiderivative,
@@ -758,10 +759,11 @@ void besthea::bem::uniform_spacetime_be_assembler<
                     * trial_curls[ trial_curl_offset + 2 ];
 
 #pragma omp simd aligned( kernel_data : DATA_ALIGN ) reduction( + : value ) \
-	simdlen( DATA_WIDTH )
+        simdlen( DATA_WIDTH )
                 for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
                   value += kernel_data[ i_quad ] * curl_dot;
                 }
+
                 global_matrix.add_atomic( 0, test_l2g[ i_loc_test ],
                   trial_l2g[ i_loc_trial ],
                   timestep * value * test_area * trial_area );
@@ -801,9 +803,10 @@ void besthea::bem::uniform_spacetime_be_assembler<
                 + test_curls[ test_curl_offset + 2 ]
                   * trial_curls[ trial_curl_offset + 2 ];
 
-#pragma omp simd \
-	aligned( x1_ref, x2_ref, y1_ref, y2_ref, kernel_data, kernel_data_2 : DATA_ALIGN ) \
-	private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
+#pragma omp simd aligned( x1_ref, x2_ref, y1_ref, y2_ref, \
+                kernel_data, kernel_data_2 : DATA_ALIGN ) \
+              private( test, trial ) reduction( + : value ) \
+                simdlen( DATA_WIDTH )
               for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
                 test = test_basis.evaluate( i_test, i_loc_test,
                   x1_ref[ i_quad ], x2_ref[ i_quad ], nx_data,
@@ -816,6 +819,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
                 value += kernel_data[ i_quad ] * curl_dot;
               }
               value *= test_area * trial_area;
+
               if ( delta > 0 ) {
                 global_matrix.add_atomic( delta - 1, test_l2g[ i_loc_test ],
                   trial_l2g[ i_loc_trial ], -value );
@@ -831,6 +835,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
                 global_matrix.add_atomic( delta + 1, test_l2g[ i_loc_test ],
                   trial_l2g[ i_loc_trial ], -value );
               }
+
             }
           }
         }
@@ -838,7 +843,399 @@ void besthea::bem::uniform_spacetime_be_assembler<
     }
   }
 }
+*/
+///*
+template<>
+void besthea::bem::uniform_spacetime_be_assembler<
+  besthea::bem::uniform_spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
+  assemble( besthea::linear_algebra::block_lower_triangular_toeplitz_matrix &
+      global_matrix ) const {
+  auto & test_basis = _test_space->get_basis( );
+  auto & trial_basis = _trial_space->get_basis( );
+  auto test_mesh = _test_space->get_mesh( );
+  auto trial_mesh = _trial_space->get_mesh( );
 
+  // number of temporal elements and timestep should be the same for test and
+  // trial meshes
+  lo n_timesteps = test_mesh->get_n_temporal_elements( );
+  sc timestep = test_mesh->get_timestep( );
+  lo n_rows = test_basis.dimension_global( );
+  lo n_columns = trial_basis.dimension_global( );
+  global_matrix.resize( n_timesteps );
+  global_matrix.resize_blocks( n_rows, n_columns );
+
+  lo n_test_elements = test_mesh->get_n_spatial_elements( );
+  lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
+  sc scaled_delta;
+
+#pragma omp parallel
+  {
+    std::vector< lo > test_l2g( 3 );
+    std::vector< lo > trial_l2g( 3 );
+
+    sc areas, trial_area;
+    sc value11, value12, value13;
+    sc value21, value22, value23;
+    sc value31, value32, value33;
+    lo size;
+    int n_shared_vertices = 0;
+    int rot_test = 0;
+    int rot_trial = 0;
+
+    linear_algebra::coordinates< 3 > x1, x2, x3;
+    linear_algebra::coordinates< 3 > y1, y2, y3;
+    linear_algebra::coordinates< 3 > nx, ny;
+
+    sc * nx_data = nx.data( );
+    sc * ny_data = ny.data( );
+
+    sc test_curls[ 9 ], trial_curls[ 9 ];
+    sc phi1x, phi1y;
+    sc kernel1, kernel2;
+    lo test_curl_offset, trial_curl_offset;
+    sc curl_dot[ 9 ];
+
+    quadrature_wrapper my_quadrature;
+    init_quadrature( my_quadrature );
+    sc * x1_ref = nullptr;
+    sc * x2_ref = nullptr;
+    sc * y1_ref = nullptr;
+    sc * y2_ref = nullptr;
+    sc * w = nullptr;
+    sc * x1_mapped = my_quadrature._x1.data( );
+    sc * x2_mapped = my_quadrature._x2.data( );
+    sc * x3_mapped = my_quadrature._x3.data( );
+    sc * y1_mapped = my_quadrature._y1.data( );
+    sc * y2_mapped = my_quadrature._y2.data( );
+    sc * y3_mapped = my_quadrature._y3.data( );
+
+    for ( lo delta = 0; delta <= n_timesteps; ++delta ) {
+#pragma omp single
+      scaled_delta = timestep * delta;
+
+#pragma omp for schedule( dynamic )
+      for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
+        test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
+        test_mesh->get_spatial_normal( i_test, nx );
+        trial_area = test_mesh->spatial_area( i_test );
+        for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
+          if ( delta == 0 ) {
+            get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
+          } else {
+            n_shared_vertices = 0;
+            rot_test = 0;
+            rot_trial = 0;
+          }
+
+          trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
+          trial_mesh->get_spatial_normal( i_trial, ny );
+          areas = trial_area * trial_mesh->spatial_area( i_trial );
+
+          test_basis.local_to_global(
+            i_test, n_shared_vertices, rot_test, false, test_l2g );
+          trial_basis.local_to_global(
+            i_trial, n_shared_vertices, rot_trial, true, trial_l2g );
+
+          triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices,
+            rot_test, rot_trial, my_quadrature );
+          x1_ref = my_quadrature._x1_ref[ n_shared_vertices ].data( );
+          x2_ref = my_quadrature._x2_ref[ n_shared_vertices ].data( );
+          y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
+          y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
+          w = my_quadrature._w[ n_shared_vertices ].data( );
+
+          size = my_quadrature._w[ n_shared_vertices ].size( );
+
+          test_basis.evaluate_curl(
+            i_test, nx, n_shared_vertices, rot_test, false, test_curls );
+          trial_basis.evaluate_curl(
+            i_trial, ny, n_shared_vertices, rot_trial, true, trial_curls );
+
+          for ( lo i_loc_test = 0; i_loc_test < 3; ++i_loc_test ) {
+            for ( lo i_loc_trial = 0; i_loc_trial < 3; ++i_loc_trial ) {
+              test_curl_offset = 3 * i_loc_test;
+              trial_curl_offset = 3 * i_loc_trial;
+              curl_dot[ i_loc_trial * 3 + i_loc_test ]
+                = test_curls[ test_curl_offset ]
+                  * trial_curls[ trial_curl_offset ]
+                + test_curls[ test_curl_offset + 1 ]
+                  * trial_curls[ trial_curl_offset + 1 ]
+                + test_curls[ test_curl_offset + 2 ]
+                  * trial_curls[ trial_curl_offset + 2 ];
+            }
+          }
+
+          if ( delta == 0 ) {
+            value11 = 0.0;
+#pragma omp simd \
+        aligned( x1_mapped, x2_mapped, x3_mapped : DATA_ALIGN ) \
+        aligned( y1_mapped, y2_mapped, y3_mapped, w : DATA_ALIGN ) \
+        reduction( + : value11 ) simdlen( DATA_WIDTH )
+            for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+              value11 += _kernel->anti_tau_limit(
+                           x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                           x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                           x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data )
+                * w[ i_quad ];
+            }
+
+            global_matrix.add_atomic( 0, test_l2g[ 0 ], trial_l2g[ 0 ],
+              timestep * value11 * curl_dot[ 0 ] * areas );
+            global_matrix.add_atomic( 0, test_l2g[ 1 ], trial_l2g[ 0 ],
+              timestep * value11 * curl_dot[ 1 ] * areas );
+            global_matrix.add_atomic( 0, test_l2g[ 2 ], trial_l2g[ 0 ],
+              timestep * value11 * curl_dot[ 2 ] * areas );
+            global_matrix.add_atomic( 0, test_l2g[ 0 ], trial_l2g[ 1 ],
+              timestep * value11 * curl_dot[ 3 ] * areas );
+            global_matrix.add_atomic( 0, test_l2g[ 1 ], trial_l2g[ 1 ],
+              timestep * value11 * curl_dot[ 4 ] * areas );
+            global_matrix.add_atomic( 0, test_l2g[ 2 ], trial_l2g[ 1 ],
+              timestep * value11 * curl_dot[ 5 ] * areas );
+            global_matrix.add_atomic( 0, test_l2g[ 0 ], trial_l2g[ 2 ],
+              timestep * value11 * curl_dot[ 6 ] * areas );
+            global_matrix.add_atomic( 0, test_l2g[ 1 ], trial_l2g[ 2 ],
+              timestep * value11 * curl_dot[ 7 ] * areas );
+            global_matrix.add_atomic( 0, test_l2g[ 2 ], trial_l2g[ 2 ],
+              timestep * value11 * curl_dot[ 8 ] * areas );
+          }
+
+          value11 = value12 = value13 = 0.0;
+          value21 = value22 = value23 = 0.0;
+          value31 = value32 = value33 = 0.0;
+          if ( delta == 0 ) {
+#pragma omp simd \
+        aligned( x1_mapped, x2_mapped, x3_mapped : DATA_ALIGN ) \
+        aligned( y1_mapped, y2_mapped, y3_mapped, w : DATA_ALIGN ) \
+        private( kernel1, kernel2, phi1x, phi1y ) \
+        reduction( + : value11, value12, value13 ) \
+        reduction( + : value21, value22, value23 ) \
+        reduction( + : value31, value32, value33 ) \
+        simdlen( DATA_WIDTH )
+            for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+              _kernel
+                ->anti_tau_anti_t_and_anti_t_limit_in_time_regular_in_space(
+                  x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                  x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                  x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data,
+                  kernel1, kernel2 );
+
+              phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
+              phi1y = (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ];
+              // phi2* = *1_ref[ i_quad ] and phi3* = *2_ref[ i_quad ];
+
+              value11 += ( kernel1 * curl_dot[ 0 ] + kernel2 * phi1x * phi1y )
+                * w[ i_quad ];
+              value21 += ( kernel1 * curl_dot[ 1 ]
+                           + kernel2 * x1_ref[ i_quad ] * phi1y )
+                * w[ i_quad ];
+              value31 += ( kernel1 * curl_dot[ 2 ]
+                           + kernel2 * x2_ref[ i_quad ] * phi1y )
+                * w[ i_quad ];
+              value12 += ( kernel1 * curl_dot[ 3 ]
+                           + kernel2 * phi1x * y1_ref[ i_quad ] )
+                * w[ i_quad ];
+              value22 += ( kernel1 * curl_dot[ 4 ]
+                           + kernel2 * x1_ref[ i_quad ] * y1_ref[ i_quad ] )
+                * w[ i_quad ];
+              value32 += ( kernel1 * curl_dot[ 5 ]
+                           + kernel2 * x2_ref[ i_quad ] * y1_ref[ i_quad ] )
+                * w[ i_quad ];
+              value13 += ( kernel1 * curl_dot[ 6 ]
+                           + kernel2 * phi1x * y2_ref[ i_quad ] )
+                * w[ i_quad ];
+              value23 += ( kernel1 * curl_dot[ 7 ]
+                           + kernel2 * x1_ref[ i_quad ] * y2_ref[ i_quad ] )
+                * w[ i_quad ];
+              value33 += ( kernel1 * curl_dot[ 8 ]
+                           + kernel2 * x2_ref[ i_quad ] * y2_ref[ i_quad ] )
+                * w[ i_quad ];
+            }
+          } else {
+            if ( i_test != i_trial ) {
+#pragma omp simd \
+        aligned( x1_mapped, x2_mapped, x3_mapped : DATA_ALIGN ) \
+        aligned( y1_mapped, y2_mapped, y3_mapped, w : DATA_ALIGN ) \
+        private( kernel1, kernel2, phi1x, phi1y ) \
+        reduction( + : value11, value12, value13 ) \
+        reduction( + : value21, value22, value23 ) \
+        reduction( + : value31, value32, value33 ) \
+        simdlen( DATA_WIDTH )
+              for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+                _kernel
+                  ->anti_tau_anti_t_and_anti_t_regular_in_time_regular_in_space(
+                    x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                    x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                    x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data,
+                    scaled_delta, kernel1, kernel2 );
+
+                phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
+                phi1y = (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ];
+                // phi2* = *1_ref[ i_quad ] and phi3* = *2_ref[ i_quad ];
+
+                value11 += ( kernel1 * curl_dot[ 0 ] + kernel2 * phi1x * phi1y )
+                  * w[ i_quad ];
+                value21 += ( kernel1 * curl_dot[ 1 ]
+                             + kernel2 * x1_ref[ i_quad ] * phi1y )
+                  * w[ i_quad ];
+                value31 += ( kernel1 * curl_dot[ 2 ]
+                             + kernel2 * x2_ref[ i_quad ] * phi1y )
+                  * w[ i_quad ];
+                value12 += ( kernel1 * curl_dot[ 3 ]
+                             + kernel2 * phi1x * y1_ref[ i_quad ] )
+                  * w[ i_quad ];
+                value22 += ( kernel1 * curl_dot[ 4 ]
+                             + kernel2 * x1_ref[ i_quad ] * y1_ref[ i_quad ] )
+                  * w[ i_quad ];
+                value32 += ( kernel1 * curl_dot[ 5 ]
+                             + kernel2 * x2_ref[ i_quad ] * y1_ref[ i_quad ] )
+                  * w[ i_quad ];
+                value13 += ( kernel1 * curl_dot[ 6 ]
+                             + kernel2 * phi1x * y2_ref[ i_quad ] )
+                  * w[ i_quad ];
+                value23 += ( kernel1 * curl_dot[ 7 ]
+                             + kernel2 * x1_ref[ i_quad ] * y2_ref[ i_quad ] )
+                  * w[ i_quad ];
+                value33 += ( kernel1 * curl_dot[ 8 ]
+                             + kernel2 * x2_ref[ i_quad ] * y2_ref[ i_quad ] )
+                  * w[ i_quad ];
+              }
+            } else {
+#pragma omp simd \
+        aligned( x1_mapped, x2_mapped, x3_mapped : DATA_ALIGN ) \
+        aligned( y1_mapped, y2_mapped, y3_mapped, w : DATA_ALIGN ) \
+        private( kernel1, kernel2, phi1x, phi1y ) \
+        reduction( + : value11, value12, value13 ) \
+        reduction( + : value21, value22, value23 ) \
+        reduction( + : value31, value32, value33 ) \
+        simdlen( DATA_WIDTH )
+              for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+                _kernel->anti_tau_anti_t_and_anti_t_regular_in_time(
+                  x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                  x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                  x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data,
+                  scaled_delta, kernel1, kernel2 );
+
+                phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
+                phi1y = (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ];
+                // phi2* = *1_ref[ i_quad ] and phi3* = *2_ref[ i_quad ];
+
+                value11 += ( kernel1 * curl_dot[ 0 ] + kernel2 * phi1x * phi1y )
+                  * w[ i_quad ];
+                value21 += ( kernel1 * curl_dot[ 1 ]
+                             + kernel2 * x1_ref[ i_quad ] * phi1y )
+                  * w[ i_quad ];
+                value31 += ( kernel1 * curl_dot[ 2 ]
+                             + kernel2 * x2_ref[ i_quad ] * phi1y )
+                  * w[ i_quad ];
+                value12 += ( kernel1 * curl_dot[ 3 ]
+                             + kernel2 * phi1x * y1_ref[ i_quad ] )
+                  * w[ i_quad ];
+                value22 += ( kernel1 * curl_dot[ 4 ]
+                             + kernel2 * x1_ref[ i_quad ] * y1_ref[ i_quad ] )
+                  * w[ i_quad ];
+                value32 += ( kernel1 * curl_dot[ 5 ]
+                             + kernel2 * x2_ref[ i_quad ] * y1_ref[ i_quad ] )
+                  * w[ i_quad ];
+                value13 += ( kernel1 * curl_dot[ 6 ]
+                             + kernel2 * phi1x * y2_ref[ i_quad ] )
+                  * w[ i_quad ];
+                value23 += ( kernel1 * curl_dot[ 7 ]
+                             + kernel2 * x1_ref[ i_quad ] * y2_ref[ i_quad ] )
+                  * w[ i_quad ];
+                value33 += ( kernel1 * curl_dot[ 8 ]
+                             + kernel2 * x2_ref[ i_quad ] * y2_ref[ i_quad ] )
+                  * w[ i_quad ];
+              }
+            }
+          }
+
+          if ( delta > 0 ) {
+            global_matrix.add_atomic(
+              delta - 1, test_l2g[ 0 ], trial_l2g[ 0 ], -value11 * areas );
+            global_matrix.add_atomic(
+              delta - 1, test_l2g[ 1 ], trial_l2g[ 0 ], -value21 * areas );
+            global_matrix.add_atomic(
+              delta - 1, test_l2g[ 2 ], trial_l2g[ 0 ], -value31 * areas );
+            global_matrix.add_atomic(
+              delta - 1, test_l2g[ 0 ], trial_l2g[ 1 ], -value12 * areas );
+            global_matrix.add_atomic(
+              delta - 1, test_l2g[ 1 ], trial_l2g[ 1 ], -value22 * areas );
+            global_matrix.add_atomic(
+              delta - 1, test_l2g[ 2 ], trial_l2g[ 1 ], -value32 * areas );
+            global_matrix.add_atomic(
+              delta - 1, test_l2g[ 0 ], trial_l2g[ 2 ], -value13 * areas );
+            global_matrix.add_atomic(
+              delta - 1, test_l2g[ 1 ], trial_l2g[ 2 ], -value23 * areas );
+            global_matrix.add_atomic(
+              delta - 1, test_l2g[ 2 ], trial_l2g[ 2 ], -value33 * areas );
+            if ( delta < n_timesteps ) {
+              global_matrix.add_atomic(
+                delta, test_l2g[ 0 ], trial_l2g[ 0 ], 2.0 * value11 * areas );
+              global_matrix.add_atomic(
+                delta, test_l2g[ 1 ], trial_l2g[ 0 ], 2.0 * value21 * areas );
+              global_matrix.add_atomic(
+                delta, test_l2g[ 2 ], trial_l2g[ 0 ], 2.0 * value31 * areas );
+              global_matrix.add_atomic(
+                delta, test_l2g[ 0 ], trial_l2g[ 1 ], 2.0 * value12 * areas );
+              global_matrix.add_atomic(
+                delta, test_l2g[ 1 ], trial_l2g[ 1 ], 2.0 * value22 * areas );
+              global_matrix.add_atomic(
+                delta, test_l2g[ 2 ], trial_l2g[ 1 ], 2.0 * value32 * areas );
+              global_matrix.add_atomic(
+                delta, test_l2g[ 0 ], trial_l2g[ 2 ], 2.0 * value13 * areas );
+              global_matrix.add_atomic(
+                delta, test_l2g[ 1 ], trial_l2g[ 2 ], 2.0 * value23 * areas );
+              global_matrix.add_atomic(
+                delta, test_l2g[ 2 ], trial_l2g[ 2 ], 2.0 * value33 * areas );
+            }
+          } else {
+            global_matrix.add_atomic(
+              0, test_l2g[ 0 ], trial_l2g[ 0 ], value11 * areas );
+            global_matrix.add_atomic(
+              0, test_l2g[ 1 ], trial_l2g[ 0 ], value21 * areas );
+            global_matrix.add_atomic(
+              0, test_l2g[ 2 ], trial_l2g[ 0 ], value31 * areas );
+            global_matrix.add_atomic(
+              0, test_l2g[ 0 ], trial_l2g[ 1 ], value12 * areas );
+            global_matrix.add_atomic(
+              0, test_l2g[ 1 ], trial_l2g[ 1 ], value22 * areas );
+            global_matrix.add_atomic(
+              0, test_l2g[ 2 ], trial_l2g[ 1 ], value32 * areas );
+            global_matrix.add_atomic(
+              0, test_l2g[ 0 ], trial_l2g[ 2 ], value13 * areas );
+            global_matrix.add_atomic(
+              0, test_l2g[ 1 ], trial_l2g[ 2 ], value23 * areas );
+            global_matrix.add_atomic(
+              0, test_l2g[ 2 ], trial_l2g[ 2 ], value33 * areas );
+          }
+          if ( delta < n_timesteps - 1 ) {
+            global_matrix.add_atomic(
+              delta + 1, test_l2g[ 0 ], trial_l2g[ 0 ], -value11 * areas );
+            global_matrix.add_atomic(
+              delta + 1, test_l2g[ 1 ], trial_l2g[ 0 ], -value21 * areas );
+            global_matrix.add_atomic(
+              delta + 1, test_l2g[ 2 ], trial_l2g[ 0 ], -value31 * areas );
+            global_matrix.add_atomic(
+              delta + 1, test_l2g[ 0 ], trial_l2g[ 1 ], -value12 * areas );
+            global_matrix.add_atomic(
+              delta + 1, test_l2g[ 1 ], trial_l2g[ 1 ], -value22 * areas );
+            global_matrix.add_atomic(
+              delta + 1, test_l2g[ 2 ], trial_l2g[ 1 ], -value32 * areas );
+            global_matrix.add_atomic(
+              delta + 1, test_l2g[ 0 ], trial_l2g[ 2 ], -value13 * areas );
+            global_matrix.add_atomic(
+              delta + 1, test_l2g[ 1 ], trial_l2g[ 2 ], -value23 * areas );
+            global_matrix.add_atomic(
+              delta + 1, test_l2g[ 2 ], trial_l2g[ 2 ], -value33 * areas );
+          }
+        }
+      }
+    }
+  }
+}
+//*/
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::init_quadrature( quadrature_wrapper & my_quadrature )
