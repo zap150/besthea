@@ -67,7 +67,7 @@ class besthea::linear_algebra::coordinates {
    * Constructing coordinates of the given size.
    * @param[in] zero Initialize to 0 if true.
    */
-  coordinates( bool zero = true );
+  explicit coordinates( bool zero = true );
 
   /**
    * Destructor

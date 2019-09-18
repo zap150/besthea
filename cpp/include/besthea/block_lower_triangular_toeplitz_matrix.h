@@ -159,10 +159,41 @@ class besthea::linear_algebra::block_lower_triangular_toeplitz_matrix
     bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
 
   /*!
+   * @brief In-place Choleski decomposition of the first block and solution.
+   * @param[in,out] rhs Right-hand side overwritten by the result.
+   * @param[in] n_rhs Number of right-hand sides.
+   */
+  void choleski_decompose_solve( block_vector_type & rhs );
+
+  /*!
+   * @brief In-place Choleski decomposition of the first block.
+   */
+  void choleski_decompose( );
+
+  /*!
+   * @brief Choleski solution
+   * @param[in,out] rhs Right-hand side overwritten by the result.
+   * @param[in] n_rhs Number of right-hand sides.
+   */
+  void choleski_solve( block_vector_type & rhs );
+
+  /*!
    * @brief Prints the matrix.
    * @param[in] stream
    */
   void print( std::ostream & stream = std::cout ) const;
+
+  /**
+   * Prints info on the object.
+   */
+  void print_info( ) const {
+    std::cout
+      << "besthea::linear_algebra::block_lower_triangular_toeplitz_matrix"
+      << std::endl;
+    std::cout << "  number of blocks: " << _data.size( ) << std::endl;
+    std::cout << "  dimension of each block: " << _data[ 0 ].get_n_rows( )
+              << " x " << _data[ 0 ].get_n_columns( ) << std::endl;
+  }
 
   /*!
    * Resizes all matrix blocks.

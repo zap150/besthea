@@ -106,34 +106,24 @@ int main( int argc, char * argv[] ) {
 
   lo order_sing = 4;
   lo order_reg = 4;
-  block_lower_triangular_toeplitz_matrix D;
-  uniform_spacetime_heat_hs_kernel_antiderivative kernel_d(
-    spacetime_mesh.get_timestep( ), cauchy_data::alpha );
-  uniform_spacetime_be_assembler assembler_d(
-    kernel_d, space_p1, space_p1, order_sing, order_reg );
-  t.reset( "D" );
-  assembler_d.assemble( D );
-  t.measure( );
-  // D.print( );
 
-  block_lower_triangular_toeplitz_matrix K;
+  block_lower_triangular_toeplitz_matrix * K
+    = new block_lower_triangular_toeplitz_matrix( );
   uniform_spacetime_heat_dl_kernel_antiderivative kernel_k(
     spacetime_mesh.get_timestep( ), cauchy_data::alpha );
   uniform_spacetime_be_assembler assembler_k(
     kernel_k, space_p0, space_p1, order_sing, order_reg );
   t.reset( "K" );
-  assembler_k.assemble( K );
+  assembler_k.assemble( *K );
   t.measure( );
   // K.print( );
 
-  sparse_matrix M;
-  uniform_spacetime_be_identity identity( space_p0, space_p1, 1 );
+  uniform_spacetime_be_identity M( space_p0, space_p1, 1 );
   t.reset( "M" );
-  identity.assemble( M );
+  M.assemble( );
   t.measure( );
-  // M.print( );
 
-  block_vector dir_proj, neu_proj, dir;
+  block_vector dir_proj, neu_proj;
   space_p1.L2_projection( cauchy_data::dirichlet, dir_proj );
   space_p0.L2_projection( cauchy_data::neumann, neu_proj );
   std::cout << "Dirichlet L2 projection relative error: "
@@ -143,9 +133,33 @@ int main( int argc, char * argv[] ) {
             << space_p0.L2_relative_error( cauchy_data::neumann, neu_proj )
             << std::endl;
 
-  t.reset( "Solving the system" );
-  uniform_spacetime_be_solver::time_marching_neumann( D, K, M, neu_proj, dir );
+  t.reset( "Setting up RHS" );
+  block_vector dir;
+  dir.resize( K->get_block_dim( ) );
+  dir.resize_blocks( K->get_n_columns( ), true );
+  M.apply( neu_proj, dir, true, 0.5, 0.0 );
+  K->apply( neu_proj, dir, true, -1.0, 1.0 );
   t.measure( );
+
+  delete K;
+
+  block_lower_triangular_toeplitz_matrix * D
+    = new block_lower_triangular_toeplitz_matrix( );
+  uniform_spacetime_heat_hs_kernel_antiderivative kernel_d(
+    spacetime_mesh.get_timestep( ), cauchy_data::alpha );
+  uniform_spacetime_be_assembler assembler_d(
+    kernel_d, space_p1, space_p1, order_sing, order_reg );
+  t.reset( "D" );
+  assembler_d.assemble( *D );
+  t.measure( );
+  // D.print( );
+
+  t.reset( "Solving the system" );
+  D->choleski_decompose_solve( dir );
+  t.measure( );
+
+  delete D;
+
   std::cout << "Dirichlet L2 relative error: "
             << space_p1.L2_relative_error( cauchy_data::dirichlet, dir )
             << std::endl;

@@ -285,7 +285,6 @@ class besthea::bem::uniform_spacetime_heat_hs_kernel_antiderivative
    * @param[in] xy3 Third coordinate of `x - y`.
    * @param[in] nx Normal in the `x` variable.
    * @param[in] ny Normal in the `y` variable.
-   * @param[in] scaled_delta Difference of time intervals.
    * @param[out] value1 Return value for anti_tau_anti_t part.
    * @param[out] value2 Return value for anti_t part.
    */
