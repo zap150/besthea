@@ -38,6 +38,8 @@
 #include "besthea/triangular_surface_mesh.h"
 #include "besthea/vector.h"
 
+#include <optional>
+
 namespace besthea {
   namespace mesh {
     class space_cluster_tree;
@@ -87,7 +89,34 @@ class besthea::mesh::space_cluster_tree {
    * -1, prints all levels.
    */
   bool print_tree( const std::string & directory, bool include_padding = false,
-    lo level = -1 ) const;
+    lo level = -1, std::optional< lo > suffix = std::nullopt ) const;
+
+  /**
+   * Prints cluster centers and half_sizes to visualizable datafile tree.vtu.
+   *
+   * To visualize the tree in ParaView:
+   * 1. Load the tree.vtu file.
+   * 2. Change representation to Point Gaussians to see the centers of clusters
+   * and possibly change the Gaussian radius.
+   * 3. Apply the Glyph filter.
+   * 4. Change Glyph type to Box, Orientation array to No orientation array,
+   * Scale array to Half_sizes, Vector Scale Mode to Scale by Components, Glyph
+   * Mode to All points, Scale Factor to 1, Representation to either Wireframe
+   * or Surface with Edges (and play with its opacity).
+   *
+   * @param[in] directory Output directory.
+   * @param[in] include_padding Adds padding to cluster's half-sizes.
+   * @param[in] level If set, prints only a given level of the tree. For
+   * -1, prints all levels.
+   */
+  bool print_tree_separately(
+    const std::string & directory, bool include_padding = false ) const {
+    bool ret = true;
+    for ( lo i = 0; i < _levels; ++i ) {
+      ret = print_tree( directory, include_padding, i, i );
+    }
+    return ret;
+  }
 
  private:
   space_cluster * _root;                  //!< root cluster of the tree
@@ -100,6 +129,8 @@ class besthea::mesh::space_cluster_tree {
                                 //!< nodes in each level
   std::vector< sc > _paddings;  //!< vector of paddings on each level
   lo _n_nonempty_nodes;         //!< number of nonempty clusters in the tree
+  std::vector< std::vector< lo > >
+    _idx_2_coord;  //!< auxiliary mapping from octant indexing to coordinates
 
   /**
    * Computes the bounding box of the underlying mesh.

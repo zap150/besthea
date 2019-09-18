@@ -85,9 +85,9 @@ int main( int argc, char * argv[] ) {
   space_mesh.print_info( );
   space_mesh.print_vtu( "test" );
 
-  space_cluster_tree ct( space_mesh, 10, 8 );
+  space_cluster_tree ct( space_mesh, 4, 8 );
   time_cluster_tree tt( time_mesh, 3 );
-  ct.print_tree( "test", true, 2 );
+  ct.print_tree_separately( "test", false );
 
   //  lo elem[ 6 ];
   //  sc node[ 4 ];

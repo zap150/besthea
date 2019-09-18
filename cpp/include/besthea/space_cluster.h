@@ -63,17 +63,19 @@ class besthea::mesh::space_cluster {
    */
   space_cluster( const vector_type & center, const vector_type & half_size,
     lo n_elements, space_cluster * parent, lo level, short octant,
-    const triangular_surface_mesh & mesh )
+    std::vector< slou > & coordinate, const triangular_surface_mesh & mesh )
     : _n_elements( n_elements ),
       _center( center ),
       _half_size( half_size ),
       _parent( parent ),
       _children( nullptr ),
+      _mesh( mesh ),
       _level( level ),
       _octant( octant ),
       _padding( 0.0 ),
-      _mesh( mesh ) {
+      _box_coordinate( coordinate ) {
     _elements.reserve( _n_elements );
+    _box_coordinate.shrink_to_fit( );
   }
 
   space_cluster( const space_cluster & that ) = delete;
@@ -254,18 +256,24 @@ class besthea::mesh::space_cluster {
    *
    */
   sc compute_padding( ) const {
-    sc node[ 9 ];
+    linear_algebra::coordinates< 3 > node1;
+    linear_algebra::coordinates< 3 > node2;
+    linear_algebra::coordinates< 3 > node3;
+    sc * nodes[ 3 ];
+
     sc * curr_node;
-    sc xmin, ymin, zmin, xmax, ymax, zmax;
 
     sc padding = 0.0;
 
     // loop over elements in cluster
     for ( lo i = 0; i < _n_elements; ++i ) {
-      _mesh.get_nodes( _elements[ i ], node, node + 3, node + 6 );
+      _mesh.get_nodes( _elements[ i ], node1, node2, node3 );
+      nodes[ 0 ] = node1.data( );
+      nodes[ 1 ] = node2.data( );
+      nodes[ 2 ] = node3.data( );
       // loop over triangle's nodes
       for ( lo j = 0; j < 3; ++j ) {
-        curr_node = node + j * 3;
+        curr_node = nodes[ j ];
         if ( ( ( _center[ 0 ] - _half_size[ 0 ] ) - curr_node[ 0 ]
                > padding ) ) {
           padding = _center[ 0 ] - _half_size[ 0 ] - curr_node[ 0 ];
@@ -317,11 +325,16 @@ class besthea::mesh::space_cluster {
     return _level;
   }
 
+  const std::vector< slou > & get_box_coordinate( ) const {
+    return _box_coordinate;
+  }
+
  private:
   lo _n_elements;          //!< number of elements in the cluster
   vector_type _center;     //!< center of the cluster
   vector_type _half_size;  //!< half sizes of the cluster's faces (in [x, y, z]
                            //!< directions)
+  // TODO: this probably will have to be optimized to reduce memory consumption
   std::vector< lo >
     _elements;  //!< indices of the cluster's elements within the spatial mesh
   space_cluster * _parent;                     //!< parent of the cluster
@@ -332,7 +345,7 @@ class besthea::mesh::space_cluster {
   short _octant;  //!< octant of the parent cluster
   sc _padding;    //!< padding of the cluster
   std::vector< slou >
-    box_coordinate;  //!< coordinate of the box within boxes on given level
+    _box_coordinate;  //!< coordinate of the box within boxes on given level
 };
 
 #endif /* INCLUDE_BESTHEA_SPACE_CLUSTER_H_ */

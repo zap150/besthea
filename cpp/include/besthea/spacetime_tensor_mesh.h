@@ -122,7 +122,7 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
     lo space_elem_idx;
     lo time_elem_idx;
     map_index( i_element, space_elem_idx, time_elem_idx );
-    lo sp_element[ 3 ];
+    linear_algebra::indices< 3 > sp_element;
     lo t_element[ 2 ];
 
     _space_mesh->get_element( space_elem_idx, sp_element );
@@ -136,12 +136,16 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
     element[ 5 ] = sp_element[ 2 ] + t_element[ 1 ] * get_n_spatial_nodes( );
   }
 
-  void get_node( lo i_node, sc * node ) const {
+  void get_node( lo i_node, linear_algebra::coordinates< 4 > & node ) const {
     lo t_idx = i_node / get_n_spatial_nodes( );
     lo s_idx = i_node % get_n_spatial_nodes( );
 
-    _space_mesh->get_node( s_idx, node );
-    _time_mesh->get_node( t_idx, node + 3 );
+    linear_algebra::coordinates< 3 > sp_node;
+    _space_mesh->get_node( s_idx, sp_node );
+    node[ 0 ] = sp_node[ 0 ];
+    node[ 1 ] = sp_node[ 1 ];
+    node[ 2 ] = sp_node[ 2 ];
+    _time_mesh->get_node( t_idx, node.end( ) - 1 );
   }
 
   /**
@@ -170,7 +174,8 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * @param[in] i_element Index of the spatial element.
    * @param[out] element Spatial element indices.
    */
-  void get_spatial_element( lo i_element, lo * element ) const {
+  void get_spatial_element(
+    lo i_element, linear_algebra::indices< 3 > & element ) const {
     _space_mesh->get_element( i_element, element );
   }
 
@@ -179,7 +184,8 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * @param[in] i_node Index of the spatial node.
    * @param[out] node Spatial node coordinates.
    */
-  void get_spatial_node( lo i_node, sc * node ) const {
+  void get_spatial_node(
+    lo i_node, linear_algebra::coordinates< 3 > & node ) const {
     _space_mesh->get_node( i_node, node );
   }
 
@@ -190,8 +196,10 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * @param[out] node2 Coordinates of the second node.
    * @param[out] node3 Coordinates of the third node.
    */
-  void get_spatial_nodes(
-    lo i_element, sc * node1, sc * node2, sc * node3 ) const {
+  void get_spatial_nodes( lo i_element,
+    linear_algebra::coordinates< 3 > & node1,
+    linear_algebra::coordinates< 3 > & node2,
+    linear_algebra::coordinates< 3 > & node3 ) const {
     _space_mesh->get_nodes( i_element, node1, node2, node3 );
   }
 
@@ -200,7 +208,8 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * @param[in] i_element Index of the element.
    * @param[out] n Normal indices.
    */
-  void get_spatial_normal( lo i_element, sc * n ) const {
+  void get_spatial_normal(
+    lo i_element, linear_algebra::coordinates< 3 > & n ) const {
     _space_mesh->get_normal( i_element, n );
   }
 
@@ -209,7 +218,8 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * @param[in] i_node Index of the node.
    * @param[out] n Normal indices.
    */
-  void get_spatial_nodal_normal( lo i_node, sc * n ) const {
+  void get_spatial_nodal_normal(
+    lo i_node, linear_algebra::coordinates< 3 > & n ) const {
     _space_mesh->get_nodal_normal( i_node, n );
   }
 
@@ -282,8 +292,9 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * @param[out] centroid Allocated array containing the element centroid on
    * return.
    */
-  void get_spatial_centroid( lo i_elem, sc * centroid ) {
-    sc x1[ 3 ], x2[ 3 ], x3[ 3 ];
+  void get_spatial_centroid(
+    lo i_elem, linear_algebra::coordinates< 3 > & centroid ) {
+    linear_algebra::coordinates< 3 > x1, x2, x3;
     _space_mesh->get_nodes( i_elem, x1, x2, x3 );
     centroid[ 0 ] = ( x1[ 0 ] + x2[ 0 ] + x3[ 0 ] ) / 3.0;
     centroid[ 1 ] = ( x1[ 1 ] + x2[ 1 ] + x3[ 1 ] ) / 3.0;
@@ -351,6 +362,13 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * Returns a pointer to the internally stored spatial mesh.
    */
   virtual triangular_surface_mesh * get_spatial_mesh( ) {
+    return _space_mesh;
+  }
+
+  /**
+   * Returns a pointer to the internally stored spatial mesh.
+   */
+  virtual const triangular_surface_mesh * get_spatial_mesh( ) const {
     return _space_mesh;
   }
 

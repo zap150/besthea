@@ -53,9 +53,13 @@ besthea::mesh::space_cluster_tree::space_cluster_tree(
   vector_type half_sizes = { std::abs( xmax - xmin ) / 2.0,
     std::abs( ymax - ymin ) / 2.0, std::abs( zmax - zmin ) / 2.0 };
 
+  _idx_2_coord = { { 1, 1, 1 }, { 0, 1, 1 }, { 0, 0, 1 }, { 1, 0, 1 },
+    { 1, 1, 0 }, { 0, 1, 0 }, { 0, 0, 0 }, { 1, 0, 0 } };
+
   // create a root cluster and call recursive tree building
-  _root = new space_cluster(
-    center, half_sizes, _mesh.get_n_elements( ), nullptr, 0, 0, _mesh );
+  std::vector< slou > coordinates = { 0, 0, 0 };
+  _root = new space_cluster( center, half_sizes, _mesh.get_n_elements( ),
+    nullptr, 0, 0, coordinates, _mesh );
 
   for ( lo i = 0; i < _mesh.get_n_elements( ); ++i ) {
     _root->add_element( i );
@@ -78,7 +82,7 @@ void besthea::mesh::space_cluster_tree::build_tree(
   // allocate children's and temporary data
   vector_type center( 3 );
   vector_type half_size( 3 );
-  sc el_centroid[ 3 ];
+  linear_algebra::coordinates< 3 > el_centroid;
   root.get_center( center );
   root.get_half_size( half_size );
   lo elem_idx = 0;
@@ -125,8 +129,31 @@ void besthea::mesh::space_cluster_tree::build_tree(
     if ( oct_sizes[ i ] > 0 ) {
       root.compute_suboctant( i, new_center, new_half_size );
       ++n_clusters;
-      clusters[ i ] = new space_cluster(
-        new_center, new_half_size, oct_sizes[ i ], &root, level, i, _mesh );
+
+      slou coord_x
+        = 2 * root.get_box_coordinate( )[ 0 ] + _idx_2_coord[ i ][ 0 ];
+      slou coord_y
+        = 2 * root.get_box_coordinate( )[ 1 ] + _idx_2_coord[ i ][ 1 ];
+      slou coord_z
+        = 2 * root.get_box_coordinate( )[ 2 ] + _idx_2_coord[ i ][ 2 ];
+
+      //      std::cout << " PARENT: " << root.get_box_coordinate( )[ 0 ] << ",
+      //      "
+      //                << root.get_box_coordinate( )[ 1 ] << ", "
+      //                << root.get_box_coordinate( )[ 2 ] << ". " << std::endl;
+      //      ;
+      //      std::cout << "     CHILD oct: " << _idx_2_coord[ i ][ 0 ] << ", "
+      //                << _idx_2_coord[ i ][ 1 ] << ", " << _idx_2_coord[ i ][
+      //                2 ]
+      //                << ". " << std::endl;
+      //      ;
+      //      std::cout << "     CHILD: " << coord_x << ", " << coord_y << ", "
+      //                << coord_z << ". " << std::endl;
+      //      ;
+
+      std::vector< slou > coordinates = { coord_x, coord_y, coord_z };
+      clusters[ i ] = new space_cluster( new_center, new_half_size,
+        oct_sizes[ i ], &root, level, i, coordinates, _mesh );
       _non_empty_nodes[ level ].push_back( clusters[ i ] );
       ++_n_nonempty_nodes;
     } else {
@@ -185,7 +212,7 @@ void besthea::mesh::space_cluster_tree::compute_bounding_box(
   xmin = ymin = zmin = std::numeric_limits< sc >::max( );
   xmax = ymax = zmax = std::numeric_limits< sc >::min( );
 
-  sc node[ 3 ];
+  linear_algebra::coordinates< 3 > node;
   for ( lo i = 0; i < _mesh.get_n_nodes( ); ++i ) {
     _mesh.get_node( i, node );
 
@@ -233,9 +260,14 @@ sc besthea::mesh::space_cluster_tree::compute_padding( space_cluster & root ) {
 }
 
 bool besthea::mesh::space_cluster_tree::print_tree(
-  const std::string & directory, bool include_padding, lo level ) const {
+  const std::string & directory, bool include_padding, lo level,
+  std::optional< lo > suffix ) const {
   std::stringstream file;
   file << directory << "/tree.vtu";
+
+  if ( suffix ) {
+    file << '.' << std::setw( 4 ) << std::setfill( '0' ) << suffix.value( );
+  }
 
   std::ofstream file_vtu( file.str( ).c_str( ) );
 
