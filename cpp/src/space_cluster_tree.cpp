@@ -57,7 +57,7 @@ besthea::mesh::space_cluster_tree::space_cluster_tree(
     { 1, 1, 0 }, { 0, 1, 0 }, { 0, 0, 0 }, { 1, 0, 0 } };
 
   // create a root cluster and call recursive tree building
-  std::vector< slou > coordinates = { 0, 0, 0 };
+  std::vector< slou > coordinates = { 0, 0, 0, 0 };
   _root = new space_cluster( center, half_sizes, _mesh.get_n_elements( ),
     nullptr, 0, 0, coordinates, _mesh );
 
@@ -137,24 +137,14 @@ void besthea::mesh::space_cluster_tree::build_tree(
       slou coord_z
         = 2 * root.get_box_coordinate( )[ 2 ] + _idx_2_coord[ i ][ 2 ];
 
-      //      std::cout << " PARENT: " << root.get_box_coordinate( )[ 0 ] << ",
-      //      "
-      //                << root.get_box_coordinate( )[ 1 ] << ", "
-      //                << root.get_box_coordinate( )[ 2 ] << ". " << std::endl;
-      //      ;
-      //      std::cout << "     CHILD oct: " << _idx_2_coord[ i ][ 0 ] << ", "
-      //                << _idx_2_coord[ i ][ 1 ] << ", " << _idx_2_coord[ i ][
-      //                2 ]
-      //                << ". " << std::endl;
-      //      ;
-      //      std::cout << "     CHILD: " << coord_x << ", " << coord_y << ", "
-      //                << coord_z << ". " << std::endl;
-      //      ;
-
-      std::vector< slou > coordinates = { coord_x, coord_y, coord_z };
+      std::vector< slou > coordinates
+        = { static_cast< slou >( level ), coord_x, coord_y, coord_z };
       clusters[ i ] = new space_cluster( new_center, new_half_size,
         oct_sizes[ i ], &root, level, i, coordinates, _mesh );
       _non_empty_nodes[ level ].push_back( clusters[ i ] );
+      _coord_2_cluster.insert(
+        std::pair< std::vector< slou >, space_cluster * >(
+          coordinates, clusters[ i ] ) );
       ++_n_nonempty_nodes;
     } else {
       clusters[ i ] = nullptr;
@@ -256,7 +246,39 @@ sc besthea::mesh::space_cluster_tree::compute_padding( space_cluster & root ) {
       _paddings[ root.get_level( ) ] = padding;
     }
   }
+
+  //  std::vector< space_cluster * > neighbors;
+  //  find_neighbors( root, 1, neighbors );
   return padding;
+}
+
+void besthea::mesh::space_cluster_tree::find_neighbors( space_cluster & cluster,
+  lo limit, std::vector< space_cluster * > & neighbors ) const {
+  const std::vector< slou > coordinates = cluster.get_box_coordinate( );
+
+  lo cluster_level = cluster.get_level( );
+  std::vector< slou > current_coordinates( 4 );
+
+  //  std::cout << " " << coordinates[ 0 ] << " " << coordinates[ 1 ] << " "
+  //            << coordinates[ 2 ] << " " << coordinates[ 3 ] << std::endl;
+
+  for ( slou i = coordinates[ 1 ] - limit; i < coordinates[ 1 ] + limit + 1;
+        ++i ) {
+    for ( slou j = coordinates[ 2 ] - limit; j < coordinates[ 2 ] + limit + 1;
+          ++j ) {
+      for ( slou k = coordinates[ 3 ] - limit; k < coordinates[ 3 ] + limit + 1;
+            ++k ) {
+        current_coordinates = { cluster_level, i, j, k };
+
+        //        if ( _coord_2_cluster.count( current_coordinates ) > 0 ) {
+        //          neighbors.push_back(
+        //            _coord_2_cluster.find( current_coordinates )->second );
+        //          std::cout << cluster_level << " " << i << " " << j << " " <<
+        //          k
+        //                   << std::endl;
+      }
+    }
+  }
 }
 
 bool besthea::mesh::space_cluster_tree::print_tree(

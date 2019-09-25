@@ -71,6 +71,19 @@ class besthea::mesh::space_cluster_tree {
   }
 
   /**
+   * Returns neighbors of a given cluster based on the limit number of clusters.
+   *
+   * @param[in] cluster Reference to the space cluster whos neighbors should be
+   * found.
+   * @param[in] limit Number of clusters which should be considered neighbors in
+   * each direction.
+   * @param[in,out] neighbors Reference to the std::vector in which the pointers
+   * to the neighbors should be included.
+   */
+  void find_neighbors( space_cluster & cluster, lo limit,
+    std::vector< space_cluster * > & neighbors ) const;
+
+  /**
    * Prints cluster centers and half_sizes to visualizable datafile tree.vtu.
    *
    * To visualize the tree in ParaView:
@@ -92,10 +105,11 @@ class besthea::mesh::space_cluster_tree {
     lo level = -1, std::optional< lo > suffix = std::nullopt ) const;
 
   /**
-   * Prints cluster centers and half_sizes to visualizable datafile tree.vtu.
+   * Prints cluster centers and half_sizes on all levels to visualizable
+   * datafiles tree.vtu.n.
    *
    * To visualize the tree in ParaView:
-   * 1. Load the tree.vtu file.
+   * 1. Load all files into ParaView.
    * 2. Change representation to Point Gaussians to see the centers of clusters
    * and possibly change the Gaussian radius.
    * 3. Apply the Glyph filter.
@@ -131,6 +145,9 @@ class besthea::mesh::space_cluster_tree {
   lo _n_nonempty_nodes;         //!< number of nonempty clusters in the tree
   std::vector< std::vector< lo > >
     _idx_2_coord;  //!< auxiliary mapping from octant indexing to coordinates
+  std::map< std::vector< slou >, space_cluster * >
+    _coord_2_cluster;  //!< map from cluster coordinates to its location in
+                       //!< memory
 
   /**
    * Computes the bounding box of the underlying mesh.
