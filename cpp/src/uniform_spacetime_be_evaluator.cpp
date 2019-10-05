@@ -113,7 +113,7 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
       my_offset += n_vectors_rest * sc_width;
     }
 
-    // last threads processing the scalar portion as well
+    // last thread processing the scalar portion as well
     if ( thread_num == max_threads - 1 ) {
       my_n_points += n_scalar;
     }
@@ -265,7 +265,7 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
   my_quadrature._y3.resize( size );
 
   // has to be a multiple of cache line size
-  lo size_chunk = DATA_ALIGN / sizeof( sc ) * 32;
+  lo size_chunk = DATA_ALIGN / sizeof( sc ) * 2;
   my_quadrature._kernel_values.resize( size_chunk );
   my_quadrature._x1.resize( size_chunk );
   my_quadrature._x2.resize( size_chunk );
