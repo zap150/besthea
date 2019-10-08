@@ -18,10 +18,10 @@ classdef lagrange_interpolant < handle
 
     function value = lagrange( obj, i, t )
       % evaluates i-th Lagrange function on the interval [ -1, 1 ]
-      value = 1;
+      value = ones(size(t));
       for k = 0 : obj.order
         if ( i ~= k )
-          value = value * ( t - obj.nodes( k + 1 ) ) / ...
+          value = value .* ( t - obj.nodes( k + 1 ) ) ./ ...
             ( obj.nodes( i + 1 ) - obj.nodes( k + 1) );
         end 
       end
