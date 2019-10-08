@@ -52,7 +52,7 @@ classdef cFMM_solver < handle
       
       % contruct temporal cluster tree
       obj.leafs = cell( 1, 2^L );
-      cluster = temporal_cluster( obj.panels, 1, 2^L * N_steps, 0 );
+      cluster = temporal_cluster(obj.panels, 1, 2^L * N_steps, t_start, t_end, 0);
       obj.cluster_tree = binary_tree( cluster, 0, 0 );
       obj.construct_cluster_tree( obj.cluster_tree );
       obj.assemble_neighbor_lists( obj.cluster_tree );
@@ -94,12 +94,7 @@ classdef cFMM_solver < handle
     
     function y = apply_fmm_matrix( obj, x )
       
-      % downward pass
-      parent = obj.leafs{ 1 };
-      for l = obj.L : -1 : 1
-        parent = parent.get_parent( );
-      end
-      obj.reset( parent );
+      obj.reset( obj.cluster_tree );
       
       y = zeros( size( obj.rhs_proj ) );
       
@@ -184,12 +179,7 @@ classdef cFMM_solver < handle
     
     function y = apply_fmm_matrix_std( obj, x )
       
-      % downward pass
-      parent = obj.leafs{ 1 };
-      for l = obj.L : -1 : 1
-        parent = parent.get_parent( );
-      end
-      obj.reset( parent );
+      obj.reset(obj.cluster_tree);
       
       y = zeros( size( obj.rhs_proj ) );
       
@@ -207,25 +197,11 @@ classdef cFMM_solver < handle
         %cluster.inc_c_moments_count( );
       end
       
-      % upward pass
-      parent = obj.leafs{ 1 };
-      for l = obj.L : -1 : 1
-        parent = parent.get_parent( );
-      end
+      obj.upward_pass(obj.cluster_tree);
       
-      obj.upward_pass( parent );
+      obj.interaction(obj.cluster_tree);
       
-      parent = obj.leafs{ 1 };
-      for l = obj.L : -1 : 1
-        parent = parent.get_parent( );
-      end
-      obj.interaction( parent );
-      
-      parent = obj.leafs{ 1 };
-      for l = obj.L : -1 : 1
-        parent = parent.get_parent( );
-      end
-      obj.downward_pass_std( parent );
+      obj.downward_pass_std(obj.cluster_tree);
       
       for m = 3 : 2^obj.L
         cluster = obj.leafs{ m }.get_value( );
@@ -253,13 +229,13 @@ classdef cFMM_solver < handle
     end
     
     function x = solve_iterative_std_fmm( obj )
-      %x = gmres(@obj.apply_fmm_matrix_std, obj.rhs_proj, 100, 1e-5, 600 );
-      x = gmres(@obj.apply_fmm_matrix, obj.rhs_proj, 100, 1e-5, 600, ...
-        @obj.apply_diag_prec );
+      x = gmres(@obj.apply_fmm_matrix_std, obj.rhs_proj, 100, 1e-5, 600, ...
+        @obj.apply_diag_prec);
+      %x = gmres(@obj.apply_fmm_matrix, obj.rhs_proj, 100, 1e-5, 600, ...
+      %  @obj.apply_diag_prec );
     end
     
-    function x = solve_direct( obj )
-      
+    function x = solve_direct( obj )     
       x = zeros( size( obj.rhs_proj ) );
       
       n = obj.N_steps;
@@ -337,7 +313,7 @@ classdef cFMM_solver < handle
       end
     end
     
-    function error = l2_error( obj, sol, analytic, T, nT )
+    function error = l2_error( ~, sol, analytic, T, nT )
       [ x, w, l ] = quadratures.line( 10 );
       
       h = T / nT;
@@ -351,7 +327,15 @@ classdef cFMM_solver < handle
       error = error * h;
       error = sqrt(error);
     end
-    
+  
+    % project a function to the space of piecewise constant functions on the 
+    % panels of the current object
+    % ATTENTION: Works only for t_start = 0 and uniform timesteps
+    function projection = apply_const_l2_project( obj, fnctn)
+      T = obj.t_end;
+      nT = size(obj.panels, 2);
+      projection = obj.project_rhs( fnctn, T, nT );
+    end
   end
   
   methods ( Access = private )
@@ -364,10 +348,12 @@ classdef cFMM_solver < handle
         start_index = current_cluster.get_start_index( );
         end_index = current_cluster.get_end_index( );
         middle_index = floor( ( start_index + end_index ) / 2 );
-        
+        t_start = current_cluster.get_start( );
+        t_end = current_cluster.get_end( );
+        t_mid = 0.5 * ( t_start + t_end );
         % recursively create binary subtrees for left and right descendants
         left_cluster = temporal_cluster( obj.panels, start_index, ...
-          middle_index, 2 * current_cluster.get_idx_nl( ) );
+          middle_index, t_start, t_mid, 2 * current_cluster.get_idx_nl( ) );
         root.set_left_child( left_cluster );
         if ( root.get_level == obj.L - 1 )
           obj.leafs{ 2 * current_cluster.get_idx_nl( ) + 1 } = ...
@@ -376,7 +362,7 @@ classdef cFMM_solver < handle
         obj.construct_cluster_tree( root.get_left_child( ) );
         
         right_cluster = temporal_cluster( obj.panels, middle_index + 1, ...
-          end_index, 2 * current_cluster.get_idx_nl( ) + 1 );
+          end_index, t_mid, t_end, 2 * current_cluster.get_idx_nl( ) + 1 );
         root.set_right_child( right_cluster );
         current_cluster.set_children( left_cluster, right_cluster );
         if ( root.get_level == obj.L - 1 )
