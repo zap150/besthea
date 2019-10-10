@@ -103,6 +103,82 @@ class besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative
   }
 
   /**
+   * Evaluates the second antiderivative.
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] ny Normal in the `y` variable.
+   * @param[in] scaled_delta Difference of time intervals.
+   */
+#pragma omp declare simd uniform( this, ny, scaled_delta ) simdlen( DATA_WIDTH )
+  sc do_anti_tau_anti_t_regular_in_time(
+    sc xy1, sc xy2, sc xy3, const sc * ny, sc scaled_delta ) const {
+    sc value;
+    sc norm2 = xy1 * xy1 + xy2 * xy2 + xy3 * xy3;
+    sc norm = std::sqrt( norm2 );
+    sc dot = xy1 * ny[ 0 ] + xy2 * ny[ 1 ] + xy3 * ny[ 2 ];
+    sc sqrt_d = std::sqrt( scaled_delta );
+
+    if ( std::abs( dot ) > _eps ) {  //  delta > 0, norm > 0
+      value = -dot / ( _four * _pi * norm )
+        * ( ( _one / ( _two * _alpha ) - scaled_delta / norm2 )
+            * std::erf( norm / ( _two * sqrt_d * _sqrt_alpha ) )
+          + sqrt_d / ( _sqrt_pi * _sqrt_alpha * norm )
+            * std::exp( -norm2 / ( _four * _alpha * scaled_delta ) ) );
+    } else {  //  delta > 0, limit for norm -> 0
+      value = 0.0;
+    }
+
+    return value;
+  }
+
+  /**
+   * Evaluates the second antiderivative.
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] ny Normal in the `y` variable.
+   * @param[in] scaled_delta Difference of time intervals.
+   */
+#pragma omp declare simd uniform( this, ny, scaled_delta ) simdlen( DATA_WIDTH )
+  sc do_anti_tau_anti_t_regular_in_time_regular_in_space(
+    sc xy1, sc xy2, sc xy3, const sc * ny, sc scaled_delta ) const {
+    sc norm2 = xy1 * xy1 + xy2 * xy2 + xy3 * xy3;
+    sc norm = std::sqrt( norm2 );
+    sc dot = xy1 * ny[ 0 ] + xy2 * ny[ 1 ] + xy3 * ny[ 2 ];
+    sc sqrt_d = std::sqrt( scaled_delta );
+
+    //  delta > 0, norm > 0
+    sc value = -dot / ( _four * _pi * norm )
+      * ( ( _one / ( _two * _alpha ) - scaled_delta / norm2 )
+          * std::erf( norm / ( _two * sqrt_d * _sqrt_alpha ) )
+        + sqrt_d / ( _sqrt_pi * _sqrt_alpha * norm )
+          * std::exp( -norm2 / ( _four * _alpha * scaled_delta ) ) );
+
+    return value;
+  }
+
+  /**
+   * Evaluates the second antiderivative.
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] ny Normal in the `y` variable.
+   */
+#pragma omp declare simd uniform( this, ny ) simdlen( DATA_WIDTH )
+  sc do_anti_tau_anti_t_limit_in_time_regular_in_space(
+    sc xy1, sc xy2, sc xy3, const sc * ny ) const {
+    sc norm2 = xy1 * xy1 + xy2 * xy2 + xy3 * xy3;
+    sc norm = std::sqrt( norm2 );
+    sc dot = xy1 * ny[ 0 ] + xy2 * ny[ 1 ] + xy3 * ny[ 2 ];
+
+    // limit for delta -> 0, assuming norm > 0
+    sc value = -dot / ( _eight * _pi * norm * _alpha );
+
+    return value;
+  }
+
+  /**
    * Evaluates the first antiderivative.
    * @param[in] xy1 First coordinate of `x - y`.
    * @param[in] xy2 Second coordinate of `x - y`.

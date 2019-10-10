@@ -55,7 +55,7 @@ class besthea::linear_algebra::indices {
   /**
    * Constructor.
    */
-  indices( bool zero = true );
+  explicit indices( bool zero = true );
 
   /**
    * Constructor with an initializer list.

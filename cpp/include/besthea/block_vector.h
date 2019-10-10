@@ -160,6 +160,16 @@ class besthea::linear_algebra::block_vector {
    */
   void print( std::ostream & stream = std::cout ) const;
 
+  /**
+   * Prints info on the object.
+   */
+  void print_info( ) const {
+    std::cout << "besthea::linear_algebra::block_vector" << std::endl;
+    std::cout << "  number of blocks: " << _data.size( ) << std::endl;
+    std::cout << "  dimension of each block: " << _data[ 0 ].size( )
+              << std::endl;
+  }
+
  protected:
   lo _block_size;                    //!< block size
   lo _size;                          //!< vector size
