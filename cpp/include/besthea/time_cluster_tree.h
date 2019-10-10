@@ -53,7 +53,7 @@ class besthea::mesh::time_cluster_tree {
    * @param[in] mesh Reference to the underlying mesh.
    * @param[in] levels Maximum number of levels in the tree.
    */
-  time_cluster_tree( const temporal_mesh & mesh, lo levels );
+  time_cluster_tree( const temporal_mesh & mesh, lo levels, lo n_min_elems );
 
   /**
    * Destructor.
@@ -62,10 +62,18 @@ class besthea::mesh::time_cluster_tree {
     delete _root;
   }
 
+  lo get_levels( ) const {
+    return _levels;
+  }
+
  private:
   time_cluster * _root;         //!< root cluster of the tree
   const temporal_mesh & _mesh;  //!< underlying mesh
   lo _levels;                   //!< number of levels in the tree
+  lo _real_max_levels;  //!< auxiliary value to determine number of real tree
+                        //!< levels (depending on _n_min_elems)
+  lo _n_min_elems;  //!< minimum number of elements so that cluster can be split
+                    //!< in halves
 
   /**
    * Builds tree recursively

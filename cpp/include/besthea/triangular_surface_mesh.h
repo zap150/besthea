@@ -327,6 +327,18 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    */
   void map_to_unit_sphere( );
 
+  /**
+   * Computes the bounding box of thes mesh.
+   * @param[in,out] xmin Minimum x coordinate of element's centroids.
+   * @param[in,out] xmax Maximum x coordinate of element's centroids.
+   * @param[in,out] ymin Minimum y coordinate of element's centroids.
+   * @param[in,out] ymax Maximum y coordinate of element's centroids.
+   * @param[in,out] zmin Minimum z coordinate of element's centroids.
+   * @param[in,out] zmax Maximum z coordinate of element's centroids.
+   */
+  void compute_bounding_box(
+    sc & xmin, sc & xmax, sc & ymin, sc & ymax, sc & zmin, sc & zmax ) const;
+
  protected:
   lo _n_nodes;               //!< number of nodes
   std::vector< sc > _nodes;  //!< coordinates of nodes

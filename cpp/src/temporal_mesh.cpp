@@ -86,8 +86,17 @@ bool besthea::mesh::temporal_mesh::load( const std::string & file ) {
 
   _nodes.resize( _n_temporal_nodes );
 
+  _start_time = std::numeric_limits< sc >::max( );
+  _end_time = std::numeric_limits< sc >::min( );
+
   for ( lo i_node = 0; i_node < _n_temporal_nodes; ++i_node ) {
     filestream >> _nodes[ i_node ];
+    if ( _nodes[ i_node ] < _start_time ) {
+      _start_time = _nodes[ i_node ];
+    }
+    if ( _nodes[ i_node ] > _end_time ) {
+      _end_time = _nodes[ i_node ];
+    }
   }
 
   std::string line;

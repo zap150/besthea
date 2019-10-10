@@ -925,3 +925,29 @@ void besthea::mesh::triangular_surface_mesh::get_centroid(
   centroid[ 1 ] /= _n_nodes;
   centroid[ 2 ] /= _n_nodes;
 }
+
+void besthea::mesh::triangular_surface_mesh::compute_bounding_box(
+  sc & xmin, sc & xmax, sc & ymin, sc & ymax, sc & zmin, sc & zmax ) const {
+  xmin = ymin = zmin = std::numeric_limits< sc >::max( );
+  xmax = ymax = zmax = std::numeric_limits< sc >::min( );
+
+  linear_algebra::coordinates< 3 > node;
+  for ( lo i = 0; i < get_n_nodes( ); ++i ) {
+    get_node( i, node );
+
+    if ( node[ 0 ] < xmin )
+      xmin = node[ 0 ];
+    if ( node[ 0 ] > xmax )
+      xmax = node[ 0 ];
+
+    if ( node[ 1 ] < ymin )
+      ymin = node[ 1 ];
+    if ( node[ 1 ] > ymax )
+      ymax = node[ 1 ];
+
+    if ( node[ 2 ] < zmin )
+      zmin = node[ 2 ];
+    if ( node[ 2 ] > zmax )
+      zmax = node[ 2 ];
+  }
+}

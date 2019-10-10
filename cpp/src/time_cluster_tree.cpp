@@ -28,9 +28,14 @@
 
 #include "besthea/time_cluster_tree.h"
 
+#include <iostream>
+
 besthea::mesh::time_cluster_tree::time_cluster_tree(
-  const temporal_mesh & mesh, lo levels )
-  : _mesh( mesh ), _levels( levels ) {
+  const temporal_mesh & mesh, lo levels, lo n_min_elems )
+  : _mesh( mesh ),
+    _levels( levels ),
+    _real_max_levels( 0 ),
+    _n_min_elems( n_min_elems ) {
   sc center = ( _mesh.get_end( ) + _mesh.get_start( ) ) / 2;
   sc half_size = ( _mesh.get_end( ) - _mesh.get_start( ) ) / 2;
 
@@ -42,12 +47,17 @@ besthea::mesh::time_cluster_tree::time_cluster_tree(
   }
 
   this->build_tree( *_root, 1 );
+  _levels = std::min( _levels, _real_max_levels );
 }
 
 void besthea::mesh::time_cluster_tree::build_tree(
   time_cluster & root, lo level ) {
   // stop recursion if maximum number of levels is reached
-  if ( level > _levels - 1 ) {
+  if ( level > _levels - 1 || root.get_n_elements( ) < _n_min_elems ) {
+    root.set_n_children( 0 );
+    if ( level > _real_max_levels ) {
+      _real_max_levels = level;
+    }
     return;
   }
 

@@ -27,6 +27,7 @@
  */
 
 #include <besthea/space_cluster_tree.h>
+#include <besthea/space_time_cluster_tree.h>
 
 #include "besthea/settings.h"
 #include "besthea/spacetime_slice.h"
@@ -49,6 +50,7 @@ int main( int argc, char * argv[] ) {
   using b_st_slice = besthea::mesh::spacetime_slice;
   using space_cluster_tree = besthea::mesh::space_cluster_tree;
   using time_cluster_tree = besthea::mesh::time_cluster_tree;
+  using space_time_cluster_tree = besthea::mesh::space_time_cluster_tree;
 
   std::string file = "./test/mesh_files/time_1_10.txt";
 
@@ -86,8 +88,9 @@ int main( int argc, char * argv[] ) {
   space_mesh.print_vtu( "test" );
 
   space_cluster_tree ct( space_mesh, 4, 8 );
-  time_cluster_tree tt( time_mesh, 2 );
+  time_cluster_tree tt( time_mesh, 2, 4 );
   ct.print_tree_separately( "test", false );
+  space_time_cluster_tree spt( space_mesh, time_mesh, 8, 4, 2, 10 );
 
   //  lo elem[ 6 ];
   //  sc node[ 4 ];
