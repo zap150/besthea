@@ -52,7 +52,7 @@ for i = 1 : orders_size
   value_numerical_single_square( i, 1 ) = w' * k * areas;
   
   %% numerical over two squares
-  k = kernel_two_squares( alpha, 0, stmesh.ht, x, y, t_ref, tau_ref );
+  k = 2 * kernel( alpha, 0, stmesh.ht, x, y, t_ref, 2 * tau_ref );
   value_numerical_two_squares( i, 1 ) = w' * k * areas;
 end
 
@@ -84,18 +84,36 @@ fprintf( 1, '  finest numerical over two squares: %.12e\n', ...
 
 figure;
 hold on;
-plot( [ min( line_num_points ) max( line_num_points ) ], ...
-  value_analytic_in_time * [ 1 1 ], '-' );
 plot( tri_num_points, value_numerical_triangle, '-o', 'LineWidth', 1 );
 plot( line_num_points, value_numerical_single_square, '-o', 'LineWidth', 1 );
 plot( line_num_points, value_numerical_two_squares, '-o', 'LineWidth', 1 );
-legend( { 'analytic in time', ...
-  'numerical over triangle', ...
+plot( [ min( line_num_points ) max( line_num_points ) ], ...
+  value_analytic_in_time * [ 1 1 ], '-' );
+legend( { 'numerical over triangle', ...
   'numerical over square', ...
-  'numericl over two squares' }, 'FontSize', 14, 'Location', 'southeast' );
+  'numerical over two squares', ...
+  'analytic in time' }, 'FontSize', 14, 'Location', 'southeast' );
 set( gca, 'XScale', 'log' );
-xlabel( 'Number of quadrature points' );
+xlabel( 'Number of quadrature points in time' );
 ylabel( 'Value' );
+hold off;
+
+figure;
+hold on;
+plot( tri_num_points, ...
+  abs( value_numerical_triangle - value_analytic_in_time ), '-o', 'LineWidth', 1 );
+plot( line_num_points, ...
+  abs( value_numerical_single_square - value_analytic_in_time ), '-o', 'LineWidth', 1 );
+plot( line_num_points, ...
+  abs( value_numerical_two_squares - value_analytic_in_time ), '-o', 'LineWidth', 1 );
+legend( { 'error - numerical over triangle', ...
+  'error - numerical over square', ...
+  'error - numerical over two squares' }, ...
+  'FontSize', 14, 'Location', 'southeast' );
+set( gca, 'XScale', 'log' );
+set( gca, 'YScale', 'log' );
+xlabel( 'Number of quadrature points in time' );
+ylabel( 'Absolute error' );
 hold off;
 
 end
@@ -127,21 +145,6 @@ rr = norm / sqrt( alpha * ht );
 value( mask, 1 ) = ( 4 * pi * ttau( mask, 1 ) ).^( -3/2 ) ...
   .* exp( -rr( mask, 1 ).^2 ./ ( 4 * ttau( mask, 1 ) ) );
 value( mask, 1 ) = value( mask, 1 ) * sqrt( ht / alpha^3 );
-
-end
-
-%%%%% Transferred to (0,2)x(0,1)
-function value = kernel_two_squares( alpha, d, ht, x, y, t, tau )
-
-ttau = d + t - 2 * tau;
-mask = ( ttau <= 0 );
-value( mask, 1 ) = 0;
-mask = ~mask;
-norm = sqrt( ( x - y ).^2 * [ 1; 1; 1 ] );
-rr = norm / sqrt( alpha * ht );
-value( mask, 1 ) = ( 4 * pi * ttau( mask, 1 ) ).^( -3/2 ) ...
-  .* exp( -rr( mask, 1 ).^2 ./ ( 4 * ttau( mask, 1 ) ) );
-value( mask, 1 ) = value( mask, 1 ) * sqrt( ht / alpha^3 ) * 2;
 
 end
 
