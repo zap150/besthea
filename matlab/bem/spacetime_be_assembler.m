@@ -213,11 +213,7 @@ classdef spacetime_be_assembler < handle
       f.Children.Title.Interpreter = 'none';
       
       my_kernel = obj.kernel;
-      for d = 2 : nt - 1
-        %       parfor d = 0 : nt - 1
-        %         my_kernel = copy( obj.kernel );
-        %         A_local = zeros( dim_test, dim_trial );
-        
+      for d = 2 : nt - 1        
         my_kernel.d = d;
         msgd = [ msg sprintf( ', d = %d/%d', d - 1, nt - 2 ) ];
         waitbar( ( d - 2 ) / ( nt - 2 ), f, msgd );
