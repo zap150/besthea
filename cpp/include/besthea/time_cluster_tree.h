@@ -37,6 +37,8 @@
 #include "besthea/temporal_mesh.h"
 #include "besthea/time_cluster.h"
 
+#include <iostream>
+
 namespace besthea {
   namespace mesh {
     class time_cluster_tree;
@@ -64,6 +66,10 @@ class besthea::mesh::time_cluster_tree {
 
   lo get_levels( ) const {
     return _levels;
+  }
+
+  time_cluster * get_root( ) {
+    return _root;
   }
 
  private:

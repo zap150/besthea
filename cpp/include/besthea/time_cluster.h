@@ -36,6 +36,7 @@
 #include "besthea/settings.h"
 #include "besthea/temporal_mesh.h"
 
+#include <iostream>
 #include <vector>
 
 namespace besthea {
@@ -65,6 +66,7 @@ class besthea::mesh::time_cluster {
       _half_size( half_size ),
       _parent( parent ),
       _level( level ),
+      _children( nullptr ),
       _mesh( mesh ) {
     _elements.reserve( _n_elements );
   }
@@ -75,10 +77,13 @@ class besthea::mesh::time_cluster {
    * Destructor.
    */
   virtual ~time_cluster( ) {
-    for ( auto it = _children.begin( ); it != _children.end( ); ++it ) {
-      if ( *it != nullptr ) {
-        delete *it;
+    if ( _children != nullptr ) {
+      for ( auto it = _children->begin( ); it != _children->end( ); ++it ) {
+        if ( *it != nullptr ) {
+          delete *it;
+        }
       }
+      delete _children;
     }
   }
 
@@ -95,7 +100,10 @@ class besthea::mesh::time_cluster {
    * @param[in] child Child cluster.
    */
   void add_child( time_cluster * child ) {
-    _children.push_back( child );
+    if ( _children == nullptr ) {
+      _children = new std::vector< time_cluster * >( );
+    }
+    _children->push_back( child );
   }
 
   /**
@@ -132,7 +140,14 @@ class besthea::mesh::time_cluster {
    * @param[in] n_children Number of cluster's children clusters.
    */
   void set_n_children( lo n_children ) {
-    _children.reserve( n_children );
+    if ( _children == nullptr ) {
+      _children = new std::vector< time_cluster * >( );
+    }
+    _children->reserve( n_children );
+  }
+
+  std::vector< time_cluster * > * get_children( ) {
+    return _children;
   }
 
  private:
@@ -141,8 +156,8 @@ class besthea::mesh::time_cluster {
   sc _half_size;   //!< half size of the cluster
   std::vector< lo >
     _elements;  //!< indices of the cluster's elements within the temporal mesh
-  time_cluster * _parent;                   //!< parent of the cluster
-  std::vector< time_cluster * > _children;  //!< children of the cluster
+  time_cluster * _parent;                     //!< parent of the cluster
+  std::vector< time_cluster * > * _children;  //!< children of the cluster
   const temporal_mesh & _mesh;  //!< temporal mesh associated with the cluster
   lo _level;                    //!< level within the cluster tree
 };

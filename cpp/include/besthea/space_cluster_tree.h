@@ -132,6 +132,10 @@ class besthea::mesh::space_cluster_tree {
     return ret;
   }
 
+  space_cluster * get_root( ) {
+    return _root;
+  }
+
  private:
   space_cluster * _root;                  //!< root cluster of the tree
   const triangular_surface_mesh & _mesh;  //!< underlying mesh
