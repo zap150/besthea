@@ -45,11 +45,11 @@
 int main( int argc, char * argv[] ) {
   using b_t_mesh = besthea::mesh::temporal_mesh;
   using b_s_mesh = besthea::mesh::triangular_surface_mesh;
-  using b_st_mesh = besthea::mesh::spacetime_tensor_mesh;
-  using b_ust_mesh = besthea::mesh::uniform_spacetime_tensor_mesh;
-  using b_st_slice = besthea::mesh::spacetime_slice;
-  using space_cluster_tree = besthea::mesh::space_cluster_tree;
-  using time_cluster_tree = besthea::mesh::time_cluster_tree;
+  // using b_st_mesh = besthea::mesh::spacetime_tensor_mesh;
+  // using b_ust_mesh = besthea::mesh::uniform_spacetime_tensor_mesh;
+  // using b_st_slice = besthea::mesh::spacetime_slice;
+  // using space_cluster_tree = besthea::mesh::space_cluster_tree;
+  // using time_cluster_tree = besthea::mesh::time_cluster_tree;
   using space_time_cluster_tree = besthea::mesh::spacetime_cluster_tree;
 
   std::string file = "./test/mesh_files/time_1_10.txt";
@@ -68,48 +68,30 @@ int main( int argc, char * argv[] ) {
   std::string file_spatial = "./test/mesh_files/nuniform.txt";
   b_s_mesh space_mesh( file_spatial );
 
-  b_st_mesh tensor_mesh( space_mesh, time_mesh );
+  // b_st_mesh tensor_mesh( space_mesh, time_mesh );
 
-  tensor_mesh.print_info( );
+  // tensor_mesh.print_info( );
 
   // tensor_mesh.refine( 1 );
 
   // tensor_mesh.print_info( );
 
-  b_ust_mesh uniform_time_mesh( space_mesh, 1, 10 );
-  uniform_time_mesh.print_info( );
+  // b_ust_mesh uniform_time_mesh( space_mesh, 1, 10 );
+  // uniform_time_mesh.print_info( );
   // uniform_time_mesh.refine( 2 );
   // uniform_time_mesh.print_info( );
 
-  b_st_slice slice( file_spatial, file );
+  // b_st_slice slice( file_spatial, file );
 
   space_mesh.refine( 1 );
   space_mesh.print_info( );
   space_mesh.print_vtu( "test" );
 
-  space_cluster_tree ct( space_mesh, 4, 8 );
-  time_cluster_tree tt( time_mesh, 2, 4 );
-  ct.print_tree_separately( "test", false );
+  // space_cluster_tree ct( space_mesh, 4, 8 );
+  // time_cluster_tree tt( time_mesh, 2, 4 );
+  // ct.print_tree_separately( "test", false );
 
   time_mesh.refine( 2 );
   space_time_cluster_tree spt( space_mesh, time_mesh, 4, 4, 3, 10 );
-  spt.print( );
-
-  //  lo elem[ 6 ];
-  //  sc node[ 4 ];
-  //  std::cout << tensor_mesh.get_n_elements( ) << std::endl;
-  //  for ( int i = 0; i < tensor_mesh.get_n_elements( ); ++i ) {
-  //	  std::cout<< i << std::endl;
-  //    tensor_mesh.get_element( i, elem );
-  //    for ( int j = 0; j < 6; ++j ) {
-  //      std::cout << elem[ j ] << " ";
-  //    }
-  //    std::cout << std::endl;
-  //    for ( int j = 0; j < 6; ++j ) {
-  //      tensor_mesh.get_node( elem[ j ], node );
-  //      std::cout << node[ 0 ] << ", " << node[ 1 ] << ", " << node[ 2 ] << ",
-  //      "
-  //                << node[ 3 ] << std::endl;
-  //    }
-  //  }
+  // spt.print( );
 }
