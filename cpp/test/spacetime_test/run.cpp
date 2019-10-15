@@ -90,7 +90,10 @@ int main( int argc, char * argv[] ) {
   space_cluster_tree ct( space_mesh, 4, 8 );
   time_cluster_tree tt( time_mesh, 2, 4 );
   ct.print_tree_separately( "test", false );
-  space_time_cluster_tree spt( space_mesh, time_mesh, 8, 4, 2, 10 );
+
+  time_mesh.refine( 2 );
+  space_time_cluster_tree spt( space_mesh, time_mesh, 4, 4, 3, 10 );
+  spt.print( );
 
   //  lo elem[ 6 ];
   //  sc node[ 4 ];

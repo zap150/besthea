@@ -26,57 +26,51 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file time_cluster.h
- * @brief Cluster of temporal elements.
+/** @file spacetime_sluster.h
+ * @brief Combination of space and time clusters
  */
 
-#ifndef INCLUDE_BESTHEA_TIME_CLUSTER_H_
-#define INCLUDE_BESTHEA_TIME_CLUSTER_H_
+#ifndef INCLUDE_BESTHEA_SPACETIME_CLUSTER_H_
+#define INCLUDE_BESTHEA_SPACETIME_CLUSTER_H_
 
 #include "besthea/settings.h"
-#include "besthea/temporal_mesh.h"
+#include "besthea/space_cluster.h"
+#include "besthea/time_cluster.h"
 
-#include <iostream>
 #include <vector>
 
 namespace besthea {
   namespace mesh {
-    class time_cluster;
+    class spacetime_cluster;
   }
 }
 
 /**
- * Class representing 1D temporal cluster.
+ * Class representing a space-time cluster
  */
-class besthea::mesh::time_cluster {
+class besthea::mesh::spacetime_cluster {
  public:
   /**
    * Constructor.
-   * @param[in] center Center of the cluster.
-   * @param[in] half_size Half size of the cluster.
-   * @param[in] n_elements Number of temporal elements in the cluster.
-   * @param[in] parent Pointer to the cluster's parent.
-   * @param[in] level Level within the cluster tree.
-   * @param[in] mesh Reference to the underlying temporal mesh.
+   * @param[in] spatial_cluster Reference to a spatial cluster.
+   * @param[in] temporal_cluster Reference to a temporal cluster.
+   * @param[in] parent Pointer to the parent.
    */
-  time_cluster( sc center, sc half_size, lo n_elements, time_cluster * parent,
-    lo level, const temporal_mesh & mesh )
-    : _n_elements( n_elements ),
-      _center( center ),
-      _half_size( half_size ),
+  spacetime_cluster( space_cluster & spatial_cluster,
+    time_cluster & temporal_cluster, spacetime_cluster * parent, lo level )
+    : _spatial_cluster( spatial_cluster ),
+      _temporal_cluster( temporal_cluster ),
       _parent( parent ),
       _children( nullptr ),
-      _mesh( mesh ),
       _level( level ) {
-    _elements.reserve( _n_elements );
   }
 
-  time_cluster( const time_cluster & that ) = delete;
+  spacetime_cluster( const space_cluster & that ) = delete;
 
   /**
    * Destructor.
    */
-  virtual ~time_cluster( ) {
+  virtual ~spacetime_cluster( ) {
     if ( _children != nullptr ) {
       for ( auto it = _children->begin( ); it != _children->end( ); ++it ) {
         if ( *it != nullptr ) {
@@ -88,51 +82,46 @@ class besthea::mesh::time_cluster {
   }
 
   /**
-   * Adds temporal element to the cluster.
-   * @param[in] idx Index of the temporal element in the underlying mesh.
-   */
-  void add_element( lo idx ) {
-    _elements.push_back( idx );
-  }
-
-  /**
    * Adds cluster's child to the list
    * @param[in] child Child cluster.
    */
-  void add_child( time_cluster * child ) {
+  void add_child( spacetime_cluster * child ) {
     if ( _children == nullptr ) {
-      _children = new std::vector< time_cluster * >( );
+      _children = new std::vector< spacetime_cluster * >( );
     }
     _children->push_back( child );
   }
 
   /**
-   * Returns center of the cluster.
+   * Returns list of cluster's children.
    */
-  sc get_center( ) const {
-    return _center;
+  std::vector< spacetime_cluster * > * get_children( ) {
+    return _children;
   }
 
   /**
-   * Returns half-size of the cluster..
+   * Returns number of cluster's children.
    */
-  sc get_half_size( ) const {
-    return _half_size;
+  lo get_n_children( ) {
+    if ( _children != nullptr ) {
+      return _children->size( );
+    } else {
+      return 0;
+    }
   }
 
   /**
-   * Returns number of elements in the cluster.
+   * Returns a reference to the underlying spatial cluster.
    */
-  lo get_n_elements( ) const {
-    return _n_elements;
+  space_cluster & get_space_cluster( ) {
+    return _spatial_cluster;
   }
 
   /**
-   * Returns element index in the mesh.
-   * @param[in] idx Index of element in the cluster's internal storage.
+   * Returns a reference to the underlying temporal cluster.
    */
-  lo get_element( lo idx ) const {
-    return _elements[ idx ];
+  time_cluster & get_time_cluster( ) {
+    return _temporal_cluster;
   }
 
   /**
@@ -140,14 +129,12 @@ class besthea::mesh::time_cluster {
    * @param[in] n_children Number of cluster's children clusters.
    */
   void set_n_children( lo n_children ) {
-    if ( _children == nullptr ) {
-      _children = new std::vector< time_cluster * >( );
+    if ( n_children > 0 ) {
+      _children = new std::vector< spacetime_cluster * >( );
+      _children->reserve( n_children );
+    } else {
+      _children = nullptr;
     }
-    _children->reserve( n_children );
-  }
-
-  std::vector< time_cluster * > * get_children( ) {
-    return _children;
   }
 
   /*
@@ -157,16 +144,17 @@ class besthea::mesh::time_cluster {
     return _level;
   }
 
+  void print( ) {
+    std::cout << _level << " " << _spatial_cluster.get_level( ) << " "
+              << _temporal_cluster.get_level( ) << std::endl;
+  }
+
  private:
-  lo _n_elements;  //!< number of elements in the cluster
-  sc _center;      //!< center of the cluster
-  sc _half_size;   //!< half size of the cluster
-  std::vector< lo >
-    _elements;  //!< indices of the cluster's elements within the temporal mesh
-  time_cluster * _parent;                     //!< parent of the cluster
-  std::vector< time_cluster * > * _children;  //!< children of the cluster
-  const temporal_mesh & _mesh;  //!< temporal mesh associated with the cluster
-  lo _level;                    //!< level within the cluster tree
+  space_cluster & _spatial_cluster;  //!< underlying spatial cluster
+  time_cluster & _temporal_cluster;  //!< underlying temporal cluster
+  spacetime_cluster * _parent;       //!< parent of the space-time cluster
+  std::vector< spacetime_cluster * > * _children;  //!< children of the cluster
+  lo _level;  //!< level within the cluster tree
 };
 
-#endif /* INCLUDE_BESTHEA_TIME_CLUSTER_H_ */
+#endif /* INCLUDE_BESTHEA_SPACETIME_CLUSTER_H_ */

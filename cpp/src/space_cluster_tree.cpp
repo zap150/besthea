@@ -256,7 +256,7 @@ void besthea::mesh::space_cluster_tree::find_neighbors( space_cluster & cluster,
   lo limit, std::vector< space_cluster * > & neighbors ) const {
   const std::vector< slou > coordinates = cluster.get_box_coordinate( );
 
-  lo cluster_level = cluster.get_level( );
+  slou cluster_level = static_cast< slou >( cluster.get_level( ) );
   std::vector< slou > current_coordinates( 4 );
 
   // std::cout << coordinates[ 0 ] << " " << coordinates[ 1 ] << " "

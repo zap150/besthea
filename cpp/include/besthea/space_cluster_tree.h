@@ -87,6 +87,7 @@ class besthea::mesh::space_cluster_tree {
    * Prints cluster centers and half_sizes to visualizable datafile tree.vtu.
    *
    * To visualize the tree in ParaView:
+   * 0. To ensure ParaView will work in 3D mode, load the underlying mesh file.
    * 1. Load the tree.vtu file.
    * 2. Change representation to Point Gaussians to see the centers of clusters
    * and possibly change the Gaussian radius.
@@ -109,6 +110,7 @@ class besthea::mesh::space_cluster_tree {
    * datafiles tree.vtu.n.
    *
    * To visualize the tree in ParaView:
+   * 0. To ensure ParaView will work in 3D mode, load the underlying mesh file.
    * 1. Load all files into ParaView.
    * 2. Change representation to Point Gaussians to see the centers of clusters
    * and possibly change the Gaussian radius.
