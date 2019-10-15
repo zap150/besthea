@@ -157,6 +157,30 @@ class besthea::mesh::time_cluster {
     return _level;
   }
 
+  /**
+   * Computes padding of the cluster (distance of the farthest point to the
+   * cluster's boundary)
+   *
+   */
+  sc compute_padding( ) const {
+    sc node1, node2;
+
+    sc padding = 0.0;
+
+    // loop over elements in cluster
+    for ( lo i = 0; i < _n_elements; ++i ) {
+      _mesh.get_nodes( _elements[ i ], &node1, &node2 );
+      if ( ( ( _center - _half_size ) - node1 > padding ) ) {
+        padding = _center - _half_size - node1;
+      }
+      if ( ( node2 - ( _center + _half_size ) > padding ) ) {
+        padding = node2 - ( _center + _half_size );
+      }
+    }
+
+    return padding;
+  }
+
  private:
   lo _n_elements;  //!< number of elements in the cluster
   sc _center;      //!< center of the cluster

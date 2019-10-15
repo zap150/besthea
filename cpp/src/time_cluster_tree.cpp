@@ -33,7 +33,8 @@ besthea::mesh::time_cluster_tree::time_cluster_tree(
   : _mesh( mesh ),
     _levels( levels ),
     _real_max_levels( 0 ),
-    _n_min_elems( n_min_elems ) {
+    _n_min_elems( n_min_elems ),
+    _paddings( _levels, 0.0 ) {
   sc center = ( _mesh.get_end( ) + _mesh.get_start( ) ) / 2;
   sc half_size = ( _mesh.get_end( ) - _mesh.get_start( ) ) / 2;
 
@@ -45,6 +46,7 @@ besthea::mesh::time_cluster_tree::time_cluster_tree(
   }
 
   this->build_tree( *_root, 1 );
+  this->compute_padding( *_root );
   _levels = std::min( _levels, _real_max_levels );
 }
 
@@ -104,4 +106,31 @@ void besthea::mesh::time_cluster_tree::build_tree(
   this->build_tree( *left_cluster, level + 1 );
   root.add_child( right_cluster );
   this->build_tree( *right_cluster, level + 1 );
+}
+
+sc besthea::mesh::time_cluster_tree::compute_padding( time_cluster & root ) {
+  std::vector< time_cluster * > * children = root.get_children( );
+  sc padding = -1.0;
+  sc tmp_padding;
+
+  if ( children != nullptr ) {
+    // for non-leaf clusters, find the largest padding of its descendants
+    for ( auto it = children->begin( ); it != children->end( ); ++it ) {
+      tmp_padding = this->compute_padding( **it );
+      if ( tmp_padding > padding ) {
+        padding = tmp_padding;
+      }
+    }
+    if ( padding > _paddings[ root.get_level( ) ] ) {
+      _paddings[ root.get_level( ) ] = padding;
+    }
+  } else {
+    // for leaf clusters, compute padding directly
+    padding = root.compute_padding( );
+    if ( padding > _paddings[ root.get_level( ) ] ) {
+      _paddings[ root.get_level( ) ] = padding;
+    }
+  }
+
+  return padding;
 }

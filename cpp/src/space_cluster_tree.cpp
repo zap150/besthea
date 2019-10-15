@@ -247,8 +247,9 @@ sc besthea::mesh::space_cluster_tree::compute_padding( space_cluster & root ) {
     }
   }
 
-  std::vector< space_cluster * > neighbors;
-  find_neighbors( root, 1, neighbors );
+  // only for test:
+  //  std::vector< space_cluster * > neighbors;
+  //  find_neighbors( root, 1, neighbors );
   return padding;
 }
 
@@ -258,9 +259,6 @@ void besthea::mesh::space_cluster_tree::find_neighbors( space_cluster & cluster,
 
   slou cluster_level = static_cast< slou >( cluster.get_level( ) );
   std::vector< slou > current_coordinates( 4 );
-
-  // std::cout << coordinates[ 0 ] << " " << coordinates[ 1 ] << " "
-  //          << coordinates[ 2 ] << " " << coordinates[ 3 ] << std::endl;
 
   for ( slou i = coordinates[ 1 ] - limit; i < coordinates[ 1 ] + limit + 1;
         ++i ) {
@@ -273,9 +271,6 @@ void besthea::mesh::space_cluster_tree::find_neighbors( space_cluster & cluster,
         if ( _coord_2_cluster.count( current_coordinates ) > 0 ) {
           neighbors.push_back(
             _coord_2_cluster.find( current_coordinates )->second );
-          // std::cout << " " << cluster_level << " " << i << " " << j << " " <<
-          // k
-          //          << std::endl;
         }
       }
     }

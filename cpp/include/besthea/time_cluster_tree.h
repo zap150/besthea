@@ -64,13 +64,21 @@ class besthea::mesh::time_cluster_tree {
     delete _root;
   }
 
+  /**
+   * Returns number of levels in the tree.
+   */
   lo get_levels( ) const {
     return _levels;
   }
 
+  /**
+   * Returns the root of the tree.
+   */
   time_cluster * get_root( ) {
     return _root;
   }
+
+  sc compute_padding( time_cluster & root );
 
  private:
   time_cluster * _root;         //!< root cluster of the tree
@@ -80,6 +88,7 @@ class besthea::mesh::time_cluster_tree {
                         //!< levels (depending on _n_min_elems)
   lo _n_min_elems;  //!< minimum number of elements so that cluster can be split
                     //!< in halves
+  std::vector< sc > _paddings;  //!< vector of paddings on each level
 
   /**
    * Builds tree recursively

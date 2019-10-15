@@ -59,22 +59,29 @@ class besthea::mesh::spacetime_cluster_tree {
     delete _time_tree;
   }
 
-  /*
+  /**
    * Returns the underlying time cluster.
    */
   time_cluster_tree * get_time_cluster_tree( ) {
     return _time_tree;
   }
 
-  /*
+  /**
    * Returns the underlying space cluster.
    */
   space_cluster_tree * get_space_cluster_tree( ) {
     return _space_tree;
   }
 
+  /**
+   * Prints levels of the tree.
+   */
   void print( ) {
     print_internal( _root );
+  }
+
+  spacetime_cluster * get_root( ) {
+    return _root;
   }
 
  private:

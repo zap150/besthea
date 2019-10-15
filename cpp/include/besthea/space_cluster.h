@@ -280,7 +280,7 @@ class besthea::mesh::space_cluster {
         }
         if ( ( curr_node[ 0 ] - ( _center[ 0 ] + _half_size[ 0 ] )
                > padding ) ) {
-          padding = _center[ 0 ] - ( _center[ 0 ] + _half_size[ 0 ] );
+          padding = curr_node[ 0 ] - ( _center[ 0 ] + _half_size[ 0 ] );
         }
         if ( ( ( _center[ 1 ] - _half_size[ 1 ] ) - curr_node[ 1 ]
                > padding ) ) {
@@ -288,7 +288,7 @@ class besthea::mesh::space_cluster {
         }
         if ( ( curr_node[ 1 ] - ( _center[ 1 ] + _half_size[ 1 ] )
                > padding ) ) {
-          padding = _center[ 1 ] - ( _center[ 1 ] + _half_size[ 1 ] );
+          padding = curr_node[ 1 ] - ( _center[ 1 ] + _half_size[ 1 ] );
         }
         if ( ( ( _center[ 2 ] - _half_size[ 2 ] ) - curr_node[ 2 ]
                > padding ) ) {
@@ -296,7 +296,7 @@ class besthea::mesh::space_cluster {
         }
         if ( ( curr_node[ 2 ] - ( _center[ 2 ] + _half_size[ 2 ] )
                > padding ) ) {
-          padding = _center[ 2 ] - ( _center[ 2 ] + _half_size[ 2 ] );
+          padding = curr_node[ 2 ] - ( _center[ 2 ] + _half_size[ 2 ] );
         }
       }
     }
