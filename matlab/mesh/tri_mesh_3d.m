@@ -224,6 +224,10 @@ classdef tri_mesh_3d < handle
       obj.nodes = obj.nodes * alpha;
     end
     
+    function x = centroid( obj, i_elem )
+      x = obj.nodes( obj.elems( i_elem, : ), : ) * [ 1 1 1 ]' / 3;
+    end
+    
   end
   
   methods (Access = private)
