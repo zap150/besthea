@@ -32,7 +32,7 @@
 
 besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
   const triangular_surface_mesh & space_mesh, const temporal_mesh & time_mesh,
-  lo time_levels, lo space_levels, lo n_min_time_elems, lo n_min_space_elems )
+  lo time_levels, lo n_min_time_elems, lo n_min_space_elems )
   : _space_mesh( space_mesh ), _time_mesh( time_mesh ) {
   // first, we create the temporal and spatial trees
   _time_tree

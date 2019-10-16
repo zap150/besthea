@@ -51,8 +51,8 @@ class besthea::mesh::spacetime_cluster_tree {
  public:
   using vector_type = besthea::linear_algebra::vector;
   spacetime_cluster_tree( const triangular_surface_mesh & space_mesh,
-    const temporal_mesh & time_mesh, lo time_levels, lo space_levels,
-    lo n_min_time_elems, lo n_min_space_elems );
+    const temporal_mesh & time_mesh, lo time_levels, lo n_min_time_elems,
+    lo n_min_space_elems );
 
   ~spacetime_cluster_tree( ) {
     delete _space_tree;
