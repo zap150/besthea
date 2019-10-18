@@ -73,6 +73,10 @@ void cblas_dsymv( CBLAS_ORDER order, CBLAS_UPLO Uplo, lo M, sc alpha,
 
 // LEVEL 3 BLAS
 
+void cblas_dgemm( CBLAS_ORDER order, CBLAS_TRANSPOSE TransA,
+  CBLAS_TRANSPOSE TransB, lo m, lo n, lo k, sc alpha, const sc * A, lo lda,
+  const sc * B, lo ldb, sc beta, sc * C, lo ldc );
+
 // LAPACK
 
 lo LAPACKE_dgetrf( int order, lo m, lo n, sc * a, lo lda, lo * ipiv );

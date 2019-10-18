@@ -117,6 +117,22 @@ void besthea::linear_algebra::full_matrix::apply_symmetric(
     _n_rows, x.data( ), 1, beta, y.data( ), 1 );
 }
 
+void besthea::linear_algebra::full_matrix::multiply( full_matrix const & A,
+  full_matrix const & B, bool trans_A, bool trans_B, sc alpha, sc beta ) {
+  CBLAS_TRANSPOSE cblas_trans_A = trans_A ? CblasTrans : CblasNoTrans;
+  CBLAS_TRANSPOSE cblas_trans_B = trans_B ? CblasTrans : CblasNoTrans;
+
+  lo m = trans_A ? A.get_n_columns( ) : A.get_n_rows( );
+  lo n = trans_B ? B.get_n_rows( ) : B.get_n_columns( );
+  lo k = trans_A ? A.get_n_rows( ) : A.get_n_columns( );
+
+  lo lda = trans_A ? k : m;
+  lo ldb = trans_B ? n : k;
+
+  cblas_dgemm( CblasColMajor, cblas_trans_A, cblas_trans_B, m, n, k, alpha,
+    A.data( ), lda, B.data( ), ldb, beta, _data.data( ), _n_rows );
+}
+
 void besthea::linear_algebra::full_matrix::lu_decompose_solve(
   vector & rhs, lo n_rhs, bool trans ) {
   char lapacke_trans = trans ? 'T' : 'N';
