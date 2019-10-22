@@ -25,48 +25,66 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "besthea/chebyshev_evaluator.h"
-#include "besthea/lagrange_interpolant.h"
+
+/** @file chebyshev_evaluator.h
+ * @brief Evaluation of Lagrange polynomials.
+ */
+
+#ifndef INCLUDE_BESTHEA_CHEBYSHEV_EVALUATOR_H_
+#define INCLUDE_BESTHEA_CHEBYSHEV_EVALUATOR_H_
+
 #include "besthea/settings.h"
 #include "besthea/vector.h"
-
-
 #include <cmath>
-#include <cstdlib>
-#include <iostream>
 
-int main( int argc, char * argv[] ) {
-  using vector_type = besthea::linear_algebra::vector;
-  using lagrange_interpolant = besthea::bem::lagrange_interpolant;
-  using chebyshev_evaluator = besthea::bem::chebyshev_evaluator;
-  // test of lagrange_interpolant class;
-  // set order of lagrange polynomials, number of evaluation points and index of
-  // polynomial which is evaluated
-  lo order = 5;
-  lo n_eval_points = 10;
-  lo poly_index = 0;
-  // declare evaluation points and lagrange_values
-  vector_type eval_points( n_eval_points ), lagrange_values( n_eval_points );
-  // initialize evaluation points uniformly in [-1, 1]
-  for ( lo i = 0; i < n_eval_points; ++i ) {
-    eval_points[ i ] = -1.0 + 2.0 * i / (n_eval_points - 1.0);
-  }
-  // evaluate lagrange polynomial
-  lagrange_interpolant lagrange(order);
-  lagrange.evaluate( poly_index, eval_points, lagrange_values );
-  std::cout << "values of lagrange polynomial are: " << std::endl;
-  for ( lo i = 0; i < n_eval_points; ++i )
-    std::cout << lagrange_values[ i ] << " ";
-  std::cout << std::endl;
-  // evaluate chebyshev polynomial
-  vector_type all_cheb_values( n_eval_points * (order + 1));
-  chebyshev_evaluator chebyshev(order);
-  chebyshev.evaluate( eval_points, all_cheb_values );
-  std::cout << "values of all chebyshev polynomials (order <= " << order;
-  std::cout << " are: " << std::endl;
-  for ( lo i = 0; i <= order; ++i ) {
-    for ( lo j = 0; j < n_eval_points; ++j ) 
-      printf("%.4f ", all_cheb_values[ n_eval_points * i + j ]);
-    std::cout << std::endl;
+namespace besthea {
+  namespace bem {
+    class chebyshev_evaluator;
   }
 }
+
+/**
+ * Class for the evaluation of Lagrange polynomials for Chebyshev nodes
+ */
+class besthea::bem::chebyshev_evaluator {
+ public:
+  using vector_type = besthea::linear_algebra::vector;
+
+  /**
+   * Constructor.
+   * @param[in] order highest order of evaluated chebyshev polynomials
+   */
+  chebyshev_evaluator( const lo order )
+    : _order( order ) {
+  }
+
+  chebyshev_evaluator( const chebyshev_evaluator & that ) = delete;
+  
+  /**
+   * Evaluate all Chebyshev polynomials up to given order for points in [-1, 1]
+   * @param[in] eval_points Points in [-1, 1] where polynomial is evaluated
+   * @param[in,out]  all_values  Resulting values (at input its size should be 
+   *                             at least (@p _order + 1) * size @p eval_points)
+   */
+  void evaluate( const vector_type eval_points, 
+                 vector_type & all_values) {
+    // initialize values to 1;
+    const lo sz = eval_points.size( );
+    for ( lo i = 0; i < sz; ++i )
+      all_values[ i ] = 1.0;
+    for ( lo i = 0; i < sz; ++ i )
+      all_values[ sz + i ] = eval_points[ i ];
+    for ( lo j = 2; j <= _order; ++ j )
+      for ( lo i = 0; i < sz; ++ i )
+        {
+          all_values[ j * sz + i ] = 2 * eval_points[ i ] * 
+                                     all_values[ ( j - 1 ) * sz + i];
+          all_values[ j * sz + i ] -= all_values[ ( j - 2 ) * sz + i ];
+        }
+  }
+  
+ private:
+  lo _order;     //!< highest order of evaluated chebyshev polynomials
+};
+
+#endif /* INCLUDE_BESTHEA_CHEBYSHEV_EVALUATOR_H_ */
