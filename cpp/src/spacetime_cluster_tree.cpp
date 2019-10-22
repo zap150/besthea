@@ -29,6 +29,7 @@
 #include <besthea/spacetime_cluster_tree.h>
 
 #include <algorithm>
+#include <vector>
 
 besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
   const triangular_surface_mesh & space_mesh, const temporal_mesh & time_mesh,
@@ -82,6 +83,9 @@ besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
     // the roots of the subtrees are linked to the level -1 global root
     _root->add_child( cluster );
   }
+  
+  // initialize temporal m2m matrices
+  set_temporal_m2m_matrices( );
 }
 
 void besthea::mesh::spacetime_cluster_tree::build_tree(
@@ -127,5 +131,59 @@ void besthea::mesh::spacetime_cluster_tree::get_space_clusters_on_level(
     }
   } else {
     clusters.push_back( root );
+  }
+}
+
+void besthea::mesh::spacetime_cluster_tree::set_temporal_m2m_matrices( ) {
+  lo n_levels = _time_tree->get_levels( );
+  // Declare the two structures containing matrices of appropriate size.
+  // NOTE: For level 0 and 1 matrices are stored, but not needed. This allows
+  //       for a direct access of the matrices via their level. The matrix for
+  //       level n_levels is not needed and hence not allocated.
+  _m2m_matrices_t_left = std::vector< full_matrix_type >( n_levels, 
+                  full_matrix_type( _temp_order + 1, _temp_order + 1, false ) );
+  _m2m_matrices_t_right = std::vector< full_matrix_type >( n_levels, 
+                  full_matrix_type( _temp_order + 1, _temp_order + 1, false ) );
+  std::vector< sc > paddings = _time_tree->get_paddings( );
+  sc h_root_no_pad = _time_tree->get_root( )->get_half_size( );
+  sc h_par_no_pad = h_root_no_pad / 4.0;
+  // Initialize class for evaluation of lagrange polynomials and get
+  // interpolation nodes in the interval [-1, 1].
+  besthea::bem::lagrange_interpolant lagrange( _temp_order );
+  vector_type nodes = lagrange.get_nodes( );
+  vector_type nodes_l_child( _temp_order + 1, false );
+  vector_type nodes_r_child( _temp_order + 1, false );
+  vector_type values_lagrange( _temp_order + 1, false );
+  for ( lo curr_level = 2; curr_level < n_levels; ++ curr_level ) {
+    sc h_child_no_pad = h_par_no_pad / 2.0;
+    // compute center of children (assuming that parent center is 0)
+    sc padding_par = paddings[ curr_level ];
+    sc padding_child = paddings[ curr_level + 1 ];
+    // transform the nodes from [-1, 1] to the child interval and then back to 
+    // [-1, 1] with the transformation of the parent interval:
+    for ( lo j = 0; j <= _temp_order; ++ j ) {
+      nodes_l_child[ j ] = 1.0 / ( h_par_no_pad + padding_par ) * 
+        ( -h_child_no_pad + ( h_child_no_pad + padding_child ) * nodes [ j ] );
+      nodes_r_child[ j ] = 1.0 / ( h_par_no_pad + padding_par ) * 
+        ( h_child_no_pad + ( h_child_no_pad + padding_child ) * nodes [ j ] );
+    }
+    // compute left m2m matrix at current level
+    for ( lo j = 0; j <= _temp_order; ++j ) {
+      lagrange.evaluate( j, nodes_l_child, values_lagrange );
+      for ( lo k = 0; k <= _temp_order; ++k )
+        _m2m_matrices_t_left[curr_level].set( j, k, values_lagrange[ k ] );
+    }
+    // compute right m2m matrix at current level
+    for ( lo j = 0; j <= _temp_order; ++j ) {
+      lagrange.evaluate( j, nodes_r_child, values_lagrange );
+      for ( lo k = 0; k <= _temp_order; ++k ) 
+        _m2m_matrices_t_right[curr_level].set( j, k, values_lagrange[ k ] );
+    }
+    // TODO: The construction of the matrices is probably far from optimal: The
+    // values are computed in row major order, but matrix memory is column major
+    // Idea: Compute L2L matrices instead of M2M matrices?
+    
+    // update for next iteration
+    h_par_no_pad = h_child_no_pad;
   }
 }

@@ -77,6 +77,13 @@ class besthea::mesh::time_cluster_tree {
   time_cluster * get_root( ) {
     return _root;
   }
+  
+  /**
+   * Returns the vector of levelwise paddings.
+   */
+  std::vector< sc > get_paddings( ) {
+    return _paddings;
+  }
 
   sc compute_padding( time_cluster & root );
 

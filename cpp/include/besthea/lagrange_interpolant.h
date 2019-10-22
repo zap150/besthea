@@ -75,17 +75,21 @@ class besthea::bem::lagrange_interpolant {
   void evaluate( const lo index, const vector_type eval_points, 
                  vector_type & values) {
     // initialize values to 1;
-    for ( lo i = 0; i <= eval_points.size( ); ++i )
+    for ( lo i = 0; i < eval_points.size( ); ++i )
       values[ i ] = 1.0;
     for ( lo k = 0; k < index; ++ k)
-      for ( lo i = 0; i <= eval_points.size( ); ++i )
+      for ( lo i = 0; i < eval_points.size( ); ++i )
         values[ i ] *= ( eval_points[ i ] - _nodes[ k ] ) / 
                        ( _nodes[ index ] - _nodes[ k ] );
     for ( lo k = index + 1; k <= _order; ++ k )
-      for ( lo i = 0; i <= eval_points.size( ); ++i )
+      for ( lo i = 0; i < eval_points.size( ); ++i )
         values[ i ] *= ( eval_points[ i ] - _nodes[ k ] ) / 
                        ( _nodes[ index ] - _nodes[ k ] );
   }
+  
+  vector_type get_nodes( ) {
+    return _nodes;
+  };
   
  private:
   lo _order;           //!< number of interpolation nodes

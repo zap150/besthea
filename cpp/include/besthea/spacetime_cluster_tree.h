@@ -33,10 +33,13 @@
 #ifndef INCLUDE_BESTHEA_SPACETIME_CLUSTER_TREE_H_
 #define INCLUDE_BESTHEA_SPACETIME_CLUSTER_TREE_H_
 
+#include "besthea/lagrange_interpolant.h"
 #include "besthea/space_cluster_tree.h"
 #include "besthea/spacetime_cluster.h"
 #include "besthea/time_cluster_tree.h"
 #include "besthea/vector.h"
+
+#include <vector>
 
 namespace besthea {
   namespace mesh {
@@ -85,6 +88,15 @@ class besthea::mesh::spacetime_cluster_tree {
   }
 
  private:
+  using full_matrix_type = besthea::linear_algebra::full_matrix;
+  std::vector< full_matrix_type > _m2m_matrices_t_left;  //! left temporal 
+      //! m2m matrices stored levelwise
+  std::vector< full_matrix_type > _m2m_matrices_t_right; //! right temporal 
+      //! m2m matrices stored levelwise
+  lo _temp_order = 5; //! degree of interpolation polynomials in time for pFMM 
+  // TODO relocate the above members to pFMM matrix
+  // TODO substitute hardcoded _temp_order with settable one
+
   const triangular_surface_mesh & _space_mesh;  //!< underlying spatial mesh
   const temporal_mesh & _time_mesh;             //!< underlying temporal mesh
   time_cluster_tree * _time_tree;               //!< temporal tree
@@ -108,6 +120,17 @@ class besthea::mesh::spacetime_cluster_tree {
    * Aux for printing
    */
   void print_internal( spacetime_cluster * root ) {
+    if (root->get_level( ) == -1) {
+      lo n_levels = _time_tree->get_levels( );
+      for ( lo curr_lev = 2; curr_lev < n_levels; ++curr_lev ) {
+        std::cout << "printing m2m matrix nr. " << curr_lev << std::endl;
+        for ( lo j = 0; j <= _temp_order; ++ j ) {
+          for ( lo k = 0; k <= _temp_order; ++ k )
+            printf( "%.4f ", _m2m_matrices_t_left[curr_lev](j, k) );
+          std::cout << std::endl;
+        }
+      }
+    }
     root->print( );
     std::vector< spacetime_cluster * > * children = root->get_children( );
     // std::cout << children->size( ) << std::endl;
@@ -117,6 +140,11 @@ class besthea::mesh::spacetime_cluster_tree {
         print_internal( *it );
       }
   }
+  
+  /*
+   * Compute the temporal m2m matrices for all levels.
+   */
+  void set_temporal_m2m_matrices( );
 };
 
 #endif /* INCLUDE_BESTHEA_SPACETIME_CLUSTER_TREE_H_ */
