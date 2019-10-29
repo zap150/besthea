@@ -41,6 +41,7 @@ besthea::mesh::space_cluster_tree::space_cluster_tree(
   const triangular_surface_mesh & mesh, lo levels, lo n_min_elems )
   : _mesh( mesh ),
     _levels( levels ),
+    _real_max_levels( 0 ),
     _n_min_elems( n_min_elems ),
     _non_empty_nodes( _levels ),
     _paddings( _levels, 0.0 ),
@@ -69,6 +70,11 @@ besthea::mesh::space_cluster_tree::space_cluster_tree(
   ++_n_nonempty_nodes;
   this->build_tree( *_root, 1 );
   this->compute_padding( *_root );
+
+  _levels = std::min( _levels, _real_max_levels );
+
+  _paddings.resize( _levels );
+  _paddings.shrink_to_fit( );
 }
 
 void besthea::mesh::space_cluster_tree::build_tree(
@@ -76,6 +82,11 @@ void besthea::mesh::space_cluster_tree::build_tree(
   // stop recursion if maximum number of tree levels is reached
   if ( level > _levels - 1 || root.get_n_elements( ) < _n_min_elems ) {
     root.set_n_children( 0 );
+
+    if ( level > _real_max_levels ) {
+      _real_max_levels = level;
+    }
+
     return;
   }
 
@@ -228,7 +239,7 @@ sc besthea::mesh::space_cluster_tree::compute_padding( space_cluster & root ) {
   sc padding = -1.0;
   sc tmp_padding;
 
-  if ( children != nullptr ) {
+  if ( children != nullptr && children->size( ) != 0 ) {
     // for non-leaf clusters, find the largest padding of its descendants
     for ( auto it = children->begin( ); it != children->end( ); ++it ) {
       tmp_padding = this->compute_padding( **it );
