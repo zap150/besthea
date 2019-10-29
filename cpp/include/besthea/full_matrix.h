@@ -219,6 +219,14 @@ class besthea::linear_algebra::full_matrix
    * @param[in] n_rhs Number of right-hand sides.
    * @param[in] trans Flag for transpose.
    */
+
+  /*!
+   * @brief C = alpha * A * B + beta * C, where A is this matrix
+   *
+   */
+  void multiply( full_matrix const & A, full_matrix const & B,
+    bool trans_A = false, bool trans_B = false, sc alpha = 1.0, sc beta = 0.0 );
+
   void lu_decompose_solve(
     vector_type & rhs, lo n_rhs = 1, bool trans = false );
 

@@ -29,6 +29,7 @@
 #include <besthea/space_cluster_tree.h>
 #include <besthea/spacetime_cluster_tree.h>
 
+#include "besthea/full_matrix.h"
 #include "besthea/settings.h"
 #include "besthea/spacetime_slice.h"
 #include "besthea/spacetime_tensor_mesh.h"
@@ -51,6 +52,7 @@ int main( int argc, char * argv[] ) {
   // using space_cluster_tree = besthea::mesh::space_cluster_tree;
   // using time_cluster_tree = besthea::mesh::time_cluster_tree;
   using space_time_cluster_tree = besthea::mesh::spacetime_cluster_tree;
+  using full_matrix = besthea::linear_algebra::full_matrix;
 
   std::string file = "./test/mesh_files/time_1_10.txt";
 

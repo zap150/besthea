@@ -26,83 +26,62 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file time_cluster_tree.h
- * @brief Tree of temporal cluster.
+/** @file chebyshev_evaluator.h
+ * @brief Evaluation of Lagrange polynomials.
  */
 
-#ifndef INCLUDE_BESTHEA_TIME_CLUSTER_TREE_H_
-#define INCLUDE_BESTHEA_TIME_CLUSTER_TREE_H_
+#ifndef INCLUDE_BESTHEA_CHEBYSHEV_EVALUATOR_H_
+#define INCLUDE_BESTHEA_CHEBYSHEV_EVALUATOR_H_
 
 #include "besthea/settings.h"
-#include "besthea/temporal_mesh.h"
-#include "besthea/time_cluster.h"
+#include "besthea/vector.h"
 
-#include <iostream>
+#include <cmath>
 
 namespace besthea {
-  namespace mesh {
-    class time_cluster_tree;
+  namespace bem {
+    class chebyshev_evaluator;
   }
 }
 
 /**
- * Class representing (not necessarily binary) tree of temporal clusters.
+ * Class for the evaluation of Lagrange polynomials for Chebyshev nodes
  */
-class besthea::mesh::time_cluster_tree {
+class besthea::bem::chebyshev_evaluator {
  public:
-  /**
-   * Constructor
-   * @param[in] mesh Reference to the underlying mesh.
-   * @param[in] levels Maximum number of levels in the tree.
-   */
-  time_cluster_tree( const temporal_mesh & mesh, lo levels, lo n_min_elems );
+  using vector_type = besthea::linear_algebra::vector;
 
   /**
-   * Destructor.
+   * Constructor.
+   * @param[in] order highest order of evaluated chebyshev polynomials
    */
-  virtual ~time_cluster_tree( ) {
-    delete _root;
+  chebyshev_evaluator( const lo order ) : _order( order ) {
   }
 
-  /**
-   * Returns number of levels in the tree.
-   */
-  lo get_levels( ) const {
-    return _levels;
-  }
+  chebyshev_evaluator( const chebyshev_evaluator & that ) = delete;
 
   /**
-   * Returns the root of the tree.
+   * Evaluate all Chebyshev polynomials up to given order for points in [-1, 1]
+   * @param[in] eval_points Points in [-1, 1] where polynomial is evaluated
+   * @param[in,out]  all_values  Resulting values (at input its size should be
+   *                             at least (@p _order + 1) * size @p eval_points)
    */
-  time_cluster * get_root( ) {
-    return _root;
+  void evaluate(
+    const vector_type eval_points, vector_type & all_values ) const {
+    // initialize values to 1;
+    const lo sz = eval_points.size( );
+    for ( lo i = 0; i < sz; ++i ) all_values[ i ] = 1.0;
+    for ( lo i = 0; i < sz; ++i ) all_values[ sz + i ] = eval_points[ i ];
+    for ( lo j = 2; j <= _order; ++j )
+      for ( lo i = 0; i < sz; ++i ) {
+        all_values[ j * sz + i ]
+          = 2 * eval_points[ i ] * all_values[ ( j - 1 ) * sz + i ];
+        all_values[ j * sz + i ] -= all_values[ ( j - 2 ) * sz + i ];
+      }
   }
-
-  /**
-   * Returns the vector of levelwise paddings.
-   */
-  const std::vector< sc > & get_paddings( ) const {
-    return _paddings;
-  }
-
-  sc compute_padding( time_cluster & root );
 
  private:
-  time_cluster * _root;         //!< root cluster of the tree
-  const temporal_mesh & _mesh;  //!< underlying mesh
-  lo _levels;                   //!< number of levels in the tree
-  lo _real_max_levels;  //!< auxiliary value to determine number of real tree
-                        //!< levels (depending on _n_min_elems)
-  lo _n_min_elems;  //!< minimum number of elements so that cluster can be split
-                    //!< in halves
-  std::vector< sc > _paddings;  //!< vector of paddings on each level
-
-  /**
-   * Builds tree recursively
-   * @param[in] root Node to stem from.
-   * @param[in] level Current level.
-   */
-  void build_tree( time_cluster & root, lo level );
+  lo _order;  //!< highest order of evaluated chebyshev polynomials
 };
 
-#endif /* INCLUDE_BESTHEA_TIME_CLUSTER_TREE_H_ */
+#endif /* INCLUDE_BESTHEA_CHEBYSHEV_EVALUATOR_H_ */
