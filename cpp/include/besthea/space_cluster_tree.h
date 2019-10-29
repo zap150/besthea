@@ -146,7 +146,7 @@ class besthea::mesh::space_cluster_tree {
    * @warning Currently this number can be higher than the effective number of
    * levels in the cluster tree (TODO)
    */
-  lo get_levels( ) {
+  lo get_levels( ) const {
     return _levels;
   }
 

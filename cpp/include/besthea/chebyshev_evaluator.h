@@ -35,6 +35,7 @@
 
 #include "besthea/settings.h"
 #include "besthea/vector.h"
+
 #include <cmath>
 
 namespace besthea {
@@ -54,37 +55,33 @@ class besthea::bem::chebyshev_evaluator {
    * Constructor.
    * @param[in] order highest order of evaluated chebyshev polynomials
    */
-  chebyshev_evaluator( const lo order )
-    : _order( order ) {
+  chebyshev_evaluator( const lo order ) : _order( order ) {
   }
 
   chebyshev_evaluator( const chebyshev_evaluator & that ) = delete;
-  
+
   /**
    * Evaluate all Chebyshev polynomials up to given order for points in [-1, 1]
    * @param[in] eval_points Points in [-1, 1] where polynomial is evaluated
-   * @param[in,out]  all_values  Resulting values (at input its size should be 
+   * @param[in,out]  all_values  Resulting values (at input its size should be
    *                             at least (@p _order + 1) * size @p eval_points)
    */
-  void evaluate( const vector_type eval_points, 
-                 vector_type & all_values) {
+  void evaluate(
+    const vector_type eval_points, vector_type & all_values ) const {
     // initialize values to 1;
     const lo sz = eval_points.size( );
-    for ( lo i = 0; i < sz; ++i )
-      all_values[ i ] = 1.0;
-    for ( lo i = 0; i < sz; ++ i )
-      all_values[ sz + i ] = eval_points[ i ];
-    for ( lo j = 2; j <= _order; ++ j )
-      for ( lo i = 0; i < sz; ++ i )
-        {
-          all_values[ j * sz + i ] = 2 * eval_points[ i ] * 
-                                     all_values[ ( j - 1 ) * sz + i];
-          all_values[ j * sz + i ] -= all_values[ ( j - 2 ) * sz + i ];
-        }
+    for ( lo i = 0; i < sz; ++i ) all_values[ i ] = 1.0;
+    for ( lo i = 0; i < sz; ++i ) all_values[ sz + i ] = eval_points[ i ];
+    for ( lo j = 2; j <= _order; ++j )
+      for ( lo i = 0; i < sz; ++i ) {
+        all_values[ j * sz + i ]
+          = 2 * eval_points[ i ] * all_values[ ( j - 1 ) * sz + i ];
+        all_values[ j * sz + i ] -= all_values[ ( j - 2 ) * sz + i ];
+      }
   }
-  
+
  private:
-  lo _order;     //!< highest order of evaluated chebyshev polynomials
+  lo _order;  //!< highest order of evaluated chebyshev polynomials
 };
 
 #endif /* INCLUDE_BESTHEA_CHEBYSHEV_EVALUATOR_H_ */
