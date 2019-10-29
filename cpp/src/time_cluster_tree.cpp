@@ -48,6 +48,7 @@ besthea::mesh::time_cluster_tree::time_cluster_tree(
   this->build_tree( *_root, 1 );
   this->compute_padding( *_root );
   _levels = std::min( _levels, _real_max_levels );
+
   _paddings.resize( _levels );
   _paddings.shrink_to_fit( );
 }
@@ -115,7 +116,7 @@ sc besthea::mesh::time_cluster_tree::compute_padding( time_cluster & root ) {
   sc padding = -1.0;
   sc tmp_padding;
 
-  if ( children != nullptr ) {
+  if ( children != nullptr && children->size( ) != 0 ) {
     // for non-leaf clusters, find the largest padding of its descendants
     for ( auto it = children->begin( ); it != children->end( ); ++it ) {
       tmp_padding = this->compute_padding( **it );

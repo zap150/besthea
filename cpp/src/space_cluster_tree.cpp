@@ -239,7 +239,7 @@ sc besthea::mesh::space_cluster_tree::compute_padding( space_cluster & root ) {
   sc padding = -1.0;
   sc tmp_padding;
 
-  if ( children != nullptr ) {
+  if ( children != nullptr && children->size( ) != 0 ) {
     // for non-leaf clusters, find the largest padding of its descendants
     for ( auto it = children->begin( ); it != children->end( ); ++it ) {
       tmp_padding = this->compute_padding( **it );
