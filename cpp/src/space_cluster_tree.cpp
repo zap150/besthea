@@ -70,9 +70,9 @@ besthea::mesh::space_cluster_tree::space_cluster_tree(
   ++_n_nonempty_nodes;
   this->build_tree( *_root, 1 );
   this->compute_padding( *_root );
-  std::cout << "Original: " << _levels << std::endl;
+
   _levels = std::min( _levels, _real_max_levels );
-  std::cout << _levels << std::endl;
+
   _paddings.resize( _levels );
   _paddings.shrink_to_fit( );
 }
