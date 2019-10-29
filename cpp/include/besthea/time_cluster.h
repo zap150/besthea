@@ -140,10 +140,12 @@ class besthea::mesh::time_cluster {
    * @param[in] n_children Number of cluster's children clusters.
    */
   void set_n_children( lo n_children ) {
-    if ( _children == nullptr ) {
+    if ( n_children > 0 ) {
       _children = new std::vector< time_cluster * >( );
+      _children->reserve( n_children );
+    } else {
+      _children = nullptr;
     }
-    _children->reserve( n_children );
   }
 
   std::vector< time_cluster * > * get_children( ) {
