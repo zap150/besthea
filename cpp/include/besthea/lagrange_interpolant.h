@@ -87,7 +87,7 @@ class besthea::bem::lagrange_interpolant {
                        ( _nodes[ index ] - _nodes[ k ] );
   }
   
-  vector_type get_nodes( ) {
+  const vector_type & get_nodes( ) const {
     return _nodes;
   };
   

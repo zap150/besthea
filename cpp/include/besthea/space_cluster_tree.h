@@ -140,7 +140,7 @@ class besthea::mesh::space_cluster_tree {
   space_cluster * get_root( ) {
     return _root;
   }
-  
+
   /**
    * Returns the number of levels in the tree.
    * @warning Currently this number can be higher than the effective number of
@@ -149,11 +149,11 @@ class besthea::mesh::space_cluster_tree {
   lo get_levels( ) {
     return _levels;
   }
-  
+
   /**
    * Returns the vector of levelwise paddings.
    */
-  std::vector< sc > get_paddings( ) {
+  const std::vector< sc > & get_paddings( ) const {
     return _paddings;
   }
 
