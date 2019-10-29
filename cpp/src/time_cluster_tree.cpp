@@ -34,7 +34,7 @@ besthea::mesh::time_cluster_tree::time_cluster_tree(
     _levels( levels ),
     _real_max_levels( 0 ),
     _n_min_elems( n_min_elems ),
-    _paddings( _levels, 0.0 ) {
+    _paddings( _levels, -1.0 ) {
   sc center = ( _mesh.get_end( ) + _mesh.get_start( ) ) / 2;
   sc half_size = ( _mesh.get_end( ) - _mesh.get_start( ) ) / 2;
 
@@ -48,6 +48,8 @@ besthea::mesh::time_cluster_tree::time_cluster_tree(
   this->build_tree( *_root, 1 );
   this->compute_padding( *_root );
   _levels = std::min( _levels, _real_max_levels );
+  _paddings.resize( _levels );
+  _paddings.shrink_to_fit( );
 }
 
 void besthea::mesh::time_cluster_tree::build_tree(
