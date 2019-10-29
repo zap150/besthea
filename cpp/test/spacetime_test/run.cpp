@@ -94,6 +94,6 @@ int main( int argc, char * argv[] ) {
   // ct.print_tree_separately( "test", false );
 
   time_mesh.refine( 2 );
-  space_time_cluster_tree spt( space_mesh, time_mesh, 4, 3, 10 );
+  space_time_cluster_tree spt( space_mesh, time_mesh, 8, 3, 1000 );
   // spt.print( );
 }
