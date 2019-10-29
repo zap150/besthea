@@ -379,3 +379,17 @@ void besthea::mesh::spacetime_cluster_tree::set_spatial_m2m_coeffs( ) {
     h_par_no_pad[ 2 ] = h_child_no_pad[ 2 ];
   }
 }
+
+void besthea::mesh::spacetime_cluster_tree::apply_temporal_m2m( 
+                            full_matrix_type const & child_moment, 
+                            const lo level,
+                            const bool is_left_child, 
+                            full_matrix_type & parent_moment)
+{
+  if ( is_left_child )
+    parent_moment.multiply( _m2m_matrices_t_left[ level ], child_moment, false, 
+                            false, 1.0, 1.0 );
+  else
+    parent_moment.multiply( _m2m_matrices_t_right[ level ], child_moment, false, 
+                            false, 1.0, 1.0 );
+}

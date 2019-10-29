@@ -182,6 +182,14 @@ class besthea::mesh::spacetime_cluster_tree {
    * Compute the spatial m2m coefficients for all levels.
    */
   void set_spatial_m2m_coeffs( );
+  
+  /*
+   * Apply the temporal m2m operation for given parent and child moments
+   */
+  void apply_temporal_m2m( full_matrix_type const & child_moment, 
+                           const lo level,
+                           const bool is_left_child, 
+                           full_matrix_type & parent_moment);
 };
 
 #endif /* INCLUDE_BESTHEA_SPACETIME_CLUSTER_TREE_H_ */
