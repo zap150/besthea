@@ -94,6 +94,10 @@ int main( int argc, char * argv[] ) {
   // ct.print_tree_separately( "test", false );
 
   time_mesh.refine( 2 );
-  space_time_cluster_tree spt( space_mesh, time_mesh, 4, 3, 10 );
-  // spt.print( );
+  
+  // coefficient to determine coupling of spatial and temoral levels
+  sc st_coeff = 4.0; // corresponds to \rho_L = 8 in Messner's paper
+  
+  space_time_cluster_tree spt( space_mesh, time_mesh, 4, 3, 10, st_coeff );
+  spt.print( );
 }
