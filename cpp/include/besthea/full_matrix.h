@@ -221,7 +221,7 @@ class besthea::linear_algebra::full_matrix
    */
 
   /*!
-   * @brief C = alpha * A * B + beta * C, where A is this matrix
+   * @brief C = alpha * A * B + beta * C, where C is this matrix
    *
    */
   void multiply( full_matrix const & A, full_matrix const & B,
