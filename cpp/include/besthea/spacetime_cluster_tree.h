@@ -56,7 +56,7 @@ class besthea::mesh::spacetime_cluster_tree {
   using vector_type = besthea::linear_algebra::vector;
   spacetime_cluster_tree( const triangular_surface_mesh & space_mesh,
     const temporal_mesh & time_mesh, lo time_levels, lo n_min_time_elems,
-    lo n_min_space_elems );
+    lo n_min_space_elems, sc st_coeff );
 
   ~spacetime_cluster_tree( ) {
     delete _space_tree;
@@ -120,6 +120,11 @@ class besthea::mesh::spacetime_cluster_tree {
   spacetime_cluster * _root;                    //!< root of the cluster tree
   lo _start_spatial_level;  //!< auxiliary variable determining the appropriate
                             //!< starting level in the space cluster tree
+  lo _start_temporal_level; //!< auxiliary variable to determine in which level
+                            //!< the spatial refinement starts 
+                            //!< (meaningful only if _start_spatial_level = 0)
+  sc _s_t_coeff;    //!< coefficient to determine the coupling of the spatial
+                    //!< and temporal levels
 
   /**
    * Auxiliary method to get all spatial clusters on a given level
@@ -130,7 +135,7 @@ class besthea::mesh::spacetime_cluster_tree {
   /**
    * Recursively builds the tree of spacetime clusters
    */
-  void build_tree( spacetime_cluster * root, lo level );
+  void build_tree( spacetime_cluster * root, lo level, bool split_space );
 
   /*
    * Aux for printing
@@ -163,14 +168,15 @@ class besthea::mesh::spacetime_cluster_tree {
         }
       }
     }
-//     root->print( );
-//     std::vector< spacetime_cluster * > * children = root->get_children( );
-//     // std::cout << children->size( ) << std::endl;
-//     if ( children != nullptr )
-//       for ( auto it = children->begin( ); it != children->end( ); ++it ) {
-//         for ( lo i = 0; i < ( *it )->get_level( ); ++i ) std::cout << " ";
-//         print_internal( *it );
-//       }
+
+    root->print( );
+    std::vector< spacetime_cluster * > * children = root->get_children( );
+    // std::cout << children->size( ) << std::endl;
+    if ( children != nullptr )
+      for ( auto it = children->begin( ); it != children->end( ); ++it ) {
+        for ( lo i = 0; i < ( *it )->get_level( ); ++i ) std::cout << " ";
+        print_internal( *it );
+      }
   }
   
   /*
@@ -182,6 +188,22 @@ class besthea::mesh::spacetime_cluster_tree {
    * Compute the spatial m2m coefficients for all levels.
    */
   void set_spatial_m2m_coeffs( );
+  
+  /*
+   * Apply the temporal m2m operation for given parent and child moments
+   */
+  void apply_temporal_m2m( full_matrix_type const & child_moment, 
+                           const lo level,
+                           const bool is_left_child, 
+                           full_matrix_type & parent_moment);
+  
+  /*
+   * Apply the spatial m2m operation for given parent and child moments
+   */
+  void apply_spatial_m2m( full_matrix_type const & child_moment, 
+                          const lo level,
+                          const slou octant, 
+                          full_matrix_type & parent_moment);
 };
 
 #endif /* INCLUDE_BESTHEA_SPACETIME_CLUSTER_TREE_H_ */
