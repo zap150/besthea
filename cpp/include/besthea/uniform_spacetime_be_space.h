@@ -152,14 +152,6 @@ class besthea::bem::uniform_spacetime_be_space
     int order_rhs_temporal = 4 ) const override;
 
   /**
-   * Returns the l2 relative error |f-approximation|/|f|.
-   * @param[in] f Function in finite dimensional space.
-   * @param[out] approximation Function in finite dimensional space.
-   */
-  virtual sc l2_relative_error( const block_vector_type & f,
-    const block_vector_type & approximation ) const override;
-
-  /**
    * Projects a function to the boundary element space. ONLY USE SPECIALIZED
    * FUNCTIONS!
    * @param[in] f Function to be projected.

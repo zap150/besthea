@@ -57,13 +57,12 @@ class besthea::bem::spacetime_be_space {
   using mesh_type = besthea::mesh::mesh;      //!< Spacetime mesh type.
 
  public:
-  spacetime_be_space( mesh_type & mesh ) : _basis( mesh ) {
-  }
+  spacetime_be_space( mesh_type & mesh );
+
   /**
    * Destructor.
    */
-  virtual ~spacetime_be_space( ) {
-  }
+  virtual ~spacetime_be_space( );
 
   /**
    * Returns reference to the basis function.
@@ -93,8 +92,7 @@ class besthea::bem::spacetime_be_space {
   virtual void L2_projection(
     sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
     block_vector_type & projection, int order_matrix = 2,
-    int order_rhs_spatial = 5, int order_rhs_temporal = 4 ) const {
-  }
+    int order_rhs_spatial = 5, int order_rhs_temporal = 4 ) const;
 
   /**
    * Returns the L2 relative error |f-approximation|/|f|.
@@ -108,9 +106,7 @@ class besthea::bem::spacetime_be_space {
   virtual sc L2_relative_error(
     sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
     const block_vector_type & approximation, int order_rhs_spatial = 5,
-    int order_rhs_temporal = 4 ) const {
-    return 0.0;
-  }
+    int order_rhs_temporal = 4 ) const;
 
   /**
    * Returns the l2 relative error |f-approximation|/|f|.
@@ -118,9 +114,7 @@ class besthea::bem::spacetime_be_space {
    * @param[out] approximation Function in finite dimensional space.
    */
   virtual sc l2_relative_error( const block_vector_type & f,
-    const block_vector_type & approximation ) const {
-    return 0.0;
-  }
+    const block_vector_type & approximation ) const;
 
   /**
    * Projects a function to the boundary element space. ONLY USE SPECIALIZED
@@ -130,8 +124,7 @@ class besthea::bem::spacetime_be_space {
    */
   virtual void interpolation(
     sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-    block_vector_type & interpolation ) const {
-  }
+    block_vector_type & interpolation ) const;
 
  protected:
   basis_type _basis;  //!< spatial basis function (temporal is constant)

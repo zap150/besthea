@@ -33,6 +33,9 @@
 #ifndef INCLUDE_BESTHEA_BEM_H_
 #define INCLUDE_BESTHEA_BEM_H_
 
+#include <besthea/spacetime_heat_dl_kernel_antiderivative.h>
+#include <besthea/spacetime_heat_hs_kernel_antiderivative.h>
+#include <besthea/spacetime_heat_sl_kernel_antiderivative.h>
 #include "besthea/basis_function.h"
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
@@ -41,8 +44,5 @@
 #include "besthea/uniform_spacetime_be_identity.h"
 #include "besthea/uniform_spacetime_be_solver.h"
 #include "besthea/uniform_spacetime_be_space.h"
-#include "besthea/uniform_spacetime_heat_dl_kernel_antiderivative.h"
-#include "besthea/uniform_spacetime_heat_hs_kernel_antiderivative.h"
-#include "besthea/uniform_spacetime_heat_sl_kernel_antiderivative.h"
 
 #endif /* INCLUDE_BESTHEA_BEM_H_ */
