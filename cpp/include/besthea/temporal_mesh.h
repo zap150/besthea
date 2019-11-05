@@ -33,6 +33,8 @@
 #ifndef INCLUDE_BESTHEA_TEMPORAL_MESH_H_
 #define INCLUDE_BESTHEA_TEMPORAL_MESH_H_
 
+#include "besthea/coordinates.h"
+#include "besthea/indices.h"
 #include "besthea/settings.h"
 
 #include <algorithm>
@@ -109,7 +111,8 @@ class besthea::mesh::temporal_mesh {
    * @param[in] i_element Index of the element.
    * @param[out] element Element indices.
    */
-  void get_element( lo i_element, lo * element ) const {
+  void get_element(
+    lo i_element, linear_algebra::indices< 2 > & element ) const {
     element[ 0 ] = _elements[ 2 * i_element ];
     element[ 1 ] = _elements[ 2 * i_element + 1 ];
   }
@@ -119,7 +122,7 @@ class besthea::mesh::temporal_mesh {
    * @param[in] i_node Index of the temporal node.
    * @param[out] node
    */
-  void get_node( lo i_node, sc * node ) const {
+  void get_node( lo i_node, linear_algebra::coordinates< 1 > & node ) const {
     node[ 0 ] = _nodes[ i_node ];
   }
 
@@ -128,6 +131,20 @@ class besthea::mesh::temporal_mesh {
    */
   sc get_node( lo i_node ) const {
     return _nodes[ i_node ];
+  }
+
+  /**
+   * Returns coordinates of all nodes of an element.
+   * @param[in] i_element Index of the element.
+   * @param[out] node1 Coordinate of the first node (beginning of the temporal
+   * subinterval).
+   * @param[out] node2 Coordinate of the second node (end of the temporal
+   * subinterval).
+   */
+  void get_nodes( lo i_element, linear_algebra::coordinates< 1 > & node1,
+    linear_algebra::coordinates< 1 > & node2 ) const {
+    node1[ 0 ] = _nodes[ _elements[ 2 * i_element ] ];
+    node2[ 0 ] = _nodes[ _elements[ 2 * i_element + 1 ] ];
   }
 
   /**
@@ -167,9 +184,11 @@ class besthea::mesh::temporal_mesh {
    * Returns centroid of the i-th element.
    */
   sc get_centroid( lo i_elem ) const {
-    sc left, right;
-    get_nodes( i_elem, &left, &right );
-    return ( left + right ) / 2.0;
+    linear_algebra::coordinates< 3 > leftt;
+    linear_algebra::coordinates< 1 > left;
+    linear_algebra::coordinates< 1 > right;
+    get_nodes( i_elem, left, right );
+    return ( left( 0 ) + right( 0 ) ) / 2.0;
   }
 
  protected:

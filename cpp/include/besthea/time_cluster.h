@@ -176,18 +176,19 @@ class besthea::mesh::time_cluster {
    *
    */
   sc compute_padding( ) const {
-    sc node1, node2;
+    linear_algebra::coordinates< 1 > node1;
+    linear_algebra::coordinates< 1 > node2;
 
     sc padding = 0.0;
 
     // loop over elements in cluster
     for ( lo i = 0; i < _n_elements; ++i ) {
-      _mesh.get_nodes( _elements[ i ], &node1, &node2 );
-      if ( ( ( _center - _half_size ) - node1 > padding ) ) {
-        padding = _center - _half_size - node1;
+      _mesh.get_nodes( _elements[ i ], node1, node2 );
+      if ( ( ( _center - _half_size ) - node1( 0 ) > padding ) ) {
+        padding = _center - _half_size - node1( 0 );
       }
-      if ( ( node2 - ( _center + _half_size ) > padding ) ) {
-        padding = node2 - ( _center + _half_size );
+      if ( ( node2( 0 ) - ( _center + _half_size ) > padding ) ) {
+        padding = node2( 0 ) - ( _center + _half_size );
       }
     }
 

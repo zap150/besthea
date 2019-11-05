@@ -34,6 +34,8 @@
 #ifndef INCLUDE_BESTHEA_SPACETIME_TENSOR_MESH_H_
 #define INCLUDE_BESTHEA_SPACETIME_TENSOR_MESH_H_
 
+#include "besthea/coordinates.h"
+#include "besthea/indices.h"
 #include "besthea/mesh.h"
 #include "besthea/temporal_mesh.h"
 #include "besthea/triangular_surface_mesh.h"
@@ -118,12 +120,13 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * @param[in] i_element Index of the element.
    * @param[out] element Element indices (array of 6 indices).
    */
-  void get_element( lo i_element, lo * element ) const {
+  void get_element(
+    lo i_element, linear_algebra::indices< 3 > & element ) const {
     lo space_elem_idx;
     lo time_elem_idx;
     map_index( i_element, space_elem_idx, time_elem_idx );
     linear_algebra::indices< 3 > sp_element;
-    lo t_element[ 2 ];
+    linear_algebra::indices< 2 > t_element;
 
     _space_mesh->get_element( space_elem_idx, sp_element );
     _time_mesh->get_element( time_elem_idx, t_element );
@@ -145,7 +148,8 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
     node[ 0 ] = sp_node[ 0 ];
     node[ 1 ] = sp_node[ 1 ];
     node[ 2 ] = sp_node[ 2 ];
-    _time_mesh->get_node( t_idx, node.end( ) - 1 );
+
+    node[ 3 ] = _time_mesh->get_node( t_idx );
   }
 
   /**
@@ -250,7 +254,8 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * @param[in] i_element Index of the temporal element.
    * @param[out] element Temporal indices.
    */
-  void get_temporal_element( lo i_element, lo * element ) const {
+  void get_temporal_element(
+    lo i_element, linear_algebra::indices< 2 > & element ) const {
     _time_mesh->get_element( i_element, element );
   }
 
@@ -266,8 +271,23 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * Returns a coordinate of a temporal node.
    * @param[in] i_node Index of the temporal node.
    */
-  void get_temporal_node( lo i_node, sc * node ) const {
+  void get_temporal_node(
+    lo i_node, linear_algebra::coordinates< 1 > & node ) const {
     _time_mesh->get_node( i_node, node );
+  }
+
+  /**
+   * Returns coordinates of all temporal nodes of an element.
+   * @param[in] i_element Index of the temporal element.
+   * @param[out] node1 Coordinate of the first node (beginning of the temporal
+   * subinterval).
+   * @param[out] node2 Coordinate of the second node (end of the temporal
+   * subinterval).
+   */
+  void get_temporal_nodes( lo i_element,
+    linear_algebra::coordinates< 1 > & node1,
+    linear_algebra::coordinates< 1 > & node2 ) const {
+    _time_mesh->get_nodes( i_element, node1, node2 );
   }
 
   /**
