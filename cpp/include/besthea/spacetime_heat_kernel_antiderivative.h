@@ -30,19 +30,18 @@
  * @brief Kernel for uniform_spacetime_tensor_mesh.h.
  */
 
-#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_
-#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_
+#ifndef INCLUDE_BESTHEA_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_
+#define INCLUDE_BESTHEA_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_
 
+#include <besthea/spacetime_kernel_antiderivative.h>
 #include "besthea/settings.h"
-#include "besthea/uniform_spacetime_kernel_antiderivative.h"
-
 #include <cmath>
 #include <vector>
 
 namespace besthea {
   namespace bem {
     template< class derived_type >
-    class uniform_spacetime_heat_kernel_antiderivative;
+    class spacetime_heat_kernel_antiderivative;
   }
 }
 
@@ -51,8 +50,8 @@ namespace besthea {
  * kernel.
  */
 template< class derived_type >
-class besthea::bem::uniform_spacetime_heat_kernel_antiderivative
-  : public besthea::bem::uniform_spacetime_kernel_antiderivative<
+class besthea::bem::spacetime_heat_kernel_antiderivative
+  : public besthea::bem::spacetime_kernel_antiderivative<
       derived_type > {
  public:
   /**
@@ -60,9 +59,8 @@ class besthea::bem::uniform_spacetime_heat_kernel_antiderivative
    * @param[in] timestep Time step.
    * @param[in] alpha Heat conductivity.
    */
-  uniform_spacetime_heat_kernel_antiderivative( sc timestep, sc alpha )
-    : uniform_spacetime_kernel_antiderivative< derived_type >( timestep ),
-      _alpha( alpha ),
+  spacetime_heat_kernel_antiderivative( sc alpha )
+    : _alpha( alpha ),
       _sqrt_alpha( std::sqrt( alpha ) ),
       _alpha2( alpha * alpha ) {
   }
@@ -70,7 +68,7 @@ class besthea::bem::uniform_spacetime_heat_kernel_antiderivative
   /**
    * Destructor.
    */
-  virtual ~uniform_spacetime_heat_kernel_antiderivative( ) {
+  virtual ~spacetime_heat_kernel_antiderivative( ) {
   }
 
  protected:
@@ -90,4 +88,4 @@ class besthea::bem::uniform_spacetime_heat_kernel_antiderivative
   const sc _eps{ 1e-12 };  //!< Auxiliary variable
 };
 
-#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_ */
+#endif /* INCLUDE_BESTHEA_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_ */

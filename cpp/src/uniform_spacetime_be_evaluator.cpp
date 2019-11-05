@@ -26,15 +26,15 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <besthea/spacetime_heat_dl_kernel_antiderivative.h>
+#include <besthea/spacetime_heat_hs_kernel_antiderivative.h>
+#include <besthea/spacetime_heat_sl_kernel_antiderivative.h>
 #include "besthea/uniform_spacetime_be_evaluator.h"
 
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
 #include "besthea/quadrature.h"
 #include "besthea/uniform_spacetime_be_space.h"
-#include "besthea/uniform_spacetime_heat_dl_kernel_antiderivative.h"
-#include "besthea/uniform_spacetime_heat_hs_kernel_antiderivative.h"
-#include "besthea/uniform_spacetime_heat_sl_kernel_antiderivative.h"
 #include "omp.h"
 
 template< class kernel_type, class space_type >
@@ -124,7 +124,7 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
     lo my_n_chunks = my_n_points / size_chunk;
     lo chunk_offset;
 
-    sc scaled_delta, area, basis_value, density_value;
+    sc ttau, area, basis_value, density_value;
     linear_algebra::coordinates< 3 > y1, y2, y3, ny;
     sc * ny_data = ny.data( );
     std::vector< lo > l2g( loc_dim );
@@ -149,7 +149,7 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
       }
 
       for ( lo delta = 0; delta <= n_timesteps - 1; ++delta ) {
-        scaled_delta = ( delta + 0.5 ) * timestep;
+        ttau = ( delta + 0.5 ) * timestep;
 
         for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
           mesh->get_spatial_nodes( i_elem, y1, y2, y3 );
@@ -203,7 +203,7 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
                 = _kernel->anti_tau_regular(
                     x1[ i_point ] - y1_mapped[ i_quad ],
                     x2[ i_point ] - y2_mapped[ i_quad ],
-                    x3[ i_point ] - y3_mapped[ i_quad ], ny_data, scaled_delta )
+                    x3[ i_point ] - y3_mapped[ i_quad ], ny_data, ttau )
                 * wy[ i_quad ];
             }  // i_point
 
@@ -300,15 +300,15 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
 }
 
 template class besthea::bem::uniform_spacetime_be_evaluator<
-  besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
 template class besthea::bem::uniform_spacetime_be_evaluator<
-  besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
 
 template class besthea::bem::uniform_spacetime_be_evaluator<
-  besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
 template class besthea::bem::uniform_spacetime_be_evaluator<
-  besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;

@@ -110,8 +110,7 @@ int main( int argc, char * argv[] ) {
 
   block_lower_triangular_toeplitz_matrix * K
     = new block_lower_triangular_toeplitz_matrix( );
-  uniform_spacetime_heat_dl_kernel_antiderivative kernel_k(
-    spacetime_mesh.get_timestep( ), cauchy_data::alpha );
+  spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::alpha );
   uniform_spacetime_be_assembler assembler_k(
     kernel_k, space_p0, space_p1, order_sing, order_reg );
   t.reset( "K" );
@@ -146,8 +145,7 @@ int main( int argc, char * argv[] ) {
 
   block_lower_triangular_toeplitz_matrix * V
     = new block_lower_triangular_toeplitz_matrix( );
-  uniform_spacetime_heat_sl_kernel_antiderivative kernel_v(
-    spacetime_mesh.get_timestep( ), cauchy_data::alpha );
+  spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::alpha );
   uniform_spacetime_be_assembler assembler_v(
     kernel_v, space_p0, space_p0, order_sing, order_reg );
   t.reset( "V" );
