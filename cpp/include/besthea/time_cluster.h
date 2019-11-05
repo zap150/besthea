@@ -194,6 +194,22 @@ class besthea::mesh::time_cluster {
     return padding;
   }
 
+  time_cluster * get_left_neighbour( ) {
+    if ( _parent == nullptr ) {
+      // for the root cluster
+      return nullptr;
+    }
+
+    if ( this == _parent->_children->back( ) ) {
+      return _parent->_children->front( );
+    } else if ( ( _parent->get_left_neighbour( ) != nullptr )
+      && ( _parent->get_left_neighbour( )->_children->size( ) == 2 ) ) {
+      return _parent->get_left_neighbour( )->_children->back( );
+    } else {
+      return nullptr;
+    }
+  }
+
  private:
   lo _n_elements;  //!< number of elements in the cluster
   sc _center;      //!< center of the cluster
