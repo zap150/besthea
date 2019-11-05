@@ -33,10 +33,11 @@
 #ifndef INCLUDE_BESTHEA_PFMM_MATRIX_H_
 #define INCLUDE_BESTHEA_PFMM_MATRIX_H_
 
-#include "besthea/full_matrix.h"
+#include "besthea/block_matrix.h"
 #include "besthea/matrix.h"
 #include "besthea/settings.h"
 #include "besthea/spacetime_cluster_tree.h"
+#include "besthea/sparse_matrix.h"
 
 namespace besthea {
   namespace linear_algebra {
@@ -50,14 +51,15 @@ namespace besthea {
 class besthea::linear_algebra::pFMM_matrix
   : public besthea::linear_algebra::matrix {
  public:
-  using full_matrix_type = besthea::linear_algebra::full_matrix;
+  using sparse_matrix_type = besthea::linear_algebra::sparse_matrix;
+  using block_matrix_type = besthea::linear_algebra::block_matrix;
   using spacetime_tree_type = besthea::mesh::spacetime_cluster_tree;
 
   /**
    * Default constructor.
    */
   pFMM_matrix( )
-    : _temp_order( 5 ), _space_order( 5 ), _spacetime_tree( nullptr ) {
+    : _spacetime_tree( nullptr ), _temp_order( 5 ), _space_order( 5 ) {
   }
 
   /*!
@@ -66,6 +68,10 @@ class besthea::linear_algebra::pFMM_matrix
    */
   void set_tree( spacetime_tree_type * spacetime_tree ) {
     _spacetime_tree = spacetime_tree;
+
+    lo n_blocks = _spacetime_tree->get_time_cluster_tree( )
+                    ->get_mesh( )
+                    .get_n_elements( );
   }
 
   /*!
@@ -79,11 +85,10 @@ class besthea::linear_algebra::pFMM_matrix
   }
 
  private:
-  spacetime_tree_type * _spacetime_tree;
-  std::vector< std::vector< full_matrix_type * > >
-    nearfield_matrices;  //!< for each time-step (outer vector), vector of 1
-                         //!< or 2 temporal nearfield full matrices (until
-                         //!< nearfield is approximated as well)
+  spacetime_tree_type *
+    _spacetime_tree;  //!< tree decomposing spatial and temporal domains
+  std::vector< sparse_matrix_type * >
+    _nearfield_matrices;  //!< temporal nearfield blocks
   lo _temp_order;   //!< degree of interpolation polynomials in time for pFMM
   lo _space_order;  //!< degree of truncated Chebyshev expansion
 };

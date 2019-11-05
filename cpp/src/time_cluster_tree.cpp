@@ -51,6 +51,7 @@ besthea::mesh::time_cluster_tree::time_cluster_tree(
 
   _paddings.resize( _levels );
   _paddings.shrink_to_fit( );
+  collect_leaves( *_root );
 }
 
 void besthea::mesh::time_cluster_tree::build_tree(
@@ -136,4 +137,15 @@ sc besthea::mesh::time_cluster_tree::compute_padding( time_cluster & root ) {
   }
 
   return padding;
+}
+
+void besthea::mesh::time_cluster_tree::collect_leaves( time_cluster & root ) {
+  if ( root.get_n_children( ) == 0 ) {
+    _leaves.push_back( &root );
+  } else {
+    for ( auto it = root.get_children( )->begin( );
+          it != root.get_children( )->end( ); ++it ) {
+      collect_leaves( **it );
+    }
+  }
 }

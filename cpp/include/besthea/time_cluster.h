@@ -148,6 +148,17 @@ class besthea::mesh::time_cluster {
     }
   }
 
+  /**
+   * Returns number of cluster's children.
+   */
+  lo get_n_children( ) {
+    if ( _children != nullptr ) {
+      return _children->size( );
+    } else {
+      return 0;
+    }
+  }
+
   std::vector< time_cluster * > * get_children( ) {
     return _children;
   }

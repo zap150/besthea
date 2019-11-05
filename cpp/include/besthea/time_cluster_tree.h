@@ -85,7 +85,23 @@ class besthea::mesh::time_cluster_tree {
     return _paddings;
   }
 
+  /**
+   * Computes padding of temporal clusters
+   */
   sc compute_padding( time_cluster & root );
+
+  /**
+   * Returns the underlying temporal mesh.
+   */
+  const temporal_mesh & get_mesh( ) {
+    return _mesh;
+  }
+  /**
+   * Returns clusters without descendants.
+   */
+  std::vector< time_cluster * > & get_leaves( ) {
+    return _leaves;
+  }
 
  private:
   time_cluster * _root;         //!< root cluster of the tree
@@ -96,6 +112,8 @@ class besthea::mesh::time_cluster_tree {
   lo _n_min_elems;  //!< minimum number of elements so that cluster can be split
                     //!< in halves
   std::vector< sc > _paddings;  //!< vector of paddings on each level
+  std::vector< time_cluster * >
+    _leaves;  //!< vector of all clusters without descendants
 
   /**
    * Builds tree recursively
@@ -103,6 +121,12 @@ class besthea::mesh::time_cluster_tree {
    * @param[in] level Current level.
    */
   void build_tree( time_cluster & root, lo level );
+
+  /**
+   * Collects all clusters without descendants and stores them in the internal
+   * _leaves vector.
+   */
+  void collect_leaves( time_cluster & root );
 };
 
 #endif /* INCLUDE_BESTHEA_TIME_CLUSTER_TREE_H_ */

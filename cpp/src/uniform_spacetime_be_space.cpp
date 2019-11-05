@@ -37,7 +37,7 @@
 template< class basis_type >
 besthea::bem::uniform_spacetime_be_space<
   basis_type >::uniform_spacetime_be_space( st_mesh_type & spacetime_mesh )
-  : _basis( spacetime_mesh ) {
+  : spacetime_be_space< basis_type >( spacetime_mesh ) {
   _spacetime_mesh = &spacetime_mesh;
 }
 
@@ -56,7 +56,7 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::L2_projection(
     *this, *this, order_matrix );
   identity.assemble( M );
 
-  lo global_dim = _basis.dimension_global( );
+  lo global_dim = this->_basis.dimension_global( );
   besthea::linear_algebra::vector rhs( global_dim, true );
 
   lo n_timesteps = _spacetime_mesh->get_n_temporal_elements( );
@@ -66,7 +66,7 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::L2_projection(
   projection.resize( n_timesteps );
   projection.resize_blocks( global_dim );
 
-  lo local_dim = _basis.dimension_local( );
+  lo local_dim = this->_basis.dimension_local( );
   std::vector< lo > l2g( local_dim );
 
   linear_algebra::coordinates< 3 > x1, x2, x3, n;
@@ -94,7 +94,7 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::L2_projection(
     for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
       _spacetime_mesh->get_spatial_nodes( i_elem, x1, x2, x3 );
       triangle_to_geometry( x1, x2, x3, my_quadrature );
-      _basis.local_to_global( i_elem, l2g );
+      this->_basis.local_to_global( i_elem, l2g );
       _spacetime_mesh->get_spatial_normal( i_elem, n );
       area_xt = _spacetime_mesh->spatial_area( i_elem ) * timestep;
 
@@ -104,7 +104,7 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::L2_projection(
                       t_mapped[ i_t ] )
             * wx[ i_x ] * wt[ i_t ] * area_xt;
           for ( lo i_loc = 0; i_loc < local_dim; ++i_loc ) {
-            basis_val = _basis.evaluate(
+            basis_val = this->_basis.evaluate(
               i_elem, i_loc, x1_ref[ i_x ], x2_ref[ i_x ], n.data( ) );
             rhs_data[ l2g_data[ i_loc ] ] += basis_val * fun_val;
           }
@@ -127,7 +127,7 @@ sc besthea::bem::uniform_spacetime_be_space< basis_type >::L2_relative_error(
   sc timestep = _spacetime_mesh->get_timestep( );
   lo n_elements = _spacetime_mesh->get_n_spatial_elements( );
 
-  lo local_dim = _basis.dimension_local( );
+  lo local_dim = this->_basis.dimension_local( );
   std::vector< lo > l2g( local_dim );
 
   linear_algebra::coordinates< 3 > x1, x2, x3, n;
@@ -158,13 +158,13 @@ sc besthea::bem::uniform_spacetime_be_space< basis_type >::L2_relative_error(
     for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
       _spacetime_mesh->get_spatial_nodes( i_elem, x1, x2, x3 );
       triangle_to_geometry( x1, x2, x3, my_quadrature );
-      _basis.local_to_global( i_elem, l2g );
+      this->_basis.local_to_global( i_elem, l2g );
       _spacetime_mesh->get_spatial_normal( i_elem, n );
       area_xt = _spacetime_mesh->spatial_area( i_elem ) * timestep;
       for ( lo i_x = 0; i_x < size_x; ++i_x ) {
         local_value = 0.0;
         for ( lo i_loc = 0; i_loc < local_dim; ++i_loc ) {
-          basis_val = _basis.evaluate(
+          basis_val = this->_basis.evaluate(
             i_elem, i_loc, x1_ref[ i_x ], x2_ref[ i_x ], n.data( ) );
           local_value += approximation_data[ l2g_data[ i_loc ] ] * basis_val;
         }

@@ -35,6 +35,7 @@
 
 #include "besthea/block_vector.h"
 #include "besthea/settings.h"
+#include "besthea/spacetime_be_space.h"
 #include "besthea/uniform_spacetime_tensor_mesh.h"
 
 namespace besthea {
@@ -50,11 +51,18 @@ namespace besthea {
  *  Class representing a boundary element space.
  */
 template< class basis_type >
-class besthea::bem::uniform_spacetime_be_space {
+class besthea::bem::uniform_spacetime_be_space
+  : public besthea::bem::spacetime_be_space< basis_type > {
   template< class, class >
   friend class besthea::bem::uniform_spacetime_be_evaluator;
 
- private:
+ public:
+  using st_mesh_type
+    = besthea::mesh::uniform_spacetime_tensor_mesh;  //!< Spacetime mesh type.
+  using block_vector_type
+    = besthea::linear_algebra::block_vector;  //!< Block vector type.
+
+ protected:
   /**
    * Wraps the mapped quadrature point so that they can be private for OpenMP
    * threads
@@ -85,18 +93,13 @@ class besthea::bem::uniform_spacetime_be_space {
   };
 
  public:
-  using st_mesh_type
-    = besthea::mesh::uniform_spacetime_tensor_mesh;  //!< Spacetime mesh type.
-  using block_vector_type
-    = besthea::linear_algebra::block_vector;  //!< Block vector type.
-
   uniform_spacetime_be_space( const uniform_spacetime_be_space & that )
     = delete;
 
   /**
    * Destructor.
    */
-  ~uniform_spacetime_be_space( );
+  virtual ~uniform_spacetime_be_space( );
 
   /**
    * Constructing mesh from a file.
@@ -119,20 +122,6 @@ class besthea::bem::uniform_spacetime_be_space {
   }
 
   /**
-   * Returns reference to the basis function.
-   */
-  basis_type & get_basis( ) {
-    return _basis;
-  }
-
-  /**
-   * Returns pointer to the basis function.
-   */
-  const basis_type & get_basis( ) const {
-    return _basis;
-  }
-
-  /**
    * Projects a function to the boundary element space.
    * @param[in] f Function to be projected.
    * @param[out] projection Projection vector.
@@ -143,10 +132,10 @@ class besthea::bem::uniform_spacetime_be_space {
    * @param[in] order_rhs_temporal Temporal line quadrature order to assemble
    * the right-hand side.
    */
-  void L2_projection(
+  virtual void L2_projection(
     sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
     block_vector_type & projection, int order_matrix = 2,
-    int order_rhs_spatial = 5, int order_rhs_temporal = 4 ) const;
+    int order_rhs_spatial = 5, int order_rhs_temporal = 4 ) const override;
 
   /**
    * Returns the L2 relative error |f-approximation|/|f|.
@@ -157,18 +146,18 @@ class besthea::bem::uniform_spacetime_be_space {
    * @param[in] order_rhs_temporal Temporal line quadrature order to assemble
    * the right-hand side.
    */
-  sc L2_relative_error(
+  virtual sc L2_relative_error(
     sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
     const block_vector_type & approximation, int order_rhs_spatial = 5,
-    int order_rhs_temporal = 4 ) const;
+    int order_rhs_temporal = 4 ) const override;
 
   /**
    * Returns the l2 relative error |f-approximation|/|f|.
    * @param[in] f Function in finite dimensional space.
    * @param[out] approximation Function in finite dimensional space.
    */
-  sc l2_relative_error( const block_vector_type & f,
-    const block_vector_type & approximation ) const;
+  virtual sc l2_relative_error( const block_vector_type & f,
+    const block_vector_type & approximation ) const override;
 
   /**
    * Projects a function to the boundary element space. ONLY USE SPECIALIZED
@@ -176,9 +165,9 @@ class besthea::bem::uniform_spacetime_be_space {
    * @param[in] f Function to be projected.
    * @param[out] interpolation Interpolation vector.
    */
-  void interpolation(
+  virtual void interpolation(
     sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-    block_vector_type & interpolation ) const;
+    block_vector_type & interpolation ) const override;
 
  protected:
   /**
@@ -213,8 +202,6 @@ class besthea::bem::uniform_spacetime_be_space {
     lo d, sc timestep, quadrature_wrapper & my_quadrature ) const;
 
   st_mesh_type * _spacetime_mesh;  //!< uniform spacetime tensor mesh
-
-  basis_type _basis;  //!< spatial basis function (temporal is constant)
 };
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_SPACE_H_ */

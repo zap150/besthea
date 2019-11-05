@@ -52,7 +52,7 @@ int main( int argc, char * argv[] ) {
   // using space_cluster_tree = besthea::mesh::space_cluster_tree;
   // using time_cluster_tree = besthea::mesh::time_cluster_tree;
   using space_time_cluster_tree = besthea::mesh::spacetime_cluster_tree;
-  using full_matrix = besthea::linear_algebra::full_matrix;
+  // using full_matrix = besthea::linear_algebra::full_matrix;
 
   std::string file = "./test/mesh_files/time_1_10.txt";
 
@@ -94,10 +94,10 @@ int main( int argc, char * argv[] ) {
   // ct.print_tree_separately( "test", false );
 
   time_mesh.refine( 2 );
-  
+
   // coefficient to determine coupling of spatial and temoral levels
-  sc st_coeff = 4.0; // corresponds to \rho_L = 8 in Messner's paper
-  
+  sc st_coeff = 4.0;  // corresponds to \rho_L = 8 in Messner's paper
+
   space_time_cluster_tree spt( space_mesh, time_mesh, 4, 3, 10, st_coeff );
   spt.print( );
 }
