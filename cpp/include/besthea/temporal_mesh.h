@@ -182,13 +182,24 @@ class besthea::mesh::temporal_mesh {
 
   /**
    * Returns centroid of the i-th element.
+   * @param[in] i_element Index of the element.
+   * @param[out] centroid Centroid of the element;
    */
-  sc get_centroid( lo i_elem ) const {
-    linear_algebra::coordinates< 3 > leftt;
-    linear_algebra::coordinates< 1 > left;
-    linear_algebra::coordinates< 1 > right;
-    get_nodes( i_elem, left, right );
-    return ( left( 0 ) + right( 0 ) ) / 2.0;
+  void get_centroid(
+    lo i_element, linear_algebra::coordinates< 1 > & centroid ) const {
+    centroid( 0 ) = ( _nodes[ _elements[ 2 * i_element ] ]
+                      + _nodes[ _elements[ 2 * i_element + 1 ] ] )
+      / 2;
+  }
+
+  /**
+   * Returns centroid of the i-th element.
+   * @param[in] i_element Index of the element.
+   */
+  sc get_centroid( lo i_element ) const {
+    return ( _nodes[ _elements[ 2 * i_element ] ]
+             + _nodes[ _elements[ 2 * i_element + 1 ] ] )
+      / 2;
   }
 
  protected:

@@ -270,10 +270,29 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
   /**
    * Returns a coordinate of a temporal node.
    * @param[in] i_node Index of the temporal node.
+   * @param[in] node Time point.
    */
   void get_temporal_node(
     lo i_node, linear_algebra::coordinates< 1 > & node ) const {
     _time_mesh->get_node( i_node, node );
+  }
+
+  /**
+   * Returns a coordinate of a temporal node.
+   * @param[in] i_element Index of the temporal element.
+   * @param[out] node Time point.
+   */
+  void get_temporal_centroid(
+    lo i_element, linear_algebra::coordinates< 1 > & node ) const {
+    node( 0 ) = _time_mesh->get_centroid( i_element );
+  }
+
+  /**
+   * Returns a coordinate of a temporal node.
+   * @param[in] i_element Index of the temporal element.
+   */
+  sc get_temporal_centroid( lo i_element ) const {
+    return _time_mesh->get_centroid( i_element );
   }
 
   /**
@@ -381,14 +400,14 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
   /**
    * Returns a pointer to the internally stored spatial mesh.
    */
-  virtual triangular_surface_mesh * get_spatial_mesh( ) {
+  virtual triangular_surface_mesh * get_spatial_mesh( ) override {
     return _space_mesh;
   }
 
   /**
    * Returns a pointer to the internally stored spatial mesh.
    */
-  virtual const triangular_surface_mesh * get_spatial_mesh( ) const {
+  virtual const triangular_surface_mesh * get_spatial_mesh( ) const override {
     return _space_mesh;
   }
 
@@ -396,6 +415,13 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * Return a pointer to the internally stored temporal mesh.
    */
   virtual temporal_mesh * get_temporal_mesh( ) {
+    return _time_mesh;
+  }
+
+  /**
+   * Return a pointer to the internally stored temporal mesh.
+   */
+  virtual const temporal_mesh * get_temporal_mesh( ) const {
     return _time_mesh;
   }
 

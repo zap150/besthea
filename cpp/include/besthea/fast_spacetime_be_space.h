@@ -38,6 +38,8 @@
 #include "besthea/spacetime_be_space.h"
 #include "besthea/spacetime_cluster_tree.h"
 #include "besthea/spacetime_tensor_mesh.h"
+#include "besthea/temporal_mesh.h"
+#include "besthea/triangular_surface_mesh.h"
 
 namespace besthea {
   namespace bem {
@@ -78,12 +80,15 @@ class besthea::bem::fast_spacetime_be_space
       _t;  //!< Coordinates of quadrature nodes in the temporal element
   };
 
- public:
   using st_mesh_type
     = besthea::mesh::spacetime_tensor_mesh;  //!< Spacetime mesh type.
+  using s_mesh_type
+    = besthea::mesh::triangular_surface_mesh;        //!< Spatial mesh type.
+  using t_mesh_type = besthea::mesh::temporal_mesh;  //!< Temporal mesh type.
   using block_vector_type
     = besthea::linear_algebra::block_vector;  //!< Block vector type.
 
+ public:
   fast_spacetime_be_space( const fast_spacetime_be_space & that ) = delete;
 
   /**
@@ -92,28 +97,69 @@ class besthea::bem::fast_spacetime_be_space
   virtual ~fast_spacetime_be_space( );
 
   /**
-   * Constructing space from a spacetime tree.
+   * Constructing space from a spacetime tree
+   * @param[in] tree Spacetime cluster tree.
    */
-  fast_spacetime_be_space( spacetime_cluster_tree & tree ) : _tree( &tree ) {
-  }
+  fast_spacetime_be_space( mesh::spacetime_cluster_tree & tree );
 
   /**
    * Returns pointer to the tree.
    */
-  st_mesh_type * get_tree( ) {
+  mesh::spacetime_cluster_tree * get_tree( ) {
     return _tree;
   }
 
   /**
    * Returns pointer to the tree.
    */
-  const st_mesh_type * get_tree( ) const {
+  const mesh::spacetime_cluster_tree * get_tree( ) const {
     return _tree;
   }
+
+  /**
+   * Projects a function to the boundary element space.
+   * @param[in] f Function to be projected.
+   * @param[out] projection Projection vector.
+   * @param[in] order_matrix Spatial quadrature order to assemble the mass
+   * matrix.
+   * @param[in] order_rhs_spatial Spatial triangular quadrature order to
+   * assemble the right-hand side.
+   * @param[in] order_rhs_temporal Temporal line quadrature order to assemble
+   * the right-hand side.
+   */
+  virtual void L2_projection(
+    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
+    block_vector_type & projection, int order_matrix = 2,
+    int order_rhs_spatial = 5, int order_rhs_temporal = 4 ) const override;
+
+  /**
+   * Returns the L2 relative error |f-approximation|/|f|.
+   * @param[in] f Function in infinite dimensional space.
+   * @param[in] approximation Function in finite dimensional space.
+   * @param[in] order_rhs_spatial Spatial triangular quadrature order to
+   * assemble the right-hand side.
+   * @param[in] order_rhs_temporal Temporal line quadrature order to assemble
+   * the right-hand side.
+   */
+  virtual sc L2_relative_error(
+    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
+    const block_vector_type & approximation, int order_rhs_spatial = 5,
+    int order_rhs_temporal = 4 ) const override;
+
+  /**
+   * Projects a function to the boundary element space. ONLY USE SPECIALIZED
+   * FUNCTIONS!
+   * @param[in] f Function to be projected.
+   * @param[out] interpolation Interpolation vector.
+   */
+  virtual void interpolation(
+    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
+    block_vector_type & interpolation ) const override;
 
  private:
-  spacetime_cluster_tree * _tree;  //!< tree storing a hierarchical subdivision
-                                   //!< of the space-time domain
+  mesh::spacetime_cluster_tree *
+    _tree;  //!< tree storing a hierarchical subdivision
+            //!< of the space-time domain
 };
 
 #endif /* INCLUDE_BESTHEA_FAST_SPACETIME_BE_SPACE_H_ */

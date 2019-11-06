@@ -37,6 +37,7 @@
 #include "besthea/lagrange_interpolant.h"
 #include "besthea/space_cluster_tree.h"
 #include "besthea/spacetime_cluster.h"
+#include "besthea/spacetime_tensor_mesh.h"
 #include "besthea/time_cluster_tree.h"
 #include "besthea/vector.h"
 
@@ -54,13 +55,14 @@ namespace besthea {
 class besthea::mesh::spacetime_cluster_tree {
  public:
   using vector_type = besthea::linear_algebra::vector;
-  spacetime_cluster_tree( const triangular_surface_mesh & space_mesh,
-    const temporal_mesh & time_mesh, lo time_levels, lo n_min_time_elems,
-    lo n_min_space_elems, sc st_coeff );
+  spacetime_cluster_tree( const spacetime_tensor_mesh & spacetime_mesh,
+    lo time_levels, lo n_min_time_elems, lo n_min_space_elems, sc st_coeff );
 
   ~spacetime_cluster_tree( ) {
-    delete _space_tree;
-    delete _time_tree;
+    if ( _space_tree )
+      delete _space_tree;
+    if ( _time_tree )
+      delete _time_tree;
   }
 
   /**
@@ -86,6 +88,27 @@ class besthea::mesh::spacetime_cluster_tree {
 
   spacetime_cluster * get_root( ) {
     return _root;
+  }
+
+  /**
+   * Returns the spacetime mesh.
+   */
+  const spacetime_tensor_mesh & get_mesh( ) const {
+    return _spacetime_mesh;
+  }
+
+  /**
+   * Returns the spatial mesh.
+   */
+  const triangular_surface_mesh & get_spatial_mesh( ) const {
+    return _space_mesh;
+  }
+
+  /**
+   * Returns the temporal mesh.
+   */
+  const temporal_mesh & get_temporal_mesh( ) const {
+    return _time_mesh;
   }
 
  private:
@@ -127,11 +150,12 @@ class besthea::mesh::spacetime_cluster_tree {
   // TODO relocate the above members to pFMM matrix
   // TODO substitute hardcoded _temp_order and _spatial_order with settable ones
 
-  const triangular_surface_mesh & _space_mesh;  //!< underlying spatial mesh
-  const temporal_mesh & _time_mesh;             //!< underlying temporal mesh
-  time_cluster_tree * _time_tree;               //!< temporal tree
-  space_cluster_tree * _space_tree;             //!< spatial tree
-  spacetime_cluster * _root;                    //!< root of the cluster tree
+  const spacetime_tensor_mesh & _spacetime_mesh;  //!< underlying spacetime mesh
+  const triangular_surface_mesh & _space_mesh;    //!< underlying spatial mesh
+  const temporal_mesh & _time_mesh;               //!< underlying temporal mesh
+  time_cluster_tree * _time_tree;                 //!< temporal tree
+  space_cluster_tree * _space_tree;               //!< spatial tree
+  spacetime_cluster * _root;                      //!< root of the cluster tree
   lo _start_spatial_level;   //!< auxiliary variable determining the appropriate
                              //!< starting level in the space cluster tree
   lo _start_temporal_level;  //!< auxiliary variable to determine in which level
