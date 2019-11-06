@@ -56,41 +56,10 @@ class besthea::bem::uniform_spacetime_be_space
   template< class, class >
   friend class besthea::bem::uniform_spacetime_be_evaluator;
 
- public:
   using st_mesh_type
     = besthea::mesh::uniform_spacetime_tensor_mesh;  //!< Spacetime mesh type.
   using block_vector_type
     = besthea::linear_algebra::block_vector;  //!< Block vector type.
-
- protected:
-  /**
-   * Wraps the mapped quadrature point so that they can be private for OpenMP
-   * threads
-   */
-  struct quadrature_wrapper {
-    std::vector< sc, besthea::allocator_type< sc > >
-      _wx;  //!< Spatial quadrature weights
-    std::vector< sc, besthea::allocator_type< sc > >
-      _x1_ref;  //!< First coordinates of quadrature nodes in the reference
-                //!< spatial element
-    std::vector< sc, besthea::allocator_type< sc > >
-      _x2_ref;  //!< Second coordinates of quadrature nodes in the reference
-                //!< spatial element
-    std::vector< sc, besthea::allocator_type< sc > >
-      _x1;  //!< First coordinates of quadrature nodes in the spatial element
-    std::vector< sc, besthea::allocator_type< sc > >
-      _x2;  //!< Second coordinates of quadrature nodes in the spatial element
-    std::vector< sc, besthea::allocator_type< sc > >
-      _x3;  //!< Third coordinates of quadrature nodes in the spatial element
-
-    std::vector< sc, besthea::allocator_type< sc > >
-      _wt;  //!< Temporal quadrature weights
-    std::vector< sc, besthea::allocator_type< sc > >
-      _t_ref;  //!< Coordinates of quadrature nodes in the reference temporal
-               //!< element
-    std::vector< sc, besthea::allocator_type< sc > >
-      _t;  //!< Coordinates of quadrature nodes in the temporal element
-  };
 
  public:
   uniform_spacetime_be_space( const uniform_spacetime_be_space & that )
@@ -162,37 +131,6 @@ class besthea::bem::uniform_spacetime_be_space
     block_vector_type & interpolation ) const override;
 
  protected:
-  /**
-   * Initializes quadrature structures.
-   * @param[in] order_rhs_spatial Triangle spatial quadrature order for RHS.
-   * @param[in] order_rhs_temporal Line temporal quadrature order for RHS.
-   * @param[out] my_quadrature Wrapper holding quadrature data.
-   */
-  void init_quadrature( int order_rhs_spatial, int order_rhs_temporal,
-    quadrature_wrapper & my_quadrature ) const;
-
-  /**
-   * Maps the quadrature nodes from the reference triangle to the actual
-   * geometry.
-   * @param[in] x1 Coordinates of the first node of the test element.
-   * @param[in] x2 Coordinates of the second node of the test element.
-   * @param[in] x3 Coordinates of the third node of the test element.
-   * @param[in,out] my_quadrature Structure holding the quadrature nodes.
-   */
-  void triangle_to_geometry( const linear_algebra::coordinates< 3 > & x1,
-    const linear_algebra::coordinates< 3 > & x2,
-    const linear_algebra::coordinates< 3 > & x3,
-    quadrature_wrapper & my_quadrature ) const;
-
-  /**
-   * Maps the quadrature nodes from reference interval to the actual time.
-   * @param[in] d Index of time interval.
-   * @param[in] timestep Timestep size.
-   * @param[in,out] my_quadrature Structure holding the quadrature nodes.
-   */
-  void line_to_time(
-    lo d, sc timestep, quadrature_wrapper & my_quadrature ) const;
-
   st_mesh_type * _spacetime_mesh;  //!< uniform spacetime tensor mesh
 };
 

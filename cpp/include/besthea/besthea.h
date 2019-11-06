@@ -26,26 +26,17 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file bem.h
+/** @file besthea.h
  * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_BEM_H_
-#define INCLUDE_BESTHEA_BEM_H_
+#ifndef INCLUDE_BESTHEA_BESTHEA_H_
+#define INCLUDE_BESTHEA_BESTHEA_H_
 
-#include "besthea/basis_function.h"
-#include "besthea/basis_tri_p0.h"
-#include "besthea/basis_tri_p1.h"
-#include "besthea/fast_spacetime_be_space.h"
-#include "besthea/spacetime_be_identity.h"
-#include "besthea/spacetime_be_space.h"
-#include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
-#include "besthea/spacetime_heat_hs_kernel_antiderivative.h"
-#include "besthea/spacetime_heat_sl_kernel_antiderivative.h"
-#include "besthea/uniform_spacetime_be_assembler.h"
-#include "besthea/uniform_spacetime_be_evaluator.h"
-#include "besthea/uniform_spacetime_be_identity.h"
-#include "besthea/uniform_spacetime_be_solver.h"
-#include "besthea/uniform_spacetime_be_space.h"
+#include "besthea/bem.h"
+#include "besthea/linear_algebra.h"
+#include "besthea/mesh_structures.h"
+#include "besthea/settings.h"
+#include "besthea/tools.h"
 
-#endif /* INCLUDE_BESTHEA_BEM_H_ */
+#endif /* INCLUDE_BESTHEA_BESTHEA_H_ */
