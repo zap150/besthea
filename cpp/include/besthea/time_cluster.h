@@ -191,7 +191,6 @@ class besthea::mesh::time_cluster {
         padding = node2( 0 ) - ( _center + _half_size );
       }
     }
-
     return padding;
   }
 

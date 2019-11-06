@@ -85,8 +85,8 @@ class besthea::linear_algebra::pFMM_matrix
   }
 
  private:
-  spacetime_tree_type *
-    _spacetime_tree;  //!< tree decomposing spatial and temporal domains
+  spacetime_tree_type * _spacetime_tree;  //!< tree hierarchically decomposing
+                                          //!< spatial and temporal domains
   std::vector< sparse_matrix_type * >
     _nearfield_matrices;  //!< temporal nearfield blocks
   lo _temp_order;   //!< degree of interpolation polynomials in time for pFMM
