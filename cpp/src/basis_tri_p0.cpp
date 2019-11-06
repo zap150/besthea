@@ -30,7 +30,7 @@
 
 #include <algorithm>
 
-besthea::bem::basis_tri_p0::basis_tri_p0( mesh_type & mesh ) {
+besthea::bem::basis_tri_p0::basis_tri_p0( const mesh_type & mesh ) {
   _mesh = &mesh;
 }
 

@@ -33,7 +33,7 @@
 
 template< class basis_type >
 besthea::bem::spacetime_be_space< basis_type >::spacetime_be_space(
-  mesh_type & mesh )
+  const mesh_type & mesh )
   : _basis( mesh ) {
 }
 
@@ -42,18 +42,11 @@ besthea::bem::spacetime_be_space< basis_type >::~spacetime_be_space( ) {
 }
 
 template< class basis_type >
-void besthea::bem::spacetime_be_space< basis_type >::L2_projection(
+void besthea::bem::spacetime_be_space< basis_type >::interpolation(
   sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-  block_vector_type & projection, int order_matrix, int order_rhs_spatial,
-  int order_rhs_temporal ) const {
-}
-
-template< class basis_type >
-sc besthea::bem::spacetime_be_space< basis_type >::L2_relative_error(
-  sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-  const block_vector_type & approximation, int order_rhs_spatial,
-  int order_rhs_temporal ) const {
-  return 0.0;
+  block_vector_type & interpolation ) const {
+  std::cout << "Only use specialized templates in descendant classes!"
+            << std::endl;
 }
 
 template< class basis_type >
@@ -75,12 +68,6 @@ sc besthea::bem::spacetime_be_space< basis_type >::l2_relative_error(
   }
 
   return std::sqrt( l2diffnorm / l2norm );
-}
-
-template< class basis_type >
-void besthea::bem::spacetime_be_space< basis_type >::interpolation(
-  sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-  block_vector_type & interpolation ) const {
 }
 
 template class besthea::bem::spacetime_be_space< besthea::bem::basis_tri_p0 >;

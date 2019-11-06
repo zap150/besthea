@@ -46,7 +46,7 @@
 int main( int argc, char * argv[] ) {
   using b_t_mesh = besthea::mesh::temporal_mesh;
   using b_s_mesh = besthea::mesh::triangular_surface_mesh;
-  // using b_st_mesh = besthea::mesh::spacetime_tensor_mesh;
+  using b_st_mesh = besthea::mesh::spacetime_tensor_mesh;
   // using b_ust_mesh = besthea::mesh::uniform_spacetime_tensor_mesh;
   // using b_st_slice = besthea::mesh::spacetime_slice;
   // using space_cluster_tree = besthea::mesh::space_cluster_tree;
@@ -69,8 +69,6 @@ int main( int argc, char * argv[] ) {
   // std::string file_spatial = "./test/mesh_files/icosahedron.txt";
   std::string file_spatial = "./test/mesh_files/nuniform.txt";
   b_s_mesh space_mesh( file_spatial );
-
-  // b_st_mesh tensor_mesh( space_mesh, time_mesh );
 
   // tensor_mesh.print_info( );
 
@@ -95,9 +93,11 @@ int main( int argc, char * argv[] ) {
 
   time_mesh.refine( 2 );
 
+  b_st_mesh tensor_mesh( space_mesh, time_mesh );
+
   // coefficient to determine coupling of spatial and temoral levels
   sc st_coeff = 4.0;  // corresponds to \rho_L = 8 in Messner's paper
 
-  space_time_cluster_tree spt( space_mesh, time_mesh, 4, 3, 10, st_coeff );
+  space_time_cluster_tree spt( tensor_mesh, 4, 3, 10, st_coeff );
   spt.print( );
 }

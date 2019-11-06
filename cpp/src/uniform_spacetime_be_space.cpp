@@ -183,13 +183,6 @@ sc besthea::bem::uniform_spacetime_be_space< basis_type >::L2_relative_error(
   return result;
 }
 
-template< class basis_type >
-void besthea::bem::uniform_spacetime_be_space< basis_type >::interpolation(
-  sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-  block_vector_type & interpolation ) const {
-  std::cout << "Only use specialized templates!" << std::endl;
-}
-
 /**
  * Projects a function to the piecewise constant boundary element space.
  * @param[in] f Function to be projected.
@@ -201,7 +194,6 @@ void besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >::
     sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
     block_vector_type & interpolation ) const {
   lo n_timesteps = _spacetime_mesh->get_n_temporal_elements( );
-  sc timestep = _spacetime_mesh->get_timestep( );
   lo n_elements = _spacetime_mesh->get_n_spatial_elements( );
 
   interpolation.resize( n_timesteps );
@@ -214,7 +206,7 @@ void besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >::
     for ( lo d = 0; d < n_timesteps; ++d ) {
       interpolation.set( d, i_elem,
         f( centroid[ 0 ], centroid[ 1 ], centroid[ 2 ], n,
-          ( d + 0.5 ) * timestep ) );
+          _spacetime_mesh->get_temporal_centroid( d ) ) );
     }
   }
 }
@@ -230,7 +222,6 @@ void besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >::
     sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
     block_vector_type & interpolation ) const {
   lo n_timesteps = _spacetime_mesh->get_n_temporal_elements( );
-  sc timestep = _spacetime_mesh->get_timestep( );
   lo n_nodes = _spacetime_mesh->get_n_spatial_nodes( );
 
   interpolation.resize( n_timesteps );
@@ -241,8 +232,9 @@ void besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >::
     _spacetime_mesh->get_spatial_node( i_node, x );
     _spacetime_mesh->get_spatial_nodal_normal( i_node, n );
     for ( lo d = 0; d < n_timesteps; ++d ) {
-      interpolation.set(
-        d, i_node, f( x[ 0 ], x[ 1 ], x[ 2 ], n, ( d + 0.5 ) * timestep ) );
+      interpolation.set( d, i_node,
+        f( x[ 0 ], x[ 1 ], x[ 2 ], n,
+          _spacetime_mesh->get_temporal_centroid( d ) ) );
     }
   }
 }

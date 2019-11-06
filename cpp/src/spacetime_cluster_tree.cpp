@@ -33,16 +33,19 @@
 #include <vector>
 
 besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
-  const triangular_surface_mesh & space_mesh, const temporal_mesh & time_mesh,
-  lo time_levels, lo n_min_time_elems, lo n_min_space_elems, sc st_coeff )
-  : _space_mesh( space_mesh ), _time_mesh( time_mesh ), _s_t_coeff( st_coeff) {
+  const spacetime_tensor_mesh & spacetime_mesh, lo time_levels,
+  lo n_min_time_elems, lo n_min_space_elems, sc st_coeff )
+  : _spacetime_mesh( spacetime_mesh ),
+    _space_mesh( *( spacetime_mesh.get_spatial_mesh( ) ) ),
+    _time_mesh( *( spacetime_mesh.get_temporal_mesh( ) ) ),
+    _s_t_coeff( st_coeff ) {
   // first, we create the temporal and spatial trees
-    
+
   _time_tree
     = new time_cluster_tree( _time_mesh, time_levels, n_min_time_elems );
   sc xmin, xmax, ymin, ymax, zmin, zmax;
-  space_mesh.compute_bounding_box( xmin, xmax, ymin, ymax, zmin, zmax );
-  
+  _space_mesh.compute_bounding_box( xmin, xmax, ymin, ymax, zmin, zmax );
+
   sc max_half_size = std::max( { ( xmax - xmin ) / 2.0, ( ymax - ymin ) / 2.0,
                        ( zmax - zmin ) / 2.0 } )
     / 2.0;
@@ -66,7 +69,7 @@ besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
   }
   _space_tree = new space_cluster_tree(
     _space_mesh, _start_spatial_level + n_s_levels, n_min_space_elems );
-  
+
   // determine for which temporal level the first spatial refinement is needed
   _start_temporal_level = 0;
   if ( _start_spatial_level == 0 ) {
@@ -74,9 +77,9 @@ besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
       delta *= 0.5;
       _start_temporal_level += 1;
     }
-    // shift _start_temporal_level if necessary to guarantee levels as in 
+    // shift _start_temporal_level if necessary to guarantee levels as in
     // Messner's work
-    if ( ( n_t_levels - _start_temporal_level ) % 2  ) {
+    if ( ( n_t_levels - _start_temporal_level ) % 2 ) {
       _start_temporal_level -= 1;
     }
   }
@@ -98,11 +101,11 @@ besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
   if ( ( _start_temporal_level == 0 ) && ( n_t_levels % 2 ) ) {
     split_space = true;
   }
-  
+
   for ( auto it = space_roots.begin( ); it != space_roots.end( ); ++it ) {
     spacetime_cluster * cluster
       = new spacetime_cluster( **it, *_time_tree->get_root( ), _root, 0 );
-    build_tree( cluster, 1 , split_space);
+    build_tree( cluster, 1, split_space );
     // the roots of the subtrees are linked to the level -1 global root
     _root->add_child( cluster );
   }
@@ -113,7 +116,7 @@ besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
 }
 
 void besthea::mesh::spacetime_cluster_tree::build_tree(
-  spacetime_cluster * root, lo level , bool split_space ) {
+  spacetime_cluster * root, lo level, bool split_space ) {
   std::vector< space_cluster * > * space_children;
   bool split_space_descendant;
   if ( !split_space ) {
@@ -121,14 +124,12 @@ void besthea::mesh::spacetime_cluster_tree::build_tree(
     space_children->push_back( &root->get_space_cluster( ) );
     if ( level + 1 < _start_temporal_level ) {
       // no spatial refinement as long as next level < _start_temporal_level
-      split_space_descendant = false; 
-    }
-    else {
+      split_space_descendant = false;
+    } else {
       // alternate between refinement and non refinement
       split_space_descendant = true;
     }
-  }
-  else {
+  } else {
     space_children = root->get_space_cluster( ).get_children( );
     split_space_descendant = false;
   }
@@ -427,32 +428,26 @@ void besthea::mesh::spacetime_cluster_tree::set_spatial_m2m_coeffs( ) {
   }
 }
 
-void besthea::mesh::spacetime_cluster_tree::apply_temporal_m2m( 
-                            full_matrix_type const & child_moment, 
-                            const lo level,
-                            const bool is_left_child, 
-                            full_matrix_type & parent_moment)
-{
+void besthea::mesh::spacetime_cluster_tree::apply_temporal_m2m(
+  full_matrix_type const & child_moment, const lo level,
+  const bool is_left_child, full_matrix_type & parent_moment ) {
   if ( is_left_child )
-    parent_moment.multiply( _m2m_matrices_t_left[ level ], child_moment, false, 
-                            false, 1.0, 1.0 );
+    parent_moment.multiply(
+      _m2m_matrices_t_left[ level ], child_moment, false, false, 1.0, 1.0 );
   else
-    parent_moment.multiply( _m2m_matrices_t_right[ level ], child_moment, false, 
-                            false, 1.0, 1.0 );
+    parent_moment.multiply(
+      _m2m_matrices_t_right[ level ], child_moment, false, false, 1.0, 1.0 );
 }
 
-void besthea::mesh::spacetime_cluster_tree::apply_spatial_m2m( 
-                            full_matrix_type const & child_moment, 
-                            const lo level,
-                            const slou octant, 
-                            full_matrix_type & parent_moment)
-{
+void besthea::mesh::spacetime_cluster_tree::apply_spatial_m2m(
+  full_matrix_type const & child_moment, const lo level, const slou octant,
+  full_matrix_type & parent_moment ) {
   const vector_type * m2m_coeffs_s_dim_0;
   const vector_type * m2m_coeffs_s_dim_1;
   const vector_type * m2m_coeffs_s_dim_2;
 
   switch ( octant ) {
-    case 0: 
+    case 0:
       m2m_coeffs_s_dim_0 = &( _m2m_coeffs_s_dim_0_right[ level ] );
       m2m_coeffs_s_dim_1 = &( _m2m_coeffs_s_dim_1_right[ level ] );
       m2m_coeffs_s_dim_2 = &( _m2m_coeffs_s_dim_2_right[ level ] );
@@ -462,7 +457,7 @@ void besthea::mesh::spacetime_cluster_tree::apply_spatial_m2m(
       m2m_coeffs_s_dim_1 = &( _m2m_coeffs_s_dim_1_right[ level ] );
       m2m_coeffs_s_dim_2 = &( _m2m_coeffs_s_dim_2_right[ level ] );
       break;
-    case 2: 
+    case 2:
       m2m_coeffs_s_dim_0 = &( _m2m_coeffs_s_dim_0_left[ level ] );
       m2m_coeffs_s_dim_1 = &( _m2m_coeffs_s_dim_1_left[ level ] );
       m2m_coeffs_s_dim_2 = &( _m2m_coeffs_s_dim_2_right[ level ] );
@@ -472,7 +467,7 @@ void besthea::mesh::spacetime_cluster_tree::apply_spatial_m2m(
       m2m_coeffs_s_dim_1 = &( _m2m_coeffs_s_dim_1_left[ level ] );
       m2m_coeffs_s_dim_2 = &( _m2m_coeffs_s_dim_2_right[ level ] );
       break;
-    case 4: 
+    case 4:
       m2m_coeffs_s_dim_0 = &( _m2m_coeffs_s_dim_0_right[ level ] );
       m2m_coeffs_s_dim_1 = &( _m2m_coeffs_s_dim_1_right[ level ] );
       m2m_coeffs_s_dim_2 = &( _m2m_coeffs_s_dim_2_left[ level ] );
@@ -482,7 +477,7 @@ void besthea::mesh::spacetime_cluster_tree::apply_spatial_m2m(
       m2m_coeffs_s_dim_1 = &( _m2m_coeffs_s_dim_1_right[ level ] );
       m2m_coeffs_s_dim_2 = &( _m2m_coeffs_s_dim_2_left[ level ] );
       break;
-    case 6: 
+    case 6:
       m2m_coeffs_s_dim_0 = &( _m2m_coeffs_s_dim_0_left[ level ] );
       m2m_coeffs_s_dim_1 = &( _m2m_coeffs_s_dim_1_left[ level ] );
       m2m_coeffs_s_dim_2 = &( _m2m_coeffs_s_dim_2_left[ level ] );
@@ -492,14 +487,14 @@ void besthea::mesh::spacetime_cluster_tree::apply_spatial_m2m(
       m2m_coeffs_s_dim_1 = &( _m2m_coeffs_s_dim_1_left[ level ] );
       m2m_coeffs_s_dim_2 = &( _m2m_coeffs_s_dim_2_left[ level ] );
       break;
-    default: // default case should never be used, programm will crash!
+    default:  // default case should never be used, programm will crash!
       m2m_coeffs_s_dim_0 = nullptr;
       m2m_coeffs_s_dim_1 = nullptr;
       m2m_coeffs_s_dim_2 = nullptr;
   }
-  
-  lo n_coeffs_s = ( _spat_order + 1 ) * ( _spat_order + 1 )
-    * ( _spat_order + 1 );
+
+  lo n_coeffs_s
+    = ( _spat_order + 1 ) * ( _spat_order + 1 ) * ( _spat_order + 1 );
   // initialize auxiliary matrices lambda_1/2 for intermediate results with 0
   full_matrix_type lambda_1( _temp_order + 1, n_coeffs_s, true );
   full_matrix_type lambda_2( _temp_order + 1, n_coeffs_s, true );
@@ -510,35 +505,38 @@ void besthea::mesh::spacetime_cluster_tree::apply_spatial_m2m(
       for ( lo alpha1 = 0; alpha1 <= _spat_order - beta2 - alpha0; ++alpha1 ) {
         lo alpha2;
         for ( alpha2 = 0; alpha2 <= beta2; ++alpha2 ) {
-          for ( lo b = 0; b <= _temp_order; ++ b ) {
-            lambda_1( b, ( _spat_order + 1 ) * ( _spat_order + 1 ) * beta2 
-                           + ( _spat_order + 1 ) * alpha0 + alpha1 ) 
-              += (*m2m_coeffs_s_dim_2)[ beta2 * ( _spat_order + 1 ) + alpha2 ] 
-                * child_moment( b, crnt_indx );
+          for ( lo b = 0; b <= _temp_order; ++b ) {
+            lambda_1( b,
+              ( _spat_order + 1 ) * ( _spat_order + 1 ) * beta2
+                + ( _spat_order + 1 ) * alpha0 + alpha1 )
+              += ( *m2m_coeffs_s_dim_2 )[ beta2 * ( _spat_order + 1 ) + alpha2 ]
+              * child_moment( b, crnt_indx );
           }
           ++crnt_indx;
         }
         // correction needed for skipt entries of child_moment
-        crnt_indx += _spat_order + 1 - alpha0 - alpha1 - alpha2; 
+        crnt_indx += _spat_order + 1 - alpha0 - alpha1 - alpha2;
       }
-      // correction for current index; necessary since alpha1 does not run until 
+      // correction for current index; necessary since alpha1 does not run until
       // _spat_order - alpha0 as it does in stored child_moment
-      crnt_indx += ( ( beta2 + 1 ) * beta2 ) / 2; 
+      crnt_indx += ( ( beta2 + 1 ) * beta2 ) / 2;
     }
   }
-  
+
   // compute intermediate result lambda_1 ignoring zero entries for the sake of
   // better readability
   for ( lo beta1 = 0; beta1 <= _spat_order; ++beta1 ) {
     for ( lo beta2 = 0; beta2 <= _spat_order - beta1; ++beta2 ) {
       for ( lo alpha0 = 0; alpha0 <= _spat_order - beta1 - beta2; ++alpha0 ) {
-        for ( lo alpha1 = 0; alpha1 <= beta1; ++ alpha1 ) {
-          for ( lo b = 0; b <= _temp_order; ++ b ) {
-            lambda_2( b, ( _spat_order + 1 ) * ( _spat_order + 1 ) * beta1 
-                          + ( _spat_order + 1 ) * beta2 + alpha0 ) 
-              += (*m2m_coeffs_s_dim_1)[ beta1 * ( _spat_order + 1 ) + alpha1 ] 
-                * lambda_1( b, ( _spat_order + 1 ) * ( _spat_order + 1 ) * beta2
-                                + ( _spat_order + 1 ) * alpha0 + alpha1 );
+        for ( lo alpha1 = 0; alpha1 <= beta1; ++alpha1 ) {
+          for ( lo b = 0; b <= _temp_order; ++b ) {
+            lambda_2( b,
+              ( _spat_order + 1 ) * ( _spat_order + 1 ) * beta1
+                + ( _spat_order + 1 ) * beta2 + alpha0 )
+              += ( *m2m_coeffs_s_dim_1 )[ beta1 * ( _spat_order + 1 ) + alpha1 ]
+              * lambda_1( b,
+                ( _spat_order + 1 ) * ( _spat_order + 1 ) * beta2
+                  + ( _spat_order + 1 ) * alpha0 + alpha1 );
           }
         }
       }
@@ -549,14 +547,15 @@ void besthea::mesh::spacetime_cluster_tree::apply_spatial_m2m(
   for ( lo beta0 = 0; beta0 <= _spat_order; ++beta0 ) {
     for ( lo beta1 = 0; beta1 <= _spat_order - beta0; ++beta1 ) {
       for ( lo beta2 = 0; beta2 <= _spat_order - beta0 - beta1; ++beta2 ) {
-        for ( lo alpha0 = 0; alpha0 <= _spat_order - beta1 - beta2; ++alpha0) {
-          for ( lo b = 0; b <= _temp_order; ++b )  {
-            parent_moment( b, crnt_indx ) 
-              += (*m2m_coeffs_s_dim_0)[ beta0 * ( _spat_order + 1 ) + alpha0 ]
-                * lambda_2( b, ( _spat_order + 1 ) * ( _spat_order + 1 ) * beta1
-                                + ( _spat_order + 1 ) * beta2 + alpha0 );
+        for ( lo alpha0 = 0; alpha0 <= _spat_order - beta1 - beta2; ++alpha0 ) {
+          for ( lo b = 0; b <= _temp_order; ++b ) {
+            parent_moment( b, crnt_indx )
+              += ( *m2m_coeffs_s_dim_0 )[ beta0 * ( _spat_order + 1 ) + alpha0 ]
+              * lambda_2( b,
+                ( _spat_order + 1 ) * ( _spat_order + 1 ) * beta1
+                  + ( _spat_order + 1 ) * beta2 + alpha0 );
           }
-        ++crnt_indx;
+          ++crnt_indx;
         }
       }
     }

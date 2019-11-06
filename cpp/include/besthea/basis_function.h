@@ -156,7 +156,7 @@ class besthea::bem::basis_function {
   }
 
  protected:
-  mesh_type * _mesh;  //!< Pointer to the mesh.
+  const mesh_type * _mesh;  //!< Pointer to the mesh.
 
   const std::array< int, 5 > _map{ 0, 1, 2, 0,
     1 };  //!< Auxiliary array for mapping DOFs under
