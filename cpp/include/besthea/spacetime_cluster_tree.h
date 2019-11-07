@@ -111,6 +111,14 @@ class besthea::mesh::spacetime_cluster_tree {
     return _time_mesh;
   }
 
+  time_cluster_tree * get_time_tree( ) {
+    return _time_tree;
+  }
+
+  space_cluster_tree * get_space_tree( ) {
+    return _space_tree;
+  }
+
  private:
   using full_matrix_type = besthea::linear_algebra::full_matrix;
   std::vector< full_matrix_type >

@@ -38,6 +38,9 @@
 #include "besthea/settings.h"
 #include "besthea/spacetime_cluster_tree.h"
 #include "besthea/sparse_matrix.h"
+#include "besthea/time_cluster.h"
+
+#include <utility>
 
 namespace besthea {
   namespace linear_algebra {
@@ -54,6 +57,7 @@ class besthea::linear_algebra::pFMM_matrix
   using sparse_matrix_type = besthea::linear_algebra::sparse_matrix;
   using block_matrix_type = besthea::linear_algebra::block_matrix;
   using spacetime_tree_type = besthea::mesh::spacetime_cluster_tree;
+  using time_cluster_type = besthea::mesh::time_cluster;
 
   /**
    * Default constructor.
@@ -68,10 +72,6 @@ class besthea::linear_algebra::pFMM_matrix
    */
   void set_tree( spacetime_tree_type * spacetime_tree ) {
     _spacetime_tree = spacetime_tree;
-
-    lo n_blocks = _spacetime_tree->get_time_cluster_tree( )
-                    ->get_mesh( )
-                    .get_n_elements( );
   }
 
   /*!
@@ -84,11 +84,17 @@ class besthea::linear_algebra::pFMM_matrix
     _n_columns = n_cols;
   }
 
+  void create_nearfield_matrix( lo test_idx, lo trial_idx ) {
+  }
+
  private:
   spacetime_tree_type * _spacetime_tree;  //!< tree hierarchically decomposing
                                           //!< spatial and temporal domains
   std::vector< sparse_matrix_type * >
     _nearfield_matrices;  //!< temporal nearfield blocks
+  std::vector< std::pair< lo, lo > >
+    _nearfield_block_map;  //!< mapping from block index to pair of matching
+                           //!< temporal clusters
   lo _temp_order;   //!< degree of interpolation polynomials in time for pFMM
   lo _space_order;  //!< degree of truncated Chebyshev expansion
 };
