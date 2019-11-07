@@ -110,6 +110,27 @@ class besthea::bem::fast_spacetime_be_space
   }
 
   /**
+   * Returns the spacetime mesh.
+   */
+  const mesh::spacetime_tensor_mesh * get_mesh( ) const {
+    return &_tree->get_mesh( );
+  }
+
+  /**
+   * Returns the spatial mesh.
+   */
+  const mesh::triangular_surface_mesh * get_spatial_mesh( ) const {
+    return &_tree->get_spatial_mesh( );
+  }
+
+  /**
+   * Returns the temporal mesh.
+   */
+  const mesh::temporal_mesh * get_temporal_mesh( ) const {
+    return &_tree->get_temporal_mesh( );
+  }
+
+  /**
    * Returns pointer to the tree.
    */
   const mesh::spacetime_cluster_tree * get_tree( ) const {

@@ -26,26 +26,24 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file bem.h
+/** @file mesh_structures.h
  * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_BEM_H_
-#define INCLUDE_BESTHEA_BEM_H_
+#ifndef INCLUDE_BESTHEA_MESH_STRUCTURES_H_
+#define INCLUDE_BESTHEA_MESH_STRUCTURES_H_
 
-#include "besthea/basis_function.h"
-#include "besthea/basis_tri_p0.h"
-#include "besthea/basis_tri_p1.h"
-#include "besthea/fast_spacetime_be_space.h"
-#include "besthea/spacetime_be_identity.h"
-#include "besthea/spacetime_be_space.h"
-#include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
-#include "besthea/spacetime_heat_hs_kernel_antiderivative.h"
-#include "besthea/spacetime_heat_sl_kernel_antiderivative.h"
-#include "besthea/uniform_spacetime_be_assembler.h"
-#include "besthea/uniform_spacetime_be_evaluator.h"
-#include "besthea/uniform_spacetime_be_identity.h"
-#include "besthea/uniform_spacetime_be_solver.h"
-#include "besthea/uniform_spacetime_be_space.h"
+#include "besthea/mesh.h"
+#include "besthea/space_cluster.h"
+#include "besthea/space_cluster_tree.h"
+#include "besthea/spacetime_cluster.h"
+#include "besthea/spacetime_cluster_tree.h"
+#include "besthea/spacetime_slice.h"
+#include "besthea/spacetime_tensor_mesh.h"
+#include "besthea/temporal_mesh.h"
+#include "besthea/time_cluster.h"
+#include "besthea/time_cluster_tree.h"
+#include "besthea/triangular_surface_mesh.h"
+#include "besthea/uniform_spacetime_tensor_mesh.h"
 
-#endif /* INCLUDE_BESTHEA_BEM_H_ */
+#endif /* INCLUDE_BESTHEA_MESH_STRUCTURES_H_ */

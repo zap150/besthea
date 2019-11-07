@@ -26,18 +26,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <besthea/space_cluster_tree.h>
-#include <besthea/spacetime_cluster_tree.h>
-
-#include "besthea/full_matrix.h"
-#include "besthea/settings.h"
-#include "besthea/spacetime_slice.h"
-#include "besthea/spacetime_tensor_mesh.h"
-#include "besthea/temporal_mesh.h"
-#include "besthea/time_cluster_tree.h"
-#include "besthea/triangular_surface_mesh.h"
-#include "besthea/uniform_spacetime_tensor_mesh.h"
-#include "besthea/vector.h"
+#include "besthea/besthea.h"
 
 #include <cmath>
 #include <cstdlib>

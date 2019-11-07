@@ -26,13 +26,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "besthea/bem.h"
-#include "besthea/linear_algebra.h"
-#include "besthea/settings.h"
-#include "besthea/spacetime_be_space.h"
-#include "besthea/tools.h"
-#include "besthea/triangular_surface_mesh.h"
-#include "besthea/uniform_spacetime_tensor_mesh.h"
+#include "besthea/besthea.h"
 
 #include <cstdlib>
 #include <filesystem>

@@ -34,7 +34,9 @@
 #define INCLUDE_BESTHEA_SPACETIME_HEAT_DL_KERNEL_ANTIDERIVATIVE_H_
 
 #include <besthea/spacetime_heat_kernel_antiderivative.h>
+
 #include "besthea/settings.h"
+
 #include <vector>
 
 namespace besthea {
@@ -215,6 +217,48 @@ class besthea::bem::spacetime_heat_dl_kernel_antiderivative
     sc dot = xy1 * ny[ 0 ] + xy2 * ny[ 1 ] + xy3 * ny[ 2 ];
 
     sc value = dot / ( _four * _pi * norm2 * norm );
+
+    return value;
+  }
+
+  /**
+   * Evaluates the definite integral over the same time interval.
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] ny Normal in the `y` variable.
+   * @param[in] t0 Start of interval.
+   * @param[in] t1 End of interval.
+   */
+#pragma omp declare simd uniform( this, ny, t0, t1 ) simdlen( DATA_WIDTH )
+  sc do_definite_integral_over_same_interval(
+    sc xy1, sc xy2, sc xy3, const sc * ny, sc t0, sc t1 ) const {
+    sc value = ( t1 - t0 ) * do_anti_tau_limit( xy1, xy2, xy3, ny )
+      - do_anti_tau_anti_t( xy1, xy2, xy3, ny, t1 - t0 )
+      + do_anti_tau_anti_t_limit_in_time_regular_in_space( xy1, xy2, xy3, ny );
+
+    return value;
+  }
+
+  /**
+   * Evaluates the definite integral over the different time intervals.
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] ny Normal in the `y` variable.
+   * @param[in] t0 Start of interval in `t`.
+   * @param[in] t1 End of interval in `t`.
+   * @param[in] tau0 Start of interval in `tau`.
+   * @param[in] tau1 End of interval in `tau`.
+   */
+#pragma omp declare simd uniform( this, ny, t0, t1, tau0, tau1 ) \
+  simdlen( DATA_WIDTH )
+  sc do_definite_integral_over_different_intervals( sc xy1, sc xy2, sc xy3,
+    const sc * ny, sc t0, sc t1, sc tau0, sc tau1 ) const {
+    sc value = do_anti_tau_anti_t( xy1, xy2, xy3, ny, t1 - tau1 )
+      - do_anti_tau_anti_t( xy1, xy2, xy3, ny, t1 - tau0 )
+      - do_anti_tau_anti_t( xy1, xy2, xy3, ny, t0 - tau1 )
+      + do_anti_tau_anti_t( xy1, xy2, xy3, ny, t0 - tau0 );
 
     return value;
   }
