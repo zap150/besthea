@@ -331,6 +331,70 @@ class besthea::bem::spacetime_heat_hs_kernel_antiderivative
     *value1 *= _alpha2;
     *value2 *= dot * _alpha;
   }
+
+  /**
+   * Evaluates the definite integral over the same time interval.
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] nx Normal in the `x` variable.
+   * @param[in] ny Normal in the `y` variable.
+   * @param[in] t0 Start of interval.
+   * @param[in] t1 End of interval.
+   * @param[out] value1 Return value for anti_tau_anti_t part.
+   * @param[out] value2 Return value for anti_t part.
+   */
+#pragma omp declare simd uniform( this, nx, ny, t0, t1 ) simdlen( DATA_WIDTH )
+  void definite_integral_over_same_interval( sc xy1, sc xy2, sc xy3,
+    const sc * nx, const sc * ny, sc t0, sc t1, sc * value1,
+    sc * value2 ) const {
+    sc val1, val2;
+    *value1 = ( t1 - t0 ) * do_anti_tau_limit( xy1, xy2, xy3, ny );
+    *value2 = 0.0;
+    anti_tau_anti_t_and_anti_t( xy1, xy2, xy3, nx, ny, t1 - t0, &val1, &val2 );
+    *value1 -= val1;
+    *value2 -= val2;
+    anti_tau_anti_t_and_anti_t_limit_in_time_regular_in_space(
+      xy1, xy2, xy3, nx, ny, &val1, &val2 );
+    *value1 += val1;
+    *value2 += val2;
+  }
+
+  /**
+   * Evaluates the definite integral over the different time intervals.
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] nx Normal in the `x` variable.
+   * @param[in] ny Normal in the `y` variable.
+   * @param[in] t0 Start of interval in `t`.
+   * @param[in] t1 End of interval in `t`.
+   * @param[in] tau0 Start of interval in `tau`.
+   * @param[in] tau1 End of interval in `tau`.
+   * @param[out] value1 Return value for anti_tau_anti_t part.
+   * @param[out] value2 Return value for anti_t part.
+   */
+#pragma omp declare simd uniform( this, nx, ny, t0, t1, tau0, tau1 ) \
+  simdlen( DATA_WIDTH )
+  void definite_integral_over_different_intervals( sc xy1, sc xy2, sc xy3,
+    const sc * nx, const sc * ny, sc t0, sc t1, sc tau0, sc tau1, sc * value1,
+    sc * value2 ) const {
+    sc val1, val2;
+    anti_tau_anti_t_and_anti_t(
+      xy1, xy2, xy3, nx, ny, t1 - tau1, value1, value2 );
+    anti_tau_anti_t_and_anti_t(
+      xy1, xy2, xy3, nx, ny, t1 - tau0, &val1, &val2 );
+    *value1 -= val1;
+    *value2 -= val2;
+    anti_tau_anti_t_and_anti_t(
+      xy1, xy2, xy3, nx, ny, t0 - tau1, &val1, &val2 );
+    *value1 -= val1;
+    *value2 -= val2;
+    anti_tau_anti_t_and_anti_t(
+      xy1, xy2, xy3, nx, ny, t0 - tau0, &val1, &val2 );
+    *value1 += val1;
+    *value2 += val2;
+  }
 };
 
 #endif /* INCLUDE_BESTHEA_SPACETIME_HEAT_HS_KERNEL_ANTIDERIVATIVE_H_ \
