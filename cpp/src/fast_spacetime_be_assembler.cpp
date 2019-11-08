@@ -28,6 +28,13 @@
 
 #include "besthea/fast_spacetime_be_assembler.h"
 
+#include "besthea/basis_tri_p0.h"
+#include "besthea/basis_tri_p1.h"
+#include "besthea/quadrature.h"
+#include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
+#include "besthea/spacetime_heat_hs_kernel_antiderivative.h"
+#include "besthea/spacetime_heat_sl_kernel_antiderivative.h"
+
 template< class kernel_type, class test_space_type, class trial_space_type >
 besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::fast_spacetime_be_assembler( kernel_type & kernel,
@@ -84,6 +91,55 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   lo n_rows = test_basis.dimension_global( );
   lo n_columns = trial_basis.dimension_global( );
 
-  std::vector< mesh::time_cluster * > * leaves
-    = _test_space->get_tree( )->get_time_tree( );
+  std::vector< mesh::time_cluster * > & leaves
+    = _test_space->get_tree( )->get_time_tree( )->get_leaves( );
+
+  mesh::time_cluster * current_cluster;
+  mesh::time_cluster * neighbor_cluster;
+
+  for ( auto it = leaves.begin( ); it != leaves.end( ); ++it ) {
+    current_cluster = *it;
+    neighbor_cluster = current_cluster->get_left_neighbour( );
+
+    // go over every element in the current time cluster
+    for ( lo i = 0; i < current_cluster->get_n_elements( ); ++i ) {
+      // first, compute interaction of the cluster with itself
+      // (this requires the temporal elements within the cluster to be sorted)
+      for ( lo j = 0; j <= i; ++j ) {
+        global_matrix.create_nearfield_matrix( i, j );
+      }
+
+      // next interact with the previous cluster
+      for ( lo j = 0; j < neighbor_cluster->get_n_elements( ); ++j ) {
+        global_matrix.create_nearfield_matrix( i, j );
+      }
+    }
+  }
 }
+
+template class besthea::bem::fast_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
+template class besthea::bem::fast_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+
+template class besthea::bem::fast_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
+template class besthea::bem::fast_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+template class besthea::bem::fast_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+
+template class besthea::bem::fast_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >;

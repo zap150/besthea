@@ -33,12 +33,13 @@
 #ifndef INCLUDE_BESTHEA_PFMM_MATRIX_H_
 #define INCLUDE_BESTHEA_PFMM_MATRIX_H_
 
-#include "besthea/block_matrix.h"
+//#include "besthea/block_matrix.h"
 #include "besthea/matrix.h"
 #include "besthea/settings.h"
 #include "besthea/spacetime_cluster_tree.h"
 #include "besthea/sparse_matrix.h"
 #include "besthea/time_cluster.h"
+#include "besthea/vector.h"
 
 #include <utility>
 
@@ -55,7 +56,6 @@ class besthea::linear_algebra::pFMM_matrix
   : public besthea::linear_algebra::matrix {
  public:
   using sparse_matrix_type = besthea::linear_algebra::sparse_matrix;
-  using block_matrix_type = besthea::linear_algebra::block_matrix;
   using spacetime_tree_type = besthea::mesh::spacetime_cluster_tree;
   using time_cluster_type = besthea::mesh::time_cluster;
 
@@ -64,6 +64,32 @@ class besthea::linear_algebra::pFMM_matrix
    */
   pFMM_matrix( )
     : _spacetime_tree( nullptr ), _temp_order( 5 ), _space_order( 5 ) {
+  }
+
+  pFMM_matrix( const pFMM_matrix & that ) = delete;
+
+  /**
+   * Destructor
+   */
+  virtual ~pFMM_matrix( ) {
+    for ( auto it = _nearfield_matrices.begin( );
+          it != _nearfield_matrices.end( ); ++it ) {
+      if ( *it != nullptr ) {
+        delete *it;
+      }
+    }
+  }
+
+  /*!
+   * @brief y = beta * y + alpha * (this)^trans * x.
+   * @param[in] x
+   * @param[in,out] y
+   * @param[in] trans
+   * @param[in] alpha
+   * @param[in] beta
+   */
+  virtual void apply( const vector_type & x, vector_type & y,
+    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const {
   }
 
   /*!
@@ -84,8 +110,7 @@ class besthea::linear_algebra::pFMM_matrix
     _n_columns = n_cols;
   }
 
-  void create_nearfield_matrix( lo test_idx, lo trial_idx ) {
-  }
+  sparse_matrix_type * create_nearfield_matrix( lo test_idx, lo trial_idx );
 
  private:
   spacetime_tree_type * _spacetime_tree;  //!< tree hierarchically decomposing

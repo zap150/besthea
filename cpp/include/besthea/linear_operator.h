@@ -46,9 +46,8 @@ namespace besthea {
  *  Class representing a linear operator.
  */
 class besthea::linear_algebra::linear_operator {
-  using vector_type = besthea::linear_algebra::vector;
-
  public:
+  using vector_type = besthea::linear_algebra::vector;
   /**
    * Destructor.
    */

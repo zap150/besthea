@@ -38,6 +38,7 @@
 #include "besthea/triangular_surface_mesh.h"
 #include "besthea/vector.h"
 
+#include <map>
 #include <optional>
 
 namespace besthea {

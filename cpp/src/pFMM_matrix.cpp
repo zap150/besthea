@@ -26,20 +26,16 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file linear_algebra.h
- * @brief
- */
-
-#ifndef INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_
-#define INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_
-
-#include "besthea/block_lower_triangular_toeplitz_matrix.h"
-#include "besthea/block_vector.h"
-#include "besthea/coordinates.h"
-#include "besthea/full_matrix.h"
-#include "besthea/indices.h"
 #include "besthea/pFMM_matrix.h"
-#include "besthea/sparse_matrix.h"
-#include "besthea/vector.h"
 
-#endif /* INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_ */
+besthea::linear_algebra::sparse_matrix *
+besthea::linear_algebra::pFMM_matrix::create_nearfield_matrix(
+  lo test_idx, lo trial_idx ) {
+  sparse_matrix_type * local_matrix = new sparse_matrix_type( );
+
+  _nearfield_matrices.push_back( local_matrix );
+
+  _nearfield_block_map.push_back( std::make_pair( test_idx, trial_idx ) );
+
+  return local_matrix;
+}

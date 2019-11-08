@@ -65,7 +65,7 @@ int main( int argc, char * argv[] ) {
   lo n_timesteps = 8;
   sc end_time = 1.0;
   std::string grid_file = "./mesh_files/grid_xy.txt";
-  //int grid_refine = 2;
+  // int grid_refine = 2;
 
   if ( argc > 1 ) {
     file.assign( argv[ 1 ] );
@@ -82,7 +82,7 @@ int main( int argc, char * argv[] ) {
   if ( argc > 5 ) {
     grid_file.assign( argv[ 5 ] );
   }
-  //if ( argc > 6 ) {
+  // if ( argc > 6 ) {
   //  grid_refine = std::atoi( argv[ 6 ] );
   //}
   triangular_surface_mesh space_mesh( file );
@@ -109,6 +109,11 @@ int main( int argc, char * argv[] ) {
   std::cout << "Neumann L2 projection relative error: "
             << space_p0.L2_relative_error( cauchy_data::neumann, neu_proj )
             << std::endl;
+
+  spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::alpha );
+  besthea::linear_algebra::pFMM_matrix A( );
+  besthea::bem::fast_spacetime_be_assembler fast_assembler(
+    kernel_v, space_p0, space_p0 );
 
   //  lo order_sing = 4;
   //  lo order_reg = 4;

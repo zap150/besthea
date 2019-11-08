@@ -33,6 +33,8 @@
 #ifndef INCLUDE_BESTHEA_FAST_SPACETIME_BE_ASSEMBLER_H_
 #define INCLUDE_BESTHEA_FAST_SPACETIME_BE_ASSEMBLER_H_
 
+#include "besthea/block_matrix.h"
+#include "besthea/fast_spacetime_be_space.h"
 #include "besthea/pFMM_matrix.h"
 #include "besthea/settings.h"
 

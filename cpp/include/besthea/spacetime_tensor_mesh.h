@@ -34,9 +34,11 @@
 #ifndef INCLUDE_BESTHEA_SPACETIME_TENSOR_MESH_H_
 #define INCLUDE_BESTHEA_SPACETIME_TENSOR_MESH_H_
 
+#include "besthea/block_vector.h"
 #include "besthea/coordinates.h"
 #include "besthea/indices.h"
 #include "besthea/mesh.h"
+#include "besthea/spacetime_tensor_mesh.h"
 #include "besthea/temporal_mesh.h"
 #include "besthea/triangular_surface_mesh.h"
 

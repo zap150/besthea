@@ -33,9 +33,11 @@
 #ifndef INCLUDE_BESTHEA_TRIANGULAR_SURFACE_MESH_H_
 #define INCLUDE_BESTHEA_TRIANGULAR_SURFACE_MESH_H_
 
-#include "besthea/linear_algebra.h"
+#include "besthea/coordinates.h"
+#include "besthea/indices.h"
 #include "besthea/mesh.h"
 #include "besthea/settings.h"
+#include "besthea/vector.h"
 
 #include <optional>
 #include <string>

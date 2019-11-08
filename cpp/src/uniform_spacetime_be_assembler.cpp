@@ -26,14 +26,15 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <besthea/spacetime_heat_dl_kernel_antiderivative.h>
-#include <besthea/spacetime_heat_hs_kernel_antiderivative.h>
-#include <besthea/spacetime_heat_sl_kernel_antiderivative.h>
 #include "besthea/uniform_spacetime_be_assembler.h"
 
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
 #include "besthea/quadrature.h"
+#include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
+#include "besthea/spacetime_heat_hs_kernel_antiderivative.h"
+#include "besthea/spacetime_heat_sl_kernel_antiderivative.h"
+
 #include <algorithm>
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -206,8 +207,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
                   = _kernel->anti_tau_anti_t_regular_in_time_regular_in_space(
                       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                       x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                      x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data,
-                      ttau )
+                      x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data, ttau )
                   * w[ i_quad ];
               }
             } else {
@@ -219,8 +219,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
                   = _kernel->anti_tau_anti_t_regular_in_time(
                       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                       x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                      x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data,
-                      ttau )
+                      x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data, ttau )
                   * w[ i_quad ];
               }
             }
@@ -562,8 +561,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
                   = _kernel->anti_tau_anti_t_regular_in_time_regular_in_space(
                       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                       x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                      x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data,
-                      ttau )
+                      x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data, ttau )
                   * w[ i_quad ];
                 value1 += kernel
                   * ( (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ] );
@@ -576,11 +574,11 @@ void besthea::bem::uniform_spacetime_be_assembler<
 						  private( kernel ) reduction( + : value1, value2, value3 ) \
 					      simdlen( DATA_WIDTH )
               for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-                kernel = _kernel->anti_tau_anti_t_regular_in_time(
-                           x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-                           x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                           x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data,
-                           ttau )
+                kernel
+                  = _kernel->anti_tau_anti_t_regular_in_time(
+                      x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                      x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                      x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data, ttau )
                   * w[ i_quad ];
                 value1 += kernel
                   * ( (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ] );

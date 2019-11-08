@@ -33,7 +33,9 @@
 #ifndef INCLUDE_BESTHEA_SPACETIME_CLUSTER_TREE_H_
 #define INCLUDE_BESTHEA_SPACETIME_CLUSTER_TREE_H_
 
+#include "besthea/block_vector.h"
 #include "besthea/chebyshev_evaluator.h"
+#include "besthea/full_matrix.h"
 #include "besthea/lagrange_interpolant.h"
 #include "besthea/space_cluster_tree.h"
 #include "besthea/spacetime_cluster.h"
@@ -41,6 +43,7 @@
 #include "besthea/time_cluster_tree.h"
 #include "besthea/vector.h"
 
+#include <map>
 #include <vector>
 
 namespace besthea {
