@@ -189,7 +189,7 @@ class besthea::bem::spacetime_kernel_antiderivative {
   simdlen( DATA_WIDTH )
   sc definite_integral_over_different_intervals( sc xy1, sc xy2, sc xy3,
     const sc * ny, sc t0, sc t1, sc tau0, sc tau1 ) const {
-    return derived( )->do_definite_integral_over_same_interval(
+    return derived( )->do_definite_integral_over_different_intervals(
       xy1, xy2, xy3, ny, t0, t1, tau0, tau1 );
   }
 };
