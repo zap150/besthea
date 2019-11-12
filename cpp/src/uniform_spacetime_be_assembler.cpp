@@ -650,7 +650,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
     std::vector< lo > test_l2g( 3 );
     std::vector< lo > trial_l2g( 3 );
 
-    sc areas, trial_area;
+    sc areas, test_area;
     sc value11, value12, value13;
     sc value21, value22, value23;
     sc value31, value32, value33;
@@ -694,7 +694,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
       for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
         test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
         test_mesh->get_spatial_normal( i_test, nx );
-        trial_area = test_mesh->spatial_area( i_test );
+        test_area = test_mesh->spatial_area( i_test );
         for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
           if ( delta == 0 ) {
             get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
@@ -706,7 +706,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
 
           trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
           trial_mesh->get_spatial_normal( i_trial, ny );
-          areas = trial_area * trial_mesh->spatial_area( i_trial );
+          areas = test_area * trial_mesh->spatial_area( i_trial );
 
           test_basis.local_to_global(
             i_test, n_shared_vertices, rot_test, false, test_l2g );

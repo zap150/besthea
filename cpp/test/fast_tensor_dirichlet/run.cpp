@@ -60,8 +60,8 @@ struct cauchy_data {
 };
 
 int main( int argc, char * argv[] ) {
-  std::string file = "../mesh_files/cube_12.txt";
-  int refine = 1;
+  std::string file = "../mesh_files/cube_192.txt";
+  int refine = 0;
   lo n_timesteps = 8;
   sc end_time = 1.0;
   std::string grid_file = "./mesh_files/grid_xy.txt";
@@ -97,8 +97,8 @@ int main( int argc, char * argv[] ) {
   sc st_coeff = 4.0;
   spacetime_cluster_tree tree( spacetime_mesh, 4, 3, 10, st_coeff );
 
-  fast_spacetime_be_space< besthea::bem::basis_tri_p0 > space_p0( tree );
-  fast_spacetime_be_space< besthea::bem::basis_tri_p1 > space_p1( tree );
+  fast_spacetime_be_space< basis_tri_p0 > space_p0( tree );
+  fast_spacetime_be_space< basis_tri_p1 > space_p1( tree );
 
   block_vector dir_proj, neu_proj;
   space_p1.L2_projection( cauchy_data::dirichlet, dir_proj );
@@ -110,11 +110,27 @@ int main( int argc, char * argv[] ) {
             << space_p0.L2_relative_error( cauchy_data::neumann, neu_proj )
             << std::endl;
 
+  pFMM_matrix V;
+
+  t.reset( "V" );
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::alpha );
-  besthea::linear_algebra::pFMM_matrix A;
-  besthea::bem::fast_spacetime_be_assembler fast_assembler(
-    kernel_v, space_p0, space_p0 );
-  fast_assembler.assemble( A );
+  fast_spacetime_be_assembler fast_assembler_v( kernel_v, space_p0, space_p0 );
+  fast_assembler_v.assemble( V );
+  t.measure( );
+
+  t.reset( "K" );
+  pFMM_matrix K;
+  spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::alpha );
+  fast_spacetime_be_assembler fast_assembler_k( kernel_k, space_p0, space_p1 );
+  fast_assembler_k.assemble( K );
+  t.measure( );
+
+  t.reset( "D" );
+  pFMM_matrix D;
+  spacetime_heat_hs_kernel_antiderivative kernel_d( cauchy_data::alpha );
+  fast_spacetime_be_assembler fast_assembler_d( kernel_d, space_p1, space_p1 );
+  fast_assembler_d.assemble( D );
+  t.measure( );
 
   //  lo order_sing = 4;
   //  lo order_reg = 4;
