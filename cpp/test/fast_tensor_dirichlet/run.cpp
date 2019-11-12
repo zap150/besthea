@@ -60,8 +60,8 @@ struct cauchy_data {
 };
 
 int main( int argc, char * argv[] ) {
-  std::string file = "../mesh_files/cube_192.txt";
-  int refine = 0;
+  std::string file = "../mesh_files/cube_12.txt";
+  int refine = 1;
   lo n_timesteps = 8;
   sc end_time = 1.0;
   std::string grid_file = "./mesh_files/grid_xy.txt";
@@ -111,9 +111,10 @@ int main( int argc, char * argv[] ) {
             << std::endl;
 
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::alpha );
-  besthea::linear_algebra::pFMM_matrix A( );
+  besthea::linear_algebra::pFMM_matrix A;
   besthea::bem::fast_spacetime_be_assembler fast_assembler(
     kernel_v, space_p0, space_p0 );
+  fast_assembler.assemble( A );
 
   //  lo order_sing = 4;
   //  lo order_reg = 4;

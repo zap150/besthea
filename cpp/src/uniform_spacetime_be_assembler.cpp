@@ -198,7 +198,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
                 * w[ i_quad ];
             }
           } else {
-            if ( delta == 0 || i_test != i_trial ) {
+            if ( i_test != i_trial ) {
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
                           y2_mapped, y3_mapped, kernel_data, w        \
                           : DATA_ALIGN ) simdlen( DATA_WIDTH )

@@ -37,6 +37,7 @@
 #include "besthea/fast_spacetime_be_space.h"
 #include "besthea/pFMM_matrix.h"
 #include "besthea/settings.h"
+#include "besthea/sparse_matrix.h"
 
 namespace besthea {
   namespace bem {
@@ -51,6 +52,10 @@ namespace besthea {
 template< class kernel_type, class test_space_type, class trial_space_type >
 class besthea::bem::fast_spacetime_be_assembler {
  private:
+  using sparse_matrix_type = besthea::linear_algebra::sparse_matrix;
+  using pfmm_matrix_type
+    = besthea::linear_algebra::pFMM_matrix;  //!< pFMM matrix type.
+
   /**
    * Wraps the mapped quadrature point so that they can be private for OpenMP
    * threads
@@ -94,9 +99,6 @@ class besthea::bem::fast_spacetime_be_assembler {
   };
 
  public:
-  using pfmm_matrix_type
-    = besthea::linear_algebra::pFMM_matrix;  //!< pFMM matrix type.
-
   /**
    * Constructor.
    * @param[in] kernel Spacetime kernel antiderivative object.
@@ -123,6 +125,13 @@ class besthea::bem::fast_spacetime_be_assembler {
    */
   void assemble( besthea::linear_algebra::pFMM_matrix & global_matrix ) const;
 
+ private:
+  /**
+   * Initializes quadrature structures.
+   * @param[out] my_quadrature Wrapper holding quadrature data.
+   */
+  void init_quadrature( quadrature_wrapper & my_quadrature ) const;
+
   /**
    * Assembles the fast spacetime matrix.
    * @param[out] global_matrix Partially assembled pFMM matrix.
@@ -130,7 +139,154 @@ class besthea::bem::fast_spacetime_be_assembler {
   void assemble_nearfield(
     besthea::linear_algebra::pFMM_matrix & global_matrix ) const;
 
- private:
+  /**
+   * Assembles nearfield matrix
+   * @param[in] t0 Initial time of the test function quadrature.
+   * @param[in] t1 Final time of the test function quadrature.
+   * @param[in] tau0 Initial time of the trial function quadrature.
+   * @param[in] tau1 Final time of the trial function quadrature.
+   * @param[out] nearfield_matrix Reference to the matrix which should be
+   * assembled.
+   */
+  void assemble_nearfield_matrix( sc t0, sc t1, sc tau0, sc tau1,
+    sparse_matrix_type & nearfield_matrix ) const;
+
+  /**
+   * Determines the configuration of two triangular elements.
+   * @param[in] i_test Index of the test element.
+   * @param[in] i_trial Index of the trial element.
+   * @param[out] type_int Type of the configuration (number of vertices shared).
+   * @param[out] rot_test Virtual rotation of the test element.
+   * @param[out] rot_trial Virtual rotation of the trial element.
+   */
+  void get_type( lo i_test, lo i_trial, int & type_int, int & rot_test,
+    int & rot_trial ) const;
+
+  /**
+   * Maps quadratures nodes from hypercube to triangles
+   * @param[in] ksi ksi variable in (0,1).
+   * @param[in] eta1 eta_1 variable in (0,1).
+   * @param[in] eta2 eta_2 variable in (0,1).
+   * @param[in] eta3 eta_3 variable in (0,1).
+   * @param[in] type Type of configuration (disjoint, shared vertex, shared
+   * edge, identical)
+   * @param[in] simplex Simplex index.
+   * @param[out] x1_ref First coordinate of quadrature node to be mapped to the
+   * test element.
+   * @param[out] x2_ref Second coordinate of quadrature node to be mapped to the
+   * test element.
+   * @param[out] y1_ref First coordinate of quadrature node to be mapped to the
+   * trial element.
+   * @param[out] y2_ref Second coordinate of quadrature node to be mapped to the
+   * trial element.
+   * @param[out] jacobian Jacobian of the transformation.
+   */
+  void hypercube_to_triangles( sc ksi, sc eta1, sc eta2, sc eta3,
+    int n_shared_vertices, int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref,
+    sc & y2_ref, sc & jacobian ) const {
+    switch ( n_shared_vertices ) {
+      case 1:
+        hypercube_to_triangles_vertex( ksi, eta1, eta2, eta3, simplex, x1_ref,
+          x2_ref, y1_ref, y2_ref, jacobian );
+        break;
+      case 2:
+        hypercube_to_triangles_edge( ksi, eta1, eta2, eta3, simplex, x1_ref,
+          x2_ref, y1_ref, y2_ref, jacobian );
+        break;
+      case 3:
+        hypercube_to_triangles_identical( ksi, eta1, eta2, eta3, simplex,
+          x1_ref, x2_ref, y1_ref, y2_ref, jacobian );
+        break;
+      case 0:
+      default:
+        return;
+    }
+  }
+
+  /**
+   * Maps quadratures nodes from hypercube to triangles (shared vertex case)
+   * @param[in] ksi ksi variable in (0,1).
+   * @param[in] eta1 eta_1 variable in (0,1).
+   * @param[in] eta2 eta_2 variable in (0,1).
+   * @param[in] eta3 eta_3 variable in (0,1).
+   * @param[in] simplex Simplex index.
+   * @param[out] x1_ref First coordinate of quadrature node to be mapped to the
+   * test element.
+   * @param[out] x2_ref Second coordinate of quadrature node to be mapped to the
+   * test element.
+   * @param[out] y1_ref First coordinate of quadrature node to be mapped to the
+   * trial element.
+   * @param[out] y2_ref Second coordinate of quadrature node to be mapped to the
+   * trial element.
+   * @param[out] jacobian Jacobian of the transformation.
+   */
+  void hypercube_to_triangles_vertex( sc ksi, sc eta1, sc eta2, sc eta3,
+    int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref, sc & y2_ref,
+    sc & jacobian ) const;
+
+  /**
+   * Maps quadratures nodes from hypercube to triangles (shared edge case)
+   * @param[in] ksi ksi variable in (0,1).
+   * @param[in] eta1 eta_1 variable in (0,1).
+   * @param[in] eta2 eta_2 variable in (0,1).
+   * @param[in] eta3 eta_3 variable in (0,1).
+   * @param[in] simplex Simplex index.
+   * @param[out] x1_ref First coordinate of quadrature node to be mapped to the
+   * test element.
+   * @param[out] x2_ref Second coordinate of quadrature node to be mapped to the
+   * test element.
+   * @param[out] y1_ref First coordinate of quadrature node to be mapped to the
+   * trial element.
+   * @param[out] y2_ref Second coordinate of quadrature node to be mapped to the
+   * trial element.
+   * @param[out]jacobian Jacobian of the transformation.
+   */
+  void hypercube_to_triangles_edge( sc ksi, sc eta1, sc eta2, sc eta3,
+    int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref, sc & y2_ref,
+    sc & jacobian ) const;
+
+  /**
+   * Maps quadratures nodes from hypercube to triangles (identical case)
+   * @param[in] ksi ksi variable in (0,1).
+   * @param[in] eta1 eta_1 variable in (0,1).
+   * @param[in] eta2 eta_2 variable in (0,1).
+   * @param[in] eta3 eta_3 variable in (0,1).
+   * @param[in] simplex Simplex index.
+   * @param[out] x1_ref First coordinate of quadrature node to be mapped to the
+   * test element.
+   * @param[out] x2_ref Second coordinate of quadrature node to be mapped to the
+   * test element.
+   * @param[out] y1_ref First coordinate of quadrature node to be mapped to the
+   * trial element.
+   * @param[out] y2_ref Second coordinate of quadrature node to be mapped to the
+   * trial element.
+   * @param[out] jacobian Jacobian of the transformation.
+   */
+  void hypercube_to_triangles_identical( sc ksi, sc eta1, sc eta2, sc eta3,
+    int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref, sc & y2_ref,
+    sc & jacobian ) const;
+
+  /**
+   * Maps the quadrature nodes from reference triangles to the actual geometry.
+   * @param[in] x1 Coordinates of the first node of the test element.
+   * @param[in] x2 Coordinates of the second node of the test element.
+   * @param[in] x3 Coordinates of the third node of the test element.
+   * @param[in] y1 Coordinates of the first node of the trial element.
+   * @param[in] y2 Coordinates of the second node of the trial element.
+   * @param[in] y3 Coordinates of the third node of the trial element.
+   * @param[in] type_int Type of the configuration (number of vertices shared).
+   * @param[in] rot_test Virtual rotation of the test element.
+   * @param[in] rot_trial Virtual rotation of the trial element.
+   * @param[in,out] my_quadrature Structure holding the quadrature nodes.
+   */
+  void triangles_to_geometry( const linear_algebra::coordinates< 3 > & x1,
+    const linear_algebra::coordinates< 3 > & x2,
+    const linear_algebra::coordinates< 3 > & x3,
+    const linear_algebra::coordinates< 3 > & y1,
+    const linear_algebra::coordinates< 3 > & y2,
+    const linear_algebra::coordinates< 3 > & y3, int type_int, int rot_test,
+    int rot_trial, quadrature_wrapper & my_quadrature ) const;
+
   kernel_type * _kernel;            //!< Kernel temporal antiderivative.
   test_space_type * _test_space;    //!< Boundary element test space.
   trial_space_type * _trial_space;  //!< Boundary element trial space.

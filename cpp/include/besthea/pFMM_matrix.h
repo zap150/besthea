@@ -33,7 +33,6 @@
 #ifndef INCLUDE_BESTHEA_PFMM_MATRIX_H_
 #define INCLUDE_BESTHEA_PFMM_MATRIX_H_
 
-//#include "besthea/block_matrix.h"
 #include "besthea/matrix.h"
 #include "besthea/settings.h"
 #include "besthea/spacetime_cluster_tree.h"

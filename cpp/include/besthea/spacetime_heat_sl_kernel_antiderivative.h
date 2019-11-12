@@ -218,7 +218,7 @@ class besthea::bem::spacetime_heat_sl_kernel_antiderivative
   sc do_definite_integral_over_same_interval(
     sc xy1, sc xy2, sc xy3, const sc * ny, sc t0, sc t1 ) const {
     sc value = ( t1 - t0 ) * do_anti_tau_limit( xy1, xy2, xy3, ny )
-      - do_anti_tau_anti_t( xy1, xy2, xy3, ny, t1 - t0 )
+      - do_anti_tau_anti_t_regular_in_time( xy1, xy2, xy3, ny, t1 - t0 )
       + do_anti_tau_anti_t_limit_in_time_regular_in_space( xy1, xy2, xy3, ny );
 
     return value;

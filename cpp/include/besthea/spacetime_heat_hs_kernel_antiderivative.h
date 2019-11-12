@@ -351,7 +351,8 @@ class besthea::bem::spacetime_heat_hs_kernel_antiderivative
     sc val1, val2;
     *value1 = ( t1 - t0 ) * do_anti_tau_limit( xy1, xy2, xy3, ny );
     *value2 = 0.0;
-    anti_tau_anti_t_and_anti_t( xy1, xy2, xy3, nx, ny, t1 - t0, &val1, &val2 );
+    anti_tau_anti_t_and_anti_t_regular_in_time(
+      xy1, xy2, xy3, nx, ny, t1 - t0, &val1, &val2 );
     *value1 -= val1;
     *value2 -= val2;
     anti_tau_anti_t_and_anti_t_limit_in_time_regular_in_space(
