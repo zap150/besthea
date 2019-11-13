@@ -30,14 +30,15 @@
 
 #include "Eigen/IterativeLinearSolvers"
 
-besthea::linear_algebra::sparse_matrix::sparse_matrix( ) : _data( ) {
+besthea::linear_algebra::sparse_matrix::sparse_matrix( )
+  : _data( ), _lu( ), _choleski( ) {
   _n_rows = 0;
   _n_columns = 0;
 }
 
 besthea::linear_algebra::sparse_matrix::sparse_matrix(
   const sparse_matrix & that )
-  : _data( that._data ) {
+  : _data( that._data ), _lu( ), _choleski( ) {
   _n_rows = that._n_rows;
   _n_columns = that._n_columns;
 }
@@ -112,4 +113,54 @@ void besthea::linear_algebra::sparse_matrix::eigen_cg_solve( const vector & rhs,
 
   relative_residual_error = static_cast< sc >( cg.error( ) );
   n_iterations = static_cast< lo >( cg.iterations( ) );
+}
+
+void besthea::linear_algebra::sparse_matrix::eigen_lu_decompose_and_solve(
+  const vector & rhs, vector & solution ) {
+  Eigen::Map< const Eigen::Matrix< sc, Eigen::Dynamic, 1 > > rhs_map(
+    rhs.data( ), rhs.size( ) );
+  Eigen::Map< Eigen::Matrix< sc, Eigen::Dynamic, 1 > > solution_map(
+    solution.data( ), solution.size( ) );
+
+  _lu.compute( _data );
+  solution_map = _lu.solve( rhs_map );
+}
+
+void besthea::linear_algebra::sparse_matrix::eigen_lu_decompose( ) {
+  _lu.compute( _data );
+}
+
+void besthea::linear_algebra::sparse_matrix::eigen_lu_solve(
+  const vector & rhs, vector & solution ) {
+  Eigen::Map< const Eigen::Matrix< sc, Eigen::Dynamic, 1 > > rhs_map(
+    rhs.data( ), rhs.size( ) );
+  Eigen::Map< Eigen::Matrix< sc, Eigen::Dynamic, 1 > > solution_map(
+    solution.data( ), solution.size( ) );
+
+  solution_map = _lu.solve( rhs_map );
+}
+
+void besthea::linear_algebra::sparse_matrix::eigen_choleski_decompose_and_solve(
+  const vector & rhs, vector & solution ) {
+  Eigen::Map< const Eigen::Matrix< sc, Eigen::Dynamic, 1 > > rhs_map(
+    rhs.data( ), rhs.size( ) );
+  Eigen::Map< Eigen::Matrix< sc, Eigen::Dynamic, 1 > > solution_map(
+    solution.data( ), solution.size( ) );
+
+  _choleski.compute( _data );
+  solution_map = _choleski.solve( rhs_map );
+}
+
+void besthea::linear_algebra::sparse_matrix::eigen_choleski_decompose( ) {
+  _choleski.compute( _data );
+}
+
+void besthea::linear_algebra::sparse_matrix::eigen_choleski_solve(
+  const vector & rhs, vector & solution ) {
+  Eigen::Map< const Eigen::Matrix< sc, Eigen::Dynamic, 1 > > rhs_map(
+    rhs.data( ), rhs.size( ) );
+  Eigen::Map< Eigen::Matrix< sc, Eigen::Dynamic, 1 > > solution_map(
+    solution.data( ), solution.size( ) );
+
+  solution_map = _choleski.solve( rhs_map );
 }
