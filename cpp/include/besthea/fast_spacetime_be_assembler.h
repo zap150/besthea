@@ -106,10 +106,13 @@ class besthea::bem::fast_spacetime_be_assembler {
    * @param[in] trial_space Trial boundary element space.
    * @param[in] order_singular Line quadrature order for regularized quadrature.
    * @param[in] order_regular Triangle quadrature order for regular quadrature.
+   * @param[in] cutoff_param Cutoff parameter for the nearfield approximation
+   * (elements further than cutoff_param * diagonal of the lowest level cluster
+   * will be ignored).
    */
   fast_spacetime_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
-    int order_singular = 4, int order_regular = 4 );
+    int order_singular = 4, int order_regular = 4, sc cutoff_param = 2.5 );
 
   fast_spacetime_be_assembler( const fast_spacetime_be_assembler & that )
     = delete;
@@ -133,7 +136,7 @@ class besthea::bem::fast_spacetime_be_assembler {
   void init_quadrature( quadrature_wrapper & my_quadrature ) const;
 
   /**
-   * Assembles the fast spacetime matrix.
+   * Assembles temporal nearfield matrices.
    * @param[out] global_matrix Partially assembled pFMM matrix.
    */
   void assemble_nearfield(
@@ -287,6 +290,14 @@ class besthea::bem::fast_spacetime_be_assembler {
     const linear_algebra::coordinates< 3 > & y3, int type_int, int rot_test,
     int rot_trial, quadrature_wrapper & my_quadrature ) const;
 
+  /**
+   * Returns true if the two elements are closer than the limit given by the
+   * size of the finest level spatial tree cluster and coefficient.
+   * @param[in] trial_idx Index of the trial spatial mesh element.
+   * @param[in] test_idx Index of the test spatial mesh element.
+   */
+  bool is_spatial_nearfield( lo test_idx, lo trial_idx ) const;
+
   kernel_type * _kernel;            //!< Kernel temporal antiderivative.
   test_space_type * _test_space;    //!< Boundary element test space.
   trial_space_type * _trial_space;  //!< Boundary element trial space.
@@ -298,6 +309,10 @@ class besthea::bem::fast_spacetime_be_assembler {
   static constexpr std::array< int, 4 > n_simplices{ 1, 2, 5,
     6 };  //!< Number of simplices for all configurations (disjoint, shared
           // vertex, shared edge, identical).
+  sc _space_cluster_size;  //!< Size of the finest level space clusters.
+  sc _cutoff_param;  //!< Coefficient for determining the spatial nearfield
+                     //!< (_cutoff_param * diagonal of the lowest level
+                     //!< cluster).
 };
 
 #endif /* INCLUDE_BESTHEA_FAST_SPACETIME_BE_ASSEMBLER_H_ */

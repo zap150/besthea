@@ -48,6 +48,10 @@ besthea::mesh::space_cluster_tree::space_cluster_tree(
     _n_nonempty_nodes( 0 ) {
   sc xmin, xmax, ymin, ymax, zmin, zmax;
   compute_bounding_box( xmin, xmax, ymin, ymax, zmin, zmax );
+  _bounding_box_size.resize( 3 );
+  _bounding_box_size[ 0 ] = ( xmax - xmin ) / 2.0;
+  _bounding_box_size[ 1 ] = ( ymax - ymin ) / 2.0;
+  _bounding_box_size[ 2 ] = ( zmax - zmin ) / 2.0;
 
   vector_type center
     = { ( xmin + xmax ) / 2.0, ( ymin + ymax ) / 2.0, ( zmin + zmax ) / 2.0 };

@@ -158,6 +158,13 @@ class besthea::mesh::space_cluster_tree {
     return _paddings;
   }
 
+  /**
+   * Returns size of the underlying mesh bounding box.
+   */
+  const std::vector< sc > & get_bounding_box( ) const {
+    return _bounding_box_size;
+  }
+
  private:
   space_cluster * _root;                  //!< root cluster of the tree
   const triangular_surface_mesh & _mesh;  //!< underlying mesh
@@ -176,6 +183,7 @@ class besthea::mesh::space_cluster_tree {
   std::map< std::vector< slou >, space_cluster * >
     _coord_2_cluster;  //!< map from cluster coordinates to its location in
                        //!< memory
+  std::vector< sc > _bounding_box_size;  //!< size of the mesh bounding box;
 
   /**
    * Computes the bounding box of the underlying mesh.
