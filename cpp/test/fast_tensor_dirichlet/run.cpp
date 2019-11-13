@@ -62,7 +62,7 @@ struct cauchy_data {
 int main( int argc, char * argv[] ) {
   std::string file = "../mesh_files/cube_192.txt";
   int refine = 0;
-  lo n_timesteps = 8;
+  lo n_timesteps = 32;
   sc end_time = 1.0;
   std::string grid_file = "./mesh_files/grid_xy.txt";
   // int grid_refine = 2;
@@ -95,7 +95,7 @@ int main( int argc, char * argv[] ) {
   timer t;
 
   sc st_coeff = 4.0;
-  spacetime_cluster_tree tree( spacetime_mesh, 4, 3, 10, st_coeff );
+  spacetime_cluster_tree tree( spacetime_mesh, 8, 2, 10, st_coeff );
 
   fast_spacetime_be_space< basis_tri_p0 > space_p0( tree );
   fast_spacetime_be_space< basis_tri_p1 > space_p1( tree );
