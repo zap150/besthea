@@ -17,6 +17,7 @@
 *.DS_Store
 *Makefile.debug
 *Makefile.release
+*Makefile.linux
 cpp/doc/html
 cpp/test/ensight
 cpp/test/ensight_surface
