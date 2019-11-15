@@ -26,20 +26,20 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "besthea/linear_operator.h"
+#include "besthea/block_linear_operator.h"
 
 #include "mkl_rci.h"
 
 #include <vector>
 
-bool besthea::linear_algebra::linear_operator::mkl_cg_solve(
-  const vector_type & rhs, vector_type & solution, sc & relative_residual_error,
-  lo & n_iterations ) const {
-  if ( _dim_domain != _dim_range || _dim_domain != rhs.size( )
-    || _dim_domain != solution.size( ) )
-    return false;
+bool besthea::linear_algebra::block_linear_operator::mkl_cg_solve(
+  const block_vector_type & rhs, block_vector_type & solution,
+  sc & relative_residual_error, lo & n_iterations ) const {
+  lo size = _dim_domain * _block_dim;
 
-  lo size = _dim_domain;
+  if ( _dim_domain != _dim_range || size != rhs.size( )
+    || size != solution.size( ) )
+    return false;
 
   lo rci;
   lo iter;
@@ -48,10 +48,16 @@ bool besthea::linear_algebra::linear_operator::mkl_cg_solve(
   std::vector< sc > tmp( size * 3 );  // need _dim_domain * 4 for preconditioned
   sc * tmp_data = tmp.data( );
 
-  vector_type tmp_1( size );
-  vector_type tmp_2( size );
+  block_vector_type tmp_1( _block_dim, _dim_domain );
+  block_vector_type tmp_2( _block_dim, _dim_domain );
 
-  dcg_init( &size, solution.data( ), rhs.data( ), &rci, ipar, dpar, tmp_data );
+  vector_type rhs_contiguous( size );
+  vector_type solution_contiguous( size );
+  rhs.copy_to_vector( rhs_contiguous );
+  solution.copy_to_vector( solution_contiguous );
+
+  dcg_init( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci,
+    ipar, dpar, tmp_data );
   if ( rci ) {
     std::cout << "Failed to initialize MKL CG." << std::endl;
     return false;
@@ -66,23 +72,26 @@ bool besthea::linear_algebra::linear_operator::mkl_cg_solve(
 
   dpar[ 0 ] = relative_residual_error;  // relative tolerance
 
-  dcg_check( &size, solution.data( ), rhs.data( ), &rci, ipar, dpar, tmp_data );
+  dcg_check( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci,
+    ipar, dpar, tmp_data );
   if ( rci ) {
     std::cout << "MKL parameters incorrect." << std::endl;
     return false;
   }
 
   while ( true ) {
-    dcg( &size, solution.data( ), rhs.data( ), &rci, ipar, dpar, tmp_data );
+    dcg( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci, ipar,
+      dpar, tmp_data );
 
     if ( rci == 1 ) {  // apply operator
-      tmp_1.copy_from_raw( _dim_domain, tmp_data );
+      tmp_1.copy_from_raw( _block_dim, _dim_domain, tmp_data );
       apply( tmp_1, tmp_2, false, 1.0, 0.0 );
-      tmp_2.copy_to_raw( tmp_data + _dim_domain );
+      tmp_2.copy_to_raw( tmp_data + size );
       continue;
     } else if ( rci == 0 ) {  // success
-      dcg_get( &size, solution.data( ), rhs.data( ), &rci, ipar, dpar, tmp_data,
-        &iter );
+      dcg_get( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci,
+        ipar, dpar, tmp_data, &iter );
+      solution.copy_from_vector( _block_dim, _dim_domain, solution_contiguous );
       n_iterations = iter;
       relative_residual_error = dpar[ 4 ] / dpar[ 2 ];
       break;
@@ -97,14 +106,15 @@ bool besthea::linear_algebra::linear_operator::mkl_cg_solve(
   return true;
 }
 
-bool besthea::linear_algebra::linear_operator::mkl_fgmres_solve(
-  vector_type & rhs, vector_type & solution, sc & relative_residual_error,
-  lo & n_iterations, lo n_iterations_until_restart ) const {
-  if ( _dim_domain != _dim_range || _dim_domain != rhs.size( )
-    || _dim_domain != solution.size( ) )
-    return false;
+bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
+  block_vector_type & rhs, block_vector_type & solution,
+  sc & relative_residual_error, lo & n_iterations,
+  lo n_iterations_until_restart ) const {
+  lo size = _dim_domain * _block_dim;
 
-  lo size = _dim_domain;
+  if ( _dim_domain != _dim_range || size != rhs.size( )
+    || size != solution.size( ) )
+    return false;
 
   lo rci;
   lo iter;
@@ -116,11 +126,16 @@ bool besthea::linear_algebra::linear_operator::mkl_fgmres_solve(
             // preconditioned
   sc * tmp_data = tmp.data( );
 
-  vector_type tmp_1( size );
-  vector_type tmp_2( size );
+  block_vector_type tmp_1( _block_dim, _dim_domain );
+  block_vector_type tmp_2( _block_dim, _dim_domain );
 
-  dfgmres_init(
-    &size, solution.data( ), rhs.data( ), &rci, ipar, dpar, tmp_data );
+  vector_type rhs_contiguous( size );
+  vector_type solution_contiguous( size );
+  rhs.copy_to_vector( rhs_contiguous );
+  solution.copy_to_vector( solution_contiguous );
+
+  dfgmres_init( &size, solution_contiguous.data( ), rhs_contiguous.data( ),
+    &rci, ipar, dpar, tmp_data );
   if ( rci ) {
     std::cout << "Failed to initialize MKL CG." << std::endl;
     return false;
@@ -138,24 +153,26 @@ bool besthea::linear_algebra::linear_operator::mkl_fgmres_solve(
 
   dpar[ 0 ] = relative_residual_error;  // relative tolerance
 
-  dfgmres_check(
-    &size, solution.data( ), rhs.data( ), &rci, ipar, dpar, tmp_data );
+  dfgmres_check( &size, solution_contiguous.data( ), rhs_contiguous.data( ),
+    &rci, ipar, dpar, tmp_data );
   if ( rci ) {
     std::cout << "MKL parameters incorrect." << std::endl;
     return false;
   }
 
   while ( true ) {
-    dfgmres( &size, solution.data( ), rhs.data( ), &rci, ipar, dpar, tmp_data );
+    dfgmres( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci,
+      ipar, dpar, tmp_data );
 
     if ( rci == 1 ) {  // apply operator
-      tmp_1.copy_from_raw( _dim_domain, tmp_data + ipar[ 21 ] - 1 );
+      tmp_1.copy_from_raw( _block_dim, _dim_domain, tmp_data + ipar[ 21 ] - 1 );
       apply( tmp_1, tmp_2, false, 1.0, 0.0 );
       tmp_2.copy_to_raw( tmp_data + ipar[ 22 ] - 1 );
       continue;
     } else if ( rci == 0 ) {  // success
-      dfgmres_get( &size, solution.data( ), rhs.data( ), &rci, ipar, dpar,
-        tmp_data, &iter );
+      dfgmres_get( &size, solution_contiguous.data( ), rhs_contiguous.data( ),
+        &rci, ipar, dpar, tmp_data, &iter );
+      solution.copy_from_vector( _block_dim, _dim_domain, solution_contiguous );
       n_iterations = iter;
       relative_residual_error = dpar[ 4 ] / dpar[ 2 ];
       break;
