@@ -54,7 +54,7 @@ template< class basis_type >
 sc besthea::bem::spacetime_be_space< basis_type >::l2_relative_error(
   const block_vector_type & f, const block_vector_type & approximation ) const {
   lo block_size = f.get_block_size( );
-  lo size = f.get_size( );
+  lo size = f.get_size_of_block( );
   sc l2diffnorm = 0.0;
   sc l2norm = 0.0;
   sc aux;

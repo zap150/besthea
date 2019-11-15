@@ -124,17 +124,33 @@ int main( int argc, char * argv[] ) {
   std::cout << "Neumann L2 projection relative error: "
             << space_p0.L2_relative_error( cauchy_data::neumann, neu_proj )
             << std::endl;
-  lo size_dir = dir_proj.get_block_size( ) * dir_proj.get_block_size( );
-  lo size_neu = neu_proj.get_block_size( ) * dir_proj.get_block_size( );
+  // lo size_dir = dir_proj.get_block_size( ) * dir_proj.get_block_size( );
+  // lo size_neu = neu_proj.get_block_size( ) * dir_proj.get_block_size( );
 
-  t.reset( "Setting up RHS" );
-  vector neu;
-  neu.resize( K->get_n_rows( ), true );
-  // M.apply( dir_proj, neu, false, 0.5, 0.0 );
-  // K->apply( dir_proj, neu, false, 1.0, 1.0 );
-  t.measure( );
-
-  delete K;
+  //  t.reset( "Setting up RHS" );
+  //  block_vector neu;
+  //  neu.resize( neu_proj.get_block_size( ) );
+  //  neu.resize_blocks( neu_proj.get_size_of_block( ), true );
+  //
+  //  vector dir_proj_vec( dir_proj.size( ) );
+  //  vector neu_vec( neu.size( ) );
+  //  for ( lo i = 0; i < dir_proj.get_block_size( ); ++i ) {
+  //    for ( lo j = 0; j < dir_proj.get_size_of_block( ); ++j )
+  //      dir_proj_vec( i * dir_proj.get_size_of_block( ) + j )
+  //        = dir_proj.get( i, j );
+  //  }
+  //
+  //  M.apply( dir_proj_vec, neu_vec, false, 0.5, 0.0 );
+  //
+  //  for ( lo i = 0; i < neu.get_block_size( ); ++i ) {
+  //    for ( lo j = 0; j < neu.get_size_of_block( ); ++j )
+  //      neu.set( i, j, neu_vec.get( i * neu.get_size_of_block( ) + j ) );
+  //  }
+  //
+  //  K->apply( dir_proj, neu, false, 1.0, 1.0 );
+  //  t.measure( );
+  //
+  //  delete K;
 
   //  pFMM_matrix V;
   //

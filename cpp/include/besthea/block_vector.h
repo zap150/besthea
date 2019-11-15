@@ -108,8 +108,15 @@ class besthea::linear_algebra::block_vector {
   /**
    * Returns the dimension of a single block
    */
-  lo get_size( ) const {
+  lo get_size_of_block( ) const {
     return _size;
+  }
+
+  /**
+   * Returns the dimension of the whole vector.
+   */
+  lo size( ) const {
+    return _block_size * _size;
   }
 
   /**
