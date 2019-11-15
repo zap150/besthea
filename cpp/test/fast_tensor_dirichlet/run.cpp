@@ -60,9 +60,9 @@ struct cauchy_data {
 };
 
 int main( int argc, char * argv[] ) {
-  std::string file = "../mesh_files/cube_192.txt";
-  int refine = 0;
-  lo n_timesteps = 32;
+  std::string file = "../mesh_files/cube_12.txt";
+  int refine = 1;
+  lo n_timesteps = 16;
   sc end_time = 1.0;
   std::string grid_file = "./mesh_files/grid_xy.txt";
   // int grid_refine = 2;
@@ -95,10 +95,25 @@ int main( int argc, char * argv[] ) {
   timer t;
 
   sc st_coeff = 4.0;
-  spacetime_cluster_tree tree( spacetime_mesh, 8, 2, 10, st_coeff );
+  spacetime_cluster_tree tree( spacetime_mesh, 3, 2, 10, st_coeff );
 
   fast_spacetime_be_space< basis_tri_p0 > space_p0( tree );
   fast_spacetime_be_space< basis_tri_p1 > space_p1( tree );
+
+  lo order_sing = 4;
+  lo order_reg = 4;
+
+  pFMM_matrix * K = new pFMM_matrix( );
+
+  spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::alpha );
+  fast_spacetime_be_assembler fast_assembler_k( kernel_k, space_p0, space_p1 );
+  t.reset( "K" );
+  fast_assembler_k.assemble( *K );
+  t.measure( );
+
+  sparse_matrix M;
+  besthea::bem::spacetime_be_identity identity( space_p0, space_p1, 1 );
+  identity.assemble( M );
 
   block_vector dir_proj, neu_proj;
   space_p1.L2_projection( cauchy_data::dirichlet, dir_proj );
@@ -109,28 +124,68 @@ int main( int argc, char * argv[] ) {
   std::cout << "Neumann L2 projection relative error: "
             << space_p0.L2_relative_error( cauchy_data::neumann, neu_proj )
             << std::endl;
+  lo size_dir = dir_proj.get_block_size( ) * dir_proj.get_block_size( );
+  lo size_neu = neu_proj.get_block_size( ) * dir_proj.get_block_size( );
 
-  pFMM_matrix V;
-
-  t.reset( "V" );
-  spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::alpha );
-  fast_spacetime_be_assembler fast_assembler_v( kernel_v, space_p0, space_p0 );
-  fast_assembler_v.assemble( V );
+  t.reset( "Setting up RHS" );
+  vector neu;
+  neu.resize( K->get_n_rows( ), true );
+  // M.apply( dir_proj, neu, false, 0.5, 0.0 );
+  // K->apply( dir_proj, neu, false, 1.0, 1.0 );
   t.measure( );
 
-  t.reset( "K" );
-  pFMM_matrix K;
-  spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::alpha );
-  fast_spacetime_be_assembler fast_assembler_k( kernel_k, space_p0, space_p1 );
-  fast_assembler_k.assemble( K );
-  t.measure( );
+  delete K;
 
-  t.reset( "D" );
-  pFMM_matrix D;
-  spacetime_heat_hs_kernel_antiderivative kernel_d( cauchy_data::alpha );
-  fast_spacetime_be_assembler fast_assembler_d( kernel_d, space_p1, space_p1 );
-  fast_assembler_d.assemble( D );
-  t.measure( );
+  //  pFMM_matrix V;
+  //
+  //  t.reset( "V" );
+  //  spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::alpha );
+  //  fast_spacetime_be_assembler fast_assembler_v( kernel_v, space_p0, space_p0
+  //  ); fast_assembler_v.assemble( V ); t.measure( );
+  //
+  //  t.reset( "V full" );
+  //  uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > space_p0_full(
+  //    spacetime_mesh );
+  //  block_lower_triangular_toeplitz_matrix * V_full
+  //    = new block_lower_triangular_toeplitz_matrix( );
+  //  uniform_spacetime_be_assembler assembler_v_full(
+  //    kernel_v, space_p0_full, space_p0_full, 4, 4 );
+  //  assembler_v_full.assemble( *V_full );
+  //  t.measure( );
+  //
+  //  vector test_y( V.get_n_columns( ), true );
+  //  vector test_x( V.get_n_rows( ) );
+  //  test_x.fill( 1.0 );
+  //  V.apply( test_x, test_y, false, 1.0, 0.0 );
+  //
+  //  block_vector test_y_block( spacetime_mesh.get_n_temporal_elements( ),
+  //    V.get_n_columns( ) / spacetime_mesh.get_n_temporal_elements( ) );
+  //
+  //  block_vector test_x_block( spacetime_mesh.get_n_temporal_elements( ),
+  //    V.get_n_rows( ) / spacetime_mesh.get_n_temporal_elements( ) );
+  //  for ( lo i = 0; i < test_x_block.get_block_size( ); ++i ) {
+  //    for ( lo j = 0; j < test_x_block.get_size( ); ++j ) {
+  //      test_x_block.set(
+  //        i, j, test_x.get( i * test_x_block.get_block_size( ) + j ) );
+  //    }
+  //  }
+  //  V_full->apply( test_x_block, test_y_block, false, 1.0, 0 );
+  //  std::cout << V_full->get_n_rows( ) << " " << V_full->get_n_columns( ) << "
+  //  "
+  //            << V_full->get_block_dim( ) << std::endl;
+  //  std::cout << test_y_block.get_block_size( ) << " " <<
+  //  test_y_block.get_size( )
+  //            << std::endl;
+  //
+  //  test_y.print( );
+  //  std::cout << std::endl;
+  //  test_y_block.print( );
+  //
+  //  t.reset( "D" );
+  //  pFMM_matrix D;
+  //  spacetime_heat_hs_kernel_antiderivative kernel_d( cauchy_data::alpha );
+  //  fast_spacetime_be_assembler fast_assembler_d( kernel_d, space_p1, space_p1
+  //  ); fast_assembler_d.assemble( D ); t.measure( );
 
   //  lo order_sing = 4;
   //  lo order_reg = 4;

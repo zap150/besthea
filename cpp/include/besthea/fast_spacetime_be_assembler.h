@@ -112,7 +112,7 @@ class besthea::bem::fast_spacetime_be_assembler {
    */
   fast_spacetime_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
-    int order_singular = 4, int order_regular = 4, sc cutoff_param = 2.5 );
+    int order_singular = 4, int order_regular = 4, sc cutoff_param = 3.0 );
 
   fast_spacetime_be_assembler( const fast_spacetime_be_assembler & that )
     = delete;
@@ -140,6 +140,12 @@ class besthea::bem::fast_spacetime_be_assembler {
    * @param[out] global_matrix Partially assembled pFMM matrix.
    */
   void assemble_nearfield(
+    besthea::linear_algebra::pFMM_matrix & global_matrix ) const;
+
+  /** Assembles temporal farfield nonapproximated by the pFMM.
+   * @param[out] global_matrix Partially assembled pFMM matrix.
+   */
+  void assemble_farfield_nonapproximated(
     besthea::linear_algebra::pFMM_matrix & global_matrix ) const;
 
   /**

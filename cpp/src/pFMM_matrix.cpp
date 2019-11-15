@@ -39,3 +39,120 @@ besthea::linear_algebra::pFMM_matrix::create_nearfield_matrix(
 
   return local_matrix;
 }
+
+besthea::linear_algebra::sparse_matrix *
+besthea::linear_algebra::pFMM_matrix::create_farfield_matrix(
+  lo test_idx, lo trial_idx ) {
+  sparse_matrix_type * local_matrix = new sparse_matrix_type( );
+
+  _farfield_matrices.push_back( local_matrix );
+
+  _farfield_block_map.push_back( std::make_pair( test_idx, trial_idx ) );
+
+  return local_matrix;
+}
+
+void besthea::linear_algebra::pFMM_matrix::apply( const vector_type & x,
+  vector_type & y, bool trans, sc alpha, sc beta ) const {
+  // assuming that all blocks have the same dimensions
+  lo loc_rows = _nearfield_matrices.at( 0 )->get_n_rows( );
+  lo loc_cols = _nearfield_matrices.at( 0 )->get_n_columns( );
+  vector_type local_x( loc_cols );
+  vector_type local_y( loc_rows );
+
+  for ( lo i = 0; i < y.size( ); ++i ) {
+    y( i ) = y( i ) * beta;
+  }
+
+  sparse_matrix_type * current_block;
+
+  // first, multiply by the nearfield blocks
+  lo matrix_idx = 0;
+  for ( auto it = _nearfield_matrices.begin( );
+        it != _nearfield_matrices.end( ); ++it ) {
+    current_block = *it;
+    const std::pair< lo, lo > & indices = _nearfield_block_map.at( matrix_idx );
+
+    for ( lo i = 0; i < local_x.size( ); ++i ) {
+      local_x( i ) = x[ indices.second * loc_cols + i ];
+    }
+    current_block->apply( local_x, local_y, trans, alpha, 1.0 );
+    for ( lo i = 0; i < local_y.size( ); ++i ) {
+      y( indices.first * loc_rows + i ) += local_y[ i ];
+    }
+    local_y.fill( 0.0 );
+    matrix_idx++;
+  }
+
+  // next, multiply the farfield blocks
+  matrix_idx = 0;
+  for ( auto it = _farfield_matrices.begin( ); it != _farfield_matrices.end( );
+        ++it ) {
+    current_block = *it;
+    const std::pair< lo, lo > & indices = _farfield_block_map.at( matrix_idx );
+
+    for ( lo i = 0; i < local_x.size( ); ++i ) {
+      local_x( i ) = x[ indices.second * loc_cols + i ];
+    }
+    current_block->apply( local_x, local_y, trans, alpha, 1.0 );
+    for ( lo i = 0; i < local_y.size( ); ++i ) {
+      y( indices.first * loc_rows + i ) += local_y[ i ];
+    }
+    local_y.fill( 0.0 );
+    matrix_idx++;
+  }
+}
+
+void besthea::linear_algebra::pFMM_matrix::apply( const block_vector_type & x,
+  block_vector_type & y, bool trans, sc alpha, sc beta ) const {
+  // assuming that all blocks have the same dimensions
+  //  lo loc_rows = _nearfield_matrices.at( 0 )->get_n_rows( );
+  //  lo loc_cols = _nearfield_matrices.at( 0 )->get_n_columns( );
+  //  vector_type local_x( loc_cols );
+  //  vector_type local_y( loc_rows );
+  //
+  //  for ( lo i = 0; i < y.size( ); ++i ) {
+  //    y( i ) = y( i ) * beta;
+  //  }
+  //
+  //  sparse_matrix_type * current_block;
+  //
+  //  // first, multiply by the nearfield blocks
+  //  lo matrix_idx = 0;
+  //  for ( auto it = _nearfield_matrices.begin( );
+  //        it != _nearfield_matrices.end( ); ++it ) {
+  //    current_block = *it;
+  //    const std::pair< lo, lo > & indices = _nearfield_block_map.at(
+  //    matrix_idx );
+  //
+  //    for ( lo i = 0; i < local_x.size( ); ++i ) {
+  //      local_x( i ) = x[ indices.second * loc_cols + i ];
+  //    }
+  //    current_block->apply( local_x, local_y, trans, alpha, 1.0 );
+  //    for ( lo i = 0; i < local_y.size( ); ++i ) {
+  //      y( indices.first * loc_rows + i ) += local_y[ i ];
+  //    }
+  //    local_y.fill( 0.0 );
+  //    matrix_idx++;
+  //  }
+  //
+  //  // next, multiply the farfield blocks
+  //  matrix_idx = 0;
+  //  for ( auto it = _farfield_matrices.begin( ); it != _farfield_matrices.end(
+  //  );
+  //        ++it ) {
+  //    current_block = *it;
+  //    const std::pair< lo, lo > & indices = _farfield_block_map.at( matrix_idx
+  //    );
+  //
+  //    for ( lo i = 0; i < local_x.size( ); ++i ) {
+  //      local_x( i ) = x[ indices.second * loc_cols + i ];
+  //    }
+  //    current_block->apply( local_x, local_y, trans, alpha, 1.0 );
+  //    for ( lo i = 0; i < local_y.size( ); ++i ) {
+  //      y( indices.first * loc_rows + i ) += local_y[ i ];
+  //    }
+  //    local_y.fill( 0.0 );
+  //    matrix_idx++;
+  //  }
+}

@@ -57,6 +57,7 @@ class besthea::linear_algebra::pFMM_matrix
   using sparse_matrix_type = besthea::linear_algebra::sparse_matrix;
   using spacetime_tree_type = besthea::mesh::spacetime_cluster_tree;
   using time_cluster_type = besthea::mesh::time_cluster;
+  using block_vector_type = besthea::linear_algebra::block_vector;
 
   /**
    * Default constructor.
@@ -77,19 +78,38 @@ class besthea::linear_algebra::pFMM_matrix
         delete *it;
       }
     }
+
+    for ( auto it = _farfield_matrices.begin( );
+          it != _farfield_matrices.end( ); ++it ) {
+      if ( *it != nullptr ) {
+        delete *it;
+      }
+    }
   }
 
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
    * @param[in] x
    * @param[in,out] y
-   * @param[in] trans
+   * @param[in] trans Flag for transpose of individual blocks (not the whole
+   * block matrix!).
    * @param[in] alpha
    * @param[in] beta
    */
   virtual void apply( const vector_type & x, vector_type & y,
-    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const {
-  }
+    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
+
+  /*!
+   * @brief y = beta * y + alpha * (this)^trans * x using block vectors.
+   * @param[in] x
+   * @param[in,out] y
+   * @param[in] trans Flag for transpose of individual blocks (not the whole
+   * block matrix!).
+   * @param[in] alpha
+   * @param[in] beta
+   */
+  virtual void apply( const block_vector_type & x, block_vector_type & y,
+    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
 
   /*!
    * Sets the underlying spacetime tree.
@@ -109,7 +129,20 @@ class besthea::linear_algebra::pFMM_matrix
     _n_columns = n_cols;
   }
 
+  /*!
+   * Allocates sparse matrix of given nearfield block and returns a pointer.
+   * @param[in] test_idx Index of the testing function.
+   * @param[in] trial_idx Index of the trial function
+   */
   sparse_matrix_type * create_nearfield_matrix( lo test_idx, lo trial_idx );
+
+  /*!
+   * Allocates sparse matrix of given farfield nonapproximated block and
+   * returns a pointer.
+   * @param[in] test_idx Index of the testing function.
+   * @param[in] trial_idx Index of the trial function
+   */
+  sparse_matrix_type * create_farfield_matrix( lo test_idx, lo trial_idx );
 
  private:
   spacetime_tree_type * _spacetime_tree;  //!< tree hierarchically decomposing
@@ -119,6 +152,11 @@ class besthea::linear_algebra::pFMM_matrix
   std::vector< std::pair< lo, lo > >
     _nearfield_block_map;  //!< mapping from block index to pair of matching
                            //!< temporal clusters
+  std::vector< sparse_matrix_type * >
+    _farfield_matrices;  //!< nonapproximated temporal farfield blocks
+  std::vector< std::pair< lo, lo > >
+    _farfield_block_map;  //!< mapping from block index to pair of matching
+                          //!< temporal clusters
   lo _temp_order;   //!< degree of interpolation polynomials in time for pFMM
   lo _space_order;  //!< degree of truncated Chebyshev expansion
 };

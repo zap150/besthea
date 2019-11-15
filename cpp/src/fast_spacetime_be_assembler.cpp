@@ -103,7 +103,10 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
   global_matrix.resize( n_timesteps * n_rows, n_timesteps * n_columns );
 
+  std::cout << "NEARFIELD" << std::endl;
   assemble_nearfield( global_matrix );
+  std::cout << "FARFIELD" << std::endl;
+  assemble_farfield_nonapproximated( global_matrix );
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -127,6 +130,7 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
     // go over every element in the current time cluster
     for ( lo i = 0; i < current_cluster->get_n_elements( ); ++i ) {
       global_elem_i = current_cluster->get_element( i );
+      std::cout << "TEST: " << global_elem_i << std::endl << "   ";
 
       _test_space->get_tree( )->get_time_tree( )->get_mesh( ).get_nodes(
         global_elem_i, &t0, &t1 );
@@ -146,23 +150,73 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
       // sorted)
       for ( lo j = 0; j < i; ++j ) {
         global_elem_j = current_cluster->get_element( j );
+        std::cout << global_elem_j << " ";
         _trial_space->get_tree( )->get_time_tree( )->get_mesh( ).get_nodes(
           global_elem_j, &tau0, &tau1 );
         block = global_matrix.create_nearfield_matrix(
           global_elem_i, global_elem_j );
         assemble_nearfield_matrix( t0, t1, tau0, tau1, *block );
       }
-
+      std::cout << std::endl << "   ";
       // next interact with the previous cluster
       if ( neighbor_cluster != nullptr ) {
         for ( lo j = 0; j < neighbor_cluster->get_n_elements( ); ++j ) {
-          global_elem_j = current_cluster->get_element( j );
+          global_elem_j = neighbor_cluster->get_element( j );
+          std::cout << global_elem_j << " ";
           _trial_space->get_tree( )->get_time_tree( )->get_mesh( ).get_nodes(
             global_elem_j, &tau0, &tau1 );
           block = global_matrix.create_nearfield_matrix(
             global_elem_i, global_elem_j );
           assemble_nearfield_matrix( t0, t1, tau0, tau1, *block );
         }
+      }
+      std::cout << std::endl;
+    }
+  }
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::assemble_farfield_nonapproximated( besthea::
+    linear_algebra::pFMM_matrix & global_matrix ) const {
+  std::vector< mesh::time_cluster * > & leaves
+    = _test_space->get_tree( )->get_time_tree( )->get_leaves( );
+
+  mesh::time_cluster * current_cluster;
+  mesh::time_cluster * farfield_cluster = nullptr;
+
+  lo global_elem_i, global_elem_j;
+  sc t0, t1, tau0, tau1;
+  sparse_matrix_type * block;
+
+  for ( auto it = leaves.begin( ); it != leaves.end( ); ++it ) {
+    current_cluster = *it;
+
+    // go over every element in the current time cluster
+    for ( lo i = 0; i < current_cluster->get_n_elements( ); ++i ) {
+      if ( current_cluster->get_left_neighbour( ) != nullptr ) {
+        farfield_cluster
+          = current_cluster->get_left_neighbour( )->get_left_neighbour( );
+      }
+      global_elem_i = current_cluster->get_element( i );
+      std::cout << "TEST: " << global_elem_i << std::endl << "   ";
+
+      _test_space->get_tree( )->get_time_tree( )->get_mesh( ).get_nodes(
+        global_elem_i, &t0, &t1 );
+
+      // next interact with the previous cluster
+      while ( farfield_cluster != nullptr ) {
+        for ( lo j = 0; j < farfield_cluster->get_n_elements( ); ++j ) {
+          global_elem_j = farfield_cluster->get_element( j );
+          std::cout << global_elem_j << " ";
+          _trial_space->get_tree( )->get_time_tree( )->get_mesh( ).get_nodes(
+            global_elem_j, &tau0, &tau1 );
+          block = global_matrix.create_farfield_matrix(
+            global_elem_i, global_elem_j );
+          assemble_nearfield_matrix( t0, t1, tau0, tau1, *block );
+        }
+        std::cout << std::endl;
+        farfield_cluster = farfield_cluster->get_left_neighbour( );
       }
     }
   }
