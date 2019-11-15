@@ -105,10 +105,6 @@ void besthea::linear_algebra::pFMM_matrix::apply( const vector_type & x,
 
 void besthea::linear_algebra::pFMM_matrix::apply( const block_vector_type & x,
   block_vector_type & y, bool trans, sc alpha, sc beta ) const {
-  // assuming that all blocks have the same dimensions
-  lo loc_rows = _nearfield_matrices.at( 0 )->get_n_rows( );
-  lo loc_cols = _nearfield_matrices.at( 0 )->get_n_columns( );
-
   for ( lo i = 0; i < y.get_block_size( ); ++i ) {
     for ( lo j = 0; j < y.get_size_of_block( ); ++j ) {
       y.set( i, j, y.get( i, j ) * beta );

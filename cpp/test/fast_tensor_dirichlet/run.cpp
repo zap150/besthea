@@ -111,9 +111,8 @@ int main( int argc, char * argv[] ) {
   fast_assembler_k.assemble( *K );
   t.measure( );
 
-  sparse_matrix M;
-  besthea::bem::spacetime_be_identity identity( space_p0, space_p1, 1 );
-  identity.assemble( M );
+  besthea::bem::spacetime_be_identity M( space_p0, space_p1, 1 );
+  M.assemble( );
 
   block_vector dir_proj, neu_proj;
   space_p1.L2_projection( cauchy_data::dirichlet, dir_proj );
@@ -127,75 +126,67 @@ int main( int argc, char * argv[] ) {
   // lo size_dir = dir_proj.get_block_size( ) * dir_proj.get_block_size( );
   // lo size_neu = neu_proj.get_block_size( ) * dir_proj.get_block_size( );
 
-  //  t.reset( "Setting up RHS" );
-  //  block_vector neu;
-  //  neu.resize( neu_proj.get_block_size( ) );
-  //  neu.resize_blocks( neu_proj.get_size_of_block( ), true );
-  //
-  //  vector dir_proj_vec( dir_proj.size( ) );
-  //  vector neu_vec( neu.size( ) );
-  //  for ( lo i = 0; i < dir_proj.get_block_size( ); ++i ) {
-  //    for ( lo j = 0; j < dir_proj.get_size_of_block( ); ++j )
-  //      dir_proj_vec( i * dir_proj.get_size_of_block( ) + j )
-  //        = dir_proj.get( i, j );
-  //  }
-  //
-  //  M.apply( dir_proj_vec, neu_vec, false, 0.5, 0.0 );
-  //
-  //  for ( lo i = 0; i < neu.get_block_size( ); ++i ) {
-  //    for ( lo j = 0; j < neu.get_size_of_block( ); ++j )
-  //      neu.set( i, j, neu_vec.get( i * neu.get_size_of_block( ) + j ) );
-  //  }
-  //
-  //  K->apply( dir_proj, neu, false, 1.0, 1.0 );
-  //  t.measure( );
-  //
-  //  delete K;
+  t.reset( "Setting up RHS" );
+  block_vector neu;
+  neu.resize( neu_proj.get_block_size( ) );
+  neu.resize_blocks( neu_proj.get_size_of_block( ), true );
 
-  //  pFMM_matrix V;
-  //
-  //  t.reset( "V" );
-  //  spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::alpha );
-  //  fast_spacetime_be_assembler fast_assembler_v( kernel_v, space_p0, space_p0
-  //  ); fast_assembler_v.assemble( V ); t.measure( );
-  //
-  //  t.reset( "V full" );
-  //  uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > space_p0_full(
-  //    spacetime_mesh );
-  //  block_lower_triangular_toeplitz_matrix * V_full
-  //    = new block_lower_triangular_toeplitz_matrix( );
-  //  uniform_spacetime_be_assembler assembler_v_full(
-  //    kernel_v, space_p0_full, space_p0_full, 4, 4 );
-  //  assembler_v_full.assemble( *V_full );
-  //  t.measure( );
-  //
-  //  vector test_y( V.get_n_columns( ), true );
-  //  vector test_x( V.get_n_rows( ) );
-  //  test_x.fill( 1.0 );
-  //  V.apply( test_x, test_y, false, 1.0, 0.0 );
-  //
-  //  block_vector test_y_block( spacetime_mesh.get_n_temporal_elements( ),
-  //    V.get_n_columns( ) / spacetime_mesh.get_n_temporal_elements( ) );
-  //
-  //  block_vector test_x_block( spacetime_mesh.get_n_temporal_elements( ),
-  //    V.get_n_rows( ) / spacetime_mesh.get_n_temporal_elements( ) );
-  //  for ( lo i = 0; i < test_x_block.get_block_size( ); ++i ) {
-  //    for ( lo j = 0; j < test_x_block.get_size( ); ++j ) {
-  //      test_x_block.set(
-  //        i, j, test_x.get( i * test_x_block.get_block_size( ) + j ) );
-  //    }
-  //  }
-  //  V_full->apply( test_x_block, test_y_block, false, 1.0, 0 );
-  //  std::cout << V_full->get_n_rows( ) << " " << V_full->get_n_columns( ) << "
-  //  "
-  //            << V_full->get_block_dim( ) << std::endl;
-  //  std::cout << test_y_block.get_block_size( ) << " " <<
-  //  test_y_block.get_size( )
-  //            << std::endl;
-  //
-  //  test_y.print( );
-  //  std::cout << std::endl;
-  //  test_y_block.print( );
+  M.apply( dir_proj, neu, false, 0.5, 0.0 );
+  K->apply( dir_proj, neu, false, 1.0, 1.0 );
+  t.measure( );
+
+  delete K;
+
+  pFMM_matrix * V = new pFMM_matrix( );
+
+  spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::alpha );
+  fast_spacetime_be_assembler fast_assembler_v( kernel_v, space_p0, space_p0 );
+  t.reset( "V" );
+  fast_assembler_v.assemble( *V );
+  t.measure( );
+
+  t.reset( "Solving the system" );
+  // V->choleski_decompose_solve( neu );
+  t.measure( );
+
+  delete V;
+
+  std::cout << "Neumann L2 relative error: "
+            << space_p0.L2_relative_error( cauchy_data::neumann, neu )
+            << std::endl;
+
+  /*  t.reset( "V full" );
+    uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > space_p0_full(
+      spacetime_mesh );
+    block_lower_triangular_toeplitz_matrix * V_full
+      = new block_lower_triangular_toeplitz_matrix( );
+    uniform_spacetime_be_assembler assembler_v_full(
+      kernel_v, space_p0_full, space_p0_full, 4, 4 );
+    assembler_v_full.assemble( *V_full );
+    t.measure( );
+
+    vector test_y( V.get_n_columns( ), true );
+    vector test_x( V.get_n_rows( ) );
+    test_x.fill( 1.0 );
+    V.apply( test_x, test_y, false, 1.0, 0.0 );
+
+    block_vector test_y_block( spacetime_mesh.get_n_temporal_elements( ),
+      V.get_n_columns( ) / spacetime_mesh.get_n_temporal_elements( ) );
+
+    block_vector test_x_block( spacetime_mesh.get_n_temporal_elements( ),
+      V.get_n_rows( ) / spacetime_mesh.get_n_temporal_elements( ) );
+    for ( lo i = 0; i < test_x_block.get_block_size( ); ++i ) {
+      for ( lo j = 0; j < test_x_block.get_size_of_block( ); ++j ) {
+        test_x_block.set(
+          i, j, test_x.get( i * test_x_block.get_block_size( ) + j ) );
+      }
+    }
+    V_full->apply( test_x_block, test_y_block, false, 1.0, 0 );
+
+    test_y.print( );
+    std::cout << std::endl << " end " << std::endl;
+    test_y_block.print( );*/
+
   //
   //  t.reset( "D" );
   //  pFMM_matrix D;
