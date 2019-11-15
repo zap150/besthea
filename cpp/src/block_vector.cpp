@@ -47,6 +47,10 @@ besthea::linear_algebra::block_vector::block_vector(
     _data( block_size, vector_type( size, zero ) ) {
 }
 
+besthea::linear_algebra::block_vector::block_vector( const block_vector & that )
+  : _block_size( that._block_size ), _size( that._size ), _data( that._data ) {
+}
+
 besthea::linear_algebra::block_vector::~block_vector( ) {
 }
 
@@ -54,5 +58,47 @@ void besthea::linear_algebra::block_vector::print(
   std::ostream & stream ) const {
   for ( const vector_type & v : _data ) {
     v.print( );
+  }
+}
+
+void besthea::linear_algebra::block_vector::copy_from_raw(
+  lo block_size, lo size, const sc * data ) {
+  if ( block_size != _block_size ) {
+    resize( block_size );
+  }
+  if ( size != _size ) {
+    resize_blocks( size, false );
+  }
+  for ( lo i = 0; i < block_size; ++i ) {
+    _data[ i ].copy_from_raw( size, data + i * size );
+  }
+}
+
+void besthea::linear_algebra::block_vector::copy_to_raw( sc * data ) const {
+  for ( lo i = 0; i < _block_size; ++i ) {
+    _data[ i ].copy_to_raw( data + i * _size );
+  }
+}
+
+void besthea::linear_algebra::block_vector::copy_from_vector(
+  lo block_size, lo size, const vector_type & data ) {
+  if ( block_size != _block_size ) {
+    resize( block_size );
+  }
+  if ( size != _size ) {
+    resize_blocks( size, false );
+  }
+  for ( lo i = 0; i < block_size; ++i ) {
+    _data[ i ].copy_from_raw( size, data.data( ) + i * size );
+  }
+}
+
+void besthea::linear_algebra::block_vector::copy_to_vector(
+  vector_type & data ) const {
+  if ( data.size( ) != _block_size * _size ) {
+    data.resize( _block_size * _size, false );
+  }
+  for ( lo i = 0; i < _block_size; ++i ) {
+    _data[ i ].copy_to_raw( data.data( ) + i * _size );
   }
 }

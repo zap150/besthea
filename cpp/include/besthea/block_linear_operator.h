@@ -46,6 +46,7 @@ namespace besthea {
  *  Class representing a linear operator.
  */
 class besthea::linear_algebra::block_linear_operator {
+  using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
   using block_vector_type
     = besthea::linear_algebra::block_vector;  //!< Block vector type.
 
@@ -82,6 +83,34 @@ class besthea::linear_algebra::block_linear_operator {
    */
   virtual void apply( const block_vector_type & x, block_vector_type & y,
     bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const = 0;
+
+  /**
+   * CG as implemented in MKL.
+   * @param[in] rhs Right-hand side vector.
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on
+   * exit.
+   */
+  bool mkl_cg_solve( const block_vector_type & rhs,
+    block_vector_type & solution, sc & relative_residual_error,
+    lo & n_iterations ) const;
+
+  /**
+   * FGMRES as implemented in MKL.
+   * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on
+   * exit.
+   * @param[in] n_iterations_until_restart Maximal number of iterations before
+   * restart.
+   */
+  bool mkl_fgmres_solve( block_vector_type & rhs, block_vector_type & solution,
+    sc & relative_residual_error, lo & n_iterations,
+    lo n_iterations_until_restart ) const;
 
  protected:
   lo _block_dim;   //!< Number of blocks in a row (column).

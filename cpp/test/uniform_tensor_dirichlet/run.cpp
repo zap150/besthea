@@ -149,6 +149,10 @@ int main( int argc, char * argv[] ) {
 
   t.reset( "Solving the system" );
   V->choleski_decompose_solve( neu );
+  //block_vector rhs( neu );
+  //sc gmres_prec = 1e-8;
+  //lo gmres_iter = 500;
+  //V->mkl_fgmres_solve( rhs, neu, gmres_prec, gmres_iter, gmres_iter );
   t.measure( );
 
   delete V;

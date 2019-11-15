@@ -52,9 +52,16 @@ class besthea::linear_algebra::block_vector {
  public:
   using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
 
+  /**
+   * Constructor.
+   */
   block_vector( );
 
-  block_vector( const block_vector & that ) = delete;
+  /**
+   * Copy constructor.
+   * @param[in] that Vector to be copied.
+   */
+  block_vector( const block_vector & that );
 
   /**
    * Constructor with an initializer list.
@@ -149,6 +156,34 @@ class besthea::linear_algebra::block_vector {
   void set( lo d, lo i, sc value ) {
     _data[ d ][ i ] = value;
   }
+
+  /*!
+   * @brief Copies data from a raw vector.
+   * @param[in] block_size Number of blocks.
+   * @param[in] size Length of the vector.
+   * @param[in] data Array to copy from.
+   */
+  void copy_from_raw( lo block_size, lo size, const sc * data );
+
+  /*!
+   * @brief Copies data to a raw vector.
+   * @param[in] data Array to copy to.
+   */
+  void copy_to_raw( sc * data ) const;
+
+  /*!
+   * @brief Copies data from a raw vector.
+   * @param[in] block_size Number of blocks.
+   * @param[in] size Length of the vector.
+   * @param[in] data Array to copy from.
+   */
+  void copy_from_vector( lo block_size, lo size, const vector_type & data );
+
+  /*!
+   * @brief Copies data to a raw vector.
+   * @param[in] data Array to copy to.
+   */
+  void copy_to_vector( vector_type & data ) const;
 
   /*!
    * @brief Vector addition this += alpha * v.
