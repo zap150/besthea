@@ -128,6 +128,19 @@ class besthea::linear_algebra::vector {
   }
 
   /*!
+   * @brief Copies data from a raw vector.
+   * @param[in] size Data size.
+   * @param[in] data Array to copy from.
+   */
+  void copy_from_raw( lo size, const sc * data );
+
+  /*!
+   * @brief Copies data to a raw vector.
+   * @param[in] data Array to copy to.
+   */
+  void copy_to_raw( sc * data ) const;
+
+  /*!
    * @brief Overloads the [] operator.
    * @param[in] i Index.
    */

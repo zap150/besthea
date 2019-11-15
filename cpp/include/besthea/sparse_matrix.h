@@ -34,7 +34,10 @@
 #define INCLUDE_BESTHEA_SPARSE_MATRIX_H_
 
 #include "Eigen/Core"
+#include "Eigen/OrderingMethods"
 #include "Eigen/Sparse"
+#include "Eigen/SparseCholesky"
+#include "Eigen/SparseLU"
 #include "besthea/matrix.h"
 #include "besthea/settings.h"
 
@@ -123,15 +126,64 @@ class besthea::linear_algebra::sparse_matrix
    * CG as implemented in Eigen.
    * @param[in] rhs Right-hand side vector.
    * @param[out] solution Solution vector.
-   * @param[in,out] relative_residual_error Stopping criterion measuring decrease of
-   * |Ax-b|/|b|, actual value on exit.
-   * @param[in,out] n_iterations Maximal number of iterations, actual value on exit.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on
+   * exit.
    */
   void eigen_cg_solve( const vector & rhs, vector & solution,
     sc & relative_residual_error, lo & n_iterations ) const;
 
+  /**
+   * LU as implemented in Eigen.
+   * @param[in] rhs Right-hand side vector.
+   * @param[out] solution Solution vector.
+   */
+  void eigen_lu_decompose_and_solve( const vector & rhs, vector & solution );
+
+  /**
+   * LU as implemented in Eigen.
+   */
+  void eigen_lu_decompose( );
+
+  /**
+   * LU as implemented in Eigen.
+   * @param[in] rhs Right-hand side vector.
+   * @param[out] solution Solution vector.
+   */
+  void eigen_lu_solve( const vector & rhs, vector & solution );
+
+  /**
+   * Choleski decomposition as implemented in Eigen.
+   * @param[in] rhs Right-hand side vector.
+   * @param[out] solution Solution vector.
+   */
+  void eigen_choleski_decompose_and_solve(
+    const vector & rhs, vector & solution );
+
+  /**
+   * Choleski decomposition as implemented in Eigen.
+   */
+  void eigen_choleski_decompose( );
+
+  /**
+   * Choleski decomposition as implemented in Eigen.
+   * @param[in] rhs Right-hand side vector.
+   * @param[out] solution Solution vector.
+   */
+  void eigen_choleski_solve( const vector & rhs, vector & solution );
+
  protected:
   Eigen::SparseMatrix< sc, Eigen::ColMajor, los > _data;  //!< Eigen data.
+
+ private:
+  Eigen::SparseLU< Eigen::SparseMatrix< sc, Eigen::ColMajor, los >,
+    Eigen::COLAMDOrdering< los > >
+    _lu;  //!< Eigen LU solver.
+
+  Eigen::SimplicialLDLT< Eigen::SparseMatrix< sc, Eigen::ColMajor, los >,
+    Eigen::Lower, Eigen::AMDOrdering< los > >
+    _choleski;  //!< Eigen Choleski solver.
 };
 
 #endif /* INCLUDE_BESTHEA_SPARSE_MATRIX_H_ */

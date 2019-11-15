@@ -65,6 +65,31 @@ class besthea::linear_algebra::linear_operator {
   virtual void apply( const vector_type & x, vector_type & y,
     bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const = 0;
 
+  /**
+   * CG as implemented in MKL.
+   * @param[in] rhs Right-hand side vector.
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on
+   * exit.
+   */
+  bool mkl_cg_solve( const vector_type & rhs, vector_type & solution,
+    sc & relative_residual_error, lo & n_iterations ) const;
+
+  /**
+   * FGMRES as implemented in MKL.
+   * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on
+   * exit.
+   */
+  bool mkl_fgmres_solve( vector_type & rhs, vector_type & solution,
+    sc & relative_residual_error, lo & n_iterations,
+    lo n_iterations_until_restart ) const;
+
  protected:
   lo _dim_domain;  //!< domain dimension
   lo _dim_range;   //!< range dimension

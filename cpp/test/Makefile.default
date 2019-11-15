@@ -9,11 +9,11 @@ NO_AS_NEEDED=
 SIMD=4
 
 #CXX=icpc
-#CXXFLAGS=-xHost -O3 -g -DDATA_WIDTH=${SIMD} -qopenmp -std=c++17 -w2 -I${MKL_INC} -I${EIGEN_INC} -I${BOOST_INC}
+#CXXFLAGS=-xHost -O3 -g -DDATA_WIDTH=${SIMD} -qopenmp -std=c++17 -w2 -I${MKL_INC} -I${EIGEN_INC} -I${BOOST_INC} -DMKL_INT=long
 #LDLIBSOPTIONS=-qopenmp -L${MKL_LIB} -Wl,-rpath,'${MKL_LIB}' -lmkl_core -lmkl_intel_thread -lmkl_intel_ilp64
 
 CXX=g++
-CXXFLAGS=-fopenmp -O3 -ffast-math -g -std=c++17 -DDATA_WIDTH=${SIMD} -Wall -I${MKL_INC} -I${EIGEN_INC} -I${BOOST_INC}
+CXXFLAGS=-fopenmp -O3 -ffast-math -g -std=c++17 -DDATA_WIDTH=${SIMD} -Wall -I${MKL_INC} -I${EIGEN_INC} -I${BOOST_INC} -DMKL_INT=long
 LDLIBSOPTIONS=-fopenmp -L${MKL_LIB} -Wl,-rpath,'${MKL_LIB}' ${NO_AS_NEEDED} -lmkl_intel_ilp64 -lmkl_core -lmkl_intel_thread -liomp5 -L${GCC_LIB} -Wl,-rpath,'${GCC_LIB}' -lstdc++fs
 
 #########################DO NOT MODIFY BELOW THIS LINE##########################
