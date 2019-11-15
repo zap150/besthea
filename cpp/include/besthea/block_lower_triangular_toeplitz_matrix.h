@@ -161,7 +161,6 @@ class besthea::linear_algebra::block_lower_triangular_toeplitz_matrix
   /*!
    * @brief In-place Choleski decomposition of the first block and solution.
    * @param[in,out] rhs Right-hand side overwritten by the result.
-   * @param[in] n_rhs Number of right-hand sides.
    */
   void choleski_decompose_solve( block_vector_type & rhs );
 
@@ -173,7 +172,6 @@ class besthea::linear_algebra::block_lower_triangular_toeplitz_matrix
   /*!
    * @brief Choleski solution
    * @param[in,out] rhs Right-hand side overwritten by the result.
-   * @param[in] n_rhs Number of right-hand sides.
    */
   void choleski_solve( block_vector_type & rhs );
 

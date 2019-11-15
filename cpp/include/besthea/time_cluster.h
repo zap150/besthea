@@ -159,11 +159,21 @@ class besthea::mesh::time_cluster {
     }
   }
 
+  /**
+   * Returns a pointer to the children.
+   */
   std::vector< time_cluster * > * get_children( ) {
     return _children;
   }
 
-  /*
+  /**
+   * Returns a pointer to the children.
+   */
+  const std::vector< time_cluster * > * get_children( ) const {
+    return _children;
+  }
+
+  /**
    * Returns level of the cluster in the cluster tree.
    */
   lo get_level( ) const {
@@ -173,7 +183,6 @@ class besthea::mesh::time_cluster {
   /**
    * Computes padding of the cluster (distance of the farthest point to the
    * cluster's boundary)
-   *
    */
   sc compute_padding( ) const {
     linear_algebra::coordinates< 1 > node1;
@@ -194,6 +203,9 @@ class besthea::mesh::time_cluster {
     return padding;
   }
 
+  /**
+   * Returns a pointer to left neighbour.
+   */
   time_cluster * get_left_neighbour( ) {
     if ( _parent == nullptr ) {
       // for the root cluster

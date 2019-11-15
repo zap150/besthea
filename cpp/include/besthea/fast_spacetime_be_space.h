@@ -48,6 +48,9 @@ namespace besthea {
   }
 }
 
+/**
+ *  Class representing a fast boundary element space.
+ */
 template< class basis_type >
 class besthea::bem::fast_spacetime_be_space
   : public besthea::bem::spacetime_be_space< basis_type > {

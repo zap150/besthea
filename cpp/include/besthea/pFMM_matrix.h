@@ -54,10 +54,10 @@ namespace besthea {
 class besthea::linear_algebra::pFMM_matrix
   : public besthea::linear_algebra::matrix {
  public:
-  using sparse_matrix_type = besthea::linear_algebra::sparse_matrix;
-  using spacetime_tree_type = besthea::mesh::spacetime_cluster_tree;
-  using time_cluster_type = besthea::mesh::time_cluster;
-  using block_vector_type = besthea::linear_algebra::block_vector;
+  using sparse_matrix_type = besthea::linear_algebra::sparse_matrix; //!< Sparse matrix type.
+  using spacetime_tree_type = besthea::mesh::spacetime_cluster_tree; //!< Spacetime tree type.
+  using time_cluster_type = besthea::mesh::time_cluster; //!< Time cluster type.
+  using block_vector_type = besthea::linear_algebra::block_vector; //!< Block vector type.
 
   /**
    * Default constructor.
@@ -129,10 +129,10 @@ class besthea::linear_algebra::pFMM_matrix
     _n_columns = n_cols;
   }
 
-  /*!
-   * Allocates sparse matrix of given nearfield block and returns a pointer.
-   * @param[in] test_idx Index of the testing function.
-   * @param[in] trial_idx Index of the trial function
+  /**
+   * Creates a nearfield matrix.
+   * @param[in] test_idx Index of test interval.
+   * @param[in] trial_idx Index of trial interval.
    */
   sparse_matrix_type * create_nearfield_matrix( lo test_idx, lo trial_idx );
 

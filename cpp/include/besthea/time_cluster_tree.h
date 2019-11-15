@@ -54,6 +54,7 @@ class besthea::mesh::time_cluster_tree {
    * Constructor
    * @param[in] mesh Reference to the underlying mesh.
    * @param[in] levels Maximum number of levels in the tree.
+   * @param[in] n_min_elems Minimum number of elements in the leafs.
    */
   time_cluster_tree( const temporal_mesh & mesh, lo levels, lo n_min_elems );
 

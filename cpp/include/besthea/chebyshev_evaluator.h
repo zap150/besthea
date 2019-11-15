@@ -49,7 +49,7 @@ namespace besthea {
  */
 class besthea::bem::chebyshev_evaluator {
  public:
-  using vector_type = besthea::linear_algebra::vector;
+  using vector_type = besthea::linear_algebra::vector; //!< Vector type.
 
   /**
    * Constructor.

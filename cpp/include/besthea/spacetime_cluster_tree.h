@@ -57,10 +57,23 @@ namespace besthea {
  */
 class besthea::mesh::spacetime_cluster_tree {
  public:
-  using vector_type = besthea::linear_algebra::vector;
+  using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
+
+  /**
+   * Constructor.
+   * @param[in] spacetime_mesh Spacetime mesh.
+   * @param[in] time_levels Number of bisections in time.
+   * @param[in] n_min_time_elems Minimum number of temporal elements in leafs.
+   * @param[in] n_min_space_elems Minimum number of spatial elements in leafs.
+   * @param[in] st_coeff Coefficient to determine the coupling of the spatial
+   * and temporal levels.
+   */
   spacetime_cluster_tree( const spacetime_tensor_mesh & spacetime_mesh,
     lo time_levels, lo n_min_time_elems, lo n_min_space_elems, sc st_coeff );
 
+  /**
+   * Destructor.
+   */
   ~spacetime_cluster_tree( ) {
     if ( _space_tree )
       delete _space_tree;
@@ -89,7 +102,17 @@ class besthea::mesh::spacetime_cluster_tree {
     print_internal( _root );
   }
 
+  /**
+   * Returns a pointer to the root.
+   */
   spacetime_cluster * get_root( ) {
+    return _root;
+  }
+
+  /**
+   * Returns a pointer to the root.
+   */
+  const spacetime_cluster * get_root( ) const {
     return _root;
   }
 
@@ -114,11 +137,31 @@ class besthea::mesh::spacetime_cluster_tree {
     return _time_mesh;
   }
 
+  /**
+   * Returns a pointer to the temporal tree.
+   */
   time_cluster_tree * get_time_tree( ) {
     return _time_tree;
   }
 
+  /**
+   * Returns a pointer to the temporal tree.
+   */
+  const time_cluster_tree * get_time_tree( ) const {
+    return _time_tree;
+  }
+
+  /**
+   * Returns a pointer to the spatial tree.
+   */
   space_cluster_tree * get_space_tree( ) {
+    return _space_tree;
+  }
+
+  /**
+   * Returns a pointer to the spatial tree.
+   */
+  const space_cluster_tree * get_space_tree( ) const {
     return _space_tree;
   }
 
@@ -160,20 +203,6 @@ class besthea::mesh::spacetime_cluster_tree {
 
   // TODO relocate the above members to pFMM matrix
   // TODO substitute hardcoded _temp_order and _spatial_order with settable ones
-
-  const spacetime_tensor_mesh & _spacetime_mesh;  //!< underlying spacetime mesh
-  const triangular_surface_mesh & _space_mesh;    //!< underlying spatial mesh
-  const temporal_mesh & _time_mesh;               //!< underlying temporal mesh
-  time_cluster_tree * _time_tree;                 //!< temporal tree
-  space_cluster_tree * _space_tree;               //!< spatial tree
-  spacetime_cluster * _root;                      //!< root of the cluster tree
-  lo _start_spatial_level;   //!< auxiliary variable determining the appropriate
-                             //!< starting level in the space cluster tree
-  lo _start_temporal_level;  //!< auxiliary variable to determine in which level
-                             //!< the spatial refinement starts
-                             //!< (meaningful only if _start_spatial_level = 0)
-  sc _s_t_coeff;  //!< coefficient to determine the coupling of the spatial
-                  //!< and temporal levels
 
   /**
    * Auxiliary method to get all spatial clusters on a given level
@@ -250,6 +279,20 @@ class besthea::mesh::spacetime_cluster_tree {
    */
   void apply_spatial_m2m( full_matrix_type const & child_moment, const lo level,
     const slou octant, full_matrix_type & parent_moment );
+
+  const spacetime_tensor_mesh & _spacetime_mesh;  //!< underlying spacetime mesh
+  const triangular_surface_mesh & _space_mesh;    //!< underlying spatial mesh
+  const temporal_mesh & _time_mesh;               //!< underlying temporal mesh
+  time_cluster_tree * _time_tree;                 //!< temporal tree
+  space_cluster_tree * _space_tree;               //!< spatial tree
+  spacetime_cluster * _root;                      //!< root of the cluster tree
+  lo _start_spatial_level;   //!< auxiliary variable determining the appropriate
+                             //!< starting level in the space cluster tree
+  lo _start_temporal_level;  //!< auxiliary variable to determine in which level
+                             //!< the spatial refinement starts
+                             //!< (meaningful only if _start_spatial_level = 0)
+  sc _s_t_coeff;  //!< coefficient to determine the coupling of the spatial
+                  //!< and temporal levels
 };
 
 #endif /* INCLUDE_BESTHEA_SPACETIME_CLUSTER_TREE_H_ */

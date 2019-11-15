@@ -214,19 +214,23 @@ class besthea::linear_algebra::full_matrix
     vector const & x, vector_type & y, sc alpha = 1.0, sc beta = 0.0 ) const;
 
   /*!
+   * @brief C = alpha * A * B + beta * C, where C is this matrix
+   * @param[in] A
+   * @param[in] B
+   * @param[in] trans_A
+   * @param[in] trans_B
+   * @param[in] alpha
+   * @param[in] beta
+   */
+  void multiply( full_matrix const & A, full_matrix const & B,
+    bool trans_A = false, bool trans_B = false, sc alpha = 1.0, sc beta = 0.0 );
+
+  /*!
    * @brief In-place LU decomposition and solution.
    * @param[in,out] rhs Right-hand side overwritten by the result.
    * @param[in] n_rhs Number of right-hand sides.
    * @param[in] trans Flag for transpose.
    */
-
-  /*!
-   * @brief C = alpha * A * B + beta * C, where C is this matrix
-   *
-   */
-  void multiply( full_matrix const & A, full_matrix const & B,
-    bool trans_A = false, bool trans_B = false, sc alpha = 1.0, sc beta = 0.0 );
-
   void lu_decompose_solve(
     vector_type & rhs, lo n_rhs = 1, bool trans = false );
 

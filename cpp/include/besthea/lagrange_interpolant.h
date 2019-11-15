@@ -48,7 +48,7 @@ namespace besthea {
  */
 class besthea::bem::lagrange_interpolant {
  public:
-  using vector_type = besthea::linear_algebra::vector;
+  using vector_type = besthea::linear_algebra::vector; //!< Vector type.
 
   /**
    * Constructor.
@@ -87,6 +87,9 @@ class besthea::bem::lagrange_interpolant {
                        ( _nodes[ index ] - _nodes[ k ] );
   }
   
+  /**
+   * Returns a reference to the interpolation nodes.
+   */
   const vector_type & get_nodes( ) const {
     return _nodes;
   };

@@ -87,6 +87,9 @@ class besthea::bem::spacetime_be_space {
   };
 
  public:
+  /**
+   * Constructor
+   */
   spacetime_be_space( const mesh_type & mesh );
 
   /**
