@@ -112,8 +112,7 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::L2_projection(
     }
     cg_eps = 1e-6;
     n_iter = 200;
-    M.mkl_fgmres_solve( rhs, projection.get_block( d ), cg_eps, n_iter, n_iter );
-    //M.eigen_cg_solve( rhs, projection.get_block( d ), cg_eps, n_iter );
+    M.eigen_cg_solve( rhs, projection.get_block( d ), cg_eps, n_iter );
     rhs.fill( 0.0 );
   }
 }

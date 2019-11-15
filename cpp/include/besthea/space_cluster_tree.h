@@ -52,14 +52,13 @@ namespace besthea {
  */
 class besthea::mesh::space_cluster_tree {
  public:
-  using vector_type = besthea::linear_algebra::vector;
+  using vector_type = besthea::linear_algebra::vector; //!< Vector type.
 
   /**
    * Constructor.
-   * @param[in] triangular_surface_mesh Reference to the underlying mesh.
+   * @param[in] mesh Reference to the underlying mesh.
    * @param[in] levels Maximum number of levels in the tree.
-   *
-   *
+   * @param[in] n_min_elems Minimum number of elements in leafs.
    */
   space_cluster_tree(
     const triangular_surface_mesh & mesh, lo levels, lo n_min_elems );
@@ -102,6 +101,7 @@ class besthea::mesh::space_cluster_tree {
    * @param[in] include_padding Adds padding to cluster's half-sizes.
    * @param[in] level If set, prints only a given level of the tree. For
    * -1, prints all levels.
+   * @param[in] suffix Suffix for the filename.
    */
   bool print_tree( const std::string & directory, bool include_padding = false,
     lo level = -1, std::optional< lo > suffix = std::nullopt ) const;
@@ -123,8 +123,6 @@ class besthea::mesh::space_cluster_tree {
    *
    * @param[in] directory Output directory.
    * @param[in] include_padding Adds padding to cluster's half-sizes.
-   * @param[in] level If set, prints only a given level of the tree. For
-   * -1, prints all levels.
    */
   bool print_tree_separately(
     const std::string & directory, bool include_padding = false ) const {

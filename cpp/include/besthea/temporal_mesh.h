@@ -80,7 +80,7 @@ class besthea::mesh::temporal_mesh {
 
   /**
    * Loads mesh from a file.
-   * @param[] file File name.
+   * @param[in] file File name.
    */
   bool load( const std::string & file );
 

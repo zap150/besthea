@@ -26,7 +26,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file uniform_spacetime_kernel_antiderivative.h
+/** @file spacetime_kernel_antiderivative.h
  * @brief Kernel for uniform_spacetime_tensor_mesh.h.
  */
 

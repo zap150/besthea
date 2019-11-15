@@ -50,7 +50,7 @@ namespace besthea {
  */
 class besthea::mesh::space_cluster {
  public:
-  using vector_type = besthea::linear_algebra::vector;
+  using vector_type = besthea::linear_algebra::vector; //!< Vector type.
 
   /**
    * Constructor.
@@ -59,6 +59,8 @@ class besthea::mesh::space_cluster {
    * @param[in] n_elements Number of spatial elements in the cluster.
    * @param[in] parent Pointer to the cluster's parent cluster.
    * @param[in] level Level within the cluster tree.
+   * @param[in] octant Index of the octant within the parent cluster.
+   * @param[in] coordinate Coordinates of the box within boxes on given level.
    * @param[in] mesh Reference to the underlying spatial surface mesh.
    */
   space_cluster( const vector_type & center, const vector_type & half_size,
@@ -206,8 +208,8 @@ class besthea::mesh::space_cluster {
   /**
    * Computes center and half-sizes of the child in a given octant
    * @param[in] octant Suboctant of the cluster.
-   * @param[out] center Center of the suboctant.
-   * @param[out] half_size Half-size of the suboctant.
+   * @param[out] new_center Center of the suboctant.
+   * @param[out] new_half_size Half-size of the suboctant.
    */
   void compute_suboctant(
     lo octant, vector_type & new_center, vector_type & new_half_size ) {
@@ -318,13 +320,16 @@ class besthea::mesh::space_cluster {
     return _padding;
   }
 
-  /*
+  /**
    * Returns level of the cluster in the cluster tree.
    */
   lo get_level( ) const {
     return _level;
   }
 
+  /**
+   * Returns coordinates of the box within boxes on given level.
+   */
   const std::vector< slou > & get_box_coordinate( ) const {
     return _box_coordinate;
   }
@@ -345,7 +350,7 @@ class besthea::mesh::space_cluster {
   short _octant;  //!< octant of the parent cluster
   sc _padding;    //!< padding of the cluster
   std::vector< slou >
-    _box_coordinate;  //!< coordinate of the box within boxes on given level
+    _box_coordinate;  //!< coordinates of the box within boxes on given level
 };
 
 #endif /* INCLUDE_BESTHEA_SPACE_CLUSTER_H_ */

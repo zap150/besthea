@@ -47,7 +47,7 @@ namespace besthea {
  */
 class besthea::linear_algebra::linear_operator {
  public:
-  using vector_type = besthea::linear_algebra::vector;
+  using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
   /**
    * Destructor.
    */
@@ -85,6 +85,8 @@ class besthea::linear_algebra::linear_operator {
    * decrease of |Ax-b|/|b|, actual value on exit.
    * @param[in,out] n_iterations Maximal number of iterations, actual value on
    * exit.
+   * @param[in] n_iterations_until_restart Maximal number of iterations before
+   * restart.
    */
   bool mkl_fgmres_solve( vector_type & rhs, vector_type & solution,
     sc & relative_residual_error, lo & n_iterations,

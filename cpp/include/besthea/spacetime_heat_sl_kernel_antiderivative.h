@@ -26,7 +26,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file uniform_spacetime_heat_kernel_antiderivative.h
+/** @file spacetime_heat_sl_kernel_antiderivative.h
  * @brief Kernel for uniform_spacetime_tensor_mesh.h.
  */
 
@@ -55,7 +55,6 @@ class besthea::bem::spacetime_heat_sl_kernel_antiderivative
  public:
   /**
    * Constructor.
-   * @param[in] timestep Time step.
    * @param[in] alpha Heat conductivity.
    */
   spacetime_heat_sl_kernel_antiderivative( sc alpha )
