@@ -19,6 +19,7 @@ FILES=$(notdir $(wildcard src/*.cpp))
 CXXFILES=$(addprefix src/,${FILES})
 
 OBJECTFILES=$(addprefix ${OBJECTDIR}/,$(FILES:.cpp=.o))
+DEPFILES=$(addprefix ${OBJECTDIR}/,$(FILES:.cpp=.o.d))
 
 all: test
 
@@ -48,3 +49,5 @@ help:
 	@echo "    clean"
 	@echo "    distclean"
 	@echo "    help"
+
+-include $(DEPFILES)
