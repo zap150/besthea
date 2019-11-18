@@ -26,33 +26,42 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file linear_operator.h
- * @brief Parent class for linear operators.
+/** @file compound_linear_operator.h
+ * @brief Class for a compound linear operator.
  */
 
-#ifndef INCLUDE_BESTHEA_LINEAR_OPERATOR_H_
-#define INCLUDE_BESTHEA_LINEAR_OPERATOR_H_
+#ifndef INCLUDE_BESTHEA_COMPOUND_LINEAR_OPERATOR_H_
+#define INCLUDE_BESTHEA_COMPOUND_LINEAR_OPERATOR_H_
 
+#include "besthea/linear_operator.h"
 #include "besthea/settings.h"
 #include "besthea/vector.h"
 
+#include <vector>
+
 namespace besthea {
   namespace linear_algebra {
-    class linear_operator;
+    class compound_linear_operator;
   }
 }
 
 /**
- *  Class representing a linear operator.
+ *  Class representing a compound linear operator.
  */
-class besthea::linear_algebra::linear_operator {
+class besthea::linear_algebra::compound_linear_operator
+  : public besthea::linear_algebra::linear_operator {
  public:
   using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
+
+  /**
+   * Constructor.
+   */
+  compound_linear_operator( );
+
   /**
    * Destructor.
    */
-  virtual ~linear_operator( ) {
-  }
+  virtual ~compound_linear_operator( );
 
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
@@ -63,52 +72,29 @@ class besthea::linear_algebra::linear_operator {
    * @param[in] beta
    */
   virtual void apply( const vector_type & x, vector_type & y,
-    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const = 0;
+    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
 
   /**
-   * CG as implemented in MKL.
-   * @param[in] rhs Right-hand side vector.
-   * @param[out] solution Solution vector.
-   * @param[in,out] relative_residual_error Stopping criterion measuring
-   * decrease of |Ax-b|/|b|, actual value on exit.
-   * @param[in,out] n_iterations Maximal number of iterations, actual value on
-   * exit.
+   * Adds a linear operator to the compound.
+   * @param[in] op Linear operator.
+   * @param[in] trans Determines whether to apply transposed.
+   * @param[in] alpha Multiplicative factor.
    */
-  bool mkl_cg_solve( const vector_type & rhs, vector_type & solution,
-    sc & relative_residual_error, lo & n_iterations ) const;
+  void push_back( const besthea::linear_algebra::linear_operator & op,
+    bool trans = false, sc alpha = 1.0 );
 
   /**
-   * FGMRES as implemented in MKL.
-   * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
-   * @param[out] solution Solution vector.
-   * @param[in,out] relative_residual_error Stopping criterion measuring
-   * decrease of |Ax-b|/|b|, actual value on exit.
-   * @param[in,out] n_iterations Maximal number of iterations, actual value on
-   * exit.
-   * @param[in] n_iterations_until_restart Maximal number of iterations before
-   * restart.
+   * Returns true if dimensions match.
    */
-  bool mkl_fgmres_solve( vector_type & rhs, vector_type & solution,
-    sc & relative_residual_error, lo & n_iterations,
-    lo n_iterations_until_restart ) const;
-
-  /**
-   * Returns the domain dimension.
-   */
-  lo get_dim_domain( ) const {
-    return _dim_domain;
-  }
-
-  /**
-   * Returns the range dimension.
-   */
-  lo get_dim_range( ) const {
-    return _dim_range;
-  }
+  bool is_valid( ) const;
 
  protected:
-  lo _dim_domain;  //!< domain dimension
-  lo _dim_range;   //!< range dimension
+  std::vector< const besthea::linear_algebra::linear_operator * >
+    _compound;                 //!< Vector of operators.
+  std::vector< bool > _trans;  //<! Transposition of individual operators.
+  std::vector< sc > _alpha;    //<! Multiplicative factors.
+
+  lo _maximal_dimension;  //<! Maximal dimension of all operators.
 };
 
-#endif /* INCLUDE_BESTHEA_LINEAR_OPERATOR_H_ */
+#endif /* INCLUDE_BESTHEA_COMPOUND_LINEAR_OPERATOR_H_ */
