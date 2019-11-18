@@ -60,8 +60,8 @@ struct cauchy_data {
 };
 
 int main( int argc, char * argv[] ) {
-  std::string file = "../mesh_files/cube_12.txt";
-  int refine = 1;
+  std::string file = "../mesh_files/cube_192.txt";
+  int refine = 0;
   lo n_timesteps = 16;
   sc end_time = 1.0;
   std::string grid_file = "./mesh_files/grid_xy.txt";
@@ -106,7 +106,8 @@ int main( int argc, char * argv[] ) {
   pFMM_matrix * K = new pFMM_matrix( );
 
   spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::alpha );
-  fast_spacetime_be_assembler fast_assembler_k( kernel_k, space_p0, space_p1 );
+  fast_spacetime_be_assembler fast_assembler_k(
+    kernel_k, space_p0, space_p1, order_sing, order_reg, 2.0 );
   t.reset( "K" );
   fast_assembler_k.assemble( *K );
   t.measure( );
@@ -127,12 +128,14 @@ int main( int argc, char * argv[] ) {
   // lo size_neu = neu_proj.get_block_size( ) * dir_proj.get_block_size( );
 
   t.reset( "Setting up RHS" );
-  block_vector neu;
-  neu.resize( neu_proj.get_block_size( ) );
-  neu.resize_blocks( neu_proj.get_size_of_block( ), true );
+  vector neu;
 
-  M.apply( dir_proj, neu, false, 0.5, 0.0 );
-  K->apply( dir_proj, neu, false, 1.0, 1.0 );
+  block_vector neu_block;
+  neu_block.resize( neu_proj.get_block_size( ) );
+  neu_block.resize_blocks( neu_proj.get_size_of_block( ), true );
+
+  M.apply( dir_proj, neu_block, false, 0.5, 0.0 );
+  K->apply( dir_proj, neu_block, false, 1.0, 1.0 );
   t.measure( );
 
   delete K;
@@ -140,19 +143,25 @@ int main( int argc, char * argv[] ) {
   pFMM_matrix * V = new pFMM_matrix( );
 
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::alpha );
-  fast_spacetime_be_assembler fast_assembler_v( kernel_v, space_p0, space_p0 );
+  fast_spacetime_be_assembler fast_assembler_v(
+    kernel_v, space_p0, space_p0, order_sing, order_reg, 2.0 );
   t.reset( "V" );
   fast_assembler_v.assemble( *V );
   t.measure( );
 
   t.reset( "Solving the system" );
   // V->choleski_decompose_solve( neu );
+  block_vector rhs( neu_block );
+  sc gmres_prec = 1e-8;
+  lo gmres_iter = 500;
+  V->mkl_fgmres_solve( rhs, neu_block, gmres_prec, gmres_iter, gmres_iter );
   t.measure( );
+  std::cout << gmres_iter << std::endl;
 
   delete V;
 
   std::cout << "Neumann L2 relative error: "
-            << space_p0.L2_relative_error( cauchy_data::neumann, neu )
+            << space_p0.L2_relative_error( cauchy_data::neumann, neu_block )
             << std::endl;
 
   /*  t.reset( "V full" );

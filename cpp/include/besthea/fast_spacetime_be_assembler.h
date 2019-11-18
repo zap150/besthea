@@ -149,6 +149,19 @@ class besthea::bem::fast_spacetime_be_assembler {
     besthea::linear_algebra::pFMM_matrix & global_matrix ) const;
 
   /**
+   * Assembles temporal nearfield matrices.
+   * @param[out] global_matrix Partially assembled pFMM matrix.
+   */
+  void assemble_nearfield_uniform(
+    besthea::linear_algebra::pFMM_matrix & global_matrix ) const;
+
+  /** Assembles temporal farfield nonapproximated by the pFMM.
+   * @param[out] global_matrix Partially assembled pFMM matrix.
+   */
+  void assemble_farfield_nonapproximated_uniform(
+    besthea::linear_algebra::pFMM_matrix & global_matrix ) const;
+
+  /**
    * Assembles nearfield matrix
    * @param[in] t0 Initial time of the test function quadrature.
    * @param[in] t1 Final time of the test function quadrature.
