@@ -33,6 +33,7 @@
 #ifndef INCLUDE_BESTHEA_PFMM_MATRIX_H_
 #define INCLUDE_BESTHEA_PFMM_MATRIX_H_
 
+#include "besthea/block_linear_operator.h"
 #include "besthea/matrix.h"
 #include "besthea/settings.h"
 #include "besthea/spacetime_cluster_tree.h"
@@ -52,12 +53,17 @@ namespace besthea {
  * Class representing a matrix approximated by the pFMM method.
  */
 class besthea::linear_algebra::pFMM_matrix
-  : public besthea::linear_algebra::matrix {
+  : public besthea::linear_algebra::block_linear_operator {
  public:
-  using sparse_matrix_type = besthea::linear_algebra::sparse_matrix; //!< Sparse matrix type.
-  using spacetime_tree_type = besthea::mesh::spacetime_cluster_tree; //!< Spacetime tree type.
-  using time_cluster_type = besthea::mesh::time_cluster; //!< Time cluster type.
-  using block_vector_type = besthea::linear_algebra::block_vector; //!< Block vector type.
+  using sparse_matrix_type
+    = besthea::linear_algebra::sparse_matrix;  //!< Sparse matrix type.
+  using spacetime_tree_type
+    = besthea::mesh::spacetime_cluster_tree;  //!< Spacetime tree type.
+  using time_cluster_type
+    = besthea::mesh::time_cluster;  //!< Time cluster type.
+  using block_vector_type
+    = besthea::linear_algebra::block_vector;            //!< Block vector type.
+  using vector_type = besthea::linear_algebra::vector;  //!< Block vector type.
 
   /**
    * Default constructor.
@@ -88,18 +94,6 @@ class besthea::linear_algebra::pFMM_matrix
   }
 
   /*!
-   * @brief y = beta * y + alpha * (this)^trans * x.
-   * @param[in] x
-   * @param[in,out] y
-   * @param[in] trans Flag for transpose of individual blocks (not the whole
-   * block matrix!).
-   * @param[in] alpha
-   * @param[in] beta
-   */
-  virtual void apply( const vector_type & x, vector_type & y,
-    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
-
-  /*!
    * @brief y = beta * y + alpha * (this)^trans * x using block vectors.
    * @param[in] x
    * @param[in,out] y
@@ -124,9 +118,10 @@ class besthea::linear_algebra::pFMM_matrix
    * @param[in] n_rows Number of rows.
    * @param[in] n_cols Number of columns.
    */
-  void resize( lo n_rows, lo n_cols ) {
-    _n_rows = n_rows;
-    _n_columns = n_cols;
+  void resize( lo block_dim, lo dim_domain, lo dim_range ) {
+    this->_block_dim = block_dim;
+    this->_dim_domain = dim_domain;
+    this->_dim_range = dim_range;
   }
 
   /**
