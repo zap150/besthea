@@ -62,7 +62,7 @@ struct cauchy_data {
 int main( int argc, char * argv[] ) {
   std::string file = "../mesh_files/cube_192.txt";
   int refine = 0;
-  lo n_timesteps = 16;
+  lo n_timesteps = 8;
   sc end_time = 1.0;
   std::string grid_file = "./mesh_files/grid_xy.txt";
   int grid_refine = 2;
@@ -153,7 +153,7 @@ int main( int argc, char * argv[] ) {
   sc gmres_prec = 1e-8;
   lo gmres_iter = 500;
   V->mkl_fgmres_solve( rhs, neu, gmres_prec, gmres_iter, gmres_iter );
-  std::cout << gmres_iter << std::endl;
+  std::cout << "  iterations: " << gmres_iter << ", residual: " << gmres_prec << std::endl;
   t.measure( );
 
   delete V;

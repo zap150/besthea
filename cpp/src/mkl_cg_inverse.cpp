@@ -26,30 +26,21 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file linear_algebra.h
- * @brief
- */
-
-#ifndef INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_
-#define INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_
-
-#include "besthea/block_iterative_inverse.h"
-#include "besthea/block_linear_operator.h"
-#include "besthea/block_lower_triangular_toeplitz_matrix.h"
-#include "besthea/block_matrix.h"
-#include "besthea/block_mkl_cg_inverse.h"
-#include "besthea/block_mkl_fgmres_inverse.h"
-#include "besthea/block_vector.h"
-#include "besthea/compound_block_linear_operator.h"
-#include "besthea/compound_linear_operator.h"
-#include "besthea/coordinates.h"
-#include "besthea/full_matrix.h"
-#include "besthea/indices.h"
-#include "besthea/iterative_inverse.h"
 #include "besthea/mkl_cg_inverse.h"
-#include "besthea/mkl_fgmres_inverse.h"
-#include "besthea/pFMM_matrix.h"
-#include "besthea/sparse_matrix.h"
-#include "besthea/vector.h"
 
-#endif /* INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_ */
+besthea::linear_algebra::mkl_cg_inverse::mkl_cg_inverse(
+  linear_operator & op, sc relative_residual_error, lo n_iterations )
+  : iterative_inverse( op, relative_residual_error, n_iterations ) {
+}
+
+besthea::linear_algebra::mkl_cg_inverse::mkl_cg_inverse( linear_operator & op,
+  linear_operator & precond, sc relative_residual_error, lo n_iterations )
+  : iterative_inverse( op, precond, relative_residual_error, n_iterations ) {
+}
+
+void besthea::linear_algebra::mkl_cg_inverse::apply( const vector_type & x,
+  vector_type & y, bool trans, sc alpha, sc beta ) const {
+  sc relative_residual_error = _relative_residual_error;
+  lo n_iterations = _n_iterations;
+  mkl_cg_solve( x, y, relative_residual_error, n_iterations );
+}

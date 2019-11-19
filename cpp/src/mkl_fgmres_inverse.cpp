@@ -26,30 +26,26 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file linear_algebra.h
- * @brief
- */
-
-#ifndef INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_
-#define INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_
-
-#include "besthea/block_iterative_inverse.h"
-#include "besthea/block_linear_operator.h"
-#include "besthea/block_lower_triangular_toeplitz_matrix.h"
-#include "besthea/block_matrix.h"
-#include "besthea/block_mkl_cg_inverse.h"
-#include "besthea/block_mkl_fgmres_inverse.h"
-#include "besthea/block_vector.h"
-#include "besthea/compound_block_linear_operator.h"
-#include "besthea/compound_linear_operator.h"
-#include "besthea/coordinates.h"
-#include "besthea/full_matrix.h"
-#include "besthea/indices.h"
-#include "besthea/iterative_inverse.h"
-#include "besthea/mkl_cg_inverse.h"
 #include "besthea/mkl_fgmres_inverse.h"
-#include "besthea/pFMM_matrix.h"
-#include "besthea/sparse_matrix.h"
-#include "besthea/vector.h"
 
-#endif /* INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_ */
+besthea::linear_algebra::mkl_fgmres_inverse::mkl_fgmres_inverse(
+  linear_operator & op, sc relative_residual_error, lo n_iterations,
+  lo n_iterations_until_restart )
+  : iterative_inverse( op, relative_residual_error, n_iterations ),
+    _n_iterations_until_restart( n_iterations_until_restart ) {
+}
+
+besthea::linear_algebra::mkl_fgmres_inverse::mkl_fgmres_inverse(
+  linear_operator & op, linear_operator & precond, sc relative_residual_error,
+  lo n_iterations, lo n_iterations_until_restart )
+  : iterative_inverse( op, precond, relative_residual_error, n_iterations ),
+    _n_iterations_until_restart( n_iterations_until_restart ) {
+}
+
+void besthea::linear_algebra::mkl_fgmres_inverse::apply( const vector_type & x,
+  vector_type & y, bool trans, sc alpha, sc beta ) const {
+  sc relative_residual_error = _relative_residual_error;
+  lo n_iterations = _n_iterations;
+  mkl_fgmres_solve( x, y, relative_residual_error, n_iterations,
+    _n_iterations_until_restart, trans );
+}
