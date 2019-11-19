@@ -39,6 +39,8 @@
 #include "besthea/settings.h"
 #include "besthea/sparse_matrix.h"
 
+#include <omp.h>
+
 namespace besthea {
   namespace bem {
     template< class kernel_type, class test_space_type, class trial_space_type >
@@ -109,10 +111,12 @@ class besthea::bem::fast_spacetime_be_assembler {
    * @param[in] cutoff_param Cutoff parameter for the nearfield approximation
    * (elements further than cutoff_param * diagonal of the lowest level cluster
    * will be ignored).
+   * @param[in] uniform Uniform time discretization to save memory.
    */
   fast_spacetime_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
-    int order_singular = 4, int order_regular = 4, sc cutoff_param = 3.0 );
+    int order_singular = 4, int order_regular = 4, sc cutoff_param = 3.0,
+    bool uniform = false );
 
   fast_spacetime_be_assembler( const fast_spacetime_be_assembler & that )
     = delete;
@@ -148,17 +152,10 @@ class besthea::bem::fast_spacetime_be_assembler {
   void assemble_farfield_nonapproximated(
     besthea::linear_algebra::pFMM_matrix & global_matrix ) const;
 
-  /**
-   * Assembles temporal nearfield matrices.
-   * @param[out] global_matrix Partially assembled pFMM matrix.
-   */
-  void assemble_nearfield_uniform(
-    besthea::linear_algebra::pFMM_matrix & global_matrix ) const;
-
   /** Assembles temporal farfield nonapproximated by the pFMM.
    * @param[out] global_matrix Partially assembled pFMM matrix.
    */
-  void assemble_farfield_nonapproximated_uniform(
+  void assemble_nonapproximated_uniform(
     besthea::linear_algebra::pFMM_matrix & global_matrix ) const;
 
   /**
@@ -332,6 +329,7 @@ class besthea::bem::fast_spacetime_be_assembler {
   sc _cutoff_param;  //!< Coefficient for determining the spatial nearfield
                      //!< (_cutoff_param * diagonal of the lowest level
                      //!< cluster).
+  bool _uniform;     //!< uniform assembly
 };
 
 #endif /* INCLUDE_BESTHEA_FAST_SPACETIME_BE_ASSEMBLER_H_ */

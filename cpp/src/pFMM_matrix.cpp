@@ -30,12 +30,20 @@
 
 besthea::linear_algebra::sparse_matrix *
 besthea::linear_algebra::pFMM_matrix::create_nearfield_matrix(
-  lo test_idx, lo trial_idx ) {
+  lo test_idx, lo trial_idx, lo n_duplications ) {
   sparse_matrix_type * local_matrix = new sparse_matrix_type( );
 
   _nearfield_matrices.push_back( local_matrix );
 
   _nearfield_block_map.push_back( std::make_pair( test_idx, trial_idx ) );
+
+  // duplicate diagonals
+  for ( lo i = 1; i < n_duplications; ++i ) {
+    _nearfield_matrices.push_back( local_matrix );
+    _nearfield_block_map.push_back(
+      std::make_pair( test_idx + i, trial_idx + i ) );
+    _uniform = true;
+  }
 
   return local_matrix;
 }

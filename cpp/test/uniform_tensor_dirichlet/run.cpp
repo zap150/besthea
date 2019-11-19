@@ -61,7 +61,7 @@ struct cauchy_data {
 
 int main( int argc, char * argv[] ) {
   std::string file = "../mesh_files/cube_192.txt";
-  int refine = 0;
+  int refine = 1;
   lo n_timesteps = 16;
   sc end_time = 1.0;
   std::string grid_file = "./mesh_files/grid_xy.txt";

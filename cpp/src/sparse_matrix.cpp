@@ -80,6 +80,28 @@ void besthea::linear_algebra::sparse_matrix::set_from_triplets( los n_rows,
   _data.makeCompressed( );
 }
 
+void besthea::linear_algebra::sparse_matrix::set_from_triplets( los n_rows,
+  los n_columns, std::vector< std::vector< los > > & row_indices,
+  std::vector< std::vector< los > > & column_indices,
+  std::vector< std::vector< sc > > & values ) {
+  _n_rows = n_rows;
+  _n_columns = n_columns;
+  _data.resize( n_rows, n_columns );
+  std::vector< Eigen::Triplet< sc, los > > triplet_list;
+  triplet_list.reserve( row_indices.size( ) * row_indices.at( 0 ).size( ) );
+
+  for ( std::vector< los >::size_type j = 0; j < row_indices.size( ); ++j ) {
+    for ( std::vector< los >::size_type i = 0; i < row_indices.at( j ).size( );
+          ++i ) {
+      triplet_list.push_back(
+        Eigen::Triplet< sc, los >( row_indices.at( j )[ i ],
+          column_indices.at( j )[ i ], values.at( j )[ i ] ) );
+    }
+  }
+  _data.setFromTriplets( triplet_list.begin( ), triplet_list.end( ) );
+  _data.makeCompressed( );
+}
+
 void besthea::linear_algebra::sparse_matrix::apply(
   const vector & x, vector & y, bool trans, sc alpha, sc beta ) const {
   // converting raw arrays to Eigen type

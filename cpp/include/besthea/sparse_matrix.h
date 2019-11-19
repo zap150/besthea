@@ -95,6 +95,20 @@ class besthea::linear_algebra::sparse_matrix
     std::vector< los > & row_indices, std::vector< los > & column_indices,
     std::vector< sc > & values );
 
+  /**
+   * Sets the sparse matrix from triplets.
+   * @param[in] n_rows Number of rows.
+   * @param[in] n_columns Number of columns.
+   * @param[in] row_indices Vector of vectors with indices of rows.
+   * @param[in] column_indices Vector of vectors with indices of columns.
+   * @param[in] values Vector of vectors with values to be stored at positions
+   * specified by `row_indices` and `column_indices`.
+   */
+  void set_from_triplets( los n_rows, los n_columns,
+    std::vector< std::vector< los > > & row_indices,
+    std::vector< std::vector< los > > & column_indices,
+    std::vector< std::vector< sc > > & values );
+
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
    * @param[in] x
