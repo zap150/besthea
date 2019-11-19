@@ -64,13 +64,23 @@ class besthea::linear_algebra::block_iterative_inverse
    * @param[in] op Linear operator to be inverted.
    * @param[in] relative_residual_error Relative residual error.
    * @param[in] n_iterations Maximal number of iterations.
+   * @param[in] trans Use transpose.
    */
-  block_iterative_inverse(
-    block_linear_operator & op, sc relative_residual_error, lo n_iterations )
+  block_iterative_inverse( block_linear_operator & op,
+    sc relative_residual_error, lo n_iterations, bool trans = false )
     : _operator( &op ),
       _preconditioner( nullptr ),
       _relative_residual_error( relative_residual_error ),
-      _n_iterations( n_iterations ) {
+      _n_iterations( n_iterations ),
+      _trans( trans ) {
+    if ( !trans ) {
+      set_dim_domain( op.get_dim_domain( ) );
+      set_dim_range( op.get_dim_range( ) );
+    } else {
+      set_dim_domain( op.get_dim_range( ) );
+      set_dim_range( op.get_dim_domain( ) );
+    }
+    set_block_dim( op.get_block_dim( ) );
   }
 
   /**
@@ -79,14 +89,24 @@ class besthea::linear_algebra::block_iterative_inverse
    * @param[in] precond Linear operator as a preconditioner.
    * @param[in] relative_residual_error Relative residual error.
    * @param[in] n_iterations Maximal number of iterations.
+   * @param[in] trans Use transpose.
    */
   block_iterative_inverse( block_linear_operator & op,
     block_linear_operator & precond, sc relative_residual_error,
-    lo n_iterations )
+    lo n_iterations, bool trans = false )
     : _operator( &op ),
       _preconditioner( &precond ),
       _relative_residual_error( relative_residual_error ),
-      _n_iterations( n_iterations ) {
+      _n_iterations( n_iterations ),
+      _trans( trans ) {
+    if ( !trans ) {
+      set_dim_domain( op.get_dim_domain( ) );
+      set_dim_range( op.get_dim_range( ) );
+    } else {
+      set_dim_domain( op.get_dim_range( ) );
+      set_dim_range( op.get_dim_domain( ) );
+    }
+    set_block_dim( op.get_block_dim( ) );
   }
 
   block_linear_operator * _operator;  //!< block linear operator to be inverted
@@ -94,6 +114,7 @@ class besthea::linear_algebra::block_iterative_inverse
     _preconditioner;            //!< block linear operator as a preconditioner
   sc _relative_residual_error;  //!< relative residual error
   lo _n_iterations;             //!< maximal number of iterations
+  bool _trans;                  //!< Use transpose.
 };
 
 #endif /* INCLUDE_BESTHEA_BLOCK_ITERATIVE_INVERSE_H_ */

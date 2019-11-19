@@ -48,6 +48,7 @@ namespace besthea {
 class besthea::linear_algebra::linear_operator {
  public:
   using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
+
   /**
    * Destructor.
    */
@@ -139,6 +140,22 @@ class besthea::linear_algebra::linear_operator {
    */
   lo get_dim_range( ) const {
     return _dim_range;
+  }
+
+  /**
+   * Sets the domain dimension.
+   * @param[in] dim_domain Domain dimension.
+   */
+  void set_dim_domain( lo dim_domain ) {
+    _dim_domain = dim_domain;
+  }
+
+  /**
+   * Sets the range dimension.
+   * @param[in] dim_range Range dimension.
+   */
+  void set_dim_range( lo dim_range ) {
+    _dim_range = dim_range;
   }
 
  protected:

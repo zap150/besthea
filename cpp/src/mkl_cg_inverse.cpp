@@ -42,5 +42,5 @@ void besthea::linear_algebra::mkl_cg_inverse::apply( const vector_type & x,
   vector_type & y, bool trans, sc alpha, sc beta ) const {
   sc relative_residual_error = _relative_residual_error;
   lo n_iterations = _n_iterations;
-  mkl_cg_solve( x, y, relative_residual_error, n_iterations );
+  _operator->mkl_cg_solve( x, y, relative_residual_error, n_iterations );
 }

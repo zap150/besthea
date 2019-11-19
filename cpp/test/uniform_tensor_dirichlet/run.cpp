@@ -94,10 +94,8 @@ int main( int argc, char * argv[] ) {
 
   timer t;
 
-  uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > space_p0(
-    spacetime_mesh );
-  uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > space_p1(
-    spacetime_mesh );
+  uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
+  uniform_spacetime_be_space< basis_tri_p1 > space_p1( spacetime_mesh );
 
   lo order_sing = 4;
   lo order_reg = 4;
@@ -153,7 +151,8 @@ int main( int argc, char * argv[] ) {
   sc gmres_prec = 1e-8;
   lo gmres_iter = 500;
   V->mkl_fgmres_solve( rhs, neu, gmres_prec, gmres_iter, gmres_iter );
-  std::cout << "  iterations: " << gmres_iter << ", residual: " << gmres_prec << std::endl;
+  std::cout << "  iterations: " << gmres_iter << ", residual: " << gmres_prec
+            << std::endl;
   t.measure( );
 
   delete V;
@@ -184,7 +183,7 @@ int main( int argc, char * argv[] ) {
   slp.add( dlp, -1.0 );
 
   block_vector sol_interp;
-  uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > grid_space_p1(
+  uniform_spacetime_be_space< basis_tri_p1 > grid_space_p1(
     grid_spacetime_mesh );
   grid_space_p1.interpolation( cauchy_data::dirichlet, sol_interp );
   std::cout << "Solution l2 relative error: "

@@ -77,6 +77,7 @@ class besthea::linear_algebra::mkl_fgmres_inverse
   virtual ~mkl_fgmres_inverse( ) {
   }
 
+  // todo: use alpha, beta
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
    * @param[in] x

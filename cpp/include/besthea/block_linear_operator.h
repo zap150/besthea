@@ -169,6 +169,30 @@ class besthea::linear_algebra::block_linear_operator {
     return _block_dim;
   }
 
+  /**
+   * Sets the domain dimension.
+   * @param[in] dim_domain Domain dimension.
+   */
+  void set_dim_domain( lo dim_domain ) {
+    _dim_domain = dim_domain;
+  }
+
+  /**
+   * Sets the range dimension.
+   * @param[in] dim_range Range dimension.
+   */
+  void set_dim_range( lo dim_range ) {
+    _dim_range = dim_range;
+  }
+
+  /**
+   * Sets the block dimension.
+   * @param[in] block_dim Block dimension.
+   */
+  void set_block_dim( lo block_dim ) {
+    _block_dim = block_dim;
+  }
+
  protected:
   lo _block_dim;   //!< Number of blocks in a row (column).
   lo _dim_domain;  //!< domain dimension

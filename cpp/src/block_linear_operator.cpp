@@ -201,8 +201,7 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
   lo ipar[ 128 ];
   sc dpar[ 128 ];
   std::vector< sc > tmp( ( 2 * n_iterations_until_restart + 1 ) * size
-    + n_iterations_until_restart * ( n_iterations_until_restart + 9 ) / 2
-    + 1 );
+    + n_iterations_until_restart * ( n_iterations_until_restart + 9 ) / 2 + 1 );
   sc * tmp_data = tmp.data( );
 
   block_vector_type tmp_1( _block_dim, _dim_domain );

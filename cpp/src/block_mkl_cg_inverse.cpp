@@ -36,7 +36,8 @@ besthea::linear_algebra::block_mkl_cg_inverse::block_mkl_cg_inverse(
 besthea::linear_algebra::block_mkl_cg_inverse::block_mkl_cg_inverse(
   block_linear_operator & op, block_linear_operator & precond,
   sc relative_residual_error, lo n_iterations )
-  : block_iterative_inverse( op, precond, relative_residual_error, n_iterations ) {
+  : block_iterative_inverse(
+    op, precond, relative_residual_error, n_iterations ) {
 }
 
 void besthea::linear_algebra::block_mkl_cg_inverse::apply(
@@ -44,5 +45,5 @@ void besthea::linear_algebra::block_mkl_cg_inverse::apply(
   sc beta ) const {
   sc relative_residual_error = _relative_residual_error;
   lo n_iterations = _n_iterations;
-  mkl_cg_solve( x, y, relative_residual_error, n_iterations );
+  _operator->mkl_cg_solve( x, y, relative_residual_error, n_iterations );
 }

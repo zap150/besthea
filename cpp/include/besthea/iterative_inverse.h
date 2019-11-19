@@ -63,13 +63,22 @@ class besthea::linear_algebra::iterative_inverse
    * @param[in] op Linear operator to be inverted.
    * @param[in] relative_residual_error Relative residual error.
    * @param[in] n_iterations Maximal number of iterations.
+   * @param[in] trans Use transpose.
    */
-  iterative_inverse(
-    linear_operator & op, sc relative_residual_error, lo n_iterations )
+  iterative_inverse( linear_operator & op, sc relative_residual_error,
+    lo n_iterations, bool trans = false )
     : _operator( &op ),
       _preconditioner( nullptr ),
       _relative_residual_error( relative_residual_error ),
-      _n_iterations( n_iterations ) {
+      _n_iterations( n_iterations ),
+      _trans( trans ) {
+    if ( !trans ) {
+      set_dim_domain( op.get_dim_domain( ) );
+      set_dim_range( op.get_dim_range( ) );
+    } else {
+      set_dim_domain( op.get_dim_range( ) );
+      set_dim_range( op.get_dim_domain( ) );
+    }
   }
 
   /**
@@ -78,19 +87,29 @@ class besthea::linear_algebra::iterative_inverse
    * @param[in] precond Linear operator as a preconditioner.
    * @param[in] relative_residual_error Relative residual error.
    * @param[in] n_iterations Maximal number of iterations.
+   * @param[in] trans Use transpose.
    */
   iterative_inverse( linear_operator & op, linear_operator & precond,
-    sc relative_residual_error, lo n_iterations )
+    sc relative_residual_error, lo n_iterations, bool trans = false )
     : _operator( &op ),
       _preconditioner( &precond ),
       _relative_residual_error( relative_residual_error ),
-      _n_iterations( n_iterations ) {
+      _n_iterations( n_iterations ),
+      _trans( trans ) {
+    if ( !trans ) {
+      set_dim_domain( op.get_dim_domain( ) );
+      set_dim_range( op.get_dim_range( ) );
+    } else {
+      set_dim_domain( op.get_dim_range( ) );
+      set_dim_range( op.get_dim_domain( ) );
+    }
   }
 
   linear_operator * _operator;        //!< linear operator to be inverted
   linear_operator * _preconditioner;  //!< linear operator as a preconditioner
   sc _relative_residual_error;        //!< relative residual error
   lo _n_iterations;                   //!< maximal number of iterations
+  bool _trans;                        //!< Use transpose.
 };
 
 #endif /* INCLUDE_BESTHEA_ITERATIVE_INVERSE_H_ */

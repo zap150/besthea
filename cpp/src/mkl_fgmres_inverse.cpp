@@ -46,6 +46,6 @@ void besthea::linear_algebra::mkl_fgmres_inverse::apply( const vector_type & x,
   vector_type & y, bool trans, sc alpha, sc beta ) const {
   sc relative_residual_error = _relative_residual_error;
   lo n_iterations = _n_iterations;
-  mkl_fgmres_solve( x, y, relative_residual_error, n_iterations,
-    _n_iterations_until_restart, trans );
+  _operator->mkl_fgmres_solve( x, y, relative_residual_error, n_iterations,
+    _n_iterations_until_restart, _trans );
 }
