@@ -112,6 +112,27 @@ class besthea::linear_algebra::block_linear_operator {
     sc & relative_residual_error, lo & n_iterations,
     lo n_iterations_until_restart ) const;
 
+  /**
+   * Returns the domain dimension.
+   */
+  lo get_dim_domain( ) const {
+    return _dim_domain;
+  }
+
+  /**
+   * Returns the range dimension.
+   */
+  lo get_dim_range( ) const {
+    return _dim_range;
+  }
+
+  /**
+   * Returns the block dimension.
+   */
+  lo get_block_dim( ) const {
+    return _block_dim;
+  }
+
  protected:
   lo _block_dim;   //!< Number of blocks in a row (column).
   lo _dim_domain;  //!< domain dimension

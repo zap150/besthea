@@ -168,24 +168,24 @@ class besthea::linear_algebra::sparse_matrix
   void eigen_lu_solve( const vector & rhs, vector & solution );
 
   /**
-   * Choleski decomposition as implemented in Eigen.
+   * Cholesky decomposition as implemented in Eigen.
    * @param[in] rhs Right-hand side vector.
    * @param[out] solution Solution vector.
    */
-  void eigen_choleski_decompose_and_solve(
+  void eigen_cholesky_decompose_and_solve(
     const vector & rhs, vector & solution );
 
   /**
-   * Choleski decomposition as implemented in Eigen.
+   * Cholesky decomposition as implemented in Eigen.
    */
-  void eigen_choleski_decompose( );
+  void eigen_cholesky_decompose( );
 
   /**
-   * Choleski decomposition as implemented in Eigen.
+   * Cholesky decomposition as implemented in Eigen.
    * @param[in] rhs Right-hand side vector.
    * @param[out] solution Solution vector.
    */
-  void eigen_choleski_solve( const vector & rhs, vector & solution );
+  void eigen_cholesky_solve( const vector & rhs, vector & solution );
 
  protected:
   Eigen::SparseMatrix< sc, Eigen::ColMajor, los > _data;  //!< Eigen data.
@@ -197,7 +197,7 @@ class besthea::linear_algebra::sparse_matrix
 
   Eigen::SimplicialLDLT< Eigen::SparseMatrix< sc, Eigen::ColMajor, los >,
     Eigen::Lower, Eigen::AMDOrdering< los > >
-    _choleski;  //!< Eigen Choleski solver.
+    _choleski;  //!< Eigen Cholesky solver.
 };
 
 #endif /* INCLUDE_BESTHEA_SPARSE_MATRIX_H_ */

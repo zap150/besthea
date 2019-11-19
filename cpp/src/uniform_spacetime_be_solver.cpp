@@ -37,7 +37,7 @@ void besthea::bem::uniform_spacetime_be_solver::time_marching_dirichlet(
   neumann.resize( n_timesteps );
   neumann.resize_blocks( n_dofs, true );
 
-  V.get_block( 0 ).choleski_decompose( );
+  V.get_block( 0 ).cholesky_decompose( );
 
   for ( lo d = 0; d < n_timesteps; ++d ) {
     auto & rhs = neumann.get_block( d );
@@ -50,7 +50,7 @@ void besthea::bem::uniform_spacetime_be_solver::time_marching_dirichlet(
       V.get_block( j ).apply(
         neumann.get_block( d - j ), rhs, false, -1.0, 1.0 );
     }
-    V.get_block( 0 ).choleski_solve( rhs );
+    V.get_block( 0 ).cholesky_solve( rhs );
   }
 }
 
@@ -63,7 +63,7 @@ void besthea::bem::uniform_spacetime_be_solver::time_marching_neumann(
   dirichlet.resize( n_timesteps );
   dirichlet.resize_blocks( n_dofs, true );
 
-  D.get_block( 0 ).choleski_decompose( );
+  D.get_block( 0 ).cholesky_decompose( );
 
   for ( lo d = 0; d < n_timesteps; ++d ) {
     auto & rhs = dirichlet.get_block( d );
@@ -76,6 +76,6 @@ void besthea::bem::uniform_spacetime_be_solver::time_marching_neumann(
       D.get_block( j ).apply(
         dirichlet.get_block( d - j ), rhs, false, -1.0, 1.0 );
     }
-    D.get_block( 0 ).choleski_solve( rhs );
+    D.get_block( 0 ).cholesky_solve( rhs );
   }
 }

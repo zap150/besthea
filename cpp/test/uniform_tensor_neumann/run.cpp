@@ -148,7 +148,7 @@ int main( int argc, char * argv[] ) {
   // D.print( );
 
   t.reset( "Solving the system" );
-  D->choleski_decompose_solve( dir );
+  D->cholesky_decompose_solve( dir );
   t.measure( );
 
   delete D;

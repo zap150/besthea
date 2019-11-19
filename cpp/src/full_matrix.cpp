@@ -146,7 +146,7 @@ void besthea::linear_algebra::full_matrix::lu_decompose_solve(
   delete[] ipiv;
 }
 
-void besthea::linear_algebra::full_matrix::choleski_decompose_solve(
+void besthea::linear_algebra::full_matrix::cholesky_decompose_solve(
   vector & rhs, lo n_rhs ) {
   char uplo = 'U';
   LAPACKE_dpotrf( LAPACK_COL_MAJOR, uplo, _n_rows, _data.data( ), _n_rows );
@@ -154,12 +154,12 @@ void besthea::linear_algebra::full_matrix::choleski_decompose_solve(
     _n_rows, rhs.data( ), _n_rows );
 }
 
-void besthea::linear_algebra::full_matrix::choleski_decompose( ) {
+void besthea::linear_algebra::full_matrix::cholesky_decompose( ) {
   char uplo = 'U';
   LAPACKE_dpotrf( LAPACK_COL_MAJOR, uplo, _n_rows, _data.data( ), _n_rows );
 }
 
-void besthea::linear_algebra::full_matrix::choleski_solve(
+void besthea::linear_algebra::full_matrix::cholesky_solve(
   vector & rhs, lo n_rhs ) {
   char uplo = 'U';
   LAPACKE_dpotrs( LAPACK_COL_MAJOR, uplo, _n_rows, n_rhs, _data.data( ),

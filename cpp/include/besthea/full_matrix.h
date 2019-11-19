@@ -235,23 +235,23 @@ class besthea::linear_algebra::full_matrix
     vector_type & rhs, lo n_rhs = 1, bool trans = false );
 
   /*!
-   * @brief In-place Choleski decomposition and solution.
+   * @brief In-place Cholesky decomposition and solution.
    * @param[in,out] rhs Right-hand side overwritten by the result.
    * @param[in] n_rhs Number of right-hand sides.
    */
-  void choleski_decompose_solve( vector_type & rhs, lo n_rhs = 1 );
+  void cholesky_decompose_solve( vector_type & rhs, lo n_rhs = 1 );
 
   /*!
-   * @brief In-place Choleski decomposition.
+   * @brief In-place Cholesky decomposition.
    */
-  void choleski_decompose( );
+  void cholesky_decompose( );
 
   /*!
-   * @brief Choleski solution
+   * @brief Cholesky solution
    * @param[in,out] rhs Right-hand side overwritten by the result.
    * @param[in] n_rhs Number of right-hand sides.
    */
-  void choleski_solve( vector_type & rhs, lo n_rhs = 1 );
+  void cholesky_solve( vector_type & rhs, lo n_rhs = 1 );
 
   /*!
    * Resizes the matrix.

@@ -24,6 +24,7 @@ DIRECTORY = $(wildcard */)
 TEST_CPP = $(shell find . -name \*.cpp -print)
 TEST_H = $(shell find . -name \*.h -print)
 EXECUTABLES = $(TEST_CPP:./%.cpp=%.exe)
+DEPFILES = $(TEST_CPP:./%.cpp=%.o.d)
 
 COMPILELINE=${CXX} ${CXXFLAGS} -I../include -c
 
@@ -33,7 +34,7 @@ all: ${EXECUTABLES} ${TEST_CPP} ${TEST_H}
 
 %.o: %.cpp
 	rm -f "$@.d"
-	${COMPILELINE} -MMD -MP -MF "$@.d" -o $@ $<
+	${COMPILELINE} -MMD -MP -MF "$@.d" -MT"$(<:%.cpp=%.exe)" -o $@ $<
 
 %.exe: %.o
 	$(CXX) -o $@ $< ${LDLIBSOPTIONS} -L../lib -lbesthea
@@ -51,3 +52,5 @@ help:
 	@echo "    clean"
 	@echo "    distclean"
 	@echo "    help"
+
+-include ${DEPFILES}

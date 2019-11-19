@@ -162,7 +162,7 @@ void besthea::linear_algebra::sparse_matrix::eigen_lu_solve(
   solution_map = _lu.solve( rhs_map );
 }
 
-void besthea::linear_algebra::sparse_matrix::eigen_choleski_decompose_and_solve(
+void besthea::linear_algebra::sparse_matrix::eigen_cholesky_decompose_and_solve(
   const vector & rhs, vector & solution ) {
   Eigen::Map< const Eigen::Matrix< sc, Eigen::Dynamic, 1 > > rhs_map(
     rhs.data( ), rhs.size( ) );
@@ -173,11 +173,11 @@ void besthea::linear_algebra::sparse_matrix::eigen_choleski_decompose_and_solve(
   solution_map = _choleski.solve( rhs_map );
 }
 
-void besthea::linear_algebra::sparse_matrix::eigen_choleski_decompose( ) {
+void besthea::linear_algebra::sparse_matrix::eigen_cholesky_decompose( ) {
   _choleski.compute( _data );
 }
 
-void besthea::linear_algebra::sparse_matrix::eigen_choleski_solve(
+void besthea::linear_algebra::sparse_matrix::eigen_cholesky_solve(
   const vector & rhs, vector & solution ) {
   Eigen::Map< const Eigen::Matrix< sc, Eigen::Dynamic, 1 > > rhs_map(
     rhs.data( ), rhs.size( ) );

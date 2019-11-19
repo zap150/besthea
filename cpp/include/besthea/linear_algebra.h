@@ -35,6 +35,8 @@
 
 #include "besthea/block_lower_triangular_toeplitz_matrix.h"
 #include "besthea/block_vector.h"
+#include "besthea/compound_block_linear_operator.h"
+#include "besthea/compound_linear_operator.h"
 #include "besthea/coordinates.h"
 #include "besthea/full_matrix.h"
 #include "besthea/indices.h"

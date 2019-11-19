@@ -150,7 +150,7 @@ int main( int argc, char * argv[] ) {
   t.measure( );
 
   t.reset( "Solving the system" );
-  // V->choleski_decompose_solve( neu );
+  // V->cholesky_decompose_solve( neu );
   block_vector rhs( neu_block );
   sc gmres_prec = 1e-8;
   lo gmres_iter = 500;
@@ -242,7 +242,7 @@ int main( int argc, char * argv[] ) {
   //  // V->print( );
   //
   //  t.reset( "Solving the system" );
-  //  V->choleski_decompose_solve( neu );
+  //  V->cholesky_decompose_solve( neu );
   //  t.measure( );
   //
   //  delete V;
