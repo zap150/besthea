@@ -61,7 +61,7 @@ struct cauchy_data {
 
 int main( int argc, char * argv[] ) {
   std::string file = "../mesh_files/cube_192.txt";
-  int refine = 0;
+  int refine = 2;
   lo n_timesteps = 16;
   sc end_time = 1.0;
   std::string grid_file = "./mesh_files/grid_xy.txt";
@@ -95,7 +95,7 @@ int main( int argc, char * argv[] ) {
   timer t;
 
   sc st_coeff = 4.0;
-  spacetime_cluster_tree tree( spacetime_mesh, 3, 2, 10, st_coeff );
+  spacetime_cluster_tree tree( spacetime_mesh, 5, 2, 10, st_coeff );
 
   fast_spacetime_be_space< basis_tri_p0 > space_p0( tree );
   fast_spacetime_be_space< basis_tri_p1 > space_p1( tree );
@@ -107,7 +107,7 @@ int main( int argc, char * argv[] ) {
 
   spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::alpha );
   fast_spacetime_be_assembler fast_assembler_k(
-    kernel_k, space_p0, space_p1, order_sing, order_reg, 2.0 );
+    kernel_k, space_p0, space_p1, order_sing, order_reg, 1.5, true );
   t.reset( "K" );
   fast_assembler_k.assemble( *K );
   t.measure( );
@@ -144,7 +144,7 @@ int main( int argc, char * argv[] ) {
 
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::alpha );
   fast_spacetime_be_assembler fast_assembler_v(
-    kernel_v, space_p0, space_p0, order_sing, order_reg, 2.0 );
+    kernel_v, space_p0, space_p0, order_sing, order_reg, 1.5, true );
   t.reset( "V" );
   fast_assembler_v.assemble( *V );
   t.measure( );

@@ -41,13 +41,14 @@ template< class kernel_type, class test_space_type, class trial_space_type >
 besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::fast_spacetime_be_assembler( kernel_type & kernel,
   test_space_type & test_space, trial_space_type & trial_space,
-  int order_singular, int order_regular, sc cutoff_param )
+  int order_singular, int order_regular, sc cutoff_param, bool uniform )
   : _kernel( &kernel ),
     _test_space( &test_space ),
     _trial_space( &trial_space ),
     _order_singular( order_singular ),
     _order_regular( order_regular ),
-    _cutoff_param( cutoff_param ) {
+    _cutoff_param( cutoff_param ),
+    _uniform( uniform ) {
   lo levels = _test_space->get_tree( )->get_space_tree( )->get_levels( );
   const std::vector< sc > & bb_size
     = _test_space->get_tree( )->get_space_tree( )->get_bounding_box( );
@@ -78,11 +79,11 @@ bool besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
   test_mesh->get_centroid( test_idx, test_c );
   trial_mesh->get_centroid( trial_idx, trial_c );
-  sc dist
-    = std::sqrt( ( test_c[ 0 ] - trial_c[ 0 ] ) * ( test_c[ 0 ] - trial_c[ 0 ] )
-      + ( test_c[ 1 ] - trial_c[ 1 ] ) * ( test_c[ 1 ] - trial_c[ 1 ] )
-      + ( test_c[ 2 ] - trial_c[ 2 ] ) * ( test_c[ 2 ] - trial_c[ 2 ] ) );
-  return dist <= _cutoff_param * _space_cluster_size;
+  sc dist = ( test_c[ 0 ] - trial_c[ 0 ] ) * ( test_c[ 0 ] - trial_c[ 0 ] )
+    + ( test_c[ 1 ] - trial_c[ 1 ] ) * ( test_c[ 1 ] - trial_c[ 1 ] )
+    + ( test_c[ 2 ] - trial_c[ 2 ] ) * ( test_c[ 2 ] - trial_c[ 2 ] );
+  return dist <= _cutoff_param * _space_cluster_size * _cutoff_param
+    * _space_cluster_size;
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -103,10 +104,12 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
   global_matrix.resize( n_timesteps, n_rows, n_columns );
 
-  // std::cout << "NEARFIELD" << std::endl;
-  assemble_nearfield( global_matrix );
-  // std::cout << "FARFIELD" << std::endl;
-  assemble_farfield_nonapproximated( global_matrix );
+  if ( !_uniform ) {
+    assemble_nearfield( global_matrix );
+    assemble_farfield_nonapproximated( global_matrix );
+  } else {
+    assemble_nonapproximated_uniform( global_matrix );
+  }
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -224,70 +227,12 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
-  trial_space_type >::assemble_nearfield_uniform( besthea::linear_algebra::
-    pFMM_matrix & global_matrix ) const {
-  std::vector< mesh::time_cluster * > & leaves
-    = _test_space->get_tree( )->get_time_tree( )->get_leaves( );
-
-  mesh::time_cluster * current_cluster;
-  mesh::time_cluster * neighbor_cluster;
-
-  lo global_elem_i, global_elem_j;
-  sc t0, t1, tau0, tau1;
-  sparse_matrix_type * block;
-
-  for ( auto it = leaves.begin( ); it != leaves.end( ); ++it ) {
-    current_cluster = *it;
-    neighbor_cluster = current_cluster->get_left_neighbour( );
-
-    // go over every element in the current time cluster
-    for ( lo i = 0; i < current_cluster->get_n_elements( ); ++i ) {
-      global_elem_i = current_cluster->get_element( i );
-
-      _test_space->get_tree( )->get_time_tree( )->get_mesh( ).get_nodes(
-        global_elem_i, &t0, &t1 );
-
-      // first, assemble diagonal block
-      block
-        = global_matrix.create_nearfield_matrix( global_elem_i, global_elem_i );
-      assemble_nearfield_matrix( t0, t1, t0, t1, *block );
-
-      // next, compute interaction of the cluster with itself
-      // (this requires the temporal elements within the cluster to be
-      // sorted)
-      for ( lo j = 0; j < i; ++j ) {
-        global_elem_j = current_cluster->get_element( j );
-        _trial_space->get_tree( )->get_time_tree( )->get_mesh( ).get_nodes(
-          global_elem_j, &tau0, &tau1 );
-        block = global_matrix.create_nearfield_matrix(
-          global_elem_i, global_elem_j );
-        assemble_nearfield_matrix( t0, t1, tau0, tau1, *block );
-      }
-
-      // next interact with the previous cluster
-      if ( neighbor_cluster != nullptr ) {
-        for ( lo j = 0; j < neighbor_cluster->get_n_elements( ); ++j ) {
-          global_elem_j = neighbor_cluster->get_element( j );
-          _trial_space->get_tree( )->get_time_tree( )->get_mesh( ).get_nodes(
-            global_elem_j, &tau0, &tau1 );
-          block = global_matrix.create_nearfield_matrix(
-            global_elem_i, global_elem_j );
-          assemble_nearfield_matrix( t0, t1, tau0, tau1, *block );
-        }
-      }
-    }
-  }
-}
-
-template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
-  trial_space_type >::assemble_farfield_nonapproximated_uniform( besthea::
+  trial_space_type >::assemble_nonapproximated_uniform( besthea::
     linear_algebra::pFMM_matrix & global_matrix ) const {
   std::vector< mesh::time_cluster * > & leaves
     = _test_space->get_tree( )->get_time_tree( )->get_leaves( );
 
   mesh::time_cluster * current_cluster;
-  mesh::time_cluster * farfield_cluster = nullptr;
 
   lo global_elem_i, global_elem_j;
   sc t0, t1, tau0, tau1;
@@ -298,27 +243,21 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
     // go over every element in the current time cluster
     for ( lo i = 0; i < current_cluster->get_n_elements( ); ++i ) {
-      if ( current_cluster->get_left_neighbour( ) != nullptr ) {
-        farfield_cluster
-          = current_cluster->get_left_neighbour( )->get_left_neighbour( );
-      }
       global_elem_i = current_cluster->get_element( i );
+      // std::cout << global_elem_i << std::endl;
 
       _test_space->get_tree( )->get_time_tree( )->get_mesh( ).get_nodes(
         global_elem_i, &t0, &t1 );
 
-      // next interact with the previous cluster
-      while ( farfield_cluster != nullptr ) {
-        for ( lo j = 0; j < farfield_cluster->get_n_elements( ); ++j ) {
-          global_elem_j = farfield_cluster->get_element( j );
-          _trial_space->get_tree( )->get_time_tree( )->get_mesh( ).get_nodes(
-            global_elem_j, &tau0, &tau1 );
-          block = global_matrix.create_farfield_matrix(
-            global_elem_i, global_elem_j );
-          assemble_nearfield_matrix( t0, t1, tau0, tau1, *block );
-        }
-        farfield_cluster = farfield_cluster->get_left_neighbour( );
-      }
+      // interact with the first cluster
+      global_elem_j = 0;
+      _trial_space->get_tree( )->get_time_tree( )->get_mesh( ).get_nodes(
+        global_elem_j, &tau0, &tau1 );
+
+      block
+        = global_matrix.create_nearfield_matrix( global_elem_i, global_elem_j,
+          leaves.size( ) * current_cluster->get_n_elements( ) - global_elem_i );
+      assemble_nearfield_matrix( t0, t1, tau0, tau1, *block );
     }
   }
 }
@@ -343,14 +282,18 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
 
   lo total_length = n_rows * n_columns * n_loc_rows * n_loc_columns;
-  std::vector< lo > row_indices, col_indices;
-  std::vector< sc > values;
-  row_indices.reserve( total_length );
-  col_indices.reserve( total_length );
-  values.reserve( total_length );
+  lo n_threads = omp_get_max_threads( );
+  std::vector< std::vector< lo > > row_indices( n_threads );
+  std::vector< std::vector< lo > > col_indices( n_threads );
+  std::vector< std::vector< sc > > values( n_threads );
 
-  //#pragma omp parallel
+#pragma omp parallel
   {
+    lo my_thread_num = omp_get_thread_num( );
+    row_indices.at( my_thread_num ).reserve( total_length / n_threads );
+    col_indices.at( my_thread_num ).reserve( total_length / n_threads );
+    values.at( my_thread_num ).reserve( total_length / n_threads );
+
     std::vector< lo > test_l2g( n_loc_rows );
     std::vector< lo > trial_l2g( n_loc_columns );
 
@@ -385,7 +328,7 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
     bool shared_t_element = t0 == tau0;
     bool shared_t_vertex = t0 == tau1;
 
-    //#pragma omp for schedule( dynamic )
+#pragma omp for schedule( dynamic, 20 )
     for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
       test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
       test_mesh->get_spatial_normal( i_test, nx );
@@ -463,10 +406,14 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
                 value += kernel_data[ i_quad ] * test * trial;
               }
               value *= test_area * trial_area;
-
-              row_indices.push_back( test_l2g[ i_loc_test ] );
-              col_indices.push_back( trial_l2g[ i_loc_trial ] );
-              values.push_back( value );
+#pragma omp critical
+              {
+                row_indices.at( my_thread_num )
+                  .push_back( test_l2g[ i_loc_test ] );
+                col_indices.at( my_thread_num )
+                  .push_back( trial_l2g[ i_loc_trial ] );
+                values.at( my_thread_num ).push_back( value );
+              }
             }
           }
         }

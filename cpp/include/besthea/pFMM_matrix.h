@@ -69,7 +69,10 @@ class besthea::linear_algebra::pFMM_matrix
    * Default constructor.
    */
   pFMM_matrix( )
-    : _spacetime_tree( nullptr ), _temp_order( 5 ), _space_order( 5 ) {
+    : _spacetime_tree( nullptr ),
+      _temp_order( 5 ),
+      _space_order( 5 ),
+      _uniform( false ) {
   }
 
   pFMM_matrix( const pFMM_matrix & that ) = delete;
@@ -78,11 +81,15 @@ class besthea::linear_algebra::pFMM_matrix
    * Destructor
    */
   virtual ~pFMM_matrix( ) {
+    lo matrix_idx = 0;
     for ( auto it = _nearfield_matrices.begin( );
           it != _nearfield_matrices.end( ); ++it ) {
-      if ( *it != nullptr ) {
+      const std::pair< lo, lo > & indices
+        = _nearfield_block_map.at( matrix_idx );
+      if ( *it != nullptr && indices.second == 0 ) {
         delete *it;
       }
+      matrix_idx++;
     }
 
     for ( auto it = _farfield_matrices.begin( );
@@ -128,8 +135,11 @@ class besthea::linear_algebra::pFMM_matrix
    * Creates a nearfield matrix.
    * @param[in] test_idx Index of test interval.
    * @param[in] trial_idx Index of trial interval.
+   * @param[in] n_duplications Number of matrix duplications for uniform-time
+   * assembly.
    */
-  sparse_matrix_type * create_nearfield_matrix( lo test_idx, lo trial_idx );
+  sparse_matrix_type * create_nearfield_matrix(
+    lo test_idx, lo trial_idx, lo n_duplications = 1 );
 
   /*!
    * Allocates sparse matrix of given farfield nonapproximated block and
@@ -154,6 +164,8 @@ class besthea::linear_algebra::pFMM_matrix
                           //!< temporal clusters
   lo _temp_order;   //!< degree of interpolation polynomials in time for pFMM
   lo _space_order;  //!< degree of truncated Chebyshev expansion
+  bool _uniform;    //!< specifies whether time-discretization is uniform
+                    //!< (duplicates blocks)
 };
 
 #endif /* INCLUDE_BESTHEA_PFMM_MATRIX_H_ */
