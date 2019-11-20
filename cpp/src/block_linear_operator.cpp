@@ -38,8 +38,10 @@ bool besthea::linear_algebra::block_linear_operator::mkl_cg_solve(
   lo size = _dim_domain * _block_dim;
 
   if ( _dim_domain != _dim_range || size != rhs.size( )
-    || size != solution.size( ) )
+    || size != solution.size( ) ) {
+    std::cout << "Check dimensions!" << std::endl;
     return false;
+  }
 
   lo rci;
   lo iter;
@@ -113,8 +115,10 @@ bool besthea::linear_algebra::block_linear_operator::mkl_cg_solve(
   lo size = _dim_domain * _block_dim;
 
   if ( _dim_domain != _dim_range || size != rhs.size( )
-    || size != solution.size( ) )
+    || size != solution.size( ) ) {
+    std::cout << "Check dimensions!" << std::endl;
     return false;
+  }
 
   lo rci;
   lo iter;
@@ -193,8 +197,10 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
   lo size = _dim_domain * _block_dim;
 
   if ( _dim_domain != _dim_range || size != rhs.size( )
-    || size != solution.size( ) )
+    || size != solution.size( ) ) {
+    std::cout << "Check dimensions!" << std::endl;
     return false;
+  }
 
   if ( n_iterations_until_restart == 0 ) {
     n_iterations_until_restart = n_iterations;
@@ -276,8 +282,10 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
   lo size = _dim_domain * _block_dim;
 
   if ( _dim_domain != _dim_range || size != rhs.size( )
-    || size != solution.size( ) )
+    || size != solution.size( ) ) {
+    std::cout << "Check dimensions!" << std::endl;
     return false;
+  }
 
   if ( n_iterations_until_restart == 0 ) {
     n_iterations_until_restart = n_iterations;

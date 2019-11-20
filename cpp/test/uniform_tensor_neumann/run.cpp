@@ -184,6 +184,7 @@ int main( int argc, char * argv[] ) {
   lo gmres_iter = 500;
   D->mkl_fgmres_solve(
     preconditioner, rhs, dir, gmres_prec, gmres_iter, gmres_iter );
+  //D->mkl_fgmres_solve( rhs, dir, gmres_prec, gmres_iter, gmres_iter );
   std::cout << "  iterations: " << gmres_iter << ", residual: " << gmres_prec
             << std::endl;
   t.measure( );

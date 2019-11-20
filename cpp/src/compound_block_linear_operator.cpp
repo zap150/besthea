@@ -106,8 +106,10 @@ void besthea::linear_algebra::compound_block_linear_operator::apply(
 void besthea::linear_algebra::compound_block_linear_operator::push_back(
   const besthea::linear_algebra::block_linear_operator & op, bool trans,
   sc alpha ) {
-  if ( op.get_block_dim( ) != get_block_dim( ) )
+  if ( op.get_block_dim( ) != get_block_dim( ) ) {
+    std::cout << "Check dimensions!" << std::endl;
     return;
+  }
 
   _compound.push_back( &op );
   _trans.push_back( trans );
