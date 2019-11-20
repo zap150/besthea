@@ -75,7 +75,8 @@ void besthea::linear_algebra::pFMM_matrix::apply( const block_vector_type & x,
     vector_type local_y( y.get_size_of_block( ) );
     // first, multiply by the nearfield blocks
 #pragma omp for
-    for ( lo i = 0; i < _nearfield_matrices.size( ); ++i ) {
+    for ( std::vector< sparse_matrix_type * >::size_type i = 0;
+          i < _nearfield_matrices.size( ); ++i ) {
       current_block = _nearfield_matrices.at( i );
       const std::pair< lo, lo > & indices = _nearfield_block_map.at( i );
 
@@ -89,7 +90,8 @@ void besthea::linear_algebra::pFMM_matrix::apply( const block_vector_type & x,
 
     // next, multiply by the farfield blocks
 #pragma omp for
-    for ( lo i = 0; i < _farfield_matrices.size( ); ++i ) {
+    for ( std::vector< sparse_matrix_type * >::size_type i = 0;
+          i < _farfield_matrices.size( ); ++i ) {
       current_block = _farfield_matrices.at( i );
       const std::pair< lo, lo > & indices = _farfield_block_map.at( i );
 
