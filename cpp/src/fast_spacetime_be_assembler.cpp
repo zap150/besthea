@@ -403,11 +403,10 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
                 value += kernel_data[ i_quad ] * test * trial;
               }
               value *= test_area * trial_area;
-              row_indices.at( my_thread_num )
-                .push_back( test_l2g[ i_loc_test ] );
-              col_indices.at( my_thread_num )
-                .push_back( trial_l2g[ i_loc_trial ] );
-              values.at( my_thread_num ).push_back( value );
+              row_indices[ my_thread_num ].push_back( test_l2g[ i_loc_test ] );
+              col_indices[ my_thread_num ].push_back(
+                trial_l2g[ i_loc_trial ] );
+              values[ my_thread_num ].push_back( value );
             }
           }
         }
@@ -439,14 +438,14 @@ void besthea::bem::fast_spacetime_be_assembler<
   lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
 
   lo total_length = n_rows * n_columns * 9;
-  std::vector< lo > row_indices, col_indices;
-  std::vector< sc > values;
-  row_indices.reserve( total_length );
-  col_indices.reserve( total_length );
-  values.reserve( total_length );
+  lo n_threads = omp_get_max_threads( );
+  std::vector< std::vector< lo > > row_indices( n_threads );
+  std::vector< std::vector< lo > > col_indices( n_threads );
+  std::vector< std::vector< sc > > values( n_threads );
 
-  //#pragma omp parallel
+#pragma omp parallel
   {
+    lo my_thread_num = omp_get_thread_num( );
     std::vector< lo > test_l2g( 3 );
     std::vector< lo > trial_l2g( 3 );
 
@@ -643,20 +642,21 @@ void besthea::bem::fast_spacetime_be_assembler<
 
           for ( lo i_loc_test = 0; i_loc_test < 3; ++i_loc_test ) {
             for ( lo i_loc_trial = 0; i_loc_trial < 3; ++i_loc_trial ) {
-              row_indices.push_back( test_l2g[ i_loc_test ] );
-              col_indices.push_back( trial_l2g[ i_loc_trial ] );
+              row_indices[ my_thread_num ].push_back( test_l2g[ i_loc_test ] );
+              col_indices[ my_thread_num ].push_back(
+                trial_l2g[ i_loc_trial ] );
             }
           }
 
-          values.push_back( value11 * areas );
-          values.push_back( value12 * areas );
-          values.push_back( value13 * areas );
-          values.push_back( value21 * areas );
-          values.push_back( value22 * areas );
-          values.push_back( value23 * areas );
-          values.push_back( value31 * areas );
-          values.push_back( value32 * areas );
-          values.push_back( value33 * areas );
+          values[ my_thread_num ].push_back( value11 * areas );
+          values[ my_thread_num ].push_back( value12 * areas );
+          values[ my_thread_num ].push_back( value13 * areas );
+          values[ my_thread_num ].push_back( value21 * areas );
+          values[ my_thread_num ].push_back( value22 * areas );
+          values[ my_thread_num ].push_back( value23 * areas );
+          values[ my_thread_num ].push_back( value31 * areas );
+          values[ my_thread_num ].push_back( value32 * areas );
+          values[ my_thread_num ].push_back( value33 * areas );
         }
       }
     }
