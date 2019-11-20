@@ -60,7 +60,7 @@ class besthea::linear_algebra::block_mkl_fgmres_inverse
    */
   block_mkl_fgmres_inverse( block_linear_operator & op,
     sc relative_residual_error, lo n_iterations,
-    lo n_iterations_until_restart );
+    lo n_iterations_until_restart = 0 );
 
   /**
    * Constructor.
@@ -71,7 +71,7 @@ class besthea::linear_algebra::block_mkl_fgmres_inverse
    */
   block_mkl_fgmres_inverse( block_linear_operator & op,
     block_linear_operator & precond, sc relative_residual_error,
-    lo n_iterations, lo n_iterations_until_restart );
+    lo n_iterations, lo n_iterations_until_restart = 0 );
 
   /**
    * Destructor.

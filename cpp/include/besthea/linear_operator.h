@@ -106,7 +106,7 @@ class besthea::linear_algebra::linear_operator {
    */
   bool mkl_fgmres_solve( const vector_type & rhs, vector_type & solution,
     sc & relative_residual_error, lo & n_iterations,
-    lo n_iterations_until_restart, bool trans = false ) const;
+    lo n_iterations_until_restart = 0, bool trans = false ) const;
 
   /**
    * Preconditioned FGMRES as implemented in MKL.
@@ -125,7 +125,7 @@ class besthea::linear_algebra::linear_operator {
   bool mkl_fgmres_solve( const linear_operator & preconditioner,
     const vector_type & rhs, vector_type & solution,
     sc & relative_residual_error, lo & n_iterations,
-    lo n_iterations_until_restart, bool trans = false,
+    lo n_iterations_until_restart = 0, bool trans = false,
     bool trans_preconditioner = false ) const;
 
   /**

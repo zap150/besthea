@@ -196,6 +196,10 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
     || size != solution.size( ) )
     return false;
 
+  if ( n_iterations_until_restart == 0 ) {
+    n_iterations_until_restart = n_iterations;
+  }
+
   lo rci;
   lo iter;
   lo ipar[ 128 ];
@@ -274,6 +278,10 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
   if ( _dim_domain != _dim_range || size != rhs.size( )
     || size != solution.size( ) )
     return false;
+
+  if ( n_iterations_until_restart == 0 ) {
+    n_iterations_until_restart = n_iterations;
+  }
 
   lo rci;
   lo iter;

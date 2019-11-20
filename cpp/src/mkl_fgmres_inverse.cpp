@@ -31,15 +31,23 @@
 besthea::linear_algebra::mkl_fgmres_inverse::mkl_fgmres_inverse(
   linear_operator & op, sc relative_residual_error, lo n_iterations,
   lo n_iterations_until_restart )
-  : iterative_inverse( op, relative_residual_error, n_iterations ),
-    _n_iterations_until_restart( n_iterations_until_restart ) {
+  : iterative_inverse( op, relative_residual_error, n_iterations ) {
+  if ( n_iterations_until_restart == 0 ) {
+    _n_iterations_until_restart = n_iterations;
+  } else {
+    _n_iterations_until_restart = n_iterations_until_restart;
+  }
 }
 
 besthea::linear_algebra::mkl_fgmres_inverse::mkl_fgmres_inverse(
   linear_operator & op, linear_operator & precond, sc relative_residual_error,
   lo n_iterations, lo n_iterations_until_restart )
-  : iterative_inverse( op, precond, relative_residual_error, n_iterations ),
-    _n_iterations_until_restart( n_iterations_until_restart ) {
+  : iterative_inverse( op, precond, relative_residual_error, n_iterations ) {
+  if ( n_iterations_until_restart == 0 ) {
+    _n_iterations_until_restart = n_iterations;
+  } else {
+    _n_iterations_until_restart = n_iterations_until_restart;
+  }
 }
 
 void besthea::linear_algebra::mkl_fgmres_inverse::apply( const vector_type & x,
