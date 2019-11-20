@@ -97,7 +97,7 @@ class besthea::bem::uniform_spacetime_be_identity
    * @param[in] beta
    */
   void apply( const block_vector_type & x, block_vector_type & y,
-    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
+    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
 
  private:
   /**

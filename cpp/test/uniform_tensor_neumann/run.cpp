@@ -150,16 +150,6 @@ int main( int argc, char * argv[] ) {
   D->cholesky_decompose_solve( dir );
   t.measure( );
   */
-  /*
-  t.reset( "Solving the system" );
-  block_vector rhs( dir );
-  sc gmres_prec = 1e-8;
-  lo gmres_iter = 500;
-  D->mkl_fgmres_solve( rhs, dir, gmres_prec, gmres_iter, gmres_iter );
-  std::cout << "  iterations: " << gmres_iter << ", residual: " << gmres_prec
-            << std::endl;
-  t.measure( );
-  */
   ///*
   block_lower_triangular_toeplitz_matrix * V11
     = new block_lower_triangular_toeplitz_matrix( );
