@@ -58,7 +58,7 @@ class besthea::linear_algebra::mkl_fgmres_inverse
    * @param[in] n_iterations Maximal number of iterations.
    */
   mkl_fgmres_inverse( linear_operator & op, sc relative_residual_error,
-    lo n_iterations, lo n_iterations_until_restart );
+    lo n_iterations, lo n_iterations_until_restart = 0 );
 
   /**
    * Constructor.
@@ -69,7 +69,7 @@ class besthea::linear_algebra::mkl_fgmres_inverse
    */
   mkl_fgmres_inverse( linear_operator & op, linear_operator & precond,
     sc relative_residual_error, lo n_iterations,
-    lo n_iterations_until_restart );
+    lo n_iterations_until_restart = 0 );
 
   /**
    * Destructor.

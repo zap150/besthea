@@ -175,6 +175,10 @@ bool besthea::linear_algebra::linear_operator::mkl_fgmres_solve(
     || _dim_domain != solution.size( ) )
     return false;
 
+  if ( n_iterations_until_restart == 0 ) {
+    n_iterations_until_restart = n_iterations;
+  }
+
   lo size = _dim_domain;
 
   lo rci;
@@ -248,6 +252,10 @@ bool besthea::linear_algebra::linear_operator::mkl_fgmres_solve(
   if ( _dim_domain != _dim_range || _dim_domain != rhs.size( )
     || _dim_domain != solution.size( ) )
     return false;
+
+  if ( n_iterations_until_restart == 0 ) {
+    n_iterations_until_restart = n_iterations;
+  }
 
   lo size = _dim_domain;
 

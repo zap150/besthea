@@ -174,7 +174,7 @@ int main( int argc, char * argv[] ) {
   M11.assemble( );
   t.measure( );
   block_mkl_cg_inverse M11_inv( M11, 1e-8, 100 );
-  compound_block_linear_operator preconditioner;
+  compound_block_linear_operator preconditioner( n_timesteps );
   preconditioner.push_back( M11_inv );
   preconditioner.push_back( *V11 );
   preconditioner.push_back( M11_inv );
@@ -184,11 +184,13 @@ int main( int argc, char * argv[] ) {
   lo gmres_iter = 500;
   D->mkl_fgmres_solve(
     preconditioner, rhs, dir, gmres_prec, gmres_iter, gmres_iter );
-  std::cout << "  iterations: " << gmres_iter << ", residual: " << gmres_prec <<
-  std::endl; t.measure( );
+  std::cout << "  iterations: " << gmres_iter << ", residual: " << gmres_prec
+            << std::endl;
+  t.measure( );
   //*/
 
   delete D;
+  delete V11;
 
   std::cout << "Dirichlet L2 relative error: "
             << space_p1.L2_relative_error( cauchy_data::dirichlet, dir )
@@ -202,7 +204,7 @@ int main( int argc, char * argv[] ) {
   grid_spacetime_mesh.print_info( );
 
   block_vector slp;
-  //spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::alpha );
+  // spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::alpha );
   uniform_spacetime_be_evaluator evaluator_v( kernel_v, space_p0, order_reg );
   t.reset( "SLP" );
   evaluator_v.evaluate( grid_space_mesh.get_nodes( ), neu_proj, slp );

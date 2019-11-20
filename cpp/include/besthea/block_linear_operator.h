@@ -125,7 +125,7 @@ class besthea::linear_algebra::block_linear_operator {
    */
   bool mkl_fgmres_solve( const block_vector_type & rhs,
     block_vector_type & solution, sc & relative_residual_error,
-    lo & n_iterations, lo n_iterations_until_restart,
+    lo & n_iterations, lo n_iterations_until_restart = 0,
     bool trans = false ) const;
 
   /**
@@ -145,7 +145,7 @@ class besthea::linear_algebra::block_linear_operator {
   bool mkl_fgmres_solve( const block_linear_operator & preconditioner,
     const block_vector_type & rhs, block_vector_type & solution,
     sc & relative_residual_error, lo & n_iterations,
-    lo n_iterations_until_restart, bool trans = false,
+    lo n_iterations_until_restart = 0, bool trans = false,
     bool trans_preconditioner = false ) const;
 
   /**
