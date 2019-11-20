@@ -211,6 +211,16 @@ class besthea::linear_algebra::vector {
   }
 
   /*!
+   * @brief Adds atomically to a single position of a vector.
+   * @param[in] i Index of an element.
+   * @param[in] val Value to be added.
+   */
+  void add_atomic( lo i, sc val ) {
+#pragma omp atomic update
+    _data.data( )[ i ] += val;
+  }
+
+  /*!
    * @brief Size of the vector.
    */
   lo size( ) const {

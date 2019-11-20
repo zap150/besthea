@@ -58,9 +58,6 @@ besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
   _space_cluster_size
     = std::sqrt( size_x * size_x + size_y * size_y + size_z * size_z );
-  //  std::cout << "Cluster size: " << _space_cluster_size << ", levels: " <<
-  //  levels
-  //            << std::endl;
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -406,14 +403,11 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
                 value += kernel_data[ i_quad ] * test * trial;
               }
               value *= test_area * trial_area;
-#pragma omp critical
-              {
-                row_indices.at( my_thread_num )
-                  .push_back( test_l2g[ i_loc_test ] );
-                col_indices.at( my_thread_num )
-                  .push_back( trial_l2g[ i_loc_trial ] );
-                values.at( my_thread_num ).push_back( value );
-              }
+              row_indices.at( my_thread_num )
+                .push_back( test_l2g[ i_loc_test ] );
+              col_indices.at( my_thread_num )
+                .push_back( trial_l2g[ i_loc_trial ] );
+              values.at( my_thread_num ).push_back( value );
             }
           }
         }

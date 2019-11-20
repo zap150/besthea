@@ -158,6 +158,17 @@ class besthea::linear_algebra::block_vector {
   }
 
   /*!
+   * @brief Adds atomically to a single position of a vector.
+   * @param[in] d Block index.
+   * @param[in] i Element index.
+   * @param[in] value Value to be added.
+   */
+  void add_atomic( lo d, lo i, sc value ) {
+#pragma omp atomic update
+    _data[ d ][ i ] += value;
+  }
+
+  /*!
    * @brief Copies data from a raw vector.
    * @param[in] block_size Number of blocks.
    * @param[in] size Length of the vector.
