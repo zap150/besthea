@@ -94,10 +94,8 @@ int main( int argc, char * argv[] ) {
 
   timer t;
 
-  uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > space_p0(
-    spacetime_mesh );
-  uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > space_p1(
-    spacetime_mesh );
+  uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
+  uniform_spacetime_be_space< basis_tri_p1 > space_p1( spacetime_mesh );
 
   lo order_sing = 4;
   lo order_reg = 4;
@@ -147,9 +145,48 @@ int main( int argc, char * argv[] ) {
   t.measure( );
   // D.print( );
 
+  /*
   t.reset( "Solving the system" );
   D->cholesky_decompose_solve( dir );
   t.measure( );
+  */
+  /*
+  t.reset( "Solving the system" );
+  block_vector rhs( dir );
+  sc gmres_prec = 1e-8;
+  lo gmres_iter = 500;
+  D->mkl_fgmres_solve( rhs, dir, gmres_prec, gmres_iter, gmres_iter );
+  std::cout << "  iterations: " << gmres_iter << ", residual: " << gmres_prec
+            << std::endl;
+  t.measure( );
+  */
+  ///*
+  block_lower_triangular_toeplitz_matrix * V11
+    = new block_lower_triangular_toeplitz_matrix( );
+  spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::alpha );
+  uniform_spacetime_be_assembler assembler_v(
+    kernel_v, space_p1, space_p1, order_sing, order_reg );
+  t.reset( "V11" );
+  assembler_v.assemble( *V11 );
+  t.measure( );
+  uniform_spacetime_be_identity M11( space_p1, space_p1, 1 );
+  t.reset( "M11" );
+  M11.assemble( );
+  t.measure( );
+  block_mkl_cg_inverse M11_inv( M11, 1e-8, 100 );
+  compound_block_linear_operator preconditioner;
+  preconditioner.push_back( M11_inv );
+  preconditioner.push_back( *V11 );
+  preconditioner.push_back( M11_inv );
+  t.reset( "Solving the system" );
+  block_vector rhs( dir );
+  sc gmres_prec = 1e-8;
+  lo gmres_iter = 500;
+  D->mkl_fgmres_solve(
+    preconditioner, rhs, dir, gmres_prec, gmres_iter, gmres_iter );
+  std::cout << "  iterations: " << gmres_iter << ", residual: " << gmres_prec <<
+  std::endl; t.measure( );
+  //*/
 
   delete D;
 
@@ -165,7 +202,7 @@ int main( int argc, char * argv[] ) {
   grid_spacetime_mesh.print_info( );
 
   block_vector slp;
-  spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::alpha );
+  //spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::alpha );
   uniform_spacetime_be_evaluator evaluator_v( kernel_v, space_p0, order_reg );
   t.reset( "SLP" );
   evaluator_v.evaluate( grid_space_mesh.get_nodes( ), neu_proj, slp );
@@ -180,7 +217,7 @@ int main( int argc, char * argv[] ) {
   slp.add( dlp, -1.0 );
 
   block_vector sol_interp;
-  uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > grid_space_p1(
+  uniform_spacetime_be_space< basis_tri_p1 > grid_space_p1(
     grid_spacetime_mesh );
   grid_space_p1.interpolation( cauchy_data::dirichlet, sol_interp );
   std::cout << "Solution l2 relative error: "

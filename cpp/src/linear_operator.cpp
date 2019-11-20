@@ -45,7 +45,7 @@ bool besthea::linear_algebra::linear_operator::mkl_cg_solve(
   lo iter;
   lo ipar[ 128 ];
   sc dpar[ 128 ];
-  std::vector< sc > tmp( size * 3 );  // need _dim_domain * 4 for preconditioned
+  std::vector< sc > tmp( size * 3 );
   sc * tmp_data = tmp.data( );
 
   vector_type tmp_1( size );
@@ -87,7 +87,78 @@ bool besthea::linear_algebra::linear_operator::mkl_cg_solve(
       relative_residual_error = dpar[ 4 ] / dpar[ 2 ];
       break;
     } else {
-      std::cout << "Only RCI codes 0-1 supported." << std::endl;
+      std::cout << "Only RCI codes 0,1 supported." << std::endl;
+      return false;
+    }
+
+    break;
+  }
+
+  return true;
+}
+
+bool besthea::linear_algebra::linear_operator::mkl_cg_solve(
+  const linear_operator & preconditioner, const vector_type & rhs,
+  vector_type & solution, sc & relative_residual_error,
+  lo & n_iterations ) const {
+  if ( _dim_domain != _dim_range || _dim_domain != rhs.size( )
+    || _dim_domain != solution.size( ) )
+    return false;
+
+  lo size = _dim_domain;
+
+  lo rci;
+  lo iter;
+  lo ipar[ 128 ];
+  sc dpar[ 128 ];
+  std::vector< sc > tmp( size * 4 );
+  sc * tmp_data = tmp.data( );
+
+  vector_type tmp_1( size );
+  vector_type tmp_2( size );
+
+  dcg_init( &size, solution.data( ), rhs.data( ), &rci, ipar, dpar, tmp_data );
+  if ( rci ) {
+    std::cout << "Failed to initialize MKL CG." << std::endl;
+    return false;
+  }
+
+  ipar[ 0 ] = size;          // size of the problem
+  ipar[ 4 ] = n_iterations;  // maximum number of iterations
+  ipar[ 7 ] = 1;             // perform the iteration stopping test
+  ipar[ 8 ] = 1;             // do the residual stopping test
+  ipar[ 9 ] = 0;             // do not request user stopping test
+  ipar[ 10 ] = 1;            // preconditioned
+
+  dpar[ 0 ] = relative_residual_error;  // relative tolerance
+
+  dcg_check( &size, solution.data( ), rhs.data( ), &rci, ipar, dpar, tmp_data );
+  if ( rci ) {
+    std::cout << "MKL parameters incorrect." << std::endl;
+    return false;
+  }
+
+  while ( true ) {
+    dcg( &size, solution.data( ), rhs.data( ), &rci, ipar, dpar, tmp_data );
+
+    if ( rci == 1 ) {  // apply operator
+      tmp_1.copy_from_raw( _dim_domain, tmp_data );
+      apply( tmp_1, tmp_2, false, 1.0, 0.0 );
+      tmp_2.copy_to_raw( tmp_data + _dim_domain );
+      continue;
+    } else if ( rci == 3 ) {  // apply preconditioner
+      tmp_1.copy_from_raw( _dim_domain, tmp_data );
+      preconditioner.apply( tmp_1, tmp_2, false, 1.0, 0.0 );
+      tmp_2.copy_to_raw( tmp_data + _dim_domain );
+      continue;
+    } else if ( rci == 0 ) {  // success
+      dcg_get( &size, solution.data( ), rhs.data( ), &rci, ipar, dpar, tmp_data,
+        &iter );
+      n_iterations = iter;
+      relative_residual_error = dpar[ 4 ] / dpar[ 2 ];
+      break;
+    } else {
+      std::cout << "Only RCI codes 0,1,3 supported." << std::endl;
       return false;
     }
 
@@ -98,8 +169,8 @@ bool besthea::linear_algebra::linear_operator::mkl_cg_solve(
 }
 
 bool besthea::linear_algebra::linear_operator::mkl_fgmres_solve(
-  vector_type & rhs, vector_type & solution, sc & relative_residual_error,
-  lo & n_iterations, lo n_iterations_until_restart ) const {
+  const vector_type & rhs, vector_type & solution, sc & relative_residual_error,
+  lo & n_iterations, lo n_iterations_until_restart, bool trans ) const {
   if ( _dim_domain != _dim_range || _dim_domain != rhs.size( )
     || _dim_domain != solution.size( ) )
     return false;
@@ -111,16 +182,15 @@ bool besthea::linear_algebra::linear_operator::mkl_fgmres_solve(
   lo ipar[ 128 ];
   sc dpar[ 128 ];
   std::vector< sc > tmp( ( 2 * n_iterations_until_restart + 1 ) * size
-    + n_iterations_until_restart * ( n_iterations_until_restart + 9 ) / 2
-    + 1 );  // need (2*ipar[14] + 1)*n + ipar[14]*(ipar[14] + 9)/2 + 1) for
-            // preconditioned
+    + n_iterations_until_restart * ( n_iterations_until_restart + 9 ) / 2 + 1 );
   sc * tmp_data = tmp.data( );
 
   vector_type tmp_1( size );
   vector_type tmp_2( size );
+  vector_type rhs_copy( rhs );
 
   dfgmres_init(
-    &size, solution.data( ), rhs.data( ), &rci, ipar, dpar, tmp_data );
+    &size, solution.data( ), rhs_copy.data( ), &rci, ipar, dpar, tmp_data );
   if ( rci ) {
     std::cout << "Failed to initialize MKL CG." << std::endl;
     return false;
@@ -139,28 +209,108 @@ bool besthea::linear_algebra::linear_operator::mkl_fgmres_solve(
   dpar[ 0 ] = relative_residual_error;  // relative tolerance
 
   dfgmres_check(
-    &size, solution.data( ), rhs.data( ), &rci, ipar, dpar, tmp_data );
+    &size, solution.data( ), rhs_copy.data( ), &rci, ipar, dpar, tmp_data );
   if ( rci ) {
     std::cout << "MKL parameters incorrect." << std::endl;
     return false;
   }
 
   while ( true ) {
-    dfgmres( &size, solution.data( ), rhs.data( ), &rci, ipar, dpar, tmp_data );
+    dfgmres(
+      &size, solution.data( ), rhs_copy.data( ), &rci, ipar, dpar, tmp_data );
 
     if ( rci == 1 ) {  // apply operator
       tmp_1.copy_from_raw( _dim_domain, tmp_data + ipar[ 21 ] - 1 );
-      apply( tmp_1, tmp_2, false, 1.0, 0.0 );
+      apply( tmp_1, tmp_2, trans, 1.0, 0.0 );
       tmp_2.copy_to_raw( tmp_data + ipar[ 22 ] - 1 );
       continue;
     } else if ( rci == 0 ) {  // success
-      dfgmres_get( &size, solution.data( ), rhs.data( ), &rci, ipar, dpar,
+      dfgmres_get( &size, solution.data( ), rhs_copy.data( ), &rci, ipar, dpar,
         tmp_data, &iter );
       n_iterations = iter;
       relative_residual_error = dpar[ 4 ] / dpar[ 2 ];
       break;
     } else {
-      std::cout << "Only RCI codes 0-1 supported." << std::endl;
+      std::cout << "Only RCI codes 0,1 supported." << std::endl;
+      return false;
+    }
+
+    break;
+  }
+
+  return true;
+}
+
+bool besthea::linear_algebra::linear_operator::mkl_fgmres_solve(
+  const linear_operator & preconditioner, const vector_type & rhs,
+  vector_type & solution, sc & relative_residual_error, lo & n_iterations,
+  lo n_iterations_until_restart, bool trans, bool trans_preconditioner ) const {
+  if ( _dim_domain != _dim_range || _dim_domain != rhs.size( )
+    || _dim_domain != solution.size( ) )
+    return false;
+
+  lo size = _dim_domain;
+
+  lo rci;
+  lo iter;
+  lo ipar[ 128 ];
+  sc dpar[ 128 ];
+  std::vector< sc > tmp( ( 2 * n_iterations_until_restart + 1 ) * size
+    + n_iterations_until_restart * ( n_iterations_until_restart + 9 ) / 2 + 1 );
+  sc * tmp_data = tmp.data( );
+
+  vector_type tmp_1( size );
+  vector_type tmp_2( size );
+  vector_type rhs_copy( rhs );
+
+  dfgmres_init(
+    &size, solution.data( ), rhs_copy.data( ), &rci, ipar, dpar, tmp_data );
+  if ( rci ) {
+    std::cout << "Failed to initialize MKL CG." << std::endl;
+    return false;
+  }
+
+  ipar[ 0 ] = size;          // size of the problem
+  ipar[ 4 ] = n_iterations;  // maximum number of iterations
+  ipar[ 7 ] = 1;             // perform the iteration stopping test
+  ipar[ 8 ] = 1;             // do the residual stopping test
+  ipar[ 9 ] = 0;             // do not request user stopping test
+  ipar[ 10 ] = 1;            // preconditioned
+  ipar[ 11 ] = 1;  // perform test for zero norm of generated direction
+  ipar[ 14 ]
+    = n_iterations_until_restart;  // number of iterations before restart
+
+  dpar[ 0 ] = relative_residual_error;  // relative tolerance
+
+  dfgmres_check(
+    &size, solution.data( ), rhs_copy.data( ), &rci, ipar, dpar, tmp_data );
+  if ( rci ) {
+    std::cout << "MKL parameters incorrect." << std::endl;
+    return false;
+  }
+
+  while ( true ) {
+    dfgmres(
+      &size, solution.data( ), rhs_copy.data( ), &rci, ipar, dpar, tmp_data );
+
+    if ( rci == 1 ) {  // apply operator
+      tmp_1.copy_from_raw( _dim_domain, tmp_data + ipar[ 21 ] - 1 );
+      apply( tmp_1, tmp_2, trans, 1.0, 0.0 );
+      tmp_2.copy_to_raw( tmp_data + ipar[ 22 ] - 1 );
+      continue;
+    } else if ( rci == 3 ) {  // apply preconditioner
+      tmp_1.copy_from_raw( _dim_domain, tmp_data + ipar[ 21 ] - 1 );
+      preconditioner.apply( tmp_1, tmp_2, trans_preconditioner, 1.0, 0.0 );
+      tmp_2.copy_to_raw( tmp_data + ipar[ 22 ] - 1 );
+      continue;
+    } else if ( rci == 0 ) {  // success
+      dfgmres_get( &size, solution.data( ), rhs_copy.data( ), &rci, ipar, dpar,
+        tmp_data, &iter );
+      n_iterations = iter;
+      relative_residual_error = dpar[ 4 ] / dpar[ 2 ];
+      break;
+    } else {
+      std::cout << "Only RCI codes 0,1,3 supported." << std::endl;
       return false;
     }
 

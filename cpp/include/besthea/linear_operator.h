@@ -48,6 +48,7 @@ namespace besthea {
 class besthea::linear_algebra::linear_operator {
  public:
   using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
+
   /**
    * Destructor.
    */
@@ -78,6 +79,20 @@ class besthea::linear_algebra::linear_operator {
     sc & relative_residual_error, lo & n_iterations ) const;
 
   /**
+   * Preconditioned CG as implemented in MKL.
+   * @param[in] preconditioner Linear operator as a preconditioner.
+   * @param[in] rhs Right-hand side vector.
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on
+   * exit.
+   */
+  bool mkl_cg_solve( const linear_operator & preconditioner,
+    const vector_type & rhs, vector_type & solution,
+    sc & relative_residual_error, lo & n_iterations ) const;
+
+  /**
    * FGMRES as implemented in MKL.
    * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
    * @param[out] solution Solution vector.
@@ -87,10 +102,31 @@ class besthea::linear_algebra::linear_operator {
    * exit.
    * @param[in] n_iterations_until_restart Maximal number of iterations before
    * restart.
+   * @param[in] trans Use transpose of this.
    */
-  bool mkl_fgmres_solve( vector_type & rhs, vector_type & solution,
+  bool mkl_fgmres_solve( const vector_type & rhs, vector_type & solution,
     sc & relative_residual_error, lo & n_iterations,
-    lo n_iterations_until_restart ) const;
+    lo n_iterations_until_restart, bool trans = false ) const;
+
+  /**
+   * Preconditioned FGMRES as implemented in MKL.
+   * @param[in] preconditioner Linear operator as a preconditioner.
+   * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on
+   * exit.
+   * @param[in] n_iterations_until_restart Maximal number of iterations before
+   * restart.
+   * @param[in] trans Use transpose of this.
+   * @param[in] trans_preconditioner Use transpose of preconditioner.
+   */
+  bool mkl_fgmres_solve( const linear_operator & preconditioner,
+    const vector_type & rhs, vector_type & solution,
+    sc & relative_residual_error, lo & n_iterations,
+    lo n_iterations_until_restart, bool trans = false,
+    bool trans_preconditioner = false ) const;
 
   /**
    * Returns the domain dimension.
@@ -104,6 +140,22 @@ class besthea::linear_algebra::linear_operator {
    */
   lo get_dim_range( ) const {
     return _dim_range;
+  }
+
+  /**
+   * Sets the domain dimension.
+   * @param[in] dim_domain Domain dimension.
+   */
+  void set_dim_domain( lo dim_domain ) {
+    _dim_domain = dim_domain;
+  }
+
+  /**
+   * Sets the range dimension.
+   * @param[in] dim_range Range dimension.
+   */
+  void set_dim_range( lo dim_range ) {
+    _dim_range = dim_range;
   }
 
  protected:
