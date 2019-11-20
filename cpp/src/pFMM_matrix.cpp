@@ -70,33 +70,68 @@ void besthea::linear_algebra::pFMM_matrix::apply( const block_vector_type & x,
 
   sparse_matrix_type * current_block;
 
-  // first, multiply by the nearfield blocks
-  lo matrix_idx = 0;
-  for ( auto it = _nearfield_matrices.begin( );
-        it != _nearfield_matrices.end( ); ++it ) {
-    current_block = *it;
-    const std::pair< lo, lo > & indices = _nearfield_block_map.at( matrix_idx );
+#pragma omp parallel
+  {
+    vector_type local_y( y.get_size_of_block( ) );
+    // first, multiply by the nearfield blocks
+#pragma omp for
+    for ( lo i = 0; i < _nearfield_matrices.size( ); ++i ) {
+      current_block = _nearfield_matrices.at( i );
+      const std::pair< lo, lo > & indices = _nearfield_block_map.at( i );
 
-    const vector_type & local_x = x.get_block( indices.second );
-    vector_type & local_y = y.get_block( indices.first );
+      const vector_type & local_x = x.get_block( indices.second );
 
-    current_block->apply( local_x, local_y, trans, alpha, 1.0 );
+      current_block->apply( local_x, local_y, trans, alpha, 0.0 );
+      for ( lo j = 0; j < local_y.size( ); ++j ) {
+        y.add_atomic( indices.first, j, local_y[ j ] );
+      }
+    }
 
-    matrix_idx++;
+    // next, multiply by the farfield blocks
+#pragma omp for
+    for ( lo i = 0; i < _farfield_matrices.size( ); ++i ) {
+      current_block = _farfield_matrices.at( i );
+      const std::pair< lo, lo > & indices = _farfield_block_map.at( i );
+
+      const vector_type & local_x = x.get_block( indices.second );
+
+      current_block->apply( local_x, local_y, trans, alpha, 0.0 );
+      for ( lo j = 0; j < local_y.size( ); ++j ) {
+        y.add_atomic( indices.first, j, local_y[ j ] );
+      }
+    }
   }
 
+  // lo matrix_idx = 0;
+  //#pragma omp parallel
+
+  //  for ( auto it = _nearfield_matrices.begin( );
+  //        it != _nearfield_matrices.end( ); ++it ) {
+  //    current_block = *it;
+  //    const std::pair< lo, lo > & indices = _nearfield_block_map.at(
+  //    matrix_idx );
+  //
+  //    const vector_type & local_x = x.get_block( indices.second );
+  //    vector_type & local_y = y.get_block( indices.first );
+  //
+  //    current_block->apply( local_x, local_y, trans, alpha, 1.0 );
+  //
+  //    matrix_idx++;
+  //  }
   // next, multiply the farfield blocks
-  matrix_idx = 0;
-  for ( auto it = _farfield_matrices.begin( ); it != _farfield_matrices.end( );
-        ++it ) {
-    current_block = *it;
-    const std::pair< lo, lo > & indices = _farfield_block_map.at( matrix_idx );
-
-    const vector_type & local_x = x.get_block( indices.second );
-    vector_type & local_y = y.get_block( indices.first );
-
-    current_block->apply( local_x, local_y, trans, alpha, 1.0 );
-
-    matrix_idx++;
-  }
+  //  matrix_idx = 0;
+  //  for ( auto it = _farfield_matrices.begin( ); it != _farfield_matrices.end(
+  //  );
+  //        ++it ) {
+  //    current_block = *it;
+  //    const std::pair< lo, lo > & indices = _farfield_block_map.at( matrix_idx
+  //    );
+  //
+  //    const vector_type & local_x = x.get_block( indices.second );
+  //    vector_type & local_y = y.get_block( indices.first );
+  //
+  //    current_block->apply( local_x, local_y, trans, alpha, 1.0 );
+  //
+  //    matrix_idx++;
+  //  }
 }
