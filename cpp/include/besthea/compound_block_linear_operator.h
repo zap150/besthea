@@ -58,7 +58,7 @@ class besthea::linear_algebra::compound_block_linear_operator
    * Constructor.
    * @param[in] block_dim Block dimension.
    */
-  compound_block_linear_operator( lo block_dim );
+  compound_block_linear_operator( );
 
   /**
    * Destructor.
