@@ -88,6 +88,13 @@ class besthea::bem::uniform_spacetime_be_identity
               << _data.get_n_columns( ) << std::endl;
   }
 
+  /**
+   * Prints the matrix.
+   */
+  void print( ) const {
+    _data.print( );
+  }
+
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
    * @param[in] x

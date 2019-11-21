@@ -159,10 +159,12 @@ int main( int argc, char * argv[] ) {
   t.reset( "V11" );
   assembler_v.assemble( *V11 );
   t.measure( );
-  uniform_spacetime_be_identity M11( space_p1, space_p1, 1 );
+  uniform_spacetime_be_identity M11( space_p1, space_p1, 2 );
   t.reset( "M11" );
   M11.assemble( );
   t.measure( );
+  // V11->print( );
+  // M11.print( );
   block_mkl_cg_inverse M11_inv( M11, 1e-8, 100 );
   compound_block_linear_operator preconditioner;
   preconditioner.push_back( M11_inv );
@@ -172,9 +174,14 @@ int main( int argc, char * argv[] ) {
   block_vector rhs( dir );
   sc gmres_prec = 1e-8;
   lo gmres_iter = 500;
+  //  D->mkl_fgmres_solve( rhs, dir, gmres_prec, gmres_iter, gmres_iter );
+  //  std::cout << "  iterations: " << gmres_iter << ", residual: " <<
+  //  gmres_prec
+  //            << std::endl;
+  //  gmres_prec = 1e-8;
+  //  gmres_iter = 500;
   D->mkl_fgmres_solve(
     preconditioner, rhs, dir, gmres_prec, gmres_iter, gmres_iter );
-  // D->mkl_fgmres_solve( rhs, dir, gmres_prec, gmres_iter, gmres_iter );
   std::cout << "  iterations: " << gmres_iter << ", residual: " << gmres_prec
             << std::endl;
   t.measure( );
