@@ -26,13 +26,15 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "besthea/uniform_spacetime_be_evaluator.h"
+
 #include <besthea/spacetime_heat_dl_kernel_antiderivative.h>
 #include <besthea/spacetime_heat_hs_kernel_antiderivative.h>
 #include <besthea/spacetime_heat_sl_kernel_antiderivative.h>
-#include "besthea/uniform_spacetime_be_evaluator.h"
 
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
+#include "besthea/fast_spacetime_be_space.h"
 #include "besthea/quadrature.h"
 #include "besthea/uniform_spacetime_be_space.h"
 #include "omp.h"
@@ -57,7 +59,7 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
   auto mesh = _space->get_mesh( );
 
   lo n_timesteps = mesh->get_n_temporal_elements( );
-  sc timestep = mesh->get_timestep( );
+  sc timestep = mesh->temporal_length( 0 );
   lo n_points = x.size( ) / 3;
   lo n_elements = mesh->get_n_spatial_elements( );
   lo loc_dim = basis.dimension_local( );
@@ -312,3 +314,17 @@ template class besthea::bem::uniform_spacetime_be_evaluator<
 template class besthea::bem::uniform_spacetime_be_evaluator<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+
+template class besthea::bem::uniform_spacetime_be_evaluator<
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
+template class besthea::bem::uniform_spacetime_be_evaluator<
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+
+template class besthea::bem::uniform_spacetime_be_evaluator<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
+template class besthea::bem::uniform_spacetime_be_evaluator<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
