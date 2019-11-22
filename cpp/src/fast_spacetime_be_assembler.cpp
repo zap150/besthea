@@ -463,9 +463,6 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   lo n_loc_rows = test_basis.dimension_local( );
   lo n_loc_columns = trial_basis.dimension_local( );
 
-  lo n_test_elements = test_mesh->get_n_spatial_elements( );
-  lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
-
   std::vector< Eigen::Triplet< sc, los > > triplet_list;
   lo nnz_size = _nonzeros.size( );
   triplet_list.resize( nnz_size * n_loc_rows * n_loc_columns );
@@ -868,16 +865,12 @@ void besthea::bem::fast_spacetime_be_assembler<
   lo n_rows = test_basis.dimension_global( );
   lo n_columns = trial_basis.dimension_global( );
 
-  lo n_test_elements = test_mesh->get_n_spatial_elements( );
-  lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
-
   std::vector< Eigen::Triplet< sc, los > > triplet_list;
   lo nnz_size = _nonzeros.size( );
   triplet_list.resize( nnz_size * 3 * 3 );
 
 #pragma omp parallel
   {
-    lo my_thread_num = omp_get_thread_num( );
     std::vector< lo > test_l2g( 3 );
     std::vector< lo > trial_l2g( 3 );
 
