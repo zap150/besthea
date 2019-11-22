@@ -109,6 +109,15 @@ class besthea::linear_algebra::sparse_matrix
     std::vector< std::vector< los > > & column_indices,
     std::vector< std::vector< sc > > & values );
 
+  /**
+   * Sets the sparse matrix from a list of Eigen triplets.
+   * @param[in] n_rows Number of rows.
+   * @param[in] n_columns Number of columns.
+   * @param[in] triplet_list Triplet list.
+   */
+  void set_from_triplets( los n_rows, los n_columns,
+    std::vector< Eigen::Triplet< sc, los > > & triplet_list );
+
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
    * @param[in] x

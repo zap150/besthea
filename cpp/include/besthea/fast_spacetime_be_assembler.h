@@ -314,6 +314,12 @@ class besthea::bem::fast_spacetime_be_assembler {
    */
   bool is_spatial_nearfield( lo test_idx, lo trial_idx ) const;
 
+  /**
+   * Precomputes elements contributing to the nonzero pattern of sparse
+   * nearfield (and possibly farfield) matrices.
+   */
+  void precompute_nonzeros( );
+
   kernel_type * _kernel;            //!< Kernel temporal antiderivative.
   test_space_type * _test_space;    //!< Boundary element test space.
   trial_space_type * _trial_space;  //!< Boundary element trial space.
@@ -330,6 +336,9 @@ class besthea::bem::fast_spacetime_be_assembler {
                      //!< (_cutoff_param * diagonal of the lowest level
                      //!< cluster).
   bool _uniform;     //!< uniform assembly
+  std::vector< std::pair< lo, lo > >
+    _nonzeros;  //!< indices of spatial element contributing to the nonzero
+                //!< pattern of the spatial matrices
 };
 
 #endif /* INCLUDE_BESTHEA_FAST_SPACETIME_BE_ASSEMBLER_H_ */

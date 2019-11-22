@@ -34,6 +34,7 @@
 #include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_hs_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_sl_kernel_antiderivative.h"
+#include "besthea/timer.h"
 
 #include <vector>
 
@@ -58,6 +59,11 @@ besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
   _space_cluster_size
     = std::sqrt( size_x * size_x + size_y * size_y + size_z * size_z );
+
+  besthea::tools::timer t;
+  t.reset( "Nonzeros" );
+  precompute_nonzeros( );
+  t.measure( );
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -81,6 +87,26 @@ bool besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
     + ( test_c[ 2 ] - trial_c[ 2 ] ) * ( test_c[ 2 ] - trial_c[ 2 ] );
   return dist <= _cutoff_param * _space_cluster_size * _cutoff_param
     * _space_cluster_size;
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::precompute_nonzeros( ) {
+  auto test_mesh = _test_space->get_mesh( );
+  auto trial_mesh = _trial_space->get_mesh( );
+
+  lo n_test_elements = test_mesh->get_n_spatial_elements( );
+  lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
+
+  _nonzeros.reserve( n_test_elements * 10 );
+  for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
+    for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
+      if ( is_spatial_nearfield( i_test, i_trial ) ) {
+        _nonzeros.push_back( std::make_pair( i_test, i_trial ) );
+      }
+    }
+  }
+  _nonzeros.shrink_to_fit( );
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -261,6 +287,166 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   }
 }
 
+// template< class kernel_type, class test_space_type, class trial_space_type >
+// void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
+//  trial_space_type >::assemble_nearfield_matrix( sc t0, sc t1, sc tau0, sc
+//  tau1, sparse_matrix_type & nearfield_matrix ) const { auto & test_basis =
+//  _test_space->get_basis( ); auto & trial_basis = _trial_space->get_basis( );
+//  auto test_mesh = _test_space->get_mesh( );
+//  auto trial_mesh = _trial_space->get_mesh( );
+//
+//  // size of individual blocks
+//  lo n_rows = test_basis.dimension_global( );
+//  lo n_columns = trial_basis.dimension_global( );
+//
+//  lo n_loc_rows = test_basis.dimension_local( );
+//  lo n_loc_columns = trial_basis.dimension_local( );
+//
+//  lo n_test_elements = test_mesh->get_n_spatial_elements( );
+//  lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
+//
+//  lo total_length = n_rows * n_columns * n_loc_rows * n_loc_columns;
+//  lo n_threads = omp_get_max_threads( );
+//  std::vector< std::vector< lo > > row_indices( n_threads );
+//  std::vector< std::vector< lo > > col_indices( n_threads );
+//  std::vector< std::vector< sc > > values( n_threads );
+//
+//#pragma omp parallel
+//  {
+//    lo my_thread_num = omp_get_thread_num( );
+//    row_indices.at( my_thread_num ).reserve( total_length / n_threads );
+//    col_indices.at( my_thread_num ).reserve( total_length / n_threads );
+//    values.at( my_thread_num ).reserve( total_length / n_threads );
+//
+//    std::vector< lo > test_l2g( n_loc_rows );
+//    std::vector< lo > trial_l2g( n_loc_columns );
+//
+//    sc test, trial, value, test_area, trial_area;
+//    lo size;
+//    int n_shared_vertices = 0;
+//    int rot_test = 0;
+//    int rot_trial = 0;
+//
+//    linear_algebra::coordinates< 3 > x1, x2, x3;
+//    linear_algebra::coordinates< 3 > y1, y2, y3;
+//    linear_algebra::coordinates< 3 > nx, ny;
+//
+//    sc * nx_data = nx.data( );
+//    sc * ny_data = ny.data( );
+//
+//    quadrature_wrapper my_quadrature;
+//    init_quadrature( my_quadrature );
+//    sc * x1_ref = nullptr;
+//    sc * x2_ref = nullptr;
+//    sc * y1_ref = nullptr;
+//    sc * y2_ref = nullptr;
+//    sc * w = nullptr;
+//    sc * x1_mapped = my_quadrature._x1.data( );
+//    sc * x2_mapped = my_quadrature._x2.data( );
+//    sc * x3_mapped = my_quadrature._x3.data( );
+//    sc * y1_mapped = my_quadrature._y1.data( );
+//    sc * y2_mapped = my_quadrature._y2.data( );
+//    sc * y3_mapped = my_quadrature._y3.data( );
+//    sc * kernel_data = my_quadrature._kernel_values.data( );
+//
+//    bool shared_t_element = t0 == tau0;
+//    bool shared_t_vertex = t0 == tau1;
+//
+//#pragma omp for schedule( dynamic, 20 )
+//    for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
+//      test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
+//      test_mesh->get_spatial_normal( i_test, nx );
+//      test_area = test_mesh->spatial_area( i_test );
+//      for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
+//        if ( is_spatial_nearfield( i_test, i_trial ) ) {
+//          if ( shared_t_element || shared_t_vertex ) {
+//            get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial
+//            );
+//          } else {
+//            n_shared_vertices = 0;
+//            rot_test = 0;
+//            rot_trial = 0;
+//          }
+//          trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
+//          trial_mesh->get_spatial_normal( i_trial, ny );
+//          trial_area = trial_mesh->spatial_area( i_trial );
+//
+//          test_basis.local_to_global(
+//            i_test, n_shared_vertices, rot_test, false, test_l2g );
+//          trial_basis.local_to_global(
+//            i_trial, n_shared_vertices, rot_trial, true, trial_l2g );
+//
+//          triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices,
+//            rot_test, rot_trial, my_quadrature );
+//          x1_ref = my_quadrature._x1_ref[ n_shared_vertices ].data( );
+//          x2_ref = my_quadrature._x2_ref[ n_shared_vertices ].data( );
+//          y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
+//          y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
+//          w = my_quadrature._w[ n_shared_vertices ].data( );
+//
+//          size = my_quadrature._w[ n_shared_vertices ].size( );
+//
+//          if ( shared_t_element ) {
+//#pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
+//                          y2_mapped, y3_mapped, kernel_data, w        \
+//                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+//            for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+//              kernel_data[ i_quad ]
+//                = _kernel->definite_integral_over_same_interval(
+//                    x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+//                    x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+//                    x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data, t0, t1
+//                    )
+//                * w[ i_quad ];
+//            }
+//          } else {
+//#pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
+//                          y2_mapped, y3_mapped, kernel_data, w        \
+//                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+//            for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+//              kernel_data[ i_quad ]
+//                = _kernel->definite_integral_over_different_intervals(
+//                    x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+//                    x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+//                    x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data, t0,
+//                    t1, tau0, tau1 )
+//                * w[ i_quad ];
+//            }
+//          }
+//
+//          for ( lo i_loc_test = 0; i_loc_test < n_loc_rows; ++i_loc_test ) {
+//            for ( lo i_loc_trial = 0; i_loc_trial < n_loc_columns;
+//                  ++i_loc_trial ) {
+//              value = 0.0;
+//#pragma omp simd \
+//	aligned( x1_ref, x2_ref, y1_ref, y2_ref, kernel_data : DATA_ALIGN ) \
+//	private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
+//              for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+//                test = test_basis.evaluate( i_test, i_loc_test,
+//                  x1_ref[ i_quad ], x2_ref[ i_quad ], nx_data,
+//                  n_shared_vertices, rot_test, false );
+//                trial = trial_basis.evaluate( i_trial, i_loc_trial,
+//                  y1_ref[ i_quad ], y2_ref[ i_quad ], ny_data,
+//                  n_shared_vertices, rot_trial, true );
+//
+//                value += kernel_data[ i_quad ] * test * trial;
+//              }
+//              value *= test_area * trial_area;
+//              row_indices[ my_thread_num ].push_back( test_l2g[ i_loc_test ]
+//              ); col_indices[ my_thread_num ].push_back(
+//                trial_l2g[ i_loc_trial ] );
+//              values[ my_thread_num ].push_back( value );
+//            }
+//          }
+//        }
+//      }
+//    }
+//  }
+//
+//  nearfield_matrix.set_from_triplets(
+//    n_rows, n_columns, row_indices, col_indices, values );
+//}
+
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::assemble_nearfield_matrix( sc t0, sc t1, sc tau0, sc tau1,
@@ -280,19 +466,12 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   lo n_test_elements = test_mesh->get_n_spatial_elements( );
   lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
 
-  lo total_length = n_rows * n_columns * n_loc_rows * n_loc_columns;
-  lo n_threads = omp_get_max_threads( );
-  std::vector< std::vector< lo > > row_indices( n_threads );
-  std::vector< std::vector< lo > > col_indices( n_threads );
-  std::vector< std::vector< sc > > values( n_threads );
+  std::vector< Eigen::Triplet< sc, los > > triplet_list;
+  lo nnz_size = _nonzeros.size( );
+  triplet_list.resize( nnz_size * n_loc_rows * n_loc_columns );
 
 #pragma omp parallel
   {
-    lo my_thread_num = omp_get_thread_num( );
-    row_indices.at( my_thread_num ).reserve( total_length / n_threads );
-    col_indices.at( my_thread_num ).reserve( total_length / n_threads );
-    values.at( my_thread_num ).reserve( total_length / n_threads );
-
     std::vector< lo > test_l2g( n_loc_rows );
     std::vector< lo > trial_l2g( n_loc_columns );
 
@@ -327,98 +506,351 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
     bool shared_t_element = t0 == tau0;
     bool shared_t_vertex = t0 == tau1;
 
-#pragma omp for schedule( dynamic, 20 )
-    for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
+    lo i_test, i_trial;
+
+#pragma omp for schedule( dynamic, 1 )
+    for ( lo i = 0; i < nnz_size; ++i ) {
+      i_test = _nonzeros[ i ].first;
+      i_trial = _nonzeros[ i ].second;
       test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
       test_mesh->get_spatial_normal( i_test, nx );
       test_area = test_mesh->spatial_area( i_test );
-      for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
-        if ( is_spatial_nearfield( i_test, i_trial ) ) {
-          if ( shared_t_element || shared_t_vertex ) {
-            get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
-          } else {
-            n_shared_vertices = 0;
-            rot_test = 0;
-            rot_trial = 0;
-          }
-          trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
-          trial_mesh->get_spatial_normal( i_trial, ny );
-          trial_area = trial_mesh->spatial_area( i_trial );
+      if ( is_spatial_nearfield( i_test, i_trial ) ) {
+        if ( shared_t_element || shared_t_vertex ) {
+          get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
+        } else {
+          n_shared_vertices = 0;
+          rot_test = 0;
+          rot_trial = 0;
+        }
+        trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
+        trial_mesh->get_spatial_normal( i_trial, ny );
+        trial_area = trial_mesh->spatial_area( i_trial );
 
-          test_basis.local_to_global(
-            i_test, n_shared_vertices, rot_test, false, test_l2g );
-          trial_basis.local_to_global(
-            i_trial, n_shared_vertices, rot_trial, true, trial_l2g );
+        test_basis.local_to_global(
+          i_test, n_shared_vertices, rot_test, false, test_l2g );
+        trial_basis.local_to_global(
+          i_trial, n_shared_vertices, rot_trial, true, trial_l2g );
 
-          triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices,
-            rot_test, rot_trial, my_quadrature );
-          x1_ref = my_quadrature._x1_ref[ n_shared_vertices ].data( );
-          x2_ref = my_quadrature._x2_ref[ n_shared_vertices ].data( );
-          y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
-          y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
-          w = my_quadrature._w[ n_shared_vertices ].data( );
+        triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices,
+          rot_test, rot_trial, my_quadrature );
+        x1_ref = my_quadrature._x1_ref[ n_shared_vertices ].data( );
+        x2_ref = my_quadrature._x2_ref[ n_shared_vertices ].data( );
+        y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
+        y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
+        w = my_quadrature._w[ n_shared_vertices ].data( );
 
-          size = my_quadrature._w[ n_shared_vertices ].size( );
+        size = my_quadrature._w[ n_shared_vertices ].size( );
 
-          if ( shared_t_element ) {
+        if ( shared_t_element ) {
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
                           y2_mapped, y3_mapped, kernel_data, w        \
                           : DATA_ALIGN ) simdlen( DATA_WIDTH )
-            for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-              kernel_data[ i_quad ]
-                = _kernel->definite_integral_over_same_interval(
-                    x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-                    x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                    x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data, t0, t1 )
-                * w[ i_quad ];
-            }
-          } else {
+          for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+            kernel_data[ i_quad ]
+              = _kernel->definite_integral_over_same_interval(
+                  x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                  x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                  x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data, t0, t1 )
+              * w[ i_quad ];
+          }
+        } else {
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
                           y2_mapped, y3_mapped, kernel_data, w        \
                           : DATA_ALIGN ) simdlen( DATA_WIDTH )
-            for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-              kernel_data[ i_quad ]
-                = _kernel->definite_integral_over_different_intervals(
-                    x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-                    x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                    x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data, t0, t1,
-                    tau0, tau1 )
-                * w[ i_quad ];
-            }
+          for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+            kernel_data[ i_quad ]
+              = _kernel->definite_integral_over_different_intervals(
+                  x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                  x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                  x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data, t0, t1,
+                  tau0, tau1 )
+              * w[ i_quad ];
           }
+        }
 
-          for ( lo i_loc_test = 0; i_loc_test < n_loc_rows; ++i_loc_test ) {
-            for ( lo i_loc_trial = 0; i_loc_trial < n_loc_columns;
-                  ++i_loc_trial ) {
-              value = 0.0;
+        for ( lo i_loc_test = 0; i_loc_test < n_loc_rows; ++i_loc_test ) {
+          for ( lo i_loc_trial = 0; i_loc_trial < n_loc_columns;
+                ++i_loc_trial ) {
+            value = 0.0;
 #pragma omp simd \
 	aligned( x1_ref, x2_ref, y1_ref, y2_ref, kernel_data : DATA_ALIGN ) \
 	private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
-              for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-                test = test_basis.evaluate( i_test, i_loc_test,
-                  x1_ref[ i_quad ], x2_ref[ i_quad ], nx_data,
-                  n_shared_vertices, rot_test, false );
-                trial = trial_basis.evaluate( i_trial, i_loc_trial,
-                  y1_ref[ i_quad ], y2_ref[ i_quad ], ny_data,
-                  n_shared_vertices, rot_trial, true );
+            for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+              test = test_basis.evaluate( i_test, i_loc_test, x1_ref[ i_quad ],
+                x2_ref[ i_quad ], nx_data, n_shared_vertices, rot_test, false );
+              trial = trial_basis.evaluate( i_trial, i_loc_trial,
+                y1_ref[ i_quad ], y2_ref[ i_quad ], ny_data, n_shared_vertices,
+                rot_trial, true );
 
-                value += kernel_data[ i_quad ] * test * trial;
-              }
-              value *= test_area * trial_area;
-              row_indices[ my_thread_num ].push_back( test_l2g[ i_loc_test ] );
-              col_indices[ my_thread_num ].push_back(
-                trial_l2g[ i_loc_trial ] );
-              values[ my_thread_num ].push_back( value );
+              value += kernel_data[ i_quad ] * test * trial;
             }
+            value *= test_area * trial_area;
+
+            triplet_list[ i * n_loc_rows * n_loc_columns
+              + i_loc_test * n_loc_columns + i_loc_trial ]
+              = Eigen::Triplet< sc, los >(
+                test_l2g[ i_loc_test ], trial_l2g[ i_loc_trial ], value );
           }
         }
       }
     }
   }
 
-  nearfield_matrix.set_from_triplets(
-    n_rows, n_columns, row_indices, col_indices, values );
+  nearfield_matrix.set_from_triplets( n_rows, n_columns, triplet_list );
 }
+
+// template<>
+// void besthea::bem::fast_spacetime_be_assembler<
+//  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+//  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+//  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
+//  assemble_nearfield_matrix( sc t0, sc t1, sc tau0, sc tau1,
+//    sparse_matrix_type & nearfield_matrix ) const {
+//  auto & test_basis = _test_space->get_basis( );
+//  auto & trial_basis = _trial_space->get_basis( );
+//  auto test_mesh = _test_space->get_mesh( );
+//  auto trial_mesh = _trial_space->get_mesh( );
+//
+//  // size of individual blocks
+//  lo n_rows = test_basis.dimension_global( );
+//  lo n_columns = trial_basis.dimension_global( );
+//
+//  lo n_test_elements = test_mesh->get_n_spatial_elements( );
+//  lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
+//
+//  lo n_threads = omp_get_max_threads( );
+//  std::vector< std::vector< lo > > row_indices( n_threads );
+//  std::vector< std::vector< lo > > col_indices( n_threads );
+//  std::vector< std::vector< sc > > values( n_threads );
+//
+//#pragma omp parallel
+//  {
+//    lo my_thread_num = omp_get_thread_num( );
+//    std::vector< lo > test_l2g( 3 );
+//    std::vector< lo > trial_l2g( 3 );
+//
+//    sc areas, test_area;
+//    sc value11, value12, value13;
+//    sc value21, value22, value23;
+//    sc value31, value32, value33;
+//    lo size;
+//    int n_shared_vertices = 0;
+//    int rot_test = 0;
+//    int rot_trial = 0;
+//
+//    linear_algebra::coordinates< 3 > x1, x2, x3;
+//    linear_algebra::coordinates< 3 > y1, y2, y3;
+//    linear_algebra::coordinates< 3 > nx, ny;
+//
+//    sc * nx_data = nx.data( );
+//    sc * ny_data = ny.data( );
+//
+//    sc test_curls[ 9 ], trial_curls[ 9 ];
+//    sc phi1x, phi1y;
+//    sc kernel1, kernel2;
+//    lo test_curl_offset, trial_curl_offset;
+//    sc curl_dot[ 9 ];
+//
+//    quadrature_wrapper my_quadrature;
+//    init_quadrature( my_quadrature );
+//    sc * x1_ref = nullptr;
+//    sc * x2_ref = nullptr;
+//    sc * y1_ref = nullptr;
+//    sc * y2_ref = nullptr;
+//    sc * w = nullptr;
+//    sc * x1_mapped = my_quadrature._x1.data( );
+//    sc * x2_mapped = my_quadrature._x2.data( );
+//    sc * x3_mapped = my_quadrature._x3.data( );
+//    sc * y1_mapped = my_quadrature._y1.data( );
+//    sc * y2_mapped = my_quadrature._y2.data( );
+//    sc * y3_mapped = my_quadrature._y3.data( );
+//
+//    bool shared_t_element = t0 == tau0;
+//    bool shared_t_vertex = t0 == tau1;
+//
+//#pragma omp for schedule( dynamic )
+//    for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
+//      test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
+//      test_mesh->get_spatial_normal( i_test, nx );
+//      test_area = test_mesh->spatial_area( i_test );
+//      for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
+//        if ( is_spatial_nearfield( i_test, i_trial ) ) {
+//          if ( shared_t_element || shared_t_vertex ) {
+//            get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial
+//            );
+//          } else {
+//            n_shared_vertices = 0;
+//            rot_test = 0;
+//            rot_trial = 0;
+//          }
+//          trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
+//          trial_mesh->get_spatial_normal( i_trial, ny );
+//          areas = test_area * trial_mesh->spatial_area( i_trial );
+//
+//          test_basis.local_to_global(
+//            i_test, n_shared_vertices, rot_test, false, test_l2g );
+//          trial_basis.local_to_global(
+//            i_trial, n_shared_vertices, rot_trial, true, trial_l2g );
+//
+//          triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices,
+//            rot_test, rot_trial, my_quadrature );
+//          x1_ref = my_quadrature._x1_ref[ n_shared_vertices ].data( );
+//          x2_ref = my_quadrature._x2_ref[ n_shared_vertices ].data( );
+//          y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
+//          y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
+//          w = my_quadrature._w[ n_shared_vertices ].data( );
+//
+//          size = my_quadrature._w[ n_shared_vertices ].size( );
+//
+//          test_basis.evaluate_curl(
+//            i_test, nx, n_shared_vertices, rot_test, false, test_curls );
+//          trial_basis.evaluate_curl(
+//            i_trial, ny, n_shared_vertices, rot_trial, true, trial_curls );
+//
+//          for ( lo i_loc_test = 0; i_loc_test < 3; ++i_loc_test ) {
+//            for ( lo i_loc_trial = 0; i_loc_trial < 3; ++i_loc_trial ) {
+//              test_curl_offset = 3 * i_loc_test;
+//              trial_curl_offset = 3 * i_loc_trial;
+//              curl_dot[ i_loc_trial * 3 + i_loc_test ]
+//                = test_curls[ test_curl_offset ]
+//                  * trial_curls[ trial_curl_offset ]
+//                + test_curls[ test_curl_offset + 1 ]
+//                  * trial_curls[ trial_curl_offset + 1 ]
+//                + test_curls[ test_curl_offset + 2 ]
+//                  * trial_curls[ trial_curl_offset + 2 ];
+//            }
+//          }
+//
+//          value11 = value12 = value13 = 0.0;
+//          value21 = value22 = value23 = 0.0;
+//          value31 = value32 = value33 = 0.0;
+//
+//          if ( shared_t_element ) {
+//#pragma omp simd \
+//        aligned( x1_mapped, x2_mapped, x3_mapped, x1_ref, x2_ref : DATA_ALIGN
+//        ) \
+//        aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, w :
+//        DATA_ALIGN ) \
+//        private( kernel1, kernel2, phi1x, phi1y ) \
+//        reduction( + : value11, value12, value13 ) \
+//        reduction( + : value21, value22, value23 ) \
+//        reduction( + : value31, value32, value33 ) \
+//        simdlen( DATA_WIDTH )
+//            for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+//              _kernel->definite_integral_over_same_interval(
+//                x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+//                x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+//                x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data,
+//                t0, t1, &kernel1, &kernel2 );
+//
+//              phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
+//              phi1y = (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ];
+//              // phi2* = *1_ref[ i_quad ] and phi3* = *2_ref[ i_quad ];
+//
+//              value11 += ( kernel1 * curl_dot[ 0 ] + kernel2 * phi1x * phi1y )
+//                * w[ i_quad ];
+//              value21 += ( kernel1 * curl_dot[ 1 ]
+//                           + kernel2 * x1_ref[ i_quad ] * phi1y )
+//                * w[ i_quad ];
+//              value31 += ( kernel1 * curl_dot[ 2 ]
+//                           + kernel2 * x2_ref[ i_quad ] * phi1y )
+//                * w[ i_quad ];
+//              value12 += ( kernel1 * curl_dot[ 3 ]
+//                           + kernel2 * phi1x * y1_ref[ i_quad ] )
+//                * w[ i_quad ];
+//              value22 += ( kernel1 * curl_dot[ 4 ]
+//                           + kernel2 * x1_ref[ i_quad ] * y1_ref[ i_quad ] )
+//                * w[ i_quad ];
+//              value32 += ( kernel1 * curl_dot[ 5 ]
+//                           + kernel2 * x2_ref[ i_quad ] * y1_ref[ i_quad ] )
+//                * w[ i_quad ];
+//              value13 += ( kernel1 * curl_dot[ 6 ]
+//                           + kernel2 * phi1x * y2_ref[ i_quad ] )
+//                * w[ i_quad ];
+//              value23 += ( kernel1 * curl_dot[ 7 ]
+//                           + kernel2 * x1_ref[ i_quad ] * y2_ref[ i_quad ] )
+//                * w[ i_quad ];
+//              value33 += ( kernel1 * curl_dot[ 8 ]
+//                           + kernel2 * x2_ref[ i_quad ] * y2_ref[ i_quad ] )
+//                * w[ i_quad ];
+//            }
+//          } else {
+//#pragma omp simd \
+//        aligned( x1_mapped, x2_mapped, x3_mapped, x1_ref, x2_ref : DATA_ALIGN
+//        ) \
+//        aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, w :
+//        DATA_ALIGN ) \
+//        private( kernel1, kernel2, phi1x, phi1y ) \
+//        reduction( + : value11, value12, value13 ) \
+//        reduction( + : value21, value22, value23 ) \
+//        reduction( + : value31, value32, value33 ) \
+//        simdlen( DATA_WIDTH )
+//            for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+//              _kernel->definite_integral_over_different_intervals(
+//                x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+//                x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+//                x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data,
+//                t0, t1, tau0, tau1, &kernel1, &kernel2 );
+//
+//              phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
+//              phi1y = (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ];
+//              // phi2* = *1_ref[ i_quad ] and phi3* = *2_ref[ i_quad ];
+//
+//              value11 += ( kernel1 * curl_dot[ 0 ] + kernel2 * phi1x * phi1y )
+//                * w[ i_quad ];
+//              value21 += ( kernel1 * curl_dot[ 1 ]
+//                           + kernel2 * x1_ref[ i_quad ] * phi1y )
+//                * w[ i_quad ];
+//              value31 += ( kernel1 * curl_dot[ 2 ]
+//                           + kernel2 * x2_ref[ i_quad ] * phi1y )
+//                * w[ i_quad ];
+//              value12 += ( kernel1 * curl_dot[ 3 ]
+//                           + kernel2 * phi1x * y1_ref[ i_quad ] )
+//                * w[ i_quad ];
+//              value22 += ( kernel1 * curl_dot[ 4 ]
+//                           + kernel2 * x1_ref[ i_quad ] * y1_ref[ i_quad ] )
+//                * w[ i_quad ];
+//              value32 += ( kernel1 * curl_dot[ 5 ]
+//                           + kernel2 * x2_ref[ i_quad ] * y1_ref[ i_quad ] )
+//                * w[ i_quad ];
+//              value13 += ( kernel1 * curl_dot[ 6 ]
+//                           + kernel2 * phi1x * y2_ref[ i_quad ] )
+//                * w[ i_quad ];
+//              value23 += ( kernel1 * curl_dot[ 7 ]
+//                           + kernel2 * x1_ref[ i_quad ] * y2_ref[ i_quad ] )
+//                * w[ i_quad ];
+//              value33 += ( kernel1 * curl_dot[ 8 ]
+//                           + kernel2 * x2_ref[ i_quad ] * y2_ref[ i_quad ] )
+//                * w[ i_quad ];
+//            }
+//          }
+//
+//          for ( lo i_loc_test = 0; i_loc_test < 3; ++i_loc_test ) {
+//            for ( lo i_loc_trial = 0; i_loc_trial < 3; ++i_loc_trial ) {
+//              row_indices[ my_thread_num ].push_back( test_l2g[ i_loc_test ]
+//              ); col_indices[ my_thread_num ].push_back(
+//                trial_l2g[ i_loc_trial ] );
+//            }
+//          }
+//
+//          values[ my_thread_num ].push_back( value11 * areas );
+//          values[ my_thread_num ].push_back( value12 * areas );
+//          values[ my_thread_num ].push_back( value13 * areas );
+//          values[ my_thread_num ].push_back( value21 * areas );
+//          values[ my_thread_num ].push_back( value22 * areas );
+//          values[ my_thread_num ].push_back( value23 * areas );
+//          values[ my_thread_num ].push_back( value31 * areas );
+//          values[ my_thread_num ].push_back( value32 * areas );
+//          values[ my_thread_num ].push_back( value33 * areas );
+//        }
+//      }
+//    }
+//  }
+//
+//  nearfield_matrix.set_from_triplets(
+//    n_rows, n_columns, row_indices, col_indices, values );
+//}
 
 template<>
 void besthea::bem::fast_spacetime_be_assembler<
@@ -439,10 +871,9 @@ void besthea::bem::fast_spacetime_be_assembler<
   lo n_test_elements = test_mesh->get_n_spatial_elements( );
   lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
 
-  lo n_threads = omp_get_max_threads( );
-  std::vector< std::vector< lo > > row_indices( n_threads );
-  std::vector< std::vector< lo > > col_indices( n_threads );
-  std::vector< std::vector< sc > > values( n_threads );
+  std::vector< Eigen::Triplet< sc, los > > triplet_list;
+  lo nnz_size = _nonzeros.size( );
+  triplet_list.resize( nnz_size * 3 * 3 );
 
 #pragma omp parallel
   {
@@ -488,183 +919,185 @@ void besthea::bem::fast_spacetime_be_assembler<
 
     bool shared_t_element = t0 == tau0;
     bool shared_t_vertex = t0 == tau1;
+    lo i_test, i_trial;
 
-#pragma omp for schedule( dynamic )
-    for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
+#pragma omp for schedule( dynamic, 1 )
+    for ( lo i = 0; i < nnz_size; ++i ) {
+      i_test = _nonzeros[ i ].first;
+      i_trial = _nonzeros[ i ].second;
       test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
       test_mesh->get_spatial_normal( i_test, nx );
       test_area = test_mesh->spatial_area( i_test );
-      for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
-        if ( is_spatial_nearfield( i_test, i_trial ) ) {
-          if ( shared_t_element || shared_t_vertex ) {
-            get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
-          } else {
-            n_shared_vertices = 0;
-            rot_test = 0;
-            rot_trial = 0;
-          }
-          trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
-          trial_mesh->get_spatial_normal( i_trial, ny );
-          areas = test_area * trial_mesh->spatial_area( i_trial );
 
-          test_basis.local_to_global(
-            i_test, n_shared_vertices, rot_test, false, test_l2g );
-          trial_basis.local_to_global(
-            i_trial, n_shared_vertices, rot_trial, true, trial_l2g );
-
-          triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices,
-            rot_test, rot_trial, my_quadrature );
-          x1_ref = my_quadrature._x1_ref[ n_shared_vertices ].data( );
-          x2_ref = my_quadrature._x2_ref[ n_shared_vertices ].data( );
-          y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
-          y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
-          w = my_quadrature._w[ n_shared_vertices ].data( );
-
-          size = my_quadrature._w[ n_shared_vertices ].size( );
-
-          test_basis.evaluate_curl(
-            i_test, nx, n_shared_vertices, rot_test, false, test_curls );
-          trial_basis.evaluate_curl(
-            i_trial, ny, n_shared_vertices, rot_trial, true, trial_curls );
-
-          for ( lo i_loc_test = 0; i_loc_test < 3; ++i_loc_test ) {
-            for ( lo i_loc_trial = 0; i_loc_trial < 3; ++i_loc_trial ) {
-              test_curl_offset = 3 * i_loc_test;
-              trial_curl_offset = 3 * i_loc_trial;
-              curl_dot[ i_loc_trial * 3 + i_loc_test ]
-                = test_curls[ test_curl_offset ]
-                  * trial_curls[ trial_curl_offset ]
-                + test_curls[ test_curl_offset + 1 ]
-                  * trial_curls[ trial_curl_offset + 1 ]
-                + test_curls[ test_curl_offset + 2 ]
-                  * trial_curls[ trial_curl_offset + 2 ];
-            }
-          }
-
-          value11 = value12 = value13 = 0.0;
-          value21 = value22 = value23 = 0.0;
-          value31 = value32 = value33 = 0.0;
-
-          if ( shared_t_element ) {
-#pragma omp simd \
-        aligned( x1_mapped, x2_mapped, x3_mapped, x1_ref, x2_ref : DATA_ALIGN ) \
-        aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, w : DATA_ALIGN ) \
-        private( kernel1, kernel2, phi1x, phi1y ) \
-        reduction( + : value11, value12, value13 ) \
-        reduction( + : value21, value22, value23 ) \
-        reduction( + : value31, value32, value33 ) \
-        simdlen( DATA_WIDTH )
-            for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-              _kernel->definite_integral_over_same_interval(
-                x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-                x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data, t0,
-                t1, &kernel1, &kernel2 );
-
-              phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
-              phi1y = (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ];
-              // phi2* = *1_ref[ i_quad ] and phi3* = *2_ref[ i_quad ];
-
-              value11 += ( kernel1 * curl_dot[ 0 ] + kernel2 * phi1x * phi1y )
-                * w[ i_quad ];
-              value21 += ( kernel1 * curl_dot[ 1 ]
-                           + kernel2 * x1_ref[ i_quad ] * phi1y )
-                * w[ i_quad ];
-              value31 += ( kernel1 * curl_dot[ 2 ]
-                           + kernel2 * x2_ref[ i_quad ] * phi1y )
-                * w[ i_quad ];
-              value12 += ( kernel1 * curl_dot[ 3 ]
-                           + kernel2 * phi1x * y1_ref[ i_quad ] )
-                * w[ i_quad ];
-              value22 += ( kernel1 * curl_dot[ 4 ]
-                           + kernel2 * x1_ref[ i_quad ] * y1_ref[ i_quad ] )
-                * w[ i_quad ];
-              value32 += ( kernel1 * curl_dot[ 5 ]
-                           + kernel2 * x2_ref[ i_quad ] * y1_ref[ i_quad ] )
-                * w[ i_quad ];
-              value13 += ( kernel1 * curl_dot[ 6 ]
-                           + kernel2 * phi1x * y2_ref[ i_quad ] )
-                * w[ i_quad ];
-              value23 += ( kernel1 * curl_dot[ 7 ]
-                           + kernel2 * x1_ref[ i_quad ] * y2_ref[ i_quad ] )
-                * w[ i_quad ];
-              value33 += ( kernel1 * curl_dot[ 8 ]
-                           + kernel2 * x2_ref[ i_quad ] * y2_ref[ i_quad ] )
-                * w[ i_quad ];
-            }
-          } else {
-#pragma omp simd \
-        aligned( x1_mapped, x2_mapped, x3_mapped, x1_ref, x2_ref : DATA_ALIGN ) \
-        aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, w : DATA_ALIGN ) \
-        private( kernel1, kernel2, phi1x, phi1y ) \
-        reduction( + : value11, value12, value13 ) \
-        reduction( + : value21, value22, value23 ) \
-        reduction( + : value31, value32, value33 ) \
-        simdlen( DATA_WIDTH )
-            for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-              _kernel->definite_integral_over_different_intervals(
-                x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-                x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data, t0,
-                t1, tau0, tau1, &kernel1, &kernel2 );
-
-              phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
-              phi1y = (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ];
-              // phi2* = *1_ref[ i_quad ] and phi3* = *2_ref[ i_quad ];
-
-              value11 += ( kernel1 * curl_dot[ 0 ] + kernel2 * phi1x * phi1y )
-                * w[ i_quad ];
-              value21 += ( kernel1 * curl_dot[ 1 ]
-                           + kernel2 * x1_ref[ i_quad ] * phi1y )
-                * w[ i_quad ];
-              value31 += ( kernel1 * curl_dot[ 2 ]
-                           + kernel2 * x2_ref[ i_quad ] * phi1y )
-                * w[ i_quad ];
-              value12 += ( kernel1 * curl_dot[ 3 ]
-                           + kernel2 * phi1x * y1_ref[ i_quad ] )
-                * w[ i_quad ];
-              value22 += ( kernel1 * curl_dot[ 4 ]
-                           + kernel2 * x1_ref[ i_quad ] * y1_ref[ i_quad ] )
-                * w[ i_quad ];
-              value32 += ( kernel1 * curl_dot[ 5 ]
-                           + kernel2 * x2_ref[ i_quad ] * y1_ref[ i_quad ] )
-                * w[ i_quad ];
-              value13 += ( kernel1 * curl_dot[ 6 ]
-                           + kernel2 * phi1x * y2_ref[ i_quad ] )
-                * w[ i_quad ];
-              value23 += ( kernel1 * curl_dot[ 7 ]
-                           + kernel2 * x1_ref[ i_quad ] * y2_ref[ i_quad ] )
-                * w[ i_quad ];
-              value33 += ( kernel1 * curl_dot[ 8 ]
-                           + kernel2 * x2_ref[ i_quad ] * y2_ref[ i_quad ] )
-                * w[ i_quad ];
-            }
-          }
-
-          for ( lo i_loc_test = 0; i_loc_test < 3; ++i_loc_test ) {
-            for ( lo i_loc_trial = 0; i_loc_trial < 3; ++i_loc_trial ) {
-              row_indices[ my_thread_num ].push_back( test_l2g[ i_loc_test ] );
-              col_indices[ my_thread_num ].push_back(
-                trial_l2g[ i_loc_trial ] );
-            }
-          }
-
-          values[ my_thread_num ].push_back( value11 * areas );
-          values[ my_thread_num ].push_back( value12 * areas );
-          values[ my_thread_num ].push_back( value13 * areas );
-          values[ my_thread_num ].push_back( value21 * areas );
-          values[ my_thread_num ].push_back( value22 * areas );
-          values[ my_thread_num ].push_back( value23 * areas );
-          values[ my_thread_num ].push_back( value31 * areas );
-          values[ my_thread_num ].push_back( value32 * areas );
-          values[ my_thread_num ].push_back( value33 * areas );
+      if ( is_spatial_nearfield( i_test, i_trial ) ) {
+        if ( shared_t_element || shared_t_vertex ) {
+          get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
+        } else {
+          n_shared_vertices = 0;
+          rot_test = 0;
+          rot_trial = 0;
         }
+        trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
+        trial_mesh->get_spatial_normal( i_trial, ny );
+        areas = test_area * trial_mesh->spatial_area( i_trial );
+
+        test_basis.local_to_global(
+          i_test, n_shared_vertices, rot_test, false, test_l2g );
+        trial_basis.local_to_global(
+          i_trial, n_shared_vertices, rot_trial, true, trial_l2g );
+
+        triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices,
+          rot_test, rot_trial, my_quadrature );
+        x1_ref = my_quadrature._x1_ref[ n_shared_vertices ].data( );
+        x2_ref = my_quadrature._x2_ref[ n_shared_vertices ].data( );
+        y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
+        y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
+        w = my_quadrature._w[ n_shared_vertices ].data( );
+
+        size = my_quadrature._w[ n_shared_vertices ].size( );
+
+        test_basis.evaluate_curl(
+          i_test, nx, n_shared_vertices, rot_test, false, test_curls );
+        trial_basis.evaluate_curl(
+          i_trial, ny, n_shared_vertices, rot_trial, true, trial_curls );
+
+        for ( lo i_loc_test = 0; i_loc_test < 3; ++i_loc_test ) {
+          for ( lo i_loc_trial = 0; i_loc_trial < 3; ++i_loc_trial ) {
+            test_curl_offset = 3 * i_loc_test;
+            trial_curl_offset = 3 * i_loc_trial;
+            curl_dot[ i_loc_trial * 3 + i_loc_test ]
+              = test_curls[ test_curl_offset ]
+                * trial_curls[ trial_curl_offset ]
+              + test_curls[ test_curl_offset + 1 ]
+                * trial_curls[ trial_curl_offset + 1 ]
+              + test_curls[ test_curl_offset + 2 ]
+                * trial_curls[ trial_curl_offset + 2 ];
+          }
+        }
+
+        value11 = value12 = value13 = 0.0;
+        value21 = value22 = value23 = 0.0;
+        value31 = value32 = value33 = 0.0;
+
+        if ( shared_t_element ) {
+#pragma omp simd \
+        aligned( x1_mapped, x2_mapped, x3_mapped, x1_ref, x2_ref : DATA_ALIGN ) \
+        aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, w : DATA_ALIGN ) \
+        private( kernel1, kernel2, phi1x, phi1y ) \
+        reduction( + : value11, value12, value13 ) \
+        reduction( + : value21, value22, value23 ) \
+        reduction( + : value31, value32, value33 ) \
+        simdlen( DATA_WIDTH )
+          for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+            _kernel->definite_integral_over_same_interval(
+              x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+              x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+              x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data, t0,
+              t1, &kernel1, &kernel2 );
+
+            phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
+            phi1y = (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ];
+            // phi2* = *1_ref[ i_quad ] and phi3* = *2_ref[ i_quad ];
+
+            value11 += ( kernel1 * curl_dot[ 0 ] + kernel2 * phi1x * phi1y )
+              * w[ i_quad ];
+            value21 += ( kernel1 * curl_dot[ 1 ]
+                         + kernel2 * x1_ref[ i_quad ] * phi1y )
+              * w[ i_quad ];
+            value31 += ( kernel1 * curl_dot[ 2 ]
+                         + kernel2 * x2_ref[ i_quad ] * phi1y )
+              * w[ i_quad ];
+            value12 += ( kernel1 * curl_dot[ 3 ]
+                         + kernel2 * phi1x * y1_ref[ i_quad ] )
+              * w[ i_quad ];
+            value22 += ( kernel1 * curl_dot[ 4 ]
+                         + kernel2 * x1_ref[ i_quad ] * y1_ref[ i_quad ] )
+              * w[ i_quad ];
+            value32 += ( kernel1 * curl_dot[ 5 ]
+                         + kernel2 * x2_ref[ i_quad ] * y1_ref[ i_quad ] )
+              * w[ i_quad ];
+            value13 += ( kernel1 * curl_dot[ 6 ]
+                         + kernel2 * phi1x * y2_ref[ i_quad ] )
+              * w[ i_quad ];
+            value23 += ( kernel1 * curl_dot[ 7 ]
+                         + kernel2 * x1_ref[ i_quad ] * y2_ref[ i_quad ] )
+              * w[ i_quad ];
+            value33 += ( kernel1 * curl_dot[ 8 ]
+                         + kernel2 * x2_ref[ i_quad ] * y2_ref[ i_quad ] )
+              * w[ i_quad ];
+          }
+        } else {
+#pragma omp simd \
+        aligned( x1_mapped, x2_mapped, x3_mapped, x1_ref, x2_ref : DATA_ALIGN ) \
+        aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, w : DATA_ALIGN ) \
+        private( kernel1, kernel2, phi1x, phi1y ) \
+        reduction( + : value11, value12, value13 ) \
+        reduction( + : value21, value22, value23 ) \
+        reduction( + : value31, value32, value33 ) \
+        simdlen( DATA_WIDTH )
+          for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+            _kernel->definite_integral_over_different_intervals(
+              x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+              x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+              x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data, t0,
+              t1, tau0, tau1, &kernel1, &kernel2 );
+
+            phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
+            phi1y = (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ];
+            // phi2* = *1_ref[ i_quad ] and phi3* = *2_ref[ i_quad ];
+
+            value11 += ( kernel1 * curl_dot[ 0 ] + kernel2 * phi1x * phi1y )
+              * w[ i_quad ];
+            value21 += ( kernel1 * curl_dot[ 1 ]
+                         + kernel2 * x1_ref[ i_quad ] * phi1y )
+              * w[ i_quad ];
+            value31 += ( kernel1 * curl_dot[ 2 ]
+                         + kernel2 * x2_ref[ i_quad ] * phi1y )
+              * w[ i_quad ];
+            value12 += ( kernel1 * curl_dot[ 3 ]
+                         + kernel2 * phi1x * y1_ref[ i_quad ] )
+              * w[ i_quad ];
+            value22 += ( kernel1 * curl_dot[ 4 ]
+                         + kernel2 * x1_ref[ i_quad ] * y1_ref[ i_quad ] )
+              * w[ i_quad ];
+            value32 += ( kernel1 * curl_dot[ 5 ]
+                         + kernel2 * x2_ref[ i_quad ] * y1_ref[ i_quad ] )
+              * w[ i_quad ];
+            value13 += ( kernel1 * curl_dot[ 6 ]
+                         + kernel2 * phi1x * y2_ref[ i_quad ] )
+              * w[ i_quad ];
+            value23 += ( kernel1 * curl_dot[ 7 ]
+                         + kernel2 * x1_ref[ i_quad ] * y2_ref[ i_quad ] )
+              * w[ i_quad ];
+            value33 += ( kernel1 * curl_dot[ 8 ]
+                         + kernel2 * x2_ref[ i_quad ] * y2_ref[ i_quad ] )
+              * w[ i_quad ];
+          }
+        }
+
+        triplet_list[ i * 3 * 3 + 0 * 3 + 0 ] = Eigen::Triplet< sc, los >(
+          test_l2g[ 0 ], trial_l2g[ 0 ], value11 * areas );
+        triplet_list[ i * 3 * 3 + 0 * 3 + 1 ] = Eigen::Triplet< sc, los >(
+          test_l2g[ 0 ], trial_l2g[ 1 ], value12 * areas );
+        triplet_list[ i * 3 * 3 + 0 * 3 + 2 ] = Eigen::Triplet< sc, los >(
+          test_l2g[ 0 ], trial_l2g[ 2 ], value13 * areas );
+        triplet_list[ i * 3 * 3 + 1 * 3 + 0 ] = Eigen::Triplet< sc, los >(
+          test_l2g[ 1 ], trial_l2g[ 0 ], value21 * areas );
+        triplet_list[ i * 3 * 3 + 1 * 3 + 1 ] = Eigen::Triplet< sc, los >(
+          test_l2g[ 1 ], trial_l2g[ 1 ], value22 * areas );
+        triplet_list[ i * 3 * 3 + 1 * 3 + 2 ] = Eigen::Triplet< sc, los >(
+          test_l2g[ 1 ], trial_l2g[ 2 ], value23 * areas );
+        triplet_list[ i * 3 * 3 + 2 * 3 + 0 ] = Eigen::Triplet< sc, los >(
+          test_l2g[ 2 ], trial_l2g[ 0 ], value31 * areas );
+        triplet_list[ i * 3 * 3 + 2 * 3 + 1 ] = Eigen::Triplet< sc, los >(
+          test_l2g[ 2 ], trial_l2g[ 1 ], value32 * areas );
+        triplet_list[ i * 3 * 3 + 2 * 3 + 2 ] = Eigen::Triplet< sc, los >(
+          test_l2g[ 2 ], trial_l2g[ 2 ], value33 * areas );
       }
     }
   }
 
-  nearfield_matrix.set_from_triplets(
-    n_rows, n_columns, row_indices, col_indices, values );
+  nearfield_matrix.set_from_triplets( n_rows, n_columns, triplet_list );
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >

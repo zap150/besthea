@@ -91,12 +91,21 @@ void besthea::linear_algebra::sparse_matrix::set_from_triplets( los n_rows,
   triplet_list.reserve( row_indices.size( ) * row_indices.at( 0 ).size( ) );
 
   for ( std::vector< los >::size_type j = 0; j < row_indices.size( ); ++j ) {
-    for ( std::vector< los >::size_type i = 0; i < row_indices.at( j ).size( );
+    for ( std::vector< los >::size_type i = 0; i < row_indices[ j ].size( );
           ++i ) {
-      triplet_list.push_back( Eigen::Triplet< sc, los >( row_indices[ j ][ i ],
-        column_indices.at( j )[ i ], values[ j ][ i ] ) );
+      triplet_list.push_back( Eigen::Triplet< sc, los >(
+        row_indices[ j ][ i ], column_indices[ j ][ i ], values[ j ][ i ] ) );
     }
   }
+  _data.setFromTriplets( triplet_list.begin( ), triplet_list.end( ) );
+  _data.makeCompressed( );
+}
+
+void besthea::linear_algebra::sparse_matrix::set_from_triplets( los n_rows,
+  los n_columns, std::vector< Eigen::Triplet< sc, los > > & triplet_list ) {
+  _n_rows = n_rows;
+  _n_columns = n_columns;
+  _data.resize( n_rows, n_columns );
   _data.setFromTriplets( triplet_list.begin( ), triplet_list.end( ) );
   _data.makeCompressed( );
 }
