@@ -91,6 +91,8 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   auto & trial_basis = _trial_space->get_basis( );
   auto test_mesh = _test_space->get_mesh( );
 
+  global_matrix.set_tree( _test_space->get_tree( ) );
+
   // number of timesteps should be the same for test and
   // trial meshes
   lo n_timesteps = test_mesh->get_n_temporal_elements( );
@@ -437,7 +439,6 @@ void besthea::bem::fast_spacetime_be_assembler<
   lo n_test_elements = test_mesh->get_n_spatial_elements( );
   lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
 
-  lo total_length = n_rows * n_columns * 9;
   lo n_threads = omp_get_max_threads( );
   std::vector< std::vector< lo > > row_indices( n_threads );
   std::vector< std::vector< lo > > col_indices( n_threads );

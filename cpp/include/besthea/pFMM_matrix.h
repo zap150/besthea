@@ -70,9 +70,9 @@ class besthea::linear_algebra::pFMM_matrix
    */
   pFMM_matrix( )
     : _spacetime_tree( nullptr ),
+      _uniform( false ),
       _temp_order( 5 ),
-      _space_order( 5 ),
-      _uniform( false ) {
+      _spat_order( 5 ) {
   }
 
   pFMM_matrix( const pFMM_matrix & that ) = delete;
@@ -162,10 +162,43 @@ class besthea::linear_algebra::pFMM_matrix
   std::vector< std::pair< lo, lo > >
     _farfield_block_map;  //!< mapping from block index to pair of matching
                           //!< temporal clusters
-  lo _temp_order;   //!< degree of interpolation polynomials in time for pFMM
-  lo _space_order;  //!< degree of truncated Chebyshev expansion
-  bool _uniform;    //!< specifies whether time-discretization is uniform
-                    //!< (duplicates blocks)
+  bool _uniform;          //!< specifies whether time-discretization is uniform
+                          //!< (duplicates blocks)
+  using full_matrix_type = besthea::linear_algebra::full_matrix;
+  std::vector< full_matrix_type >
+    _m2m_matrices_t_left;  //! left temporal
+                           //! m2m matrices stored levelwise
+  std::vector< full_matrix_type >
+    _m2m_matrices_t_right;  //! right temporal
+                            //! m2m matrices stored levelwise
+
+  lo _temp_order;  //! degree of interpolation polynomials in time for pFMM
+  std::vector< vector_type >
+    _m2m_coeffs_s_dim_0_left;  //! left spatial
+                               //! m2m matrices along dimension 0 stored
+                               //! levelwise
+  std::vector< vector_type >
+    _m2m_coeffs_s_dim_0_right;  //! right spatial
+                                //! m2m matrices along dimension 0 stored
+                                //! levelwise
+  std::vector< vector_type >
+    _m2m_coeffs_s_dim_1_left;  //! left spatial
+                               //! m2m matrices along dimension 1 stored
+                               //! levelwise
+  std::vector< vector_type >
+    _m2m_coeffs_s_dim_1_right;  //! right spatial
+                                //! m2m matrices along dimension 1 stored
+                                //! levelwise
+  std::vector< vector_type >
+    _m2m_coeffs_s_dim_2_left;  //! left spatial
+                               //! m2m matrices along dimension 2 stored
+                               //! levelwise
+  std::vector< vector_type >
+    _m2m_coeffs_s_dim_2_right;  //! right spatial
+                                //! m2m matrices along dimension 2 stored
+                                //! levelwise
+  lo _spat_order;  //! degree of Chebyshev polynomials for expansion in
+                   //! space in pFMM
 };
 
 #endif /* INCLUDE_BESTHEA_PFMM_MATRIX_H_ */
