@@ -489,7 +489,7 @@ void besthea::bem::fast_spacetime_be_assembler<
     bool shared_t_element = t0 == tau0;
     bool shared_t_vertex = t0 == tau1;
 
-    //#pragma omp for schedule( dynamic )
+#pragma omp for schedule( dynamic )
     for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
       test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
       test_mesh->get_spatial_normal( i_test, nx );

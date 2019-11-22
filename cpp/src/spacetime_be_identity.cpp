@@ -43,6 +43,12 @@ besthea::bem::spacetime_be_identity< test_space_type,
     _test_space( &test_space ),
     _trial_space( &trial_space ),
     _order_regular( order_regular ) {
+  auto & test_basis = _test_space->get_basis( );
+  auto & trial_basis = _trial_space->get_basis( );
+  auto mesh = _test_space->get_mesh( );
+  set_block_dim( mesh->get_n_temporal_elements( ) );
+  set_dim_domain( trial_basis.dimension_global( ) );
+  set_dim_range( test_basis.dimension_global( ) );
 }
 
 template< class test_space_type, class trial_space_type >
