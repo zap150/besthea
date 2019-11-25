@@ -60,10 +60,7 @@ besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   _space_cluster_size
     = std::sqrt( size_x * size_x + size_y * size_y + size_z * size_z );
 
-  besthea::tools::timer t;
-  t.reset( "Nonzeros" );
   precompute_nonzeros( );
-  t.measure( );
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -128,6 +125,9 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   lo n_columns = trial_basis.dimension_global( );
 
   global_matrix.resize( n_timesteps, n_rows, n_columns );
+
+  global_matrix.compute_spatial_m2m_coeffs( );
+  global_matrix.compute_temporal_m2m_matrices( );
 
   if ( !_uniform ) {
     assemble_nearfield( global_matrix );

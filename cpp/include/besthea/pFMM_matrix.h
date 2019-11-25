@@ -34,11 +34,15 @@
 #define INCLUDE_BESTHEA_PFMM_MATRIX_H_
 
 #include "besthea/block_linear_operator.h"
+#include "besthea/chebyshev_evaluator.h"
+#include "besthea/lagrange_interpolant.h"
 #include "besthea/matrix.h"
 #include "besthea/settings.h"
+#include "besthea/space_cluster_tree.h"
 #include "besthea/spacetime_cluster_tree.h"
 #include "besthea/sparse_matrix.h"
 #include "besthea/time_cluster.h"
+#include "besthea/time_cluster_tree.h"
 #include "besthea/vector.h"
 
 #include <utility>
@@ -148,6 +152,16 @@ class besthea::linear_algebra::pFMM_matrix
    * @param[in] trial_idx Index of the trial function
    */
   sparse_matrix_type * create_farfield_matrix( lo test_idx, lo trial_idx );
+
+  /*
+   * Compute the temporal m2m matrices for all levels.
+   */
+  void compute_temporal_m2m_matrices( );
+
+  /*
+   * Compute the spatial m2m coefficients for all levels.
+   */
+  void compute_spatial_m2m_coeffs( );
 
  private:
   spacetime_tree_type * _spacetime_tree;  //!< tree hierarchically decomposing

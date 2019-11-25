@@ -34,9 +34,7 @@
 #define INCLUDE_BESTHEA_SPACETIME_CLUSTER_TREE_H_
 
 #include "besthea/block_vector.h"
-#include "besthea/chebyshev_evaluator.h"
 #include "besthea/full_matrix.h"
-#include "besthea/lagrange_interpolant.h"
 #include "besthea/space_cluster_tree.h"
 #include "besthea/spacetime_cluster.h"
 #include "besthea/spacetime_tensor_mesh.h"
@@ -256,16 +254,6 @@ class besthea::mesh::spacetime_cluster_tree {
         print_internal( *it );
       }
   }
-
-  /*
-   * Compute the temporal m2m matrices for all levels.
-   */
-  void set_temporal_m2m_matrices( );
-
-  /*
-   * Compute the spatial m2m coefficients for all levels.
-   */
-  void set_spatial_m2m_coeffs( );
 
   /*
    * Apply the temporal m2m operation for given parent and child moments

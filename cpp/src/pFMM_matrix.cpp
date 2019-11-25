@@ -138,3 +138,269 @@ void besthea::linear_algebra::pFMM_matrix::apply( const block_vector_type & x,
   //    matrix_idx++;
   //  }
 }
+
+void besthea::linear_algebra::pFMM_matrix::compute_temporal_m2m_matrices( ) {
+  mesh::time_cluster_tree * time_tree
+    = _spacetime_tree->get_time_cluster_tree( );
+  lo n_levels = time_tree->get_levels( );
+  // Declare the two structures containing matrices of appropriate size.
+  // NOTE: For level 0 and 1 matrices are stored, but not needed. This allows
+  //       for a direct access of the matrices via their level. The matrix for
+  //       level n_levels is not needed and hence not allocated.
+
+  _m2m_matrices_t_left.resize( n_levels );
+  _m2m_matrices_t_right.resize( n_levels );
+
+  for ( auto it = _m2m_matrices_t_left.begin( );
+        it != _m2m_matrices_t_left.end( ); ++it ) {
+    ( *it ).resize( _temp_order + 1, _temp_order + 1 );
+  }
+  for ( auto it = _m2m_matrices_t_right.begin( );
+        it != _m2m_matrices_t_right.end( ); ++it ) {
+    ( *it ).resize( _temp_order + 1, _temp_order + 1 );
+  }
+
+  const std::vector< sc > & paddings = time_tree->get_paddings( );
+  sc h_root_no_pad = time_tree->get_root( )->get_half_size( );
+  sc h_par_no_pad = h_root_no_pad / 4.0;
+
+  // Initialize class for evaluation of lagrange polynomials and get
+  // interpolation nodes in the interval [-1, 1].
+  besthea::bem::lagrange_interpolant lagrange( _temp_order );
+  const vector_type & nodes = lagrange.get_nodes( );
+  vector_type nodes_l_child( _temp_order + 1, false );
+  vector_type nodes_r_child( _temp_order + 1, false );
+  vector_type values_lagrange( _temp_order + 1, false );
+  for ( lo curr_level = 2; curr_level < n_levels; ++curr_level ) {
+    sc h_child_no_pad = h_par_no_pad / 2.0;
+    sc padding_par = paddings[ curr_level ];
+    sc padding_child = paddings[ curr_level + 1 ];
+
+    // transform the nodes from [-1, 1] to the child interval and then back to
+    // [-1, 1] with the transformation of the parent interval:
+    for ( lo j = 0; j <= _temp_order; ++j ) {
+      nodes_l_child[ j ] = 1.0 / ( h_par_no_pad + padding_par )
+        * ( -h_child_no_pad + ( h_child_no_pad + padding_child ) * nodes[ j ] );
+      nodes_r_child[ j ] = 1.0 / ( h_par_no_pad + padding_par )
+        * ( h_child_no_pad + ( h_child_no_pad + padding_child ) * nodes[ j ] );
+    }
+
+    // compute left m2m matrix at current level
+    for ( lo j = 0; j <= _temp_order; ++j ) {
+      lagrange.evaluate( j, nodes_l_child, values_lagrange );
+      for ( lo k = 0; k <= _temp_order; ++k )
+        _m2m_matrices_t_left[ curr_level ].set( j, k, values_lagrange[ k ] );
+    }
+
+    // compute right m2m matrix at current level
+    for ( lo j = 0; j <= _temp_order; ++j ) {
+      lagrange.evaluate( j, nodes_r_child, values_lagrange );
+      for ( lo k = 0; k <= _temp_order; ++k )
+        _m2m_matrices_t_right[ curr_level ].set( j, k, values_lagrange[ k ] );
+    }
+
+    // TODO: The construction of the matrices is probably far from optimal: The
+    // values are computed in row major order, but matrix memory is column major
+    // Idea: Compute L2L matrices instead of M2M matrices?
+
+    // update for next iteration
+    h_par_no_pad = h_child_no_pad;
+  }
+}
+
+void besthea::linear_algebra::pFMM_matrix::compute_spatial_m2m_coeffs( ) {
+  mesh::space_cluster_tree * space_tree
+    = _spacetime_tree->get_space_cluster_tree( );
+  lo n_levels = space_tree->get_levels( );
+
+  // Declare the structures containing coefficients of appropriate size.
+  // NOTE: The M2M coefficients are computed for all levels except the last one,
+  //       even in case they are not needed for the first few levels.
+  _m2m_coeffs_s_dim_0_left.resize( n_levels );
+  _m2m_coeffs_s_dim_0_right.resize( n_levels );
+  _m2m_coeffs_s_dim_1_left.resize( n_levels );
+  _m2m_coeffs_s_dim_1_right.resize( n_levels );
+  _m2m_coeffs_s_dim_2_left.resize( n_levels );
+  _m2m_coeffs_s_dim_2_right.resize( n_levels );
+  auto it1 = _m2m_coeffs_s_dim_0_left.begin( );
+  auto it2 = _m2m_coeffs_s_dim_0_right.begin( );
+  auto it3 = _m2m_coeffs_s_dim_1_left.begin( );
+  auto it4 = _m2m_coeffs_s_dim_1_right.begin( );
+  auto it5 = _m2m_coeffs_s_dim_2_left.begin( );
+  auto it6 = _m2m_coeffs_s_dim_2_right.begin( );
+
+  for ( ; it1 != _m2m_coeffs_s_dim_0_left.end( );
+        ++it1, ++it2, ++it3, ++it4, ++it5, ++it6 ) {
+    ( *it1 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    ( *it2 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    ( *it3 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    ( *it4 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    ( *it5 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    ( *it6 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+  }
+
+  const std::vector< sc > & paddings = space_tree->get_paddings( );
+
+  // declare half box side lengths of parent and child cluster + initialize
+  vector_type h_par_no_pad( 3, false ), h_child_no_pad( 3, false );
+  space_tree->get_root( )->get_half_size( h_par_no_pad );
+  // Initialize class for evaluation of Chebyshev polynomials and compute
+  // Chebyshev nodes in the interval [-1, 1].
+  besthea::bem::chebyshev_evaluator chebyshev( _spat_order );
+  vector_type nodes( _spat_order + 1, false );
+  for ( lo i = 0; i <= _spat_order; ++i )
+    nodes[ i ] = cos( ( M_PI * ( 2 * i + 1 ) ) / ( 2 * ( _spat_order + 1 ) ) );
+  // evaluate Chebyshev polynomials at the nodes (needed for coefficients)
+  vector_type all_values_cheb_std_intrvl(
+    ( _spat_order + 1 ) * ( _spat_order + 1 ), false );
+  chebyshev.evaluate( nodes, all_values_cheb_std_intrvl );
+  // vector to store values of Chebyshev polynomials for transformed intervals
+  vector_type all_values_cheb_trf_intrvl(
+    ( _spat_order + 1 ) * ( _spat_order + 1 ), false );
+  // initialize vectors to store transformed nodes
+  vector_type nodes_l_child_dim_0( _spat_order + 1, false );
+  vector_type nodes_r_child_dim_0( _spat_order + 1, false );
+  vector_type nodes_l_child_dim_1( _spat_order + 1, false );
+  vector_type nodes_r_child_dim_1( _spat_order + 1, false );
+  vector_type nodes_l_child_dim_2( _spat_order + 1, false );
+  vector_type nodes_r_child_dim_2( _spat_order + 1, false );
+  for ( lo curr_level = 0; curr_level < n_levels; ++curr_level ) {
+    h_child_no_pad[ 0 ] = h_par_no_pad[ 0 ] / 2.0;
+    h_child_no_pad[ 1 ] = h_par_no_pad[ 1 ] / 2.0;
+    h_child_no_pad[ 2 ] = h_par_no_pad[ 2 ] / 2.0;
+    sc padding_par = paddings[ curr_level ];
+    sc padding_child = paddings[ curr_level + 1 ];
+    // transform the nodes from [-1, 1] to the child interval and then back to
+    // [-1, 1] with the transformation of the parent interval:
+    for ( lo j = 0; j <= _spat_order; ++j ) {
+      nodes_l_child_dim_0[ j ] = 1.0 / ( h_par_no_pad[ 0 ] + padding_par )
+        * ( -h_child_no_pad[ 0 ]
+          + ( h_child_no_pad[ 0 ] + padding_child ) * nodes[ j ] );
+      nodes_r_child_dim_0[ j ] = 1.0 / ( h_par_no_pad[ 0 ] + padding_par )
+        * ( h_child_no_pad[ 0 ]
+          + ( h_child_no_pad[ 0 ] + padding_child ) * nodes[ j ] );
+      nodes_l_child_dim_1[ j ] = 1.0 / ( h_par_no_pad[ 1 ] + padding_par )
+        * ( -h_child_no_pad[ 1 ]
+          + ( h_child_no_pad[ 1 ] + padding_child ) * nodes[ j ] );
+      nodes_r_child_dim_1[ j ] = 1.0 / ( h_par_no_pad[ 1 ] + padding_par )
+        * ( h_child_no_pad[ 1 ]
+          + ( h_child_no_pad[ 1 ] + padding_child ) * nodes[ j ] );
+      nodes_l_child_dim_2[ j ] = 1.0 / ( h_par_no_pad[ 2 ] + padding_par )
+        * ( -h_child_no_pad[ 2 ]
+          + ( h_child_no_pad[ 2 ] + padding_child ) * nodes[ j ] );
+      nodes_r_child_dim_2[ j ] = 1.0 / ( h_par_no_pad[ 2 ] + padding_par )
+        * ( h_child_no_pad[ 2 ]
+          + ( h_child_no_pad[ 2 ] + padding_child ) * nodes[ j ] );
+    }
+    // compute m2m coefficients at current level along all dimensions
+    // for i1 < i0 the coefficients are knwon to be zero
+    chebyshev.evaluate( nodes_l_child_dim_0, all_values_cheb_trf_intrvl );
+    for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
+      for ( lo i1 = i0; i1 <= _spat_order; ++i1 ) {
+        sc coeff = 0;
+        for ( lo n = 0; n <= _spat_order; ++n ) {
+          coeff += all_values_cheb_std_intrvl[ i0 * ( _spat_order + 1 ) + n ]
+            * all_values_cheb_trf_intrvl[ i1 * ( _spat_order + 1 ) + n ];
+        }
+        coeff *= 2.0 / ( _spat_order + 1.0 );
+        if ( i0 == 0 ) {
+          coeff /= 2.0;
+        }
+        _m2m_coeffs_s_dim_0_left[ curr_level ][ ( _spat_order + 1 ) * i0 + i1 ]
+          = coeff;
+      }
+    }
+
+    chebyshev.evaluate( nodes_r_child_dim_0, all_values_cheb_trf_intrvl );
+    for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
+      for ( lo i1 = i0; i1 <= _spat_order; ++i1 ) {
+        sc coeff = 0;
+        for ( lo n = 0; n <= _spat_order; ++n ) {
+          coeff += all_values_cheb_std_intrvl[ i0 * ( _spat_order + 1 ) + n ]
+            * all_values_cheb_trf_intrvl[ i1 * ( _spat_order + 1 ) + n ];
+        }
+        coeff *= 2.0 / ( _spat_order + 1 );
+        if ( i0 == 0 ) {
+          coeff /= 2.0;
+        }
+        _m2m_coeffs_s_dim_0_right[ curr_level ][ ( _spat_order + 1 ) * i0 + i1 ]
+          = coeff;
+      }
+    }
+
+    // compute m2m coefficients at current level along all dimensions
+    chebyshev.evaluate( nodes_l_child_dim_1, all_values_cheb_trf_intrvl );
+    for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
+      for ( lo i1 = i0; i1 <= _spat_order; ++i1 ) {
+        sc coeff = 0;
+        for ( lo n = 0; n <= _spat_order; ++n ) {
+          coeff += all_values_cheb_std_intrvl[ i0 * ( _spat_order + 1 ) + n ]
+            * all_values_cheb_trf_intrvl[ i1 * ( _spat_order + 1 ) + n ];
+        }
+        coeff *= 2.0 / ( _spat_order + 1 );
+        if ( i0 == 0 ) {
+          coeff /= 2.0;
+        }
+        _m2m_coeffs_s_dim_1_left[ curr_level ][ ( _spat_order + 1 ) * i0 + i1 ]
+          = coeff;
+      }
+    }
+
+    chebyshev.evaluate( nodes_r_child_dim_1, all_values_cheb_trf_intrvl );
+    for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
+      for ( lo i1 = i0; i1 <= _spat_order; ++i1 ) {
+        sc coeff = 0;
+        for ( lo n = 0; n <= _spat_order; ++n ) {
+          coeff += all_values_cheb_std_intrvl[ i0 * ( _spat_order + 1 ) + n ]
+            * all_values_cheb_trf_intrvl[ i1 * ( _spat_order + 1 ) + n ];
+        }
+        coeff *= 2.0 / ( _spat_order + 1 );
+        if ( i0 == 0 ) {
+          coeff /= 2.0;
+        }
+        _m2m_coeffs_s_dim_1_right[ curr_level ][ ( _spat_order + 1 ) * i0 + i1 ]
+          = coeff;
+      }
+    }
+
+    // compute m2m coefficients at current level along all dimensions
+    chebyshev.evaluate( nodes_l_child_dim_2, all_values_cheb_trf_intrvl );
+    for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
+      for ( lo i1 = i0; i1 <= _spat_order; ++i1 ) {
+        sc coeff = 0;
+        for ( lo n = 0; n <= _spat_order; ++n ) {
+          coeff += all_values_cheb_std_intrvl[ i0 * ( _spat_order + 1 ) + n ]
+            * all_values_cheb_trf_intrvl[ i1 * ( _spat_order + 1 ) + n ];
+        }
+        coeff *= 2.0 / ( _spat_order + 1 );
+        if ( i0 == 0 ) {
+          coeff /= 2.0;
+        }
+        _m2m_coeffs_s_dim_2_left[ curr_level ][ ( _spat_order + 1 ) * i0 + i1 ]
+          = coeff;
+      }
+    }
+
+    chebyshev.evaluate( nodes_r_child_dim_2, all_values_cheb_trf_intrvl );
+    for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
+      for ( lo i1 = i0; i1 <= _spat_order; ++i1 ) {
+        sc coeff = 0;
+        for ( lo n = 0; n <= _spat_order; ++n ) {
+          coeff += all_values_cheb_std_intrvl[ i0 * ( _spat_order + 1 ) + n ]
+            * all_values_cheb_trf_intrvl[ i1 * ( _spat_order + 1 ) + n ];
+        }
+        coeff *= 2.0 / ( _spat_order + 1 );
+        if ( i0 == 0 ) {
+          coeff /= 2.0;
+        }
+        _m2m_coeffs_s_dim_2_right[ curr_level ][ ( _spat_order + 1 ) * i0 + i1 ]
+          = coeff;
+      }
+    }
+
+    // update for next iteration
+    h_par_no_pad[ 0 ] = h_child_no_pad[ 0 ];
+    h_par_no_pad[ 1 ] = h_child_no_pad[ 1 ];
+    h_par_no_pad[ 2 ] = h_child_no_pad[ 2 ];
+  }
+}
