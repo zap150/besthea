@@ -36,7 +36,7 @@ all: ${EXECUTABLES} ${TEST_CPP} ${TEST_H}
 	rm -f "$@.d"
 	${COMPILELINE} -MMD -MP -MF "$@.d" -MT"$(<:%.cpp=%.exe)" -o $@ $<
 
-%.exe: %.o
+%.exe: %.o ../lib/libbesthea.a
 	$(CXX) -o $@ $< ${LDLIBSOPTIONS} -L../lib -lbesthea
 
 clean:

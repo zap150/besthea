@@ -127,9 +127,9 @@ void besthea::mesh::triangular_surface_mesh::init_normals_and_areas( ) {
   _areas.resize( _n_elements );
   _normals.resize( 3 * _n_elements );
 
-  sc x21[ 3 ];
-  sc x31[ 3 ];
-  sc cross[ 3 ];
+  linear_algebra::coordinates< 3 > x21;
+  linear_algebra::coordinates< 3 > x31;
+  linear_algebra::coordinates< 3 > cross;
   sc norm;
 
   for ( lo i_elem = 0; i_elem < _n_elements; ++i_elem ) {
@@ -348,7 +348,6 @@ void besthea::mesh::triangular_surface_mesh::init_edges( ) {
 
   // allocate aux. variables
   linear_algebra::indices< 3 > element;
-
   std::vector< std::vector< lo > > local_edges;
   local_edges.resize( _n_nodes );
   std::vector< std::pair< lo, lo > > element_to_edges_tmp;
