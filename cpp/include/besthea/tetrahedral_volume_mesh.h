@@ -280,11 +280,6 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
    */
   void refine( int level );
 
-  /**
-   * Maps the nodes to the unit sphere.
-   */
-  void map_to_unit_sphere( );
-
  protected:
   lo _n_nodes;               //!< number of nodes
   std::vector< sc > _nodes;  //!< coordinates of nodes

@@ -134,19 +134,104 @@ void besthea::mesh::tetrahedral_volume_mesh::scale( sc factor ) {
 }
 
 void besthea::mesh::tetrahedral_volume_mesh::refine( int level ) {
-}
+  lo new_n_nodes, new_n_elements;
+  linear_algebra::coordinates< 3 > x1, x2;
+  linear_algebra::indices< 2 > edge;
+  linear_algebra::indices< 4 > element;
+  linear_algebra::indices< 6 > edges;
+  lo node1, node2, node3, node4, node12, node13, node14, node23, node24, node34;
 
-void besthea::mesh::tetrahedral_volume_mesh::map_to_unit_sphere( ) {
-  linear_algebra::coordinates< 3 > x;
-  sc norm;
-  for ( lo i_node = 0; i_node < _n_nodes; ++i_node ) {
-    get_node( i_node, x );
-    norm = std::sqrt( x[ 0 ] * x[ 0 ] + x[ 1 ] * x[ 1 ] + x[ 2 ] * x[ 2 ] );
-    x[ 0 ] /= norm;
-    x[ 1 ] /= norm;
-    x[ 2 ] /= norm;
-    set_node( i_node, x );
+  for ( int l = 0; l < level; ++l ) {
+    // allocate new arrays
+    new_n_nodes = _n_nodes + _n_edges;
+    new_n_elements = 8 * _n_elements;
+    std::vector< sc > new_nodes( _nodes );
+    new_nodes.resize( 3 * new_n_nodes );
+    std::vector< lo > new_elements;
+    new_elements.resize( 6 * new_n_elements );
+
+    // loop through edges to insert new nodes
+#pragma omp parallel for private( x1, x2, edge )
+    for ( lo i = 0; i < _n_edges; ++i ) {
+      get_edge( i, edge );
+      get_node( edge[ 0 ], x1 );
+      get_node( edge[ 1 ], x2 );
+      new_nodes[ 3 * ( _n_nodes + i ) ] = ( x1[ 0 ] + x2[ 0 ] ) / 2.0;
+      new_nodes[ 3 * ( _n_nodes + i ) + 1 ] = ( x1[ 1 ] + x2[ 1 ] ) / 2.0;
+      new_nodes[ 3 * ( _n_nodes + i ) + 2 ] = ( x1[ 2 ] + x2[ 2 ] ) / 2.0;
+    }
+
+    // loop through old elements to define new elements as in Bey, J. Computing
+    //   (1995) 55: 355. https://doi.org/10.1007/BF02238487 node1
+#pragma omp parallel for private( element, edges, node1, node2, node3, node4, \
+  node12, node13, node14, node23, node24, node34 )
+    for ( lo i = 0; i < _n_elements; ++i ) {
+      get_element( i, element );
+      get_edges( i, edges );
+
+      node1 = element[ 0 ];
+      node2 = element[ 1 ];
+      node3 = element[ 2 ];
+      node4 = element[ 3 ];
+      node12 = _n_nodes + edges[ 0 ];
+      node13 = _n_nodes + edges[ 1 ];
+      node14 = _n_nodes + edges[ 2 ];
+      node23 = _n_nodes + edges[ 3 ];
+      node24 = _n_nodes + edges[ 4 ];
+      node34 = _n_nodes + edges[ 5 ];
+
+      // first element
+      new_elements[ 32 * i ] = node1;
+      new_elements[ 32 * i + 1 ] = node12;
+      new_elements[ 32 * i + 2 ] = node13;
+      new_elements[ 32 * i + 3 ] = node14;
+      // second element
+      new_elements[ 32 * i + 4 ] = node12;
+      new_elements[ 32 * i + 5 ] = node2;
+      new_elements[ 32 * i + 6 ] = node23;
+      new_elements[ 32 * i + 7 ] = node24;
+      // third element
+      new_elements[ 32 * i + 8 ] = node13;
+      new_elements[ 32 * i + 9 ] = node23;
+      new_elements[ 32 * i + 10 ] = node3;
+      new_elements[ 32 * i + 11 ] = node34;
+      // fourth element
+      new_elements[ 32 * i + 12 ] = node14;
+      new_elements[ 32 * i + 13 ] = node24;
+      new_elements[ 32 * i + 14 ] = node34;
+      new_elements[ 32 * i + 15 ] = node4;
+      // fifth element
+      new_elements[ 32 * i + 16 ] = node12;
+      new_elements[ 32 * i + 17 ] = node13;
+      new_elements[ 32 * i + 18 ] = node14;
+      new_elements[ 32 * i + 19 ] = node24;
+      // sixth element
+      new_elements[ 32 * i + 20 ] = node12;
+      new_elements[ 32 * i + 21 ] = node13;
+      new_elements[ 32 * i + 22 ] = node23;
+      new_elements[ 32 * i + 23 ] = node24;
+      // seventh element
+      new_elements[ 32 * i + 24 ] = node13;
+      new_elements[ 32 * i + 25 ] = node14;
+      new_elements[ 32 * i + 26 ] = node24;
+      new_elements[ 32 * i + 27 ] = node34;
+      // eighth element
+      new_elements[ 32 * i + 28 ] = node13;
+      new_elements[ 32 * i + 29 ] = node23;
+      new_elements[ 32 * i + 30 ] = node24;
+      new_elements[ 32 * i + 31 ] = node34;
+    }
+
+    // update the mesh
+    _n_nodes = new_n_nodes;
+    _n_elements = new_n_elements;
+    _nodes.swap( new_nodes );
+    _elements.swap( new_elements );
+
+    init_edges( );
   }
+
+  init_areas( );
 }
 
 void besthea::mesh::tetrahedral_volume_mesh::init_areas( ) {
@@ -259,8 +344,8 @@ void besthea::mesh::tetrahedral_volume_mesh::init_edges( ) {
 
         edge_position = std::find< it, lo >(
           local_edges[ f ].begin( ), local_edges[ f ].end( ), s );
-        // fixme: counter = i_node_1 * 4 - ( i_node_1 + 1 ) * i_node_1 / 2 +
-        // i_node_2
+        // counter = i_node_1 * 4 - ( i_node_1 + 1 ) * i_node_1 / 2 + i_node_2 -
+        // i_node_1 - 1
         element_to_edges_tmp[ 6 * i_elem + counter ]
           = std::pair< lo, lo >( f, edge_position - local_edges[ f ].begin( ) );
         ++counter;

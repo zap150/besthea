@@ -5,7 +5,9 @@ external
 lib
 build
 Makefile
-test/test_3/run.o
-test/test_ensight_export/test_ensight_export.o
-test/uniform_tensor_dirichlet/run.o
-test/uniform_tensor_neumann/run.o
+doc/html
+test/ensight
+test/ensight_surface
+test/ensight_grid
+test/ensight_mesh
+test/local
