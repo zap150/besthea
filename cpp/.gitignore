@@ -10,4 +10,6 @@ test/ensight
 test/ensight_surface
 test/ensight_grid
 test/ensight_mesh
+test/ensight_tri_mesh
+test/ensight_quad_mesh
 test/local
