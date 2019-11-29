@@ -64,7 +64,7 @@ bool besthea::mesh::triangular_surface_mesh::load( const std::string & file ) {
 
   filestream >> dummy;  // dimension (3)
   filestream >> dummy;  // nodes per element (3)
-  filestream >> this->_n_nodes;
+  filestream >> _n_nodes;
 
   _nodes.resize( 3 * _n_nodes );
 

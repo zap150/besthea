@@ -168,6 +168,18 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
   }
 
   /**
+   * Returns node indices of a surface element.
+   * @param[in] i_element Index of the element.
+   * @param[out] element Element indices.
+   */
+  void get_surface_element(
+    lo i_element, linear_algebra::indices< 3 > & element ) const {
+    element[ 0 ] = _surface_elements[ 3 * i_element ];
+    element[ 1 ] = _surface_elements[ 3 * i_element + 1 ];
+    element[ 2 ] = _surface_elements[ 3 * i_element + 2 ];
+  }
+
+  /**
    * Returns coordinates of a node.
    * @param[in] i_node Index of the node.
    * @param[out] node Element coordinates.
@@ -298,6 +310,9 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
   lo _n_edges;                          //!< number of edges
   std::vector< lo > _edges;             //!< indices into #_nodes
   std::vector< lo > _element_to_edges;  //!< indices into #_edges
+
+  lo _n_surface_edges;
+  std::vector< lo > _surface_element_to_edges;  //!< indices into #_edges
 
   /**
    * Precomputes exterior normals and areas of elements.

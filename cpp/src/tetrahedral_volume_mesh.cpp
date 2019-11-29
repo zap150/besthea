@@ -35,7 +35,10 @@
 
 besthea::mesh::tetrahedral_volume_mesh::tetrahedral_volume_mesh(
   const std::string & file )
-  : _n_nodes( 0 ), _n_elements( 0 ), _n_surface_elements( 0 ) {
+  : _n_nodes( 0 ),
+    _n_elements( 0 ),
+    _n_surface_elements( 0 ),
+    _n_surface_edges( 0 ) {
   load( file );
 }
 
@@ -46,6 +49,8 @@ void besthea::mesh::tetrahedral_volume_mesh::print_info( ) const {
   std::cout << "besthea::mesh::tetrahedral_volume_mesh" << std::endl;
   std::cout << "  elements: " << _n_elements << ", nodes: " << _n_nodes
             << ", edges: " << _n_edges << std::endl;
+  std::cout << "  surface elements: " << _n_surface_elements
+            << ", surface edges: " << _n_surface_edges << std::endl;
 }
 
 bool besthea::mesh::tetrahedral_volume_mesh::load( const std::string & file ) {
@@ -60,7 +65,7 @@ bool besthea::mesh::tetrahedral_volume_mesh::load( const std::string & file ) {
 
   filestream >> dummy;  // dimension (3)
   filestream >> dummy;  // nodes per element (4)
-  filestream >> this->_n_nodes;
+  filestream >> _n_nodes;
 
   _nodes.resize( 3 * _n_nodes );
 
@@ -279,6 +284,8 @@ void besthea::mesh::tetrahedral_volume_mesh::init_edges( ) {
   // allocate class variables
   _element_to_edges.clear( );
   _element_to_edges.resize( 6 * _n_elements );
+  _surface_element_to_edges.clear( );
+  _surface_element_to_edges.resize( 3 * _n_surface_elements );
 
   // allocate aux. variables
   linear_algebra::indices< 4 > element;
@@ -353,7 +360,7 @@ void besthea::mesh::tetrahedral_volume_mesh::init_edges( ) {
     }
   }
 
-  std::vector< lo > offsets( _n_nodes );
+  std::vector< lo > offsets( _n_nodes - 1 );
   lo offset = 0;
   for ( lo i = 0; i < _n_nodes - 1; ++i ) {
     offsets[ i ] = offset;
@@ -366,6 +373,65 @@ void besthea::mesh::tetrahedral_volume_mesh::init_edges( ) {
       _element_to_edges[ 6 * i_elem + i_edge ]
         = element_to_edges_tmp[ 6 * i_elem + i_edge ].second
         + offsets[ element_to_edges_tmp[ 6 * i_elem + i_edge ].first ];
+    }
+  }
+
+  linear_algebra::indices< 3 > surface_element;
+  std::vector< std::vector< lo > > surface_local_edges;
+  surface_local_edges.resize( _n_nodes - 1 );
+  std::vector< std::pair< lo, lo > > surface_element_to_edges_tmp;
+  surface_element_to_edges_tmp.resize( 3 * _n_surface_elements );
+  lo modulo_3[ 4 ] = { 0, 1, 2, 0 };
+
+  // iterate through surface elements and insert edges with index of starting
+  // point lower than ending point
+  for ( lo i = 0; i < _n_surface_elements; ++i ) {
+    get_surface_element( i, surface_element );
+    for ( lo i_node = 0; i_node < 3; ++i_node ) {
+      if ( surface_element[ i_node ]
+        < surface_element[ modulo_3[ i_node + 1 ] ] ) {
+        surface_local_edges[ surface_element[ i_node ] ].push_back(
+          surface_element[ modulo_3[ i_node + 1 ] ] );
+      }
+    }
+  }
+
+  // iterate through surface elements, find its edges in vector edges and
+  // fill the mapping vector from element to edges
+  // we number the edges within an element as
+  // node 0 -- node 1
+  // node 1 -- node 2
+  // node 2 -- node 0
+  for ( lo i_elem = 0; i_elem < _n_surface_elements; ++i_elem ) {
+    get_surface_element( i_elem, surface_element );
+
+    for ( lo i_node = 0; i_node < 3; ++i_node ) {
+      if ( surface_element[ i_node ]
+        < surface_element[ modulo_3[ i_node + 1 ] ] ) {
+        f = surface_element[ i_node ];
+        s = surface_element[ modulo_3[ i_node + 1 ] ];
+      } else {
+        f = surface_element[ modulo_3[ i_node + 1 ] ];
+        s = surface_element[ i_node ];
+      }
+
+      edge_position = std::find< it, lo >(
+        local_edges[ f ].begin( ), local_edges[ f ].end( ), s );
+      surface_element_to_edges_tmp[ 3 * i_elem + i_node ]
+        = std::pair< lo, lo >( f, edge_position - local_edges[ f ].begin( ) );
+    }
+  }
+
+  _n_surface_edges = 0;
+  for ( lo i = 0; i < _n_nodes - 1; ++i ) {
+    _n_surface_edges += surface_local_edges[ i ].size( );
+  }
+
+  for ( lo i_elem = 0; i_elem < _n_surface_elements; ++i_elem ) {
+    for ( lo i_edge = 0; i_edge < 3; ++i_edge ) {
+      _surface_element_to_edges[ 3 * i_elem + i_edge ]
+        = surface_element_to_edges_tmp[ 3 * i_elem + i_edge ].second
+        + offsets[ surface_element_to_edges_tmp[ 3 * i_elem + i_edge ].first ];
     }
   }
 
