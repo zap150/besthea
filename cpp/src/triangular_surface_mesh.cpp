@@ -52,6 +52,41 @@ besthea::mesh::triangular_surface_mesh::triangular_surface_mesh(
   load( file );
 }
 
+besthea::mesh::triangular_surface_mesh::triangular_surface_mesh(
+  const tetrahedral_volume_mesh & mesh )
+  : _orientation( mesh.get_surface_orientation( ) ) {
+  _n_nodes = mesh.get_n_surface_nodes( );
+  _n_elements = mesh.get_n_surface_elements( );
+
+  _nodes.reserve( 3 * _n_nodes );
+  lo n_nodes_volume = mesh.get_n_nodes( );
+  linear_algebra::coordinates< 3 > x;
+  std::vector< lo > volume_to_surface( n_nodes_volume, 0 );
+  lo counter = 0;
+  for ( lo i_node = 0; i_node < n_nodes_volume; ++i_node ) {
+    if ( mesh.is_surface_node( i_node ) ) {
+      mesh.get_node( i_node, x );
+      _nodes.push_back( x[ 0 ] );
+      _nodes.push_back( x[ 1 ] );
+      _nodes.push_back( x[ 2 ] );
+      volume_to_surface[ i_node ] = counter++;
+    }
+  }
+
+  _elements.resize( 3 * _n_elements );
+  linear_algebra::indices< 3 > element;
+  for ( lo i_element = 0; i_element < _n_elements; ++i_element ) {
+    mesh.get_surface_element( i_element, element );
+    _elements[ 3 * i_element ] = volume_to_surface[ element[ 0 ] ];
+    _elements[ 3 * i_element + 1 ] = volume_to_surface[ element[ 1 ] ];
+    _elements[ 3 * i_element + 2 ] = volume_to_surface[ element[ 2 ] ];
+  }
+
+  init_normals_and_areas( );
+  init_edges( );
+  init_node_to_elements( );
+}
+
 bool besthea::mesh::triangular_surface_mesh::load( const std::string & file ) {
   std::ifstream filestream( file.c_str( ) );
 

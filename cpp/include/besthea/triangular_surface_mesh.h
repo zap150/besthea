@@ -37,6 +37,7 @@
 #include "besthea/indices.h"
 #include "besthea/mesh.h"
 #include "besthea/settings.h"
+#include "besthea/tetrahedral_volume_mesh.h"
 #include "besthea/vector.h"
 
 #include <optional>
@@ -59,6 +60,12 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    * @param[in] file Path to the file.
    */
   triangular_surface_mesh( const std::string & file );
+
+  /**
+   * Constructing mesh from a volume mesh.
+   * @param[in] mesh Tetrahedral mesh.
+   */
+  triangular_surface_mesh( const tetrahedral_volume_mesh & mesh );
 
   triangular_surface_mesh( const triangular_surface_mesh & that ) = delete;
 

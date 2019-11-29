@@ -155,6 +155,27 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
   }
 
   /**
+   * Returns number of surface elements.
+   */
+  lo get_n_surface_elements( ) const {
+    return _n_surface_elements;
+  }
+
+  /**
+   * Returns number of surface nodes.
+   */
+  lo get_n_surface_nodes( ) const {
+    return _n_surface_nodes;
+  }
+
+  /**
+   * Returns number of surface edges.
+   */
+  lo get_n_surface_edges( ) const {
+    return _n_surface_edges;
+  }
+
+  /**
    * Returns node indices of an element.
    * @param[in] i_element Index of the element.
    * @param[out] element Element indices.
@@ -266,6 +287,18 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
   }
 
   /**
+   * Returns edge indices of a surface element.
+   * @param[in] i_element Index of an element.
+   * @param[out] edges Edge indices.
+   */
+  void get_surface_edges(
+    lo i_element, linear_algebra::indices< 3 > & edges ) const {
+    edges[ 0 ] = _surface_element_to_edges[ 3 * i_element ];
+    edges[ 1 ] = _surface_element_to_edges[ 3 * i_element + 1 ];
+    edges[ 2 ] = _surface_element_to_edges[ 3 * i_element + 2 ];
+  }
+
+  /**
    * Returns the centroid of the mesh.
    * @param[in] i_elem element index.
    * @param[out] centroid Allocated array containing the element centroid on
@@ -292,28 +325,22 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
    */
   void refine( int level );
 
+  /**
+   * Returns true for a surface node.
+   */
+  bool is_surface_node( lo i_node ) const {
+    return _is_surface_node[ i_node ];
+  }
+
+  /**
+   * Returns the orientation of surface elements.
+   */
+  const std::pair< std::vector< lo >, std::vector< lo > > &
+  get_surface_orientation( ) const {
+    return _surface_orientation;
+  }
+
  protected:
-  lo _n_nodes;               //!< number of nodes
-  std::vector< sc > _nodes;  //!< coordinates of nodes
-  std::vector< std::vector< lo > >
-    _node_to_elements;  //!< mapping from nodes to elements
-
-  lo _n_elements;               //!< number of elements
-  std::vector< lo > _elements;  //!< indices into #_nodes
-  std::vector< sc > _areas;     //!< element areas
-
-  lo _n_surface_elements;               //!< number of elements
-  std::vector< lo > _surface_elements;  //!< indices into #_nodes
-  std::pair< std::vector< lo >, std::vector< lo > >
-    _surface_orientation;  //!< orientation of n := (x2-x1)x(x3-x1) and -n
-
-  lo _n_edges;                          //!< number of edges
-  std::vector< lo > _edges;             //!< indices into #_nodes
-  std::vector< lo > _element_to_edges;  //!< indices into #_edges
-
-  lo _n_surface_edges;
-  std::vector< lo > _surface_element_to_edges;  //!< indices into #_edges
-
   /**
    * Precomputes exterior normals and areas of elements.
    */
@@ -323,6 +350,11 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
    * Initializes edges.
    */
   void init_edges( );
+
+  /**
+   * Initializes number of surface nodes.
+   */
+  void init_surface_nodes( );
 
   /**
    * Returns the centroid of the mesh.
@@ -343,6 +375,29 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
   virtual const triangular_surface_mesh * get_spatial_mesh( ) const {
     return nullptr;
   }
+
+  lo _n_nodes;               //!< number of nodes
+  std::vector< sc > _nodes;  //!< coordinates of nodes
+  std::vector< std::vector< lo > >
+    _node_to_elements;  //!< mapping from nodes to elements
+  lo _n_surface_nodes;
+  std::vector< bool > _is_surface_node;  //!< True if surface node
+
+  lo _n_elements;               //!< number of elements
+  std::vector< lo > _elements;  //!< indices into #_nodes
+  std::vector< sc > _areas;     //!< element areas
+
+  lo _n_surface_elements;               //!< number of elements
+  std::vector< lo > _surface_elements;  //!< indices into #_nodes
+  std::pair< std::vector< lo >, std::vector< lo > >
+    _surface_orientation;  //!< orientation of n := (x2-x1)x(x3-x1) and -n
+
+  lo _n_edges;                          //!< number of edges
+  std::vector< lo > _edges;             //!< indices into #_nodes
+  std::vector< lo > _element_to_edges;  //!< indices into #_edges
+
+  lo _n_surface_edges;
+  std::vector< lo > _surface_element_to_edges;  //!< indices into #_edges
 };
 
 #endif /* INCLUDE_BESTHEA_TETRAHEDRAL_VOLUME_MESH_H_ */

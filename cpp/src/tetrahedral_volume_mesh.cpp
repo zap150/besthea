@@ -36,6 +36,7 @@
 besthea::mesh::tetrahedral_volume_mesh::tetrahedral_volume_mesh(
   const std::string & file )
   : _n_nodes( 0 ),
+    _n_surface_nodes( 0 ),
     _n_elements( 0 ),
     _n_surface_elements( 0 ),
     _n_surface_edges( 0 ) {
@@ -50,6 +51,7 @@ void besthea::mesh::tetrahedral_volume_mesh::print_info( ) const {
   std::cout << "  elements: " << _n_elements << ", nodes: " << _n_nodes
             << ", edges: " << _n_edges << std::endl;
   std::cout << "  surface elements: " << _n_surface_elements
+            << ", surface nodes: " << _n_surface_nodes
             << ", surface edges: " << _n_surface_edges << std::endl;
 }
 
@@ -120,6 +122,7 @@ bool besthea::mesh::tetrahedral_volume_mesh::load( const std::string & file ) {
 
   init_areas( );
   init_edges( );
+  init_surface_nodes( );
 
   return true;
 }
@@ -139,21 +142,32 @@ void besthea::mesh::tetrahedral_volume_mesh::scale( sc factor ) {
 }
 
 void besthea::mesh::tetrahedral_volume_mesh::refine( int level ) {
-  lo new_n_nodes, new_n_elements;
+  lo new_n_nodes, new_n_elements, new_n_surface_elements;
   linear_algebra::coordinates< 3 > x1, x2;
   linear_algebra::indices< 2 > edge;
   linear_algebra::indices< 4 > element;
+  linear_algebra::indices< 3 > surface_element;
   linear_algebra::indices< 6 > edges;
-  lo node1, node2, node3, node4, node12, node13, node14, node23, node24, node34;
+  linear_algebra::indices< 3 > surface_edges;
+  lo node1, node2, node3, node4, node5, node6, node12, node13, node14, node23,
+    node24, node34;
 
   for ( int l = 0; l < level; ++l ) {
     // allocate new arrays
     new_n_nodes = _n_nodes + _n_edges;
     new_n_elements = 8 * _n_elements;
+    new_n_surface_elements = 4 * _n_surface_elements;
     std::vector< sc > new_nodes( _nodes );
     new_nodes.resize( 3 * new_n_nodes );
     std::vector< lo > new_elements;
     new_elements.resize( 6 * new_n_elements );
+    std::vector< lo > new_surface_elements;
+    new_surface_elements.resize( 3 * new_n_surface_elements );
+
+    std::vector< lo > new_orientation_first;
+    std::vector< lo > new_orientation_second;
+    new_orientation_first.resize( new_n_elements );
+    new_orientation_second.resize( new_n_elements );
 
     // loop through edges to insert new nodes
 #pragma omp parallel for private( x1, x2, edge )
@@ -227,15 +241,68 @@ void besthea::mesh::tetrahedral_volume_mesh::refine( int level ) {
       new_elements[ 32 * i + 31 ] = node34;
     }
 
+/* loop through old elements to define new elements
+                      node1
+                       /\
+                      /  \
+                     / 1  \
+               node4 ______ node6
+                   / \ 4  / \
+                  / 2 \  / 3 \
+                 /_____\/_____\
+               node2  node5  node3
+     */
+#pragma omp parallel for private( \
+  surface_element, surface_edges, node1, node2, node3, node4, node5, node6 )
+    for ( lo i = 0; i < _n_surface_elements; ++i ) {
+      get_surface_element( i, surface_element );
+      get_surface_edges( i, surface_edges );
+
+      for ( lo j = 0; j < 4; ++j ) {
+        new_orientation_first[ 4 * i + j ] = _surface_orientation.first.at( i );
+        new_orientation_second[ 4 * i + j ]
+          = _surface_orientation.second.at( i );
+      }
+
+      node1 = surface_element[ 0 ];
+      node2 = surface_element[ 1 ];
+      node3 = surface_element[ 2 ];
+      node4 = _n_nodes + surface_edges[ 0 ];
+      node5 = _n_nodes + surface_edges[ 1 ];
+      node6 = _n_nodes + surface_edges[ 2 ];
+
+      // first element
+      new_surface_elements[ 12 * i ] = node1;
+      new_surface_elements[ 12 * i + 1 ] = node4;
+      new_surface_elements[ 12 * i + 2 ] = node6;
+      // second element
+      new_surface_elements[ 12 * i + 3 ] = node4;
+      new_surface_elements[ 12 * i + 4 ] = node2;
+      new_surface_elements[ 12 * i + 5 ] = node5;
+      // third element
+      new_surface_elements[ 12 * i + 6 ] = node5;
+      new_surface_elements[ 12 * i + 7 ] = node3;
+      new_surface_elements[ 12 * i + 8 ] = node6;
+      // fourth element
+      new_surface_elements[ 12 * i + 9 ] = node4;
+      new_surface_elements[ 12 * i + 10 ] = node5;
+      new_surface_elements[ 12 * i + 11 ] = node6;
+    }
+
     // update the mesh
     _n_nodes = new_n_nodes;
     _n_elements = new_n_elements;
+    _n_surface_elements = new_n_surface_elements;
     _nodes.swap( new_nodes );
     _elements.swap( new_elements );
+    _surface_elements.swap( new_surface_elements );
+    _surface_orientation.first.swap( new_orientation_first );
+    _surface_orientation.second.swap( new_orientation_second );
 
     init_edges( );
   }
 
+  init_surface_nodes( );
   init_areas( );
 }
 
@@ -444,6 +511,20 @@ void besthea::mesh::tetrahedral_volume_mesh::init_edges( ) {
           ++j ) {
       _edges[ 2 * ( offsets[ i ] + j ) ] = i;
       _edges[ 2 * ( offsets[ i ] + j ) + 1 ] = local_edges[ i ][ j ];
+    }
+  }
+}
+
+void besthea::mesh::tetrahedral_volume_mesh::init_surface_nodes( ) {
+  _n_surface_nodes = 0;
+  _is_surface_node.clear( );
+  _is_surface_node.resize( _n_nodes );
+  for ( const lo & node : _surface_elements ) {
+    _is_surface_node[ node ] = true;
+  }
+  for ( const bool & is_surface_node : _is_surface_node ) {
+    if ( is_surface_node ) {
+      ++_n_surface_nodes;
     }
   }
 }
