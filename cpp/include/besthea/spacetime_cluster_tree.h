@@ -93,12 +93,12 @@ class besthea::mesh::spacetime_cluster_tree {
     return _space_tree;
   }
 
-  /**
-   * Prints levels of the tree.
-   */
-  void print( ) {
-    print_internal( _root );
-  }
+  //  /**
+  //   * Prints levels of the tree.
+  //   */
+  //  void print( ) {
+  //    print_internal( _root );
+  //  }
 
   /**
    * Returns a pointer to the root.
@@ -165,42 +165,6 @@ class besthea::mesh::spacetime_cluster_tree {
 
  private:
   using full_matrix_type = besthea::linear_algebra::full_matrix;
-  std::vector< full_matrix_type >
-    _m2m_matrices_t_left;  //! left temporal
-                           //! m2m matrices stored levelwise
-  std::vector< full_matrix_type >
-    _m2m_matrices_t_right;  //! right temporal
-                            //! m2m matrices stored levelwise
-  lo _temp_order = 5;  //! degree of interpolation polynomials in time for pFMM
-  std::vector< vector_type >
-    _m2m_coeffs_s_dim_0_left;  //! left spatial
-                               //! m2m matrices along dimension 0 stored
-                               //! levelwise
-  std::vector< vector_type >
-    _m2m_coeffs_s_dim_0_right;  //! right spatial
-                                //! m2m matrices along dimension 0 stored
-                                //! levelwise
-  std::vector< vector_type >
-    _m2m_coeffs_s_dim_1_left;  //! left spatial
-                               //! m2m matrices along dimension 1 stored
-                               //! levelwise
-  std::vector< vector_type >
-    _m2m_coeffs_s_dim_1_right;  //! right spatial
-                                //! m2m matrices along dimension 1 stored
-                                //! levelwise
-  std::vector< vector_type >
-    _m2m_coeffs_s_dim_2_left;  //! left spatial
-                               //! m2m matrices along dimension 2 stored
-                               //! levelwise
-  std::vector< vector_type >
-    _m2m_coeffs_s_dim_2_right;  //! right spatial
-                                //! m2m matrices along dimension 2 stored
-                                //! levelwise
-  lo _spat_order = 5;  //! degree of Chebyshev polynomials for expansion in
-                       //! space in pFMM
-
-  // TODO relocate the above members to pFMM matrix
-  // TODO substitute hardcoded _temp_order and _spatial_order with settable ones
 
   /**
    * Auxiliary method to get all spatial clusters on a given level
@@ -213,60 +177,47 @@ class besthea::mesh::spacetime_cluster_tree {
    */
   void build_tree( spacetime_cluster * root, lo level, bool split_space );
 
-  /*
-   * Aux for printing
-   */
-  void print_internal( spacetime_cluster * root ) {
-    if ( root->get_level( ) == -1 ) {
-      // print temporal m2m matrices
-      lo n_levels = _time_tree->get_levels( );
-      std::cout << "printing exemplarily temporal m2m matrices" << std::endl;
-      for ( lo curr_lev = 2; curr_lev < n_levels; ++curr_lev ) {
-        std::cout << "printing m2m matrix on level " << curr_lev << std::endl;
-        for ( lo j = 0; j <= _temp_order; ++j ) {
-          for ( lo k = 0; k <= _temp_order; ++k )
-            printf( "%.4f ", _m2m_matrices_t_right[ curr_lev ]( j, k ) );
-          std::cout << std::endl;
-        }
-      }
-      // print spatial m2m coefficients
-      n_levels = _space_tree->get_levels( );
-      std::cout << "printing exemplarily spatial m2m coefficients" << std::endl;
-      for ( lo curr_lev = 0; curr_lev < n_levels; ++curr_lev ) {
-        std::cout << "printing m2m coeffs on level " << curr_lev << std::endl;
-        std::cout << "curr_lev = " << curr_lev << std::endl;
-        for ( lo j = 0; j <= _spat_order; ++j ) {
-          for ( lo k = 0; k <= _spat_order; ++k )
-            printf( "(%ld, %ld): %.4f ", (long) j, (long) k,
-              _m2m_coeffs_s_dim_0_left[ curr_lev ]
-                                      [ j * ( _spat_order + 1 ) + k ] );
-          std::cout << std::endl;
-        }
-      }
-    }
-
-    root->print( );
-    std::vector< spacetime_cluster * > * children = root->get_children( );
-    // std::cout << children->size( ) << std::endl;
-    if ( children != nullptr )
-      for ( auto it = children->begin( ); it != children->end( ); ++it ) {
-        for ( lo i = 0; i < ( *it )->get_level( ); ++i ) std::cout << " ";
-        print_internal( *it );
-      }
-  }
-
-  /*
-   * Apply the temporal m2m operation for given parent and child moments
-   */
-  void apply_temporal_m2m( full_matrix_type const & child_moment,
-    const lo level, const bool is_left_child,
-    full_matrix_type & parent_moment );
-
-  /*
-   * Apply the spatial m2m operation for given parent and child moments
-   */
-  void apply_spatial_m2m( full_matrix_type const & child_moment, const lo level,
-    const slou octant, full_matrix_type & parent_moment );
+  //  /*
+  //   * Aux for printing
+  //   */
+  //    void print_internal( spacetime_cluster * root ) {
+  //    if ( root->get_level( ) == -1 ) {
+  //      // print temporal m2m matrices
+  //      lo n_levels = _time_tree->get_levels( );
+  //      std::cout << "printing exemplarily temporal m2m matrices" <<
+  //      std::endl; for ( lo curr_lev = 2; curr_lev < n_levels; ++curr_lev ) {
+  //        std::cout << "printing m2m matrix on level " << curr_lev <<
+  //        std::endl; for ( lo j = 0; j <= _temp_order; ++j ) {
+  //          for ( lo k = 0; k <= _temp_order; ++k )
+  //            printf( "%.4f ", _m2m_matrices_t_right[ curr_lev ]( j, k ) );
+  //          std::cout << std::endl;
+  //        }
+  //      }
+  //      // print spatial m2m coefficients
+  //      n_levels = _space_tree->get_levels( );
+  //      std::cout << "printing exemplarily spatial m2m coefficients" <<
+  //      std::endl; for ( lo curr_lev = 0; curr_lev < n_levels; ++curr_lev ) {
+  //        std::cout << "printing m2m coeffs on level " << curr_lev <<
+  //        std::endl; std::cout << "curr_lev = " << curr_lev << std::endl; for
+  //        ( lo j = 0; j <= _spat_order; ++j ) {
+  //          for ( lo k = 0; k <= _spat_order; ++k )
+  //            printf( "(%ld, %ld): %.4f ", (long) j, (long) k,
+  //              _m2m_coeffs_s_dim_0_left[ curr_lev ]
+  //                                      [ j * ( _spat_order + 1 ) + k ] );
+  //          std::cout << std::endl;
+  //        }
+  //      }
+  //    }
+  //
+  //  root->print( );
+  //  std::vector< spacetime_cluster * > * children = root->get_children( );
+  //  // std::cout << children->size( ) << std::endl;
+  //  if ( children != nullptr )
+  //    for ( auto it = children->begin( ); it != children->end( ); ++it ) {
+  //      for ( lo i = 0; i < ( *it )->get_level( ); ++i ) std::cout << " ";
+  //      print_internal( *it );
+  //    }
+  //}
 
   const spacetime_tensor_mesh & _spacetime_mesh;  //!< underlying spacetime mesh
   const triangular_surface_mesh & _space_mesh;    //!< underlying spatial mesh

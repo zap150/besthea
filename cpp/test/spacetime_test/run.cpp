@@ -88,5 +88,5 @@ int main( int argc, char * argv[] ) {
   sc st_coeff = 4.0;  // corresponds to \rho_L = 8 in Messner's paper
 
   space_time_cluster_tree spt( tensor_mesh, 4, 3, 10, st_coeff );
-  spt.print( );
+  // spt.print( );
 }

@@ -35,11 +35,17 @@
 
 #include "besthea/block_matrix.h"
 #include "besthea/fast_spacetime_be_space.h"
+#include "besthea/lagrange_interpolant.h"
 #include "besthea/pFMM_matrix.h"
+#include "besthea/quadrature.h"
 #include "besthea/settings.h"
+#include "besthea/space_cluster.h"
 #include "besthea/sparse_matrix.h"
+#include "besthea/time_cluster.h"
+#include "besthea/vector.h"
 
 #include <omp.h>
+#include <vector>
 
 namespace besthea {
   namespace bem {
@@ -56,7 +62,11 @@ class besthea::bem::fast_spacetime_be_assembler {
  private:
   using sparse_matrix_type = besthea::linear_algebra::sparse_matrix;
   using pfmm_matrix_type
-    = besthea::linear_algebra::pFMM_matrix;  //!< pFMM matrix type.
+    = besthea::linear_algebra::pFMM_matrix;               //!< pFMM matrix type.
+  using time_cluster_type = besthea::mesh::time_cluster;  //!< time cluster type
+  using space_cluster_type
+    = besthea::mesh::space_cluster;                     //!< space cluster type
+  using vector_type = besthea::linear_algebra::vector;  //!< vector type
 
   /**
    * Wraps the mapped quadrature point so that they can be private for OpenMP
@@ -108,6 +118,10 @@ class besthea::bem::fast_spacetime_be_assembler {
    * @param[in] trial_space Trial boundary element space.
    * @param[in] order_singular Line quadrature order for regularized quadrature.
    * @param[in] order_regular Triangle quadrature order for regular quadrature.
+   * @param[in] spat_order Degree of Chebyshev polynomials for expansion in pFMM
+   * matrix.
+   * @param[in] temp_order degree of Lagrange interpolation polynomials in time
+   * for pFMM matrix.
    * @param[in] cutoff_param Cutoff parameter for the nearfield approximation
    * (elements further than cutoff_param * diagonal of the lowest level cluster
    * will be ignored).
@@ -115,8 +129,8 @@ class besthea::bem::fast_spacetime_be_assembler {
    */
   fast_spacetime_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
-    int order_singular = 4, int order_regular = 4, sc cutoff_param = 3.0,
-    bool uniform = false );
+    int order_singular = 4, int order_regular = 4, int spat_order = 5,
+    int temp_order = 5, sc cutoff_param = 3.0, bool uniform = false );
 
   fast_spacetime_be_assembler( const fast_spacetime_be_assembler & that )
     = delete;
@@ -320,6 +334,17 @@ class besthea::bem::fast_spacetime_be_assembler {
    */
   void precompute_nonzeros( );
 
+  /**
+   * Computes quadrature of the Lagrange polynomials up to a given order over an
+   * element in the cluster.
+   */
+  void compute_lagrange_quadrature( time_cluster_type * cluster );
+
+  /**
+   * Compute quadrature of the Chebyshev polynomials.
+   */
+  void compute_chebyshev_quadrature( space_cluster_type * cluster );
+
   kernel_type * _kernel;            //!< Kernel temporal antiderivative.
   test_space_type * _test_space;    //!< Boundary element test space.
   trial_space_type * _trial_space;  //!< Boundary element trial space.
@@ -339,6 +364,12 @@ class besthea::bem::fast_spacetime_be_assembler {
   std::vector< std::pair< lo, lo > >
     _nonzeros;  //!< indices of spatial element contributing to the nonzero
                 //!< pattern of the spatial matrices
+
+  int _spat_order;  //!< degree of Chebyshev polynomials for expansion in
+                    //!< space in pFMM
+  int _temp_order;  //!< degree of Lagrange interpolation polynomials in time
+                    //!< for pFMM
+  bem::lagrange_interpolant _lagrange;
 };
 
 #endif /* INCLUDE_BESTHEA_FAST_SPACETIME_BE_ASSEMBLER_H_ */
