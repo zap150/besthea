@@ -41,6 +41,7 @@
 #include "besthea/spacetime_slice.h"
 #include "besthea/spacetime_tensor_mesh.h"
 #include "besthea/temporal_mesh.h"
+#include "besthea/tetrahedral_volume_mesh.h"
 #include "besthea/time_cluster.h"
 #include "besthea/time_cluster_tree.h"
 #include "besthea/triangular_surface_mesh.h"

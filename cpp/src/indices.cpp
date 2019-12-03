@@ -60,3 +60,4 @@ template class besthea::linear_algebra::indices< 1 >;
 template class besthea::linear_algebra::indices< 2 >;
 template class besthea::linear_algebra::indices< 3 >;
 template class besthea::linear_algebra::indices< 4 >;
+template class besthea::linear_algebra::indices< 6 >;
