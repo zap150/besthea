@@ -35,6 +35,7 @@
 
 #include "besthea/block_linear_operator.h"
 #include "besthea/chebyshev_evaluator.h"
+#include "besthea/full_matrix.h"
 #include "besthea/lagrange_interpolant.h"
 #include "besthea/matrix.h"
 #include "besthea/settings.h"
@@ -61,6 +62,8 @@ class besthea::linear_algebra::pFMM_matrix
  public:
   using sparse_matrix_type
     = besthea::linear_algebra::sparse_matrix;  //!< Sparse matrix type.
+  using full_matrix_type
+    = besthea::linear_algebra::full_matrix;  //!< Sparse matrix type.
   using spacetime_tree_type
     = besthea::mesh::spacetime_cluster_tree;  //!< Spacetime tree type.
   using time_cluster_type
@@ -135,7 +138,7 @@ class besthea::linear_algebra::pFMM_matrix
     this->_dim_range = dim_range;
   }
 
-  /**
+  /*!
    * Creates a nearfield matrix.
    * @param[in] test_idx Index of test interval.
    * @param[in] trial_idx Index of trial interval.
@@ -153,17 +156,43 @@ class besthea::linear_algebra::pFMM_matrix
    */
   sparse_matrix_type * create_farfield_matrix( lo test_idx, lo trial_idx );
 
-  /*
+  /*!
    * Compute the temporal m2m matrices for all levels.
    */
   void compute_temporal_m2m_matrices( );
 
-  /*
+  /*!
    * Compute the spatial m2m coefficients for all levels.
    */
   void compute_spatial_m2m_coeffs( );
 
+  /*!
+   * Apply the temporal m2m operation for given parent and child moments
+   */
+  void apply_temporal_m2m( full_matrix_type const & child_moment,
+    const lo level, const bool is_left_child,
+    full_matrix_type & parent_moment );
+
+  /*!
+   * Apply the spatial m2m operation for given parent and child moments
+   */
+  void apply_spatial_m2m( full_matrix_type const & child_moment, const lo level,
+    const slou octant, full_matrix_type & parent_moment );
+
+  /*!
+   * Sets order of the Lagrange and Chebyshev polynomials.
+   * @param[in] spat_order Order of the Chebyshev polynomials
+   * @param[in] temp_order Order of the Lagrange polynomials
+   */
+  void set_order( int spat_order, int temp_order ) {
+    _spat_order = spat_order;
+    _temp_order = temp_order;
+  }
+
  private:
+  friend class spacetime_cluster_tree;  //!< enable the tree to access private
+                                        //!< variables
+
   spacetime_tree_type * _spacetime_tree;  //!< tree hierarchically decomposing
                                           //!< spatial and temporal domains
   std::vector< sparse_matrix_type * >
@@ -178,41 +207,41 @@ class besthea::linear_algebra::pFMM_matrix
                           //!< temporal clusters
   bool _uniform;          //!< specifies whether time-discretization is uniform
                           //!< (duplicates blocks)
-  using full_matrix_type = besthea::linear_algebra::full_matrix;
   std::vector< full_matrix_type >
-    _m2m_matrices_t_left;  //! left temporal
-                           //! m2m matrices stored levelwise
+    _m2m_matrices_t_left;  //!< left temporal
+                           //!< m2m matrices stored levelwise
   std::vector< full_matrix_type >
     _m2m_matrices_t_right;  //! right temporal
                             //! m2m matrices stored levelwise
 
-  lo _temp_order;  //! degree of interpolation polynomials in time for pFMM
+  int _temp_order;  //!< degree of interpolation polynomials in time for pFMM
   std::vector< vector_type >
-    _m2m_coeffs_s_dim_0_left;  //! left spatial
-                               //! m2m matrices along dimension 0 stored
-                               //! levelwise
+    _m2m_coeffs_s_dim_0_left;  //!< left spatial
+                               //!< m2m matrices along dimension 0 stored
+                               //!< levelwise
   std::vector< vector_type >
-    _m2m_coeffs_s_dim_0_right;  //! right spatial
-                                //! m2m matrices along dimension 0 stored
-                                //! levelwise
+    _m2m_coeffs_s_dim_0_right;  //!< right spatial
+                                //!< m2m matrices along dimension 0 stored
+                                //!< levelwise
   std::vector< vector_type >
-    _m2m_coeffs_s_dim_1_left;  //! left spatial
-                               //! m2m matrices along dimension 1 stored
-                               //! levelwise
+    _m2m_coeffs_s_dim_1_left;  //!< left spatial
+                               //!< m2m matrices along dimension 1 stored
+                               //!< levelwise
   std::vector< vector_type >
-    _m2m_coeffs_s_dim_1_right;  //! right spatial
-                                //! m2m matrices along dimension 1 stored
-                                //! levelwise
+    _m2m_coeffs_s_dim_1_right;  //!< right spatial
+                                //!< m2m matrices along dimension 1 stored
+                                //!< levelwise
   std::vector< vector_type >
-    _m2m_coeffs_s_dim_2_left;  //! left spatial
-                               //! m2m matrices along dimension 2 stored
-                               //! levelwise
+    _m2m_coeffs_s_dim_2_left;  //!< left spatial
+                               //!< m2m matrices along dimension 2 stored
+                               //!< levelwise
   std::vector< vector_type >
-    _m2m_coeffs_s_dim_2_right;  //! right spatial
-                                //! m2m matrices along dimension 2 stored
-                                //! levelwise
-  lo _spat_order;  //! degree of Chebyshev polynomials for expansion in
-                   //! space in pFMM
+    _m2m_coeffs_s_dim_2_right;  //!< right spatial
+                                //!< m2m matrices along dimension 2 stored
+                                //!< levelwise
+
+  int _spat_order;  //!< degree of Chebyshev polynomials for expansion in
+                    //!< space in pFMM
 };
 
 #endif /* INCLUDE_BESTHEA_PFMM_MATRIX_H_ */
