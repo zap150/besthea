@@ -145,6 +145,14 @@ class besthea::linear_algebra::indices {
    * @brief Overloads the [] operator.
    * @param[in] i Index.
    */
+  lo operator[]( lo i ) const {
+    return _data[ i ];
+  }
+
+  /*!
+   * @brief Overloads the [] operator.
+   * @param[in] i Index.
+   */
   lo & operator[]( lo i ) {
     return _data[ i ];
   }
@@ -162,14 +170,6 @@ class besthea::linear_algebra::indices {
    * @param[in] i Index.
    */
   lo & operator( )( lo i ) {
-    return _data[ i ];
-  }
-
-  /*!
-   * @brief Overloads the [] operator.
-   * @param[in] i Index.
-   */
-  lo operator[]( lo i ) const {
     return _data[ i ];
   }
 

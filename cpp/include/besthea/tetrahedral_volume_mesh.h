@@ -26,18 +26,17 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file triangular_surface_mesh.h
- * @brief Triangular mesh of a boundary of a 3D object.
+/** @file tetrahedral_volume_mesh.h
+ * @brief Tetrahedral mesh of a volume of a 3D object.
  */
 
-#ifndef INCLUDE_BESTHEA_TRIANGULAR_SURFACE_MESH_H_
-#define INCLUDE_BESTHEA_TRIANGULAR_SURFACE_MESH_H_
+#ifndef INCLUDE_BESTHEA_TETRAHEDRAL_VOLUME_MESH_H_
+#define INCLUDE_BESTHEA_TETRAHEDRAL_VOLUME_MESH_H_
 
 #include "besthea/coordinates.h"
 #include "besthea/indices.h"
 #include "besthea/mesh.h"
 #include "besthea/settings.h"
-#include "besthea/tetrahedral_volume_mesh.h"
 #include "besthea/vector.h"
 
 #include <optional>
@@ -46,51 +45,29 @@
 
 namespace besthea {
   namespace mesh {
-    class triangular_surface_mesh;
+    class tetrahedral_volume_mesh;
   }
 }
 
 /**
- *  Class representing a triangular mesh of a 3D surface
+ *  Class representing a tetrahedral mesh of a 3D volume
  */
-class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
+class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
  public:
   /**
    * Constructing mesh from a file.
    * @param[in] file Path to the file.
    */
-  triangular_surface_mesh( const std::string & file );
+  tetrahedral_volume_mesh( const std::string & file );
 
-  /**
-   * Constructing mesh from a volume mesh.
-   * @param[in] mesh Tetrahedral mesh.
-   */
-  triangular_surface_mesh( const tetrahedral_volume_mesh & mesh );
+  tetrahedral_volume_mesh( const tetrahedral_volume_mesh & that ) = delete;
 
-  triangular_surface_mesh( const triangular_surface_mesh & that ) = delete;
-
-  ~triangular_surface_mesh( );
+  ~tetrahedral_volume_mesh( );
 
   /**
    * Prints info on the object.
    */
   void print_info( ) const;
-
-  /**
-   * Prints the mesh into Paraview format.
-   * @param[in] directory Directory name.
-   * @param[in] node_labels Labels for nodal data.
-   * @param[in] node_data Scalar nodal data.
-   * @param[in] element_labels Labels for elemental data.
-   * @param[in] element_data Scalar elemental data.
-   * @param[in] suffix Suffix for the filename.
-   */
-  bool print_vtu( const std::string & directory,
-    const std::vector< std::string > * node_labels = nullptr,
-    const std::vector< linear_algebra::vector * > * node_data = nullptr,
-    const std::vector< std::string > * element_labels = nullptr,
-    const std::vector< linear_algebra::vector * > * element_data = nullptr,
-    std::optional< lo > suffix = std::nullopt ) const;
 
   /**
    * Prints the EnSight Gold case file.
@@ -178,52 +155,49 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
   }
 
   /**
+   * Returns number of surface elements.
+   */
+  lo get_n_surface_elements( ) const {
+    return _n_surface_elements;
+  }
+
+  /**
+   * Returns number of surface nodes.
+   */
+  lo get_n_surface_nodes( ) const {
+    return _n_surface_nodes;
+  }
+
+  /**
+   * Returns number of surface edges.
+   */
+  lo get_n_surface_edges( ) const {
+    return _n_surface_edges;
+  }
+
+  /**
    * Returns node indices of an element.
    * @param[in] i_element Index of the element.
    * @param[out] element Element indices.
    */
   void get_element(
-    lo i_element, linear_algebra::indices< 3 > & element ) const {
-    element[ 0 ] = _elements[ 3 * i_element ];
-    element[ 1 ] = _elements[ 3 * i_element + 1 ];
-    element[ 2 ] = _elements[ 3 * i_element + 2 ];
+    lo i_element, linear_algebra::indices< 4 > & element ) const {
+    element[ 0 ] = _elements[ 4 * i_element ];
+    element[ 1 ] = _elements[ 4 * i_element + 1 ];
+    element[ 2 ] = _elements[ 4 * i_element + 2 ];
+    element[ 3 ] = _elements[ 4 * i_element + 3 ];
   }
 
   /**
-   * Returns element normal vector.
+   * Returns node indices of a surface element.
    * @param[in] i_element Index of the element.
-   * @param[out] n Normal indices.
+   * @param[out] element Element indices.
    */
-  void get_normal( lo i_element, linear_algebra::coordinates< 3 > & n ) const {
-    n[ 0 ] = _normals[ 3 * i_element ];
-    n[ 1 ] = _normals[ 3 * i_element + 1 ];
-    n[ 2 ] = _normals[ 3 * i_element + 2 ];
-  }
-
-  /**
-   * Returns element normal vector.
-   * @param[in] i_node Index of the node.
-   * @param[out] n Normal indices.
-   */
-  void get_nodal_normal(
-    lo i_node, linear_algebra::coordinates< 3 > & n ) const {
-    n[ 0 ] = n[ 1 ] = n[ 2 ] = 0.0;
-    lo size = _node_to_elements[ i_node ].size( );
-    linear_algebra::coordinates< 3 > nn;
-    lo i_elem;
-
-    for ( lo i = 0; i < size; ++i ) {
-      i_elem = _node_to_elements[ i_node ][ i ];
-      get_normal( i_elem, nn );
-      n[ 0 ] += _areas[ i_elem ] * nn[ 0 ];
-      n[ 1 ] += _areas[ i_elem ] * nn[ 1 ];
-      n[ 2 ] += _areas[ i_elem ] * nn[ 2 ];
-    }
-
-    sc norm = std::sqrt( n[ 0 ] * n[ 0 ] + n[ 1 ] * n[ 1 ] + n[ 2 ] * n[ 2 ] );
-    n[ 0 ] /= norm;
-    n[ 1 ] /= norm;
-    n[ 2 ] /= norm;
+  void get_surface_element(
+    lo i_element, linear_algebra::indices< 3 > & element ) const {
+    element[ 0 ] = _surface_elements[ 3 * i_element ];
+    element[ 1 ] = _surface_elements[ 3 * i_element + 1 ];
+    element[ 2 ] = _surface_elements[ 3 * i_element + 2 ];
   }
 
   /**
@@ -243,19 +217,24 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    * @param[out] node1 Coordinates of the first node.
    * @param[out] node2 Coordinates of the second node.
    * @param[out] node3 Coordinates of the third node.
+   * @param[out] node4 Coordinates of the fourth node.
    */
   void get_nodes( lo i_element, linear_algebra::coordinates< 3 > & node1,
     linear_algebra::coordinates< 3 > & node2,
-    linear_algebra::coordinates< 3 > & node3 ) const {
-    node1[ 0 ] = _nodes[ 3 * _elements[ 3 * i_element ] ];
-    node1[ 1 ] = _nodes[ 3 * _elements[ 3 * i_element ] + 1 ];
-    node1[ 2 ] = _nodes[ 3 * _elements[ 3 * i_element ] + 2 ];
-    node2[ 0 ] = _nodes[ 3 * _elements[ 3 * i_element + 1 ] ];
-    node2[ 1 ] = _nodes[ 3 * _elements[ 3 * i_element + 1 ] + 1 ];
-    node2[ 2 ] = _nodes[ 3 * _elements[ 3 * i_element + 1 ] + 2 ];
-    node3[ 0 ] = _nodes[ 3 * _elements[ 3 * i_element + 2 ] ];
-    node3[ 1 ] = _nodes[ 3 * _elements[ 3 * i_element + 2 ] + 1 ];
-    node3[ 2 ] = _nodes[ 3 * _elements[ 3 * i_element + 2 ] + 2 ];
+    linear_algebra::coordinates< 3 > & node3,
+    linear_algebra::coordinates< 3 > & node4 ) const {
+    node1[ 0 ] = _nodes[ 3 * _elements[ 4 * i_element ] ];
+    node1[ 1 ] = _nodes[ 3 * _elements[ 4 * i_element ] + 1 ];
+    node1[ 2 ] = _nodes[ 3 * _elements[ 4 * i_element ] + 2 ];
+    node2[ 0 ] = _nodes[ 3 * _elements[ 4 * i_element + 1 ] ];
+    node2[ 1 ] = _nodes[ 3 * _elements[ 4 * i_element + 1 ] + 1 ];
+    node2[ 2 ] = _nodes[ 3 * _elements[ 4 * i_element + 1 ] + 2 ];
+    node3[ 0 ] = _nodes[ 3 * _elements[ 4 * i_element + 2 ] ];
+    node3[ 1 ] = _nodes[ 3 * _elements[ 4 * i_element + 2 ] + 1 ];
+    node3[ 2 ] = _nodes[ 3 * _elements[ 4 * i_element + 2 ] + 2 ];
+    node4[ 0 ] = _nodes[ 3 * _elements[ 4 * i_element + 3 ] ];
+    node4[ 1 ] = _nodes[ 3 * _elements[ 4 * i_element + 3 ] + 1 ];
+    node4[ 2 ] = _nodes[ 3 * _elements[ 4 * i_element + 3 ] + 2 ];
   }
 
   /**
@@ -298,10 +277,25 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    * @param[in] i_element Index of an element.
    * @param[out] edges Edge indices.
    */
-  void get_edges( lo i_element, linear_algebra::indices< 3 > & edges ) const {
-    edges[ 0 ] = _element_to_edges[ 3 * i_element ];
-    edges[ 1 ] = _element_to_edges[ 3 * i_element + 1 ];
-    edges[ 2 ] = _element_to_edges[ 3 * i_element + 2 ];
+  void get_edges( lo i_element, linear_algebra::indices< 6 > & edges ) const {
+    edges[ 0 ] = _element_to_edges[ 6 * i_element ];
+    edges[ 1 ] = _element_to_edges[ 6 * i_element + 1 ];
+    edges[ 2 ] = _element_to_edges[ 6 * i_element + 2 ];
+    edges[ 3 ] = _element_to_edges[ 6 * i_element + 3 ];
+    edges[ 4 ] = _element_to_edges[ 6 * i_element + 4 ];
+    edges[ 5 ] = _element_to_edges[ 6 * i_element + 5 ];
+  }
+
+  /**
+   * Returns edge indices of a surface element.
+   * @param[in] i_element Index of an element.
+   * @param[out] edges Edge indices.
+   */
+  void get_surface_edges(
+    lo i_element, linear_algebra::indices< 3 > & edges ) const {
+    edges[ 0 ] = _surface_element_to_edges[ 3 * i_element ];
+    edges[ 1 ] = _surface_element_to_edges[ 3 * i_element + 1 ];
+    edges[ 2 ] = _surface_element_to_edges[ 3 * i_element + 2 ];
   }
 
   /**
@@ -312,11 +306,11 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    */
   void get_centroid(
     lo i_elem, linear_algebra::coordinates< 3 > & centroid ) const {
-    linear_algebra::coordinates< 3 > x1, x2, x3;
-    get_nodes( i_elem, x1, x2, x3 );
-    centroid[ 0 ] = ( x1[ 0 ] + x2[ 0 ] + x3[ 0 ] ) / 3.0;
-    centroid[ 1 ] = ( x1[ 1 ] + x2[ 1 ] + x3[ 1 ] ) / 3.0;
-    centroid[ 2 ] = ( x1[ 2 ] + x2[ 2 ] + x3[ 2 ] ) / 3.0;
+    linear_algebra::coordinates< 3 > x1, x2, x3, x4;
+    get_nodes( i_elem, x1, x2, x3, x4 );
+    centroid[ 0 ] = ( x1[ 0 ] + x2[ 0 ] + x3[ 0 ] + x4[ 0 ] ) / 4.0;
+    centroid[ 1 ] = ( x1[ 1 ] + x2[ 1 ] + x3[ 1 ] + x4[ 1 ] ) / 4.0;
+    centroid[ 2 ] = ( x1[ 2 ] + x2[ 2 ] + x3[ 2 ] + x4[ 2 ] ) / 4.0;
   }
 
   /**
@@ -332,43 +326,25 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
   void refine( int level );
 
   /**
-   * Maps the nodes to the unit sphere.
+   * Returns true for a surface node.
    */
-  void map_to_unit_sphere( );
+  bool is_surface_node( lo i_node ) const {
+    return _is_surface_node[ i_node ];
+  }
 
   /**
-   * Computes the bounding box of thes mesh.
-   * @param[in,out] xmin Minimum x coordinate of element's centroids.
-   * @param[in,out] xmax Maximum x coordinate of element's centroids.
-   * @param[in,out] ymin Minimum y coordinate of element's centroids.
-   * @param[in,out] ymax Maximum y coordinate of element's centroids.
-   * @param[in,out] zmin Minimum z coordinate of element's centroids.
-   * @param[in,out] zmax Maximum z coordinate of element's centroids.
+   * Returns the orientation of surface elements.
    */
-  void compute_bounding_box(
-    sc & xmin, sc & xmax, sc & ymin, sc & ymax, sc & zmin, sc & zmax ) const;
+  const std::pair< std::vector< lo >, std::vector< lo > > &
+  get_surface_orientation( ) const {
+    return _surface_orientation;
+  }
 
  protected:
-  lo _n_nodes;               //!< number of nodes
-  std::vector< sc > _nodes;  //!< coordinates of nodes
-  std::vector< std::vector< lo > >
-    _node_to_elements;  //!< mapping from nodes to elements
-
-  lo _n_elements;               //!< number of elements
-  std::vector< lo > _elements;  //!< indices into #_nodes
-  std::pair< std::vector< lo >, std::vector< lo > >
-    _orientation;              //!< orientation of n := (x2-x1)x(x3-x1) and -n
-  std::vector< sc > _areas;    //!< element areas
-  std::vector< sc > _normals;  //!< exterior normal vectors
-
-  lo _n_edges;                          //!< number of edges
-  std::vector< lo > _edges;             //!< indices into #_nodes
-  std::vector< lo > _element_to_edges;  //!< indices into #_edges
-
   /**
    * Precomputes exterior normals and areas of elements.
    */
-  void init_normals_and_areas( );
+  void init_areas( );
 
   /**
    * Initializes edges.
@@ -376,9 +352,9 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
   void init_edges( );
 
   /**
-   * Initializes the mapping from nodes to elements.
+   * Initializes number of surface nodes.
    */
-  void init_node_to_elements( );
+  void init_surface_nodes( );
 
   /**
    * Returns the centroid of the mesh.
@@ -387,18 +363,41 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
   void get_centroid( linear_algebra::coordinates< 3 > & centroid );
 
   /**
-   * Returns the surface mesh.
+   * Returns the volume mesh.
    */
   virtual triangular_surface_mesh * get_spatial_mesh( ) {
-    return this;
+    return nullptr;
   }
 
   /**
-   * Returns the surface mesh.
+   * Returns the volume mesh.
    */
   virtual const triangular_surface_mesh * get_spatial_mesh( ) const {
-    return this;
+    return nullptr;
   }
+
+  lo _n_nodes;               //!< number of nodes
+  std::vector< sc > _nodes;  //!< coordinates of nodes
+  std::vector< std::vector< lo > >
+    _node_to_elements;  //!< mapping from nodes to elements
+  lo _n_surface_nodes;
+  std::vector< bool > _is_surface_node;  //!< True if surface node
+
+  lo _n_elements;               //!< number of elements
+  std::vector< lo > _elements;  //!< indices into #_nodes
+  std::vector< sc > _areas;     //!< element areas
+
+  lo _n_surface_elements;               //!< number of elements
+  std::vector< lo > _surface_elements;  //!< indices into #_nodes
+  std::pair< std::vector< lo >, std::vector< lo > >
+    _surface_orientation;  //!< orientation of n := (x2-x1)x(x3-x1) and -n
+
+  lo _n_edges;                          //!< number of edges
+  std::vector< lo > _edges;             //!< indices into #_nodes
+  std::vector< lo > _element_to_edges;  //!< indices into #_edges
+
+  lo _n_surface_edges;
+  std::vector< lo > _surface_element_to_edges;  //!< indices into #_edges
 };
 
-#endif /* INCLUDE_BESTHEA_TRIANGULAR_SURFACE_MESH_H_ */
+#endif /* INCLUDE_BESTHEA_TETRAHEDRAL_VOLUME_MESH_H_ */
