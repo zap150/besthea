@@ -1110,6 +1110,20 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   }
 }
 
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::compute_chebyshev_quadrature( space_cluster_type *
+    space_cluster ) {
+}
+
+template<>
+void besthea::bem::fast_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
+  compute_chebyshev_quadrature( space_cluster_type * space_cluster ) {
+}
+
 template class besthea::bem::fast_spacetime_be_assembler<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
