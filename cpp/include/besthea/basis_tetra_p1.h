@@ -26,59 +26,80 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file mesh.h
+/** @file basis_tetra_p1.h
  * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_MESH_H_
-#define INCLUDE_BESTHEA_MESH_H_
+#ifndef INCLUDE_BESTHEA_BASIS_TETRA_P1_H_
+#define INCLUDE_BESTHEA_BASIS_TETRA_P1_H_
+
+#include "besthea/tetrahedral_volume_mesh.h"
+#include "besthea/volume_basis_function.h"
 
 namespace besthea {
-  namespace mesh {
-    class mesh;
-    class triangular_surface_mesh;
-    class tetrahedral_volume_mesh;
+  namespace bem {
+    class basis_tetra_p1;
   }
 }
 
 /**
- *  Abstract class representing a mesh.
+ *  Class representing a piecewise linear function on a triangular mesh.
  */
-class besthea::mesh::mesh {
+class besthea::bem::basis_tetra_p1
+  : public besthea::bem::volume_basis_function< besthea::bem::basis_tetra_p1 > {
  public:
   /**
    * Constructor.
+   * @param[in] mesh Mesh.
    */
-  mesh( ) {
-  }
-
-  mesh( const mesh & that ) = delete;
+  basis_tetra_p1( const mesh_type & mesh );
 
   /**
    * Destructor.
    */
-  virtual ~mesh( ) {
+  virtual ~basis_tetra_p1( );
+
+  /**
+   * Returns number of basis functions supported on i_elem.
+   */
+  virtual lo dimension_local( ) const;
+
+  /**
+   * Returns number of basis functions on the whole mesh.
+   */
+  virtual lo dimension_global( ) const;
+
+  /**
+   * Provides global indices for local contributions.
+   * @param[in] i_elem Element index.
+   * @param[out] indices Global indices for local contributions.
+   */
+  void do_local_to_global( lo i_elem, std::vector< lo > & indices ) const;
+
+  /**
+   * Evaluates the basis function.
+   * @param[in] i_elem Element index.
+   * @param[in] i_fun Local basis function index.
+   * @param[in] x1_ref First coordinate of reference quadrature point.
+   * @param[in] x2_ref Second coordinate of reference quadrature point.
+   * @param[in] x3_ref Third coordinate of reference quadrature point.
+   */
+#pragma omp declare simd uniform( this, i_elem, i_fun ) simdlen( DATA_WIDTH )
+  sc do_evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, sc x3_ref ) const {
+    sc value = 0.0;
+
+    if ( i_fun == 0 ) {
+      value = 1 - x1_ref - x2_ref - x3_ref;
+    } else if ( i_fun == 1 ) {
+      value = x1_ref;
+    } else if ( i_fun == 2 ) {
+      value = x2_ref;
+    } else if ( i_fun == 3 ) {
+      value = x3_ref;
+    }
+
+    return value;
   }
-
-  /**
-   * Returns pointer to the surface mesh.
-   */
-  virtual triangular_surface_mesh * get_spatial_surface_mesh( ) = 0;
-
-  /**
-   * Returns pointer to the surface mesh.
-   */
-  virtual const triangular_surface_mesh * get_spatial_surface_mesh( ) const = 0;
-
-  /**
-   * Returns pointer to the surface mesh.
-   */
-  virtual tetrahedral_volume_mesh * get_spatial_volume_mesh( ) = 0;
-
-  /**
-   * Returns pointer to the surface mesh.
-   */
-  virtual const tetrahedral_volume_mesh * get_spatial_volume_mesh( ) const = 0;
 };
 
-#endif /* INCLUDE_BESTHEA_MESH_H_ */
+#endif /* INCLUDE_BESTHEA_BASIS_TETRA_P1_H_ */

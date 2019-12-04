@@ -323,7 +323,7 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
    * Refines the mesh by quadrisection.
    * @param[in] level Number of refinements.
    */
-  void refine( int level );
+  void refine( int level = 1 );
 
   /**
    * Returns true for a surface node.
@@ -365,15 +365,31 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
   /**
    * Returns the volume mesh.
    */
-  virtual triangular_surface_mesh * get_spatial_mesh( ) {
+  virtual triangular_surface_mesh * get_spatial_surface_mesh( ) override {
     return nullptr;
   }
 
   /**
    * Returns the volume mesh.
    */
-  virtual const triangular_surface_mesh * get_spatial_mesh( ) const {
+  virtual const triangular_surface_mesh * get_spatial_surface_mesh( )
+    const override {
     return nullptr;
+  }
+
+  /**
+   * Returns the volume mesh.
+   */
+  virtual tetrahedral_volume_mesh * get_spatial_volume_mesh( ) override {
+    return this;
+  }
+
+  /**
+   * Returns the volume mesh.
+   */
+  virtual const tetrahedral_volume_mesh * get_spatial_volume_mesh( )
+    const override {
+    return this;
   }
 
   lo _n_nodes;               //!< number of nodes

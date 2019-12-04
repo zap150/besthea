@@ -389,15 +389,31 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
   /**
    * Returns the surface mesh.
    */
-  virtual triangular_surface_mesh * get_spatial_mesh( ) {
+  virtual triangular_surface_mesh * get_spatial_surface_mesh( ) override {
     return this;
   }
 
   /**
    * Returns the surface mesh.
    */
-  virtual const triangular_surface_mesh * get_spatial_mesh( ) const {
+  virtual const triangular_surface_mesh * get_spatial_surface_mesh( )
+    const override {
     return this;
+  }
+
+  /**
+   * Returns the volume mesh.
+   */
+  virtual tetrahedral_volume_mesh * get_spatial_volume_mesh( ) override {
+    return nullptr;
+  }
+
+  /**
+   * Returns the volume mesh.
+   */
+  virtual const tetrahedral_volume_mesh * get_spatial_volume_mesh( )
+    const override {
+    return nullptr;
   }
 };
 
