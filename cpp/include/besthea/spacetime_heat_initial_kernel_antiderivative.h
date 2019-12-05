@@ -26,40 +26,40 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file spacetime_heat_kernel_antiderivative.h
- * @brief Kernel for uniform_spacetime_tensor_mesh.h.
+/** @file spacetime_heat_initial_kernel_antiderivative.h
+ * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_
-#define INCLUDE_BESTHEA_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_
+#ifndef INCLUDE_BESTHEA_SPACETIME_HEAT_INITIAL_KERNEL_ANTIDERIVATIVE_H_
+#define INCLUDE_BESTHEA_SPACETIME_HEAT_INITIAL_KERNEL_ANTIDERIVATIVE_H_
 
-#include <besthea/spacetime_kernel_antiderivative.h>
+#include <besthea/spacetime_initial_kernel_antiderivative.h>
 
 #include "besthea/settings.h"
 
 #include <cmath>
-#include <vector>
 
 namespace besthea {
   namespace bem {
     template< class derived_type >
-    class spacetime_heat_kernel_antiderivative;
+    class spacetime_heat_initial_kernel_antiderivative;
   }
 }
 
 /**
- *  Class representing a first and second antiderivative of a spacetime heat
+ *  Class representing a first antiderivative of an initial spacetime heat
  * kernel.
  */
 template< class derived_type >
-class besthea::bem::spacetime_heat_kernel_antiderivative
-  : public besthea::bem::spacetime_kernel_antiderivative< derived_type > {
+class besthea::bem::spacetime_heat_initial_kernel_antiderivative
+  : public besthea::bem::spacetime_initial_kernel_antiderivative<
+      derived_type > {
  public:
   /**
    * Constructor.
    * @param[in] alpha Heat conductivity.
    */
-  spacetime_heat_kernel_antiderivative( sc alpha )
+  spacetime_heat_initial_kernel_antiderivative( sc alpha )
     : _alpha( alpha ),
       _sqrt_alpha( std::sqrt( alpha ) ),
       _alpha2( alpha * alpha ) {
@@ -68,7 +68,7 @@ class besthea::bem::spacetime_heat_kernel_antiderivative
   /**
    * Destructor.
    */
-  virtual ~spacetime_heat_kernel_antiderivative( ) {
+  virtual ~spacetime_heat_initial_kernel_antiderivative( ) {
   }
 
  protected:
@@ -88,4 +88,4 @@ class besthea::bem::spacetime_heat_kernel_antiderivative
   const sc _eps{ 1e-12 };  //!< Auxiliary variable
 };
 
-#endif /* INCLUDE_BESTHEA_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_ */
+#endif /* INCLUDE_BESTHEA_SPACETIME_HEAT_INITIAL_KERNEL_ANTIDERIVATIVE_H_ */

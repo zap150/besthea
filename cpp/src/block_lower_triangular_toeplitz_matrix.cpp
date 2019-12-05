@@ -30,7 +30,7 @@
 
 besthea::linear_algebra::block_lower_triangular_toeplitz_matrix::
   block_lower_triangular_toeplitz_matrix( )
-  : block_matrix( 1, 1, 1 ), _data( 1, matrix_type( ) ) {
+  : block_matrix( 0, 0, 0 ), _data( ) {
 }
 
 besthea::linear_algebra::block_lower_triangular_toeplitz_matrix::

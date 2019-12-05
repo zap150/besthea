@@ -26,27 +26,48 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file linear_algebra.h
- * @brief
- */
-
-#ifndef INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_
-#define INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_
-
-#include "besthea/block_lower_triangular_toeplitz_matrix.h"
-#include "besthea/block_mkl_cg_inverse.h"
-#include "besthea/block_mkl_fgmres_inverse.h"
 #include "besthea/block_row_matrix.h"
-#include "besthea/block_vector.h"
-#include "besthea/compound_block_linear_operator.h"
-#include "besthea/compound_linear_operator.h"
-#include "besthea/coordinates.h"
-#include "besthea/full_matrix.h"
-#include "besthea/indices.h"
-#include "besthea/mkl_cg_inverse.h"
-#include "besthea/mkl_fgmres_inverse.h"
-#include "besthea/pFMM_matrix.h"
-#include "besthea/sparse_matrix.h"
-#include "besthea/vector.h"
 
-#endif /* INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_ */
+besthea::linear_algebra::block_row_matrix::block_row_matrix( )
+  : block_row_linear_operator( 0, 0, 0 ), _data( ) {
+}
+
+besthea::linear_algebra::block_row_matrix::block_row_matrix(
+  lo block_dim, lo n_rows, lo n_columns, std::initializer_list< sc > list )
+  : block_row_linear_operator( block_dim, n_columns, n_rows ),
+    _data( block_dim, matrix_type( n_rows, n_columns, list ) ) {
+}
+
+besthea::linear_algebra::block_row_matrix::block_row_matrix(
+  lo block_dim, lo n_rows, lo n_columns, bool zero )
+  : block_row_linear_operator( block_dim, n_columns, n_rows ),
+    _data( block_dim, matrix_type( n_rows, n_columns, zero ) ) {
+}
+
+void besthea::linear_algebra::block_row_matrix::print(
+  std::ostream & stream ) const {
+  for ( const matrix_type & m : _data ) {
+    m.print( );
+  }
+}
+
+void besthea::linear_algebra::block_row_matrix::resize_blocks(
+  lo n_rows, lo n_columns ) {
+  for ( matrix_type & m : _data ) {
+    m.resize( n_rows, n_columns );
+  }
+  _n_rows = n_rows;
+  _n_columns = n_columns;
+}
+
+void besthea::linear_algebra::block_row_matrix::resize( lo block_dim ) {
+  _data.resize( block_dim );
+  _block_dim = block_dim;
+}
+
+void besthea::linear_algebra::block_row_matrix::apply( const vector_type & x,
+  block_vector_type & y, bool trans, sc alpha, sc beta ) const {
+  for ( lo i_block = 0; i_block < _block_dim; ++i_block ) {
+    _data[ i_block ].apply( x, y.get_block( i_block ), trans, alpha, beta );
+  }
+}

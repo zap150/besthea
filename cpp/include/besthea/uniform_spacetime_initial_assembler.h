@@ -26,27 +26,15 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file linear_algebra.h
+/** @file uniform_spacetime_initial_assembler.h
  * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_
-#define INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_
+#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_INITIAL_ASSEMBLER_H_
+#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_INITIAL_ASSEMBLER_H_
 
-#include "besthea/block_lower_triangular_toeplitz_matrix.h"
-#include "besthea/block_mkl_cg_inverse.h"
-#include "besthea/block_mkl_fgmres_inverse.h"
-#include "besthea/block_row_matrix.h"
-#include "besthea/block_vector.h"
-#include "besthea/compound_block_linear_operator.h"
-#include "besthea/compound_linear_operator.h"
-#include "besthea/coordinates.h"
-#include "besthea/full_matrix.h"
-#include "besthea/indices.h"
-#include "besthea/mkl_cg_inverse.h"
-#include "besthea/mkl_fgmres_inverse.h"
-#include "besthea/pFMM_matrix.h"
-#include "besthea/sparse_matrix.h"
-#include "besthea/vector.h"
 
-#endif /* INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_ */
+
+
+
+#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_INITIAL_ASSEMBLER_H_ */

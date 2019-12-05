@@ -26,66 +26,78 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file spacetime_heat_kernel_antiderivative.h
- * @brief Kernel for uniform_spacetime_tensor_mesh.h.
+/** @file spacetime_initial_kernel_antiderivative.h
+ * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_
-#define INCLUDE_BESTHEA_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_
-
-#include <besthea/spacetime_kernel_antiderivative.h>
+#ifndef INCLUDE_BESTHEA_SPACETIME_INITIAL_KERNEL_ANTIDERIVATIVE_H_
+#define INCLUDE_BESTHEA_SPACETIME_INITIAL_KERNEL_ANTIDERIVATIVE_H_
 
 #include "besthea/settings.h"
-
-#include <cmath>
-#include <vector>
 
 namespace besthea {
   namespace bem {
     template< class derived_type >
-    class spacetime_heat_kernel_antiderivative;
+    class spacetime_initial_kernel_antiderivative;
   }
 }
 
 /**
- *  Class representing a first and second antiderivative of a spacetime heat
- * kernel.
+ *  Class representing a first antiderivative of a spacetime initial kernel.
  */
 template< class derived_type >
-class besthea::bem::spacetime_heat_kernel_antiderivative
-  : public besthea::bem::spacetime_kernel_antiderivative< derived_type > {
+class besthea::bem::spacetime_initial_kernel_antiderivative {
  public:
   /**
    * Constructor.
-   * @param[in] alpha Heat conductivity.
    */
-  spacetime_heat_kernel_antiderivative( sc alpha )
-    : _alpha( alpha ),
-      _sqrt_alpha( std::sqrt( alpha ) ),
-      _alpha2( alpha * alpha ) {
+  spacetime_initial_kernel_antiderivative( ) {
   }
 
   /**
    * Destructor.
    */
-  virtual ~spacetime_heat_kernel_antiderivative( ) {
+  virtual ~spacetime_initial_kernel_antiderivative( ) {
   }
 
- protected:
-  sc _alpha;  //!< Heat conductivity.
+  /**
+   * Returns this cast to the descendant's type.
+   */
+  derived_type * derived( ) {
+    return static_cast< derived_type * >( this );
+  }
 
-  sc _sqrt_alpha;  //!< Auxiliary variable
-  sc _alpha2;      //!< Auxiliary variable
+  /**
+   * Returns this cast to the descendant's type.
+   */
+  const derived_type * derived( ) const {
+    return static_cast< const derived_type * >( this );
+  }
 
-  const sc _pi{ M_PI };                    //!< Auxiliary variable
-  const sc _sqrt_pi{ std::sqrt( M_PI ) };  //!< Auxiliary variable
-  const sc _zero{ 0.0 };                   //!< Auxiliary variable
-  const sc _one{ 1.0 };                    //!< Auxiliary variable
-  const sc _two{ 2.0 };                    //!< Auxiliary variable
-  const sc _four{ 4.0 };                   //!< Auxiliary variable
-  const sc _eight{ 8.0 };                  //!< Auxiliary variable
+  /**
+   * Evaluates the first antiderivative.
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] n Normal.
+   */
+#pragma omp declare simd uniform( this, n ) simdlen( DATA_WIDTH )
+  sc anti_tau_limit( sc xy1, sc xy2, sc xy3, const sc * n ) const {
+    return derived( )->do_anti_tau_limit( xy1, xy2, xy3, n );
+  }
 
-  const sc _eps{ 1e-12 };  //!< Auxiliary variable
+  /**
+   * Evaluates the first antiderivative.
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] n Normal.
+   * @param[in] t `t`.
+   */
+#pragma omp declare simd uniform( this, n, t ) simdlen( DATA_WIDTH )
+  sc anti_tau_regular( sc xy1, sc xy2, sc xy3, const sc * n, sc t ) const {
+    return derived( )->do_anti_tau_regular( xy1, xy2, xy3, n, t );
+  }
 };
 
-#endif /* INCLUDE_BESTHEA_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_ */
+#endif /* INCLUDE_BESTHEA_SPACETIME_INITIAL_KERNEL_ANTIDERIVATIVE_H_ */

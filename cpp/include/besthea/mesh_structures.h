@@ -33,7 +33,6 @@
 #ifndef INCLUDE_BESTHEA_MESH_STRUCTURES_H_
 #define INCLUDE_BESTHEA_MESH_STRUCTURES_H_
 
-#include "besthea/mesh.h"
 #include "besthea/space_cluster.h"
 #include "besthea/space_cluster_tree.h"
 #include "besthea/spacetime_cluster.h"
