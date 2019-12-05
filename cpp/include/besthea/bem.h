@@ -50,5 +50,6 @@
 #include "besthea/uniform_spacetime_be_identity.h"
 #include "besthea/uniform_spacetime_be_solver.h"
 #include "besthea/uniform_spacetime_be_space.h"
+#include "besthea/uniform_spacetime_initial_assembler.h"
 
 #endif /* INCLUDE_BESTHEA_BEM_H_ */
