@@ -77,7 +77,7 @@ class besthea::bem::spacetime_heat_initial_m1_kernel_antiderivative
    * @param[in] t `t`.
    */
 #pragma omp declare simd uniform( this, nx, t ) simdlen( DATA_WIDTH )
-  sc do_anti_tau_regular( sc xy1, sc xy2, sc xy3, const sc * nx, sc t ) const {
+  sc do_anti_t_regular( sc xy1, sc xy2, sc xy3, const sc * nx, sc t ) const {
     sc norm2 = xy1 * xy1 + xy2 * xy2 + xy3 * xy3;
     sc norm = std::sqrt( norm2 );
     sc dot = xy1 * nx[ 0 ] + xy2 * nx[ 1 ] + xy3 * nx[ 2 ];
@@ -99,7 +99,7 @@ class besthea::bem::spacetime_heat_initial_m1_kernel_antiderivative
  * @param[in] nx Normal in the `x` variable.
  */
 #pragma omp declare simd uniform( this, nx ) simdlen( DATA_WIDTH )
-  sc do_anti_tau_limit( sc xy1, sc xy2, sc xy3, const sc * nx ) const {
+  sc do_anti_t_limit( sc xy1, sc xy2, sc xy3, const sc * nx ) const {
     sc norm2 = xy1 * xy1 + xy2 * xy2 + xy3 * xy3;
     sc norm = std::sqrt( norm2 );
     sc dot = xy1 * nx[ 0 ] + xy2 * nx[ 1 ] + xy3 * nx[ 2 ];

@@ -82,8 +82,8 @@ class besthea::bem::spacetime_initial_kernel_antiderivative {
    * @param[in] n Normal.
    */
 #pragma omp declare simd uniform( this, n ) simdlen( DATA_WIDTH )
-  sc anti_tau_limit( sc xy1, sc xy2, sc xy3, const sc * n ) const {
-    return derived( )->do_anti_tau_limit( xy1, xy2, xy3, n );
+  sc anti_t_limit( sc xy1, sc xy2, sc xy3, const sc * n ) const {
+    return derived( )->do_anti_t_limit( xy1, xy2, xy3, n );
   }
 
   /**
@@ -95,8 +95,8 @@ class besthea::bem::spacetime_initial_kernel_antiderivative {
    * @param[in] t `t`.
    */
 #pragma omp declare simd uniform( this, n, t ) simdlen( DATA_WIDTH )
-  sc anti_tau_regular( sc xy1, sc xy2, sc xy3, const sc * n, sc t ) const {
-    return derived( )->do_anti_tau_regular( xy1, xy2, xy3, n, t );
+  sc anti_t_regular( sc xy1, sc xy2, sc xy3, const sc * n, sc t ) const {
+    return derived( )->do_anti_t_regular( xy1, xy2, xy3, n, t );
   }
 };
 

@@ -57,10 +57,140 @@ void besthea::bem::uniform_spacetime_initial_assembler< kernel_type,
   test_space_type,
   trial_space_type >::assemble( besthea::linear_algebra::block_row_matrix &
     global_matrix ) const {
+  auto & test_basis = _test_space->get_basis( );
+  auto & trial_basis = _trial_space->get_basis( );
+  auto test_mesh = _test_space->get_mesh( );
+  auto trial_mesh = _trial_space->get_mesh( );
+
+  lo n_timesteps = test_mesh->get_n_temporal_elements( );
+  sc timestep = test_mesh->get_timestep( );
+  lo n_rows = test_basis.dimension_global( );
+  lo n_columns = trial_basis.dimension_global( );
+  global_matrix.resize( n_timesteps );
+  global_matrix.resize_blocks( n_rows, n_columns );
+
+  lo n_loc_rows = test_basis.dimension_local( );
+  lo n_loc_columns = trial_basis.dimension_local( );
+
+  lo n_test_elements = test_mesh->get_n_spatial_elements( );
+  lo n_trial_elements = trial_mesh->get_n_elements( );
+  sc t;
+
 #pragma omp parallel
   {
+    std::vector< lo > test_l2g( n_loc_rows );
+    std::vector< lo > trial_l2g( n_loc_columns );
+
+    sc test, trial, value, test_area, trial_area;
+    lo size;
+
+    linear_algebra::coordinates< 3 > x1, x2, x3;
+    linear_algebra::coordinates< 3 > y1, y2, y3, y4;
+    linear_algebra::coordinates< 3 > nx;
+
+    sc * nx_data = nx.data( );
+
     quadrature_wrapper my_quadrature;
     init_quadrature( my_quadrature );
+    sc * x1_ref = nullptr;
+    sc * x2_ref = nullptr;
+    sc * y1_ref = nullptr;
+    sc * y2_ref = nullptr;
+    sc * y3_ref = nullptr;
+    sc * w = nullptr;
+    sc * x1_mapped = my_quadrature._x1.data( );
+    sc * x2_mapped = my_quadrature._x2.data( );
+    sc * x3_mapped = my_quadrature._x3.data( );
+    sc * y1_mapped = my_quadrature._y1.data( );
+    sc * y2_mapped = my_quadrature._y2.data( );
+    sc * y3_mapped = my_quadrature._y3.data( );
+    sc * kernel_data = my_quadrature._kernel_values.data( );
+
+    for ( lo i_t = 0; i_t <= n_timesteps; ++i_t ) {
+#pragma omp single
+      t = timestep * i_t;
+
+#pragma omp for schedule( dynamic )
+      for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
+        test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
+        test_mesh->get_spatial_normal( i_test, nx );
+        test_area = test_mesh->spatial_area( i_test );
+        for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
+          trial_mesh->get_nodes( i_trial, y1, y2, y3, y4 );
+          trial_area = trial_mesh->area( i_trial );
+
+          test_basis.local_to_global( i_test, test_l2g );
+          trial_basis.local_to_global( i_trial, trial_l2g );
+
+          triangle_and_tetrahedron_to_geometry(
+            x1, x2, x3, y1, y2, y3, y4, my_quadrature );
+          x1_ref = my_quadrature._x1_ref.data( );
+          x2_ref = my_quadrature._x2_ref.data( );
+          y1_ref = my_quadrature._y1_ref.data( );
+          y2_ref = my_quadrature._y2_ref.data( );
+          y3_ref = my_quadrature._y3_ref.data( );
+          w = my_quadrature._w.data( );
+
+          size = my_quadrature._w.size( );
+
+          if ( i_t == 0 ) {
+#pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
+                          y2_mapped, y3_mapped, kernel_data, w        \
+                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+            for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+              kernel_data[ i_quad ]
+                = _kernel->anti_t_limit(
+                    x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                    x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                    x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data )
+                * w[ i_quad ];
+            }
+          } else {
+#pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
+                          y2_mapped, y3_mapped, kernel_data, w        \
+                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+            for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+              kernel_data[ i_quad ]
+                = _kernel->anti_t_regular(
+                    x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                    x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                    x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, t )
+                * w[ i_quad ];
+            }
+          }
+
+          for ( lo i_loc_test = 0; i_loc_test < n_loc_rows; ++i_loc_test ) {
+            for ( lo i_loc_trial = 0; i_loc_trial < n_loc_columns;
+                  ++i_loc_trial ) {
+              value = 0.0;
+#pragma omp simd \
+    	aligned( x1_ref, x2_ref, y1_ref, y2_ref, y3_ref, kernel_data : DATA_ALIGN ) \
+    	private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
+              for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+                test = test_basis.evaluate( i_test, i_loc_test,
+                  x1_ref[ i_quad ], x2_ref[ i_quad ], nx_data );
+                trial = trial_basis.evaluate( i_trial, i_loc_trial,
+                  y1_ref[ i_quad ], y2_ref[ i_quad ], y3_ref[ i_quad ] );
+
+                value += kernel_data[ i_quad ] * test * trial;
+              }
+              value *= test_area * trial_area;
+              if ( i_t > 0 ) {
+                global_matrix.add_atomic( i_t - 1, test_l2g[ i_loc_test ],
+                  trial_l2g[ i_loc_trial ], value );
+                if ( i_t < n_timesteps ) {
+                  global_matrix.add_atomic( i_t, test_l2g[ i_loc_test ],
+                    trial_l2g[ i_loc_trial ], -value );
+                }
+              } else {
+                global_matrix.add_atomic(
+                  0, test_l2g[ i_loc_test ], trial_l2g[ i_loc_trial ], -value );
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }
 

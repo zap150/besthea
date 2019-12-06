@@ -39,24 +39,37 @@ using namespace besthea::tools;
 
 struct cauchy_data {
   static sc dirichlet( sc x1, sc x2, sc x3, const coordinates< 3 > & n, sc t ) {
-    sc norm2 = ( x1 - y[ 0 ] ) * ( x1 - y[ 0 ] )
-      + ( x2 - y[ 1 ] ) * ( x2 - y[ 1 ] ) + ( x3 - y[ 2 ] ) * ( x3 - y[ 2 ] );
-    sc value = std::pow( 4.0 * M_PI * alpha * t, -1.5 )
-      * std::exp( -norm2 / ( 4.0 * alpha * t ) );
+    sc norm2 = ( x1 - _y[ 0 ] ) * ( x1 - _y[ 0 ] )
+      + ( x2 - _y[ 1 ] ) * ( x2 - _y[ 1 ] )
+      + ( x3 - _y[ 2 ] ) * ( x3 - _y[ 2 ] );
+    sc value = std::pow( 4.0 * M_PI * _alpha * ( t + _shift ), -1.5 )
+      * std::exp( -norm2 / ( 4.0 * _alpha * ( t + _shift ) ) );
 
     return value;
   }
 
   static sc neumann( sc x1, sc x2, sc x3, const coordinates< 3 > & n, sc t ) {
-    sc dot = ( x1 - y[ 0 ] ) * n[ 0 ] + ( x2 - y[ 1 ] ) * n[ 1 ]
-      + ( x3 - y[ 2 ] ) * n[ 2 ];
-    sc value = ( -1.0 / ( 2.0 * t ) ) * dot * dirichlet( x1, x2, x3, n, t );
+    sc dot = ( x1 - _y[ 0 ] ) * n[ 0 ] + ( x2 - _y[ 1 ] ) * n[ 1 ]
+      + ( x3 - _y[ 2 ] ) * n[ 2 ];
+    sc value = ( -1.0 / ( 2.0 * ( t + _shift ) ) ) * dot
+      * dirichlet( x1, x2, x3, n, ( t + _shift ) );
 
     return value;
   }
 
-  static constexpr sc alpha{ 0.5 };
-  static constexpr std::array< sc, 3 > y{ 0.0, 0.0, 1.5 };
+  static sc initial( sc x1, sc x2, sc x3 ) {
+    sc norm2 = ( x1 - _y[ 0 ] ) * ( x1 - _y[ 0 ] )
+      + ( x2 - _y[ 1 ] ) * ( x2 - _y[ 1 ] )
+      + ( x3 - _y[ 2 ] ) * ( x3 - _y[ 2 ] );
+    sc value = std::pow( 4.0 * M_PI * _alpha * _shift, -1.5 )
+      * std::exp( -norm2 / ( 4.0 * _alpha * _shift ) );
+
+    return value;
+  }
+
+  static constexpr sc _alpha{ 0.5 };
+  static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
+  static constexpr sc _shift{ 0.0 };
 };
 
 int main( int argc, char * argv[] ) {
@@ -102,7 +115,7 @@ int main( int argc, char * argv[] ) {
 
   block_lower_triangular_toeplitz_matrix * K
     = new block_lower_triangular_toeplitz_matrix( );
-  spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::alpha );
+  spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
   uniform_spacetime_be_assembler assembler_k(
     kernel_k, space_p0, space_p1, order_sing, order_reg );
   t.reset( "K" );
@@ -137,7 +150,7 @@ int main( int argc, char * argv[] ) {
 
   block_lower_triangular_toeplitz_matrix * V
     = new block_lower_triangular_toeplitz_matrix( );
-  spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::alpha );
+  spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
   uniform_spacetime_be_assembler assembler_v(
     kernel_v, space_p0, space_p0, order_sing, order_reg );
   t.reset( "V" );
