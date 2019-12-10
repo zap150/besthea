@@ -38,6 +38,10 @@
 #include <utility>
 #include <vector>
 
+besthea::mesh::triangular_surface_mesh::triangular_surface_mesh( )
+  : _n_nodes( 0 ), _n_elements( 0 ), _n_edges( 0 ) {
+}
+
 besthea::mesh::triangular_surface_mesh::~triangular_surface_mesh( ) {
 }
 
@@ -53,8 +57,13 @@ besthea::mesh::triangular_surface_mesh::triangular_surface_mesh(
 }
 
 besthea::mesh::triangular_surface_mesh::triangular_surface_mesh(
-  const tetrahedral_volume_mesh & mesh )
-  : _orientation( mesh.get_surface_orientation( ) ) {
+  const tetrahedral_volume_mesh & mesh ) {
+  from_tetrahedral( mesh );
+}
+
+void besthea::mesh::triangular_surface_mesh::from_tetrahedral(
+  const tetrahedral_volume_mesh & mesh ) {
+  _orientation = mesh.get_surface_orientation( );
   _n_nodes = mesh.get_n_surface_nodes( );
   _n_elements = mesh.get_n_surface_elements( );
 
@@ -197,6 +206,9 @@ void besthea::mesh::triangular_surface_mesh::init_normals_and_areas( ) {
 }
 
 void besthea::mesh::triangular_surface_mesh::refine( int level ) {
+  if ( level < 1 )
+    return;
+
   lo new_n_nodes, new_n_elements, new_n_edges;
   linear_algebra::coordinates< 3 > x1, x2;
   linear_algebra::indices< 2 > edge;

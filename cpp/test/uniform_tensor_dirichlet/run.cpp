@@ -69,11 +69,11 @@ struct cauchy_data {
 
   static constexpr sc _alpha{ 0.5 };
   static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
-  static constexpr sc _shift{ 0.0 };
+  static constexpr sc _shift{ 0.2 };
 };
 
 int main( int argc, char * argv[] ) {
-  std::string file = "../mesh_files/cube_192.txt";
+  std::string file = "./mesh_files/cube_192_vol.txt";
   int refine = 0;
   lo n_timesteps = 8;
   sc end_time = 1.0;
@@ -98,11 +98,22 @@ int main( int argc, char * argv[] ) {
   if ( argc > 6 ) {
     grid_refine = std::atoi( argv[ 6 ] );
   }
-  triangular_surface_mesh space_mesh( file );
+  triangular_surface_mesh space_mesh;
+  tetrahedral_volume_mesh volume_mesh;
+  if ( cauchy_data::_shift > 0.0 ) {
+    volume_mesh.load( file );
+    volume_mesh.refine( refine );
+    space_mesh.from_tetrahedral( volume_mesh );
+    volume_mesh.print_info( );
+  } else {
+    space_mesh.load( file );
+    space_mesh.refine( refine );
+  }
+  n_timesteps *= std::exp2( refine );
   uniform_spacetime_tensor_mesh spacetime_mesh(
     space_mesh, end_time, n_timesteps );
-  spacetime_mesh.refine( refine, 1 );
 
+  space_mesh.print_info( );
   spacetime_mesh.print_info( );
 
   timer t;
@@ -138,15 +149,39 @@ int main( int argc, char * argv[] ) {
             << space_p0.L2_relative_error( cauchy_data::neumann, neu_proj )
             << std::endl;
 
-  t.reset( "Setting up RHS" );
   block_vector neu;
   neu.resize( K->get_block_dim( ) );
   neu.resize_blocks( K->get_n_rows( ), true );
   M.apply( dir_proj, neu, false, 0.5, 0.0 );
   K->apply( dir_proj, neu, false, 1.0, 1.0 );
-  t.measure( );
 
   delete K;
+
+  if ( cauchy_data::_shift > 0.0 ) {
+    lo order_reg_tetra = 4;
+
+    fe_space< basis_tetra_p1 > space_p1_tetra( volume_mesh );
+
+    vector init_proj;
+    space_p1_tetra.L2_projection( cauchy_data::initial, init_proj );
+    std::cout << "Initial projection L2 relative error: "
+              << space_p1_tetra.L2_relative_error(
+                   cauchy_data::initial, init_proj )
+              << std::endl;
+
+    block_row_matrix * M0 = new block_row_matrix( );
+    spacetime_heat_initial_m0_kernel_antiderivative kernel_m0(
+      cauchy_data::_alpha );
+    uniform_spacetime_initial_assembler assembler_m0(
+      kernel_m0, space_p0, space_p1_tetra, order_reg, order_reg_tetra );
+    t.reset( "M0" );
+    assembler_m0.assemble( *M0 );
+    t.measure( );
+
+    M0->apply( init_proj, neu, false, -1.0, 1.0 );
+
+    delete M0;
+  }
 
   block_lower_triangular_toeplitz_matrix * V
     = new block_lower_triangular_toeplitz_matrix( );

@@ -55,6 +55,11 @@ namespace besthea {
 class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
  public:
   /**
+   * Constructor.
+   */
+  tetrahedral_volume_mesh( );
+
+  /**
    * Constructing mesh from a file.
    * @param[in] file Path to the file.
    */
@@ -68,6 +73,12 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
    * Prints info on the object.
    */
   void print_info( ) const;
+
+  /**
+   * Prints the mesh file.
+   * @param[in] file File name.
+   */
+  void print( const std::string & file );
 
   /**
    * Prints the EnSight Gold case file.

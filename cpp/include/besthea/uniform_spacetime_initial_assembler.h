@@ -109,7 +109,7 @@ class besthea::bem::uniform_spacetime_initial_assembler {
    */
   uniform_spacetime_initial_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
-    int order_regular_tri = 4, int order_regular_tetra = 4 );
+    int order_regular_tri = 5, int order_regular_tetra = 4 );
 
   uniform_spacetime_initial_assembler(
     const uniform_spacetime_initial_assembler & that )

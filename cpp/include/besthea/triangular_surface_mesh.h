@@ -56,6 +56,11 @@ namespace besthea {
 class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
  public:
   /**
+   * Constructor.
+   */
+  triangular_surface_mesh( );
+
+  /**
    * Constructing mesh from a file.
    * @param[in] file Path to the file.
    */
@@ -147,6 +152,12 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    * @param[in] file File name.
    */
   bool load( const std::string & file );
+
+  /**
+   * Loads mesh from a tetrahedral mesh.
+   * @param[in] mesh Tetrahedral mesh.
+   */
+  void from_tetrahedral( const tetrahedral_volume_mesh & mesh );
 
   /**
    * Returns area of a single element.
@@ -349,22 +360,6 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
     sc & xmin, sc & xmax, sc & ymin, sc & ymax, sc & zmin, sc & zmax ) const;
 
  protected:
-  lo _n_nodes;               //!< number of nodes
-  std::vector< sc > _nodes;  //!< coordinates of nodes
-  std::vector< std::vector< lo > >
-    _node_to_elements;  //!< mapping from nodes to elements
-
-  lo _n_elements;               //!< number of elements
-  std::vector< lo > _elements;  //!< indices into #_nodes
-  std::pair< std::vector< lo >, std::vector< lo > >
-    _orientation;              //!< orientation of n := (x2-x1)x(x3-x1) and -n
-  std::vector< sc > _areas;    //!< element areas
-  std::vector< sc > _normals;  //!< exterior normal vectors
-
-  lo _n_edges;                          //!< number of edges
-  std::vector< lo > _edges;             //!< indices into #_nodes
-  std::vector< lo > _element_to_edges;  //!< indices into #_edges
-
   /**
    * Precomputes exterior normals and areas of elements.
    */
@@ -415,6 +410,22 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
     const override {
     return nullptr;
   }
+
+  lo _n_nodes;               //!< number of nodes
+  std::vector< sc > _nodes;  //!< coordinates of nodes
+  std::vector< std::vector< lo > >
+    _node_to_elements;  //!< mapping from nodes to elements
+
+  lo _n_elements;               //!< number of elements
+  std::vector< lo > _elements;  //!< indices into #_nodes
+  std::pair< std::vector< lo >, std::vector< lo > >
+    _orientation;              //!< orientation of n := (x2-x1)x(x3-x1) and -n
+  std::vector< sc > _areas;    //!< element areas
+  std::vector< sc > _normals;  //!< exterior normal vectors
+
+  lo _n_edges;                          //!< number of edges
+  std::vector< lo > _edges;             //!< indices into #_nodes
+  std::vector< lo > _element_to_edges;  //!< indices into #_edges
 };
 
 #endif /* INCLUDE_BESTHEA_TRIANGULAR_SURFACE_MESH_H_ */

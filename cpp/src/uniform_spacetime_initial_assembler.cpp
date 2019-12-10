@@ -82,7 +82,6 @@ void besthea::bem::uniform_spacetime_initial_assembler< kernel_type,
     std::vector< lo > trial_l2g( n_loc_columns );
 
     sc test, trial, value, test_area, trial_area;
-    lo size;
 
     linear_algebra::coordinates< 3 > x1, x2, x3;
     linear_algebra::coordinates< 3 > y1, y2, y3, y4;
@@ -92,12 +91,12 @@ void besthea::bem::uniform_spacetime_initial_assembler< kernel_type,
 
     quadrature_wrapper my_quadrature;
     init_quadrature( my_quadrature );
-    sc * x1_ref = nullptr;
-    sc * x2_ref = nullptr;
-    sc * y1_ref = nullptr;
-    sc * y2_ref = nullptr;
-    sc * y3_ref = nullptr;
-    sc * w = nullptr;
+    sc * x1_ref = my_quadrature._x1_ref.data( );;
+    sc * x2_ref = my_quadrature._x2_ref.data( );;
+    sc * y1_ref = my_quadrature._y1_ref.data( );
+    sc * y2_ref = my_quadrature._y2_ref.data( );
+    sc * y3_ref = my_quadrature._y3_ref.data( );
+    sc * w = my_quadrature._w.data( );
     sc * x1_mapped = my_quadrature._x1.data( );
     sc * x2_mapped = my_quadrature._x2.data( );
     sc * x3_mapped = my_quadrature._x3.data( );
@@ -105,6 +104,7 @@ void besthea::bem::uniform_spacetime_initial_assembler< kernel_type,
     sc * y2_mapped = my_quadrature._y2.data( );
     sc * y3_mapped = my_quadrature._y3.data( );
     sc * kernel_data = my_quadrature._kernel_values.data( );
+    lo size = my_quadrature._w.size( );
 
     for ( lo i_t = 0; i_t <= n_timesteps; ++i_t ) {
 #pragma omp single
@@ -124,14 +124,6 @@ void besthea::bem::uniform_spacetime_initial_assembler< kernel_type,
 
           triangle_and_tetrahedron_to_geometry(
             x1, x2, x3, y1, y2, y3, y4, my_quadrature );
-          x1_ref = my_quadrature._x1_ref.data( );
-          x2_ref = my_quadrature._x2_ref.data( );
-          y1_ref = my_quadrature._y1_ref.data( );
-          y2_ref = my_quadrature._y2_ref.data( );
-          y3_ref = my_quadrature._y3_ref.data( );
-          w = my_quadrature._w.data( );
-
-          size = my_quadrature._w.size( );
 
           if ( i_t == 0 ) {
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
