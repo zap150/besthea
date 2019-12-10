@@ -52,7 +52,7 @@ struct cauchy_data {
     sc dot = ( x1 - _y[ 0 ] ) * n[ 0 ] + ( x2 - _y[ 1 ] ) * n[ 1 ]
       + ( x3 - _y[ 2 ] ) * n[ 2 ];
     sc value = ( -1.0 / ( 2.0 * ( t + _shift ) ) ) * dot
-      * dirichlet( x1, x2, x3, n, ( t + _shift ) );
+      * dirichlet( x1, x2, x3, n, t );
 
     return value;
   }
