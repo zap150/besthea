@@ -137,7 +137,7 @@ class besthea::bem::fe_space {
    * Returns the L2 relative error |f-approximation|/|f|.
    * @param[in] f Function in infinite dimensional space.
    * @param[in] approximation Function in finite dimensional space.
-   * @param[in] rhs_spatial Triangular quadrature order to
+   * @param[in] order_rhs Triangular quadrature order to
    * assemble the right-hand side.
    */
   sc L2_relative_error( sc ( *f )( sc, sc, sc ),

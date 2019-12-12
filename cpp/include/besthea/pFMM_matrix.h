@@ -129,8 +129,9 @@ class besthea::linear_algebra::pFMM_matrix
 
   /*!
    * Sets the dimension of the matrix.
-   * @param[in] n_rows Number of rows.
-   * @param[in] n_cols Number of columns.
+   * @param[in] block_dim Block dimension.
+   * @param[in] dim_domain Number of columns.
+   * @param[in] dim_range Number of rows.
    */
   void resize( lo block_dim, lo dim_domain, lo dim_range ) {
     this->_block_dim = block_dim;

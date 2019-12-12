@@ -91,10 +91,10 @@ class besthea::linear_algebra::compound_linear_operator
  protected:
   std::vector< const besthea::linear_algebra::linear_operator * >
     _compound;                 //!< Vector of operators.
-  std::vector< bool > _trans;  //<! Transposition of individual operators.
-  std::vector< sc > _alpha;    //<! Multiplicative factors.
+  std::vector< bool > _trans;  //!< Transposition of individual operators.
+  std::vector< sc > _alpha;    //!< Multiplicative factors.
 
-  lo _maximal_dimension;  //<! Maximal dimension of all operators.
+  lo _maximal_dimension;  //!< Maximal dimension of all operators.
 };
 
 #endif /* INCLUDE_BESTHEA_COMPOUND_LINEAR_OPERATOR_H_ */

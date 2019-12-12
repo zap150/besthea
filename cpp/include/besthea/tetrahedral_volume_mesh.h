@@ -407,7 +407,7 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
   std::vector< sc > _nodes;  //!< coordinates of nodes
   std::vector< std::vector< lo > >
     _node_to_elements;  //!< mapping from nodes to elements
-  lo _n_surface_nodes;
+  lo _n_surface_nodes; //!< number of surface nodes
   std::vector< bool > _is_surface_node;  //!< True if surface node
 
   lo _n_elements;               //!< number of elements
@@ -423,7 +423,7 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
   std::vector< lo > _edges;             //!< indices into #_nodes
   std::vector< lo > _element_to_edges;  //!< indices into #_edges
 
-  lo _n_surface_edges;
+  lo _n_surface_edges; //!< number of surface edges
   std::vector< lo > _surface_element_to_edges;  //!< indices into #_edges
 };
 
