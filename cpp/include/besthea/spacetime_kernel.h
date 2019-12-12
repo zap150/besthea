@@ -26,32 +26,65 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file bem.h
+/** @file spacetime_kernel.h
  * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_BEM_H_
-#define INCLUDE_BESTHEA_BEM_H_
+#ifndef INCLUDE_BESTHEA_SPACETIME_KERNEL_H_
+#define INCLUDE_BESTHEA_SPACETIME_KERNEL_H_
 
-#include "besthea/basis_tetra_p1.h"
-#include "besthea/basis_tri_p0.h"
-#include "besthea/basis_tri_p1.h"
-#include "besthea/fast_spacetime_be_assembler.h"
-#include "besthea/fast_spacetime_be_space.h"
-#include "besthea/fe_space.h"
-#include "besthea/spacetime_be_identity.h"
-#include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
-#include "besthea/spacetime_heat_hs_kernel_antiderivative.h"
-#include "besthea/spacetime_heat_initial_m0_kernel_antiderivative.h"
-#include "besthea/spacetime_heat_initial_m1_kernel_antiderivative.h"
-#include "besthea/spacetime_heat_kernel.h"
-#include "besthea/spacetime_heat_sl_kernel_antiderivative.h"
-#include "besthea/uniform_spacetime_be_assembler.h"
-#include "besthea/uniform_spacetime_be_evaluator.h"
-#include "besthea/uniform_spacetime_be_identity.h"
-#include "besthea/uniform_spacetime_be_solver.h"
-#include "besthea/uniform_spacetime_be_space.h"
-#include "besthea/uniform_spacetime_initial_assembler.h"
-#include "besthea/uniform_spacetime_initial_evaluator.h"
+#include "besthea/settings.h"
 
-#endif /* INCLUDE_BESTHEA_BEM_H_ */
+namespace besthea {
+  namespace bem {
+    template< class derived_type >
+    class spacetime_kernel;
+  }
+}
+
+/**
+ *  Class representing a spacetime kernel.
+ */
+template< class derived_type >
+class besthea::bem::spacetime_kernel {
+ public:
+  /**
+   * Constructor.
+   */
+  spacetime_kernel( ) {
+  }
+
+  /**
+   * Destructor.
+   */
+  virtual ~spacetime_kernel( ) {
+  }
+
+  /**
+   * Returns this cast to the descendant's type.
+   */
+  derived_type * derived( ) {
+    return static_cast< derived_type * >( this );
+  }
+
+  /**
+   * Returns this cast to the descendant's type.
+   */
+  const derived_type * derived( ) const {
+    return static_cast< const derived_type * >( this );
+  }
+
+  /**
+   * Evaluates the kernel.
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] t `t`.
+   */
+#pragma omp declare simd uniform( this, t ) simdlen( DATA_WIDTH )
+  sc evaluate( sc xy1, sc xy2, sc xy3, sc t ) const {
+    return derived( )->do_evaluate( xy1, xy2, xy3, t );
+  }
+};
+
+#endif /* INCLUDE_BESTHEA_SPACETIME_KERNEL_H_ */

@@ -123,6 +123,7 @@ int main( int argc, char * argv[] ) {
 
   lo order_sing = 4;
   lo order_reg = 4;
+  lo order_reg_tetra = 4;
 
   block_lower_triangular_toeplitz_matrix * K
     = new block_lower_triangular_toeplitz_matrix( );
@@ -157,12 +158,10 @@ int main( int argc, char * argv[] ) {
 
   delete K;
 
+  vector init_proj;
   if ( cauchy_data::_shift > 0.0 ) {
-    lo order_reg_tetra = 4;
-
     fe_space< basis_tetra_p1 > space_p1_tetra( volume_mesh );
 
-    vector init_proj;
     space_p1_tetra.L2_projection( cauchy_data::initial, init_proj );
     std::cout << "Initial projection L2 relative error: "
               << space_p1_tetra.L2_relative_error(
@@ -264,6 +263,20 @@ int main( int argc, char * argv[] ) {
     t.measure( );
 
     slp.add( dlp, -1.0 );
+
+    if ( cauchy_data::_shift > 0.0 ) {
+      block_vector initp;
+      spacetime_heat_kernel kernel( cauchy_data::_alpha );
+      fe_space< basis_tetra_p1 > space_p1_tetra( volume_mesh );
+      uniform_spacetime_initial_evaluator evaluator_init( kernel,
+        space_p1_tetra, spacetime_mesh.get_n_temporal_elements( ),
+        spacetime_mesh.get_timestep( ), order_reg_tetra );
+      t.reset( "INITP" );
+      evaluator_init.evaluate( grid_space_mesh.get_nodes( ), init_proj, initp );
+      t.measure( );
+
+      slp.add( initp );
+    }
 
     block_vector sol_interp;
     uniform_spacetime_be_space< basis_tri_p1 > grid_space_p1(
