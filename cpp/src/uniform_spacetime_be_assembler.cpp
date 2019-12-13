@@ -31,9 +31,9 @@
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
 #include "besthea/quadrature.h"
-#include "besthea/uniform_spacetime_heat_dl_kernel_antiderivative.h"
-#include "besthea/uniform_spacetime_heat_hs_kernel_antiderivative.h"
-#include "besthea/uniform_spacetime_heat_sl_kernel_antiderivative.h"
+#include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
+#include "besthea/spacetime_heat_hs_kernel_antiderivative.h"
+#include "besthea/spacetime_heat_sl_kernel_antiderivative.h"
 
 #include <algorithm>
 
@@ -77,7 +77,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 
   lo n_test_elements = test_mesh->get_n_spatial_elements( );
   lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
-  sc scaled_delta;
+  sc ttau;
 
 #pragma omp parallel
   {
@@ -114,7 +114,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 
     for ( lo delta = 0; delta <= n_timesteps; ++delta ) {
 #pragma omp single
-      scaled_delta = timestep * delta;
+      ttau = timestep * delta;
 
 #pragma omp for schedule( dynamic )
       for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
@@ -198,7 +198,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
                 * w[ i_quad ];
             }
           } else {
-            if ( delta == 0 || i_test != i_trial ) {
+            if ( i_test != i_trial ) {
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
                           y2_mapped, y3_mapped, kernel_data, w        \
                           : DATA_ALIGN ) simdlen( DATA_WIDTH )
@@ -207,8 +207,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
                   = _kernel->anti_tau_anti_t_regular_in_time_regular_in_space(
                       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                       x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                      x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data,
-                      scaled_delta )
+                      x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data, ttau )
                   * w[ i_quad ];
               }
             } else {
@@ -220,8 +219,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
                   = _kernel->anti_tau_anti_t_regular_in_time(
                       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                       x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                      x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data,
-                      scaled_delta )
+                      x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data, ttau )
                   * w[ i_quad ];
               }
             }
@@ -274,7 +272,7 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
  */
 template<>
 void besthea::bem::uniform_spacetime_be_assembler<
-  besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
   assemble( besthea::linear_algebra::block_lower_triangular_toeplitz_matrix &
@@ -294,7 +292,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
   global_matrix.resize( n_timesteps );
   global_matrix.resize_blocks( n_rows, n_columns );
 
-  sc scaled_delta;
+  sc ttau;
 
 #pragma omp parallel
   {
@@ -319,7 +317,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
 
     for ( lo delta = 0; delta <= n_timesteps; ++delta ) {
 #pragma omp single
-      scaled_delta = timestep * delta;
+      ttau = timestep * delta;
 
 #pragma omp for schedule( dynamic )
       for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
@@ -383,7 +381,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
                        x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                        x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
                        x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nullptr,
-                       scaled_delta )
+                       ttau )
                   * w[ i_quad ];
               }
             } else {
@@ -395,7 +393,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
                            x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                            x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
                            x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nullptr,
-                           scaled_delta )
+                           ttau )
                   * w[ i_quad ];
               }
             }
@@ -426,7 +424,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
  */
 template<>
 void besthea::bem::uniform_spacetime_be_assembler<
-  besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
   assemble( besthea::linear_algebra::block_lower_triangular_toeplitz_matrix &
@@ -447,7 +445,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
   global_matrix.resize( n_timesteps );
   global_matrix.resize_blocks( n_rows, n_columns );
 
-  sc scaled_delta;
+  sc ttau;
 
 #pragma omp parallel
   {
@@ -480,7 +478,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
 
     for ( lo delta = 0; delta <= n_timesteps; ++delta ) {
 #pragma omp single
-      scaled_delta = timestep * delta;
+      ttau = timestep * delta;
 
 #pragma omp for schedule( dynamic )
       for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
@@ -563,8 +561,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
                   = _kernel->anti_tau_anti_t_regular_in_time_regular_in_space(
                       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                       x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                      x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data,
-                      scaled_delta )
+                      x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data, ttau )
                   * w[ i_quad ];
                 value1 += kernel
                   * ( (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ] );
@@ -577,11 +574,11 @@ void besthea::bem::uniform_spacetime_be_assembler<
 						  private( kernel ) reduction( + : value1, value2, value3 ) \
 					      simdlen( DATA_WIDTH )
               for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-                kernel = _kernel->anti_tau_anti_t_regular_in_time(
-                           x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-                           x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                           x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data,
-                           scaled_delta )
+                kernel
+                  = _kernel->anti_tau_anti_t_regular_in_time(
+                      x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                      x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                      x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data, ttau )
                   * w[ i_quad ];
                 value1 += kernel
                   * ( (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ] );
@@ -625,7 +622,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
  */
 template<>
 void besthea::bem::uniform_spacetime_be_assembler<
-  besthea::bem::uniform_spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
   assemble( besthea::linear_algebra::block_lower_triangular_toeplitz_matrix &
@@ -646,14 +643,14 @@ void besthea::bem::uniform_spacetime_be_assembler<
 
   lo n_test_elements = test_mesh->get_n_spatial_elements( );
   lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
-  sc scaled_delta;
+  sc ttau;
 
 #pragma omp parallel
   {
     std::vector< lo > test_l2g( 3 );
     std::vector< lo > trial_l2g( 3 );
 
-    sc areas, trial_area;
+    sc areas, test_area;
     sc value11, value12, value13;
     sc value21, value22, value23;
     sc value31, value32, value33;
@@ -691,13 +688,13 @@ void besthea::bem::uniform_spacetime_be_assembler<
 
     for ( lo delta = 0; delta <= n_timesteps; ++delta ) {
 #pragma omp single
-      scaled_delta = timestep * delta;
+      ttau = timestep * delta;
 
 #pragma omp for schedule( dynamic )
       for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
         test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
         test_mesh->get_spatial_normal( i_test, nx );
-        trial_area = test_mesh->spatial_area( i_test );
+        test_area = test_mesh->spatial_area( i_test );
         for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
           if ( delta == 0 ) {
             get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
@@ -709,7 +706,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
 
           trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
           trial_mesh->get_spatial_normal( i_trial, ny );
-          areas = trial_area * trial_mesh->spatial_area( i_trial );
+          areas = test_area * trial_mesh->spatial_area( i_trial );
 
           test_basis.local_to_global(
             i_test, n_shared_vertices, rot_test, false, test_l2g );
@@ -846,7 +843,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
                     x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                     x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
                     x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data,
-                    scaled_delta, &kernel1, &kernel2 );
+                    ttau, &kernel1, &kernel2 );
 
                 phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
                 phi1y = (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ];
@@ -893,7 +890,7 @@ void besthea::bem::uniform_spacetime_be_assembler<
                   x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                   x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
                   x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data,
-                  scaled_delta, &kernel1, &kernel2 );
+                  ttau, &kernel1, &kernel2 );
 
                 phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
                 phi1y = (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ];
@@ -1387,28 +1384,28 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 }
 
 template class besthea::bem::uniform_spacetime_be_assembler<
-  besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
 template class besthea::bem::uniform_spacetime_be_assembler<
-  besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
 
 template class besthea::bem::uniform_spacetime_be_assembler<
-  besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
 template class besthea::bem::uniform_spacetime_be_assembler<
-  besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
 template class besthea::bem::uniform_spacetime_be_assembler<
-  besthea::bem::uniform_spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
 
 template class besthea::bem::uniform_spacetime_be_assembler<
-  besthea::bem::uniform_spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;

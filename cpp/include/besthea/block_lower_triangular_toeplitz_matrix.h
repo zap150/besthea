@@ -156,26 +156,24 @@ class besthea::linear_algebra::block_lower_triangular_toeplitz_matrix
    * @param[in] beta
    */
   virtual void apply( const block_vector_type & x, block_vector_type & y,
-    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
+    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
 
   /*!
-   * @brief In-place Choleski decomposition of the first block and solution.
+   * @brief In-place Cholesky decomposition of the first block and solution.
    * @param[in,out] rhs Right-hand side overwritten by the result.
-   * @param[in] n_rhs Number of right-hand sides.
    */
-  void choleski_decompose_solve( block_vector_type & rhs );
+  void cholesky_decompose_solve( block_vector_type & rhs );
 
   /*!
-   * @brief In-place Choleski decomposition of the first block.
+   * @brief In-place Cholesky decomposition of the first block.
    */
-  void choleski_decompose( );
+  void cholesky_decompose( );
 
   /*!
-   * @brief Choleski solution
+   * @brief Cholesky solution
    * @param[in,out] rhs Right-hand side overwritten by the result.
-   * @param[in] n_rhs Number of right-hand sides.
    */
-  void choleski_solve( block_vector_type & rhs );
+  void cholesky_solve( block_vector_type & rhs );
 
   /*!
    * @brief Prints the matrix.

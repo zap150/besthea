@@ -26,68 +26,65 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file uniform_spacetime_heat_kernel_antiderivative.h
- * @brief Kernel for uniform_spacetime_tensor_mesh.h.
+/** @file spacetime_kernel.h
+ * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_
-#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_
+#ifndef INCLUDE_BESTHEA_SPACETIME_KERNEL_H_
+#define INCLUDE_BESTHEA_SPACETIME_KERNEL_H_
 
 #include "besthea/settings.h"
-#include "besthea/uniform_spacetime_kernel_antiderivative.h"
-
-#include <cmath>
-#include <vector>
 
 namespace besthea {
   namespace bem {
     template< class derived_type >
-    class uniform_spacetime_heat_kernel_antiderivative;
+    class spacetime_kernel;
   }
 }
 
 /**
- *  Class representing a first and second antiderivative of a spacetime heat
- * kernel.
+ *  Class representing a spacetime kernel.
  */
 template< class derived_type >
-class besthea::bem::uniform_spacetime_heat_kernel_antiderivative
-  : public besthea::bem::uniform_spacetime_kernel_antiderivative<
-      derived_type > {
+class besthea::bem::spacetime_kernel {
  public:
   /**
    * Constructor.
-   * @param[in] timestep Time step.
-   * @param[in] alpha Heat conductivity.
    */
-  uniform_spacetime_heat_kernel_antiderivative( sc timestep, sc alpha )
-    : uniform_spacetime_kernel_antiderivative< derived_type >( timestep ),
-      _alpha( alpha ),
-      _sqrt_alpha( std::sqrt( alpha ) ),
-      _alpha2( alpha * alpha ) {
+  spacetime_kernel( ) {
   }
 
   /**
    * Destructor.
    */
-  virtual ~uniform_spacetime_heat_kernel_antiderivative( ) {
+  virtual ~spacetime_kernel( ) {
   }
 
- protected:
-  sc _alpha;  //!< Heat conductivity.
+  /**
+   * Returns this cast to the descendant's type.
+   */
+  derived_type * derived( ) {
+    return static_cast< derived_type * >( this );
+  }
 
-  sc _sqrt_alpha;  //!< Auxiliary variable
-  sc _alpha2;      //!< Auxiliary variable
+  /**
+   * Returns this cast to the descendant's type.
+   */
+  const derived_type * derived( ) const {
+    return static_cast< const derived_type * >( this );
+  }
 
-  const sc _pi{ M_PI };                    //!< Auxiliary variable
-  const sc _sqrt_pi{ std::sqrt( M_PI ) };  //!< Auxiliary variable
-  const sc _zero{ 0.0 };                   //!< Auxiliary variable
-  const sc _one{ 1.0 };                    //!< Auxiliary variable
-  const sc _two{ 2.0 };                    //!< Auxiliary variable
-  const sc _four{ 4.0 };                   //!< Auxiliary variable
-  const sc _eight{ 8.0 };                  //!< Auxiliary variable
-
-  const sc _eps{ 1e-12 };  //!< Auxiliary variable
+  /**
+   * Evaluates the kernel.
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] t `t`.
+   */
+#pragma omp declare simd uniform( this, t ) simdlen( DATA_WIDTH )
+  sc evaluate( sc xy1, sc xy2, sc xy3, sc t ) const {
+    return derived( )->do_evaluate( xy1, xy2, xy3, t );
+  }
 };
 
-#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_ */
+#endif /* INCLUDE_BESTHEA_SPACETIME_KERNEL_H_ */

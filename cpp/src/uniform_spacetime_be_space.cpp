@@ -30,14 +30,13 @@
 
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
-#include "besthea/quadrature.h"
 #include "besthea/sparse_matrix.h"
 #include "besthea/uniform_spacetime_be_identity.h"
 
 template< class basis_type >
 besthea::bem::uniform_spacetime_be_space<
   basis_type >::uniform_spacetime_be_space( st_mesh_type & spacetime_mesh )
-  : _basis( spacetime_mesh ) {
+  : spacetime_be_space< basis_type >( spacetime_mesh ) {
   _spacetime_mesh = &spacetime_mesh;
 }
 
@@ -56,7 +55,7 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::L2_projection(
     *this, *this, order_matrix );
   identity.assemble( M );
 
-  lo global_dim = _basis.dimension_global( );
+  lo global_dim = this->_basis.dimension_global( );
   besthea::linear_algebra::vector rhs( global_dim, true );
 
   lo n_timesteps = _spacetime_mesh->get_n_temporal_elements( );
@@ -66,7 +65,7 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::L2_projection(
   projection.resize( n_timesteps );
   projection.resize_blocks( global_dim );
 
-  lo local_dim = _basis.dimension_local( );
+  lo local_dim = this->_basis.dimension_local( );
   std::vector< lo > l2g( local_dim );
 
   linear_algebra::coordinates< 3 > x1, x2, x3, n;
@@ -74,8 +73,8 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::L2_projection(
   sc cg_eps;
   lo n_iter;
 
-  quadrature_wrapper my_quadrature;
-  init_quadrature( order_rhs_spatial, order_rhs_temporal, my_quadrature );
+  typename spacetime_be_space< basis_type >::quadrature_wrapper my_quadrature;
+  this->init_quadrature( order_rhs_spatial, order_rhs_temporal, my_quadrature );
   lo size_t = my_quadrature._wt.size( );
   lo size_x = my_quadrature._wx.size( );
   sc * x1_ref = my_quadrature._x1_ref.data( );
@@ -90,11 +89,11 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::L2_projection(
   lo * l2g_data = l2g.data( );
 
   for ( lo d = 0; d < n_timesteps; ++d ) {
-    line_to_time( d, timestep, my_quadrature );
+    this->line_to_time( d, timestep, my_quadrature );
     for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
       _spacetime_mesh->get_spatial_nodes( i_elem, x1, x2, x3 );
-      triangle_to_geometry( x1, x2, x3, my_quadrature );
-      _basis.local_to_global( i_elem, l2g );
+      this->triangle_to_geometry( x1, x2, x3, my_quadrature );
+      this->_basis.local_to_global( i_elem, l2g );
       _spacetime_mesh->get_spatial_normal( i_elem, n );
       area_xt = _spacetime_mesh->spatial_area( i_elem ) * timestep;
 
@@ -104,7 +103,7 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::L2_projection(
                       t_mapped[ i_t ] )
             * wx[ i_x ] * wt[ i_t ] * area_xt;
           for ( lo i_loc = 0; i_loc < local_dim; ++i_loc ) {
-            basis_val = _basis.evaluate(
+            basis_val = this->_basis.evaluate(
               i_elem, i_loc, x1_ref[ i_x ], x2_ref[ i_x ], n.data( ) );
             rhs_data[ l2g_data[ i_loc ] ] += basis_val * fun_val;
           }
@@ -127,7 +126,7 @@ sc besthea::bem::uniform_spacetime_be_space< basis_type >::L2_relative_error(
   sc timestep = _spacetime_mesh->get_timestep( );
   lo n_elements = _spacetime_mesh->get_n_spatial_elements( );
 
-  lo local_dim = _basis.dimension_local( );
+  lo local_dim = this->_basis.dimension_local( );
   std::vector< lo > l2g( local_dim );
 
   linear_algebra::coordinates< 3 > x1, x2, x3, n;
@@ -137,8 +136,8 @@ sc besthea::bem::uniform_spacetime_be_space< basis_type >::L2_relative_error(
   sc local_value;
   sc absdiff, absf;
 
-  quadrature_wrapper my_quadrature;
-  init_quadrature( order_rhs_spatial, order_rhs_temporal, my_quadrature );
+  typename spacetime_be_space< basis_type >::quadrature_wrapper my_quadrature;
+  this->init_quadrature( order_rhs_spatial, order_rhs_temporal, my_quadrature );
   lo size_t = my_quadrature._wt.size( );
   lo size_x = my_quadrature._wx.size( );
   sc * x1_ref = my_quadrature._x1_ref.data( );
@@ -153,18 +152,18 @@ sc besthea::bem::uniform_spacetime_be_space< basis_type >::L2_relative_error(
   const sc * approximation_data = nullptr;
 
   for ( lo d = 0; d < n_timesteps; ++d ) {
-    line_to_time( d, timestep, my_quadrature );
+    this->line_to_time( d, timestep, my_quadrature );
     approximation_data = approximation.get_block( d ).data( );
     for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
       _spacetime_mesh->get_spatial_nodes( i_elem, x1, x2, x3 );
-      triangle_to_geometry( x1, x2, x3, my_quadrature );
-      _basis.local_to_global( i_elem, l2g );
+      this->triangle_to_geometry( x1, x2, x3, my_quadrature );
+      this->_basis.local_to_global( i_elem, l2g );
       _spacetime_mesh->get_spatial_normal( i_elem, n );
       area_xt = _spacetime_mesh->spatial_area( i_elem ) * timestep;
       for ( lo i_x = 0; i_x < size_x; ++i_x ) {
         local_value = 0.0;
         for ( lo i_loc = 0; i_loc < local_dim; ++i_loc ) {
-          basis_val = _basis.evaluate(
+          basis_val = this->_basis.evaluate(
             i_elem, i_loc, x1_ref[ i_x ], x2_ref[ i_x ], n.data( ) );
           local_value += approximation_data[ l2g_data[ i_loc ] ] * basis_val;
         }
@@ -183,13 +182,6 @@ sc besthea::bem::uniform_spacetime_be_space< basis_type >::L2_relative_error(
   return result;
 }
 
-template< class basis_type >
-void besthea::bem::uniform_spacetime_be_space< basis_type >::interpolation(
-  sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-  block_vector_type & interpolation ) const {
-  std::cout << "Only use specialized templates!" << std::endl;
-}
-
 /**
  * Projects a function to the piecewise constant boundary element space.
  * @param[in] f Function to be projected.
@@ -201,7 +193,6 @@ void besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >::
     sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
     block_vector_type & interpolation ) const {
   lo n_timesteps = _spacetime_mesh->get_n_temporal_elements( );
-  sc timestep = _spacetime_mesh->get_timestep( );
   lo n_elements = _spacetime_mesh->get_n_spatial_elements( );
 
   interpolation.resize( n_timesteps );
@@ -214,7 +205,7 @@ void besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >::
     for ( lo d = 0; d < n_timesteps; ++d ) {
       interpolation.set( d, i_elem,
         f( centroid[ 0 ], centroid[ 1 ], centroid[ 2 ], n,
-          ( d + 0.5 ) * timestep ) );
+          _spacetime_mesh->get_temporal_centroid( d ) ) );
     }
   }
 }
@@ -230,7 +221,6 @@ void besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >::
     sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
     block_vector_type & interpolation ) const {
   lo n_timesteps = _spacetime_mesh->get_n_temporal_elements( );
-  sc timestep = _spacetime_mesh->get_timestep( );
   lo n_nodes = _spacetime_mesh->get_n_spatial_nodes( );
 
   interpolation.resize( n_timesteps );
@@ -241,92 +231,10 @@ void besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >::
     _spacetime_mesh->get_spatial_node( i_node, x );
     _spacetime_mesh->get_spatial_nodal_normal( i_node, n );
     for ( lo d = 0; d < n_timesteps; ++d ) {
-      interpolation.set(
-        d, i_node, f( x[ 0 ], x[ 1 ], x[ 2 ], n, ( d + 0.5 ) * timestep ) );
+      interpolation.set( d, i_node,
+        f( x[ 0 ], x[ 1 ], x[ 2 ], n,
+          _spacetime_mesh->get_temporal_centroid( d ) ) );
     }
-  }
-}
-
-template< class basis_type >
-void besthea::bem::uniform_spacetime_be_space< basis_type >::init_quadrature(
-  int order_rhs_spatial, int order_rhs_temporal,
-  quadrature_wrapper & my_quadrature ) const {
-  // calling copy constructor of std::vector
-  my_quadrature._x1_ref = quadrature::triangle_x1( order_rhs_spatial );
-  my_quadrature._x2_ref = quadrature::triangle_x2( order_rhs_spatial );
-  my_quadrature._wx = quadrature::triangle_w( order_rhs_spatial );
-
-  lo size = my_quadrature._wx.size( );
-  my_quadrature._x1.resize( size );
-  my_quadrature._x2.resize( size );
-  my_quadrature._x3.resize( size );
-
-  // calling copy constructor of std::vector
-  my_quadrature._t_ref = quadrature::line_x( order_rhs_temporal );
-  my_quadrature._wt = quadrature::line_w( order_rhs_temporal );
-
-  size = my_quadrature._wt.size( );
-  my_quadrature._t.resize( size );
-}
-
-template< class basis_type >
-void besthea::bem::uniform_spacetime_be_space< basis_type >::
-  triangle_to_geometry( const linear_algebra::coordinates< 3 > & x1,
-    const linear_algebra::coordinates< 3 > & x2,
-    const linear_algebra::coordinates< 3 > & x3,
-    quadrature_wrapper & my_quadrature ) const {
-  const sc * x1_ref = my_quadrature._x1_ref.data( );
-  const sc * x2_ref = my_quadrature._x2_ref.data( );
-  sc * x1_mapped = my_quadrature._x1.data( );
-  sc * x2_mapped = my_quadrature._x2.data( );
-  sc * x3_mapped = my_quadrature._x3.data( );
-
-  lo size = my_quadrature._wx.size( );
-
-#pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, x1_ref, x2_ref \
-                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
-  for ( lo i = 0; i < size; ++i ) {
-    x1_mapped[ i ] = x1[ 0 ] + ( x2[ 0 ] - x1[ 0 ] ) * x1_ref[ i ]
-      + ( x3[ 0 ] - x1[ 0 ] ) * x2_ref[ i ];
-    x2_mapped[ i ] = x1[ 1 ] + ( x2[ 1 ] - x1[ 1 ] ) * x1_ref[ i ]
-      + ( x3[ 1 ] - x1[ 1 ] ) * x2_ref[ i ];
-    x3_mapped[ i ] = x1[ 2 ] + ( x2[ 2 ] - x1[ 2 ] ) * x1_ref[ i ]
-      + ( x3[ 2 ] - x1[ 2 ] ) * x2_ref[ i ];
-  }
-}
-
-template< class basis_type >
-sc besthea::bem::uniform_spacetime_be_space< basis_type >::l2_relative_error(
-  const block_vector_type & f, const block_vector_type & approximation ) const {
-  lo block_size = f.get_block_size( );
-  lo size = f.get_size( );
-  sc l2diffnorm = 0.0;
-  sc l2norm = 0.0;
-  sc aux;
-
-  for ( lo i_block = 0; i_block < block_size; ++i_block ) {
-    for ( lo i_elem = 0; i_elem < size; ++i_elem ) {
-      aux = f.get( i_block, i_elem );
-      l2norm += aux * aux;
-      aux -= approximation.get( i_block, i_elem );
-      l2diffnorm += aux * aux;
-    }
-  }
-
-  return std::sqrt( l2diffnorm / l2norm );
-}
-
-template< class basis_type >
-void besthea::bem::uniform_spacetime_be_space< basis_type >::line_to_time(
-  lo d, sc timestep, quadrature_wrapper & my_quadrature ) const {
-  const sc * t_ref = my_quadrature._t_ref.data( );
-  sc * t_mapped = my_quadrature._t.data( );
-
-  lo size = my_quadrature._wt.size( );
-
-#pragma omp simd aligned( t_mapped, t_ref ) simdlen( DATA_WIDTH )
-  for ( lo i = 0; i < size; ++i ) {
-    t_mapped[ i ] = ( t_ref[ i ] + d ) * timestep;
   }
 }
 

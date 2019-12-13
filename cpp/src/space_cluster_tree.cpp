@@ -48,6 +48,10 @@ besthea::mesh::space_cluster_tree::space_cluster_tree(
     _n_nonempty_nodes( 0 ) {
   sc xmin, xmax, ymin, ymax, zmin, zmax;
   compute_bounding_box( xmin, xmax, ymin, ymax, zmin, zmax );
+  _bounding_box_size.resize( 3 );
+  _bounding_box_size[ 0 ] = ( xmax - xmin ) / 2.0;
+  _bounding_box_size[ 1 ] = ( ymax - ymin ) / 2.0;
+  _bounding_box_size[ 2 ] = ( zmax - zmin ) / 2.0;
 
   vector_type center
     = { ( xmin + xmax ) / 2.0, ( ymin + ymax ) / 2.0, ( zmin + zmax ) / 2.0 };
@@ -75,6 +79,9 @@ besthea::mesh::space_cluster_tree::space_cluster_tree(
 
   _paddings.resize( _levels );
   _paddings.shrink_to_fit( );
+
+  // collect all clusters without descendants
+  collect_leaves( *_root );
 }
 
 void besthea::mesh::space_cluster_tree::build_tree(
@@ -418,4 +425,15 @@ bool besthea::mesh::space_cluster_tree::print_tree(
   std::cout << "done." << std::endl;
 
   return true;
+}
+
+void besthea::mesh::space_cluster_tree::collect_leaves( space_cluster & root ) {
+  if ( root.get_n_children( ) == 0 ) {
+    _leaves.push_back( &root );
+  } else {
+    for ( auto it = root.get_children( )->begin( );
+          it != root.get_children( )->end( ); ++it ) {
+      collect_leaves( **it );
+    }
+  }
 }

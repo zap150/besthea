@@ -34,7 +34,11 @@
 #ifndef INCLUDE_BESTHEA_SPACETIME_TENSOR_MESH_H_
 #define INCLUDE_BESTHEA_SPACETIME_TENSOR_MESH_H_
 
+#include "besthea/block_vector.h"
+#include "besthea/coordinates.h"
+#include "besthea/indices.h"
 #include "besthea/mesh.h"
+#include "besthea/spacetime_tensor_mesh.h"
 #include "besthea/temporal_mesh.h"
 #include "besthea/triangular_surface_mesh.h"
 
@@ -118,12 +122,13 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * @param[in] i_element Index of the element.
    * @param[out] element Element indices (array of 6 indices).
    */
-  void get_element( lo i_element, lo * element ) const {
+  void get_element(
+    lo i_element, linear_algebra::indices< 3 > & element ) const {
     lo space_elem_idx;
     lo time_elem_idx;
     map_index( i_element, space_elem_idx, time_elem_idx );
     linear_algebra::indices< 3 > sp_element;
-    lo t_element[ 2 ];
+    linear_algebra::indices< 2 > t_element;
 
     _space_mesh->get_element( space_elem_idx, sp_element );
     _time_mesh->get_element( time_elem_idx, t_element );
@@ -136,6 +141,11 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
     element[ 5 ] = sp_element[ 2 ] + t_element[ 1 ] * get_n_spatial_nodes( );
   }
 
+  /**
+   * Returns the coordinates of the spacetime node.
+   * @param[in] i_node Index of the node.
+   * @param[out] node Coordinates of the spacetime node.
+   */
   void get_node( lo i_node, linear_algebra::coordinates< 4 > & node ) const {
     lo t_idx = i_node / get_n_spatial_nodes( );
     lo s_idx = i_node % get_n_spatial_nodes( );
@@ -145,7 +155,8 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
     node[ 0 ] = sp_node[ 0 ];
     node[ 1 ] = sp_node[ 1 ];
     node[ 2 ] = sp_node[ 2 ];
-    _time_mesh->get_node( t_idx, node.end( ) - 1 );
+
+    node[ 3 ] = _time_mesh->get_node( t_idx );
   }
 
   /**
@@ -250,7 +261,8 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * @param[in] i_element Index of the temporal element.
    * @param[out] element Temporal indices.
    */
-  void get_temporal_element( lo i_element, lo * element ) const {
+  void get_temporal_element(
+    lo i_element, linear_algebra::indices< 2 > & element ) const {
     _time_mesh->get_element( i_element, element );
   }
 
@@ -265,9 +277,43 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
   /**
    * Returns a coordinate of a temporal node.
    * @param[in] i_node Index of the temporal node.
+   * @param[in] node Time point.
    */
-  void get_temporal_node( lo i_node, sc * node ) const {
+  void get_temporal_node(
+    lo i_node, linear_algebra::coordinates< 1 > & node ) const {
     _time_mesh->get_node( i_node, node );
+  }
+
+  /**
+   * Returns a coordinate of a temporal node.
+   * @param[in] i_element Index of the temporal element.
+   * @param[out] node Time point.
+   */
+  void get_temporal_centroid(
+    lo i_element, linear_algebra::coordinates< 1 > & node ) const {
+    node( 0 ) = _time_mesh->get_centroid( i_element );
+  }
+
+  /**
+   * Returns a coordinate of a temporal node.
+   * @param[in] i_element Index of the temporal element.
+   */
+  sc get_temporal_centroid( lo i_element ) const {
+    return _time_mesh->get_centroid( i_element );
+  }
+
+  /**
+   * Returns coordinates of all temporal nodes of an element.
+   * @param[in] i_element Index of the temporal element.
+   * @param[out] node1 Coordinate of the first node (beginning of the temporal
+   * subinterval).
+   * @param[out] node2 Coordinate of the second node (end of the temporal
+   * subinterval).
+   */
+  void get_temporal_nodes( lo i_element,
+    linear_algebra::coordinates< 1 > & node1,
+    linear_algebra::coordinates< 1 > & node2 ) const {
+    _time_mesh->get_nodes( i_element, node1, node2 );
   }
 
   /**
@@ -282,6 +328,10 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
     _time_mesh->get_nodes( i_element, node1, node2 );
   }
 
+  /**
+   * Returns the length of  time interval.
+   * @param[in] i_element Index of the element.
+   */
   sc temporal_length( lo i_element ) const {
     return _time_mesh->length( i_element );
   }
@@ -303,11 +353,12 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
 
   /**
    * Prints the mesh into Paraview format.
-   * @param[in] file File name.
+   * @param[in] directory Directory name.
    * @param[in] node_labels Labels for nodal data.
    * @param[in] node_data Scalar nodal data.
    * @param[in] element_labels Labels for elemental data.
    * @param[in] element_data Scalar elemental data.
+   * @param[in] time_stride Stride in time.
    */
   bool print_vtu( const std::string & directory,
     const std::vector< std::string > * node_labels = nullptr,
@@ -361,21 +412,44 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
   /**
    * Returns a pointer to the internally stored spatial mesh.
    */
-  virtual triangular_surface_mesh * get_spatial_mesh( ) {
+  virtual triangular_surface_mesh * get_spatial_surface_mesh( ) override {
     return _space_mesh;
   }
 
   /**
    * Returns a pointer to the internally stored spatial mesh.
    */
-  virtual const triangular_surface_mesh * get_spatial_mesh( ) const {
+  virtual const triangular_surface_mesh * get_spatial_surface_mesh( )
+    const override {
     return _space_mesh;
+  }
+
+  /**
+   * Returns the volume mesh.
+   */
+  virtual tetrahedral_volume_mesh * get_spatial_volume_mesh( ) override {
+    return nullptr;
+  }
+
+  /**
+   * Returns the volume mesh.
+   */
+  virtual const tetrahedral_volume_mesh * get_spatial_volume_mesh( )
+    const override {
+    return nullptr;
   }
 
   /**
    * Return a pointer to the internally stored temporal mesh.
    */
   virtual temporal_mesh * get_temporal_mesh( ) {
+    return _time_mesh;
+  }
+
+  /**
+   * Return a pointer to the internally stored temporal mesh.
+   */
+  virtual const temporal_mesh * get_temporal_mesh( ) const {
     return _time_mesh;
   }
 

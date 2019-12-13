@@ -30,7 +30,7 @@
 
 besthea::linear_algebra::block_lower_triangular_toeplitz_matrix::
   block_lower_triangular_toeplitz_matrix( )
-  : block_matrix( 1, 1, 1 ), _data( 1, matrix_type( ) ) {
+  : block_matrix( 0, 0, 0 ), _data( ) {
 }
 
 besthea::linear_algebra::block_lower_triangular_toeplitz_matrix::
@@ -93,30 +93,30 @@ void besthea::linear_algebra::block_lower_triangular_toeplitz_matrix::resize(
 }
 
 void besthea::linear_algebra::block_lower_triangular_toeplitz_matrix::
-  choleski_decompose_solve( block_vector_type & rhs ) {
-  _data[ 0 ].choleski_decompose( );
+  cholesky_decompose_solve( block_vector_type & rhs ) {
+  _data[ 0 ].cholesky_decompose( );
 
   for ( lo d = 0; d < _block_dim; ++d ) {
     for ( lo j = 1; j <= d; ++j ) {
       _data[ j ].apply(
         rhs.get_block( d - j ), rhs.get_block( d ), false, -1.0, 1.0 );
     }
-    _data[ 0 ].choleski_solve( rhs.get_block( d ) );
+    _data[ 0 ].cholesky_solve( rhs.get_block( d ) );
   }
 }
 
 void besthea::linear_algebra::block_lower_triangular_toeplitz_matrix::
-  choleski_decompose( ) {
-  _data[ 0 ].choleski_decompose( );
+  cholesky_decompose( ) {
+  _data[ 0 ].cholesky_decompose( );
 }
 
 void besthea::linear_algebra::block_lower_triangular_toeplitz_matrix::
-  choleski_solve( block_vector_type & rhs ) {
+  cholesky_solve( block_vector_type & rhs ) {
   for ( lo d = 0; d < _block_dim; ++d ) {
     for ( lo j = 1; j <= d; ++j ) {
       _data[ j ].apply(
         rhs.get_block( d - j ), rhs.get_block( d ), false, -1.0, 1.0 );
     }
-    _data[ 0 ].choleski_solve( rhs.get_block( d ) );
+    _data[ 0 ].cholesky_solve( rhs.get_block( d ) );
   }
 }

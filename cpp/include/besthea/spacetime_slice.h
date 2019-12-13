@@ -48,6 +48,11 @@ namespace besthea {
  */
 class besthea::mesh::spacetime_slice {
  public:
+	/**
+	 * Constructor.
+	 * @param[in] space_file File with the spatial mesh.
+	 * @param[in] time_file File with the temporal mesh.
+	 */
   spacetime_slice(
     const std::string & space_file, const std::string & time_file )
     : _space_mesh( space_file ),
@@ -56,9 +61,9 @@ class besthea::mesh::spacetime_slice {
   }
 
  protected:
-  triangular_surface_mesh _space_mesh;
-  temporal_mesh _time_mesh;
-  spacetime_tensor_mesh _spacetime_mesh;
+  triangular_surface_mesh _space_mesh; //!< Spatial mesh.
+  temporal_mesh _time_mesh; //!< Temporal mesh.
+  spacetime_tensor_mesh _spacetime_mesh; //!< Spacetime mesh.
 };
 
 #endif /* INCLUDE_BESTHEA_SPACETIME_SLICE_H_ */

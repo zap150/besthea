@@ -26,18 +26,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <besthea/space_cluster_tree.h>
-#include <besthea/spacetime_cluster_tree.h>
-
-#include "besthea/full_matrix.h"
-#include "besthea/settings.h"
-#include "besthea/spacetime_slice.h"
-#include "besthea/spacetime_tensor_mesh.h"
-#include "besthea/temporal_mesh.h"
-#include "besthea/time_cluster_tree.h"
-#include "besthea/triangular_surface_mesh.h"
-#include "besthea/uniform_spacetime_tensor_mesh.h"
-#include "besthea/vector.h"
+#include "besthea/besthea.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -46,13 +35,13 @@
 int main( int argc, char * argv[] ) {
   using b_t_mesh = besthea::mesh::temporal_mesh;
   using b_s_mesh = besthea::mesh::triangular_surface_mesh;
-  // using b_st_mesh = besthea::mesh::spacetime_tensor_mesh;
+  using b_st_mesh = besthea::mesh::spacetime_tensor_mesh;
   // using b_ust_mesh = besthea::mesh::uniform_spacetime_tensor_mesh;
   // using b_st_slice = besthea::mesh::spacetime_slice;
   // using space_cluster_tree = besthea::mesh::space_cluster_tree;
   // using time_cluster_tree = besthea::mesh::time_cluster_tree;
   using space_time_cluster_tree = besthea::mesh::spacetime_cluster_tree;
-  using full_matrix = besthea::linear_algebra::full_matrix;
+  // using full_matrix = besthea::linear_algebra::full_matrix;
 
   std::string file = "./test/mesh_files/time_1_10.txt";
 
@@ -69,8 +58,6 @@ int main( int argc, char * argv[] ) {
   // std::string file_spatial = "./test/mesh_files/icosahedron.txt";
   std::string file_spatial = "./test/mesh_files/nuniform.txt";
   b_s_mesh space_mesh( file_spatial );
-
-  // b_st_mesh tensor_mesh( space_mesh, time_mesh );
 
   // tensor_mesh.print_info( );
 
@@ -94,10 +81,12 @@ int main( int argc, char * argv[] ) {
   // ct.print_tree_separately( "test", false );
 
   time_mesh.refine( 2 );
-  
+
+  b_st_mesh tensor_mesh( space_mesh, time_mesh );
+
   // coefficient to determine coupling of spatial and temoral levels
-  sc st_coeff = 4.0; // corresponds to \rho_L = 8 in Messner's paper
-  
-  space_time_cluster_tree spt( space_mesh, time_mesh, 4, 3, 10, st_coeff );
-  spt.print( );
+  sc st_coeff = 4.0;  // corresponds to \rho_L = 8 in Messner's paper
+
+  space_time_cluster_tree spt( tensor_mesh, 4, 3, 10, st_coeff );
+  // spt.print( );
 }

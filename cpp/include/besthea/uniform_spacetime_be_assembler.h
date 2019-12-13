@@ -94,9 +94,6 @@ class besthea::bem::uniform_spacetime_be_assembler {
   };
 
  public:
-  using full_matrix_type
-    = besthea::linear_algebra::full_matrix;  //!< Full matrix type.
-
   /**
    * Constructor.
    * @param[in] kernel Spacetime kernel antiderivative object.

@@ -63,5 +63,6 @@ void besthea::linear_algebra::coordinates< dimension >::print(
   stream << std::endl;
 }
 
+template class besthea::linear_algebra::coordinates< 1 >;
 template class besthea::linear_algebra::coordinates< 3 >;
 template class besthea::linear_algebra::coordinates< 4 >;

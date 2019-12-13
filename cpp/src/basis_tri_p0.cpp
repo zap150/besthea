@@ -30,7 +30,7 @@
 
 #include <algorithm>
 
-besthea::bem::basis_tri_p0::basis_tri_p0( mesh_type & mesh ) {
+besthea::bem::basis_tri_p0::basis_tri_p0( const mesh_type & mesh ) {
   _mesh = &mesh;
 }
 
@@ -42,7 +42,7 @@ lo besthea::bem::basis_tri_p0::dimension_local( ) const {
 }
 
 lo besthea::bem::basis_tri_p0::dimension_global( ) const {
-  return _mesh->get_spatial_mesh( )->get_n_elements( );
+  return _mesh->get_spatial_surface_mesh( )->get_n_elements( );
 }
 
 void besthea::bem::basis_tri_p0::do_local_to_global(

@@ -26,21 +26,22 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file uniform_spacetime_heat_kernel_antiderivative.h
+/** @file spacetime_heat_sl_kernel_antiderivative.h
  * @brief Kernel for uniform_spacetime_tensor_mesh.h.
  */
 
-#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_SL_KERNEL_ANTIDERIVATIVE_H_
-#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_SL_KERNEL_ANTIDERIVATIVE_H_
+#ifndef INCLUDE_BESTHEA_SPACETIME_HEAT_SL_KERNEL_ANTIDERIVATIVE_H_
+#define INCLUDE_BESTHEA_SPACETIME_HEAT_SL_KERNEL_ANTIDERIVATIVE_H_
+
+#include <besthea/spacetime_heat_kernel_antiderivative.h>
 
 #include "besthea/settings.h"
-#include "besthea/uniform_spacetime_heat_kernel_antiderivative.h"
 
 #include <vector>
 
 namespace besthea {
   namespace bem {
-    class uniform_spacetime_heat_sl_kernel_antiderivative;
+    class spacetime_heat_sl_kernel_antiderivative;
   }
 }
 
@@ -48,24 +49,23 @@ namespace besthea {
  *  Class representing a first and second antiderivative of the single-layer
  * spacetime kernel.
  */
-class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
-  : public besthea::bem::uniform_spacetime_heat_kernel_antiderivative<
-      uniform_spacetime_heat_sl_kernel_antiderivative > {
+class besthea::bem::spacetime_heat_sl_kernel_antiderivative
+  : public besthea::bem::spacetime_heat_kernel_antiderivative<
+      spacetime_heat_sl_kernel_antiderivative > {
  public:
   /**
    * Constructor.
-   * @param[in] timestep Time step.
    * @param[in] alpha Heat conductivity.
    */
-  uniform_spacetime_heat_sl_kernel_antiderivative( sc timestep, sc alpha )
-    : uniform_spacetime_heat_kernel_antiderivative<
-      uniform_spacetime_heat_sl_kernel_antiderivative >( timestep, alpha ) {
+  spacetime_heat_sl_kernel_antiderivative( sc alpha )
+    : spacetime_heat_kernel_antiderivative<
+      spacetime_heat_sl_kernel_antiderivative >( alpha ) {
   }
 
   /**
    * Destructor.
    */
-  virtual ~uniform_spacetime_heat_sl_kernel_antiderivative( ) {
+  virtual ~spacetime_heat_sl_kernel_antiderivative( ) {
   }
 
   /**
@@ -74,26 +74,26 @@ class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
    * @param[in] xy2 Second coordinate of `x - y`.
    * @param[in] xy3 Third coordinate of `x - y`.
    * @param[in] ny Normal in the `y` variable.
-   * @param[in] scaled_delta Difference of time intervals.
+   * @param[in] ttau `t-tau`.
    */
-#pragma omp declare simd uniform( this, ny, scaled_delta ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, ny, ttau ) simdlen( DATA_WIDTH )
   sc do_anti_tau_anti_t(
-    sc xy1, sc xy2, sc xy3, const sc * ny, sc scaled_delta ) const {
+    sc xy1, sc xy2, sc xy3, const sc * ny, sc ttau ) const {
     sc value;
     sc norm = std::sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
-    sc sqrt_d = std::sqrt( scaled_delta );
+    sc sqrt_d = std::sqrt( ttau );
 
-    if ( scaled_delta > _eps ) {
-      if ( norm > _eps ) {  //  delta > 0, norm > 0
-        value = ( scaled_delta / ( _four * _pi * _alpha * norm )
+    if ( ttau > _eps ) {
+      if ( norm > _eps ) {  //  ttau > 0, norm > 0
+        value = ( ttau / ( _four * _pi * _alpha * norm )
                   + norm / ( _eight * _pi * _alpha2 ) )
             * std::erf( norm / ( _two * sqrt_d * _sqrt_alpha ) )
           + sqrt_d / ( _four * _pi * _alpha * _sqrt_pi * _sqrt_alpha )
-            * std::exp( -( norm * norm ) / ( _four * scaled_delta * _alpha ) );
-      } else {  //  delta > 0, limit for norm -> 0
+            * std::exp( -( norm * norm ) / ( _four * ttau * _alpha ) );
+      } else {  //  ttau > 0, limit for norm -> 0
         value = sqrt_d / ( _two * _pi * _alpha * _sqrt_pi * _sqrt_alpha );
       }
-    } else {  // limit for delta -> 0, assuming norm > 0
+    } else {  // limit for ttau -> 0, assuming norm > 0
       value = norm / ( _eight * _pi * _alpha2 );
     }
 
@@ -106,21 +106,21 @@ class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
    * @param[in] xy2 Second coordinate of `x - y`.
    * @param[in] xy3 Third coordinate of `x - y`.
    * @param[in] ny Normal in the `y` variable.
-   * @param[in] scaled_delta Difference of time intervals.
+   * @param[in] ttau `t-tau`.
    */
-#pragma omp declare simd uniform( this, ny, scaled_delta ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, ny, ttau ) simdlen( DATA_WIDTH )
   sc do_anti_tau_anti_t_regular_in_time(
-    sc xy1, sc xy2, sc xy3, const sc * ny, sc scaled_delta ) const {
+    sc xy1, sc xy2, sc xy3, const sc * ny, sc ttau ) const {
     sc value;
     sc norm = std::sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
-    sc sqrt_d = std::sqrt( scaled_delta );
+    sc sqrt_d = std::sqrt( ttau );
 
     if ( norm > _eps ) {  //  delta > 0, norm > 0
-      value = ( scaled_delta / ( _four * _pi * _alpha * norm )
+      value = ( ttau / ( _four * _pi * _alpha * norm )
                 + norm / ( _eight * _pi * _alpha2 ) )
           * std::erf( norm / ( _two * sqrt_d * _sqrt_alpha ) )
         + sqrt_d / ( _four * _pi * _alpha * _sqrt_pi * _sqrt_alpha )
-          * std::exp( -( norm * norm ) / ( _four * scaled_delta * _alpha ) );
+          * std::exp( -( norm * norm ) / ( _four * ttau * _alpha ) );
     } else {  //  delta > 0, limit for norm -> 0
       value = sqrt_d / ( _two * _pi * _alpha * _sqrt_pi * _sqrt_alpha );
     }
@@ -134,20 +134,20 @@ class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
    * @param[in] xy2 Second coordinate of `x - y`.
    * @param[in] xy3 Third coordinate of `x - y`.
    * @param[in] ny Normal in the `y` variable.
-   * @param[in] scaled_delta Difference of time intervals.
+   * @param[in] ttau `t-tau`.
    */
-#pragma omp declare simd uniform( this, ny, scaled_delta ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, ny, ttau ) simdlen( DATA_WIDTH )
   sc do_anti_tau_anti_t_regular_in_time_regular_in_space(
-    sc xy1, sc xy2, sc xy3, const sc * ny, sc scaled_delta ) const {
+    sc xy1, sc xy2, sc xy3, const sc * ny, sc ttau ) const {
     sc norm = std::sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
-    sc sqrt_d = std::sqrt( scaled_delta );
+    sc sqrt_d = std::sqrt( ttau );
 
-    //  delta > 0, norm > 0
-    sc value = ( scaled_delta / ( _four * _pi * _alpha * norm )
+    //  ttau > 0, norm > 0
+    sc value = ( ttau / ( _four * _pi * _alpha * norm )
                  + norm / ( _eight * _pi * _alpha2 ) )
         * std::erf( norm / ( _two * sqrt_d * _sqrt_alpha ) )
       + sqrt_d / ( _four * _pi * _alpha * _sqrt_pi * _sqrt_alpha )
-        * std::exp( -( norm * norm ) / ( _four * scaled_delta * _alpha ) );
+        * std::exp( -( norm * norm ) / ( _four * ttau * _alpha ) );
 
     return value;
   }
@@ -164,7 +164,7 @@ class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
     sc xy1, sc xy2, sc xy3, const sc * ny ) const {
     sc norm = std::sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
 
-    // limit for delta -> 0, assuming norm > 0
+    // limit for ttau -> 0, assuming norm > 0
     sc value = norm / ( _eight * _pi * _alpha2 );
 
     return value;
@@ -175,13 +175,13 @@ class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
    * @param[in] xy2 Second coordinate of `x - y`.
    * @param[in] xy3 Third coordinate of `x - y`.
    * @param[in] ny Normal in the `y` variable.
-   * @param[in] scaled_delta Difference of time intervals.
+   * @param[in] ttau `t-tau`.
    */
-#pragma omp declare simd uniform( this, ny, scaled_delta ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, ny, ttau ) simdlen( DATA_WIDTH )
   sc do_anti_tau_regular(
-    sc xy1, sc xy2, sc xy3, const sc * ny, sc scaled_delta ) const {
+    sc xy1, sc xy2, sc xy3, const sc * ny, sc ttau ) const {
     sc norm = std::sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
-    sc sqrt_d = std::sqrt( scaled_delta );
+    sc sqrt_d = std::sqrt( ttau );
 
     sc value = std::erf( norm / ( _two * _sqrt_alpha * sqrt_d ) )
       / ( _four * _pi * _alpha * norm );
@@ -203,7 +203,49 @@ class besthea::bem::uniform_spacetime_heat_sl_kernel_antiderivative
 
     return value;
   }
+
+  /**
+   * Evaluates the definite integral over the same time interval.
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] ny Normal in the `y` variable.
+   * @param[in] t0 Start of interval.
+   * @param[in] t1 End of interval.
+   */
+#pragma omp declare simd uniform( this, ny, t0, t1 ) simdlen( DATA_WIDTH )
+  sc do_definite_integral_over_same_interval(
+    sc xy1, sc xy2, sc xy3, const sc * ny, sc t0, sc t1 ) const {
+    sc value = ( t1 - t0 ) * do_anti_tau_limit( xy1, xy2, xy3, ny )
+      - do_anti_tau_anti_t_regular_in_time( xy1, xy2, xy3, ny, t1 - t0 )
+      + do_anti_tau_anti_t_limit_in_time_regular_in_space( xy1, xy2, xy3, ny );
+
+    return value;
+  }
+
+  /**
+   * Evaluates the definite integral over the different time intervals.
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] ny Normal in the `y` variable.
+   * @param[in] t0 Start of interval in `t`.
+   * @param[in] t1 End of interval in `t`.
+   * @param[in] tau0 Start of interval in `tau`.
+   * @param[in] tau1 End of interval in `tau`.
+   */
+#pragma omp declare simd uniform( this, ny, t0, t1, tau0, tau1 ) \
+  simdlen( DATA_WIDTH )
+  sc do_definite_integral_over_different_intervals( sc xy1, sc xy2, sc xy3,
+    const sc * ny, sc t0, sc t1, sc tau0, sc tau1 ) const {
+    sc value = do_anti_tau_anti_t( xy1, xy2, xy3, ny, t1 - tau1 )
+      - do_anti_tau_anti_t( xy1, xy2, xy3, ny, t1 - tau0 )
+      - do_anti_tau_anti_t( xy1, xy2, xy3, ny, t0 - tau1 )
+      + do_anti_tau_anti_t( xy1, xy2, xy3, ny, t0 - tau0 );
+
+    return value;
+  }
 };
 
-#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_HEAT_SL_KERNEL_ANTIDERIVATIVE_H_ \
+#endif /* INCLUDE_BESTHEA_SPACETIME_HEAT_SL_KERNEL_ANTIDERIVATIVE_H_ \
         */

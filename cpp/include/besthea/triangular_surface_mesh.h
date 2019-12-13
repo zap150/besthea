@@ -33,9 +33,12 @@
 #ifndef INCLUDE_BESTHEA_TRIANGULAR_SURFACE_MESH_H_
 #define INCLUDE_BESTHEA_TRIANGULAR_SURFACE_MESH_H_
 
-#include "besthea/linear_algebra.h"
+#include "besthea/coordinates.h"
+#include "besthea/indices.h"
 #include "besthea/mesh.h"
 #include "besthea/settings.h"
+#include "besthea/tetrahedral_volume_mesh.h"
+#include "besthea/vector.h"
 
 #include <optional>
 #include <string>
@@ -53,10 +56,21 @@ namespace besthea {
 class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
  public:
   /**
+   * Constructor.
+   */
+  triangular_surface_mesh( );
+
+  /**
    * Constructing mesh from a file.
    * @param[in] file Path to the file.
    */
   triangular_surface_mesh( const std::string & file );
+
+  /**
+   * Constructing mesh from a volume mesh.
+   * @param[in] mesh Tetrahedral mesh.
+   */
+  triangular_surface_mesh( const tetrahedral_volume_mesh & mesh );
 
   triangular_surface_mesh( const triangular_surface_mesh & that ) = delete;
 
@@ -138,6 +152,12 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    * @param[in] file File name.
    */
   bool load( const std::string & file );
+
+  /**
+   * Loads mesh from a tetrahedral mesh.
+   * @param[in] mesh Tetrahedral mesh.
+   */
+  void from_tetrahedral( const tetrahedral_volume_mesh & mesh );
 
   /**
    * Returns area of a single element.
@@ -340,22 +360,6 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
     sc & xmin, sc & xmax, sc & ymin, sc & ymax, sc & zmin, sc & zmax ) const;
 
  protected:
-  lo _n_nodes;               //!< number of nodes
-  std::vector< sc > _nodes;  //!< coordinates of nodes
-  std::vector< std::vector< lo > >
-    _node_to_elements;  //!< mapping from nodes to elements
-
-  lo _n_elements;               //!< number of elements
-  std::vector< lo > _elements;  //!< indices into #_nodes
-  std::pair< std::vector< lo >, std::vector< lo > >
-    _orientation;              //!< orientation of n := (x2-x1)x(x3-x1) and -n
-  std::vector< sc > _areas;    //!< element areas
-  std::vector< sc > _normals;  //!< exterior normal vectors
-
-  lo _n_edges;                          //!< number of edges
-  std::vector< lo > _edges;             //!< indices into #_nodes
-  std::vector< lo > _element_to_edges;  //!< indices into #_edges
-
   /**
    * Precomputes exterior normals and areas of elements.
    */
@@ -380,16 +384,48 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
   /**
    * Returns the surface mesh.
    */
-  virtual triangular_surface_mesh * get_spatial_mesh( ) {
+  virtual triangular_surface_mesh * get_spatial_surface_mesh( ) override {
     return this;
   }
 
   /**
    * Returns the surface mesh.
    */
-  virtual const triangular_surface_mesh * get_spatial_mesh( ) const {
+  virtual const triangular_surface_mesh * get_spatial_surface_mesh( )
+    const override {
     return this;
   }
+
+  /**
+   * Returns the volume mesh.
+   */
+  virtual tetrahedral_volume_mesh * get_spatial_volume_mesh( ) override {
+    return nullptr;
+  }
+
+  /**
+   * Returns the volume mesh.
+   */
+  virtual const tetrahedral_volume_mesh * get_spatial_volume_mesh( )
+    const override {
+    return nullptr;
+  }
+
+  lo _n_nodes;               //!< number of nodes
+  std::vector< sc > _nodes;  //!< coordinates of nodes
+  std::vector< std::vector< lo > >
+    _node_to_elements;  //!< mapping from nodes to elements
+
+  lo _n_elements;               //!< number of elements
+  std::vector< lo > _elements;  //!< indices into #_nodes
+  std::pair< std::vector< lo >, std::vector< lo > >
+    _orientation;              //!< orientation of n := (x2-x1)x(x3-x1) and -n
+  std::vector< sc > _areas;    //!< element areas
+  std::vector< sc > _normals;  //!< exterior normal vectors
+
+  lo _n_edges;                          //!< number of edges
+  std::vector< lo > _edges;             //!< indices into #_nodes
+  std::vector< lo > _element_to_edges;  //!< indices into #_edges
 };
 
 #endif /* INCLUDE_BESTHEA_TRIANGULAR_SURFACE_MESH_H_ */

@@ -33,8 +33,10 @@
 #ifndef INCLUDE_BESTHEA_TIME_CLUSTER_H_
 #define INCLUDE_BESTHEA_TIME_CLUSTER_H_
 
+#include "besthea/full_matrix.h"
 #include "besthea/settings.h"
 #include "besthea/temporal_mesh.h"
+#include "besthea/vector.h"
 
 #include <iostream>
 #include <vector>
@@ -50,6 +52,9 @@ namespace besthea {
  */
 class besthea::mesh::time_cluster {
  public:
+  using vector_type = besthea::linear_algebra::vector;  //!< Block vector type.
+  using full_matrix_type
+    = besthea::linear_algebra::full_matrix;  //!< Full matrix type.
   /**
    * Constructor.
    * @param[in] center Center of the cluster.
@@ -67,7 +72,8 @@ class besthea::mesh::time_cluster {
       _parent( parent ),
       _children( nullptr ),
       _mesh( mesh ),
-      _level( level ) {
+      _level( level ),
+      _lagrange_quad( 1, 1 ) {
     _elements.reserve( _n_elements );
   }
 
@@ -148,11 +154,32 @@ class besthea::mesh::time_cluster {
     }
   }
 
+  /**
+   * Returns number of cluster's children.
+   */
+  lo get_n_children( ) {
+    if ( _children != nullptr ) {
+      return _children->size( );
+    } else {
+      return 0;
+    }
+  }
+
+  /**
+   * Returns a pointer to the children.
+   */
   std::vector< time_cluster * > * get_children( ) {
     return _children;
   }
 
-  /*
+  /**
+   * Returns a pointer to the children.
+   */
+  const std::vector< time_cluster * > * get_children( ) const {
+    return _children;
+  }
+
+  /**
    * Returns level of the cluster in the cluster tree.
    */
   lo get_level( ) const {
@@ -162,25 +189,57 @@ class besthea::mesh::time_cluster {
   /**
    * Computes padding of the cluster (distance of the farthest point to the
    * cluster's boundary)
-   *
    */
   sc compute_padding( ) const {
-    sc node1, node2;
+    linear_algebra::coordinates< 1 > node1;
+    linear_algebra::coordinates< 1 > node2;
 
     sc padding = 0.0;
 
     // loop over elements in cluster
     for ( lo i = 0; i < _n_elements; ++i ) {
-      _mesh.get_nodes( _elements[ i ], &node1, &node2 );
-      if ( ( ( _center - _half_size ) - node1 > padding ) ) {
-        padding = _center - _half_size - node1;
+      _mesh.get_nodes( _elements[ i ], node1, node2 );
+      if ( ( ( _center - _half_size ) - node1( 0 ) > padding ) ) {
+        padding = _center - _half_size - node1( 0 );
       }
-      if ( ( node2 - ( _center + _half_size ) > padding ) ) {
-        padding = node2 - ( _center + _half_size );
+      if ( ( node2( 0 ) - ( _center + _half_size ) > padding ) ) {
+        padding = node2( 0 ) - ( _center + _half_size );
       }
     }
-
     return padding;
+  }
+
+  /**
+   * Returns a pointer to left neighbour.
+   */
+  time_cluster * get_left_neighbour( ) {
+    if ( _parent == nullptr ) {
+      // for the root cluster
+      return nullptr;
+    }
+
+    if ( this == _parent->_children->back( ) ) {
+      return _parent->_children->front( );
+    } else if ( ( _parent->get_left_neighbour( ) != nullptr )
+      && ( _parent->get_left_neighbour( )->_children->size( ) == 2 ) ) {
+      return _parent->get_left_neighbour( )->_children->back( );
+    } else {
+      return nullptr;
+    }
+  }
+
+  /**
+   * Returns vector storing quadrature of the Lagrange polynomials on a cluster.
+   */
+  full_matrix_type & get_lagrange_quad( ) {
+    return _lagrange_quad;
+  }
+
+  /**
+   * Returns the associated mesh.
+   */
+  const temporal_mesh & get_mesh( ) {
+    return _mesh;
   }
 
  private:
@@ -193,6 +252,11 @@ class besthea::mesh::time_cluster {
   std::vector< time_cluster * > * _children;  //!< children of the cluster
   const temporal_mesh & _mesh;  //!< temporal mesh associated with the cluster
   lo _level;                    //!< level within the cluster tree
+  full_matrix_type
+    _lagrange_quad;  //!< integrals of the Lagrange polynomials defined on
+                     //!< temporal clusters over temporal elements; each
+                     //!< std::vector entry of index i stores data associated
+                     //!< with i-th order polynomial
 };
 
 #endif /* INCLUDE_BESTHEA_TIME_CLUSTER_H_ */

@@ -46,7 +46,7 @@ namespace besthea {
 }
 
 /**
- *  Class representing a boundary element matrix assembler.
+ *  Class representing a potential evaluator.
  */
 template< class kernel_type, class space_type >
 class besthea::bem::uniform_spacetime_be_evaluator {
@@ -104,7 +104,7 @@ class besthea::bem::uniform_spacetime_be_evaluator {
   ~uniform_spacetime_be_evaluator( );
 
   /**
-   * Assembles the spacetime matrix.
+   * Evaluates the potential.
    * @param[in] x Point coordinates.
    * @param[in] density Density of the potential.
    * @param[out] result Result in the given points.
@@ -123,9 +123,9 @@ class besthea::bem::uniform_spacetime_be_evaluator {
   /**
    * Maps the quadrature nodes from the reference triangle to the actual
    * geometry.
-   * @param[in] x1 Coordinates of the first node of the test element.
-   * @param[in] x2 Coordinates of the second node of the test element.
-   * @param[in] x3 Coordinates of the third node of the test element.
+   * @param[in] x1 Coordinates of the first node of the trial element.
+   * @param[in] x2 Coordinates of the second node of the trial element.
+   * @param[in] x3 Coordinates of the third node of the trial element.
    * @param[in,out] my_quadrature Structure holding the quadrature nodes.
    */
   void triangle_to_geometry( const linear_algebra::coordinates< 3 > & x1,

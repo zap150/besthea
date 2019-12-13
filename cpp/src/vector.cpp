@@ -68,3 +68,15 @@ void besthea::linear_algebra::vector::random_fill( sc lower, sc upper ) {
   std::generate(
     _data.begin( ), _data.end( ), [&gen, &dis]( ) { return dis( gen ); } );
 }
+
+void besthea::linear_algebra::vector::copy_from_raw(
+  lo size, const sc * data ) {
+  if ( _size != size ) {
+    resize( size, false );
+  }
+  std::copy( data, data + size, _data.data( ) );
+}
+
+void besthea::linear_algebra::vector::copy_to_raw( sc * data ) const {
+  std::copy( _data.begin( ), _data.end( ), data );
+}

@@ -35,6 +35,7 @@
 
 #include "besthea/settings.h"
 #include "besthea/vector.h"
+
 #include <cmath>
 
 namespace besthea {
@@ -48,7 +49,7 @@ namespace besthea {
  */
 class besthea::bem::lagrange_interpolant {
  public:
-  using vector_type = besthea::linear_algebra::vector;
+  using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
 
   /**
    * Constructor.
@@ -56,46 +57,47 @@ class besthea::bem::lagrange_interpolant {
    * @note @p _nodes are initialized with Chebyshev nodes of order (order + 1)
    */
   lagrange_interpolant( const lo order )
-    : _order( order ),
-      _nodes( vector_type( order + 1, false ) ) {
+    : _order( order ), _nodes( vector_type( order + 1, false ) ) {
     for ( lo i = 0; i <= _order; ++i )
       _nodes[ i ] = cos( ( _pi * ( 2 * i + 1 ) ) / ( 2 * ( _order + 1 ) ) );
   }
 
   lagrange_interpolant( const lagrange_interpolant & that ) = delete;
-  
+
   /**
    * Evaluate Lagrange polynomials in [-1, 1]
    * @param[in] index Index of the Lagrange polynomial which is evaluated
    *                  (has to be in {0, ..., order})
    * @param[in] eval_points Points in [-1, 1] where polynomial is evaluated
-   * @param[in,out]  values  Resulting values (at input its size should be at 
+   * @param[in,out]  values  Resulting values (at input its size should be at
    *                         least the size of @p eval_points)
    */
-  void evaluate( const lo index, const vector_type eval_points, 
-                 vector_type & values) {
+  void evaluate(
+    const lo index, const vector_type eval_points, vector_type & values ) {
     // initialize values to 1;
-    for ( lo i = 0; i < eval_points.size( ); ++i )
-      values[ i ] = 1.0;
-    for ( lo k = 0; k < index; ++ k)
+    for ( lo i = 0; i < eval_points.size( ); ++i ) values[ i ] = 1.0;
+    for ( lo k = 0; k < index; ++k )
       for ( lo i = 0; i < eval_points.size( ); ++i )
-        values[ i ] *= ( eval_points[ i ] - _nodes[ k ] ) / 
-                       ( _nodes[ index ] - _nodes[ k ] );
-    for ( lo k = index + 1; k <= _order; ++ k )
+        values[ i ] *= ( eval_points[ i ] - _nodes[ k ] )
+          / ( _nodes[ index ] - _nodes[ k ] );
+    for ( lo k = index + 1; k <= _order; ++k )
       for ( lo i = 0; i < eval_points.size( ); ++i )
-        values[ i ] *= ( eval_points[ i ] - _nodes[ k ] ) / 
-                       ( _nodes[ index ] - _nodes[ k ] );
+        values[ i ] *= ( eval_points[ i ] - _nodes[ k ] )
+          / ( _nodes[ index ] - _nodes[ k ] );
   }
-  
+
+  /**
+   * Returns a reference to the interpolation nodes.
+   */
   const vector_type & get_nodes( ) const {
     return _nodes;
   };
-  
+
  private:
-  lo _order;           //!< number of interpolation nodes
-  vector_type _nodes;  //!< interpolation nodes determining the Lagrange
-                       //!< polynomials
-  const sc _pi{ M_PI }; //!< Auxiliary variable
+  lo _order;             //!< number of interpolation nodes
+  vector_type _nodes;    //!< interpolation nodes determining the Lagrange
+                         //!< polynomials
+  const sc _pi{ M_PI };  //!< Auxiliary variable
 };
 
 #endif /* INCLUDE_BESTHEA_LAGRANGE_INTERPOLANT_H_ */

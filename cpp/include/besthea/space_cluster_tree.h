@@ -38,6 +38,7 @@
 #include "besthea/triangular_surface_mesh.h"
 #include "besthea/vector.h"
 
+#include <map>
 #include <optional>
 
 namespace besthea {
@@ -51,14 +52,13 @@ namespace besthea {
  */
 class besthea::mesh::space_cluster_tree {
  public:
-  using vector_type = besthea::linear_algebra::vector;
+  using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
 
   /**
    * Constructor.
-   * @param[in] triangular_surface_mesh Reference to the underlying mesh.
+   * @param[in] mesh Reference to the underlying mesh.
    * @param[in] levels Maximum number of levels in the tree.
-   *
-   *
+   * @param[in] n_min_elems Minimum number of elements in leafs.
    */
   space_cluster_tree(
     const triangular_surface_mesh & mesh, lo levels, lo n_min_elems );
@@ -101,6 +101,7 @@ class besthea::mesh::space_cluster_tree {
    * @param[in] include_padding Adds padding to cluster's half-sizes.
    * @param[in] level If set, prints only a given level of the tree. For
    * -1, prints all levels.
+   * @param[in] suffix Suffix for the filename.
    */
   bool print_tree( const std::string & directory, bool include_padding = false,
     lo level = -1, std::optional< lo > suffix = std::nullopt ) const;
@@ -122,8 +123,6 @@ class besthea::mesh::space_cluster_tree {
    *
    * @param[in] directory Output directory.
    * @param[in] include_padding Adds padding to cluster's half-sizes.
-   * @param[in] level If set, prints only a given level of the tree. For
-   * -1, prints all levels.
    */
   bool print_tree_separately(
     const std::string & directory, bool include_padding = false ) const {
@@ -157,6 +156,20 @@ class besthea::mesh::space_cluster_tree {
     return _paddings;
   }
 
+  /**
+   * Returns size of the underlying mesh bounding box.
+   */
+  const std::vector< sc > & get_bounding_box( ) const {
+    return _bounding_box_size;
+  }
+
+  /**
+   * Returns clusters without descendants.
+   */
+  std::vector< space_cluster * > & get_leaves( ) {
+    return _leaves;
+  }
+
  private:
   space_cluster * _root;                  //!< root cluster of the tree
   const triangular_surface_mesh & _mesh;  //!< underlying mesh
@@ -175,6 +188,9 @@ class besthea::mesh::space_cluster_tree {
   std::map< std::vector< slou >, space_cluster * >
     _coord_2_cluster;  //!< map from cluster coordinates to its location in
                        //!< memory
+  std::vector< sc > _bounding_box_size;  //!< size of the mesh bounding box;
+  std::vector< space_cluster * >
+    _leaves;  //!< vector of all clusters without descendants
 
   /**
    * Computes the bounding box of the underlying mesh.
@@ -200,6 +216,13 @@ class besthea::mesh::space_cluster_tree {
    * @param[in] root Node to stem from.
    */
   sc compute_padding( space_cluster & root );
+
+  /**
+   * Collects all clusters without descendants and stores them in the internal
+   * _leaves vector.
+   * @param[in] root Root cluster of the tree.
+   */
+  void collect_leaves( space_cluster & root );
 };
 
 #endif /* INCLUDE_BESTHEA_SPACE_CLUSTER_TREE_H_ */

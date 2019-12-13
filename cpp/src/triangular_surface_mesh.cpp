@@ -38,6 +38,10 @@
 #include <utility>
 #include <vector>
 
+besthea::mesh::triangular_surface_mesh::triangular_surface_mesh( )
+  : _n_nodes( 0 ), _n_elements( 0 ), _n_edges( 0 ) {
+}
+
 besthea::mesh::triangular_surface_mesh::~triangular_surface_mesh( ) {
 }
 
@@ -52,6 +56,46 @@ besthea::mesh::triangular_surface_mesh::triangular_surface_mesh(
   load( file );
 }
 
+besthea::mesh::triangular_surface_mesh::triangular_surface_mesh(
+  const tetrahedral_volume_mesh & mesh ) {
+  from_tetrahedral( mesh );
+}
+
+void besthea::mesh::triangular_surface_mesh::from_tetrahedral(
+  const tetrahedral_volume_mesh & mesh ) {
+  _orientation = mesh.get_surface_orientation( );
+  _n_nodes = mesh.get_n_surface_nodes( );
+  _n_elements = mesh.get_n_surface_elements( );
+
+  _nodes.reserve( 3 * _n_nodes );
+  lo n_nodes_volume = mesh.get_n_nodes( );
+  linear_algebra::coordinates< 3 > x;
+  std::vector< lo > volume_to_surface( n_nodes_volume, 0 );
+  lo counter = 0;
+  for ( lo i_node = 0; i_node < n_nodes_volume; ++i_node ) {
+    if ( mesh.is_surface_node( i_node ) ) {
+      mesh.get_node( i_node, x );
+      _nodes.push_back( x[ 0 ] );
+      _nodes.push_back( x[ 1 ] );
+      _nodes.push_back( x[ 2 ] );
+      volume_to_surface[ i_node ] = counter++;
+    }
+  }
+
+  _elements.resize( 3 * _n_elements );
+  linear_algebra::indices< 3 > element;
+  for ( lo i_element = 0; i_element < _n_elements; ++i_element ) {
+    mesh.get_surface_element( i_element, element );
+    _elements[ 3 * i_element ] = volume_to_surface[ element[ 0 ] ];
+    _elements[ 3 * i_element + 1 ] = volume_to_surface[ element[ 1 ] ];
+    _elements[ 3 * i_element + 2 ] = volume_to_surface[ element[ 2 ] ];
+  }
+
+  init_normals_and_areas( );
+  init_edges( );
+  init_node_to_elements( );
+}
+
 bool besthea::mesh::triangular_surface_mesh::load( const std::string & file ) {
   std::ifstream filestream( file.c_str( ) );
 
@@ -64,7 +108,7 @@ bool besthea::mesh::triangular_surface_mesh::load( const std::string & file ) {
 
   filestream >> dummy;  // dimension (3)
   filestream >> dummy;  // nodes per element (3)
-  filestream >> this->_n_nodes;
+  filestream >> _n_nodes;
 
   _nodes.resize( 3 * _n_nodes );
 
@@ -127,9 +171,9 @@ void besthea::mesh::triangular_surface_mesh::init_normals_and_areas( ) {
   _areas.resize( _n_elements );
   _normals.resize( 3 * _n_elements );
 
-  sc x21[ 3 ];
-  sc x31[ 3 ];
-  sc cross[ 3 ];
+  linear_algebra::coordinates< 3 > x21;
+  linear_algebra::coordinates< 3 > x31;
+  linear_algebra::coordinates< 3 > cross;
   sc norm;
 
   for ( lo i_elem = 0; i_elem < _n_elements; ++i_elem ) {
@@ -162,6 +206,9 @@ void besthea::mesh::triangular_surface_mesh::init_normals_and_areas( ) {
 }
 
 void besthea::mesh::triangular_surface_mesh::refine( int level ) {
+  if ( level < 1 )
+    return;
+
   lo new_n_nodes, new_n_elements, new_n_edges;
   linear_algebra::coordinates< 3 > x1, x2;
   linear_algebra::indices< 2 > edge;
@@ -348,7 +395,6 @@ void besthea::mesh::triangular_surface_mesh::init_edges( ) {
 
   // allocate aux. variables
   linear_algebra::indices< 3 > element;
-
   std::vector< std::vector< lo > > local_edges;
   local_edges.resize( _n_nodes );
   std::vector< std::pair< lo, lo > > element_to_edges_tmp;

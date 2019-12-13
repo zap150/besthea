@@ -52,7 +52,7 @@ class besthea::bem::basis_tri_p0
    * Constructor.
    * @param[in] mesh Mesh.
    */
-  basis_tri_p0( mesh_type & mesh );
+  basis_tri_p0( const mesh_type & mesh );
 
   /**
    * Destructor.

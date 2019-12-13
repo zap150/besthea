@@ -2,6 +2,7 @@
 *.vtu.*
 *.vtu
 *.exe
+*.o
 *.o.d
 *.bbl
 *.blg
@@ -17,10 +18,7 @@
 *.DS_Store
 *Makefile.debug
 *Makefile.release
-cpp/doc/html
-cpp/test/ensight
-cpp/test/ensight_surface
-cpp/test/ensight_grid
-cpp/test/local
+*Makefile.linux
 notes/integration/integration.pdf
-notes/handwritten/*
+notes/handwritten/
+notes/20_tausch/

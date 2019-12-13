@@ -46,6 +46,7 @@ namespace besthea {
  *  Class representing a linear operator.
  */
 class besthea::linear_algebra::block_linear_operator {
+  using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
   using block_vector_type
     = besthea::linear_algebra::block_vector;  //!< Block vector type.
 
@@ -82,6 +83,115 @@ class besthea::linear_algebra::block_linear_operator {
    */
   virtual void apply( const block_vector_type & x, block_vector_type & y,
     bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const = 0;
+
+  /**
+   * CG as implemented in MKL.
+   * @param[in] rhs Right-hand side vector.
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on
+   * exit.
+   */
+  bool mkl_cg_solve( const block_vector_type & rhs,
+    block_vector_type & solution, sc & relative_residual_error,
+    lo & n_iterations ) const;
+
+  /**
+   * Preconditioned CG as implemented in MKL.
+   * @param[in] preconditioner Linear operator as a preconditioner.
+   * @param[in] rhs Right-hand side vector.
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on
+   * exit.
+   */
+  bool mkl_cg_solve( const block_linear_operator & preconditioner,
+    const block_vector_type & rhs, block_vector_type & solution,
+    sc & relative_residual_error, lo & n_iterations ) const;
+
+  /**
+   * FGMRES as implemented in MKL.
+   * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on
+   * exit.
+   * @param[in] n_iterations_until_restart Maximal number of iterations before
+   * restart.
+   * @param[in] trans Use transpose of this.
+   */
+  bool mkl_fgmres_solve( const block_vector_type & rhs,
+    block_vector_type & solution, sc & relative_residual_error,
+    lo & n_iterations, lo n_iterations_until_restart = 0,
+    bool trans = false ) const;
+
+  /**
+   * Preconditioned FGMRES as implemented in MKL.
+   * @param[in] preconditioner Linear operator as a preconditioner.
+   * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on
+   * exit.
+   * @param[in] n_iterations_until_restart Maximal number of iterations before
+   * restart.
+   * @param[in] trans Use transpose of this.
+   * @param[in] trans_preconditioner Use transpose of preconditioner.
+   */
+  bool mkl_fgmres_solve( const block_linear_operator & preconditioner,
+    const block_vector_type & rhs, block_vector_type & solution,
+    sc & relative_residual_error, lo & n_iterations,
+    lo n_iterations_until_restart = 0, bool trans = false,
+    bool trans_preconditioner = false ) const;
+
+  /**
+   * Returns the domain dimension.
+   */
+  lo get_dim_domain( ) const {
+    return _dim_domain;
+  }
+
+  /**
+   * Returns the range dimension.
+   */
+  lo get_dim_range( ) const {
+    return _dim_range;
+  }
+
+  /**
+   * Returns the block dimension.
+   */
+  lo get_block_dim( ) const {
+    return _block_dim;
+  }
+
+  /**
+   * Sets the domain dimension.
+   * @param[in] dim_domain Domain dimension.
+   */
+  void set_dim_domain( lo dim_domain ) {
+    _dim_domain = dim_domain;
+  }
+
+  /**
+   * Sets the range dimension.
+   * @param[in] dim_range Range dimension.
+   */
+  void set_dim_range( lo dim_range ) {
+    _dim_range = dim_range;
+  }
+
+  /**
+   * Sets the block dimension.
+   * @param[in] block_dim Block dimension.
+   */
+  void set_block_dim( lo block_dim ) {
+    _block_dim = block_dim;
+  }
 
  protected:
   lo _block_dim;   //!< Number of blocks in a row (column).

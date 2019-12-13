@@ -56,8 +56,8 @@ namespace besthea {
   using index_unsigned
     = std::make_unsigned< index >::type;  //!< Unsigned indexing type.
   using short_index = int16_t;            //!< Signed short integer.
-  using short_index_unsigned = std::make_unsigned< short_index >::type;
-  ;  //!< Signed short integer.
+  using short_index_unsigned
+    = std::make_unsigned< short_index >::type;  //!< Unsigned short integer.
 
   template< class T >
   using allocator_type = boost::alignment::aligned_allocator< T,

@@ -49,7 +49,7 @@ namespace besthea {
  */
 class besthea::bem::chebyshev_evaluator {
  public:
-  using vector_type = besthea::linear_algebra::vector;
+  using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
 
   /**
    * Constructor.
@@ -67,7 +67,7 @@ class besthea::bem::chebyshev_evaluator {
    *                             at least (@p _order + 1) * size @p eval_points)
    */
   void evaluate(
-    const vector_type eval_points, vector_type & all_values ) const {
+    const vector_type & eval_points, vector_type & all_values ) const {
     // initialize values to 1;
     const lo sz = eval_points.size( );
     for ( lo i = 0; i < sz; ++i ) all_values[ i ] = 1.0;

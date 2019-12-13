@@ -34,7 +34,10 @@
 #define INCLUDE_BESTHEA_SPARSE_MATRIX_H_
 
 #include "Eigen/Core"
+#include "Eigen/OrderingMethods"
 #include "Eigen/Sparse"
+#include "Eigen/SparseCholesky"
+#include "Eigen/SparseLU"
 #include "besthea/matrix.h"
 #include "besthea/settings.h"
 
@@ -92,6 +95,29 @@ class besthea::linear_algebra::sparse_matrix
     std::vector< los > & row_indices, std::vector< los > & column_indices,
     std::vector< sc > & values );
 
+  /**
+   * Sets the sparse matrix from triplets.
+   * @param[in] n_rows Number of rows.
+   * @param[in] n_columns Number of columns.
+   * @param[in] row_indices Vector of vectors with indices of rows.
+   * @param[in] column_indices Vector of vectors with indices of columns.
+   * @param[in] values Vector of vectors with values to be stored at positions
+   * specified by `row_indices` and `column_indices`.
+   */
+  void set_from_triplets( los n_rows, los n_columns,
+    std::vector< std::vector< los > > & row_indices,
+    std::vector< std::vector< los > > & column_indices,
+    std::vector< std::vector< sc > > & values );
+
+  /**
+   * Sets the sparse matrix from a list of Eigen triplets.
+   * @param[in] n_rows Number of rows.
+   * @param[in] n_columns Number of columns.
+   * @param[in] triplet_list Triplet list.
+   */
+  void set_from_triplets( los n_rows, los n_columns,
+    std::vector< Eigen::Triplet< sc, los > > & triplet_list );
+
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
    * @param[in] x
@@ -123,15 +149,64 @@ class besthea::linear_algebra::sparse_matrix
    * CG as implemented in Eigen.
    * @param[in] rhs Right-hand side vector.
    * @param[out] solution Solution vector.
-   * @param[in,out] relative_residual_error Stopping criterion measuring decrease of
-   * |Ax-b|/|b|, actual value on exit.
-   * @param[in,out] n_iterations Maximal number of iterations, actual value on exit.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on
+   * exit.
    */
   void eigen_cg_solve( const vector & rhs, vector & solution,
     sc & relative_residual_error, lo & n_iterations ) const;
 
+  /**
+   * LU as implemented in Eigen.
+   * @param[in] rhs Right-hand side vector.
+   * @param[out] solution Solution vector.
+   */
+  void eigen_lu_decompose_and_solve( const vector & rhs, vector & solution );
+
+  /**
+   * LU as implemented in Eigen.
+   */
+  void eigen_lu_decompose( );
+
+  /**
+   * LU as implemented in Eigen.
+   * @param[in] rhs Right-hand side vector.
+   * @param[out] solution Solution vector.
+   */
+  void eigen_lu_solve( const vector & rhs, vector & solution );
+
+  /**
+   * Cholesky decomposition as implemented in Eigen.
+   * @param[in] rhs Right-hand side vector.
+   * @param[out] solution Solution vector.
+   */
+  void eigen_cholesky_decompose_and_solve(
+    const vector & rhs, vector & solution );
+
+  /**
+   * Cholesky decomposition as implemented in Eigen.
+   */
+  void eigen_cholesky_decompose( );
+
+  /**
+   * Cholesky decomposition as implemented in Eigen.
+   * @param[in] rhs Right-hand side vector.
+   * @param[out] solution Solution vector.
+   */
+  void eigen_cholesky_solve( const vector & rhs, vector & solution );
+
  protected:
   Eigen::SparseMatrix< sc, Eigen::ColMajor, los > _data;  //!< Eigen data.
+
+ private:
+  Eigen::SparseLU< Eigen::SparseMatrix< sc, Eigen::ColMajor, los >,
+    Eigen::COLAMDOrdering< los > >
+    _lu;  //!< Eigen LU solver.
+
+  Eigen::SimplicialLDLT< Eigen::SparseMatrix< sc, Eigen::ColMajor, los >,
+    Eigen::Lower, Eigen::AMDOrdering< los > >
+    _choleski;  //!< Eigen Cholesky solver.
 };
 
 #endif /* INCLUDE_BESTHEA_SPARSE_MATRIX_H_ */

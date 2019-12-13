@@ -26,7 +26,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file spacetime_sluster.h
+/** @file spacetime_cluster.h
  * @brief Combination of space and time clusters
  */
 
@@ -55,6 +55,7 @@ class besthea::mesh::spacetime_cluster {
    * @param[in] spatial_cluster Reference to a spatial cluster.
    * @param[in] temporal_cluster Reference to a temporal cluster.
    * @param[in] parent Pointer to the parent.
+   * @param[in] level Assigns level to the cluster.
    */
   spacetime_cluster( space_cluster & spatial_cluster,
     time_cluster & temporal_cluster, spacetime_cluster * parent, lo level )
@@ -137,13 +138,16 @@ class besthea::mesh::spacetime_cluster {
     }
   }
 
-  /*
+  /**
    * Returns level of the cluster in the cluster tree.
    */
   lo get_level( ) const {
     return _level;
   }
 
+  /**
+   * Prints info of the object.
+   */
   void print( ) {
     std::cout << _level << " " << _spatial_cluster.get_level( ) << " "
               << _temporal_cluster.get_level( ) << std::endl;

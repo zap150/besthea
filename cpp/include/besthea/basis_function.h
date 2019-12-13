@@ -33,10 +33,9 @@
 #ifndef INCLUDE_BESTHEA_BASIS_FUNCTION_H_
 #define INCLUDE_BESTHEA_BASIS_FUNCTION_H_
 
-#include "besthea/full_matrix.h"
+#include "besthea/coordinates.h"
 #include "besthea/mesh.h"
 #include "besthea/settings.h"
-#include "besthea/coordinates.h"
 
 #include <array>
 #include <vector>
@@ -54,8 +53,7 @@ namespace besthea {
 template< class derived_type >
 class besthea::bem::basis_function {
  protected:
-  using mesh_type = besthea::mesh::mesh;                     //!< Mesh type.
-  using matrix_type = besthea::linear_algebra::full_matrix;  //!< Matrix type.
+  using mesh_type = besthea::mesh::mesh;  //!< Mesh type.
 
  public:
   /**
@@ -129,8 +127,7 @@ class besthea::bem::basis_function {
    * @param[in] n Element normal.
    */
 #pragma omp declare simd uniform( i_elem, i_fun, n ) simdlen( DATA_WIDTH )
-  sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref,
-    const sc * n ) const {
+  sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n ) const {
     return derived( )->do_evaluate( i_elem, i_fun, x1_ref, x2_ref, n );
   }
 
@@ -148,15 +145,14 @@ class besthea::bem::basis_function {
    */
 #pragma omp declare simd uniform( \
   i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
-  sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref,
-    const sc * n, int n_shared_vertices,
-    int rotation, bool swap ) const {
+  sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n,
+    int n_shared_vertices, int rotation, bool swap ) const {
     return derived( )->do_evaluate(
       i_elem, i_fun, x1_ref, x2_ref, n, n_shared_vertices, rotation, swap );
   }
 
  protected:
-  mesh_type * _mesh;  //!< Pointer to the mesh.
+  const mesh_type * _mesh;  //!< Pointer to the mesh.
 
   const std::array< int, 5 > _map{ 0, 1, 2, 0,
     1 };  //!< Auxiliary array for mapping DOFs under

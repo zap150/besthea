@@ -65,8 +65,8 @@ void besthea::mesh::uniform_spacetime_tensor_mesh::refine(
 
 void besthea::mesh::uniform_spacetime_tensor_mesh::print_info( ) const {
   std::cout << "besthea::mesh::uniform_spacetime_tensor_mesh" << std::endl;
-  std::cout << "  spatial elements: " << get_n_spatial_elements( ) << std::endl;
-  std::cout << "  spatial nodes: " << get_n_spatial_nodes( ) << std::endl;
-  std::cout << "  spatial edges: " << get_n_spatial_edges( ) << std::endl;
+  std::cout << "  spatial elements: " << get_n_spatial_elements( )
+            << ", spatial nodes: " << get_n_spatial_nodes( )
+            << ", spatial edges: " << get_n_spatial_edges( ) << std::endl;
   std::cout << "  timesteps: " << get_n_temporal_elements( ) << std::endl;
 }
