@@ -473,6 +473,7 @@ void besthea::linear_algebra::pFMM_matrix::apply_spatial_m2m(
   lo n_coeffs_s
     = ( _spat_order + 1 ) * ( _spat_order + 1 ) * ( _spat_order + 1 );
   // initialize auxiliary matrices lambda_1/2 for intermediate results with 0
+  // TODO move as a member variables to avoid allocations
   full_matrix_type lambda_1( _temp_order + 1, n_coeffs_s, true );
   full_matrix_type lambda_2( _temp_order + 1, n_coeffs_s, true );
 
