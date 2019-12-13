@@ -97,6 +97,7 @@ class besthea::mesh::time_cluster_tree {
   const temporal_mesh & get_mesh( ) {
     return _mesh;
   }
+
   /**
    * Returns clusters without descendants.
    */

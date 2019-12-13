@@ -34,12 +34,15 @@
 #define INCLUDE_BESTHEA_FAST_SPACETIME_BE_ASSEMBLER_H_
 
 #include "besthea/block_matrix.h"
+#include "besthea/chebyshev_evaluator.h"
 #include "besthea/fast_spacetime_be_space.h"
+#include "besthea/full_matrix.h"
 #include "besthea/lagrange_interpolant.h"
 #include "besthea/pFMM_matrix.h"
 #include "besthea/quadrature.h"
 #include "besthea/settings.h"
 #include "besthea/space_cluster.h"
+#include "besthea/spacetime_cluster.h"
 #include "besthea/sparse_matrix.h"
 #include "besthea/time_cluster.h"
 #include "besthea/vector.h"
@@ -61,9 +64,12 @@ template< class kernel_type, class test_space_type, class trial_space_type >
 class besthea::bem::fast_spacetime_be_assembler {
  private:
   using sparse_matrix_type = besthea::linear_algebra::sparse_matrix;
+  using full_matrix_type = besthea::linear_algebra::full_matrix;
   using pfmm_matrix_type
     = besthea::linear_algebra::pFMM_matrix;               //!< pFMM matrix type.
   using time_cluster_type = besthea::mesh::time_cluster;  //!< time cluster type
+  using spacetime_cluster_type
+    = besthea::mesh::spacetime_cluster;  //!< time cluster type
   using space_cluster_type
     = besthea::mesh::space_cluster;                     //!< space cluster type
   using vector_type = besthea::linear_algebra::vector;  //!< vector type
@@ -108,6 +114,26 @@ class besthea::bem::fast_spacetime_be_assembler {
       _kernel_values;  //!< Buffer for storing kernel values.
     std::vector< sc, besthea::allocator_type< sc > >
       _kernel_values_2;  //!< Buffer for storing additional kernel values.
+
+    std::vector< sc, besthea::allocator_type< sc > >
+      _y1_ref_cheb;  //!< First coordinates of quadrature nodes for the
+                     //!< Chebyshev polynomials in (0,1)x(0,1-x1) to be mapped
+                     //!< to the test element
+    std::vector< sc, besthea::allocator_type< sc > >
+      _y2_ref_cheb;  //!< Second coordinates of quadrature nodes for the
+                     //!< Chebyshev polynomials in (0,1)x(0,1-x1) to be mapped
+                     //!< to the test element
+    vector_type
+      _y1_polynomial;  //!< Coordinates for evaluation of the Chebyshev
+                       //!< polynomials in the interval [-1,1] in x direction
+    vector_type
+      _y2_polynomial;  //!< Coordinates for evaluation of the Chebyshev
+                       //!< polynomials in the interval [-1,1] in y direction
+    vector_type
+      _y3_polynomial;  //!< Coordinates for evaluation of the Chebyshev
+                       //!< polynomials in the interval [-1,1] in z direction
+    std::vector< sc, besthea::allocator_type< sc > >
+      _wy_cheb;  //!< Quadrature weights including
   };
 
  public:
@@ -152,6 +178,12 @@ class besthea::bem::fast_spacetime_be_assembler {
    * @param[out] my_quadrature Wrapper holding quadrature data.
    */
   void init_quadrature( quadrature_wrapper & my_quadrature ) const;
+
+  /**
+   * Initializes quadrature structures.
+   * @param[out] my_quadrature Wrapper holding quadrature data.
+   */
+  void init_quadrature_polynomials( quadrature_wrapper & my_quadrature ) const;
 
   /**
    * Assembles temporal nearfield matrices.
@@ -321,6 +353,32 @@ class besthea::bem::fast_spacetime_be_assembler {
     int rot_trial, quadrature_wrapper & my_quadrature ) const;
 
   /**
+   * Maps the quadrature nodes from the reference triangle to the actual
+   * geometry.
+   * @param[in] y1 Coordinates of the first node of the test element.
+   * @param[in] y2 Coordinates of the second node of the test element.
+   * @param[in] y3 Coordinates of the third node of the test element.
+   * @param[in,out] my_quadrature Structure holding the quadrature nodes.
+   */
+  void triangle_to_geometry( const linear_algebra::coordinates< 3 > & y1,
+    const linear_algebra::coordinates< 3 > & y2,
+    const linear_algebra::coordinates< 3 > & y3,
+    quadrature_wrapper & my_quadrature ) const;
+
+  /**
+   * Maps from the spatial cluster to the interval [-1, 1] where the Chebyshev
+   * polynomials are defined.
+   * @param[in] cluster_point Reference to the point in a given @p space_cluster
+   * @param[out] polynomial_point Mapping of the @p cluster_point to the
+   * interval [-1,1]
+   * @param[in] space_cluster Space cluster for which the Chebyshev polynomials
+   * are evaluated.
+   *
+   */
+  void cluster_to_polynomials( quadrature_wrapper & my_quadrature, sc x_start,
+    sc x_end, sc y_start, sc y_end, sc z_start, sc z_end ) const;
+
+  /**
    * Returns true if the two elements are closer than the limit given by the
    * size of the finest level spatial tree cluster and coefficient.
    * @param[in] trial_idx Index of the trial spatial mesh element.
@@ -338,12 +396,12 @@ class besthea::bem::fast_spacetime_be_assembler {
    * Computes quadrature of the Lagrange polynomials up to a given order over an
    * element in the cluster.
    */
-  void compute_lagrange_quadrature( time_cluster_type * cluster );
+  void compute_lagrange_quadrature( time_cluster_type * cluster ) const;
 
   /**
    * Compute quadrature of the Chebyshev polynomials.
    */
-  void compute_chebyshev_quadrature( space_cluster_type * cluster );
+  void compute_chebyshev_quadrature( space_cluster_type * cluster ) const;
 
   kernel_type * _kernel;            //!< Kernel temporal antiderivative.
   test_space_type * _test_space;    //!< Boundary element test space.
@@ -369,7 +427,10 @@ class besthea::bem::fast_spacetime_be_assembler {
                     //!< space in pFMM
   int _temp_order;  //!< degree of Lagrange interpolation polynomials in time
                     //!< for pFMM
-  bem::lagrange_interpolant _lagrange;
+  mutable bem::lagrange_interpolant
+    _lagrange;  //!< Evaluator of the Lagrange polynomials.
+  mutable bem::chebyshev_evaluator
+    _chebyshev;  //!< Evaluator of the Chebyshev polynomials.
 };
 
 #endif /* INCLUDE_BESTHEA_FAST_SPACETIME_BE_ASSEMBLER_H_ */

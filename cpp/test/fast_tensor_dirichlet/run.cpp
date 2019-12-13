@@ -73,7 +73,7 @@ struct cauchy_data {
 };
 
 int main( int argc, char * argv[] ) {
-  std::string file = "../mesh_files/cube_192.txt";
+  std::string file = "../mesh_files/cube_12.txt";
   int refine = 1;
   lo n_timesteps = 16;
   sc end_time = 1.0;
@@ -120,7 +120,7 @@ int main( int argc, char * argv[] ) {
 
   spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
   fast_spacetime_be_assembler fast_assembler_k(
-    kernel_k, space_p0, space_p1, order_sing, order_reg, 1.5, true );
+    kernel_k, space_p0, space_p1, order_sing, order_reg, 4, 4, 1.5, false );
   t.reset( "K" );
   fast_assembler_k.assemble( *K );
   t.measure( );
@@ -155,7 +155,7 @@ int main( int argc, char * argv[] ) {
 
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
   fast_spacetime_be_assembler fast_assembler_v(
-    kernel_v, space_p0, space_p0, order_sing, order_reg, 1.5, true );
+    kernel_v, space_p0, space_p0, order_sing, order_reg, 4, 4, 3, false );
   t.reset( "V" );
   fast_assembler_v.assemble( *V );
   t.measure( );

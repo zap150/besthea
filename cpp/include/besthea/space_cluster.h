@@ -33,6 +33,7 @@
 #ifndef INCLUDE_BESTHEA_SPACE_CLUSTER_H_
 #define INCLUDE_BESTHEA_SPACE_CLUSTER_H_
 
+#include "besthea/full_matrix.h"
 #include "besthea/settings.h"
 #include "besthea/triangular_surface_mesh.h"
 #include "besthea/vector.h"
@@ -50,7 +51,9 @@ namespace besthea {
  */
 class besthea::mesh::space_cluster {
  public:
-  using vector_type = besthea::linear_algebra::vector; //!< Vector type.
+  using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
+  using full_matrix_type
+    = besthea::linear_algebra::full_matrix;  //!< Vector type.
 
   /**
    * Constructor.
@@ -75,7 +78,8 @@ class besthea::mesh::space_cluster {
       _level( level ),
       _octant( octant ),
       _padding( 0.0 ),
-      _box_coordinate( coordinate ) {
+      _box_coordinate( coordinate ),
+      _cheb_T( 1, 1 ) {
     _elements.reserve( _n_elements );
     _box_coordinate.shrink_to_fit( );
   }
@@ -334,6 +338,21 @@ class besthea::mesh::space_cluster {
     return _box_coordinate;
   }
 
+  /**
+   * Returns a pointer to the matrix storing quadratures of the Chebyshev
+   * polynomial over the elements of the cluster.
+   */
+  full_matrix_type & get_chebyshev_quad( ) {
+    return _cheb_T;
+  }
+
+  /**
+   * Returns the associated mesh.
+   */
+  const triangular_surface_mesh & get_mesh( ) {
+    return _mesh;
+  }
+
  private:
   lo _n_elements;          //!< number of elements in the cluster
   vector_type _center;     //!< center of the cluster
@@ -351,6 +370,9 @@ class besthea::mesh::space_cluster {
   sc _padding;    //!< padding of the cluster
   std::vector< slou >
     _box_coordinate;  //!< coordinates of the box within boxes on given level
+  full_matrix_type
+    _cheb_T;  //!< matrix storing quadrature of the Chebyshev polynomials (rows
+              //!< - element of the cluster, column - order of the polynomial)
 };
 
 #endif /* INCLUDE_BESTHEA_SPACE_CLUSTER_H_ */

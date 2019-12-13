@@ -52,7 +52,7 @@ namespace besthea {
  */
 class besthea::mesh::space_cluster_tree {
  public:
-  using vector_type = besthea::linear_algebra::vector; //!< Vector type.
+  using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
 
   /**
    * Constructor.
@@ -163,6 +163,13 @@ class besthea::mesh::space_cluster_tree {
     return _bounding_box_size;
   }
 
+  /**
+   * Returns clusters without descendants.
+   */
+  std::vector< space_cluster * > & get_leaves( ) {
+    return _leaves;
+  }
+
  private:
   space_cluster * _root;                  //!< root cluster of the tree
   const triangular_surface_mesh & _mesh;  //!< underlying mesh
@@ -182,6 +189,8 @@ class besthea::mesh::space_cluster_tree {
     _coord_2_cluster;  //!< map from cluster coordinates to its location in
                        //!< memory
   std::vector< sc > _bounding_box_size;  //!< size of the mesh bounding box;
+  std::vector< space_cluster * >
+    _leaves;  //!< vector of all clusters without descendants
 
   /**
    * Computes the bounding box of the underlying mesh.
@@ -207,6 +216,13 @@ class besthea::mesh::space_cluster_tree {
    * @param[in] root Node to stem from.
    */
   sc compute_padding( space_cluster & root );
+
+  /**
+   * Collects all clusters without descendants and stores them in the internal
+   * _leaves vector.
+   * @param[in] root Root cluster of the tree.
+   */
+  void collect_leaves( space_cluster & root );
 };
 
 #endif /* INCLUDE_BESTHEA_SPACE_CLUSTER_TREE_H_ */

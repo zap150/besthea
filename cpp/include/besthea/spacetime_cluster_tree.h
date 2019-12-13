@@ -163,6 +163,13 @@ class besthea::mesh::spacetime_cluster_tree {
     return _space_tree;
   }
 
+  /**
+   * Returns clusters without descendants.
+   */
+  std::vector< spacetime_cluster * > & get_leaves( ) {
+    return _leaves;
+  }
+
  private:
   using full_matrix_type = besthea::linear_algebra::full_matrix;
 
@@ -176,6 +183,13 @@ class besthea::mesh::spacetime_cluster_tree {
    * Recursively builds the tree of spacetime clusters
    */
   void build_tree( spacetime_cluster * root, lo level, bool split_space );
+
+  /**
+   * Collects all clusters without descendants and stores them in the internal
+   * _leaves vector.
+   * @param[in] root Root cluster of the tree.
+   */
+  void collect_leaves( spacetime_cluster & root );
 
   //  /*
   //   * Aux for printing
@@ -232,6 +246,8 @@ class besthea::mesh::spacetime_cluster_tree {
                              //!< (meaningful only if _start_spatial_level = 0)
   sc _s_t_coeff;  //!< coefficient to determine the coupling of the spatial
                   //!< and temporal levels
+  std::vector< spacetime_cluster * >
+    _leaves;  //!< vector of all clusters without descendants
 };
 
 #endif /* INCLUDE_BESTHEA_SPACETIME_CLUSTER_TREE_H_ */

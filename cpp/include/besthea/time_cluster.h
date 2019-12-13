@@ -33,6 +33,7 @@
 #ifndef INCLUDE_BESTHEA_TIME_CLUSTER_H_
 #define INCLUDE_BESTHEA_TIME_CLUSTER_H_
 
+#include "besthea/full_matrix.h"
 #include "besthea/settings.h"
 #include "besthea/temporal_mesh.h"
 #include "besthea/vector.h"
@@ -52,6 +53,8 @@ namespace besthea {
 class besthea::mesh::time_cluster {
  public:
   using vector_type = besthea::linear_algebra::vector;  //!< Block vector type.
+  using full_matrix_type
+    = besthea::linear_algebra::full_matrix;  //!< Full matrix type.
   /**
    * Constructor.
    * @param[in] center Center of the cluster.
@@ -69,9 +72,9 @@ class besthea::mesh::time_cluster {
       _parent( parent ),
       _children( nullptr ),
       _mesh( mesh ),
-      _level( level ) {
+      _level( level ),
+      _lagrange_quad( 1, 1 ) {
     _elements.reserve( _n_elements );
-    _lagrange_quad = new std::vector< vector_type >;
   }
 
   time_cluster( const time_cluster & that ) = delete;
@@ -228,7 +231,7 @@ class besthea::mesh::time_cluster {
   /**
    * Returns vector storing quadrature of the Lagrange polynomials on a cluster.
    */
-  std::vector< vector_type > * get_lagrange_quad( ) {
+  full_matrix_type & get_lagrange_quad( ) {
     return _lagrange_quad;
   }
 
@@ -249,7 +252,7 @@ class besthea::mesh::time_cluster {
   std::vector< time_cluster * > * _children;  //!< children of the cluster
   const temporal_mesh & _mesh;  //!< temporal mesh associated with the cluster
   lo _level;                    //!< level within the cluster tree
-  std::vector< vector_type > *
+  full_matrix_type
     _lagrange_quad;  //!< integrals of the Lagrange polynomials defined on
                      //!< temporal clusters over temporal elements; each
                      //!< std::vector entry of index i stores data associated

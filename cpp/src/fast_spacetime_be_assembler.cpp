@@ -51,7 +51,10 @@ besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
     _order_regular( order_regular ),
     _cutoff_param( cutoff_param ),
     _uniform( uniform ),
-    _lagrange( temp_order ) {
+    _spat_order( spat_order ),
+    _temp_order( temp_order ),
+    _lagrange( temp_order ),
+    _chebyshev( spat_order ) {
   lo levels = _test_space->get_tree( )->get_space_tree( )->get_levels( );
   const std::vector< sc > & bb_size
     = _test_space->get_tree( )->get_space_tree( )->get_bounding_box( );
@@ -128,12 +131,24 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
   global_matrix.resize( n_timesteps, n_rows, n_columns );
 
+  std::vector< space_cluster_type * > & space_leaves
+    = _test_space->get_tree( )->get_space_cluster_tree( )->get_leaves( );
+  std::vector< time_cluster_type * > & time_leaves
+    = _test_space->get_tree( )->get_time_cluster_tree( )->get_leaves( );
+
+  for ( auto it = space_leaves.begin( ); it != space_leaves.end( ); ++it ) {
+    compute_chebyshev_quadrature( *it );
+  }
+  for ( auto it = time_leaves.begin( ); it != time_leaves.end( ); ++it ) {
+    compute_lagrange_quadrature( *it );
+  }
+
   global_matrix.compute_spatial_m2m_coeffs( );
   global_matrix.compute_temporal_m2m_matrices( );
 
   if ( !_uniform ) {
     assemble_nearfield( global_matrix );
-    assemble_farfield_nonapproximated( global_matrix );
+    // assemble_farfield_nonapproximated( global_matrix );
   } else {
     assemble_nonapproximated_uniform( global_matrix );
   }
@@ -830,6 +845,25 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::init_quadrature_polynomials( quadrature_wrapper &
+    my_quadrature ) const {
+  // calling copy constructor of std::vector
+  my_quadrature._y1_ref_cheb = quadrature::triangle_x1( _order_regular );
+  my_quadrature._y2_ref_cheb = quadrature::triangle_x2( _order_regular );
+  my_quadrature._wy_cheb = quadrature::triangle_w( _order_regular );
+
+  lo size = my_quadrature._wy_cheb.size( );
+  my_quadrature._y1.resize( size );
+  my_quadrature._y2.resize( size );
+  my_quadrature._y3.resize( size );
+
+  my_quadrature._y1_polynomial.resize( size );
+  my_quadrature._y2_polynomial.resize( size );
+  my_quadrature._y3_polynomial.resize( size );
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::hypercube_to_triangles_vertex( sc ksi, sc eta1, sc eta2,
   sc eta3, int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref, sc & y2_ref,
   sc & jacobian ) const {
@@ -848,6 +882,33 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
       y1_ref = ksi * ( 1 - eta1 );
       y2_ref = ksi * eta1;
       break;
+  }
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::
+  triangle_to_geometry( const linear_algebra::coordinates< 3 > & x1,
+    const linear_algebra::coordinates< 3 > & x2,
+    const linear_algebra::coordinates< 3 > & x3,
+    quadrature_wrapper & my_quadrature ) const {
+  const sc * y1_ref = my_quadrature._y1_ref_cheb.data( );
+  const sc * y2_ref = my_quadrature._y2_ref_cheb.data( );
+  sc * y1_mapped = my_quadrature._y1.data( );
+  sc * y2_mapped = my_quadrature._y2.data( );
+  sc * y3_mapped = my_quadrature._y3.data( );
+
+  lo size = my_quadrature._wy_cheb.size( );
+
+#pragma omp simd aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref \
+                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+  for ( lo i = 0; i < size; ++i ) {
+    y1_mapped[ i ] = x1[ 0 ] + ( x2[ 0 ] - x1[ 0 ] ) * y1_ref[ i ]
+      + ( x3[ 0 ] - x1[ 0 ] ) * y2_ref[ i ];
+    y2_mapped[ i ] = x1[ 1 ] + ( x2[ 1 ] - x1[ 1 ] ) * y1_ref[ i ]
+      + ( x3[ 1 ] - x1[ 1 ] ) * y2_ref[ i ];
+    y3_mapped[ i ] = x1[ 2 ] + ( x2[ 2 ] - x1[ 2 ] ) * y1_ref[ i ]
+      + ( x3[ 2 ] - x1[ 2 ] ) * y2_ref[ i ];
   }
 }
 
@@ -1058,15 +1119,11 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::compute_lagrange_quadrature( time_cluster_type *
-    time_cluster ) {
-  std::vector< vector_type > * lagrange_quad
-    = time_cluster->get_lagrange_quad( );
-  lagrange_quad->resize( _temp_order + 1 );
-
+    time_cluster ) const {
   lo n_temp_elems = time_cluster->get_n_elements( );
-  for ( auto it = lagrange_quad->begin( ); it != lagrange_quad->end( ); ++it ) {
-    ( *it ).resize( n_temp_elems );
-  }
+  full_matrix_type & L = time_cluster->get_lagrange_quad( );
+  L.resize( _temp_order + 1, n_temp_elems );
+  L.fill( 0.0 );
 
   const std::vector< sc, besthea::allocator_type< sc > > & line_t
     = quadrature::line_x( _order_regular );
@@ -1086,26 +1143,123 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   linear_algebra::coordinates< 1 > elem_t_start;
   linear_algebra::coordinates< 1 > elem_t_end;
 
+  sc cluster_size = cluster_t_end - cluster_t_start;
+  sc elem_size;
+
   for ( lo i = 0; i < n_temp_elems; ++i ) {
     lo elem = time_cluster->get_element( i );
     time_cluster->get_mesh( ).get_nodes( elem, elem_t_start, elem_t_end );
+    elem_size = elem_t_end[ 0 ] - elem_t_start[ 0 ];
 
     for ( std::vector< sc, besthea::allocator_type< sc > >::size_type j = 0;
           j < line_t.size( ); ++j ) {
       eval_points[ j ] = -1.0
         + 2.0
-          * ( elem_t_start[ 0 ]
-            + ( elem_t_end[ 0 ] - elem_t_start[ 0 ] ) * line_t[ j ]
-            - cluster_t_start )
-          / ( cluster_t_end - cluster_t_start );
+          * ( elem_t_start[ 0 ] + elem_size * line_t[ j ] - cluster_t_start )
+          / cluster_size;
     }
 
-    for ( lo j = 0; j < _temp_order + 1; ++j ) {
+    for ( lo j = 0; j <= _temp_order; ++j ) {
       _lagrange.evaluate( j, eval_points, evaluation );
       for ( lo k = 0; k < eval_points.size( ); ++k ) {
-        ( *lagrange_quad )[ j ][ i ] += evaluation[ k ] * line_w[ k ];
+        L.add( j, i, evaluation[ k ] * line_w[ k ] );
       }
-      ( *lagrange_quad )[ j ][ i ] *= ( elem_t_end[ 0 ] - elem_t_start[ 0 ] );
+      L.set( j, i, L.get( j, i ) * elem_size );
+    }
+  }
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::cluster_to_polynomials( quadrature_wrapper &
+                                                my_quadrature,
+  sc start_0, sc end_0, sc start_1, sc end_1, sc start_2, sc end_2 ) const {
+  for ( lo i = 0; i < my_quadrature._y1_polynomial.size( ); ++i ) {
+    my_quadrature._y1_polynomial[ i ]
+      = -1.0 + 2.0 * ( my_quadrature._y1[ i ] - start_0 ) / ( end_0 - start_0 );
+    my_quadrature._y2_polynomial[ i ]
+      = -1.0 + 2.0 * ( my_quadrature._y2[ i ] - start_1 ) / ( end_1 - start_1 );
+    my_quadrature._y3_polynomial[ i ]
+      = -1.0 + 2.0 * ( my_quadrature._y3[ i ] - start_2 ) / ( end_2 - start_2 );
+  }
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::compute_chebyshev_quadrature( space_cluster_type *
+    space_cluster ) const {
+}
+
+template<>
+void besthea::bem::fast_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
+  compute_chebyshev_quadrature( space_cluster_type * space_cluster ) const {
+  full_matrix_type & T = space_cluster->get_chebyshev_quad( );
+
+  lo n_space_elems = space_cluster->get_n_elements( );
+  T.resize( n_space_elems,
+    ( _spat_order + 1 ) * ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+
+  // get some info on the current cluster
+  vector_type cluster_center( 3 );
+  vector_type cluster_half( 3 );
+  space_cluster->get_center( cluster_center );
+  space_cluster->get_half_size( cluster_half );
+  sc padding = space_cluster->get_padding( );
+  sc start_0 = cluster_center[ 0 ] - cluster_half[ 0 ] - padding;
+  sc end_0 = cluster_center[ 0 ] + cluster_half[ 0 ] + padding;
+  sc start_1 = cluster_center[ 1 ] - cluster_half[ 1 ] - padding;
+  sc end_1 = cluster_center[ 1 ] + cluster_half[ 1 ] + padding;
+  sc start_2 = cluster_center[ 2 ] - cluster_half[ 2 ] - padding;
+  sc end_2 = cluster_center[ 2 ] + cluster_half[ 2 ] + padding;
+
+  // init quadrature data
+  quadrature_wrapper my_quadrature;
+  init_quadrature_polynomials( my_quadrature );
+  lo size_quad = my_quadrature._wy_cheb.size( );
+  sc * wy = my_quadrature._wy_cheb.data( );
+  linear_algebra::coordinates< 3 > y1, y2, y3;
+
+  // for storing the result of the Chebyshev evaluation in quadrature points
+  vector_type cheb_dim_0( ( _spat_order + 1 ) * size_quad );
+  vector_type cheb_dim_1( ( _spat_order + 1 ) * size_quad );
+  vector_type cheb_dim_2( ( _spat_order + 1 ) * size_quad );
+
+  sc elem_area;
+  lo elem;
+
+  for ( lo i = 0; i < n_space_elems; ++i ) {
+    elem = space_cluster->get_element( i );
+    space_cluster->get_mesh( ).get_nodes( elem, y1, y2, y3 );
+    elem_area = space_cluster->get_mesh( ).area( elem );
+
+    triangle_to_geometry( y1, y2, y3, my_quadrature );
+
+    cluster_to_polynomials(
+      my_quadrature, start_0, end_0, start_1, end_1, start_2, end_2 );
+
+    _chebyshev.evaluate( my_quadrature._y1_polynomial, cheb_dim_0 );
+    _chebyshev.evaluate( my_quadrature._y2_polynomial, cheb_dim_1 );
+    _chebyshev.evaluate( my_quadrature._y3_polynomial, cheb_dim_2 );
+
+    for ( lo beta0 = 0; beta0 <= _spat_order; ++beta0 ) {
+      for ( lo beta1 = 0; beta1 <= _spat_order - beta0; ++beta1 ) {
+        for ( lo beta2 = 0; beta2 <= _spat_order - beta0 - beta1; ++beta2 ) {
+          sc quad = 0.0;
+          for ( lo j = 0; j < size_quad; ++j ) {
+            quad += cheb_dim_0[ beta0 * size_quad + j ]
+              * cheb_dim_1[ beta1 * size_quad + j ]
+              * cheb_dim_2[ beta2 * size_quad + j ] * wy[ j ];
+          }
+          quad *= elem_area;
+          T.set( i,
+            beta0 * ( _spat_order + 1 ) * ( _spat_order + 1 )
+              + ( _spat_order + 1 ) * beta1 + beta2,
+            quad );
+        }
+      }
     }
   }
 }

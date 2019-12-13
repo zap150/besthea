@@ -109,6 +109,9 @@ besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
     // the roots of the subtrees are linked to the level -1 global root
     _root->add_child( cluster );
   }
+
+  // collect all clusters without descendants
+  collect_leaves( *_root );
 }
 
 void besthea::mesh::spacetime_cluster_tree::build_tree(
@@ -160,5 +163,17 @@ void besthea::mesh::spacetime_cluster_tree::get_space_clusters_on_level(
     }
   } else {
     clusters.push_back( root );
+  }
+}
+
+void besthea::mesh::spacetime_cluster_tree::collect_leaves(
+  spacetime_cluster & root ) {
+  if ( root.get_n_children( ) == 0 ) {
+    _leaves.push_back( &root );
+  } else {
+    for ( auto it = root.get_children( )->begin( );
+          it != root.get_children( )->end( ); ++it ) {
+      collect_leaves( **it );
+    }
   }
 }
