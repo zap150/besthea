@@ -39,28 +39,41 @@ using namespace besthea::tools;
 
 struct cauchy_data {
   static sc dirichlet( sc x1, sc x2, sc x3, const coordinates< 3 > & n, sc t ) {
-    sc norm2 = ( x1 - y[ 0 ] ) * ( x1 - y[ 0 ] )
-      + ( x2 - y[ 1 ] ) * ( x2 - y[ 1 ] ) + ( x3 - y[ 2 ] ) * ( x3 - y[ 2 ] );
-    sc value = std::pow( 4.0 * M_PI * alpha * t, -1.5 )
-      * std::exp( -norm2 / ( 4.0 * alpha * t ) );
+    sc norm2 = ( x1 - _y[ 0 ] ) * ( x1 - _y[ 0 ] )
+      + ( x2 - _y[ 1 ] ) * ( x2 - _y[ 1 ] )
+      + ( x3 - _y[ 2 ] ) * ( x3 - _y[ 2 ] );
+    sc value = std::pow( 4.0 * M_PI * _alpha * ( t + _shift ), -1.5 )
+      * std::exp( -norm2 / ( 4.0 * _alpha * ( t + _shift ) ) );
 
     return value;
   }
 
   static sc neumann( sc x1, sc x2, sc x3, const coordinates< 3 > & n, sc t ) {
-    sc dot = ( x1 - y[ 0 ] ) * n[ 0 ] + ( x2 - y[ 1 ] ) * n[ 1 ]
-      + ( x3 - y[ 2 ] ) * n[ 2 ];
-    sc value = ( -1.0 / ( 2.0 * t ) ) * dot * dirichlet( x1, x2, x3, n, t );
+    sc dot = ( x1 - _y[ 0 ] ) * n[ 0 ] + ( x2 - _y[ 1 ] ) * n[ 1 ]
+      + ( x3 - _y[ 2 ] ) * n[ 2 ];
+    sc value = ( -1.0 / ( 2.0 * ( t + _shift ) ) ) * dot
+      * dirichlet( x1, x2, x3, n, t );
 
     return value;
   }
 
-  static constexpr sc alpha{ 0.5 };
-  static constexpr std::array< sc, 3 > y{ 0.0, 0.0, 1.5 };
+  static sc initial( sc x1, sc x2, sc x3 ) {
+    sc norm2 = ( x1 - _y[ 0 ] ) * ( x1 - _y[ 0 ] )
+      + ( x2 - _y[ 1 ] ) * ( x2 - _y[ 1 ] )
+      + ( x3 - _y[ 2 ] ) * ( x3 - _y[ 2 ] );
+    sc value = std::pow( 4.0 * M_PI * _alpha * _shift, -1.5 )
+      * std::exp( -norm2 / ( 4.0 * _alpha * _shift ) );
+
+    return value;
+  }
+
+  static constexpr sc _alpha{ 0.5 };
+  static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
+  static constexpr sc _shift{ 0.2 };
 };
 
 int main( int argc, char * argv[] ) {
-  std::string file = "./mesh_files/cube_192.txt";
+  std::string file = "./mesh_files/cube_192_vol.txt";
   int refine = 0;
   lo n_timesteps = 8;
   sc end_time = 1.0;
@@ -85,11 +98,22 @@ int main( int argc, char * argv[] ) {
   if ( argc > 6 ) {
     grid_refine = std::atoi( argv[ 6 ] );
   }
-  triangular_surface_mesh space_mesh( file );
+  triangular_surface_mesh space_mesh;
+  tetrahedral_volume_mesh volume_mesh;
+  if ( cauchy_data::_shift > 0.0 ) {
+    volume_mesh.load( file );
+    volume_mesh.refine( refine );
+    space_mesh.from_tetrahedral( volume_mesh );
+    volume_mesh.print_info( );
+  } else {
+    space_mesh.load( file );
+    space_mesh.refine( refine );
+  }
+  n_timesteps *= std::exp2( refine );
   uniform_spacetime_tensor_mesh spacetime_mesh(
     space_mesh, end_time, n_timesteps );
-  spacetime_mesh.refine( refine, 1 );
 
+  space_mesh.print_info( );
   spacetime_mesh.print_info( );
 
   timer t;
@@ -99,10 +123,11 @@ int main( int argc, char * argv[] ) {
 
   lo order_sing = 4;
   lo order_reg = 4;
+  lo order_reg_tetra = 4;
 
   block_lower_triangular_toeplitz_matrix * K
     = new block_lower_triangular_toeplitz_matrix( );
-  spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::alpha );
+  spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
   uniform_spacetime_be_assembler assembler_k(
     kernel_k, space_p0, space_p1, order_sing, order_reg );
   t.reset( "K" );
@@ -125,19 +150,41 @@ int main( int argc, char * argv[] ) {
             << space_p0.L2_relative_error( cauchy_data::neumann, neu_proj )
             << std::endl;
 
-  t.reset( "Setting up RHS" );
   block_vector dir;
   dir.resize( K->get_block_dim( ) );
   dir.resize_blocks( K->get_n_columns( ), true );
   M.apply( neu_proj, dir, true, 0.5, 0.0 );
   K->apply( neu_proj, dir, true, -1.0, 1.0 );
-  t.measure( );
 
   delete K;
 
+  vector init_proj;
+  if ( cauchy_data::_shift > 0.0 ) {
+    fe_space< basis_tetra_p1 > space_p1_tetra( volume_mesh );
+
+    space_p1_tetra.L2_projection( cauchy_data::initial, init_proj );
+    std::cout << "Initial projection L2 relative error: "
+              << space_p1_tetra.L2_relative_error(
+                   cauchy_data::initial, init_proj )
+              << std::endl;
+
+    block_row_matrix * M1 = new block_row_matrix( );
+    spacetime_heat_initial_m1_kernel_antiderivative kernel_m1(
+      cauchy_data::_alpha );
+    uniform_spacetime_initial_assembler assembler_m1(
+      kernel_m1, space_p1, space_p1_tetra, order_reg, order_reg_tetra );
+    t.reset( "M1" );
+    assembler_m1.assemble( *M1 );
+    t.measure( );
+
+    M1->apply( init_proj, dir, false, -1.0, 1.0 );
+
+    delete M1;
+  }
+
   block_lower_triangular_toeplitz_matrix * D
     = new block_lower_triangular_toeplitz_matrix( );
-  spacetime_heat_hs_kernel_antiderivative kernel_d( cauchy_data::alpha );
+  spacetime_heat_hs_kernel_antiderivative kernel_d( cauchy_data::_alpha );
   uniform_spacetime_be_assembler assembler_d(
     kernel_d, space_p1, space_p1, order_sing, order_reg );
   t.reset( "D" );
@@ -153,7 +200,7 @@ int main( int argc, char * argv[] ) {
   ///*
   block_lower_triangular_toeplitz_matrix * V11
     = new block_lower_triangular_toeplitz_matrix( );
-  spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::alpha );
+  spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
   uniform_spacetime_be_assembler assembler_v(
     kernel_v, space_p1, space_p1, order_sing, order_reg );
   t.reset( "V11" );
@@ -203,7 +250,7 @@ int main( int argc, char * argv[] ) {
     grid_spacetime_mesh.print_info( );
 
     block_vector slp;
-    // spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::alpha );
+    // spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
     uniform_spacetime_be_evaluator evaluator_v( kernel_v, space_p0, order_reg );
     t.reset( "SLP" );
     evaluator_v.evaluate( grid_space_mesh.get_nodes( ), neu_proj, slp );
@@ -216,6 +263,20 @@ int main( int argc, char * argv[] ) {
     t.measure( );
 
     slp.add( dlp, -1.0 );
+
+    if ( cauchy_data::_shift > 0.0 ) {
+      block_vector initp;
+      spacetime_heat_kernel kernel( cauchy_data::_alpha );
+      fe_space< basis_tetra_p1 > space_p1_tetra( volume_mesh );
+      uniform_spacetime_initial_evaluator evaluator_init( kernel,
+        space_p1_tetra, spacetime_mesh.get_n_temporal_elements( ),
+        spacetime_mesh.get_timestep( ), order_reg_tetra );
+      t.reset( "INITP" );
+      evaluator_init.evaluate( grid_space_mesh.get_nodes( ), init_proj, initp );
+      t.measure( );
+
+      slp.add( initp );
+    }
 
     block_vector sol_interp;
     uniform_spacetime_be_space< basis_tri_p1 > grid_space_p1(

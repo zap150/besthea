@@ -40,13 +40,13 @@ lo besthea::bem::basis_tri_p1::dimension_local( ) const {
 }
 
 lo besthea::bem::basis_tri_p1::dimension_global( ) const {
-  return _mesh->get_spatial_mesh( )->get_n_nodes( );
+  return _mesh->get_spatial_surface_mesh( )->get_n_nodes( );
 }
 
 void besthea::bem::basis_tri_p1::do_local_to_global(
   lo i_elem, std::vector< lo > & indices ) const {
   linear_algebra::indices< 3 > element;
-  _mesh->get_spatial_mesh( )->get_element( i_elem, element );
+  _mesh->get_spatial_surface_mesh( )->get_element( i_elem, element );
   indices[ 0 ] = element[ 0 ];
   indices[ 1 ] = element[ 1 ];
   indices[ 2 ] = element[ 2 ];
@@ -56,7 +56,7 @@ void besthea::bem::basis_tri_p1::do_local_to_global( lo i_elem,
   int n_shared_vertices, int rotation, bool swap,
   std::vector< lo > & indices ) const {
   linear_algebra::indices< 3 > element;
-  _mesh->get_spatial_mesh( )->get_element( i_elem, element );
+  _mesh->get_spatial_surface_mesh( )->get_element( i_elem, element );
 
   if ( n_shared_vertices == 2 && swap ) {
     indices[ 0 ] = element[ _map[ rotation + 1 ] ];
@@ -74,18 +74,20 @@ void besthea::bem::basis_tri_p1::evaluate_curl( lo i_elem,
   linear_algebra::indices< 3 > element;
   linear_algebra::coordinates< 3 > x1rot, x2rot, x3rot;
 
-  _mesh->get_spatial_mesh( )->get_element( i_elem, element );
+  _mesh->get_spatial_surface_mesh( )->get_element( i_elem, element );
 
   if ( n_shared_vertices == 2 && swap ) {
-    _mesh->get_spatial_mesh( )->get_node(
+    _mesh->get_spatial_surface_mesh( )->get_node(
       element[ _map[ rotation + 1 ] ], x1rot );
-    _mesh->get_spatial_mesh( )->get_node( element[ _map[ rotation ] ], x2rot );
+    _mesh->get_spatial_surface_mesh( )->get_node(
+      element[ _map[ rotation ] ], x2rot );
   } else {
-    _mesh->get_spatial_mesh( )->get_node( element[ _map[ rotation ] ], x1rot );
-    _mesh->get_spatial_mesh( )->get_node(
+    _mesh->get_spatial_surface_mesh( )->get_node(
+      element[ _map[ rotation ] ], x1rot );
+    _mesh->get_spatial_surface_mesh( )->get_node(
       element[ _map[ rotation + 1 ] ], x2rot );
   }
-  _mesh->get_spatial_mesh( )->get_node(
+  _mesh->get_spatial_surface_mesh( )->get_node(
     element[ _map[ rotation + 2 ] ], x3rot );
 
   // first two rows of R^\trans, third is n

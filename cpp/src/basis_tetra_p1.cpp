@@ -26,47 +26,29 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "besthea/uniform_spacetime_tensor_mesh.h"
+#include "besthea/basis_tetra_p1.h"
 
-#include <iomanip>
-#include <iostream>
-
-besthea::mesh::uniform_spacetime_tensor_mesh::uniform_spacetime_tensor_mesh(
-  triangular_surface_mesh & space_mesh, sc end_time, lo n_timesteps ) {
-  this->_space_mesh = &space_mesh;
-  _end_time = end_time;
-  _n_timesteps = n_timesteps;
-  _timestep = end_time / n_timesteps;
-  _time_mesh = new temporal_mesh( 0.0, end_time, n_timesteps );
+besthea::bem::basis_tetra_p1::basis_tetra_p1( const mesh_type & mesh ) {
+  _mesh = &mesh;
 }
 
-besthea::mesh::uniform_spacetime_tensor_mesh::
-  ~uniform_spacetime_tensor_mesh( ) {
-  delete _time_mesh;
+besthea::bem::basis_tetra_p1::~basis_tetra_p1( ) {
 }
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine(
-  int level, int temporal_order ) {
-  refine_space( level );
-  refine_time( temporal_order * level );
-  _n_timesteps = _time_mesh->get_n_elements( );
-  _timestep = _end_time / _n_timesteps;
+lo besthea::bem::basis_tetra_p1::dimension_local( ) const {
+  return 4;
 }
 
-// void besthea::mesh::uniform_spacetime_tensor_mesh::refine_space( int level )
-// {
-//  _space_mesh->refine( level );
-//}
-//
-// void besthea::mesh::uniform_spacetime_tensor_mesh::refine_time( int level ) {
-//  _n_timesteps *= 1 << level;
-//  _timestep = _end_time / _n_timesteps;
-//}
+lo besthea::bem::basis_tetra_p1::dimension_global( ) const {
+  return _mesh->get_n_nodes( );
+}
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::print_info( ) const {
-  std::cout << "besthea::mesh::uniform_spacetime_tensor_mesh" << std::endl;
-  std::cout << "  spatial elements: " << get_n_spatial_elements( )
-            << ", spatial nodes: " << get_n_spatial_nodes( )
-            << ", spatial edges: " << get_n_spatial_edges( ) << std::endl;
-  std::cout << "  timesteps: " << get_n_temporal_elements( ) << std::endl;
+void besthea::bem::basis_tetra_p1::do_local_to_global(
+  lo i_elem, std::vector< lo > & indices ) const {
+  linear_algebra::indices< 4 > element;
+  _mesh->get_element( i_elem, element );
+  indices[ 0 ] = element[ 0 ];
+  indices[ 1 ] = element[ 1 ];
+  indices[ 2 ] = element[ 2 ];
+  indices[ 3 ] = element[ 3 ];
 }

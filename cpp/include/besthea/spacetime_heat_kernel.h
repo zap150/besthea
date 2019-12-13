@@ -26,76 +26,73 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file compound_block_linear_operator.h
- * @brief Class for a compound block linear operator.
+/** @file spacetime_heat_kernel.h
+ * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_COMPOUND_BLOCK_LINEAR_OPERATOR_H_
-#define INCLUDE_BESTHEA_COMPOUND_BLOCK_LINEAR_OPERATOR_H_
+#ifndef INCLUDE_BESTHEA_SPACETIME_HEAT_KERNEL_H_
+#define INCLUDE_BESTHEA_SPACETIME_HEAT_KERNEL_H_
 
-#include "besthea/block_linear_operator.h"
-#include "besthea/block_vector.h"
 #include "besthea/settings.h"
+#include "besthea/spacetime_kernel.h"
 
 #include <vector>
 
 namespace besthea {
-  namespace linear_algebra {
-    class compound_block_linear_operator;
+  namespace bem {
+    class spacetime_heat_kernel;
   }
 }
 
 /**
- *  Class representing a compound block linear operator.
+ *  Class representing a spacetime heat kernel.
  */
-class besthea::linear_algebra::compound_block_linear_operator
-  : public besthea::linear_algebra::block_linear_operator {
+class besthea::bem::spacetime_heat_kernel
+  : public besthea::bem::spacetime_kernel<
+      besthea::bem::spacetime_heat_kernel > {
  public:
-  using block_vector_type
-    = besthea::linear_algebra::block_vector;  //!< Block vector type.
-
   /**
    * Constructor.
+   * @param[in] alpha Heat conductivity.
    */
-  compound_block_linear_operator( );
+  spacetime_heat_kernel( sc alpha )
+    : _alpha( alpha ), _alpha_sqrt_alpha( alpha * std::sqrt( alpha ) ) {
+  }
 
   /**
    * Destructor.
    */
-  virtual ~compound_block_linear_operator( );
-
-  /*!
-   * @brief y = beta * y + alpha * (this)^trans * x.
-   * @param[in] x
-   * @param[in,out] y
-   * @param[in] trans
-   * @param[in] alpha
-   * @param[in] beta
-   */
-  virtual void apply( const block_vector_type & x, block_vector_type & y,
-    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
+  virtual ~spacetime_heat_kernel( ) {
+  }
 
   /**
-   * Adds a linear operator to the compound.
-   * @param[in] op Linear operator.
-   * @param[in] trans Determines whether to apply transposed.
-   * @param[in] alpha Multiplicative factor.
+   * Evaluates the kernel.
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] t `t`.
    */
-  void push_back( const besthea::linear_algebra::block_linear_operator & op,
-    bool trans = false, sc alpha = 1.0 );
+#pragma omp declare simd uniform( this, t ) simdlen( DATA_WIDTH )
+  sc do_evaluate( sc xy1, sc xy2, sc xy3, sc t ) const {
+    sc norm2 = xy1 * xy1 + xy2 * xy2 + xy3 * xy3;
 
-  /**
-   * Returns true if dimensions match.
-   */
-  bool is_valid( ) const;
+    sc value = _one
+      / ( _eight * _pi_sqrt_pi * _alpha_sqrt_alpha * t * std::sqrt( t ) )
+      * std::exp( -norm2 / ( _four * _alpha * t ) );
+
+    return value;
+  }
 
  protected:
-  std::vector< const besthea::linear_algebra::block_linear_operator * >
-    _compound;                 //!< Vector of operators.
-  std::vector< bool > _trans;  //!< Transposition of individual operators.
-  std::vector< sc > _alpha;    //!< Multiplicative factors.
+  sc _alpha;  //!< Heat conductivity.
 
-  lo _maximal_dimension;  //!< Maximal dimension of all operators.
+  sc _alpha_sqrt_alpha;  //!< Auxiliary variable
+
+  const sc _pi_sqrt_pi{ M_PI * std::sqrt( M_PI ) };  //!< Auxiliary variable
+  const sc _zero{ 0.0 };                             //!< Auxiliary variable
+  const sc _one{ 1.0 };                              //!< Auxiliary variable
+  const sc _four{ 4.0 };                             //!< Auxiliary variable
+  const sc _eight{ 8.0 };                            //!< Auxiliary variable
 };
 
-#endif /* INCLUDE_BESTHEA_COMPOUND_BLOCK_LINEAR_OPERATOR_H_ */
+#endif /* INCLUDE_BESTHEA_SPACETIME_HEAT_KERNEL_H_ */

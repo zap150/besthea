@@ -55,6 +55,11 @@ namespace besthea {
 class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
  public:
   /**
+   * Constructor.
+   */
+  tetrahedral_volume_mesh( );
+
+  /**
    * Constructing mesh from a file.
    * @param[in] file Path to the file.
    */
@@ -68,6 +73,12 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
    * Prints info on the object.
    */
   void print_info( ) const;
+
+  /**
+   * Prints the mesh file.
+   * @param[in] file File name.
+   */
+  void print( const std::string & file );
 
   /**
    * Prints the EnSight Gold case file.
@@ -323,7 +334,7 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
    * Refines the mesh by quadrisection.
    * @param[in] level Number of refinements.
    */
-  void refine( int level );
+  void refine( int level = 1 );
 
   /**
    * Returns true for a surface node.
@@ -365,22 +376,38 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
   /**
    * Returns the volume mesh.
    */
-  virtual triangular_surface_mesh * get_spatial_mesh( ) {
+  virtual triangular_surface_mesh * get_spatial_surface_mesh( ) override {
     return nullptr;
   }
 
   /**
    * Returns the volume mesh.
    */
-  virtual const triangular_surface_mesh * get_spatial_mesh( ) const {
+  virtual const triangular_surface_mesh * get_spatial_surface_mesh( )
+    const override {
     return nullptr;
+  }
+
+  /**
+   * Returns the volume mesh.
+   */
+  virtual tetrahedral_volume_mesh * get_spatial_volume_mesh( ) override {
+    return this;
+  }
+
+  /**
+   * Returns the volume mesh.
+   */
+  virtual const tetrahedral_volume_mesh * get_spatial_volume_mesh( )
+    const override {
+    return this;
   }
 
   lo _n_nodes;               //!< number of nodes
   std::vector< sc > _nodes;  //!< coordinates of nodes
   std::vector< std::vector< lo > >
     _node_to_elements;  //!< mapping from nodes to elements
-  lo _n_surface_nodes;
+  lo _n_surface_nodes; //!< number of surface nodes
   std::vector< bool > _is_surface_node;  //!< True if surface node
 
   lo _n_elements;               //!< number of elements
@@ -396,7 +423,7 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
   std::vector< lo > _edges;             //!< indices into #_nodes
   std::vector< lo > _element_to_edges;  //!< indices into #_edges
 
-  lo _n_surface_edges;
+  lo _n_surface_edges; //!< number of surface edges
   std::vector< lo > _surface_element_to_edges;  //!< indices into #_edges
 };
 

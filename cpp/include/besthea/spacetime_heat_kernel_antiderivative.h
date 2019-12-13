@@ -34,7 +34,9 @@
 #define INCLUDE_BESTHEA_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_
 
 #include <besthea/spacetime_kernel_antiderivative.h>
+
 #include "besthea/settings.h"
+
 #include <cmath>
 #include <vector>
 
@@ -51,8 +53,7 @@ namespace besthea {
  */
 template< class derived_type >
 class besthea::bem::spacetime_heat_kernel_antiderivative
-  : public besthea::bem::spacetime_kernel_antiderivative<
-      derived_type > {
+  : public besthea::bem::spacetime_kernel_antiderivative< derived_type > {
  public:
   /**
    * Constructor.

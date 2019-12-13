@@ -29,7 +29,7 @@
 #include "besthea/block_vector.h"
 
 besthea::linear_algebra::block_vector::block_vector( )
-  : _block_size( 1 ), _size( 1 ), _data( 1, vector_type( 1, 0.0 ) ) {
+  : _block_size( 0 ), _size( 0 ), _data( ) {
 }
 
 besthea::linear_algebra::block_vector::block_vector(

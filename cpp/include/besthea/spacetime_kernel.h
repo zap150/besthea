@@ -26,76 +26,65 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file compound_block_linear_operator.h
- * @brief Class for a compound block linear operator.
+/** @file spacetime_kernel.h
+ * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_COMPOUND_BLOCK_LINEAR_OPERATOR_H_
-#define INCLUDE_BESTHEA_COMPOUND_BLOCK_LINEAR_OPERATOR_H_
+#ifndef INCLUDE_BESTHEA_SPACETIME_KERNEL_H_
+#define INCLUDE_BESTHEA_SPACETIME_KERNEL_H_
 
-#include "besthea/block_linear_operator.h"
-#include "besthea/block_vector.h"
 #include "besthea/settings.h"
 
-#include <vector>
-
 namespace besthea {
-  namespace linear_algebra {
-    class compound_block_linear_operator;
+  namespace bem {
+    template< class derived_type >
+    class spacetime_kernel;
   }
 }
 
 /**
- *  Class representing a compound block linear operator.
+ *  Class representing a spacetime kernel.
  */
-class besthea::linear_algebra::compound_block_linear_operator
-  : public besthea::linear_algebra::block_linear_operator {
+template< class derived_type >
+class besthea::bem::spacetime_kernel {
  public:
-  using block_vector_type
-    = besthea::linear_algebra::block_vector;  //!< Block vector type.
-
   /**
    * Constructor.
    */
-  compound_block_linear_operator( );
+  spacetime_kernel( ) {
+  }
 
   /**
    * Destructor.
    */
-  virtual ~compound_block_linear_operator( );
-
-  /*!
-   * @brief y = beta * y + alpha * (this)^trans * x.
-   * @param[in] x
-   * @param[in,out] y
-   * @param[in] trans
-   * @param[in] alpha
-   * @param[in] beta
-   */
-  virtual void apply( const block_vector_type & x, block_vector_type & y,
-    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
+  virtual ~spacetime_kernel( ) {
+  }
 
   /**
-   * Adds a linear operator to the compound.
-   * @param[in] op Linear operator.
-   * @param[in] trans Determines whether to apply transposed.
-   * @param[in] alpha Multiplicative factor.
+   * Returns this cast to the descendant's type.
    */
-  void push_back( const besthea::linear_algebra::block_linear_operator & op,
-    bool trans = false, sc alpha = 1.0 );
+  derived_type * derived( ) {
+    return static_cast< derived_type * >( this );
+  }
 
   /**
-   * Returns true if dimensions match.
+   * Returns this cast to the descendant's type.
    */
-  bool is_valid( ) const;
+  const derived_type * derived( ) const {
+    return static_cast< const derived_type * >( this );
+  }
 
- protected:
-  std::vector< const besthea::linear_algebra::block_linear_operator * >
-    _compound;                 //!< Vector of operators.
-  std::vector< bool > _trans;  //!< Transposition of individual operators.
-  std::vector< sc > _alpha;    //!< Multiplicative factors.
-
-  lo _maximal_dimension;  //!< Maximal dimension of all operators.
+  /**
+   * Evaluates the kernel.
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] t `t`.
+   */
+#pragma omp declare simd uniform( this, t ) simdlen( DATA_WIDTH )
+  sc evaluate( sc xy1, sc xy2, sc xy3, sc t ) const {
+    return derived( )->do_evaluate( xy1, xy2, xy3, t );
+  }
 };
 
-#endif /* INCLUDE_BESTHEA_COMPOUND_BLOCK_LINEAR_OPERATOR_H_ */
+#endif /* INCLUDE_BESTHEA_SPACETIME_KERNEL_H_ */

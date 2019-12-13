@@ -26,76 +26,66 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file compound_block_linear_operator.h
- * @brief Class for a compound block linear operator.
+/** @file spacetime_heat_initial_kernel_antiderivative.h
+ * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_COMPOUND_BLOCK_LINEAR_OPERATOR_H_
-#define INCLUDE_BESTHEA_COMPOUND_BLOCK_LINEAR_OPERATOR_H_
+#ifndef INCLUDE_BESTHEA_SPACETIME_HEAT_INITIAL_KERNEL_ANTIDERIVATIVE_H_
+#define INCLUDE_BESTHEA_SPACETIME_HEAT_INITIAL_KERNEL_ANTIDERIVATIVE_H_
 
-#include "besthea/block_linear_operator.h"
-#include "besthea/block_vector.h"
+#include <besthea/spacetime_initial_kernel_antiderivative.h>
+
 #include "besthea/settings.h"
 
-#include <vector>
+#include <cmath>
 
 namespace besthea {
-  namespace linear_algebra {
-    class compound_block_linear_operator;
+  namespace bem {
+    template< class derived_type >
+    class spacetime_heat_initial_kernel_antiderivative;
   }
 }
 
 /**
- *  Class representing a compound block linear operator.
+ *  Class representing a first antiderivative of an initial spacetime heat
+ * kernel.
  */
-class besthea::linear_algebra::compound_block_linear_operator
-  : public besthea::linear_algebra::block_linear_operator {
+template< class derived_type >
+class besthea::bem::spacetime_heat_initial_kernel_antiderivative
+  : public besthea::bem::spacetime_initial_kernel_antiderivative<
+      derived_type > {
  public:
-  using block_vector_type
-    = besthea::linear_algebra::block_vector;  //!< Block vector type.
-
   /**
    * Constructor.
+   * @param[in] alpha Heat conductivity.
    */
-  compound_block_linear_operator( );
+  spacetime_heat_initial_kernel_antiderivative( sc alpha )
+    : _alpha( alpha ),
+      _sqrt_alpha( std::sqrt( alpha ) ),
+      _alpha2( alpha * alpha ) {
+  }
 
   /**
    * Destructor.
    */
-  virtual ~compound_block_linear_operator( );
-
-  /*!
-   * @brief y = beta * y + alpha * (this)^trans * x.
-   * @param[in] x
-   * @param[in,out] y
-   * @param[in] trans
-   * @param[in] alpha
-   * @param[in] beta
-   */
-  virtual void apply( const block_vector_type & x, block_vector_type & y,
-    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
-
-  /**
-   * Adds a linear operator to the compound.
-   * @param[in] op Linear operator.
-   * @param[in] trans Determines whether to apply transposed.
-   * @param[in] alpha Multiplicative factor.
-   */
-  void push_back( const besthea::linear_algebra::block_linear_operator & op,
-    bool trans = false, sc alpha = 1.0 );
-
-  /**
-   * Returns true if dimensions match.
-   */
-  bool is_valid( ) const;
+  virtual ~spacetime_heat_initial_kernel_antiderivative( ) {
+  }
 
  protected:
-  std::vector< const besthea::linear_algebra::block_linear_operator * >
-    _compound;                 //!< Vector of operators.
-  std::vector< bool > _trans;  //!< Transposition of individual operators.
-  std::vector< sc > _alpha;    //!< Multiplicative factors.
+  sc _alpha;  //!< Heat conductivity.
 
-  lo _maximal_dimension;  //!< Maximal dimension of all operators.
+  sc _sqrt_alpha;  //!< Auxiliary variable
+  sc _alpha2;      //!< Auxiliary variable
+
+  const sc _pi{ M_PI };                    //!< Auxiliary variable
+  const sc _sqrt_pi{ std::sqrt( M_PI ) };  //!< Auxiliary variable
+  const sc _zero{ 0.0 };                   //!< Auxiliary variable
+  const sc _one{ 1.0 };                    //!< Auxiliary variable
+  const sc _two{ 2.0 };                    //!< Auxiliary variable
+  const sc _four{ 4.0 };                   //!< Auxiliary variable
+  const sc _eight{ 8.0 };                  //!< Auxiliary variable
+
+  const sc _eps{ 1e-12 };  //!< Auxiliary variable
 };
 
-#endif /* INCLUDE_BESTHEA_COMPOUND_BLOCK_LINEAR_OPERATOR_H_ */
+#endif /* INCLUDE_BESTHEA_SPACETIME_HEAT_INITIAL_KERNEL_ANTIDERIVATIVE_H_ */

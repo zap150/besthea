@@ -57,6 +57,7 @@ class besthea::linear_algebra::block_mkl_fgmres_inverse
    * @param[in] op Linear operator to be inverted.
    * @param[in] relative_residual_error Relative residual error.
    * @param[in] n_iterations Maximal number of iterations.
+   * @param[in] n_iterations_until_restart Number of iterations before restart.
    */
   block_mkl_fgmres_inverse( block_linear_operator & op,
     sc relative_residual_error, lo n_iterations,
@@ -68,6 +69,7 @@ class besthea::linear_algebra::block_mkl_fgmres_inverse
    * @param[in] precond Linear operator as a preconditioner.
    * @param[in] relative_residual_error Relative residual error.
    * @param[in] n_iterations Maximal number of iterations.
+   * @param[in] n_iterations_until_restart Number of iterations before restart.
    */
   block_mkl_fgmres_inverse( block_linear_operator & op,
     block_linear_operator & precond, sc relative_residual_error,

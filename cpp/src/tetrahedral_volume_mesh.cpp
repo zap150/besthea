@@ -33,6 +33,15 @@
 #include <iomanip>
 #include <sstream>
 
+besthea::mesh::tetrahedral_volume_mesh::tetrahedral_volume_mesh( )
+  : _n_nodes( 0 ),
+    _n_surface_nodes( 0 ),
+    _n_elements( 0 ),
+    _n_surface_elements( 0 ),
+    _n_edges( 0 ),
+    _n_surface_edges( 0 ) {
+}
+
 besthea::mesh::tetrahedral_volume_mesh::tetrahedral_volume_mesh(
   const std::string & file )
   : _n_nodes( 0 ),
@@ -142,6 +151,9 @@ void besthea::mesh::tetrahedral_volume_mesh::scale( sc factor ) {
 }
 
 void besthea::mesh::tetrahedral_volume_mesh::refine( int level ) {
+  if ( level < 1 )
+    return;
+
   lo new_n_nodes, new_n_elements, new_n_surface_elements;
   linear_algebra::coordinates< 3 > x1, x2;
   linear_algebra::indices< 2 > edge;
@@ -816,4 +828,46 @@ bool besthea::mesh::tetrahedral_volume_mesh::print_ensight(
     && print_ensight_geometry( directory )
     && print_ensight_datafiles(
       directory, node_labels, node_data, element_labels, element_data );
+}
+
+void besthea::mesh::tetrahedral_volume_mesh::print( const std::string & file ) {
+  // std::cout << "Printing  '" << meshFile << "' ... ";
+
+  std::ofstream data_file( file.c_str( ) );
+
+  data_file.setf( std::ios::showpoint | std::ios::scientific );
+  data_file.precision( 6 );
+
+  if ( !data_file.is_open( ) ) {
+    std::cout << "File could not be opened!" << std::endl;
+    return;
+  }
+
+  data_file << 3 << std::endl << 4 << std::endl << std::endl;
+  data_file << _n_nodes << std::endl;
+
+  for ( lo i = 0; i < _n_nodes; ++i ) {
+    data_file << _nodes[ 3 * i ] << " " << _nodes[ 3 * i + 1 ] << " "
+              << _nodes[ 3 * i + 2 ] << std::endl;
+  }
+
+  data_file << std::endl << _n_surface_elements << std::endl;
+
+  for ( lo i = 0; i < _n_surface_elements; ++i ) {
+    data_file << _surface_elements[ 3 * i ] << " "
+              << _surface_elements[ 3 * i + 1 ] << " "
+              << _surface_elements[ 3 * i + 2 ] << std::endl;
+  }
+
+  data_file << std::endl << _n_elements << std::endl;
+
+  for ( lo i = 0; i < _n_elements; ++i ) {
+    data_file << _elements[ 4 * i ] << " " << _elements[ 4 * i + 1 ] << " "
+              << _elements[ 4 * i + 2 ] << " " << _elements[ 4 * i + 3 ]
+              << std::endl;
+  }
+
+  data_file.close( );
+
+  // std::cout << "done." << std::endl;
 }

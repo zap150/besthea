@@ -26,47 +26,48 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "besthea/uniform_spacetime_tensor_mesh.h"
+#include "besthea/block_row_matrix.h"
 
-#include <iomanip>
-#include <iostream>
-
-besthea::mesh::uniform_spacetime_tensor_mesh::uniform_spacetime_tensor_mesh(
-  triangular_surface_mesh & space_mesh, sc end_time, lo n_timesteps ) {
-  this->_space_mesh = &space_mesh;
-  _end_time = end_time;
-  _n_timesteps = n_timesteps;
-  _timestep = end_time / n_timesteps;
-  _time_mesh = new temporal_mesh( 0.0, end_time, n_timesteps );
+besthea::linear_algebra::block_row_matrix::block_row_matrix( )
+  : block_row_linear_operator( 0, 0, 0 ), _data( ) {
 }
 
-besthea::mesh::uniform_spacetime_tensor_mesh::
-  ~uniform_spacetime_tensor_mesh( ) {
-  delete _time_mesh;
+besthea::linear_algebra::block_row_matrix::block_row_matrix(
+  lo block_dim, lo n_rows, lo n_columns, std::initializer_list< sc > list )
+  : block_row_linear_operator( block_dim, n_columns, n_rows ),
+    _data( block_dim, matrix_type( n_rows, n_columns, list ) ) {
 }
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::refine(
-  int level, int temporal_order ) {
-  refine_space( level );
-  refine_time( temporal_order * level );
-  _n_timesteps = _time_mesh->get_n_elements( );
-  _timestep = _end_time / _n_timesteps;
+besthea::linear_algebra::block_row_matrix::block_row_matrix(
+  lo block_dim, lo n_rows, lo n_columns, bool zero )
+  : block_row_linear_operator( block_dim, n_columns, n_rows ),
+    _data( block_dim, matrix_type( n_rows, n_columns, zero ) ) {
 }
 
-// void besthea::mesh::uniform_spacetime_tensor_mesh::refine_space( int level )
-// {
-//  _space_mesh->refine( level );
-//}
-//
-// void besthea::mesh::uniform_spacetime_tensor_mesh::refine_time( int level ) {
-//  _n_timesteps *= 1 << level;
-//  _timestep = _end_time / _n_timesteps;
-//}
+void besthea::linear_algebra::block_row_matrix::print(
+  std::ostream & stream ) const {
+  for ( const matrix_type & m : _data ) {
+    m.print( );
+  }
+}
 
-void besthea::mesh::uniform_spacetime_tensor_mesh::print_info( ) const {
-  std::cout << "besthea::mesh::uniform_spacetime_tensor_mesh" << std::endl;
-  std::cout << "  spatial elements: " << get_n_spatial_elements( )
-            << ", spatial nodes: " << get_n_spatial_nodes( )
-            << ", spatial edges: " << get_n_spatial_edges( ) << std::endl;
-  std::cout << "  timesteps: " << get_n_temporal_elements( ) << std::endl;
+void besthea::linear_algebra::block_row_matrix::resize_blocks(
+  lo n_rows, lo n_columns ) {
+  for ( matrix_type & m : _data ) {
+    m.resize( n_rows, n_columns );
+  }
+  _n_rows = n_rows;
+  _n_columns = n_columns;
+}
+
+void besthea::linear_algebra::block_row_matrix::resize( lo block_dim ) {
+  _data.resize( block_dim );
+  _block_dim = block_dim;
+}
+
+void besthea::linear_algebra::block_row_matrix::apply( const vector_type & x,
+  block_vector_type & y, bool trans, sc alpha, sc beta ) const {
+  for ( lo i_block = 0; i_block < _block_dim; ++i_block ) {
+    _data[ i_block ].apply( x, y.get_block( i_block ), trans, alpha, beta );
+  }
 }

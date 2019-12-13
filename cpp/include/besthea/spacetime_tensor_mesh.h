@@ -412,15 +412,31 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
   /**
    * Returns a pointer to the internally stored spatial mesh.
    */
-  virtual triangular_surface_mesh * get_spatial_mesh( ) override {
+  virtual triangular_surface_mesh * get_spatial_surface_mesh( ) override {
     return _space_mesh;
   }
 
   /**
    * Returns a pointer to the internally stored spatial mesh.
    */
-  virtual const triangular_surface_mesh * get_spatial_mesh( ) const override {
+  virtual const triangular_surface_mesh * get_spatial_surface_mesh( )
+    const override {
     return _space_mesh;
+  }
+
+  /**
+   * Returns the volume mesh.
+   */
+  virtual tetrahedral_volume_mesh * get_spatial_volume_mesh( ) override {
+    return nullptr;
+  }
+
+  /**
+   * Returns the volume mesh.
+   */
+  virtual const tetrahedral_volume_mesh * get_spatial_volume_mesh( )
+    const override {
+    return nullptr;
   }
 
   /**

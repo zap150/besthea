@@ -26,60 +26,54 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file mkl_fgmres_inverse.h
- * @brief MKL FGMRES inverse of linear operators.
+/** @file block_row_linear_operator.h
+ * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_MKL_FGMRES_INVERSE_H_
-#define INCLUDE_BESTHEA_MKL_FGMRES_INVERSE_H_
+#ifndef INCLUDE_BESTHEA_BLOCK_ROW_LINEAR_OPERATOR_H_
+#define INCLUDE_BESTHEA_BLOCK_ROW_LINEAR_OPERATOR_H_
 
-#include "besthea/iterative_inverse.h"
+#include "besthea/block_vector.h"
 #include "besthea/settings.h"
 #include "besthea/vector.h"
 
 namespace besthea {
   namespace linear_algebra {
-    class mkl_fgmres_inverse;
+    class block_row_linear_operator;
   }
 }
 
 /**
- *  Class representing a MKL CG inverse of a linear operator.
+ *  Class representing a linear operator.
  */
-class besthea::linear_algebra::mkl_fgmres_inverse
-  : public besthea::linear_algebra::iterative_inverse {
- public:
+class besthea::linear_algebra::block_row_linear_operator {
   using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
+  using block_vector_type
+    = besthea::linear_algebra::block_vector;  //!< Block vector type.
 
-  /**
-   * Constructor.
-   * @param[in] op Linear operator to be inverted.
-   * @param[in] relative_residual_error Relative residual error.
-   * @param[in] n_iterations Maximal number of iterations.
-   * @param[in] n_iterations_until_restart Number of iterations before restart.
-   */
-  mkl_fgmres_inverse( linear_operator & op, sc relative_residual_error,
-    lo n_iterations, lo n_iterations_until_restart = 0 );
+ public:
+  block_row_linear_operator( )
+    : _block_dim( 0 ), _dim_domain( 0 ), _dim_range( 0 ) {
+  }
 
-  /**
-   * Constructor.
-   * @param[in] op Linear operator to be inverted.
-   * @param[in] precond Linear operator as a preconditioner.
-   * @param[in] relative_residual_error Relative residual error.
-   * @param[in] n_iterations Maximal number of iterations.
-   * @param[in] n_iterations_until_restart Number of iterations before restart.
+  /*!
+   * @brief Constructor.
+   * @param[in] block_dim Block dimension.
+   * @param[in] dim_domain Dimension of domain per block.
+   * @param[in] dim_range Dimension of range per block.
    */
-  mkl_fgmres_inverse( linear_operator & op, linear_operator & precond,
-    sc relative_residual_error, lo n_iterations,
-    lo n_iterations_until_restart = 0 );
+  block_row_linear_operator( lo block_dim, lo dim_domain, lo dim_range )
+    : _block_dim( block_dim ),
+      _dim_domain( dim_domain ),
+      _dim_range( dim_range ) {
+  }
 
   /**
    * Destructor.
    */
-  virtual ~mkl_fgmres_inverse( ) {
+  virtual ~block_row_linear_operator( ) {
   }
 
-  // todo: use alpha, beta
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
    * @param[in] x
@@ -88,12 +82,58 @@ class besthea::linear_algebra::mkl_fgmres_inverse
    * @param[in] alpha
    * @param[in] beta
    */
-  virtual void apply( const vector_type & x, vector_type & y,
-    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
+  virtual void apply( const vector_type & x, block_vector_type & y,
+    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const = 0;
+
+  /**
+   * Returns the domain dimension.
+   */
+  lo get_dim_domain( ) const {
+    return _dim_domain;
+  }
+
+  /**
+   * Returns the range dimension.
+   */
+  lo get_dim_range( ) const {
+    return _dim_range;
+  }
+
+  /**
+   * Returns the block dimension.
+   */
+  lo get_block_dim( ) const {
+    return _block_dim;
+  }
+
+  /**
+   * Sets the domain dimension.
+   * @param[in] dim_domain Domain dimension.
+   */
+  void set_dim_domain( lo dim_domain ) {
+    _dim_domain = dim_domain;
+  }
+
+  /**
+   * Sets the range dimension.
+   * @param[in] dim_range Range dimension.
+   */
+  void set_dim_range( lo dim_range ) {
+    _dim_range = dim_range;
+  }
+
+  /**
+   * Sets the block dimension.
+   * @param[in] block_dim Block dimension.
+   */
+  void set_block_dim( lo block_dim ) {
+    _block_dim = block_dim;
+  }
 
  protected:
-  lo _n_iterations_until_restart;  //!< maximal number of iterations before
-                                   //!< restart
+  lo _block_dim;   //!< Number of blocks in a row (column).
+  lo _dim_domain;  //!< domain dimension
+  lo _dim_range;   //!< range dimension
 };
 
-#endif /* INCLUDE_BESTHEA_MKL_FGMRES_INVERSE_H_ */
+#endif /* INCLUDE_BESTHEA_BLOCK_ROW_LINEAR_OPERATOR_H_ */

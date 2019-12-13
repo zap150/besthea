@@ -26,24 +26,24 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file spacetime_be_space.h
- * @brief File contains root class of boundary element spaces.
+/** @file fe_space.h
+ * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_SPACETIME_BE_SPACE_H_
-#define INCLUDE_BESTHEA_SPACETIME_BE_SPACE_H_
+#ifndef INCLUDE_BESTHEA_FE_SPACE_H_
+#define INCLUDE_BESTHEA_FE_SPACE_H_
 
-#include "besthea/block_vector.h"
 #include "besthea/coordinates.h"
-#include "besthea/mesh.h"
 #include "besthea/settings.h"
+#include "besthea/tetrahedral_volume_mesh.h"
+#include "besthea/vector.h"
 
 #include <vector>
 
 namespace besthea {
   namespace bem {
     template< class basis_type >
-    class spacetime_be_space;
+    class fe_space;
   }
 }
 
@@ -51,10 +51,10 @@ namespace besthea {
  * Superclass of all boundary element spaces.
  */
 template< class basis_type >
-class besthea::bem::spacetime_be_space {
-  using block_vector_type
-    = besthea::linear_algebra::block_vector;  //!< Block vector type.
-  using mesh_type = besthea::mesh::mesh;      //!< Spacetime mesh type.
+class besthea::bem::fe_space {
+  using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
+  using mesh_type
+    = besthea::mesh::tetrahedral_volume_mesh;  //!< Space mesh type.
 
  protected:
   /**
@@ -71,31 +71,27 @@ class besthea::bem::spacetime_be_space {
       _x2_ref;  //!< Second coordinates of quadrature nodes in the reference
                 //!< spatial element
     std::vector< sc, besthea::allocator_type< sc > >
+      _x3_ref;  //!< First coordinates of quadrature nodes in the reference
+                //!< spatial element
+
+    std::vector< sc, besthea::allocator_type< sc > >
       _x1;  //!< First coordinates of quadrature nodes in the spatial element
     std::vector< sc, besthea::allocator_type< sc > >
       _x2;  //!< Second coordinates of quadrature nodes in the spatial element
     std::vector< sc, besthea::allocator_type< sc > >
       _x3;  //!< Third coordinates of quadrature nodes in the spatial element
-
-    std::vector< sc, besthea::allocator_type< sc > >
-      _wt;  //!< Temporal quadrature weights
-    std::vector< sc, besthea::allocator_type< sc > >
-      _t_ref;  //!< Coordinates of quadrature nodes in the reference temporal
-               //!< element
-    std::vector< sc, besthea::allocator_type< sc > >
-      _t;  //!< Coordinates of quadrature nodes in the temporal element
   };
 
  public:
   /**
    * Constructor
    */
-  spacetime_be_space( const mesh_type & mesh );
+  fe_space( mesh_type & mesh );
 
   /**
    * Destructor.
    */
-  virtual ~spacetime_be_space( );
+  ~fe_space( );
 
   /**
    * Returns reference to the basis function.
@@ -112,34 +108,40 @@ class besthea::bem::spacetime_be_space {
   }
 
   /**
+   * Returns pointer to the mesh.
+   */
+  mesh_type * get_mesh( ) {
+    return _mesh;
+  }
+
+  /**
+   * Returns pointer to the mesh.
+   */
+  const mesh_type * get_mesh( ) const {
+    return _mesh;
+  }
+
+  /**
    * Projects a function to the boundary element space.
    * @param[in] f Function to be projected.
    * @param[out] projection Projection vector.
-   * @param[in] order_matrix Spatial quadrature order to assemble the mass
+   * @param[in] order_matrix Quadrature order to assemble the mass
    * matrix.
-   * @param[in] order_rhs_spatial Spatial triangular quadrature order to
+   * @param[in] order_rhs Triangular quadrature order to
    * assemble the right-hand side.
-   * @param[in] order_rhs_temporal Temporal line quadrature order to assemble
-   * the right-hand side.
    */
-  virtual void L2_projection(
-    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-    block_vector_type & projection, int order_matrix = 2,
-    int order_rhs_spatial = 5, int order_rhs_temporal = 4 ) const = 0;
+  void L2_projection( sc ( *f )( sc, sc, sc ), vector_type & projection,
+    int order_matrix = 2, int order_rhs = 4 ) const;
 
   /**
    * Returns the L2 relative error |f-approximation|/|f|.
    * @param[in] f Function in infinite dimensional space.
    * @param[in] approximation Function in finite dimensional space.
-   * @param[in] order_rhs_spatial Spatial triangular quadrature order to
+   * @param[in] order_rhs Triangular quadrature order to
    * assemble the right-hand side.
-   * @param[in] order_rhs_temporal Temporal line quadrature order to assemble
-   * the right-hand side.
    */
-  virtual sc L2_relative_error(
-    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-    const block_vector_type & approximation, int order_rhs_spatial = 5,
-    int order_rhs_temporal = 4 ) const = 0;
+  sc L2_relative_error( sc ( *f )( sc, sc, sc ),
+    const vector_type & approximation, int order_rhs = 4 ) const;
 
   /**
    * Projects a function to the boundary element space. ONLY USE SPECIALIZED
@@ -147,51 +149,43 @@ class besthea::bem::spacetime_be_space {
    * @param[in] f Function to be projected.
    * @param[out] interpolation Interpolation vector.
    */
-  virtual void interpolation(
-    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-    block_vector_type & interpolation ) const;
+  void interpolation(
+    sc ( *f )( sc, sc, sc ), vector_type & interpolation ) const;
 
   /**
    * Returns the l2 relative error |f-approximation|/|f|.
    * @param[in] f Function in finite dimensional space.
    * @param[out] approximation Function in finite dimensional space.
    */
-  sc l2_relative_error( const block_vector_type & f,
-    const block_vector_type & approximation ) const;
+  sc l2_relative_error(
+    const vector_type & f, const vector_type & approximation ) const;
 
  protected:
   /**
    * Initializes quadrature structures.
-   * @param[in] order_rhs_spatial Triangle spatial quadrature order for RHS.
-   * @param[in] order_rhs_temporal Line temporal quadrature order for RHS.
+   * @param[in] order_rhs Triangle quadrature order for RHS.
    * @param[out] my_quadrature Wrapper holding quadrature data.
    */
-  void init_quadrature( int order_rhs_spatial, int order_rhs_temporal,
-    quadrature_wrapper & my_quadrature ) const;
+  void init_quadrature(
+    int order_rhs, quadrature_wrapper & my_quadrature ) const;
 
   /**
-   * Maps the quadrature nodes from the reference triangle to the actual
+   * Maps the quadrature nodes from the reference tetrahedron to the actual
    * geometry.
    * @param[in] x1 Coordinates of the first node of the element.
    * @param[in] x2 Coordinates of the second node of the element.
    * @param[in] x3 Coordinates of the third node of the element.
+   * @param[in] x4 Coordinates of the fourth node of the element.
    * @param[in,out] my_quadrature Structure holding the quadrature nodes.
    */
-  void triangle_to_geometry( const linear_algebra::coordinates< 3 > & x1,
+  void tetrahedron_to_geometry( const linear_algebra::coordinates< 3 > & x1,
     const linear_algebra::coordinates< 3 > & x2,
     const linear_algebra::coordinates< 3 > & x3,
+    const linear_algebra::coordinates< 3 > & x4,
     quadrature_wrapper & my_quadrature ) const;
 
-  /**
-   * Maps the quadrature nodes from reference interval to the actual time.
-   * @param[in] d Index of time interval.
-   * @param[in] timestep Timestep size.
-   * @param[in,out] my_quadrature Structure holding the quadrature nodes.
-   */
-  void line_to_time(
-    lo d, sc timestep, quadrature_wrapper & my_quadrature ) const;
-
-  basis_type _basis;  //!< spatial basis function (temporal is constant)
+  basis_type _basis;  //!< basis function
+  mesh_type * _mesh;  //!< tetrahedral mesh
 };
 
-#endif /* INCLUDE_BESTHEA_SPACETIME_BE_SPACE_H_ */
+#endif /* INCLUDE_BESTHEA_FE_SPACE_H_ */

@@ -26,48 +26,47 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file basis_function.h
+/** @file volume_basis_function.h
  * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_BASIS_FUNCTION_H_
-#define INCLUDE_BESTHEA_BASIS_FUNCTION_H_
+#ifndef INCLUDE_BESTHEA_VOLUME_BASIS_FUNCTION_H_
+#define INCLUDE_BESTHEA_VOLUME_BASIS_FUNCTION_H_
 
 #include "besthea/coordinates.h"
-#include "besthea/mesh.h"
 #include "besthea/settings.h"
+#include "besthea/tetrahedral_volume_mesh.h"
 
-#include <array>
 #include <vector>
 
 namespace besthea {
   namespace bem {
     template< class derived_type >
-    class basis_function;
+    class volume_basis_function;
   }
 }
 
 /**
- *  Class representing a basis function.
+ *  Class representing a volume basis function.
  */
 template< class derived_type >
-class besthea::bem::basis_function {
+class besthea::bem::volume_basis_function {
  protected:
-  using mesh_type = besthea::mesh::mesh;  //!< Mesh type.
+  using mesh_type = besthea::mesh::tetrahedral_volume_mesh;  //!< Mesh type.
 
  public:
   /**
    * Default constructor.
    */
-  basis_function( ) : _mesh( nullptr ) {
+  volume_basis_function( ) : _mesh( nullptr ) {
   }
 
-  basis_function( const basis_function & that ) = delete;
+  volume_basis_function( const volume_basis_function & that ) = delete;
 
   /**
    * Destructor.
    */
-  virtual ~basis_function( ) {
+  virtual ~volume_basis_function( ) {
   }
 
   /**
@@ -104,59 +103,20 @@ class besthea::bem::basis_function {
   }
 
   /**
-   * Provides global indices for local contributions.
-   * @param[in] i_elem Element index.
-   * @param[in] n_shared_vertices Number of shared vertives in currect elements
-   * (regularized quadrature).
-   * @param[in] rotation Virtual element rotation (regularized quadrature).
-   * @param[in] swap Virtual element inversion (regularized quadrature).
-   * @param[out] indices Global indices for local contributions.
-   */
-  void local_to_global( lo i_elem, int n_shared_vertices, int rotation,
-    bool swap, std::vector< lo > & indices ) const {
-    derived( )->do_local_to_global(
-      i_elem, n_shared_vertices, rotation, swap, indices );
-  }
-
-  /**
    * Evaluates the basis function.
    * @param[in] i_elem Element index.
    * @param[in] i_fun Local basis function index.
    * @param[in] x1_ref First coordinate of reference quadrature point.
    * @param[in] x2_ref Second coordinate of reference quadrature point.
-   * @param[in] n Element normal.
+   * @param[in] x3_ref Third coordinate of reference quadrature point.
    */
-#pragma omp declare simd uniform( i_elem, i_fun, n ) simdlen( DATA_WIDTH )
-  sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n ) const {
-    return derived( )->do_evaluate( i_elem, i_fun, x1_ref, x2_ref, n );
-  }
-
-  /**
-   * Evaluates the basis function.
-   * @param[in] i_elem Element index.
-   * @param[in] i_fun Local basis function index.
-   * @param[in] x1_ref First coordinate of reference quadrature point.
-   * @param[in] x2_ref Second coordinate of reference quadrature point.
-   * @param[in] n Element normal.
-   * @param[in] n_shared_vertices Number of shared vertives in currect elements
-   * (regularized quadrature).
-   * @param[in] rotation Virtual element rotation (regularized quadrature).
-   * @param[in] swap Virtual element inversion (regularized quadrature).
-   */
-#pragma omp declare simd uniform( \
-  i_elem, i_fun, n, n_shared_vertices, rotation, swap ) simdlen( DATA_WIDTH )
-  sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n,
-    int n_shared_vertices, int rotation, bool swap ) const {
-    return derived( )->do_evaluate(
-      i_elem, i_fun, x1_ref, x2_ref, n, n_shared_vertices, rotation, swap );
+#pragma omp declare simd uniform( i_elem, i_fun ) simdlen( DATA_WIDTH )
+  sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, sc x3_ref ) const {
+    return derived( )->do_evaluate( i_elem, i_fun, x1_ref, x2_ref, x3_ref );
   }
 
  protected:
   const mesh_type * _mesh;  //!< Pointer to the mesh.
-
-  const std::array< int, 5 > _map{ 0, 1, 2, 0,
-    1 };  //!< Auxiliary array for mapping DOFs under
-          // rotation (regularized quadrature).
 };
 
-#endif /* INCLUDE_BESTHEA_BASIS_FUNCTION_H_ */
+#endif /* INCLUDE_BESTHEA_VOLUME_BASIS_FUNCTION_H_ */

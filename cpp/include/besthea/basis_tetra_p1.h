@@ -26,75 +26,80 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file compound_linear_operator.h
- * @brief Class for a compound linear operator.
+/** @file basis_tetra_p1.h
+ * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_COMPOUND_LINEAR_OPERATOR_H_
-#define INCLUDE_BESTHEA_COMPOUND_LINEAR_OPERATOR_H_
+#ifndef INCLUDE_BESTHEA_BASIS_TETRA_P1_H_
+#define INCLUDE_BESTHEA_BASIS_TETRA_P1_H_
 
-#include "besthea/linear_operator.h"
-#include "besthea/settings.h"
-#include "besthea/vector.h"
-
-#include <vector>
+#include "besthea/tetrahedral_volume_mesh.h"
+#include "besthea/volume_basis_function.h"
 
 namespace besthea {
-  namespace linear_algebra {
-    class compound_linear_operator;
+  namespace bem {
+    class basis_tetra_p1;
   }
 }
 
 /**
- *  Class representing a compound linear operator.
+ *  Class representing a piecewise linear function on a triangular mesh.
  */
-class besthea::linear_algebra::compound_linear_operator
-  : public besthea::linear_algebra::linear_operator {
+class besthea::bem::basis_tetra_p1
+  : public besthea::bem::volume_basis_function< besthea::bem::basis_tetra_p1 > {
  public:
-  using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
-
   /**
    * Constructor.
+   * @param[in] mesh Mesh.
    */
-  compound_linear_operator( );
+  basis_tetra_p1( const mesh_type & mesh );
 
   /**
    * Destructor.
    */
-  virtual ~compound_linear_operator( );
-
-  /*!
-   * @brief y = beta * y + alpha * (this)^trans * x.
-   * @param[in] x
-   * @param[in,out] y
-   * @param[in] trans
-   * @param[in] alpha
-   * @param[in] beta
-   */
-  virtual void apply( const vector_type & x, vector_type & y,
-    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
+  virtual ~basis_tetra_p1( );
 
   /**
-   * Adds a linear operator to the compound.
-   * @param[in] op Linear operator.
-   * @param[in] trans Determines whether to apply transposed.
-   * @param[in] alpha Multiplicative factor.
+   * Returns number of basis functions supported on i_elem.
    */
-  void push_back( const besthea::linear_algebra::linear_operator & op,
-    bool trans = false, sc alpha = 1.0 );
+  virtual lo dimension_local( ) const;
 
   /**
-   * Returns true if dimensions match.
+   * Returns number of basis functions on the whole mesh.
    */
-  bool is_valid( ) const;
+  virtual lo dimension_global( ) const;
 
- protected:
-  std::vector< const besthea::linear_algebra::linear_operator * >
-    _compound;                 //!< Vector of operators.
-  std::vector< bool > _trans;  //!< Transposition of individual operators.
-  std::vector< sc > _alpha;    //!< Multiplicative factors.
+  /**
+   * Provides global indices for local contributions.
+   * @param[in] i_elem Element index.
+   * @param[out] indices Global indices for local contributions.
+   */
+  void do_local_to_global( lo i_elem, std::vector< lo > & indices ) const;
 
-  lo _maximal_dimension;  //!< Maximal dimension of all operators.
+  /**
+   * Evaluates the basis function.
+   * @param[in] i_elem Element index.
+   * @param[in] i_fun Local basis function index.
+   * @param[in] x1_ref First coordinate of reference quadrature point.
+   * @param[in] x2_ref Second coordinate of reference quadrature point.
+   * @param[in] x3_ref Third coordinate of reference quadrature point.
+   */
+#pragma omp declare simd uniform( this, i_elem, i_fun ) simdlen( DATA_WIDTH )
+  sc do_evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, sc x3_ref ) const {
+    sc value = 0.0;
+
+    if ( i_fun == 0 ) {
+      value = 1 - x1_ref - x2_ref - x3_ref;
+    } else if ( i_fun == 1 ) {
+      value = x1_ref;
+    } else if ( i_fun == 2 ) {
+      value = x2_ref;
+    } else if ( i_fun == 3 ) {
+      value = x3_ref;
+    }
+
+    return value;
+  }
 };
 
-#endif /* INCLUDE_BESTHEA_COMPOUND_LINEAR_OPERATOR_H_ */
+#endif /* INCLUDE_BESTHEA_BASIS_TETRA_P1_H_ */

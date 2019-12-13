@@ -37,6 +37,7 @@ namespace besthea {
   namespace mesh {
     class mesh;
     class triangular_surface_mesh;
+    class tetrahedral_volume_mesh;
   }
 }
 
@@ -62,12 +63,22 @@ class besthea::mesh::mesh {
   /**
    * Returns pointer to the surface mesh.
    */
-  virtual triangular_surface_mesh * get_spatial_mesh( ) = 0;
+  virtual triangular_surface_mesh * get_spatial_surface_mesh( ) = 0;
 
   /**
    * Returns pointer to the surface mesh.
    */
-  virtual const triangular_surface_mesh * get_spatial_mesh( ) const = 0;
+  virtual const triangular_surface_mesh * get_spatial_surface_mesh( ) const = 0;
+
+  /**
+   * Returns pointer to the surface mesh.
+   */
+  virtual tetrahedral_volume_mesh * get_spatial_volume_mesh( ) = 0;
+
+  /**
+   * Returns pointer to the surface mesh.
+   */
+  virtual const tetrahedral_volume_mesh * get_spatial_volume_mesh( ) const = 0;
 };
 
 #endif /* INCLUDE_BESTHEA_MESH_H_ */

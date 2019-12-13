@@ -26,22 +26,21 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file uniform_spacetime_be_evaluator.h
+/** @file uniform_spacetime_initial_evaluator.h
  * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_EVALUATOR_H_
-#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_EVALUATOR_H_
+#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_INITIAL_EVALUATOR_H_
+#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_INITIAL_EVALUATOR_H_
 
 #include "besthea/block_vector.h"
-#include "besthea/uniform_spacetime_be_space.h"
-
-#include <array>
+#include "besthea/fe_space.h"
+#include "besthea/vector.h"
 
 namespace besthea {
   namespace bem {
     template< class kernel_type, class space_type >
-    class uniform_spacetime_be_evaluator;
+    class uniform_spacetime_initial_evaluator;
   }
 }
 
@@ -49,7 +48,8 @@ namespace besthea {
  *  Class representing a potential evaluator.
  */
 template< class kernel_type, class space_type >
-class besthea::bem::uniform_spacetime_be_evaluator {
+class besthea::bem::uniform_spacetime_initial_evaluator {
+  using vector_type = linear_algebra::vector;  //!< Vector type.
   using block_vector_type
     = linear_algebra::block_vector;  //!< Block vector type.
 
@@ -66,6 +66,9 @@ class besthea::bem::uniform_spacetime_be_evaluator {
                 //!< spatial element
     std::vector< sc, besthea::allocator_type< sc > >
       _y2_ref;  //!< Second coordinates of quadrature nodes in the reference
+                //!< spatial element
+    std::vector< sc, besthea::allocator_type< sc > >
+      _y3_ref;  //!< Third coordinates of quadrature nodes in the reference
                 //!< spatial element
     std::vector< sc, besthea::allocator_type< sc > >
       _y1;  //!< First coordinates of quadrature nodes in the spatial element
@@ -90,18 +93,21 @@ class besthea::bem::uniform_spacetime_be_evaluator {
    * Constructor.
    * @param[in] kernel Spacetime kernel antiderivative object.
    * @param[in] space Boundary element space.
+   * @param[in] n_timesteps Number of timesteps.
+   * @param[in] timestep Timestep.
    * @param[in] order_spatial Triangle quadrature order for regular quadrature.
    */
-  uniform_spacetime_be_evaluator(
-    kernel_type & kernel, space_type & space, int order_spatial = 4 );
+  uniform_spacetime_initial_evaluator( kernel_type & kernel, space_type & space,
+    lo n_timesteps, sc timestep, int order_spatial = 4 );
 
-  uniform_spacetime_be_evaluator( const uniform_spacetime_be_evaluator & that )
+  uniform_spacetime_initial_evaluator(
+    const uniform_spacetime_initial_evaluator & that )
     = delete;
 
   /**
    * Destructor.
    */
-  ~uniform_spacetime_be_evaluator( );
+  ~uniform_spacetime_initial_evaluator( );
 
   /**
    * Evaluates the potential.
@@ -109,13 +115,13 @@ class besthea::bem::uniform_spacetime_be_evaluator {
    * @param[in] density Density of the potential.
    * @param[out] result Result in the given points.
    */
-  void evaluate( const std::vector< sc > & x, const block_vector_type & density,
+  void evaluate( const std::vector< sc > & x, const vector_type & density,
     block_vector_type & result ) const;
 
  private:
   /**
    * Initializes quadrature structures.
-   * @param[in] order_spatial Triangle spatial quadrature order.
+   * @param[in] order_spatial Tetrahedron spatial quadrature order.
    * @param[out] my_quadrature Wrapper holding quadrature data.
    */
   void init_quadrature( quadrature_wrapper & my_quadrature ) const;
@@ -126,19 +132,25 @@ class besthea::bem::uniform_spacetime_be_evaluator {
    * @param[in] x1 Coordinates of the first node of the trial element.
    * @param[in] x2 Coordinates of the second node of the trial element.
    * @param[in] x3 Coordinates of the third node of the trial element.
+   * @param[in] x4 Coordinates of the fourth node of the trial element.
    * @param[in,out] my_quadrature Structure holding the quadrature nodes.
    */
-  void triangle_to_geometry( const linear_algebra::coordinates< 3 > & x1,
+  void tetrahedron_to_geometry( const linear_algebra::coordinates< 3 > & x1,
     const linear_algebra::coordinates< 3 > & x2,
     const linear_algebra::coordinates< 3 > & x3,
+    const linear_algebra::coordinates< 3 > & x4,
     quadrature_wrapper & my_quadrature ) const;
 
   kernel_type * _kernel;  //!< Kernel temporal antiderivative.
 
   space_type * _space;  //!< Boundary element space.
 
-  int _order_spatial;  //!< Spatial triangle quadrature order for the regular
+  lo _n_timesteps;  //!< Number of timesteps.
+
+  sc _timestep;  //!< Timestep.
+
+  int _order_spatial;  //!< Spatial tetrahedron quadrature order for the regular
                        //!< integrals.
 };
 
-#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_EVALUATOR_H_ */
+#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_INITIAL_EVALUATOR_H_ */
