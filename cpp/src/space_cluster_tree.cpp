@@ -89,6 +89,7 @@ void besthea::mesh::space_cluster_tree::build_tree(
   // stop recursion if maximum number of tree levels is reached
   if ( level > _levels - 1 || root.get_n_elements( ) < _n_min_elems ) {
     root.set_n_children( 0 );
+    root.compute_node_mapping( );
 
     if ( level > _real_max_levels ) {
       _real_max_levels = level;

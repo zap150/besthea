@@ -38,6 +38,7 @@
 #include "besthea/triangular_surface_mesh.h"
 #include "besthea/vector.h"
 
+#include <algorithm>
 #include <vector>
 
 namespace besthea {
@@ -170,6 +171,13 @@ class besthea::mesh::space_cluster {
    */
   lo get_element( lo idx ) const {
     return _elements[ idx ];
+  }
+
+  /**
+   * Returns number of nodes in the cluster.
+   */
+  lo get_n_nodes( ) const {
+    return _local_2_global_nodes.size( );
   }
 
   /**
@@ -353,6 +361,44 @@ class besthea::mesh::space_cluster {
     return _mesh;
   }
 
+  const std::vector< lo > & get_elems_2_local_nodes( ) {
+    return _elems_2_local_nodes;
+  }
+
+  void compute_node_mapping( ) {
+    linear_algebra::indices< 3 > element;
+    for ( auto it = _elements.begin( ); it != _elements.end( ); ++it ) {
+      _mesh.get_element( *it, element );
+      _local_2_global_nodes.push_back( element[ 0 ] );
+      _local_2_global_nodes.push_back( element[ 1 ] );
+      _local_2_global_nodes.push_back( element[ 2 ] );
+    }
+    std::sort( _local_2_global_nodes.begin( ), _local_2_global_nodes.end( ) );
+    _local_2_global_nodes.erase( std::unique( _local_2_global_nodes.begin( ),
+                                   _local_2_global_nodes.end( ) ),
+      _local_2_global_nodes.end( ) );
+
+    _elems_2_local_nodes.resize( 3 * _elements.size( ) );
+
+    lo counter = 0;
+    for ( auto it = _elements.begin( ); it != _elements.end( ); ++it ) {
+      _mesh.get_element( *it, element );
+      auto idx_it = std::find( _local_2_global_nodes.begin( ),
+        _local_2_global_nodes.end( ), element[ 0 ] );
+      _elems_2_local_nodes[ 3 * counter ]
+        = std::distance( _local_2_global_nodes.begin( ), idx_it );
+      idx_it = std::find( _local_2_global_nodes.begin( ),
+        _local_2_global_nodes.end( ), element[ 1 ] );
+      _elems_2_local_nodes[ 3 * counter + 1 ]
+        = std::distance( _local_2_global_nodes.begin( ), idx_it );
+      idx_it = std::find( _local_2_global_nodes.begin( ),
+        _local_2_global_nodes.end( ), element[ 2 ] );
+      _elems_2_local_nodes[ 3 * counter + 2 ]
+        = std::distance( _local_2_global_nodes.begin( ), idx_it );
+      ++counter;
+    }
+  }
+
  private:
   lo _n_elements;          //!< number of elements in the cluster
   vector_type _center;     //!< center of the cluster
@@ -373,6 +419,10 @@ class besthea::mesh::space_cluster {
   full_matrix_type
     _cheb_T;  //!< matrix storing quadrature of the Chebyshev polynomials (rows
               //!< - element of the cluster, column - order of the polynomial)
+  std::vector< lo > _elems_2_local_nodes;   //! mapping from element nodes
+                                            //! vertices to local node list
+  std::vector< lo > _local_2_global_nodes;  //!< mapping from local nodes
+                                            //!< to the global ones
 };
 
 #endif /* INCLUDE_BESTHEA_SPACE_CLUSTER_H_ */
