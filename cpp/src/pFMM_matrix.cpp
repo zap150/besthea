@@ -171,7 +171,7 @@ void besthea::linear_algebra::pFMM_matrix::compute_temporal_m2m_matrices( ) {
   vector_type nodes_l_child( _temp_order + 1, false );
   vector_type nodes_r_child( _temp_order + 1, false );
   vector_type values_lagrange( _temp_order + 1, false );
-  for ( lo curr_level = 2; curr_level < n_levels; ++curr_level ) {
+  for ( lo curr_level = 2; curr_level < n_levels - 1; ++curr_level ) {
     sc h_child_no_pad = h_par_no_pad / 2.0;
     sc padding_par = paddings[ curr_level ];
     sc padding_child = paddings[ curr_level + 1 ];
@@ -264,7 +264,7 @@ void besthea::linear_algebra::pFMM_matrix::compute_spatial_m2m_coeffs( ) {
   vector_type nodes_r_child_dim_1( _spat_order + 1, false );
   vector_type nodes_l_child_dim_2( _spat_order + 1, false );
   vector_type nodes_r_child_dim_2( _spat_order + 1, false );
-  for ( lo curr_level = 0; curr_level < n_levels; ++curr_level ) {
+  for ( lo curr_level = 0; curr_level < n_levels - 1; ++curr_level ) {
     h_child_no_pad[ 0 ] = h_par_no_pad[ 0 ] / 2.0;
     h_child_no_pad[ 1 ] = h_par_no_pad[ 1 ] / 2.0;
     h_child_no_pad[ 2 ] = h_par_no_pad[ 2 ] / 2.0;

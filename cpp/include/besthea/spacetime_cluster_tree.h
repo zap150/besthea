@@ -77,6 +77,9 @@ class besthea::mesh::spacetime_cluster_tree {
       delete _space_tree;
     if ( _time_tree )
       delete _time_tree;
+    if ( _root ) {
+      delete _root;
+    }
   }
 
   /**

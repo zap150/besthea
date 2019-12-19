@@ -89,12 +89,20 @@ class besthea::linear_algebra::pFMM_matrix
    */
   virtual ~pFMM_matrix( ) {
     lo matrix_idx = 0;
+
     for ( auto it = _nearfield_matrices.begin( );
           it != _nearfield_matrices.end( ); ++it ) {
       const std::pair< lo, lo > & indices
         = _nearfield_block_map.at( matrix_idx );
-      if ( *it != nullptr && indices.second == 0 ) {
-        delete *it;
+
+      if ( *it != nullptr ) {
+        if ( _uniform && indices.second == 0 ) {
+          delete *it;
+          *it = nullptr;
+        } else if ( !_uniform ) {
+          delete *it;
+          *it = nullptr;
+        }
       }
       matrix_idx++;
     }
