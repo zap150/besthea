@@ -365,6 +365,10 @@ class besthea::mesh::space_cluster {
     return _elems_2_local_nodes;
   }
 
+  const std::vector< lo > & get_local_2_global_nodes( ) {
+    return _local_2_global_nodes;
+  }
+
   void compute_node_mapping( ) {
     linear_algebra::indices< 3 > element;
     for ( auto it = _elements.begin( ); it != _elements.end( ); ++it ) {
