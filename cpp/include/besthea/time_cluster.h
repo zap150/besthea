@@ -171,7 +171,14 @@ class besthea::mesh::time_cluster {
   std::vector< time_cluster * > * get_children( ) {
     return _children;
   }
-
+  
+    /**
+   * Returns a pointer to the parent.
+   */
+  time_cluster * get_parent( ) {
+    return _parent;
+  }
+    
   /**
    * Returns a pointer to the children.
    */

@@ -44,7 +44,7 @@ besthea::linear_algebra::pFMM_matrix::create_nearfield_matrix(
       std::make_pair( test_idx + i, trial_idx + i ) );
     _uniform = true;
   }
-
+  
   return local_matrix;
 }
 

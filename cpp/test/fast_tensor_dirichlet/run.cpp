@@ -74,6 +74,7 @@ struct cauchy_data {
 
 int main( int argc, char * argv[] ) {
   std::string file = "../mesh_files/cube_12.txt";
+//   int refine = 1;
   int refine = 1;
   lo n_timesteps = 16;
   sc end_time = 1.0;
@@ -107,9 +108,10 @@ int main( int argc, char * argv[] ) {
 
   timer t;
 
+//   sc st_coeff = 4.0;
+//   spacetime_cluster_tree tree( spacetime_mesh, 5, 2, 10, st_coeff );
   sc st_coeff = 4.0;
   spacetime_cluster_tree tree( spacetime_mesh, 5, 2, 10, st_coeff );
-
   fast_spacetime_be_space< basis_tri_p0 > space_p0( tree );
   fast_spacetime_be_space< basis_tri_p1 > space_p1( tree );
 
@@ -117,6 +119,7 @@ int main( int argc, char * argv[] ) {
   lo order_reg = 4;
 
   pFMM_matrix * K = new pFMM_matrix( );
+  tree.print( );
 
   spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
   fast_spacetime_be_assembler fast_assembler_k(

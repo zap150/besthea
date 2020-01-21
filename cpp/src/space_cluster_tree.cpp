@@ -65,6 +65,8 @@ besthea::mesh::space_cluster_tree::space_cluster_tree(
   std::vector< slou > coordinates = { 0, 0, 0, 0 };
   _root = new space_cluster( center, half_sizes, _mesh.get_n_elements( ),
     nullptr, 0, 0, coordinates, _mesh );
+  _coord_2_cluster.insert( std::pair< std::vector< slou >, space_cluster * >(
+    coordinates, _root ) );
 
   for ( lo i = 0; i < _mesh.get_n_elements( ); ++i ) {
     _root->add_element( i );
@@ -278,15 +280,21 @@ void besthea::mesh::space_cluster_tree::find_neighbors( space_cluster & cluster,
 
   slou cluster_level = static_cast< slou >( cluster.get_level( ) );
   std::vector< slou > current_coordinates( 4 );
-
-  for ( slou i = coordinates[ 1 ] - limit; i < coordinates[ 1 ] + limit + 1;
+  
+  // compute lower bounds of following loops manually to avoid overflow
+  slou i_low = ( (lo) coordinates[ 1 ] - limit > 0 ? 
+                coordinates[ 1 ] - limit : 0 );
+  slou j_low = ( (lo) coordinates[ 2 ] - limit > 0 ? 
+                coordinates[ 2 ] - limit : 0 );
+  slou k_low = ( (lo) coordinates[ 3 ] - limit > 0 ? 
+                coordinates[ 3 ] - limit : 0 );
+  for ( slou i = i_low; i < coordinates[ 1 ] + limit + 1;
         ++i ) {
-    for ( slou j = coordinates[ 2 ] - limit; j < coordinates[ 2 ] + limit + 1;
+    for ( slou j = j_low; j < coordinates[ 2 ] + limit + 1;
           ++j ) {
-      for ( slou k = coordinates[ 3 ] - limit; k < coordinates[ 3 ] + limit + 1;
+      for ( slou k = k_low; k < coordinates[ 3 ] + limit + 1;
             ++k ) {
         current_coordinates = { cluster_level, i, j, k };
-
         if ( _coord_2_cluster.count( current_coordinates ) > 0 ) {
           neighbors.push_back(
             _coord_2_cluster.find( current_coordinates )->second );

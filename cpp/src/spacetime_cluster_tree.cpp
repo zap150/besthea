@@ -55,8 +55,8 @@ besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
   _start_spatial_level = 0;
 
   // determine the number of initial octasections that has to be performed to
-  // get to the level of the spatial tree satisfying the condition h_x^l \approx
-  // sqrt(delta)
+  // get to the level of the spatial tree satisfying the condition 
+  // h_x^l \approx st_coeff sqrt(delta)
   while ( max_half_size > st_coeff * sqrt( delta ) ) {
     max_half_size *= 0.5;
     _start_spatial_level += 1;
@@ -89,6 +89,11 @@ besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
   _root = new spacetime_cluster(
     *_space_tree->get_root( ), *_time_tree->get_root( ), nullptr, -1 );
 
+  // _map_to_spacetime_clusters.insert( std::pair< std::pair< space_cluster *,
+  //   time_cluster * >, spacetime_cluster * >( std::pair< space_cluster *,
+  //   time_cluster * >( _space_tree->get_root( ), _time_tree->get_root( ) ),
+  //   & _root ) );
+
   // if the space has to be split to fullfil the condition, the individual roots
   // are stored in the space_roots vector
   std::vector< space_cluster * > space_roots;
@@ -105,13 +110,22 @@ besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
   for ( auto it = space_roots.begin( ); it != space_roots.end( ); ++it ) {
     spacetime_cluster * cluster
       = new spacetime_cluster( **it, *_time_tree->get_root( ), _root, 0 );
+    _map_to_spacetime_clusters.insert( std::pair< std::pair< space_cluster *,
+      time_cluster * >, spacetime_cluster * >( std::pair< space_cluster *,
+      time_cluster * >( *it, _time_tree->get_root( ) ),
+      cluster ) );
     build_tree( cluster, 1, split_space );
+    
     // the roots of the subtrees are linked to the level -1 global root
     _root->add_child( cluster );
   }
 
   // collect all clusters without descendants
   collect_leaves( *_root );
+  
+    
+  // fill interaction lists
+  determine_interactions( *_root );
 }
 
 void besthea::mesh::spacetime_cluster_tree::build_tree(
@@ -144,6 +158,9 @@ void besthea::mesh::spacetime_cluster_tree::build_tree(
             ++it2 ) {
         spacetime_cluster * cluster
           = new spacetime_cluster( **it2, **it, root, level );
+        _map_to_spacetime_clusters.insert( std::pair< std::pair< 
+          space_cluster *, time_cluster * >, spacetime_cluster * >( std::pair< 
+          space_cluster *, time_cluster * >( *it2, *it ), cluster ) );
         root->add_child( cluster );
         build_tree( cluster, level + 1, split_space_descendant );
       }
@@ -174,6 +191,69 @@ void besthea::mesh::spacetime_cluster_tree::collect_leaves(
     for ( auto it = root.get_children( )->begin( );
           it != root.get_children( )->end( ); ++it ) {
       collect_leaves( **it );
+    }
+  }
+}
+
+void besthea::mesh::spacetime_cluster_tree::determine_interactions ( 
+  spacetime_cluster & root ) {
+  space_cluster & root_space_cluster = root.get_space_cluster( );
+  time_cluster & root_time_cluster = root.get_time_cluster( );
+  lo time_level = root_time_cluster.get_level( );
+  // interacting clusters exist only if time level > 1
+  if ( time_level > 1 ) {
+    // compute the interacting time clusters
+    std::vector< time_cluster * > interaction_list_time;
+    bool is_left_child = ( & root_time_cluster == root_time_cluster.get_parent( 
+      )->get_children( )->front( ) );
+    time_cluster * admissible_cluster;
+    // the right child can have two time intervals in its interaction list
+    // add the farthest first
+    if ( ! is_left_child ) {
+      // check if there is a left left neighbour 
+      if ( root_time_cluster.get_left_neighbour( )->get_left_neighbour( ) !=
+            nullptr) {
+        // add left left left neighbour to interaction list, if != nullptr
+        admissible_cluster = root_time_cluster.get_left_neighbour( )->
+          get_left_neighbour( )->get_left_neighbour( );
+        if ( admissible_cluster != nullptr )
+          interaction_list_time.push_back( admissible_cluster );
+      }
+    }
+    // add the left left neighbour to the interaction list in all cases
+    // check first if there is a left neighbour 
+    if ( root_time_cluster.get_left_neighbour( ) != nullptr ) {
+      admissible_cluster = root_time_cluster.get_left_neighbour( )->
+        get_left_neighbour( );
+      if ( admissible_cluster != nullptr )
+        interaction_list_time.push_back( admissible_cluster );
+    }
+    // compute the interacting space clusters
+    std::vector< space_cluster * > interaction_list_space;
+    lo limit = 3; // TODO: make a class member out of this
+    _space_tree->find_neighbors( root_space_cluster, limit, 
+      interaction_list_space );
+    
+    // construct the interaction list of the spacetime cluster from the
+    // interaction lists of its spatial and temporal component.
+    for ( auto it_time = interaction_list_time.begin( ); 
+          it_time != interaction_list_time.end( ); ++ it_time ) {
+      for ( auto it_space = interaction_list_space.begin( );
+            it_space != interaction_list_space.end( ); ++ it_space ) {
+        // find space time cluster corresponding to the current spatial and 
+        // temporal clusters in the respective interaction lists
+        spacetime_cluster * admissible_st_cluster = _map_to_spacetime_clusters[ 
+          std::pair< space_cluster *, time_cluster * >( *it_space, *it_time )];
+        root.add_to_interaction_list( admissible_st_cluster );
+      }
+    }
+  }
+  // call the same routine for all children of root, if root has children
+  std::vector< spacetime_cluster * > * root_children = root.get_children( );
+  if ( root_children != nullptr ) {
+    for ( auto it = root_children->begin( ); 
+          it != root_children->end( ); ++ it ) {
+      determine_interactions ( ** it );
     }
   }
 }
