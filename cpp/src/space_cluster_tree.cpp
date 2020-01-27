@@ -43,6 +43,7 @@ besthea::mesh::space_cluster_tree::space_cluster_tree(
     _levels( levels ),
     _real_max_levels( 0 ),
     _n_min_elems( n_min_elems ),
+    _n_max_elems_leaf( 0 ),
     _non_empty_nodes( _levels ),
     _paddings( _levels, 0.0 ),
     _n_nonempty_nodes( 0 ) {
@@ -93,6 +94,9 @@ void besthea::mesh::space_cluster_tree::build_tree(
     root.set_n_children( 0 );
     root.compute_node_mapping( );
 
+    if ( root.get_n_elements( ) > _n_max_elems_leaf ) {
+      _n_max_elems_leaf = root.get_n_elements( );
+    }
     if ( level > _real_max_levels ) {
       _real_max_levels = level;
     }

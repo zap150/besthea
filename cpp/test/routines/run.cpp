@@ -62,7 +62,15 @@ int main( int argc, char * argv[] ) {
   vector_type all_cheb_values( n_eval_points * (order + 1));
   chebyshev_evaluator chebyshev(order);
   chebyshev.evaluate( eval_points, all_cheb_values );
-  std::cout << "values of all chebyshev polynomials (order <= " << order;
+  std::cout << "values of chebyshev polynomials (order <= " << order;
+  std::cout << " are: " << std::endl;
+  for ( lo i = 0; i <= order; ++i ) {
+    for ( lo j = 0; j < n_eval_points; ++j ) 
+      printf("%.4f ", all_cheb_values[ n_eval_points * i + j ]);
+    std::cout << std::endl;
+  }
+  chebyshev.evaluate_derivative( eval_points, all_cheb_values );
+  std::cout << "values of derived chebyshev polynomials (order <= " << order;
   std::cout << " are: " << std::endl;
   for ( lo i = 0; i <= order; ++i ) {
     for ( lo j = 0; j < n_eval_points; ++j ) 

@@ -33,13 +33,17 @@
 #ifndef INCLUDE_BESTHEA_PFMM_MATRIX_H_
 #define INCLUDE_BESTHEA_PFMM_MATRIX_H_
 
+#include "besthea/basis_tri_p0.h"
+#include "besthea/basis_tri_p1.h"
 #include "besthea/block_linear_operator.h"
 #include "besthea/chebyshev_evaluator.h"
+#include "besthea/fast_spacetime_be_space.h"
 #include "besthea/full_matrix.h"
 #include "besthea/lagrange_interpolant.h"
 #include "besthea/matrix.h"
 #include "besthea/settings.h"
 #include "besthea/space_cluster_tree.h"
+#include "besthea/spacetime_cluster.h"
 #include "besthea/spacetime_cluster_tree.h"
 #include "besthea/sparse_matrix.h"
 #include "besthea/time_cluster.h"
@@ -64,13 +68,17 @@ class besthea::linear_algebra::pFMM_matrix
     = besthea::linear_algebra::sparse_matrix;  //!< Sparse matrix type.
   using full_matrix_type
     = besthea::linear_algebra::full_matrix;  //!< Sparse matrix type.
+  using space_cluster
+    = besthea::mesh::space_cluster; //!< Spacetime cluster type.
+  using spacetime_cluster
+    = besthea::mesh::spacetime_cluster; //!< Spacetime cluster type.
   using spacetime_tree_type
     = besthea::mesh::spacetime_cluster_tree;  //!< Spacetime tree type.
   using time_cluster_type
     = besthea::mesh::time_cluster;  //!< Time cluster type.
   using block_vector_type
     = besthea::linear_algebra::block_vector;            //!< Block vector type.
-  using vector_type = besthea::linear_algebra::vector;  //!< Block vector type.
+  using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
 
   /**
    * Default constructor.
@@ -79,7 +87,17 @@ class besthea::linear_algebra::pFMM_matrix
     : _spacetime_tree( nullptr ),
       _uniform( false ),
       _temp_order( 5 ),
-      _spat_order( 5 ) {
+      _spat_order( 5 ),
+      _chebyshev( _spat_order ),
+      _alpha( 1.0 ),
+      _heat_kernel( _alpha ) {
+  }
+  
+  pFMM_matrix( spacetime_cluster_tree * spacetime_tree, bool uniform, 
+               slou temp_order, slou spat_order, sc alpha )
+    : _spacetime_tree( spacetime_tree ), _uniform ( uniform ), 
+      _temp_order( temp_order ), _spat_order( spat_order ),
+      _chebyshev( _spat_order ), _alpha( alpha ), _heat_kernel( _alpha ) {
   }
 
   pFMM_matrix( const pFMM_matrix & that ) = delete;
@@ -176,14 +194,26 @@ class besthea::linear_algebra::pFMM_matrix
   void compute_spatial_m2m_coeffs( );
 
   /*!
-   * Apply the temporal m2m operation for given parent and child moments
+   * Applies the temporal m2m operation for a child moment and adds the result
+   * to the parent moment.
+   * @param[in] child_moment  Moment of the child which is passed up.
+   * @param[in] level   Temporal level of the parent cluster.
+   * @param[in] is_left_child True if the temporal cluster of the child is a
+   *                          left child.
+   * @param[in,out] parent_moment  Result of m2m operation is added to it.
    */
   void apply_temporal_m2m( full_matrix_type const & child_moment,
     const lo level, const bool is_left_child,
     full_matrix_type & parent_moment );
 
   /*!
-   * Apply the spatial m2m operation for given parent and child moments
+   * Applies the spatial m2m operation for a child moment and adds the result
+   * to the parent moment.
+   * @param[in] child_moment  Moment of the child which is passed up.
+   * @param[in] level   Spatial level of the parent cluster.
+   * @param[in] octant  Configuration of the space cluster of the child 
+   *                    relative to the parent ( 8 configurations )
+   * @param[in,out] parent_moment  Result of m2m operation is added to it.
    */
   void apply_spatial_m2m( full_matrix_type const & child_moment, const lo level,
     const slou octant, full_matrix_type & parent_moment );
@@ -197,6 +227,42 @@ class besthea::linear_algebra::pFMM_matrix
     _spat_order = spat_order;
     _temp_order = temp_order;
   }
+  
+  /*!
+   * @brief Executes all S2M operations for given leaves and a given vector x
+   * for spatial basis functions in p0
+   * @param[in] x Vector for multiplication.
+   * @note The results are stored in the matrices _moment_contribution in the 
+   * respective spacetime clusters.
+   * @note The method uses matrices of integrals over polynomials which are 
+   * computed in 
+   * \ref besthea::bem::fast_spacetime_be_assembler.
+   */
+  void apply_s2m_operations_p0( block_vector_type const & x ) const;
+  
+   /*!
+   * @brief Executes all S2M operations for given leaves and a given vector x
+   * for spatial basis functions in p1
+   * @param[in] x Vector for multiplication.
+   * @note The results are stored in the matrices _moment_contribution in the 
+   * respective spacetime clusters.
+   * @note The method uses matrices of integrals over polynomials which are 
+   * computed in 
+   * \ref besthea::bem::fast_spacetime_be_assembler.
+   */
+  void apply_s2m_operations_p1( block_vector_type const & x ) const;
+//   template< class basis_type >
+//   void apply_s2m_operations( 
+//     besthea::bem::fast_spacetime_be_space < basis_type > be_space,
+//     block_vector_type const & x ) const;
+  
+  /*!
+   * @brief Executes all M2M operations recursively
+   * \todo currently some unnecessary m2m operations are executed (for clusters 
+   * without direct interactions or parental interactions) 
+   */
+  void call_m2m_operations( spacetime_cluster * root,
+                              std::vector< full_matrix_type >& buffer_matrices);
 
  private:
   friend class spacetime_cluster_tree;  //!< enable the tree to access private
@@ -223,7 +289,7 @@ class besthea::linear_algebra::pFMM_matrix
     _m2m_matrices_t_right;  //! right temporal
                             //! m2m matrices stored levelwise
 
-  int _temp_order;  //!< degree of interpolation polynomials in time for pFMM
+  slou _temp_order;  //!< degree of interpolation polynomials in time for pFMM
   std::vector< vector_type >
     _m2m_coeffs_s_dim_0_left;  //!< left spatial
                                //!< m2m matrices along dimension 0 stored
@@ -249,8 +315,17 @@ class besthea::linear_algebra::pFMM_matrix
                                 //!< m2m matrices along dimension 2 stored
                                 //!< levelwise
 
-  int _spat_order;  //!< degree of Chebyshev polynomials for expansion in
+  slou _spat_order;  //!< degree of Chebyshev polynomials for expansion in
                     //!< space in pFMM
+                    
+  mutable bem::chebyshev_evaluator
+    _chebyshev;  //!< Evaluator of the Chebyshev polynomials.
+                 //!< \todo TODO check if necessary in the final code
+                 
+  sc _alpha; //!< Heat conductivity.
+                 
+  besthea::bem::spacetime_heat_kernel 
+    _heat_kernel; //!< Evaluator of the Heat Kernel
 };
 
 #endif /* INCLUDE_BESTHEA_PFMM_MATRIX_H_ */

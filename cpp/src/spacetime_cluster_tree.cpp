@@ -204,8 +204,7 @@ void besthea::mesh::spacetime_cluster_tree::determine_interactions (
   if ( time_level > 1 ) {
     // compute the interacting time clusters
     std::vector< time_cluster * > interaction_list_time;
-    bool is_left_child = ( & root_time_cluster == root_time_cluster.get_parent( 
-      )->get_children( )->front( ) );
+    bool is_left_child = root_time_cluster.is_left_child( );
     time_cluster * admissible_cluster;
     // the right child can have two time intervals in its interaction list
     // add the farthest first

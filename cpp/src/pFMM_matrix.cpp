@@ -244,16 +244,13 @@ void besthea::linear_algebra::pFMM_matrix::compute_spatial_m2m_coeffs( ) {
   // declare half box side lengths of parent and child cluster + initialize
   vector_type h_par_no_pad( 3, false ), h_child_no_pad( 3, false );
   space_tree->get_root( )->get_half_size( h_par_no_pad );
-  // Initialize class for evaluation of Chebyshev polynomials and compute
-  // Chebyshev nodes in the interval [-1, 1].
-  besthea::bem::chebyshev_evaluator chebyshev( _spat_order );
   vector_type nodes( _spat_order + 1, false );
   for ( lo i = 0; i <= _spat_order; ++i )
     nodes[ i ] = cos( ( M_PI * ( 2 * i + 1 ) ) / ( 2 * ( _spat_order + 1 ) ) );
   // evaluate Chebyshev polynomials at the nodes (needed for coefficients)
   vector_type all_values_cheb_std_intrvl(
     ( _spat_order + 1 ) * ( _spat_order + 1 ), false );
-  chebyshev.evaluate( nodes, all_values_cheb_std_intrvl );
+  _chebyshev.evaluate( nodes, all_values_cheb_std_intrvl );
   // vector to store values of Chebyshev polynomials for transformed intervals
   vector_type all_values_cheb_trf_intrvl(
     ( _spat_order + 1 ) * ( _spat_order + 1 ), false );
@@ -294,7 +291,7 @@ void besthea::linear_algebra::pFMM_matrix::compute_spatial_m2m_coeffs( ) {
     }
     // compute m2m coefficients at current level along all dimensions
     // for i1 < i0 the coefficients are knwon to be zero
-    chebyshev.evaluate( nodes_l_child_dim_0, all_values_cheb_trf_intrvl );
+    _chebyshev.evaluate( nodes_l_child_dim_0, all_values_cheb_trf_intrvl );
     for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
       for ( lo i1 = i0; i1 <= _spat_order; ++i1 ) {
         sc coeff = 0;
@@ -311,7 +308,7 @@ void besthea::linear_algebra::pFMM_matrix::compute_spatial_m2m_coeffs( ) {
       }
     }
 
-    chebyshev.evaluate( nodes_r_child_dim_0, all_values_cheb_trf_intrvl );
+    _chebyshev.evaluate( nodes_r_child_dim_0, all_values_cheb_trf_intrvl );
     for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
       for ( lo i1 = i0; i1 <= _spat_order; ++i1 ) {
         sc coeff = 0;
@@ -329,7 +326,7 @@ void besthea::linear_algebra::pFMM_matrix::compute_spatial_m2m_coeffs( ) {
     }
 
     // compute m2m coefficients at current level along all dimensions
-    chebyshev.evaluate( nodes_l_child_dim_1, all_values_cheb_trf_intrvl );
+    _chebyshev.evaluate( nodes_l_child_dim_1, all_values_cheb_trf_intrvl );
     for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
       for ( lo i1 = i0; i1 <= _spat_order; ++i1 ) {
         sc coeff = 0;
@@ -346,7 +343,7 @@ void besthea::linear_algebra::pFMM_matrix::compute_spatial_m2m_coeffs( ) {
       }
     }
 
-    chebyshev.evaluate( nodes_r_child_dim_1, all_values_cheb_trf_intrvl );
+    _chebyshev.evaluate( nodes_r_child_dim_1, all_values_cheb_trf_intrvl );
     for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
       for ( lo i1 = i0; i1 <= _spat_order; ++i1 ) {
         sc coeff = 0;
@@ -364,7 +361,7 @@ void besthea::linear_algebra::pFMM_matrix::compute_spatial_m2m_coeffs( ) {
     }
 
     // compute m2m coefficients at current level along all dimensions
-    chebyshev.evaluate( nodes_l_child_dim_2, all_values_cheb_trf_intrvl );
+    _chebyshev.evaluate( nodes_l_child_dim_2, all_values_cheb_trf_intrvl );
     for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
       for ( lo i1 = i0; i1 <= _spat_order; ++i1 ) {
         sc coeff = 0;
@@ -381,7 +378,7 @@ void besthea::linear_algebra::pFMM_matrix::compute_spatial_m2m_coeffs( ) {
       }
     }
 
-    chebyshev.evaluate( nodes_r_child_dim_2, all_values_cheb_trf_intrvl );
+    _chebyshev.evaluate( nodes_r_child_dim_2, all_values_cheb_trf_intrvl );
     for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
       for ( lo i1 = i0; i1 <= _spat_order; ++i1 ) {
         sc coeff = 0;
@@ -539,3 +536,285 @@ void besthea::linear_algebra::pFMM_matrix::apply_spatial_m2m(
     }
   }
 }
+
+// template< class basis_type >
+// void besthea::linear_algebra::pFMM_matrix::apply_s2m_operations( 
+//   besthea::bem::fast_spacetime_be_space< basis_type > be_space,
+//   block_vector_type const & x ) const { 
+// }
+
+
+// // TODO current implementation just for spatial space p0
+// template<>
+// void besthea::linear_algebra::pFMM_matrix::apply_s2m_operations( 
+//   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > be_space,
+//   block_vector_type const & x ) const 
+
+void besthea::linear_algebra::pFMM_matrix::apply_s2m_operations_p0( 
+  block_vector_type const & x ) const {
+  lo max_elem_time_cluster = _spacetime_tree->get_time_cluster_tree( )->
+    get_n_max_elems_leaf( );
+  // TODO needs to be changed for spaces other than p0
+  lo max_elem_space_cluster = _spacetime_tree->get_space_cluster_tree( )->
+    get_n_max_elems_leaf( );
+  full_matrix_type sources( max_elem_time_cluster, max_elem_space_cluster, 
+                            false);
+  full_matrix_type aux_matrix( max_elem_time_cluster, 
+    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 );
+  for ( auto it = _spacetime_tree->get_leaves( ).begin( ); 
+        it != _spacetime_tree->get_leaves( ).end( ); ++it ) {
+    // get references of current moment and all required matrices
+    full_matrix_type & moment = *( ( *it )->get_moment_contribution( ) );
+    full_matrix_type & T = (*it)->get_space_cluster( ).get_chebyshev_quad( );
+    full_matrix_type & L = (*it)->get_time_cluster( ).get_lagrange_quad( );
+    
+    // get the relevant entries of the block vector x and store them in sources
+    lo n_space_elements = (*it)->get_space_cluster( ).get_n_elements( );
+    lo n_time_elements = (*it)->get_time_cluster( ).get_n_elements( );
+    sources.resize( n_time_elements, n_space_elements );
+    for ( lo i_time = 0; i_time < n_time_elements; ++ i_time ) {
+      for ( lo i_space = 0; i_space < n_space_elements; ++ i_space ) {
+        sources( i_time, i_space ) = x.get( i_time, i_space );
+      }
+    }
+    
+    // compute D = Q * T and then the moment mu = L * D 
+    aux_matrix.resize( n_time_elements, 
+      ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 );
+    aux_matrix.multiply( sources, T );
+    moment.multiply( L, aux_matrix );
+  }
+}
+
+void besthea::linear_algebra::pFMM_matrix::apply_s2m_operations_p1( 
+  block_vector_type const & x ) const {
+  lo max_elem_time_cluster = _spacetime_tree->get_time_cluster_tree( )->
+    get_n_max_elems_leaf( );
+  // TODO needs to be changed for spaces other than p0
+  lo max_elem_space_cluster = _spacetime_tree->get_space_cluster_tree( )->
+    get_n_max_elems_leaf( );
+  // allocate large enough matrix for sources to avoid reallocation
+  // (3 * nr_elem is used as bound for the number of vertices in a cluster)
+  full_matrix_type sources( max_elem_time_cluster, 3 * max_elem_space_cluster, 
+                            false);
+  full_matrix_type aux_matrix( max_elem_time_cluster, 
+    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 );
+  for ( auto it = _spacetime_tree->get_leaves( ).begin( ); 
+        it != _spacetime_tree->get_leaves( ).end( ); ++it ) {
+    // get references of current moment and all required matrices
+    full_matrix_type & moment = *( ( *it )->get_moment_contribution( ) );
+    full_matrix_type & T = (*it)->get_space_cluster( ).get_chebyshev_quad( );
+    full_matrix_type & L = (*it)->get_time_cluster( ).get_lagrange_quad( );
+    
+    // get the relevant entries of the block vector x and store them in sources
+    lo n_space_nodes = (*it)->get_space_cluster( ).get_n_nodes( );
+    const std::vector< lo > & local_2_global_nodes = 
+      (*it)->get_space_cluster( ).get_local_2_global_nodes( );
+    lo n_time_elements = (*it)->get_time_cluster( ).get_n_elements( );
+    sources.resize( n_time_elements, n_space_nodes );
+    for ( lo i_time = 0; i_time < n_time_elements; ++ i_time ) {
+      for ( lo i_space = 0; i_space < n_space_nodes; ++ i_space ) {
+        sources( i_time, i_space ) = x.get( i_time, 
+                                            local_2_global_nodes[ i_space ] );
+      }
+    }
+    
+    // compute D = Q * T and then the moment mu = L * D 
+    aux_matrix.resize( n_time_elements, 
+      ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 );
+    aux_matrix.multiply( sources, T );
+    moment.multiply( L, aux_matrix );
+  }
+}
+
+void besthea::linear_algebra::pFMM_matrix::call_m2m_operations( 
+  spacetime_cluster * root, 
+  std::vector< full_matrix_type >& buffer_matrices ) {
+  if ( root->get_n_children( ) > 0 ) {
+    std::vector< spacetime_cluster * > * children = root->get_children( );
+    // compute the moment contributions for all children recursively
+    for ( std::vector< spacetime_cluster * >::iterator it = children->begin( );
+          it != children->end( ); ++ it ) {
+      apply_m2m_operations( *it, buffer_matrices );
+    }
+    lo temporal_level = root->get_time_cluster( ).get_level( );
+    full_matrix_type * parent_moment = root->get_moment_contribution( );
+    // decide whether to use only temporal m2m or spacetime m2m
+    space_cluster & root_space_cluster = root->get_space_cluster( ); 
+    space_cluster & child_space_cluster = ( *children )[ 0 ]->
+                                            get_space_cluster( );
+    bool temporal_only = ( &root_space_cluster == &child_space_cluster );
+    if ( temporal_only ) {
+      // execute only temporal m2m operation
+      for ( std::vector< spacetime_cluster * >::iterator it = children->begin( );
+          it != children->end( ); ++ it ) {
+        full_matrix_type * child_moment = ( *it )->get_moment_contribution( );
+        // determine configuration in time for temporal m2m
+        bool is_left_time_child = ( *it )->get_time_cluster( ).is_left_child( );
+        apply_temporal_m2m( *child_moment, temporal_level, is_left_time_child,
+                            *parent_moment );
+      }
+    }
+    else {
+      bool octant_used[ 8 ];
+      // apply temporal m2m to all child moments
+      for ( std::vector< spacetime_cluster * >::iterator it = children->begin( );
+          it != children->end( ); ++ it ) {
+        full_matrix_type * child_moment = ( *it )->get_moment_contribution( );
+        // determine configuration in space to determine auxiliary target matrix
+        // to store result of temporal m2m
+        slou octant = ( *it )->get_space_cluster( ).get_octant( );
+        // determine configuration in time for temporal m2m
+        bool is_left_time_child = ( *it )->get_time_cluster( ).is_left_child( );
+        octant_used[ octant ] = true; // remember that octant was used
+        apply_temporal_m2m( *child_moment, temporal_level, is_left_time_child,
+                            buffer_matrices[ octant ] );
+      }
+      // compute parent moment with spatial m2m using the auxiliary matrices
+      lo spatial_level = root_space_cluster.get_level( );
+      for ( slou octant = 0; octant < 8; ++ octant ) {
+        if ( octant_used[ octant ] ) {
+          apply_spatial_m2m( buffer_matrices[ octant ], spatial_level, octant,
+                              *parent_moment );
+        }
+      }
+      // reset buffer matrices to zero if they were used
+      for ( slou octant = 0; octant < 8; ++ octant ) {
+        if ( octant_used[ octant ] ) {
+          buffer_matrices[ octant ].fill( 0.0 );
+        }
+      }
+    }
+  }
+}
+
+void besthea::linear_algebra::pFMM_matrix::apply_m2l_operation( 
+  spacetime_cluster * target_cluster, spacetime_cluster * source_cluster,
+  vector_type * buffer_for_integrals ) {
+  
+  
+  slou dimension = 0;
+  for (lo i = 0; i < ( _spat_order + 1 ) * ( _spat_order + 1 ) 
+        * ( _temp_order + 1) * ( _temp_order + 1 ); ++i )
+    buffer_for_integrals[ i ] = 0;
+    
+  // initialize Chebyshev nodes for numerical integration
+  vector_type cheb_nodes( _spat_order + 1, false );
+  for ( lo i = 0 ; i <= _spat_order; ++i ) {
+    cheb_nodes[ i ] = 
+      std::cos( M_PI * ( 2 * i + 1 ) / ( 2 * ( _spat_order + 1 ) ) );
+  }
+  // evaluate Chebyshev polynomials for all degrees <= _spat_order for integrals
+  vector_type all_poly_vals( ( _spat_order + 1 ) * ( _spat_order + 1 ), false );
+  _chebyshev.evaluate( cheb_nodes, all_poly_vals );
+  
+  // get spatial properties ( difference of cluster, half length )
+  vector_type source_center( 3, false );
+  source_cluster->get_space_cluster( ).get_center( source_center );
+  vector_type center_diff( 3, false );
+  target_cluster->get_space_cluster( ).get_center( center_diff );
+  for ( lo i = 0; i < 3; ++i ) {
+    center_diff [ i ] -= source_center[ i ];
+  }
+  vector_type half_size( 3, false );
+  target_cluster->get_space_cluster( ).get_half_size( half_size );
+  
+  sc h_delta = half_size[ dimension ];
+  int center_diff = 2*(i-n_int_boxes);
+  //evaluate the gaussian kernel for the numerical integration
+  double h_delta = h*h/delta;
+  double eval_gaussian[(rho+1)*(rho+1)];
+  for (int mu=0; mu<rho+1; mu++) 
+  {
+      for (int nu=0; nu<rho+1; nu++) 
+      {
+          eval_gaussian[mu*(rho+1)+nu] = exp(-h_delta * (center_diff+cheb_nodes[nu]-cheb_nodes[mu]) * (center_diff+cheb_nodes[nu]-cheb_nodes[mu]));
+      }
+  }
+  //compute the numerical integrals
+  double inv_rho = 1.0/(rho+1)/(rho+1);
+  for (int beta=0; beta<=p; ++beta)
+      for (int alpha=0; alpha<=p; ++alpha)
+      {
+          for (int mu=0; mu<=rho; ++mu)
+              for (int nu=0; nu<=rho; ++nu)
+                  expansion_integrals[crnt_indx] +=  eval_gaussian[mu*(rho+1)+nu] * cheb_poly_eval[alpha*(rho+1)+mu] * cheb_poly_eval[beta*(rho+1)+nu];
+          expansion_integrals[crnt_indx] *= inv_rho * 4; //gamma = 2 everywhere (correction later)
+          ++crnt_indx;
+      }
+  for (int k=0; k<=p; ++k) //correction for alpha2=0 or beta2=0
+  {   
+      expansion_integrals[(p+1)*(p+1)*i+k] *= 0.5;
+      expansion_integrals[(p+1)*(p+1)*i+k*(p+1)] *= 0.5;
+  }
+  
+  
+  
+  
+  int nr_coeffs = (p+3)*(p+2)*(p+1)/6;
+  double lambda[2][nr_coeffs]; //2d to store lambda^(1) and lambda^(2)
+  for (int k=0; k<nr_coeffs; k++) 
+  {
+      lambda[0][k] = 0;
+      lambda[1][k] = 0;
+  }
+  // efficient calculation of c_beta (Tausch, 2009, p. 3558) (index shift -1 compared to notation there)
+  // lambda^(0)(b2,a0,a1) = sum_{a2=0}^{p-a0-a1} E_{b2,a2}*A_{a0,a1,a2}
+  int crnt_indx_lmbd_0=0;
+  for (int beta2=0; beta2<=p; ++beta2)
+  {
+      int crnt_indx_a = 0;
+      for (int alpha0=0; alpha0<=p-beta2; ++alpha0)
+      {
+          for (int alpha1=0; alpha1<=p-beta2-alpha0; ++alpha1)
+          {
+              for (int alpha2=0; alpha2<=p-alpha0-alpha1; ++alpha2)
+              {
+                  lambda[0][crnt_indx_lmbd_0] += expansion_coeffs[2][beta2*(p+1)+alpha2] * a_alpha[crnt_indx_a];
+                  ++crnt_indx_a;
+              }
+              ++crnt_indx_lmbd_0;
+          }
+          crnt_indx_a += ((beta2+1)*beta2)/2; //correction for current index; necessary since alpha1 does not run until p-alpha0 as it does in a_alpha;
+      }
+  }
+  // lambda^(1)(b1,b2,a0) = sum_{a1=0}^{p-a0-b2} E_{b1,a1}*lambda^(0)(b2,a0,a1)
+  int crnt_indx_lmbd_1 = 0;
+  for (int beta1=0; beta1<=p; ++beta1)
+  {
+      crnt_indx_lmbd_0 = 0;
+      for (int beta2=0; beta2<=p-beta1; ++beta2)
+      {
+          for (int alpha0=0; alpha0<=p-beta1-beta2; ++alpha0)
+          {
+              for (int alpha1=0; alpha1<=p-alpha0-beta2; ++ alpha1)
+              {
+                  lambda[1][crnt_indx_lmbd_1] += expansion_coeffs[1][beta1*(p+1)+alpha1] * lambda[0][crnt_indx_lmbd_0];
+                  ++crnt_indx_lmbd_0;
+              }
+              ++crnt_indx_lmbd_1;
+          }
+          crnt_indx_lmbd_0 += ((beta1+1)*beta1)/2; //correction for current index; necessary since alpha0 does not run until p-beta2 as it does in lambda[0];
+      }
+  }
+  // C(b0,b1,b2) = sum_{a0=0}^{p-b2-b1} E_{b0,a0}*lambda^(1)(b1,b2,a0)
+  int crnt_indx_c = 0;
+  for (int beta0=0; beta0<=p; ++beta0)
+  {
+      crnt_indx_lmbd_1 = 0;
+      for (int beta1=0; beta1<=p-beta0; ++beta1)
+      {
+          for (int beta2=0; beta2<=p-beta0-beta1; ++beta2)
+          {
+              for (int alpha0=0; alpha0<=p-beta1-beta2; ++alpha0)
+              {
+                  c_beta[crnt_indx_c] += expansion_coeffs[0][beta0*(p+1)+alpha0] * lambda[1][crnt_indx_lmbd_1];
+                  ++crnt_indx_lmbd_1;
+              }
+              ++crnt_indx_c;
+          }
+          crnt_indx_lmbd_1 += ((beta0+1)*beta0)/2; //correction for current index; necessary since beta2 does not run until p-beta1 as it does in lambda[0];
+      }
+  }
+}
+

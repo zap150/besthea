@@ -1150,7 +1150,8 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
     lo elem = time_cluster->get_element( i );
     time_cluster->get_mesh( ).get_nodes( elem, elem_t_start, elem_t_end );
     elem_size = elem_t_end[ 0 ] - elem_t_start[ 0 ];
-
+    // compute the quadrature points in the current element in relative 
+    // coordinates with respect to the time cluster and transform them to [-1,1]
     for ( std::vector< sc, besthea::allocator_type< sc > >::size_type j = 0;
           j < line_t.size( ); ++j ) {
       eval_points[ j ] = -1.0
@@ -1200,7 +1201,7 @@ void besthea::bem::fast_spacetime_be_assembler<
 
   lo n_space_elems = space_cluster->get_n_elements( );
   T.resize( n_space_elems,
-    ( _spat_order + 1 ) * ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 );
 
   // get some info on the current cluster
   vector_type cluster_center( 3 );
@@ -1243,7 +1244,7 @@ void besthea::bem::fast_spacetime_be_assembler<
     _chebyshev.evaluate( my_quadrature._y1_polynomial, cheb_dim_0 );
     _chebyshev.evaluate( my_quadrature._y2_polynomial, cheb_dim_1 );
     _chebyshev.evaluate( my_quadrature._y3_polynomial, cheb_dim_2 );
-
+    lo current_index = 0;
     for ( lo beta0 = 0; beta0 <= _spat_order; ++beta0 ) {
       for ( lo beta1 = 0; beta1 <= _spat_order - beta0; ++beta1 ) {
         for ( lo beta2 = 0; beta2 <= _spat_order - beta0 - beta1; ++beta2 ) {
@@ -1254,10 +1255,8 @@ void besthea::bem::fast_spacetime_be_assembler<
               * cheb_dim_2[ beta2 * size_quad + j ] * wy[ j ];
           }
           quad *= elem_area;
-          T.set( i,
-            beta0 * ( _spat_order + 1 ) * ( _spat_order + 1 )
-              + ( _spat_order + 1 ) * beta1 + beta2,
-            quad );
+          T.set( i, current_index, quad );
+          ++ current_index;
         }
       }
     }
@@ -1274,7 +1273,7 @@ void besthea::bem::fast_spacetime_be_assembler<
   lo n_space_nodes = space_cluster->get_n_nodes( );
   lo n_space_elems = space_cluster->get_n_elements( );
   T.resize( n_space_nodes,
-    ( _spat_order + 1 ) * ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 );
 
   // get some info on the current cluster
   vector_type cluster_center( 3 );
@@ -1300,6 +1299,10 @@ void besthea::bem::fast_spacetime_be_assembler<
   vector_type cheb_dim_0( ( _spat_order + 1 ) * size_quad );
   vector_type cheb_dim_1( ( _spat_order + 1 ) * size_quad );
   vector_type cheb_dim_2( ( _spat_order + 1 ) * size_quad );
+  // same for evaluations of scaled derivatives of Chebyshev polynomials
+  vector_type cheb_drv_dim_0( ( _spat_order + 1 ) * size_quad );
+  vector_type cheb_drv_dim_1( ( _spat_order + 1 ) * size_quad );
+  vector_type cheb_drv_dim_2( ( _spat_order + 1 ) * size_quad );
 
   sc elem_area;
   lo elem;
@@ -1307,12 +1310,15 @@ void besthea::bem::fast_spacetime_be_assembler<
   sc * y1_ref = my_quadrature._y1_ref_cheb.data( );
   sc * y2_ref = my_quadrature._y2_ref_cheb.data( );
 
-  sc value1, value2, value3, chebs;
+  sc value1, value2, value3;
+  linear_algebra::coordinates< 3 > grad;
   const std::vector< lo > & elems_2_local_nodes
     = space_cluster->get_elems_2_local_nodes( );
-
+  
+  linear_algebra::coordinates< 3 > normal;
   for ( lo i = 0; i < n_space_elems; ++i ) {
     elem = space_cluster->get_element( i );
+    space_cluster->get_mesh( ).get_normal( elem, normal );
     space_cluster->get_mesh( ).get_nodes( elem, y1, y2, y3 );
     elem_area = space_cluster->get_mesh( ).area( elem );
 
@@ -1324,7 +1330,14 @@ void besthea::bem::fast_spacetime_be_assembler<
     _chebyshev.evaluate( my_quadrature._y1_polynomial, cheb_dim_0 );
     _chebyshev.evaluate( my_quadrature._y2_polynomial, cheb_dim_1 );
     _chebyshev.evaluate( my_quadrature._y3_polynomial, cheb_dim_2 );
+    _chebyshev.evaluate_derivative( my_quadrature._y1_polynomial, 
+                                      cheb_drv_dim_0);
+    _chebyshev.evaluate_derivative( my_quadrature._y2_polynomial, 
+                                      cheb_drv_dim_1);
+    _chebyshev.evaluate_derivative( my_quadrature._y3_polynomial, 
+                                      cheb_drv_dim_2);
 
+    lo current_index = 0;
     for ( lo beta0 = 0; beta0 <= _spat_order; ++beta0 ) {
       for ( lo beta1 = 0; beta1 <= _spat_order - beta0; ++beta1 ) {
         for ( lo beta2 = 0; beta2 <= _spat_order - beta0 - beta1; ++beta2 ) {
@@ -1332,27 +1345,33 @@ void besthea::bem::fast_spacetime_be_assembler<
           value2 = 0.0;
           value3 = 0.0;
           for ( lo j = 0; j < size_quad; ++j ) {
-            chebs = cheb_dim_0[ beta0 * size_quad + j ]
+            grad[ 0 ] = cheb_drv_dim_0[ beta0 * size_quad + j ]
               * cheb_dim_1[ beta1 * size_quad + j ]
-              * cheb_dim_2[ beta2 * size_quad + j ] * wy[ j ];
-
-            value1 += chebs * ( (sc) 1.0 - y1_ref[ j ] - y2_ref[ j ] );
-            value2 += chebs * y1_ref[ j ];
-            value3 += chebs * y2_ref[ j ];
+              * cheb_dim_2[ beta2 * size_quad + j ] 
+              / (cluster_half[ 0 ] + padding);
+            grad[ 1 ] = cheb_dim_0[ beta0 * size_quad + j ] 
+              * cheb_drv_dim_1[ beta1 * size_quad + j ]
+              * cheb_dim_2[ beta2 * size_quad + j ]
+              / (cluster_half[ 1 ] + padding);
+            grad[ 2 ] = cheb_drv_dim_0[ beta0 * size_quad + j ]
+              * cheb_dim_1[ beta1 * size_quad + j ]
+              * cheb_drv_dim_2[ beta2 * size_quad + j ]
+              / (cluster_half[ 2 ] + padding);
+            sc weighted_normal_derivative = wy[ j ] *  elem_area *
+                                              normal.dot(grad);
+            value1 += weighted_normal_derivative
+              * ( (sc) 1.0 - y1_ref[ j ] - y2_ref[ j ] );
+            value2 += weighted_normal_derivative * y1_ref[ j ];
+            value3 += weighted_normal_derivative * y2_ref[ j ];
           }
 
           T.add_atomic( elems_2_local_nodes[ 3 * i ],
-            beta0 * ( _spat_order + 1 ) * ( _spat_order + 1 )
-              + ( _spat_order + 1 ) * beta1 + beta2,
-            value1 * elem_area );
+            current_index, value1 );
           T.add_atomic( elems_2_local_nodes[ 3 * i + 1 ],
-            beta0 * ( _spat_order + 1 ) * ( _spat_order + 1 )
-              + ( _spat_order + 1 ) * beta1 + beta2,
-            value2 * elem_area );
+            current_index, value2 );
           T.add_atomic( elems_2_local_nodes[ 3 * i + 2 ],
-            beta0 * ( _spat_order + 1 ) * ( _spat_order + 1 )
-              + ( _spat_order + 1 ) * beta1 + beta2,
-            value3 * elem_area );
+            current_index, value3 );
+          ++ current_index;
         }
       }
     }
@@ -1369,7 +1388,7 @@ void besthea::bem::fast_spacetime_be_assembler<
   lo n_space_nodes = space_cluster->get_n_nodes( );
   lo n_space_elems = space_cluster->get_n_elements( );
   T.resize( n_space_nodes,
-    ( _spat_order + 1 ) * ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 );
 
   // get some info on the current cluster
   vector_type cluster_center( 3 );
@@ -1420,6 +1439,7 @@ void besthea::bem::fast_spacetime_be_assembler<
     _chebyshev.evaluate( my_quadrature._y2_polynomial, cheb_dim_1 );
     _chebyshev.evaluate( my_quadrature._y3_polynomial, cheb_dim_2 );
 
+    lo current_index = 0;
     for ( lo beta0 = 0; beta0 <= _spat_order; ++beta0 ) {
       for ( lo beta1 = 0; beta1 <= _spat_order - beta0; ++beta1 ) {
         for ( lo beta2 = 0; beta2 <= _spat_order - beta0 - beta1; ++beta2 ) {
@@ -1437,17 +1457,12 @@ void besthea::bem::fast_spacetime_be_assembler<
           }
 
           T.add_atomic( elems_2_local_nodes[ 3 * i ],
-            beta0 * ( _spat_order + 1 ) * ( _spat_order + 1 )
-              + ( _spat_order + 1 ) * beta1 + beta2,
-            value1 * elem_area );
+            current_index, value1 * elem_area );
           T.add_atomic( elems_2_local_nodes[ 3 * i + 1 ],
-            beta0 * ( _spat_order + 1 ) * ( _spat_order + 1 )
-              + ( _spat_order + 1 ) * beta1 + beta2,
-            value2 * elem_area );
+            current_index, value2 * elem_area );
           T.add_atomic( elems_2_local_nodes[ 3 * i + 2 ],
-            beta0 * ( _spat_order + 1 ) * ( _spat_order + 1 )
-              + ( _spat_order + 1 ) * beta1 + beta2,
-            value3 * elem_area );
+            current_index, value3 * elem_area );
+          ++ current_index;
         }
       }
     }

@@ -172,6 +172,14 @@ class besthea::mesh::space_cluster {
   lo get_element( lo idx ) const {
     return _elements[ idx ];
   }
+  
+  /**
+   * Returns reference to vector of global element indices for elements in the 
+   * cluster
+   */
+  const std::vector< lo > & get_all_elements( ) const {
+    return _elements;
+  }
 
   /**
    * Returns number of nodes in the cluster.

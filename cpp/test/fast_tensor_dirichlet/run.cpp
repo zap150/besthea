@@ -118,7 +118,7 @@ int main( int argc, char * argv[] ) {
   lo order_sing = 4;
   lo order_reg = 4;
 
-  pFMM_matrix * K = new pFMM_matrix( );
+  pFMM_matrix * K = new pFMM_matrix( tree, false, 5, 5, cauchy_data::_alpha );
   tree.print( );
 
   spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
@@ -154,7 +154,7 @@ int main( int argc, char * argv[] ) {
 
   delete K;
 
-  pFMM_matrix * V = new pFMM_matrix( );
+  pFMM_matrix * V = new pFMM_matrix( tree, false, 5, 5, cauchy_data::_alpha );
 
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
   fast_spacetime_be_assembler fast_assembler_v(

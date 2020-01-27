@@ -40,7 +40,7 @@
 
 namespace besthea {
   namespace bem {
-    class chebyshev_evaluator;
+    class chebyshev_evaluator; 
   }
 }
 
@@ -61,10 +61,10 @@ class besthea::bem::chebyshev_evaluator {
   chebyshev_evaluator( const chebyshev_evaluator & that ) = delete;
 
   /**
-   * Evaluate all Chebyshev polynomials up to given order for points in [-1, 1]
-   * @param[in] eval_points Points in [-1, 1] where polynomial is evaluated
-   * @param[in,out]  all_values  Resulting values (at input its size should be
-   *                             at least (@p _order + 1) * size @p eval_points)
+   * Evaluate all Chebyshev polynomials up to given order for points in [-1, 1].
+   * @param[in] eval_points Points in [-1, 1] where polynomial is evaluated.
+   * @param[in,out]  all_values  Resulting values (at input size should be at
+   *                             least (@p _order + 1) * size @p eval_points).
    */
   void evaluate(
     const vector_type & eval_points, vector_type & all_values ) const {
@@ -77,6 +77,30 @@ class besthea::bem::chebyshev_evaluator {
         all_values[ j * sz + i ]
           = 2 * eval_points[ i ] * all_values[ ( j - 1 ) * sz + i ];
         all_values[ j * sz + i ] -= all_values[ ( j - 2 ) * sz + i ];
+      }
+  }
+  
+  /**
+   * Evaluate derivatives of all Chebyshev polynomial up to given order for 
+   * points in [-1, 1].
+   * @param[in] eval_points Points in [-1, 1] where polynomial is evaluated.
+   * @param[in,out]  all_values  Resulting values (at input size should be at
+   *                             least (@p _order + 1) * size @p eval_points).
+   */
+  void evaluate_derivative(
+    const vector_type & eval_points, vector_type & all_values ) const {
+    // initialize values to 1;
+    const lo sz = eval_points.size( );
+    for ( lo i = 0; i < sz; ++i ) all_values[ i ] = 0.0;
+    for ( lo i = 0; i < sz; ++i ) all_values[ sz + i ] = 1.0;
+    for ( lo i = 0; i < sz; ++i ) all_values[ 2 * sz + i ] = 4.0 * eval_points[ i ];
+    for ( lo j = 3; j <= _order; ++j )
+      for ( lo i = 0; i < sz; ++i ) {
+        all_values[ j * sz + i ]
+          = ( 2.0 * j ) / ( j - 1 ) * eval_points[ i ] 
+          * all_values[ ( j - 1 ) * sz + i ];
+        all_values[ j * sz + i ] 
+          -= ( j / ( j - 2.0 ) ) * all_values[ ( j - 2 ) * sz + i ];
       }
   }
 
