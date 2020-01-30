@@ -395,13 +395,37 @@ class besthea::bem::fast_spacetime_be_assembler {
   /**
    * Computes quadrature of the Lagrange polynomials up to a given order over an
    * element in the cluster.
+   * \param[in] cluster   Time cluster for which the quadratures are computed 
+   *                      and where they are stored.
    */
   void compute_lagrange_quadrature( time_cluster_type * cluster ) const;
 
   /**
-   * Compute quadrature of the Chebyshev polynomials.
+   * Compute quadrature of the Chebyshev polynomials or their normal derivatives
+   * depending on the underlying space.
+   * \note If the required quadratures are already computed they are not 
+   * recomputed.
+   * \warning Only the number of columns of the Chebyshev quadrature (or its 
+   *          derivative ) of the first spatial leaf cluster is checked to see
+   *          if the quadratures have been computed.
+   */
+  void compute_required_chebyshev_quadratures( ) const;
+    
+  /**
+   * Compute quadrature of the Chebyshev polynomials for a space cluster.
+   * \param[in] cluster   Space cluster for which the quadratures are computed 
+   *                      and where they are stored.
    */
   void compute_chebyshev_quadrature( space_cluster_type * cluster ) const;
+  
+  /**
+   * Compute quadrature of the normal derivatives of the Chebyshev polynomials 
+   * for a space cluster.
+   * \param[in] cluster   Space cluster for which the quadratures are computed 
+   *                      and where they are stored.
+   */
+  void compute_normal_drv_chebyshev_quadrature( 
+    space_cluster_type * cluster ) const;
 
   kernel_type * _kernel;            //!< Kernel temporal antiderivative.
   test_space_type * _test_space;    //!< Boundary element test space.

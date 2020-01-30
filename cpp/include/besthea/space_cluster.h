@@ -80,7 +80,8 @@ class besthea::mesh::space_cluster {
       _octant( octant ),
       _padding( 0.0 ),
       _box_coordinate( coordinate ),
-      _cheb_T( 1, 1 ) {
+      _cheb_T( 1, 1 ),
+      _cheb_normal_drv_T( 1, 1 ) {
     _elements.reserve( _n_elements );
     _box_coordinate.shrink_to_fit( );
   }
@@ -361,6 +362,10 @@ class besthea::mesh::space_cluster {
   full_matrix_type & get_chebyshev_quad( ) {
     return _cheb_T;
   }
+  
+  full_matrix_type & get_normal_drv_chebyshev_quad( ) {
+    return _cheb_normal_drv_T;
+  }
 
   /**
    * Returns the associated mesh.
@@ -431,6 +436,10 @@ class besthea::mesh::space_cluster {
   full_matrix_type
     _cheb_T;  //!< matrix storing quadrature of the Chebyshev polynomials (rows
               //!< - element of the cluster, column - order of the polynomial)
+  full_matrix_type
+    _cheb_normal_drv_T; //!< matrix storing quadratue of the normal derivatives
+                        //!< of the Chebyshev polynomials (rows - vertex of the
+                        //!< cluster, column - order of the polynomial)
   std::vector< lo > _elems_2_local_nodes;   //! mapping from element nodes
                                             //! vertices to local node list
   std::vector< lo > _local_2_global_nodes;  //!< mapping from local nodes

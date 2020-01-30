@@ -90,14 +90,19 @@ class besthea::linear_algebra::pFMM_matrix
       _spat_order( 5 ),
       _chebyshev( _spat_order ),
       _alpha( 1.0 ),
-      _heat_kernel( _alpha ) {
+      _source_space_is_p0( true ),
+      _target_space_is_p0( true ) {
   }
   
-  pFMM_matrix( spacetime_cluster_tree * spacetime_tree, bool uniform, 
-               slou temp_order, slou spat_order, sc alpha )
+  pFMM_matrix( spacetime_tree_type * spacetime_tree, bool uniform, 
+               slou temp_order, slou spat_order, sc alpha, 
+               bool source_space_is_p0, bool target_space_is_p0 )
     : _spacetime_tree( spacetime_tree ), _uniform ( uniform ), 
       _temp_order( temp_order ), _spat_order( spat_order ),
-      _chebyshev( _spat_order ), _alpha( alpha ), _heat_kernel( _alpha ) {
+      _chebyshev( _spat_order ), _alpha( alpha ),
+      _source_space_is_p0( source_space_is_p0 ), 
+      _target_space_is_p0( target_space_is_p0 ) {
+//         , _heat_kernel( _alpha ) {
   }
 
   pFMM_matrix( const pFMM_matrix & that ) = delete;
@@ -204,7 +209,7 @@ class besthea::linear_algebra::pFMM_matrix
    */
   void apply_temporal_m2m( full_matrix_type const & child_moment,
     const lo level, const bool is_left_child,
-    full_matrix_type & parent_moment );
+    full_matrix_type & parent_moment ) const;
 
   /*!
    * Applies the spatial m2m operation for a child moment and adds the result
@@ -216,8 +221,15 @@ class besthea::linear_algebra::pFMM_matrix
    * @param[in,out] parent_moment  Result of m2m operation is added to it.
    */
   void apply_spatial_m2m( full_matrix_type const & child_moment, const lo level,
-    const slou octant, full_matrix_type & parent_moment );
+    const slou octant, full_matrix_type & parent_moment ) const;
 
+  void apply_temporal_l2l( full_matrix_type const & parent_local,
+    const lo level, const bool is_left_child,
+    full_matrix_type & child_local ) const;
+  
+  void apply_spatial_l2l( full_matrix_type const & parent_local, const lo level,
+    const slou octant, full_matrix_type & child_local ) const;
+  
   /*!
    * Sets order of the Lagrange and Chebyshev polynomials.
    * @param[in] spat_order Order of the Chebyshev polynomials
@@ -229,10 +241,10 @@ class besthea::linear_algebra::pFMM_matrix
   }
   
   /*!
-   * @brief Executes all S2M operations for given leaves and a given vector x
-   * for spatial basis functions in p0
+   * @brief Executes s2m operations for all leaves of the spacetime cluster 
+   * and a given vector x for spatial basis functions in p0
    * @param[in] x Vector for multiplication.
-   * @note The results are stored in the matrices _moment_contribution in the 
+   * @note The results are stored in the matrices \p _moment_contribution in the 
    * respective spacetime clusters.
    * @note The method uses matrices of integrals over polynomials which are 
    * computed in 
@@ -241,10 +253,10 @@ class besthea::linear_algebra::pFMM_matrix
   void apply_s2m_operations_p0( block_vector_type const & x ) const;
   
    /*!
-   * @brief Executes all S2M operations for given leaves and a given vector x
-   * for spatial basis functions in p1
+   * @brief Executes s2m operations for all leaves of the spacetime cluster 
+   * and a given vector x for spatial basis functions in p1
    * @param[in] x Vector for multiplication.
-   * @note The results are stored in the matrices _moment_contribution in the 
+   * @note The results are stored in the matrices \p _moment_contribution in the 
    * respective spacetime clusters.
    * @note The method uses matrices of integrals over polynomials which are 
    * computed in 
@@ -257,14 +269,123 @@ class besthea::linear_algebra::pFMM_matrix
 //     block_vector_type const & x ) const;
   
   /*!
-   * @brief Executes all M2M operations recursively
-   * \todo currently some unnecessary m2m operations are executed (for clusters 
-   * without direct interactions or parental interactions) 
+   * @brief Executes all m2m operations recursively.
+   * @param[in] root  M2m operations are applied for this spacetime cluster and
+   *                  all its descendants.
+   * @param[in] buffer_matrices Vector of 8 matrices of size >= 
+   *    ( _temp_order + 1 ) * ( ( _spat_order + 3 ) choose 3 ).
+   * \todo Currently some unnecessary m2m operations are executed (for clusters 
+   * without direct interactions or parental interactions).
    */
   void call_m2m_operations( spacetime_cluster * root,
-                              std::vector< full_matrix_type >& buffer_matrices);
+    std::vector< full_matrix_type >& buffer_matrices) const;
+  
+  /*!
+   * @brief Applies the spacetime M2L operation to the moment contribution of 
+   * a source cluster and adds the result to the local contribution of the 
+   * target.
+   * @param[in,out] target_cluster  Target cluster for the m2l operation.  
+   * @param[in] source_cluster  Source cluster for the m2l operation.
+   * @param[in] buffer_for_gaussians  Vector with size >= ( _spat_order + 1 )^2
+   *    * ( _temp_order + 1 )^2 to store intermediate results in the computation
+   *    of the m2l coefficients.
+   * @param[in] buffer_for_coeffs  Vector with size >= ( _spat_order + 1 )^2
+   *    * ( _temp_order + 1 )^2 to store m2l coefficients.
+   * @param[in] aux_buffer_0  Matrix with ( _temp_order + 1 )^2 times 
+   *  ( ( _spat_order + 3 ) choose 3 ) entries for intermediate m2l results.
+   * @param[in] aux_buffer_1  Matrix with ( _temp_order + 1 )^2 times 
+   *  ( ( _spat_order + 3 ) choose 3 ) entries for intermediate m2l results.
+   */
+  void apply_m2l_operation( spacetime_cluster * target_cluster, 
+    spacetime_cluster * source_cluster, 
+    vector_type & buffer_for_gaussians, vector_type & buffer_for_coeffs, 
+    full_matrix_type & aux_buffer_0, full_matrix_type & aux_buffer_1 ) const;
+ 
+  /*!
+   * @brief Executes all m2l operations recursively starting at the root in a
+   * cluster tree.
+   * @param[in] root  M2l operations are applied for this spacetime cluster and
+   *                  all its descendants.
+   * @param[in] buffer_for_gaussians  Vector with size >= ( _spat_order + 1 )^2
+   *    * ( _temp_order + 1 )^2 to store intermediate results in the computation
+   *    of the m2l coefficients.
+   * @param[in] buffer_for_coeffs  Vector with size >= ( _spat_order + 1 )^2
+   *    * ( _temp_order + 1 )^2 to store m2l coefficients.
+   * @param[in] aux_buffer_0  Matrix with ( _temp_order + 1 )^2 times 
+   *  ( ( _spat_order + 3 ) choose 3 ) entries for intermediate m2l results.
+   * @param[in] aux_buffer_1  Matrix with ( _temp_order + 1 )^2 times 
+   *  ( ( _spat_order + 3 ) choose 3 ) entries for intermediate m2l results.
+   * @note The function \ref apply_m2l_operation is used to execute the m2l
+   *        operations.
+   */
+  void call_m2l_operations( spacetime_cluster * root, 
+    vector_type & buffer_for_gaussians, vector_type & buffer_for_coeffs, 
+    full_matrix_type & aux_buffer_0, full_matrix_type & aux_buffer_1 ) const;
 
+  /*!
+   * @brief Executes all l2l operations recursively.
+   * @param[in] root  L2l operations are applied for this spacetime cluster and
+   *                  all its descendants.
+   * @param[in] buffer_matrices Vector of 8 matrices of size >= 
+   *    ( _temp_order + 1 ) * ( ( _spat_order + 3 ) choose 3 ).
+   * \todo Currently some unnecessary l2l operations are executed (for clusters 
+   * without direct interactions or parental interactions).
+   */
+  void call_l2l_operations( spacetime_cluster * root,
+    std::vector< full_matrix_type >& buffer_matrices) const;
+  /*!
+   * @brief Executes l2t operations for all leaves of the spacetime cluster 
+   * and adds the results to a vector y for spatial basis functions in p0.
+   * @param[in,out] y Vector to which the results are added.
+   * @note For the computations the matrices \p _local_contribution in the 
+   * respective spacetime clusters are used.
+   * @note The method uses matrices of integrals over polynomials which are 
+   * computed in 
+   * \ref besthea::bem::fast_spacetime_be_assembler.
+   */
+  void apply_l2t_operations_p0( block_vector_type & y ) const;
+  
+   /*!
+   * @brief Executes l2t operations for all leaves of the spacetime cluster 
+   * and adds the results to a vector y for spatial basis functions in p1.
+   * @param[in,out] y Vector to which the results are added.
+   * @note For the computations the matrices \p _local_contribution in the 
+   * respective spacetime clusters are used.
+   * @note The method uses matrices of integrals over polynomials which are 
+   * computed in 
+   * \ref besthea::bem::fast_spacetime_be_assembler.
+   */
+  void apply_l2t_operations_p1( block_vector_type & y ) const;
+  
  private:
+  
+   /*!
+   * @brief Computes coupling coefficients for the spacetime m2l operation
+   *        for one of the three space dimensions implicitly given.
+   * @param[in] src_time_nodes  Interpolation nodes in time for the source 
+   *                            cluster.
+   * @param[in] tar_time_nodes  Interpolation nodes in time for the target
+   *                            cluster.
+   * @param[in] cheb_nodes  Chebyshev nodes of degree ( _spat_order + 1 )
+   * @param[in] evaluated_chebyshev  Vector of evaluated Chebyshev polynomials 
+   *      with degree <= _spat_order at \p cheb_nodes as given by 
+   *      \ref chebyshev_evaluator.evaluate.
+   * @param[in] half_size   Half size in space of the current clusters along the
+   *                        dimension for which the coefficients are computed.
+   * @param[in] center_diff   The appropriate component of the difference vector
+   *                          (target_center - source_center).
+   * @param[in] buffer_for_gaussians  Vector with size >= ( _spat_order + 1 )^2
+   *    * ( _temp_order + 1 )^2 to store intermediate results in the computation
+   *    of the m2l coefficients.
+   * @param[in,out] coupling_coeffs Vector with size >= ( _spat_order + 1 )^2
+   *    * ( _temp_order + 1 )^2 to store m2l coefficients.
+   */
+  void compute_coupling_coeffs( const vector_type & src_time_nodes, 
+    const vector_type & tar_time_nodes, const vector_type & cheb_nodes, 
+    const vector_type & evaluated_chebyshev, const sc half_size, 
+    const sc center_diff, vector_type & buffer_for_gaussians, 
+    vector_type & coupling_coeffs) const;
+  
   friend class spacetime_cluster_tree;  //!< enable the tree to access private
                                         //!< variables
 
@@ -323,9 +444,14 @@ class besthea::linear_algebra::pFMM_matrix
                  //!< \todo TODO check if necessary in the final code
                  
   sc _alpha; //!< Heat conductivity.
+  
+  bool _source_space_is_p0;  //!< True if spatial source space is p0.
+                            //!< \todo TODO: control more elegantly.
+  bool _target_space_is_p0;  //!< True if spatial target space is p0.
+                            //!< \todo TODO: control more elegantly.
                  
-  besthea::bem::spacetime_heat_kernel 
-    _heat_kernel; //!< Evaluator of the Heat Kernel
+//   besthea::bem::spacetime_heat_kernel 
+//     _heat_kernel; //!< Evaluator of the Heat Kernel
 };
 
 #endif /* INCLUDE_BESTHEA_PFMM_MATRIX_H_ */
