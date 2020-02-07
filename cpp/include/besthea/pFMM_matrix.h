@@ -94,6 +94,17 @@ class besthea::linear_algebra::pFMM_matrix
       _target_space_is_p0( true ) {
   }
   
+  /**
+   * Constructor.
+   * \param[in] spacetime_tree  Clustering of spacetime domain on which pFMM 
+   *                            matrix is build.
+   * \param[in] uniform 
+   * \param[in] temp_order  Interpolation order for temporal approximation.
+   * \param[in] spat_order  Expansion order for spatial Chebyshev approximation.
+   * \param[in] alpha Heat conductivity.
+   * \param[in] source_space_is_p0 True if source space ( trial space ) is p0.
+   * \param[in] target_space_is_p0 True if target space ( test space ) is p0. 
+   */
   pFMM_matrix( spacetime_tree_type * spacetime_tree, bool uniform, 
                slou temp_order, slou spat_order, sc alpha, 
                bool source_space_is_p0, bool target_space_is_p0 )
@@ -217,16 +228,36 @@ class besthea::linear_algebra::pFMM_matrix
    * @param[in] child_moment  Moment of the child which is passed up.
    * @param[in] level   Spatial level of the parent cluster.
    * @param[in] octant  Configuration of the space cluster of the child 
-   *                    relative to the parent ( 8 configurations )
+   *                    relative to the parent ( from 8 configurations )
    * @param[in,out] parent_moment  Result of m2m operation is added to it.
    */
   void apply_spatial_m2m( full_matrix_type const & child_moment, const lo level,
     const slou octant, full_matrix_type & parent_moment ) const;
 
+  /*!
+   * Applies the temporal l2l operation for a given local contribution of a 
+   * parent and adds the result to a childs local contribution.
+   * @param[in] parent_local  Local contribution of the parent which is passed
+   *                          down.
+   * @param[in] level   Temporal level of the parent cluster.
+   * @param[in] is_left_child True if the temporal cluster of the child is a
+   *                          left child.
+   * @param[in,out] child_local  Result of l2l operation is added to it.
+   */
   void apply_temporal_l2l( full_matrix_type const & parent_local,
     const lo level, const bool is_left_child,
     full_matrix_type & child_local ) const;
-  
+    
+  /*!
+   * Applies the spatial l2l operation for a given local contribution of a 
+   * parent and adds the result to a childs local contribution.
+   * @param[in] parent_local  Local contribution of the parent which is passed
+   *                          down.
+   * @param[in] level   Spatial level of the parent cluster.
+   * @param[in] octant  Configuration of the space cluster of the child 
+   *                    relative to the parent ( from 8 configurations )
+   * @param[in,out] child_local  Result of l2l operation is added to it.
+   */
   void apply_spatial_l2l( full_matrix_type const & parent_local, const lo level,
     const slou octant, full_matrix_type & child_local ) const;
   
@@ -295,6 +326,8 @@ class besthea::linear_algebra::pFMM_matrix
    *  ( ( _spat_order + 3 ) choose 3 ) entries for intermediate m2l results.
    * @param[in] aux_buffer_1  Matrix with ( _temp_order + 1 )^2 times 
    *  ( ( _spat_order + 3 ) choose 3 ) entries for intermediate m2l results.
+   * \todo Routine requires changes if source and target cluster are from
+   *       different cluster trees.
    */
   void apply_m2l_operation( spacetime_cluster * target_cluster, 
     spacetime_cluster * source_cluster, 

@@ -117,14 +117,17 @@ int main( int argc, char * argv[] ) {
 
   lo order_sing = 4;
   lo order_reg = 4;
+  lo temp_order = 2;
+  lo spat_order = 2;
 
-  pFMM_matrix * K = new pFMM_matrix( &tree, false, 5, 5, cauchy_data::_alpha,
-                                      false, true );
+  pFMM_matrix * K = new pFMM_matrix( &tree, false, temp_order, spat_order, 
+                                     cauchy_data::_alpha, false, true );
   tree.print( );
 
   spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
   fast_spacetime_be_assembler fast_assembler_k(
-    kernel_k, space_p0, space_p1, order_sing, order_reg, 2, 2, 1.5, false );
+    kernel_k, space_p0, space_p1, order_sing, order_reg, temp_order, 
+    spat_order, 1.5, false );
   t.reset( "K" );
   fast_assembler_k.assemble( *K );
   t.measure( );
@@ -151,16 +154,19 @@ int main( int argc, char * argv[] ) {
   neu_block.resize_blocks( neu_proj.get_size_of_block( ), true );
 
   M.apply( dir_proj, neu_block, false, 0.5, 0.0 );
+  std::cout << "applying K" << std::endl;
   K->apply( dir_proj, neu_block, false, 1.0, 1.0 );
+  std::cout << "applied K" << std::endl;
 
   delete K;
 
-  pFMM_matrix * V = new pFMM_matrix( &tree, false, 5, 5, cauchy_data::_alpha,
-                                      true, true );
+  pFMM_matrix * V = new pFMM_matrix( &tree, false, temp_order, 
+    spat_order, cauchy_data::_alpha, true, true );
 
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
   fast_spacetime_be_assembler fast_assembler_v(
-    kernel_v, space_p0, space_p0, order_sing, order_reg, 2, 2, 1.5, false );
+    kernel_v, space_p0, space_p0, order_sing, order_reg, temp_order, 
+    spat_order, 1.5, false );
   t.reset( "V" );
   fast_assembler_v.assemble( *V );
   t.measure( );

@@ -47,11 +47,12 @@ struct cauchy_data {
     return value;
   }
 
-  static constexpr sc _alpha{ 0.5 };
+  static constexpr sc _alpha{ 8 };
   static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
 };
 
 int main( int argc, char * argv[] ) {
+  lo test_case = 3;
   std::string file = "./mesh_files/cube_12.txt";
   int refine = 2;
   lo n_timesteps = 8;
@@ -90,6 +91,7 @@ int main( int argc, char * argv[] ) {
   lo order_sing = 4;
   lo order_reg = 4;
 
+  // V without approximation
   block_lower_triangular_toeplitz_matrix * V
     = new block_lower_triangular_toeplitz_matrix( );
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
@@ -105,46 +107,141 @@ int main( int argc, char * argv[] ) {
   besthea::bem::uniform_spacetime_be_identity M( space_p0, space_p0 );
   M.assemble( );
   block_vector M_dir_proj;
-  M_dir_proj.resize( V->get_block_dim( ) );
-  M_dir_proj.resize_blocks( V->get_n_rows( ) );
+  
+  lo n_blocks = V->get_block_dim( );
+  lo size_of_block = V->get_n_rows( );
+  
+  M_dir_proj.resize( n_blocks );
+  M_dir_proj.resize_blocks( size_of_block );
   M.apply( dir_proj, M_dir_proj );
 
+  // V approximated by pFMM
+  // sc st_coeff = 4.0;
+  sc st_coeff = 4.0;
+  lo temp_order = 8;
+  lo spat_order = 8;
+  spacetime_cluster_tree tree( spacetime_mesh, 5, 2, 10, st_coeff );
+  tree.print( );
+  fast_spacetime_be_space< basis_tri_p0 > space_p0_pFMM( tree );
+  pFMM_matrix * V_pFMM = new pFMM_matrix( &tree, false, temp_order, 
+    spat_order, cauchy_data::_alpha, true, true );
+
+  fast_spacetime_be_assembler fast_assembler_v(
+    kernel_v, space_p0_pFMM, space_p0_pFMM, order_sing, order_reg, temp_order, 
+    spat_order, 1.5, false );
+  // t.reset( "V" );
+  fast_assembler_v.assemble( *V_pFMM );
+  // t.measure( );
+
+  // t.reset( "Solving the system" );
+  
+if ( test_case == 1 ) {
+//   lo block_id = n_blocks - 1 - 2;
+  lo block_id = 0;
+  lo block_evaluation_id = 0;
+  lo toeplitz_id = block_evaluation_id - block_id;
+//   lo block_evaluation_id = n_blocks - 1;
+  
+  
+  full_matrix & V_block_loc = V->get_block( toeplitz_id );
+  vector y_loc( size_of_block );
+  vector x_loc_0( size_of_block );
+  x_loc_0(0) = 1.0;
+//   x_loc_0.fill( 1.0 );
+  V_block_loc.apply( x_loc_0, y_loc );
+
+  block_vector block_ones( n_blocks, size_of_block, true );
+  block_ones.get_block( block_id ) = x_loc_0;
+  block_vector applied_pFMM ( n_blocks, size_of_block, true );
+  V_pFMM->apply( block_ones, applied_pFMM );
+
+  std::cout << "resulting subblock pFMM multiplication" << std::endl;
+  std::cout << "block id " << block_id << std::endl;
+  vector & subvec_pFMM = applied_pFMM.get_block( block_evaluation_id );
+  subvec_pFMM.print_h( );
+  std::cout << "exact result block" << std::endl;
+  y_loc.print_h( );
+  std::cout << "error timewise"  << std::endl;
+  subvec_pFMM.add( y_loc , -1.0 );
+  std::cout << subvec_pFMM.norm( ) << ", rel. " 
+            << subvec_pFMM.norm( ) / y_loc.norm( ) << std::endl;
+}
+else if ( test_case == 2 ) {
+  std::cout << "comparison of multiplication with random vector" << std::endl;
+  for ( lo i = 0; i < n_blocks; ++ i ) {
+    M_dir_proj.get_block( i ).random_fill( 0.5, 1.5 );
+  }
+  std::cout << "applying V" << std::endl;
+  block_vector applied_std ( n_blocks, size_of_block, true );
+  V->apply( M_dir_proj, applied_std );
+  std::cout << "applying V_pFMM" << std::endl;
+  block_vector applied_pFMM ( n_blocks, size_of_block, true );
+  V_pFMM->apply( M_dir_proj, applied_pFMM );
+  std::cout << "error timewise"  << std::endl;
+  for ( lo i = 0; i < n_blocks; ++ i ) {
+    applied_pFMM.get_block( i ).add( applied_std.get_block( i ) , -1.0 );
+    std::cout << applied_pFMM.get_block( i ).norm( ) << ", rel. " 
+              << applied_pFMM.get_block( i ).norm( )
+                 / applied_std.get_block( i ).norm( ) << std::endl;
+  }
+}
+else if ( test_case == 3 ) {
   sc gmres_prec = 1e-8;
   lo gmres_iter = 500;
-  block_vector dens(
-    dir_proj.get_block_size( ), dir_proj.get_size_of_block( ) );
+  block_vector dens( n_blocks, size_of_block );
   V->mkl_fgmres_solve( M_dir_proj, dens, gmres_prec, gmres_iter, gmres_iter );
-
-  if ( !grid_file.empty( ) ) {
-    triangular_surface_mesh grid_space_mesh( grid_file );
-    grid_space_mesh.scale( 0.95 );
-    grid_space_mesh.refine( grid_refine );
-    uniform_spacetime_tensor_mesh grid_spacetime_mesh(
-      grid_space_mesh, end_time, spacetime_mesh.get_n_temporal_elements( ) );
-
-    block_vector repr;
-    besthea::bem::uniform_spacetime_be_evaluator evaluator_v(
-      kernel_v, space_p0 );
-    evaluator_v.evaluate( grid_space_mesh.get_nodes( ), dens, repr );
-
-    block_vector sol_interp;
-    uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > grid_space_p1(
-      grid_spacetime_mesh );
-    grid_space_p1.interpolation( cauchy_data::dirichlet, sol_interp );
-    std::cout << "Solution l2 relative error: "
-              << grid_space_p1.l2_relative_error( sol_interp, repr ) 
-              << std::endl;
+  std::cout << "iterations pFMM: " << gmres_iter << std::endl;
+  gmres_prec = 1e-8;
+  gmres_iter = 500;
+  block_vector dens_pFMM( n_blocks, size_of_block, true );
+  V_pFMM->mkl_fgmres_solve( M_dir_proj, dens_pFMM, gmres_prec, gmres_iter, 
+                        gmres_iter );
+  std::cout << "iterations pFMM: " << gmres_iter << std::endl;
+  
+  std::cout << "error timewise"  << std::endl;
+  for ( lo i = 0; i < n_blocks; ++ i ) {
+    dens_pFMM.get_block( i ).add( dens.get_block( i ) , -1.0 );
+    std::cout << dens_pFMM.get_block( i ).norm( ) << ", rel. " 
+              << dens_pFMM.get_block( i ).norm( )
+                 / dens.get_block( i ).norm( ) << std::endl;
+  }
+  
+//   if ( !grid_file.empty( ) ) {
+//     triangular_surface_mesh grid_space_mesh( grid_file );
+//     grid_space_mesh.scale( 0.95 );
+//     grid_space_mesh.refine( grid_refine );
+//     uniform_spacetime_tensor_mesh grid_spacetime_mesh(
+//       grid_space_mesh, end_time, spacetime_mesh.get_n_temporal_elements( ) );
+// 
+//     block_vector repr;
+//     block_vector repr_pFMM;
+//     besthea::bem::uniform_spacetime_be_evaluator evaluator_v(
+//       kernel_v, space_p0 );
+//     evaluator_v.evaluate( grid_space_mesh.get_nodes( ), dens, repr );
+//     evaluator_v.evaluate( grid_space_mesh.get_nodes( ), dens_pFMM, repr_pFMM );
+// 
+//     block_vector sol_interp;
+//     uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > grid_space_p1(
+//       grid_spacetime_mesh );
+//     grid_space_p1.interpolation( cauchy_data::dirichlet, sol_interp );
+//     std::cout << "Solution l2 relative error: "
+//               << grid_space_p1.l2_relative_error( sol_interp, repr ) 
+//               << std::endl;
+//     std::cout << "Solution l2 relative error pFMM: "
+//               << grid_space_p1.l2_relative_error( sol_interp, repr_pFMM ) 
+//               << std::endl;
 
     // print the result in the Ensight format
-    std::vector< std::string > grid_node_labels{ "Temperature_interpolation",
-      "Temperature_result" };
-    std::vector< block_vector * > grid_node_data{ &sol_interp, &repr };
-    std::string ensight_grid_dir = "ensight_grid";
-    std::filesystem::create_directory( ensight_grid_dir );
-    grid_spacetime_mesh.print_ensight_case(
-      ensight_grid_dir, &grid_node_labels );
-    grid_spacetime_mesh.print_ensight_geometry( ensight_grid_dir );
-    grid_spacetime_mesh.print_ensight_datafiles(
-      ensight_grid_dir, &grid_node_labels, &grid_node_data, nullptr, nullptr );
+    // std::vector< std::string > grid_node_labels{ "Temperature_interpolation",
+    //   "Temperature_result" };
+    // std::vector< block_vector * > grid_node_data{ &sol_interp, &repr };
+    // std::string ensight_grid_dir = "ensight_grid";
+    // std::filesystem::create_directory( ensight_grid_dir );
+    // grid_spacetime_mesh.print_ensight_case(
+    //   ensight_grid_dir, &grid_node_labels );
+    // grid_spacetime_mesh.print_ensight_geometry( ensight_grid_dir );
+    // grid_spacetime_mesh.print_ensight_datafiles(
+    //   ensight_grid_dir, &grid_node_labels, &grid_node_data, nullptr, nullptr );
+//   }
   }
 }

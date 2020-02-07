@@ -37,12 +37,13 @@
 #include "besthea/timer.h"
 
 #include <vector>
+#include <set>
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::fast_spacetime_be_assembler( kernel_type & kernel,
   test_space_type & test_space, trial_space_type & trial_space,
-  int order_singular, int order_regular, int spat_order, int temp_order,
+  int order_singular, int order_regular, int temp_order, int spat_order,
   sc cutoff_param, bool uniform )
   : _kernel( &kernel ),
     _test_space( &test_space ),
@@ -51,8 +52,8 @@ besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
     _order_regular( order_regular ),
     _cutoff_param( cutoff_param ),
     _uniform( uniform ),
-    _spat_order( spat_order ),
     _temp_order( temp_order ),
+    _spat_order( spat_order ),
     _lagrange( temp_order ),
     _chebyshev( spat_order ) {
   lo levels = _test_space->get_tree( )->get_space_tree( )->get_levels( );
@@ -87,8 +88,10 @@ bool besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   sc dist = ( test_c[ 0 ] - trial_c[ 0 ] ) * ( test_c[ 0 ] - trial_c[ 0 ] )
     + ( test_c[ 1 ] - trial_c[ 1 ] ) * ( test_c[ 1 ] - trial_c[ 1 ] )
     + ( test_c[ 2 ] - trial_c[ 2 ] ) * ( test_c[ 2 ] - trial_c[ 2 ] );
-  return dist <= _cutoff_param * _space_cluster_size * _cutoff_param
-    * _space_cluster_size;
+  // TODO: criterion turned off for debugging reasons
+//   return dist <= _cutoff_param * _space_cluster_size * _cutoff_param
+//     * _space_cluster_size;
+  return true;
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -130,24 +133,40 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   lo n_columns = trial_basis.dimension_global( );
 
   global_matrix.resize( n_timesteps, n_rows, n_columns );
-
-  std::vector< time_cluster_type * > & time_leaves
-    = _test_space->get_tree( )->get_time_cluster_tree( )->get_leaves( );
-
-  compute_required_chebyshev_quadratures( );
   
-  // Check if lagrange quadrature has already been set and set it if not.
+  std::vector< spacetime_cluster_type * > spacetime_leaves = 
+    _test_space->get_tree( )->get_leaves( );
+  // find all space cluster and time clusters which are part of a spacetime 
+  // leaf cluster and store them ( each only once ) in sets
+  std::set< time_cluster_type * > time_clusters_spacetime_leaves;
+  std::set< space_cluster_type * > space_clusters_spacetime_leaves;
+  for ( auto it = spacetime_leaves.begin( ); it != spacetime_leaves.end( );
+        ++it ) {
+    time_clusters_spacetime_leaves.insert( &( ( *it )->get_time_cluster( ) ) );
+    space_clusters_spacetime_leaves.insert( &( ( *it )->
+                                                  get_space_cluster( ) ) );
+  }
+  // Check if lagrange quadratures have already been set and set them if not.
   // WARNING: Only the number of rows of the lagrange quadrature of the first
   //          temporal cluster is checked.
-  if ( ( time_leaves.size( ) > 0 ) &&  
-    time_leaves[ 0 ]->get_lagrange_quad( ).get_n_rows( ) != _temp_order + 1 ) {
-    for ( auto it = time_leaves.begin( ); it != time_leaves.end( ); ++it ) {
+  // ATTENTION: THIS IS WRONG FOR _temp_order == 0 
+//   if ( ( time_clusters_spacetime_leaves.size( ) > 0 ) &&  
+//        ( (* time_clusters_spacetime_leaves.begin( ) )->get_lagrange_quad( ).
+//               get_n_rows( ) != _temp_order + 1 ) ) {
+  // ATTENTION: in the below version it is not checked if the quadratures have
+  //            been computed
+  if ( time_clusters_spacetime_leaves.size( ) > 0 ) {
+    for ( auto it = time_clusters_spacetime_leaves.begin( ); 
+            it != time_clusters_spacetime_leaves.end( ); ++it ) {
       compute_lagrange_quadrature( *it );
     }
   }
+  compute_required_chebyshev_quadratures( space_clusters_spacetime_leaves );
 
   global_matrix.compute_spatial_m2m_coeffs( );
   global_matrix.compute_temporal_m2m_matrices( );
+  
+  initialize_moment_and_local_contributions( );
 
   if ( !_uniform ) {
     assemble_nearfield( global_matrix );
@@ -903,6 +922,8 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
   lo size = my_quadrature._wy_cheb.size( );
 
+  // x1, x2, x3 are vectors in R^3,
+  // y%_mapped are the %th components of the vectors to which y#_ref is mapped 
 #pragma omp simd aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref \
                           : DATA_ALIGN ) simdlen( DATA_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
@@ -1190,25 +1211,32 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
-  trial_space_type >::compute_required_chebyshev_quadratures( ) const {
+  trial_space_type >::compute_required_chebyshev_quadratures( 
+    std::set< space_cluster_type * > & space_clusters_spacetime_leaves ) const {
 }
   
 
 template<>
 void besthea::bem::fast_spacetime_be_assembler<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  compute_required_chebyshev_quadratures( ) const {
+  compute_required_chebyshev_quadratures( 
+    std::set< space_cluster_type * > & space_clusters_spacetime_leaves ) const {
   // Compute only Chebyshev quadratures (not their derivatives) only if they
   // have not been computed yet.
-  std::vector< space_cluster_type * > & space_leaves
-    = _test_space->get_tree( )->get_space_cluster_tree( )->get_leaves( );
-  if ( ( space_leaves.size( ) > 0 ) && 
-    ( space_leaves[ 0 ]->get_chebyshev_quad( ).get_n_columns( ) != 
-    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 ) )
+  // WARNING: Only the number of columns of the Chebyshev quadrature of the 
+  //          first spatial cluster is checked.
+//   if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) && 
+//     ( ( *space_clusters_spacetime_leaves.begin( ) )->get_chebyshev_quad( ).
+//               get_n_columns( ) != 
+//     ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 ) )
+  // ATTENTION: in the below version it is not checked if the quadratures have
+  //            been computed
+  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) )
   {
-    for ( auto it = space_leaves.begin( ); it != space_leaves.end( ); ++it ) {
+    for ( auto it = space_clusters_spacetime_leaves.begin( ); 
+          it != space_clusters_spacetime_leaves.end( ); ++it ) {
       compute_chebyshev_quadrature( *it );
     }
   }
@@ -1219,24 +1247,38 @@ void besthea::bem::fast_spacetime_be_assembler<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
-  compute_required_chebyshev_quadratures( ) const {
+  compute_required_chebyshev_quadratures( 
+    std::set< space_cluster_type * > & space_clusters_spacetime_leaves ) const {
   // Compute quadratures of the Chebyshev polynomials and their derivatives in
   // case that they do not have been computed yet.
-  std::vector< space_cluster_type * > & space_leaves
-    = _test_space->get_tree( )->get_space_cluster_tree( )->get_leaves( );
-  if ( ( space_leaves.size( ) > 0 ) && 
-    ( space_leaves[ 0 ]->get_chebyshev_quad( ).get_n_columns( ) != 
-    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 ) )
+  // WARNING: Only the number of columns of the quadratures of the 
+  //          first spatial cluster is checked.
+//  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) && 
+//    ( ( *space_clusters_spacetime_leaves.begin( ) )->get_chebyshev_quad( ).
+//              get_n_columns( ) != 
+//    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 ) )
+  // ATTENTION: in the below version it is not checked if the quadratures have
+  //            been computed
+  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) )
   {
-    for ( auto it = space_leaves.begin( ); it != space_leaves.end( ); ++it ) {
+    for ( auto it = space_clusters_spacetime_leaves.begin( ); 
+          it != space_clusters_spacetime_leaves.end( ); ++it ) {
       compute_chebyshev_quadrature( *it );
     }
   }
-  if ( ( space_leaves.size( ) > 0 ) && 
-    ( space_leaves[ 0 ]->get_normal_drv_chebyshev_quad( ).get_n_columns( ) != 
-    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 ) ) 
+//  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) && 
+//    ( ( *space_clusters_spacetime_leaves.begin( ) )->
+//          get_normal_drv_chebyshev_quad( ).get_n_columns( ) != 
+//    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 ) )
+  // ATTENTION: in the below version it is not checked if the quadratures have
+  //            been computed
+  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) )
   {
-    for ( auto it = space_leaves.begin( ); it != space_leaves.end( ); ++it ) {
+    for ( auto it = space_clusters_spacetime_leaves.begin( ); 
+          it != space_clusters_spacetime_leaves.end( ); ++it ) {
+      // update the node mappings (needed for non-leaf space clusters)
+//       TODO: should this be done here, or somewhere else in the code?
+      ( *it )->compute_node_mapping( );
       compute_normal_drv_chebyshev_quadrature( *it );
     }
   }
@@ -1247,24 +1289,38 @@ void besthea::bem::fast_spacetime_be_assembler<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  compute_required_chebyshev_quadratures( ) const {
+  compute_required_chebyshev_quadratures( 
+    std::set< space_cluster_type * > & space_clusters_spacetime_leaves ) const {
   // Compute quadratures of the Chebyshev polynomials and their derivatives in
   // case that they do not have been computed yet.
-  std::vector< space_cluster_type * > & space_leaves
-    = _test_space->get_tree( )->get_space_cluster_tree( )->get_leaves( );
-  if ( ( space_leaves.size( ) > 0 ) && 
-    ( space_leaves[ 0 ]->get_chebyshev_quad( ).get_n_columns( ) != 
-    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 ) )
+  // WARNING: Only the number of columns of the quadratures of the 
+  //          first spatial cluster is checked.
+//  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) && 
+//    ( ( *space_clusters_spacetime_leaves.begin( ) )->get_chebyshev_quad( ).
+//              get_n_columns( ) != 
+//    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 ) )
+  // ATTENTION: in the below version it is not checked if the quadratures have
+  //            been computed
+  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) )
   {
-    for ( auto it = space_leaves.begin( ); it != space_leaves.end( ); ++it ) {
+    for ( auto it = space_clusters_spacetime_leaves.begin( ); 
+          it != space_clusters_spacetime_leaves.end( ); ++it ) {
       compute_chebyshev_quadrature( *it );
     }
   }
-  if ( ( space_leaves.size( ) > 0 ) && 
-    ( space_leaves[ 0 ]->get_normal_drv_chebyshev_quad( ).get_n_columns( ) != 
-    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 ) ) 
+//  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) && 
+//    ( ( *space_clusters_spacetime_leaves.begin( ) )->
+//          get_normal_drv_chebyshev_quad( ).get_n_columns( ) != 
+//    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 ) )
+  // ATTENTION: in the below version it is not checked if the quadratures have
+  //            been computed
+  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) )
   {
-    for ( auto it = space_leaves.begin( ); it != space_leaves.end( ); ++it ) {
+    for ( auto it = space_clusters_spacetime_leaves.begin( ); 
+          it != space_clusters_spacetime_leaves.end( ); ++it ) {
+      // update the node mappings (needed for non-leaf space clusters)
+//       TODO: should this be done here, or somewhere else in the code?
+      ( *it )->compute_node_mapping( );
       compute_normal_drv_chebyshev_quadrature( *it );
     }
   }
@@ -1321,6 +1377,7 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
     _chebyshev.evaluate( my_quadrature._y1_polynomial, cheb_dim_0 );
     _chebyshev.evaluate( my_quadrature._y2_polynomial, cheb_dim_1 );
     _chebyshev.evaluate( my_quadrature._y3_polynomial, cheb_dim_2 );
+        
     lo current_index = 0;
     for ( lo beta0 = 0; beta0 <= _spat_order; ++beta0 ) {
       for ( lo beta1 = 0; beta1 <= _spat_order - beta0; ++beta1 ) {
@@ -1451,6 +1508,21 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
       }
     }
   }
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::initialize_moment_and_local_contributions( ) const {
+  lo n_rows_contribution = _temp_order + 1;
+  lo n_columns_contribution = 
+    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6;
+    
+  _trial_space->get_tree( )->initialize_moment_contributions( 
+    _trial_space->get_tree( )->get_root( ), n_rows_contribution, 
+    n_columns_contribution );
+  _test_space->get_tree( )->initialize_local_contributions( 
+    _test_space->get_tree( )->get_root( ), n_rows_contribution, 
+    n_columns_contribution );
 }
 
 template class besthea::bem::fast_spacetime_be_assembler<

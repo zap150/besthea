@@ -170,22 +170,46 @@ class besthea::mesh::spacetime_cluster {
   
   /**
    * Initialize local contribution as full matrix of zeros.
-   * @param[in] temp_order Number of rows.
-   * @param[in] spat_order Number of columns.
+   * @param[in] n_rows_contribution Number of rows.
+   * @param[in] n_columns_contribution Number of columns.
+   * \note If the contributions are set already, then they are resized and
+   * reset to zero.
+   * \todo Is resizing of a full matrix allocated with new safe?
    */
-  void set_local_contribution( lo temp_order, lo spat_order ) {
-    if ( _local_contribution == nullptr )
-      _local_contribution = new full_matrix_type( temp_order, spat_order );
+  void set_local_contribution( lo n_rows_contribution, 
+                               lo n_columns_contribution ) {
+    if ( _local_contribution == nullptr ) {
+      _local_contribution = new full_matrix_type( n_rows_contribution, 
+                                                  n_columns_contribution );
+    }
+    else {
+//       TODO: see comment above
+      _local_contribution->resize( n_rows_contribution, 
+                                   n_columns_contribution );
+      _local_contribution->fill( 0.0 );
+    }
   }
   
   /**
    * Initialize moment contribution as full matrix of zeros.
-   * @param[in] temp_order Number of rows.
-   * @param[in] spat_order Number of columns.
+   * @param[in] n_rows_contribution Number of rows.
+   * @param[in] n_columns_contribution Number of columns.
+   * \note If the contributions are set already, then they are resized and
+   * reset to zero.
+   * \todo Is resizing of a full matrix allocated with new safe?
    */
-  void set_moment_contribution( lo temp_order, lo spat_order ) {
-    if ( _moment_contribution == nullptr )
-      _moment_contribution = new full_matrix_type( temp_order, spat_order );
+  void set_moment_contribution( lo n_rows_contribution, 
+                                lo n_columns_contribution ) {
+    if ( _moment_contribution == nullptr ) {
+      _moment_contribution = new full_matrix_type( n_rows_contribution, 
+                                                   n_columns_contribution );
+    }
+    else {
+//       TODO: see comment above
+      _moment_contribution->resize( n_rows_contribution, 
+                                    n_columns_contribution );
+      _moment_contribution->fill( 0.0 );
+    }
   }
   
   /**
@@ -215,6 +239,13 @@ class besthea::mesh::spacetime_cluster {
   void print( ) {
     std::cout << _level << ", space: " << _spatial_cluster.get_level( ) 
               << " time: " << _temporal_cluster.get_level( ) << std::endl;
+    besthea::linear_algebra::vector spat_center( 3, false );
+    _spatial_cluster.get_center( spat_center );
+    sc temp_center = _temporal_cluster.get_center( );
+    std::cout << "spatial center: (" << spat_center[ 0 ] << ", "
+              << spat_center[ 1] << ", " << spat_center[ 2 ] << ")" 
+              << std::endl;
+    std::cout << "temporal center: " << temp_center << std::endl;
   }
 
  private:

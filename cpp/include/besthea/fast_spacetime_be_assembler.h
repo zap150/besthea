@@ -49,6 +49,7 @@
 
 #include <omp.h>
 #include <vector>
+#include <set>
 
 namespace besthea {
   namespace bem {
@@ -155,8 +156,8 @@ class besthea::bem::fast_spacetime_be_assembler {
    */
   fast_spacetime_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
-    int order_singular = 4, int order_regular = 4, int spat_order = 5,
-    int temp_order = 5, sc cutoff_param = 3.0, bool uniform = false );
+    int order_singular = 4, int order_regular = 4, int temp_order = 5,
+    int spat_order = 5, sc cutoff_param = 3.0, bool uniform = false );
 
   fast_spacetime_be_assembler( const fast_spacetime_be_assembler & that )
     = delete;
@@ -408,8 +409,10 @@ class besthea::bem::fast_spacetime_be_assembler {
    * \warning Only the number of columns of the Chebyshev quadrature (or its 
    *          derivative ) of the first spatial leaf cluster is checked to see
    *          if the quadratures have been computed.
+   * \todo change documentation
    */
-  void compute_required_chebyshev_quadratures( ) const;
+  void compute_required_chebyshev_quadratures(
+    std::set< space_cluster_type * > & space_clusters_spacetime_leaves ) const;
     
   /**
    * Compute quadrature of the Chebyshev polynomials for a space cluster.
@@ -426,6 +429,11 @@ class besthea::bem::fast_spacetime_be_assembler {
    */
   void compute_normal_drv_chebyshev_quadrature( 
     space_cluster_type * cluster ) const;
+ 
+ /**
+   * \todo do documentation
+   */  
+  void initialize_moment_and_local_contributions( ) const;
 
   kernel_type * _kernel;            //!< Kernel temporal antiderivative.
   test_space_type * _test_space;    //!< Boundary element test space.
@@ -446,11 +454,10 @@ class besthea::bem::fast_spacetime_be_assembler {
   std::vector< std::pair< lo, lo > >
     _nonzeros;  //!< indices of spatial element contributing to the nonzero
                 //!< pattern of the spatial matrices
-
-  int _spat_order;  //!< degree of Chebyshev polynomials for expansion in
-                    //!< space in pFMM
   int _temp_order;  //!< degree of Lagrange interpolation polynomials in time
                     //!< for pFMM
+  int _spat_order;  //!< degree of Chebyshev polynomials for expansion in
+                    //!< space in pFMM
   mutable bem::lagrange_interpolant
     _lagrange;  //!< Evaluator of the Lagrange polynomials.
   mutable bem::chebyshev_evaluator

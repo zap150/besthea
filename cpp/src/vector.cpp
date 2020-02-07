@@ -61,6 +61,13 @@ void besthea::linear_algebra::vector::print( std::ostream & stream ) const {
   stream << std::endl;
 }
 
+void besthea::linear_algebra::vector::print_h( std::ostream & stream ) const {
+  for ( lo i = 0; i < _size; ++i ) {
+    stream << _data[ i ] << " ";
+  }
+  stream << std::endl;
+}
+
 void besthea::linear_algebra::vector::random_fill( sc lower, sc upper ) {
   std::random_device rd;
   std::mt19937 gen( rd( ) );

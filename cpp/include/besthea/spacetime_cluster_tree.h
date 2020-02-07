@@ -173,6 +173,12 @@ class besthea::mesh::spacetime_cluster_tree {
     return _leaves;
   }
   
+  void initialize_moment_contributions( spacetime_cluster * root, 
+    lo & n_rows_contribution, lo & n_columns_contribution );
+  
+  void initialize_local_contributions( spacetime_cluster * root,
+    lo & n_rows_contribution, lo & n_columns_contribution );
+  
   /**
    * Recursively fills the interaction lists of clusters starting at root.
    * \param[in] root  Starting cluster for the recursion.
@@ -232,7 +238,7 @@ class besthea::mesh::spacetime_cluster_tree {
 //       }
 //     }
   
-    std::cout << "root levels: " << std::endl;
+    std::cout << "root levels: ";
     root->print( );
     std::vector< spacetime_cluster * > * children = root->get_children( );
     std::vector< spacetime_cluster * > * interaction_list = root->

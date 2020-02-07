@@ -195,6 +195,34 @@ void besthea::mesh::spacetime_cluster_tree::collect_leaves(
   }
 }
 
+void besthea::mesh::spacetime_cluster_tree::initialize_moment_contributions( 
+  spacetime_cluster * root, lo & n_rows_contribution, 
+  lo & n_columns_contribution ) {
+  root->set_moment_contribution( n_rows_contribution, 
+                                  n_columns_contribution );
+  if ( root->get_n_children( ) > 0 ) {
+    std::vector< spacetime_cluster * > * children = root->get_children( );
+    for ( auto it = children->begin( ); it != children->end( ); ++it ) {
+      initialize_moment_contributions( *it, n_rows_contribution, 
+                                        n_columns_contribution );
+    }
+  }
+}
+
+void besthea::mesh::spacetime_cluster_tree::initialize_local_contributions( 
+  spacetime_cluster * root, lo & n_rows_contribution, 
+  lo & n_columns_contribution ) {
+  root->set_local_contribution( n_rows_contribution, 
+                                n_columns_contribution );
+  if ( root->get_n_children( ) > 0 ) {
+    std::vector< spacetime_cluster * > * children = root->get_children( );
+    for ( auto it = children->begin( ); it != children->end( ); ++it ) {
+      initialize_local_contributions( *it, n_rows_contribution, 
+                                        n_columns_contribution );
+    }
+  }
+}
+
 void besthea::mesh::spacetime_cluster_tree::determine_interactions ( 
   spacetime_cluster & root ) {
   space_cluster & root_space_cluster = root.get_space_cluster( );
