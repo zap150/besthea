@@ -177,7 +177,12 @@ class besthea::mesh::spacetime_cluster_tree {
     lo & n_rows_contribution, lo & n_columns_contribution );
   
   void initialize_local_contributions( spacetime_cluster * root,
-    lo & n_rows_contribution, lo & n_columns_contribution );
+    const lo & n_rows_contribution, const lo & n_columns_contribution );
+  
+  void clean_local_contributions( spacetime_cluster * root );
+  
+  void clean_moment_contributions( spacetime_cluster * root );
+  
   
   /**
    * Recursively fills the interaction lists of clusters starting at root.

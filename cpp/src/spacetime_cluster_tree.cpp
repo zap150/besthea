@@ -223,6 +223,28 @@ void besthea::mesh::spacetime_cluster_tree::initialize_local_contributions(
   }
 }
 
+void besthea::mesh::spacetime_cluster_tree::clean_local_contributions( 
+  spacetime_cluster * root ) {
+  root->clean_local_contribution( );
+  if ( root->get_n_children( ) > 0 ) {
+    std::vector< spacetime_cluster * > * children = root->get_children( );
+    for ( auto it = children->begin( ); it != children->end( ); ++it ) {
+      clean_local_contributions( *it );
+    }
+  }
+}
+
+void besthea::mesh::spacetime_cluster_tree::clean_moment_contributions( 
+  spacetime_cluster * root ) {
+  root->clean_moment_contribution( );
+  if ( root->get_n_children( ) > 0 ) {
+    std::vector< spacetime_cluster * > * children = root->get_children( );
+    for ( auto it = children->begin( ); it != children->end( ); ++it ) {
+      clean_moment_contributions( *it );
+    }
+  }
+}
+
 void besthea::mesh::spacetime_cluster_tree::determine_interactions ( 
   spacetime_cluster & root ) {
   space_cluster & root_space_cluster = root.get_space_cluster( );

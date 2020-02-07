@@ -71,13 +71,15 @@ class besthea::bem::chebyshev_evaluator {
     // initialize values to 1;
     const lo sz = eval_points.size( );
     for ( lo i = 0; i < sz; ++i ) all_values[ i ] = 1.0;
-    for ( lo i = 0; i < sz; ++i ) all_values[ sz + i ] = eval_points[ i ];
-    for ( lo j = 2; j <= _order; ++j )
-      for ( lo i = 0; i < sz; ++i ) {
-        all_values[ j * sz + i ]
-          = 2 * eval_points[ i ] * all_values[ ( j - 1 ) * sz + i ];
-        all_values[ j * sz + i ] -= all_values[ ( j - 2 ) * sz + i ];
-      }
+    if ( _order > 0 ) {
+      for ( lo i = 0; i < sz; ++i ) all_values[ sz + i ] = eval_points[ i ];
+      for ( lo j = 2; j <= _order; ++j )
+        for ( lo i = 0; i < sz; ++i ) {
+          all_values[ j * sz + i ]
+            = 2 * eval_points[ i ] * all_values[ ( j - 1 ) * sz + i ];
+          all_values[ j * sz + i ] -= all_values[ ( j - 2 ) * sz + i ];
+        }
+    }
   }
   
   /**

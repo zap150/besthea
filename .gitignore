@@ -22,3 +22,5 @@
 notes/integration/integration.pdf
 notes/handwritten/
 notes/20_tausch/
+*.mat
+*.tmp

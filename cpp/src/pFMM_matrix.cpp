@@ -89,6 +89,10 @@ void besthea::linear_algebra::pFMM_matrix::apply( const block_vector_type & x,
       }
     }
   }
+  // reset all moment and local contributions to zero
+  _spacetime_tree->clean_local_contributions( _spacetime_tree->get_root( ) );
+  _spacetime_tree->clean_moment_contributions( _spacetime_tree->get_root( ) );
+
   // Next, use the pFMM for the computation of the farfield contribution 
   // according to the respective spaces. The result is stored in an auxiliary
   // vector y_pFMM and then added to y

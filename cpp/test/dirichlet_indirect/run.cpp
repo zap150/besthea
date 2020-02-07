@@ -47,7 +47,7 @@ struct cauchy_data {
     return value;
   }
 
-  static constexpr sc _alpha{ 8 };
+  static constexpr sc _alpha{ 0.5 };
   static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
 };
 
@@ -117,9 +117,9 @@ int main( int argc, char * argv[] ) {
 
   // V approximated by pFMM
   // sc st_coeff = 4.0;
-  sc st_coeff = 4.0;
-  lo temp_order = 8;
-  lo spat_order = 8;
+  sc st_coeff = 1.0;
+  lo temp_order = 6;
+  lo spat_order = 6;
   spacetime_cluster_tree tree( spacetime_mesh, 5, 2, 10, st_coeff );
   tree.print( );
   fast_spacetime_be_space< basis_tri_p0 > space_p0_pFMM( tree );
@@ -138,7 +138,7 @@ int main( int argc, char * argv[] ) {
 if ( test_case == 1 ) {
 //   lo block_id = n_blocks - 1 - 2;
   lo block_id = 0;
-  lo block_evaluation_id = 0;
+  lo block_evaluation_id = 4;
   lo toeplitz_id = block_evaluation_id - block_id;
 //   lo block_evaluation_id = n_blocks - 1;
   
@@ -206,32 +206,32 @@ else if ( test_case == 3 ) {
                  / dens.get_block( i ).norm( ) << std::endl;
   }
   
-//   if ( !grid_file.empty( ) ) {
-//     triangular_surface_mesh grid_space_mesh( grid_file );
-//     grid_space_mesh.scale( 0.95 );
-//     grid_space_mesh.refine( grid_refine );
-//     uniform_spacetime_tensor_mesh grid_spacetime_mesh(
-//       grid_space_mesh, end_time, spacetime_mesh.get_n_temporal_elements( ) );
-// 
-//     block_vector repr;
-//     block_vector repr_pFMM;
-//     besthea::bem::uniform_spacetime_be_evaluator evaluator_v(
-//       kernel_v, space_p0 );
-//     evaluator_v.evaluate( grid_space_mesh.get_nodes( ), dens, repr );
-//     evaluator_v.evaluate( grid_space_mesh.get_nodes( ), dens_pFMM, repr_pFMM );
-// 
-//     block_vector sol_interp;
-//     uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > grid_space_p1(
-//       grid_spacetime_mesh );
-//     grid_space_p1.interpolation( cauchy_data::dirichlet, sol_interp );
-//     std::cout << "Solution l2 relative error: "
-//               << grid_space_p1.l2_relative_error( sol_interp, repr ) 
-//               << std::endl;
-//     std::cout << "Solution l2 relative error pFMM: "
-//               << grid_space_p1.l2_relative_error( sol_interp, repr_pFMM ) 
-//               << std::endl;
+  if ( !grid_file.empty( ) ) {
+    triangular_surface_mesh grid_space_mesh( grid_file );
+    grid_space_mesh.scale( 0.95 );
+    grid_space_mesh.refine( grid_refine );
+    uniform_spacetime_tensor_mesh grid_spacetime_mesh(
+      grid_space_mesh, end_time, spacetime_mesh.get_n_temporal_elements( ) );
 
-    // print the result in the Ensight format
+    block_vector repr;
+    block_vector repr_pFMM;
+    besthea::bem::uniform_spacetime_be_evaluator evaluator_v(
+      kernel_v, space_p0 );
+    evaluator_v.evaluate( grid_space_mesh.get_nodes( ), dens, repr );
+    evaluator_v.evaluate( grid_space_mesh.get_nodes( ), dens_pFMM, repr_pFMM );
+
+    block_vector sol_interp;
+    uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > grid_space_p1(
+      grid_spacetime_mesh );
+    grid_space_p1.interpolation( cauchy_data::dirichlet, sol_interp );
+    std::cout << "Solution l2 relative error: "
+              << grid_space_p1.l2_relative_error( sol_interp, repr ) 
+              << std::endl;
+    std::cout << "Solution l2 relative error pFMM: "
+              << grid_space_p1.l2_relative_error( sol_interp, repr_pFMM ) 
+              << std::endl;
+
+    // // print the result in the Ensight format
     // std::vector< std::string > grid_node_labels{ "Temperature_interpolation",
     //   "Temperature_result" };
     // std::vector< block_vector * > grid_node_data{ &sol_interp, &repr };

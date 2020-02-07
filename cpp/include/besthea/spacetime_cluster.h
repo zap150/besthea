@@ -189,6 +189,15 @@ class besthea::mesh::spacetime_cluster {
       _local_contribution->fill( 0.0 );
     }
   }
+
+  /**
+   * Resets local contribution to zero.
+   */
+  void clean_local_contribution( ) {
+    if ( _local_contribution != nullptr ) {
+      _local_contribution->fill( 0.0 );
+    }
+  }
   
   /**
    * Initialize moment contribution as full matrix of zeros.
@@ -208,6 +217,15 @@ class besthea::mesh::spacetime_cluster {
 //       TODO: see comment above
       _moment_contribution->resize( n_rows_contribution, 
                                     n_columns_contribution );
+      _moment_contribution->fill( 0.0 );
+    }
+  }
+
+  /**
+   * Resets moment contribution to zero.
+   */
+  void clean_moment_contribution( ) {
+    if ( _moment_contribution != nullptr ) {
       _moment_contribution->fill( 0.0 );
     }
   }
