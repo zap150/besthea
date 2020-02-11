@@ -793,7 +793,7 @@ void besthea::linear_algebra::pFMM_matrix::apply_s2m_operations_p1(
     lo n_space_nodes = ( *it )->get_space_cluster( ).get_n_nodes( );
     const std::vector< lo > & local_2_global_nodes = 
       ( *it )->get_space_cluster( ).get_local_2_global_nodes( );
-    lo n_time_elements = (*it)->get_time_cluster( ).get_n_elements( );
+    lo n_time_elements = ( *it )->get_time_cluster( ).get_n_elements( );
     const std::vector< lo > & time_elements = 
       ( *it )->get_time_cluster( ).get_all_elements( );
     sources.resize( n_time_elements, n_space_nodes );

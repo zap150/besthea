@@ -113,7 +113,6 @@ class besthea::linear_algebra::pFMM_matrix
       _chebyshev( _spat_order ), _alpha( alpha ),
       _source_space_is_p0( source_space_is_p0 ), 
       _target_space_is_p0( target_space_is_p0 ) {
-//         , _heat_kernel( _alpha ) {
   }
 
   pFMM_matrix( const pFMM_matrix & that ) = delete;

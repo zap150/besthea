@@ -174,7 +174,7 @@ class besthea::mesh::spacetime_cluster_tree {
   }
   
   void initialize_moment_contributions( spacetime_cluster * root, 
-    lo & n_rows_contribution, lo & n_columns_contribution );
+    const lo & n_rows_contribution, const lo & n_columns_contribution );
   
   void initialize_local_contributions( spacetime_cluster * root,
     const lo & n_rows_contribution, const lo & n_columns_contribution );
