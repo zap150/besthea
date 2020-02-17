@@ -35,7 +35,7 @@
 besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
   const spacetime_tensor_mesh & spacetime_mesh, lo time_levels,
   lo n_min_time_elems, lo n_min_space_elems, sc st_coeff )
-  : _spacetime_mesh( spacetime_mesh ),
+  : _levels( 0 ), _spacetime_mesh( spacetime_mesh ),
     _space_mesh( *( spacetime_mesh.get_spatial_surface_mesh( ) ) ),
     _time_mesh( *( spacetime_mesh.get_temporal_mesh( ) ) ),
     _s_t_coeff( st_coeff ) {
@@ -102,6 +102,7 @@ besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
 
   // determine whether the individual roots are split in the first step of the
   // building of the cluster tree (guarantees levels as in Messner's work)
+  // TODO: discuss if this should be kept in the final code (somehow haphazard)
   bool split_space = false;
   if ( ( _start_temporal_level == 0 ) && ( n_t_levels % 2 ) ) {
     split_space = true;
@@ -165,7 +166,13 @@ void besthea::mesh::spacetime_cluster_tree::build_tree(
         build_tree( cluster, level + 1, split_space_descendant );
       }
     }
+  } else {
+    // Root is a leaf. Update the number of levels if necessary.
+    if ( level  > _levels ) {
+      _levels = level;
+    } 
   }
+  // delete space children, if they have been allocated in this routine
   if ( ( split_space_descendant ) || ( level < _start_temporal_level ) ) {
     delete space_children;
   }
@@ -175,8 +182,13 @@ void besthea::mesh::spacetime_cluster_tree::get_space_clusters_on_level(
   space_cluster * root, lo level, std::vector< space_cluster * > & clusters ) {
   if ( root->get_level( ) < level ) {
     std::vector< space_cluster * > * children = root->get_children( );
-    for ( auto it = children->begin( ); it != children->end( ); ++it ) {
-      get_space_clusters_on_level( *it, level, clusters );
+    if ( children == nullptr ) {
+      // early spatial leaf is added to the cluster tree
+      clusters.push_back( root );
+    } else {
+      for ( auto it = children->begin( ); it != children->end( ); ++it ) {
+        get_space_clusters_on_level( *it, level, clusters );
+      }
     }
   } else {
     clusters.push_back( root );

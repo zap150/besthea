@@ -96,12 +96,18 @@ class besthea::mesh::spacetime_cluster_tree {
     return _space_tree;
   }
 
-   /**
-    * Prints levels of the tree.
-    */
-   void print( ) {
-     print_internal( _root );
-   }
+  /**
+   * Prints levels of the tree.
+   */
+  void print( ) {
+    print_internal( _root );
+    std::cout << "number of levels of spacetime tree " << _levels
+              << std::endl;
+    std::cout << "number of levels of space tree " << _space_tree->get_levels( )
+              << std::endl;
+    std::cout << "number of levels of time tree " <<  _time_tree->get_levels( )
+              << std::endl;  
+  }
 
   /**
    * Returns a pointer to the root.
@@ -171,6 +177,13 @@ class besthea::mesh::spacetime_cluster_tree {
    */
   std::vector< spacetime_cluster * > & get_leaves( ) {
     return _leaves;
+  }
+
+  /**
+   * Returns the number of levels in the tree.
+   */
+  lo get_levels( ) const {
+    return _levels;
   }
   
   void initialize_moment_contributions( spacetime_cluster * root, 
@@ -249,11 +262,11 @@ class besthea::mesh::spacetime_cluster_tree {
     std::vector< spacetime_cluster * > * interaction_list = root->
     get_interaction_list( );
 
-    if ( interaction_list != nullptr ) {
-      std::cout << "nr interacting clusters: " << interaction_list->size( ) <<
-        std::endl;
-      std::cout << "##############################" << std::endl;
-    }
+//     if ( interaction_list != nullptr ) {
+//       std::cout << "nr interacting clusters: " << interaction_list->size( ) <<
+//         std::endl;
+//       std::cout << "##############################" << std::endl;
+//     }
     // std::cout << children->size( ) << std::endl;
     if ( children != nullptr )
       for ( auto it = children->begin( ); it != children->end( ); ++it ) {
@@ -262,6 +275,7 @@ class besthea::mesh::spacetime_cluster_tree {
       }
   }
 
+  lo _levels;   //!< number of levels in the tree
   const spacetime_tensor_mesh & _spacetime_mesh;  //!< underlying spacetime mesh
   const triangular_surface_mesh & _space_mesh;    //!< underlying spatial mesh
   const temporal_mesh & _time_mesh;               //!< underlying temporal mesh
