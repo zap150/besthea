@@ -1480,17 +1480,17 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
             grad[ 0 ] = cheb_drv_dim_0[ beta0 * size_quad + j ]
               * cheb_dim_1[ beta1 * size_quad + j ]
               * cheb_dim_2[ beta2 * size_quad + j ] 
-              / (cluster_half[ 0 ] + padding);
+              / ( cluster_half[ 0 ] + padding );
             grad[ 1 ] = cheb_dim_0[ beta0 * size_quad + j ] 
               * cheb_drv_dim_1[ beta1 * size_quad + j ]
               * cheb_dim_2[ beta2 * size_quad + j ]
-              / (cluster_half[ 1 ] + padding);
-            grad[ 2 ] = cheb_drv_dim_0[ beta0 * size_quad + j ]
+              / ( cluster_half[ 1 ] + padding );
+            grad[ 2 ] = cheb_dim_0[ beta0 * size_quad + j ]
               * cheb_dim_1[ beta1 * size_quad + j ]
               * cheb_drv_dim_2[ beta2 * size_quad + j ]
-              / (cluster_half[ 2 ] + padding);
+              / ( cluster_half[ 2 ] + padding );
             sc weighted_normal_derivative = wy[ j ] *  elem_area *
-                                              normal.dot(grad);
+                                              normal.dot( grad );
             value1 += weighted_normal_derivative
               * ( (sc) 1.0 - y1_ref[ j ] - y2_ref[ j ] );
             value2 += weighted_normal_derivative * y1_ref[ j ];
