@@ -259,8 +259,8 @@ class besthea::mesh::spacetime_cluster_tree {
     std::cout << "root levels: ";
     root->print( );
     std::vector< spacetime_cluster * > * children = root->get_children( );
-    std::vector< spacetime_cluster * > * interaction_list = root->
-    get_interaction_list( );
+//     std::vector< spacetime_cluster * > * interaction_list = root->
+//     get_interaction_list( );
 
 //     if ( interaction_list != nullptr ) {
 //       std::cout << "nr interacting clusters: " << interaction_list->size( ) <<

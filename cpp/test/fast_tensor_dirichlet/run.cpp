@@ -67,16 +67,16 @@ struct cauchy_data {
     return value;
   }
 
-  static constexpr sc _alpha{ 0.5 };
+  static constexpr sc _alpha{ 4.0 };
   static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
   static constexpr sc _shift{ 0.0 };
 };
 
 int main( int argc, char * argv[] ) {
-  std::string file = "../mesh_files/cube_12.txt";
+  std::string file = "./mesh_files/cube_12.txt";
 //   int refine = 1;
-  int refine = 1;
-  lo n_timesteps = 16;
+  int refine = 3;
+  lo n_timesteps = 8;
   sc end_time = 1.0;
   std::string grid_file = "./mesh_files/grid_xy.txt";
   // int grid_refine = 2;
@@ -117,12 +117,12 @@ int main( int argc, char * argv[] ) {
 
   lo order_sing = 4;
   lo order_reg = 4;
-  lo temp_order = 2;
-  lo spat_order = 2;
+  lo temp_order = 6;
+  lo spat_order = 6;
 
   pFMM_matrix * K = new pFMM_matrix( &tree, false, temp_order, spat_order, 
                                      cauchy_data::_alpha, false, true );
-  tree.print( );
+//   tree.print( );
 
   spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
   fast_spacetime_be_assembler fast_assembler_k(

@@ -72,13 +72,16 @@ class besthea::bem::chebyshev_evaluator {
     const lo sz = eval_points.size( );
     for ( lo i = 0; i < sz; ++i ) all_values[ i ] = 1.0;
     if ( _order > 0 ) {
-      for ( lo i = 0; i < sz; ++i ) all_values[ sz + i ] = eval_points[ i ];
-      for ( lo j = 2; j <= _order; ++j )
+      for ( lo i = 0; i < sz; ++i ) {
+        all_values[ sz + i ] = eval_points[ i ];
+      }
+      for ( lo j = 2; j <= _order; ++j ) {
         for ( lo i = 0; i < sz; ++i ) {
           all_values[ j * sz + i ]
             = 2 * eval_points[ i ] * all_values[ ( j - 1 ) * sz + i ];
           all_values[ j * sz + i ] -= all_values[ ( j - 2 ) * sz + i ];
         }
+      }
     }
   }
   
@@ -94,16 +97,25 @@ class besthea::bem::chebyshev_evaluator {
     // initialize values to 1;
     const lo sz = eval_points.size( );
     for ( lo i = 0; i < sz; ++i ) all_values[ i ] = 0.0;
-    for ( lo i = 0; i < sz; ++i ) all_values[ sz + i ] = 1.0;
-    for ( lo i = 0; i < sz; ++i ) all_values[ 2 * sz + i ] = 4.0 * eval_points[ i ];
-    for ( lo j = 3; j <= _order; ++j )
+    if ( _order > 0 ) {
       for ( lo i = 0; i < sz; ++i ) {
-        all_values[ j * sz + i ]
-          = ( 2.0 * j ) / ( j - 1 ) * eval_points[ i ] 
-          * all_values[ ( j - 1 ) * sz + i ];
-        all_values[ j * sz + i ] 
-          -= ( j / ( j - 2.0 ) ) * all_values[ ( j - 2 ) * sz + i ];
+        all_values[ sz + i ] = 1.0;
       }
+    }
+    if ( _order > 1 ) {
+      for ( lo i = 0; i < sz; ++i ) { 
+        all_values[ 2 * sz + i ] = 4.0 * eval_points[ i ];
+      }
+      for ( lo j = 3; j <= _order; ++j ) {
+        for ( lo i = 0; i < sz; ++i ) {
+          all_values[ j * sz + i ]
+            = ( 2.0 * j ) / ( j - 1 ) * eval_points[ i ] 
+            * all_values[ ( j - 1 ) * sz + i ];
+          all_values[ j * sz + i ] 
+            -= ( j / ( j - 2.0 ) ) * all_values[ ( j - 2 ) * sz + i ];
+        }
+      }
+    }
   }
 
  private:

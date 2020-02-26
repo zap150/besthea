@@ -28,10 +28,11 @@
 
 #include "besthea/pFMM_matrix.h"
 
-besthea::linear_algebra::sparse_matrix *
+besthea::linear_algebra::full_matrix *
 besthea::linear_algebra::pFMM_matrix::create_nearfield_matrix(
   lo test_idx, lo trial_idx, lo n_duplications ) {
-  sparse_matrix_type * local_matrix = new sparse_matrix_type( );
+  full_matrix_type * local_matrix = new full_matrix_type( _dim_domain, 
+                                                          _dim_range);
 
   _nearfield_matrices.push_back( local_matrix );
 
@@ -48,10 +49,11 @@ besthea::linear_algebra::pFMM_matrix::create_nearfield_matrix(
   return local_matrix;
 }
 
-besthea::linear_algebra::sparse_matrix *
+besthea::linear_algebra::full_matrix *
 besthea::linear_algebra::pFMM_matrix::create_farfield_matrix(
   lo test_idx, lo trial_idx ) {
-  sparse_matrix_type * local_matrix = new sparse_matrix_type( );
+  full_matrix_type * local_matrix = new full_matrix_type( _dim_domain, 
+                                                          _dim_range);
 
   _farfield_matrices.push_back( local_matrix );
 
@@ -69,14 +71,14 @@ void besthea::linear_algebra::pFMM_matrix::apply( const block_vector_type & x,
     }
   }
 
-  sparse_matrix_type * current_block;
+  full_matrix_type * current_block;
 
 #pragma omp parallel
   {
     vector_type local_y( y.get_size_of_block( ) );
     // first, multiply by the nearfield blocks
 #pragma omp for
-    for ( std::vector< sparse_matrix_type * >::size_type i = 0;
+    for ( std::vector< full_matrix_type * >::size_type i = 0;
           i < _nearfield_matrices.size( ); ++i ) {
       current_block = _nearfield_matrices.at( i );
       const std::pair< lo, lo > & indices = _nearfield_block_map.at( i );
@@ -113,8 +115,9 @@ void besthea::linear_algebra::pFMM_matrix::apply( const block_vector_type & x,
   }
   call_m2m_operations( _spacetime_tree->get_root( ), buffer_matrices );
   
-  vector_type buffer_for_gaussians( ( _spat_order + 1 ) * ( _spat_order + 1 ) 
-    * ( _temp_order + 1 ) * ( _temp_order + 1 ), false );
+  vector_type buffer_for_gaussians( ( _m2l_integration_order + 1 ) 
+    * ( _m2l_integration_order + 1 ) * ( _temp_order + 1 ) 
+    * ( _temp_order + 1 ), false );
   vector_type buffer_for_coeffs( ( _spat_order + 1 ) * ( _spat_order + 1 ) 
     * ( _temp_order + 1 ) * ( _temp_order + 1 ), false );
   full_matrix_type aux_buffer_0( ( _temp_order + 1 ) * ( _temp_order + 1 ),
@@ -139,6 +142,7 @@ void besthea::linear_algebra::pFMM_matrix::apply( const block_vector_type & x,
   // add the scaled result to y
   y.add( y_pFMM, alpha );
   
+// TODO: eliminate the remaining lines?!
 // #pragma omp parallel
 //   {
 //     // next, multiply by the farfield blocks
@@ -899,13 +903,14 @@ void besthea::linear_algebra::pFMM_matrix::apply_m2l_operation(
   }
   
   // initialize Chebyshev nodes for numerical integration
-  vector_type cheb_nodes( _spat_order + 1, false );
-  for ( lo i = 0 ; i <= _spat_order; ++i ) {
+  vector_type cheb_nodes( _m2l_integration_order + 1, false );
+  for ( lo i = 0 ; i <=  _m2l_integration_order; ++i ) {
     cheb_nodes[ i ] = 
-      std::cos( M_PI * ( 2 * i + 1 ) / ( 2 * ( _spat_order + 1 ) ) );
+      std::cos( M_PI * ( 2 * i + 1 ) / ( 2 * ( _m2l_integration_order + 1 ) ) );
   }
   // evaluate Chebyshev polynomials for all degrees <= _spat_order for integrals
-  vector_type all_poly_vals( ( _spat_order + 1 ) * ( _spat_order + 1 ), false );
+  vector_type all_poly_vals(
+    ( _m2l_integration_order + 1 ) * ( _spat_order + 1 ), false );
   _chebyshev.evaluate( cheb_nodes, all_poly_vals );
   
   // get spatial properties ( difference of cluster, half length )
@@ -1211,8 +1216,8 @@ void besthea::linear_algebra::pFMM_matrix::compute_coupling_coeffs(
   for ( lo a = 0; a <= _temp_order; ++ a ) {
     for ( lo b = 0; b <= _temp_order; ++ b ) {
       sc h_delta_ab = h_alpha / ( tar_time_nodes[ a ] - src_time_nodes[ b ] );
-      for ( lo mu = 0; mu <= _spat_order ; ++mu ) {
-        for ( lo nu = 0; nu <= _spat_order; ++nu ) {
+      for ( lo mu = 0; mu < cheb_nodes.size( ) ; ++mu ) {
+        for ( lo nu = 0; nu < cheb_nodes.size( ); ++nu ) {
           buffer_for_gaussians[ index_gaussian ] = std::exp( -h_delta_ab 
             * ( scaled_center_diff + cheb_nodes[ mu ] - cheb_nodes[ nu ] ) 
             * ( scaled_center_diff + cheb_nodes[ mu ] - cheb_nodes[ nu ] ) );
@@ -1224,18 +1229,18 @@ void besthea::linear_algebra::pFMM_matrix::compute_coupling_coeffs(
   
   // compute the numerical integrals
   lou index_integral = 0;
-  sc mul_factor = 4.0 / ( ( _spat_order + 1.0 ) * ( _spat_order + 1.0 ) );
+  sc mul_factor = 4.0 / ( cheb_nodes.size( ) * cheb_nodes.size( ) );
   for ( lo alpha = 0; alpha <= _spat_order; ++alpha ) {
     for ( lo beta = 0; beta <= _spat_order; ++beta ) {
       index_gaussian = 0;
       for ( lo a = 0; a <= _temp_order; ++ a ) {
         for ( lo b = 0; b <= _temp_order; ++ b ) {  
-          for ( lo mu = 0; mu <= _spat_order ; ++mu ) {
-            for ( lo nu = 0; nu <= _spat_order; ++nu ) {
+          for ( lo mu = 0; mu < cheb_nodes.size( ); ++mu ) {
+            for ( lo nu = 0; nu < cheb_nodes.size( ); ++nu ) {
               coupling_coeffs[ index_integral ]   
                 += buffer_for_gaussians[ index_gaussian ]  
-                * evaluated_chebyshev[ alpha * ( _spat_order + 1 ) + mu ] 
-                * evaluated_chebyshev[ beta * ( _spat_order + 1 ) + nu ];
+                * evaluated_chebyshev[ alpha * cheb_nodes.size( ) + mu ] 
+                * evaluated_chebyshev[ beta * cheb_nodes.size( ) + nu ];
               ++ index_gaussian;
             }
           }

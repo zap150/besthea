@@ -65,8 +65,7 @@ besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
   _space_cluster_size
     = std::sqrt( size_x * size_x + size_y * size_y + size_z * size_z );
-
-  precompute_nonzeros( );
+//   precompute_nonzeros( );
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -77,17 +76,17 @@ besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 template< class kernel_type, class test_space_type, class trial_space_type >
 bool besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::is_spatial_nearfield( lo test_idx, lo trial_idx ) const {
-  auto test_mesh = _test_space->get_spatial_mesh( );
-  auto trial_mesh = _trial_space->get_spatial_mesh( );
-
-  linear_algebra::coordinates< 3 > test_c;
-  linear_algebra::coordinates< 3 > trial_c;
-
-  test_mesh->get_centroid( test_idx, test_c );
-  trial_mesh->get_centroid( trial_idx, trial_c );
-  sc dist = ( test_c[ 0 ] - trial_c[ 0 ] ) * ( test_c[ 0 ] - trial_c[ 0 ] )
-    + ( test_c[ 1 ] - trial_c[ 1 ] ) * ( test_c[ 1 ] - trial_c[ 1 ] )
-    + ( test_c[ 2 ] - trial_c[ 2 ] ) * ( test_c[ 2 ] - trial_c[ 2 ] );
+//   auto test_mesh = _test_space->get_spatial_mesh( );
+//   auto trial_mesh = _trial_space->get_spatial_mesh( );
+// 
+//   linear_algebra::coordinates< 3 > test_c;
+//   linear_algebra::coordinates< 3 > trial_c;
+// 
+//   test_mesh->get_centroid( test_idx, test_c );
+//   trial_mesh->get_centroid( trial_idx, trial_c );
+//   sc dist = ( test_c[ 0 ] - trial_c[ 0 ] ) * ( test_c[ 0 ] - trial_c[ 0 ] )
+//     + ( test_c[ 1 ] - trial_c[ 1 ] ) * ( test_c[ 1 ] - trial_c[ 1 ] )
+//     + ( test_c[ 2 ] - trial_c[ 2 ] ) * ( test_c[ 2 ] - trial_c[ 2 ] );
   // TODO: criterion turned off for debugging reasons
 //   return dist <= _cutoff_param * _space_cluster_size * _cutoff_param
 //     * _space_cluster_size;
@@ -188,7 +187,7 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
   lo global_elem_i, global_elem_j;
   sc t0, t1, tau0, tau1;
-  sparse_matrix_type * block;
+  full_matrix_type * block;
 
   for ( auto it = leaves.begin( ); it != leaves.end( ); ++it ) {
     current_cluster = *it;
@@ -254,7 +253,7 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
   lo global_elem_i, global_elem_j;
   sc t0, t1, tau0, tau1;
-  sparse_matrix_type * block;
+  full_matrix_type * block;
 
   for ( auto it = leaves.begin( ); it != leaves.end( ); ++it ) {
     current_cluster = *it;
@@ -300,7 +299,7 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
   lo global_elem_i, global_elem_j;
   sc t0, t1, tau0, tau1;
-  sparse_matrix_type * block;
+  full_matrix_type * block;
 
   for ( auto it = leaves.begin( ); it != leaves.end( ); ++it ) {
     current_cluster = *it;
@@ -329,23 +328,18 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::assemble_nearfield_matrix( sc t0, sc t1, sc tau0, sc tau1,
-  sparse_matrix_type & nearfield_matrix ) const {
+  full_matrix_type & nearfield_matrix ) const {
   auto & test_basis = _test_space->get_basis( );
   auto & trial_basis = _trial_space->get_basis( );
   auto test_mesh = _test_space->get_mesh( );
   auto trial_mesh = _trial_space->get_mesh( );
 
-  // size of individual blocks
-  lo n_rows = test_basis.dimension_global( );
-  lo n_columns = trial_basis.dimension_global( );
-
   lo n_loc_rows = test_basis.dimension_local( );
   lo n_loc_columns = trial_basis.dimension_local( );
 
-  std::vector< Eigen::Triplet< sc, los > > triplet_list;
-  lo nnz_size = _nonzeros.size( );
-  triplet_list.resize( nnz_size * n_loc_rows * n_loc_columns );
-
+  lo n_test_elements = test_mesh->get_n_spatial_elements( );
+  lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
+  
 #pragma omp parallel
   {
     std::vector< lo > test_l2g( n_loc_rows );
@@ -382,16 +376,12 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
     bool shared_t_element = t0 == tau0;
     bool shared_t_vertex = t0 == tau1;
 
-    lo i_test, i_trial;
-
 #pragma omp for schedule( dynamic, 1 )
-    for ( lo i = 0; i < nnz_size; ++i ) {
-      i_test = _nonzeros[ i ].first;
-      i_trial = _nonzeros[ i ].second;
-      test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
-      test_mesh->get_spatial_normal( i_test, nx );
-      test_area = test_mesh->spatial_area( i_test );
-      if ( is_spatial_nearfield( i_test, i_trial ) ) {
+    for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
+      for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
+        test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
+        test_mesh->get_spatial_normal( i_test, nx );
+        test_area = test_mesh->spatial_area( i_test );
         if ( shared_t_element || shared_t_vertex ) {
           get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
         } else {
@@ -450,8 +440,8 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
                 ++i_loc_trial ) {
             value = 0.0;
 #pragma omp simd \
-	aligned( x1_ref, x2_ref, y1_ref, y2_ref, kernel_data : DATA_ALIGN ) \
-	private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
+  aligned( x1_ref, x2_ref, y1_ref, y2_ref, kernel_data : DATA_ALIGN ) \
+  private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
             for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
               test = test_basis.evaluate( i_test, i_loc_test, x1_ref[ i_quad ],
                 x2_ref[ i_quad ], nx_data, n_shared_vertices, rot_test, false );
@@ -463,17 +453,13 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
             }
             value *= test_area * trial_area;
 
-            triplet_list[ i * n_loc_rows * n_loc_columns
-              + i_loc_test * n_loc_columns + i_loc_trial ]
-              = Eigen::Triplet< sc, los >(
-                test_l2g[ i_loc_test ], trial_l2g[ i_loc_trial ], value );
+            nearfield_matrix.add( 
+              test_l2g[ i_loc_test ], trial_l2g[ i_loc_trial ], value );
           }
         }
       }
     }
   }
-
-  nearfield_matrix.set_from_triplets( n_rows, n_columns, triplet_list );
 }
 
 template<>
@@ -482,19 +468,15 @@ void besthea::bem::fast_spacetime_be_assembler<
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
   assemble_nearfield_matrix( sc t0, sc t1, sc tau0, sc tau1,
-    sparse_matrix_type & nearfield_matrix ) const {
+    full_matrix_type & nearfield_matrix ) const {
   auto & test_basis = _test_space->get_basis( );
   auto & trial_basis = _trial_space->get_basis( );
   auto test_mesh = _test_space->get_mesh( );
   auto trial_mesh = _trial_space->get_mesh( );
 
   // size of individual blocks
-  lo n_rows = test_basis.dimension_global( );
-  lo n_columns = trial_basis.dimension_global( );
-
-  std::vector< Eigen::Triplet< sc, los > > triplet_list;
-  lo nnz_size = _nonzeros.size( );
-  triplet_list.resize( nnz_size * 3 * 3 );
+  lo n_test_elements = test_mesh->get_n_spatial_elements( );
+  lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
 
 #pragma omp parallel
   {
@@ -539,17 +521,14 @@ void besthea::bem::fast_spacetime_be_assembler<
 
     bool shared_t_element = t0 == tau0;
     bool shared_t_vertex = t0 == tau1;
-    lo i_test, i_trial;
 
 #pragma omp for schedule( dynamic, 1 )
-    for ( lo i = 0; i < nnz_size; ++i ) {
-      i_test = _nonzeros[ i ].first;
-      i_trial = _nonzeros[ i ].second;
-      test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
-      test_mesh->get_spatial_normal( i_test, nx );
-      test_area = test_mesh->spatial_area( i_test );
+    for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
+      for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
+        test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
+        test_mesh->get_spatial_normal( i_test, nx );
+        test_area = test_mesh->spatial_area( i_test );
 
-      if ( is_spatial_nearfield( i_test, i_trial ) ) {
         if ( shared_t_element || shared_t_vertex ) {
           get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
         } else {
@@ -622,28 +601,28 @@ void besthea::bem::fast_spacetime_be_assembler<
             value11 += ( kernel1 * curl_dot[ 0 ] + kernel2 * phi1x * phi1y )
               * w[ i_quad ];
             value21 += ( kernel1 * curl_dot[ 1 ]
-                         + kernel2 * x1_ref[ i_quad ] * phi1y )
+                        + kernel2 * x1_ref[ i_quad ] * phi1y )
               * w[ i_quad ];
             value31 += ( kernel1 * curl_dot[ 2 ]
-                         + kernel2 * x2_ref[ i_quad ] * phi1y )
+                        + kernel2 * x2_ref[ i_quad ] * phi1y )
               * w[ i_quad ];
             value12 += ( kernel1 * curl_dot[ 3 ]
-                         + kernel2 * phi1x * y1_ref[ i_quad ] )
+                        + kernel2 * phi1x * y1_ref[ i_quad ] )
               * w[ i_quad ];
             value22 += ( kernel1 * curl_dot[ 4 ]
-                         + kernel2 * x1_ref[ i_quad ] * y1_ref[ i_quad ] )
+                        + kernel2 * x1_ref[ i_quad ] * y1_ref[ i_quad ] )
               * w[ i_quad ];
             value32 += ( kernel1 * curl_dot[ 5 ]
-                         + kernel2 * x2_ref[ i_quad ] * y1_ref[ i_quad ] )
+                        + kernel2 * x2_ref[ i_quad ] * y1_ref[ i_quad ] )
               * w[ i_quad ];
             value13 += ( kernel1 * curl_dot[ 6 ]
-                         + kernel2 * phi1x * y2_ref[ i_quad ] )
+                        + kernel2 * phi1x * y2_ref[ i_quad ] )
               * w[ i_quad ];
             value23 += ( kernel1 * curl_dot[ 7 ]
-                         + kernel2 * x1_ref[ i_quad ] * y2_ref[ i_quad ] )
+                        + kernel2 * x1_ref[ i_quad ] * y2_ref[ i_quad ] )
               * w[ i_quad ];
             value33 += ( kernel1 * curl_dot[ 8 ]
-                         + kernel2 * x2_ref[ i_quad ] * y2_ref[ i_quad ] )
+                        + kernel2 * x2_ref[ i_quad ] * y2_ref[ i_quad ] )
               * w[ i_quad ];
           }
         } else {
@@ -669,55 +648,44 @@ void besthea::bem::fast_spacetime_be_assembler<
             value11 += ( kernel1 * curl_dot[ 0 ] + kernel2 * phi1x * phi1y )
               * w[ i_quad ];
             value21 += ( kernel1 * curl_dot[ 1 ]
-                         + kernel2 * x1_ref[ i_quad ] * phi1y )
+                        + kernel2 * x1_ref[ i_quad ] * phi1y )
               * w[ i_quad ];
             value31 += ( kernel1 * curl_dot[ 2 ]
-                         + kernel2 * x2_ref[ i_quad ] * phi1y )
+                        + kernel2 * x2_ref[ i_quad ] * phi1y )
               * w[ i_quad ];
             value12 += ( kernel1 * curl_dot[ 3 ]
-                         + kernel2 * phi1x * y1_ref[ i_quad ] )
+                        + kernel2 * phi1x * y1_ref[ i_quad ] )
               * w[ i_quad ];
             value22 += ( kernel1 * curl_dot[ 4 ]
-                         + kernel2 * x1_ref[ i_quad ] * y1_ref[ i_quad ] )
+                        + kernel2 * x1_ref[ i_quad ] * y1_ref[ i_quad ] )
               * w[ i_quad ];
             value32 += ( kernel1 * curl_dot[ 5 ]
-                         + kernel2 * x2_ref[ i_quad ] * y1_ref[ i_quad ] )
+                        + kernel2 * x2_ref[ i_quad ] * y1_ref[ i_quad ] )
               * w[ i_quad ];
             value13 += ( kernel1 * curl_dot[ 6 ]
-                         + kernel2 * phi1x * y2_ref[ i_quad ] )
+                        + kernel2 * phi1x * y2_ref[ i_quad ] )
               * w[ i_quad ];
             value23 += ( kernel1 * curl_dot[ 7 ]
-                         + kernel2 * x1_ref[ i_quad ] * y2_ref[ i_quad ] )
+                        + kernel2 * x1_ref[ i_quad ] * y2_ref[ i_quad ] )
               * w[ i_quad ];
             value33 += ( kernel1 * curl_dot[ 8 ]
-                         + kernel2 * x2_ref[ i_quad ] * y2_ref[ i_quad ] )
+                        + kernel2 * x2_ref[ i_quad ] * y2_ref[ i_quad ] )
               * w[ i_quad ];
           }
         }
 
-        triplet_list[ i * 3 * 3 + 0 * 3 + 0 ] = Eigen::Triplet< sc, los >(
-          test_l2g[ 0 ], trial_l2g[ 0 ], value11 * areas );
-        triplet_list[ i * 3 * 3 + 0 * 3 + 1 ] = Eigen::Triplet< sc, los >(
-          test_l2g[ 0 ], trial_l2g[ 1 ], value12 * areas );
-        triplet_list[ i * 3 * 3 + 0 * 3 + 2 ] = Eigen::Triplet< sc, los >(
-          test_l2g[ 0 ], trial_l2g[ 2 ], value13 * areas );
-        triplet_list[ i * 3 * 3 + 1 * 3 + 0 ] = Eigen::Triplet< sc, los >(
-          test_l2g[ 1 ], trial_l2g[ 0 ], value21 * areas );
-        triplet_list[ i * 3 * 3 + 1 * 3 + 1 ] = Eigen::Triplet< sc, los >(
-          test_l2g[ 1 ], trial_l2g[ 1 ], value22 * areas );
-        triplet_list[ i * 3 * 3 + 1 * 3 + 2 ] = Eigen::Triplet< sc, los >(
-          test_l2g[ 1 ], trial_l2g[ 2 ], value23 * areas );
-        triplet_list[ i * 3 * 3 + 2 * 3 + 0 ] = Eigen::Triplet< sc, los >(
-          test_l2g[ 2 ], trial_l2g[ 0 ], value31 * areas );
-        triplet_list[ i * 3 * 3 + 2 * 3 + 1 ] = Eigen::Triplet< sc, los >(
-          test_l2g[ 2 ], trial_l2g[ 1 ], value32 * areas );
-        triplet_list[ i * 3 * 3 + 2 * 3 + 2 ] = Eigen::Triplet< sc, los >(
-          test_l2g[ 2 ], trial_l2g[ 2 ], value33 * areas );
+        nearfield_matrix.add( test_l2g[ 0 ], trial_l2g[ 0 ], value11 * areas );
+        nearfield_matrix.add( test_l2g[ 0 ], trial_l2g[ 1 ], value12 * areas );
+        nearfield_matrix.add( test_l2g[ 0 ], trial_l2g[ 2 ], value13 * areas );
+        nearfield_matrix.add( test_l2g[ 1 ], trial_l2g[ 0 ], value21 * areas );
+        nearfield_matrix.add( test_l2g[ 1 ], trial_l2g[ 1 ], value22 * areas );
+        nearfield_matrix.add( test_l2g[ 1 ], trial_l2g[ 2 ], value23 * areas );
+        nearfield_matrix.add( test_l2g[ 2 ], trial_l2g[ 0 ], value31 * areas );
+        nearfield_matrix.add( test_l2g[ 2 ], trial_l2g[ 1 ], value32 * areas );
+        nearfield_matrix.add( test_l2g[ 2 ], trial_l2g[ 2 ], value33 * areas );
       }
     }
   }
-
-  nearfield_matrix.set_from_triplets( n_rows, n_columns, triplet_list );
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >

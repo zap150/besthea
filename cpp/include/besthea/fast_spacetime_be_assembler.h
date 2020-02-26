@@ -218,7 +218,7 @@ class besthea::bem::fast_spacetime_be_assembler {
    * assembled.
    */
   void assemble_nearfield_matrix( sc t0, sc t1, sc tau0, sc tau1,
-    sparse_matrix_type & nearfield_matrix ) const;
+    full_matrix_type & nearfield_matrix ) const;
 
   /**
    * Determines the configuration of two triangular elements.

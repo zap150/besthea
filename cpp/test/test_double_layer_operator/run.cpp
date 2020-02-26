@@ -67,9 +67,9 @@ struct cauchy_data {
     return value;
   }
 
-  static constexpr sc _alpha{ 0.5 };
+  static constexpr sc _alpha{ 4.0 };
   static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
-  static constexpr sc _shift{ 0.2 };
+  static constexpr sc _shift{ 0.0 };
 };
 
 int main( int argc, char * argv[] ) {
@@ -77,26 +77,10 @@ int main( int argc, char * argv[] ) {
   lo test_case = 1;
 //   int refine = 1;
   int refine = 1;
-  lo n_timesteps = 16;
+  lo n_timesteps = 8;
   sc end_time = 1.0;
   std::string grid_file = "./mesh_files/grid_xy.txt";
   // int grid_refine = 2;
-
-  if ( argc > 1 ) {
-    file.assign( argv[ 1 ] );
-  }
-  if ( argc > 2 ) {
-    n_timesteps = std::atoi( argv[ 2 ] );
-  }
-  if ( argc > 3 ) {
-    end_time = std::atof( argv[ 3 ] );
-  }
-  if ( argc > 4 ) {
-    refine = std::atoi( argv[ 4 ] );
-  }
-  if ( argc > 5 ) {
-    grid_file.assign( argv[ 5 ] );
-  }
   // if ( argc > 6 ) {
   //  grid_refine = std::atoi( argv[ 6 ] );
   //}
@@ -112,8 +96,8 @@ int main( int argc, char * argv[] ) {
   uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
   uniform_spacetime_be_space< basis_tri_p1 > space_p1( spacetime_mesh );
 
-  lo order_sing = 4;
-  lo order_reg = 4;
+  lo order_sing = 5;
+  lo order_reg = 5;
 
   block_lower_triangular_toeplitz_matrix * K
     = new block_lower_triangular_toeplitz_matrix( );
@@ -141,8 +125,14 @@ int main( int argc, char * argv[] ) {
   fast_spacetime_be_space< basis_tri_p0 > space_p0_pFMM( tree );
   fast_spacetime_be_space< basis_tri_p1 > space_p1_pFMM( tree );
 
-  lo temp_order = 6;
-  lo spat_order = 6;
+  lo temp_order = 2;
+  lo spat_order = 2;
+  if ( argc > 1 ) {
+    temp_order = std::atoi( argv[ 1 ] );
+  }
+  if ( argc > 2 ) {
+    spat_order = std::atoi( argv[ 2 ] );
+  }
 
   pFMM_matrix * K_pFMM = new pFMM_matrix( &tree, false, temp_order, spat_order, 
                                           cauchy_data::_alpha, false, true );
@@ -172,7 +162,7 @@ int main( int argc, char * argv[] ) {
   if ( test_case == 1 ) {
   //   lo block_id = n_blocks - 1 - 2;
     lo block_id = 0;
-    lo block_evaluation_id = 0;
+    lo block_evaluation_id = 2;
     lo toeplitz_id = block_evaluation_id - block_id;
   //   lo block_evaluation_id = n_blocks - 1;
     
@@ -180,7 +170,7 @@ int main( int argc, char * argv[] ) {
     full_matrix & K_block_loc = K->get_block( toeplitz_id );
     vector y_loc( rows_of_block );
     vector x_loc_0( cols_of_block );
-    x_loc_0(0) = 1.0;
+    x_loc_0(9) = 1.0;
   //   x_loc_0.fill( 1.0 );
     K_block_loc.apply( x_loc_0, y_loc );
 
@@ -190,13 +180,19 @@ int main( int argc, char * argv[] ) {
     K_pFMM->apply( block_ones, applied_pFMM );
 
     std::cout << "resulting subblock pFMM multiplication" << std::endl;
-    std::cout << "block id " << block_id << std::endl;
+    std::cout << "source id " << block_id << std::endl;
+    std::cout << "target id " << block_evaluation_id << std::endl;
     vector & subvec_pFMM = applied_pFMM.get_block( block_evaluation_id );
+    lo entry_id = 8;
+    std::cout << "id: " << entry_id << std::endl;
+    std::cout << "entry is " << subvec_pFMM[ entry_id ]
+              << std::endl;
+    std::cout << "should be " << y_loc[ entry_id ] << std::endl;
     subvec_pFMM.print_h( );
     std::cout << "exact result block" << std::endl;
     y_loc.print_h( );
     std::cout << "error timewise"  << std::endl;
-    subvec_pFMM.add( y_loc , -1.0 );
+    subvec_pFMM.add( y_loc , -1.0 ); 
     std::cout << subvec_pFMM.norm( ) << ", rel. " 
               << subvec_pFMM.norm( ) / y_loc.norm( ) << std::endl;
   }

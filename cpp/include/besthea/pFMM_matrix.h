@@ -88,6 +88,7 @@ class besthea::linear_algebra::pFMM_matrix
       _uniform( false ),
       _temp_order( 5 ),
       _spat_order( 5 ),
+      _m2l_integration_order( _spat_order ),
       _chebyshev( _spat_order ),
       _alpha( 1.0 ),
       _source_space_is_p0( true ),
@@ -109,7 +110,8 @@ class besthea::linear_algebra::pFMM_matrix
                slou temp_order, slou spat_order, sc alpha, 
                bool source_space_is_p0, bool target_space_is_p0 )
     : _spacetime_tree( spacetime_tree ), _uniform ( uniform ), 
-      _temp_order( temp_order ), _spat_order( spat_order ),
+      _temp_order( temp_order ), _spat_order( spat_order ), 
+      _m2l_integration_order( _spat_order ),
       _chebyshev( _spat_order ), _alpha( alpha ),
       _source_space_is_p0( source_space_is_p0 ), 
       _target_space_is_p0( target_space_is_p0 ) {
@@ -187,7 +189,7 @@ class besthea::linear_algebra::pFMM_matrix
    * @param[in] n_duplications Number of matrix duplications for uniform-time
    * assembly.
    */
-  sparse_matrix_type * create_nearfield_matrix(
+  full_matrix_type * create_nearfield_matrix(
     lo test_idx, lo trial_idx, lo n_duplications = 1 );
 
   /*!
@@ -196,7 +198,7 @@ class besthea::linear_algebra::pFMM_matrix
    * @param[in] test_idx Index of the testing function.
    * @param[in] trial_idx Index of the trial function
    */
-  sparse_matrix_type * create_farfield_matrix( lo test_idx, lo trial_idx );
+  full_matrix_type * create_farfield_matrix( lo test_idx, lo trial_idx );
 
   /*!
    * Compute the temporal m2m matrices for all levels.
@@ -423,12 +425,12 @@ class besthea::linear_algebra::pFMM_matrix
 
   spacetime_tree_type * _spacetime_tree;  //!< tree hierarchically decomposing
                                           //!< spatial and temporal domains
-  std::vector< sparse_matrix_type * >
+  std::vector< full_matrix_type * >
     _nearfield_matrices;  //!< temporal nearfield blocks
   std::vector< std::pair< lo, lo > >
     _nearfield_block_map;  //!< mapping from block index to pair of matching
                            //!< temporal clusters
-  std::vector< sparse_matrix_type * >
+  std::vector< full_matrix_type * >
     _farfield_matrices;  //!< nonapproximated temporal farfield blocks
   std::vector< std::pair< lo, lo > >
     _farfield_block_map;  //!< mapping from block index to pair of matching
@@ -442,7 +444,6 @@ class besthea::linear_algebra::pFMM_matrix
     _m2m_matrices_t_right;  //! right temporal
                             //! m2m matrices stored levelwise
 
-  slou _temp_order;  //!< degree of interpolation polynomials in time for pFMM
   std::vector< vector_type >
     _m2m_coeffs_s_dim_0_left;  //!< left spatial
                                //!< m2m matrices along dimension 0 stored
@@ -467,9 +468,14 @@ class besthea::linear_algebra::pFMM_matrix
     _m2m_coeffs_s_dim_2_right;  //!< right spatial
                                 //!< m2m matrices along dimension 2 stored
                                 //!< levelwise
-
+  slou _temp_order;  //!< degree of interpolation polynomials in time for pFMM
+  
   slou _spat_order;  //!< degree of Chebyshev polynomials for expansion in
                     //!< space in pFMM
+                    
+  slou _m2l_integration_order;  //!< _m2l_integration_order + 1 quadrature 
+                                //!< points are used for the approximation of 
+                                //!< the m2l coefficients.
                     
   mutable bem::chebyshev_evaluator
     _chebyshev;  //!< Evaluator of the Chebyshev polynomials.
