@@ -112,12 +112,6 @@ int main( int argc, char * argv[] ) {
   lo rows_of_block = K->get_n_rows( );
   lo cols_of_block = K->get_n_columns( );
 
-  block_vector dir_proj;
-  space_p1.L2_projection( cauchy_data::dirichlet, dir_proj );
-
-  block_vector applied_std( n_blocks, rows_of_block, true );
-  K->apply( dir_proj, applied_std );
-
 //   sc st_coeff = 4.0;
 //   spacetime_cluster_tree tree( spacetime_mesh, 5, 2, 10, st_coeff );
   sc st_coeff = 4.0;
@@ -163,48 +157,57 @@ int main( int argc, char * argv[] ) {
   //   lo block_id = n_blocks - 1 - 2;
     lo block_id = 0;
     lo block_evaluation_id = 2;
-    lo toeplitz_id = block_evaluation_id - block_id;
+//     lo toeplitz_id = block_evaluation_id - block_id;
   //   lo block_evaluation_id = n_blocks - 1;
     
     
-    full_matrix & K_block_loc = K->get_block( toeplitz_id );
-    vector y_loc( rows_of_block );
     vector x_loc_0( cols_of_block );
     x_loc_0(9) = 1.0;
-  //   x_loc_0.fill( 1.0 );
-    K_block_loc.apply( x_loc_0, y_loc );
-
-    block_vector block_ones( n_blocks, cols_of_block, true );
-    block_ones.get_block( block_id ) = x_loc_0;
+    block_vector x_block_vec( n_blocks, cols_of_block, true );
+    x_block_vec.get_block( block_id ) = x_loc_0;
+    // multiplicate x_block_vec with Toeplitz matrix K
+    block_vector applied_toeplitz ( n_blocks, rows_of_block, true );
+    K->apply( x_block_vec, applied_toeplitz );
+    // multiplicate x_block_vec with pFMM matrix K
     block_vector applied_pFMM ( n_blocks, rows_of_block, true );
-    K_pFMM->apply( block_ones, applied_pFMM );
+    K_pFMM->apply( x_block_vec, applied_pFMM );
 
     std::cout << "resulting subblock pFMM multiplication" << std::endl;
     std::cout << "source id " << block_id << std::endl;
     std::cout << "target id " << block_evaluation_id << std::endl;
     vector & subvec_pFMM = applied_pFMM.get_block( block_evaluation_id );
+    vector & subvec_toeplitz = applied_toeplitz.get_block( 
+      block_evaluation_id );
     lo entry_id = 8;
     std::cout << "id: " << entry_id << std::endl;
     std::cout << "entry is " << subvec_pFMM[ entry_id ]
               << std::endl;
-    std::cout << "should be " << y_loc[ entry_id ] << std::endl;
+    std::cout << "should be " << subvec_toeplitz[ entry_id ] << std::endl;
     subvec_pFMM.print_h( );
     std::cout << "exact result block" << std::endl;
-    y_loc.print_h( );
+    subvec_toeplitz.print_h( );
     std::cout << "error timewise"  << std::endl;
-    subvec_pFMM.add( y_loc , -1.0 ); 
+    subvec_pFMM.add( subvec_toeplitz , -1.0 ); 
     std::cout << subvec_pFMM.norm( ) << ", rel. " 
-              << subvec_pFMM.norm( ) / y_loc.norm( ) << std::endl;
+              << subvec_pFMM.norm( ) / subvec_toeplitz.norm( ) << std::endl;
   }
-            
-//   std::cout << "error timewise"  << std::endl;
-//   for ( lo i = 0; i < applied_std.get_block_size( ); ++ i ) {
-//     applied_pFMM.get_block( i ).add( applied_std.get_block( i ) , -1.0 );
-//     std::cout << applied_pFMM.get_block( i ).norm( ) << ", rel. " 
-//               << applied_pFMM.get_block( i ).norm( )
-//                 / applied_std.get_block( i ).norm( ) << std::endl;
-//   }
-
+  else if ( test_case == 2 ) {
+    block_vector dir_proj;
+    space_p1.L2_projection( cauchy_data::dirichlet, dir_proj );
+    // multiplicate dir_proj with Toeplitz matrix K
+    block_vector applied_toeplitz( n_blocks, rows_of_block, true );
+    K->apply( dir_proj, applied_toeplitz );
+    // multiplicate dir_proj with pFMM matrix K
+    block_vector applied_pFMM ( n_blocks, rows_of_block, true );
+    K_pFMM->apply( dir_proj, applied_pFMM );
+    std::cout << "error timewise"  << std::endl;
+    for ( lo i = 0; i < applied_toeplitz.get_block_size( ); ++ i ) {
+      applied_pFMM.get_block( i ).add( applied_toeplitz.get_block( i ) , -1.0 );
+      std::cout << applied_pFMM.get_block( i ).norm( ) << ", rel. " 
+                << applied_pFMM.get_block( i ).norm( )
+                  / applied_toeplitz.get_block( i ).norm( ) << std::endl;
+    }
+  }
 
   delete K;
 
