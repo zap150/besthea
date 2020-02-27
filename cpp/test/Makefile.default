@@ -18,6 +18,10 @@ LDLIBSOPTIONS=-fopenmp -L${MKL_LIB} -Wl,-rpath,'${MKL_LIB}' ${NO_AS_NEEDED} -lmk
 
 #########################DO NOT MODIFY BELOW THIS LINE##########################
 ################################################################################
+# sources, objects, and headers of the lib
+LIB_CPP = $(shell find ../src/ -name \*.cpp -print)
+LIB_H = $(shell find ../include/besthea/ -name \*.hpp -print)
+LIBFMM_A = ../lib/libbesthea.a
 
 DIRECTORY = $(wildcard */)
 
@@ -30,14 +34,18 @@ COMPILELINE=${CXX} ${CXXFLAGS} -I../include -c
 
 OBJECTDIR=build
 
-all: ${EXECUTABLES} ${TEST_CPP} ${TEST_H}
+all: ${LIBFMM_A} ${EXECUTABLES} ${TEST_CPP} ${TEST_H}
 
-%.o: %.cpp
+%.o: %.cpp ${LIBFMM_A}
 	rm -f "$@.d"
 	${COMPILELINE} -MMD -MP -MF "$@.d" -MT"$(<:%.cpp=%.exe)" -o $@ $<
 
-%.exe: %.o ../lib/libbesthea.a
-	$(CXX) -o $@ $< ${LDLIBSOPTIONS} -L../lib -lbesthea
+%.exe: %.o 
+	$(CXX) -o $@ $< -L../lib -lbesthea ${LDLIBSOPTIONS} 
+	
+${LIBFMM_A}: ${LIB_CPP} ${LIB_H}
+	@echo generating lib
+	@cd .. ; $(MAKE) lib/libbesthea.a
 
 clean:
 	$(foreach sd,${DIRECTORY}, rm -f ${sd}*.o.d;)

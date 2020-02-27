@@ -1466,11 +1466,11 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
           }
 
           T_drv.add_atomic( elems_2_local_nodes[ 3 * i ],
-            current_index, value1 );
+            current_index, _kernel->get_alpha( ) * value1 );
           T_drv.add_atomic( elems_2_local_nodes[ 3 * i + 1 ],
-            current_index, value2 );
+            current_index, _kernel->get_alpha( ) * value2 );
           T_drv.add_atomic( elems_2_local_nodes[ 3 * i + 2 ],
-            current_index, value3 );
+            current_index, _kernel->get_alpha( ) * value3 );
           ++ current_index;
         }
       }
