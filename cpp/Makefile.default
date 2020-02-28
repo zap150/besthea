@@ -23,12 +23,12 @@ DEPFILES=$(addprefix ${OBJECTDIR}/,$(FILES:.cpp=.o.d))
 
 all: test
 
-test: libbesthea.a
+test: lib/libbesthea.a
 	cd test && ${MAKE}
 
-libbesthea.a: ${OBJECTFILES}
+lib/libbesthea.a: ${OBJECTFILES}
 	mkdir -p lib
-	ar -r lib/$@ $?
+	ar -r $@ $?
 
 ${OBJECTDIR}/%.o: src/%.cpp
 	mkdir -p ${OBJECTDIR}

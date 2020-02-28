@@ -80,7 +80,8 @@ class besthea::mesh::space_cluster {
       _octant( octant ),
       _padding( 0.0 ),
       _box_coordinate( coordinate ),
-      _cheb_T( 1, 1 ) {
+      _cheb_T( 1, 1 ),
+      _cheb_normal_drv_T( 1, 1 ) {
     _elements.reserve( _n_elements );
     _box_coordinate.shrink_to_fit( );
   }
@@ -171,6 +172,14 @@ class besthea::mesh::space_cluster {
    */
   lo get_element( lo idx ) const {
     return _elements[ idx ];
+  }
+  
+  /**
+   * Returns reference to vector of global element indices for elements in the 
+   * cluster
+   */
+  const std::vector< lo > & get_all_elements( ) const {
+    return _elements;
   }
 
   /**
@@ -340,6 +349,13 @@ class besthea::mesh::space_cluster {
   }
 
   /**
+   * Returns a pointer to the cluster's parent.
+   */
+  space_cluster * get_parent( ) const {
+    return _parent;
+  }
+
+  /**
    * Returns coordinates of the box within boxes on given level.
    */
   const std::vector< slou > & get_box_coordinate( ) const {
@@ -347,11 +363,19 @@ class besthea::mesh::space_cluster {
   }
 
   /**
-   * Returns a pointer to the matrix storing quadratures of the Chebyshev
-   * polynomial over the elements of the cluster.
+   * Returns a pointer to the matrix storing quadratures of Chebyshev
+   * polynomials over the elements of the cluster.
    */
   full_matrix_type & get_chebyshev_quad( ) {
     return _cheb_T;
+  }
+  
+  /**
+   * Returns a pointer to the matrix storing quadratures of the normal 
+   * derivatives of Chebyshev polynomials over the elements of the cluster.
+   */
+  full_matrix_type & get_normal_drv_chebyshev_quad( ) {
+    return _cheb_normal_drv_T;
   }
 
   /**
@@ -370,36 +394,39 @@ class besthea::mesh::space_cluster {
   }
 
   void compute_node_mapping( ) {
-    linear_algebra::indices< 3 > element;
-    for ( auto it = _elements.begin( ); it != _elements.end( ); ++it ) {
-      _mesh.get_element( *it, element );
-      _local_2_global_nodes.push_back( element[ 0 ] );
-      _local_2_global_nodes.push_back( element[ 1 ] );
-      _local_2_global_nodes.push_back( element[ 2 ] );
-    }
-    std::sort( _local_2_global_nodes.begin( ), _local_2_global_nodes.end( ) );
-    _local_2_global_nodes.erase( std::unique( _local_2_global_nodes.begin( ),
-                                   _local_2_global_nodes.end( ) ),
-      _local_2_global_nodes.end( ) );
+    // check first whether the mapping already exists
+    if ( _local_2_global_nodes.size( ) == 0 ) {
+      linear_algebra::indices< 3 > element;
+      for ( auto it = _elements.begin( ); it != _elements.end( ); ++it ) {
+        _mesh.get_element( *it, element );
+        _local_2_global_nodes.push_back( element[ 0 ] );
+        _local_2_global_nodes.push_back( element[ 1 ] );
+        _local_2_global_nodes.push_back( element[ 2 ] );
+      }
+      std::sort( _local_2_global_nodes.begin( ), _local_2_global_nodes.end( ) );
+      _local_2_global_nodes.erase( std::unique( _local_2_global_nodes.begin( ),
+                                    _local_2_global_nodes.end( ) ),
+        _local_2_global_nodes.end( ) );
 
-    _elems_2_local_nodes.resize( 3 * _elements.size( ) );
+      _elems_2_local_nodes.resize( 3 * _elements.size( ) );
 
-    lo counter = 0;
-    for ( auto it = _elements.begin( ); it != _elements.end( ); ++it ) {
-      _mesh.get_element( *it, element );
-      auto idx_it = std::find( _local_2_global_nodes.begin( ),
-        _local_2_global_nodes.end( ), element[ 0 ] );
-      _elems_2_local_nodes[ 3 * counter ]
-        = std::distance( _local_2_global_nodes.begin( ), idx_it );
-      idx_it = std::find( _local_2_global_nodes.begin( ),
-        _local_2_global_nodes.end( ), element[ 1 ] );
-      _elems_2_local_nodes[ 3 * counter + 1 ]
-        = std::distance( _local_2_global_nodes.begin( ), idx_it );
-      idx_it = std::find( _local_2_global_nodes.begin( ),
-        _local_2_global_nodes.end( ), element[ 2 ] );
-      _elems_2_local_nodes[ 3 * counter + 2 ]
-        = std::distance( _local_2_global_nodes.begin( ), idx_it );
-      ++counter;
+      lo counter = 0;
+      for ( auto it = _elements.begin( ); it != _elements.end( ); ++it ) {
+        _mesh.get_element( *it, element );
+        auto idx_it = std::find( _local_2_global_nodes.begin( ),
+          _local_2_global_nodes.end( ), element[ 0 ] );
+        _elems_2_local_nodes[ 3 * counter ]
+          = std::distance( _local_2_global_nodes.begin( ), idx_it );
+        idx_it = std::find( _local_2_global_nodes.begin( ),
+          _local_2_global_nodes.end( ), element[ 1 ] );
+        _elems_2_local_nodes[ 3 * counter + 1 ]
+          = std::distance( _local_2_global_nodes.begin( ), idx_it );
+        idx_it = std::find( _local_2_global_nodes.begin( ),
+          _local_2_global_nodes.end( ), element[ 2 ] );
+        _elems_2_local_nodes[ 3 * counter + 2 ]
+          = std::distance( _local_2_global_nodes.begin( ), idx_it );
+        ++counter;
+      }
     }
   }
 
@@ -423,6 +450,10 @@ class besthea::mesh::space_cluster {
   full_matrix_type
     _cheb_T;  //!< matrix storing quadrature of the Chebyshev polynomials (rows
               //!< - element of the cluster, column - order of the polynomial)
+  full_matrix_type
+    _cheb_normal_drv_T; //!< matrix storing quadratue of the normal derivatives
+                        //!< of the Chebyshev polynomials (rows - vertex of the
+                        //!< cluster, column - order of the polynomial)
   std::vector< lo > _elems_2_local_nodes;   //! mapping from element nodes
                                             //! vertices to local node list
   std::vector< lo > _local_2_global_nodes;  //!< mapping from local nodes

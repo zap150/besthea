@@ -64,6 +64,10 @@ class besthea::bem::spacetime_heat_kernel_antiderivative
       _sqrt_alpha( std::sqrt( alpha ) ),
       _alpha2( alpha * alpha ) {
   }
+  
+  sc get_alpha( ) const {
+    return _alpha;
+  }
 
   /**
    * Destructor.

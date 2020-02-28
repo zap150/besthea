@@ -140,6 +140,14 @@ class besthea::mesh::time_cluster {
   lo get_element( lo idx ) const {
     return _elements[ idx ];
   }
+  
+  /**
+   * Returns reference to vector of global element indices for elements in the 
+   * cluster
+   */
+  const std::vector< lo > & get_all_elements( ) const {
+    return _elements;
+  }
 
   /**
    * Sets a number of children and allocates vector of pointers to children.
@@ -171,7 +179,14 @@ class besthea::mesh::time_cluster {
   std::vector< time_cluster * > * get_children( ) {
     return _children;
   }
-
+  
+    /**
+   * Returns a pointer to the parent.
+   */
+  time_cluster * get_parent( ) {
+    return _parent;
+  }
+    
   /**
    * Returns a pointer to the children.
    */
@@ -240,6 +255,17 @@ class besthea::mesh::time_cluster {
    */
   const temporal_mesh & get_mesh( ) {
     return _mesh;
+  }
+  
+  /**
+   * Determines whether the current cluster is the left child of its parent.
+   * \note If the current cluster is the root of the tree \p false is returned.
+   */
+  bool is_left_child( ) const {
+    if ( _parent == nullptr )
+      return false;
+    else 
+      return ( this == _parent->_children->front( ) );
   }
 
  private:

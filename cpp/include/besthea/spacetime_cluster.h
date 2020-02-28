@@ -33,6 +33,7 @@
 #ifndef INCLUDE_BESTHEA_SPACETIME_CLUSTER_H_
 #define INCLUDE_BESTHEA_SPACETIME_CLUSTER_H_
 
+#include "besthea/full_matrix.h"
 #include "besthea/settings.h"
 #include "besthea/space_cluster.h"
 #include "besthea/time_cluster.h"
@@ -50,6 +51,8 @@ namespace besthea {
  */
 class besthea::mesh::spacetime_cluster {
  public:
+   using full_matrix_type
+    = besthea::linear_algebra::full_matrix;  //!< Sparse matrix type.
   /**
    * Constructor.
    * @param[in] spatial_cluster Reference to a spatial cluster.
@@ -63,6 +66,9 @@ class besthea::mesh::spacetime_cluster {
       _temporal_cluster( temporal_cluster ),
       _parent( parent ),
       _children( nullptr ),
+      _moment_contribution( nullptr ),
+      _local_contribution( nullptr ),
+      _interaction_list( nullptr ),
       _level( level ) {
   }
 
@@ -80,6 +86,12 @@ class besthea::mesh::spacetime_cluster {
       }
       delete _children;
     }
+    if ( _moment_contribution != nullptr )
+      delete _moment_contribution;
+    if ( _local_contribution != nullptr )
+      delete _local_contribution;
+    if ( _interaction_list != nullptr )
+      delete _interaction_list;
   }
 
   /**
@@ -110,6 +122,24 @@ class besthea::mesh::spacetime_cluster {
       return 0;
     }
   }
+  
+  /**
+   * Adds cluster to the interaction list.
+   * @param[in] cluster Cluster to be added.
+   */
+  void add_to_interaction_list( spacetime_cluster * cluster ) {
+    if ( _interaction_list == nullptr ) {
+      _interaction_list = new std::vector< spacetime_cluster * >( );
+    }
+    _interaction_list->push_back( cluster );
+  }
+  
+  /**
+   * Returns cluster's interaction list.
+   */
+  std::vector< spacetime_cluster * > * get_interaction_list( ) {
+    return _interaction_list;
+  }
 
   /**
    * Returns a reference to the underlying spatial cluster.
@@ -137,6 +167,82 @@ class besthea::mesh::spacetime_cluster {
       _children = nullptr;
     }
   }
+  
+  /**
+   * Initialize local contribution as full matrix of zeros.
+   * @param[in] n_rows_contribution Number of rows.
+   * @param[in] n_columns_contribution Number of columns.
+   * \note If the contributions are set already, then they are resized and
+   * reset to zero.
+   * \todo Is resizing of a full matrix allocated with new safe?
+   */
+  void set_local_contribution( lo n_rows_contribution, 
+                               lo n_columns_contribution ) {
+    if ( _local_contribution == nullptr ) {
+      _local_contribution = new full_matrix_type( n_rows_contribution, 
+                                                  n_columns_contribution );
+    }
+    else {
+//       TODO: see comment above
+      _local_contribution->resize( n_rows_contribution, 
+                                   n_columns_contribution );
+      _local_contribution->fill( 0.0 );
+    }
+  }
+
+  /**
+   * Resets local contribution to zero.
+   */
+  void clean_local_contribution( ) {
+    if ( _local_contribution != nullptr ) {
+      _local_contribution->fill( 0.0 );
+    }
+  }
+  
+  /**
+   * Initialize moment contribution as full matrix of zeros.
+   * @param[in] n_rows_contribution Number of rows.
+   * @param[in] n_columns_contribution Number of columns.
+   * \note If the contributions are set already, then they are resized and
+   * reset to zero.
+   * \todo Is resizing of a full matrix allocated with new safe?
+   */
+  void set_moment_contribution( lo n_rows_contribution, 
+                                lo n_columns_contribution ) {
+    if ( _moment_contribution == nullptr ) {
+      _moment_contribution = new full_matrix_type( n_rows_contribution, 
+                                                   n_columns_contribution );
+    }
+    else {
+//       TODO: see comment above
+      _moment_contribution->resize( n_rows_contribution, 
+                                    n_columns_contribution );
+      _moment_contribution->fill( 0.0 );
+    }
+  }
+
+  /**
+   * Resets moment contribution to zero.
+   */
+  void clean_moment_contribution( ) {
+    if ( _moment_contribution != nullptr ) {
+      _moment_contribution->fill( 0.0 );
+    }
+  }
+  
+  /**
+   * Returns pointer to the local contribution.
+   */
+  full_matrix_type * get_local_contribution( ) {
+    return _local_contribution;
+  }
+  
+  /**
+   * Returns pointer to the moment contribution.
+   */
+  full_matrix_type * get_moment_contribution( ) {
+    return _moment_contribution;
+  }
 
   /**
    * Returns level of the cluster in the cluster tree.
@@ -149,8 +255,15 @@ class besthea::mesh::spacetime_cluster {
    * Prints info of the object.
    */
   void print( ) {
-    std::cout << _level << " " << _spatial_cluster.get_level( ) << " "
-              << _temporal_cluster.get_level( ) << std::endl;
+    std::cout << _level << ", space: " << _spatial_cluster.get_level( ) 
+              << " time: " << _temporal_cluster.get_level( ) << std::endl;
+    besthea::linear_algebra::vector spat_center( 3, false );
+    _spatial_cluster.get_center( spat_center );
+    sc temp_center = _temporal_cluster.get_center( );
+    std::cout << "spatial center: (" << spat_center[ 0 ] << ", "
+              << spat_center[ 1] << ", " << spat_center[ 2 ] << ")" 
+              << std::endl;
+    std::cout << "temporal center: " << temp_center << std::endl;
   }
 
  private:
@@ -158,6 +271,12 @@ class besthea::mesh::spacetime_cluster {
   time_cluster & _temporal_cluster;  //!< underlying temporal cluster
   spacetime_cluster * _parent;       //!< parent of the space-time cluster
   std::vector< spacetime_cluster * > * _children;  //!< children of the cluster
+  full_matrix_type *_moment_contribution; //!< matrix to store the intermediate 
+                                          //!< products in the upward FMM step
+  full_matrix_type *_local_contribution; //!< matrix to store the intermediate 
+                                         //!< products in the downpward FMM step
+  std::vector< spacetime_cluster * > * _interaction_list; //!< interaction list
+                                                          //!< of the cluster
   lo _level;  //!< level within the cluster tree
 };
 

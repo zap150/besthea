@@ -34,6 +34,7 @@ besthea::mesh::time_cluster_tree::time_cluster_tree(
     _levels( levels ),
     _real_max_levels( 0 ),
     _n_min_elems( n_min_elems ),
+    _n_max_elems_leaf( 0 ),
     _paddings( _levels, -1.0 ) {
   sc center = ( _mesh.get_end( ) + _mesh.get_start( ) ) / 2;
   sc half_size = ( _mesh.get_end( ) - _mesh.get_start( ) ) / 2;
@@ -60,7 +61,9 @@ void besthea::mesh::time_cluster_tree::build_tree(
 
   if ( level > _levels - 1 || root.get_n_elements( ) < _n_min_elems ) {
     root.set_n_children( 0 );
-
+    if ( root.get_n_elements( ) > _n_max_elems_leaf ) {
+      _n_max_elems_leaf = root.get_n_elements( );
+    }
     if ( level > _real_max_levels ) {
       _real_max_levels = level;
     }
