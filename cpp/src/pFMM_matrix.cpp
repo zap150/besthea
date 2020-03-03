@@ -91,56 +91,131 @@ void besthea::linear_algebra::pFMM_matrix::apply( const block_vector_type & x,
       }
     }
   }
-  // reset all moment and local contributions to zero
-  _spacetime_tree->clean_local_contributions( _spacetime_tree->get_root( ) );
-  _spacetime_tree->clean_moment_contributions( _spacetime_tree->get_root( ) );
-
   // Next, use the pFMM for the computation of the farfield contribution 
   // according to the respective spaces. The result is stored in an auxiliary
   // vector y_pFMM and then added to y
-  block_vector_type y_pFMM( y.get_block_size( ), y.get_size_of_block( ), true );
-  if ( _source_space_is_p0 ) {
-    apply_s2m_operations_p0( x );
+  // first: case (trans == false) and spaces are not both p1:
+  if ( !trans && ( _source_space_is_p0 || _target_space_is_p0 ) ) {
+    // reset all moment and local contributions to zero
+    _spacetime_tree->clean_local_contributions( _spacetime_tree->get_root( ) );
+    _spacetime_tree->clean_moment_contributions( _spacetime_tree->get_root( ) );
+    
+    // allocate buffers for the operations
+    std::vector< full_matrix_type > buffer_matrices;
+    buffer_matrices.resize( 8 );
+    for ( auto it = buffer_matrices.begin( ); it != buffer_matrices.end( ); 
+          ++it ) {
+      ( *it ).resize( _temp_order + 1, 
+      ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 );
+    }
+    vector_type buffer_for_gaussians( ( _m2l_integration_order + 1 ) 
+      * ( _m2l_integration_order + 1 ) * ( _temp_order + 1 ) 
+      * ( _temp_order + 1 ), false );
+    vector_type buffer_for_coeffs( ( _spat_order + 1 ) * ( _spat_order + 1 ) 
+      * ( _temp_order + 1 ) * ( _temp_order + 1 ), false );
+    full_matrix_type aux_buffer_0( ( _temp_order + 1 ) * ( _temp_order + 1 ),
+      ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6,
+      false );
+    full_matrix_type aux_buffer_1( ( _temp_order + 1 ) * ( _temp_order + 1 ),
+      ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6,
+      false );
+    block_vector_type y_pFMM( y.get_block_size( ), y.get_size_of_block( ), 
+                              true );
+    
+    // S2M, M2M, M2L, L2L and L2T steps:
+    if ( _source_space_is_p0 ) {
+      apply_s2m_operations_p0( x );
+    }
+    else {
+      apply_s2m_operations_p1( x );
+    }    
+    call_m2m_operations( _spacetime_tree->get_root( ), buffer_matrices );
+    call_m2l_operations( _spacetime_tree->get_root( ), buffer_for_gaussians, 
+                        buffer_for_coeffs, aux_buffer_0, aux_buffer_1 );
+    call_l2l_operations( _spacetime_tree->get_root( ), buffer_matrices );
+    if ( _target_space_is_p0 ) {
+      apply_l2t_operations_p0( y_pFMM );
+    }
+    else {
+      apply_l2t_operations_p1( y_pFMM );
+    }
+    
+    // Add the scaled result to y.
+    y.add( y_pFMM, alpha );
   }
-  else {
-    apply_s2m_operations_p1( x );
+  else if ( trans && ( _source_space_is_p0 || _target_space_is_p0 ) ) {
+    //TODO: implement this!
   }
-  
-  std::vector< full_matrix_type > buffer_matrices;
-  buffer_matrices.resize( 8 );
-  for ( auto it = buffer_matrices.begin( ); it != buffer_matrices.end( ); 
-        ++it ) {
-    ( *it ).resize( _temp_order + 1, 
-     ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 );
+  else if ( !trans && !_source_space_is_p0 && !_target_space_is_p0 ) {
+    // Spezialiation for hypersingular operator.
+    
+    //  Allocate buffers for the operations
+    std::vector< full_matrix_type > buffer_matrices;
+    buffer_matrices.resize( 8 );
+    for ( auto it = buffer_matrices.begin( ); it != buffer_matrices.end( ); 
+          ++it ) {
+      ( *it ).resize( _temp_order + 1, 
+      ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 );
+    }
+    vector_type buffer_for_gaussians( ( _m2l_integration_order + 1 ) 
+      * ( _m2l_integration_order + 1 ) * ( _temp_order + 1 ) 
+      * ( _temp_order + 1 ), false );
+    vector_type buffer_for_coeffs( ( _spat_order + 1 ) * ( _spat_order + 1 ) 
+      * ( _temp_order + 1 ) * ( _temp_order + 1 ), false );
+    full_matrix_type aux_buffer_0( ( _temp_order + 1 ) * ( _temp_order + 1 ),
+      ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6,
+      false );
+    full_matrix_type aux_buffer_1( ( _temp_order + 1 ) * ( _temp_order + 1 ),
+      ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6,
+      false );
+    block_vector_type y_pFMM( y.get_block_size( ), y.get_size_of_block( ), 
+                              true );
+    
+    // 3 "pFMM steps" for first term of hypersingular operator (curls)
+    for ( lo dim = 0; dim < 3; ++ dim ) {
+      // reset all moment and local contributions to zero
+      _spacetime_tree->
+        clean_local_contributions( _spacetime_tree->get_root( ) );
+      _spacetime_tree->
+        clean_moment_contributions( _spacetime_tree->get_root( ) );
+      apply_s2m_operations_curl_p1_hs( x, dim );
+      call_m2m_operations( _spacetime_tree->get_root( ), buffer_matrices );
+      call_m2l_operations( _spacetime_tree->get_root( ), buffer_for_gaussians, 
+                          buffer_for_coeffs, aux_buffer_0, aux_buffer_1 );
+      call_l2l_operations( _spacetime_tree->get_root( ), buffer_matrices );
+      apply_l2t_operations_curl_p1_hs( y_pFMM, dim );
+    }
+    
+    // Add the scaled result to y. 
+    // (additional scaling by square of heat coefficient)
+    y.add( y_pFMM, alpha * _alpha * _alpha );
+    
+    // reset y_pFMM to zero
+    y_pFMM.fill( 0.0 );
+    
+    // 3 "pFMM steps" for the second term of hypersingular operator (normals and
+    // time derivative in source term)
+    for ( lo dim = 0; dim < 3; ++ dim ) {
+      // reset all moment and local contributions to zero
+      _spacetime_tree->
+        clean_local_contributions( _spacetime_tree->get_root( ) );
+      _spacetime_tree->
+        clean_moment_contributions( _spacetime_tree->get_root( ) );
+      apply_s2m_operations_p1_normal_hs( x, dim );
+      call_m2m_operations( _spacetime_tree->get_root( ), buffer_matrices );
+      call_m2l_operations( _spacetime_tree->get_root( ), buffer_for_gaussians, 
+                          buffer_for_coeffs, aux_buffer_0, aux_buffer_1 );
+      call_l2l_operations( _spacetime_tree->get_root( ), buffer_matrices );
+      apply_l2t_operations_p1_normal_hs( y_pFMM, dim );
+    }
+    
+    // Subtract the scaled result from y. 
+    // (additional scaling by heat coefficient)
+    y.add( y_pFMM, -alpha * _alpha );
   }
-  call_m2m_operations( _spacetime_tree->get_root( ), buffer_matrices );
-  
-  vector_type buffer_for_gaussians( ( _m2l_integration_order + 1 ) 
-    * ( _m2l_integration_order + 1 ) * ( _temp_order + 1 ) 
-    * ( _temp_order + 1 ), false );
-  vector_type buffer_for_coeffs( ( _spat_order + 1 ) * ( _spat_order + 1 ) 
-    * ( _temp_order + 1 ) * ( _temp_order + 1 ), false );
-  full_matrix_type aux_buffer_0( ( _temp_order + 1 ) * ( _temp_order + 1 ),
-    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6,
-    false );
-  full_matrix_type aux_buffer_1( ( _temp_order + 1 ) * ( _temp_order + 1 ),
-    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6,
-    false );
-  
-  call_m2l_operations( _spacetime_tree->get_root( ), buffer_for_gaussians, 
-                       buffer_for_coeffs, aux_buffer_0, aux_buffer_1 );
-  
-  call_l2l_operations( _spacetime_tree->get_root( ), buffer_matrices );
-  
-  if ( _target_space_is_p0 ) {
-    apply_l2t_operations_p0( y_pFMM );
+  else if ( trans && !_source_space_is_p0 && !_target_space_is_p0 ) {
+   //TODO: do we need this?!  
   }
-  else {
-    apply_l2t_operations_p1( y_pFMM );
-  }
-
-  // add the scaled result to y
-  y.add( y_pFMM, alpha );
   
 // TODO: eliminate the remaining lines?!
 // #pragma omp parallel
@@ -816,6 +891,117 @@ void besthea::linear_algebra::pFMM_matrix::apply_s2m_operations_p1(
   }
 }
 
+void besthea::linear_algebra::pFMM_matrix::apply_s2m_operations_curl_p1_hs( 
+  block_vector_type const & x, const lo dim ) const {
+  lo max_elem_time_cluster = _spacetime_tree->get_time_cluster_tree( )->
+    get_n_max_elems_leaf( );
+  lo max_elem_space_cluster = _spacetime_tree->get_space_cluster_tree( )->
+    get_n_max_elems_leaf( );
+  lo n_multi_indices = 
+    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6;
+  // allocate large enough matrix for sources to avoid reallocation
+  // (3 * nr_elem is used as bound for the number of vertices in a cluster)
+  full_matrix_type sources( max_elem_time_cluster, 3 * max_elem_space_cluster, 
+                            false);
+  full_matrix_type T_curl( 3 * max_elem_space_cluster, n_multi_indices,
+                                 false );                             
+  full_matrix_type aux_matrix( max_elem_time_cluster, n_multi_indices, 
+                                 false );
+  for ( auto it = _spacetime_tree->get_leaves( ).begin( ); 
+        it != _spacetime_tree->get_leaves( ).end( ); ++it ) {
+    // get references of current moment and all required matrices
+    full_matrix_type & moment = *( ( *it )->get_moment_contribution( ) );
+    full_matrix_type & T = ( *it )->get_space_cluster( ).
+                                        get_chebyshev_quad( );
+    full_matrix_type & L = ( *it )->get_time_cluster( ).get_lagrange_quad( );
+    
+    // get the relevant entries of the block vector x and store them in sources
+    lo n_space_nodes = ( *it )->get_space_cluster( ).get_n_nodes( );
+    lo n_space_elements = ( *it )->get_space_cluster( ).get_n_elements( );
+    const std::vector< lo > & local_2_global_nodes = 
+      ( *it )->get_space_cluster( ).get_local_2_global_nodes( );
+    lo n_time_elements = ( *it )->get_time_cluster( ).get_n_elements( );
+    const std::vector< lo > & time_elements = 
+      ( *it )->get_time_cluster( ).get_all_elements( );
+    sources.resize( n_time_elements, n_space_nodes );
+    for ( lo i_time = 0; i_time < n_time_elements; ++ i_time ) {
+      for ( lo i_space = 0; i_space < n_space_nodes; ++ i_space ) {
+        sources( i_time, i_space ) = x.get( time_elements[ i_time ], 
+                                            local_2_global_nodes[ i_space ] );
+      }
+    }
+    T_curl.resize( n_space_nodes, n_multi_indices );
+    T_curl.fill( 0.0 );
+    const std::vector< lo > & elems_2_local_nodes
+      = ( *it )->get_space_cluster( ).get_elems_2_local_nodes( );
+    const std::vector< sc > & surf_curls_curr_dim =
+      ( *it )->get_space_cluster( ).get_surf_curls( dim );
+    // use quadrature of plain Chebyshev polynomials to compute quadrature of
+    // Chebyshev polynomials times surface curls of p1 basis functions.
+    for ( lo i_beta = 0; i_beta < n_multi_indices; ++i_beta ) {
+      for ( lo i_el = 0; i_el < n_space_elements; ++i_el ) {
+        T_curl.add_atomic( elems_2_local_nodes[ 3 * i_el ], i_beta,
+                                  surf_curls_curr_dim[ 3 * i_el ] 
+                                  * T.get( i_el, i_beta ) );
+        T_curl.add_atomic( elems_2_local_nodes[ 3 * i_el + 1 ], i_beta,
+                                  surf_curls_curr_dim[ 3 * i_el + 1 ] 
+                                  * T.get( i_el, i_beta ) );     
+        T_curl.add_atomic( elems_2_local_nodes[ 3 * i_el + 2 ], i_beta,
+                                  surf_curls_curr_dim[ 3 * i_el + 2 ] 
+                                  * T.get( i_el, i_beta ) );
+      }
+    }
+    // compute D = Q * T_curl and then the moment mu = L * D 
+    aux_matrix.resize( n_time_elements, n_multi_indices );
+    aux_matrix.multiply( sources, T_curl );
+    moment.multiply( L, aux_matrix );
+  }
+}
+
+void besthea::linear_algebra::pFMM_matrix::apply_s2m_operations_p1_normal_hs( 
+  block_vector_type const & x, const lo dim ) const {
+  lo max_elem_time_cluster = _spacetime_tree->get_time_cluster_tree( )->
+    get_n_max_elems_leaf( );
+  lo max_elem_space_cluster = _spacetime_tree->get_space_cluster_tree( )->
+    get_n_max_elems_leaf( );
+  lo n_multi_indices = 
+    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6;
+  // allocate large enough matrix for sources to avoid reallocation
+  // (3 * nr_elem is used as bound for the number of vertices in a cluster)
+  full_matrix_type sources( max_elem_time_cluster, 3 * max_elem_space_cluster, 
+                            false);                         
+  full_matrix_type aux_matrix( max_elem_time_cluster, n_multi_indices, 
+                                 false );
+  for ( auto it = _spacetime_tree->get_leaves( ).begin( ); 
+        it != _spacetime_tree->get_leaves( ).end( ); ++it ) {
+    // get references of current moment and all required matrices
+    full_matrix_type & moment = *( ( *it )->get_moment_contribution( ) );
+    full_matrix_type & T_normal = ( *it )->get_space_cluster( ).
+                                        get_cheb_times_normal_quad( dim );
+    full_matrix_type & L_drv = ( *it )->get_time_cluster( ).
+                                        get_lagrange_drv_int( );
+    
+    // get the relevant entries of the block vector x and store them in sources
+    lo n_space_nodes = ( *it )->get_space_cluster( ).get_n_nodes( );
+    const std::vector< lo > & local_2_global_nodes = 
+      ( *it )->get_space_cluster( ).get_local_2_global_nodes( );
+    lo n_time_elements = ( *it )->get_time_cluster( ).get_n_elements( );
+    const std::vector< lo > & time_elements = 
+      ( *it )->get_time_cluster( ).get_all_elements( );
+    sources.resize( n_time_elements, n_space_nodes );
+    for ( lo i_time = 0; i_time < n_time_elements; ++ i_time ) {
+      for ( lo i_space = 0; i_space < n_space_nodes; ++ i_space ) {
+        sources( i_time, i_space ) = x.get( time_elements[ i_time ], 
+                                            local_2_global_nodes[ i_space ] );
+      }
+    }
+    // compute D = Q * T_normal and then the moment mu = L * D 
+    aux_matrix.resize( n_time_elements, n_multi_indices );
+    aux_matrix.multiply( sources, T_normal );
+    moment.multiply( L_drv, aux_matrix );
+  }
+}
+
 void besthea::linear_algebra::pFMM_matrix::call_m2m_operations( 
   spacetime_cluster * root, 
   std::vector< full_matrix_type >& buffer_matrices ) const {
@@ -1136,10 +1322,10 @@ void besthea::linear_algebra::pFMM_matrix::apply_l2t_operations_p0(
         it != _spacetime_tree->get_leaves( ).end( ); ++it ) {
     // get references of local moment and all required matrices
     full_matrix_type & local = *( ( *it )->get_local_contribution( ) );
-    full_matrix_type & T = (*it)->get_space_cluster( ).get_chebyshev_quad( );
-    full_matrix_type & L = (*it)->get_time_cluster( ).get_lagrange_quad( );
-    lo n_space_elements = (*it)->get_space_cluster( ).get_n_elements( );
-    lo n_time_elements = (*it)->get_time_cluster( ).get_n_elements( );
+    full_matrix_type & T = ( *it )->get_space_cluster( ).get_chebyshev_quad( );
+    full_matrix_type & L = ( *it )->get_time_cluster( ).get_lagrange_quad( );
+    lo n_space_elements = ( *it )->get_space_cluster( ).get_n_elements( );
+    lo n_time_elements = ( *it )->get_time_cluster( ).get_n_elements( );
     const std::vector< lo > & space_elements = 
       ( *it )->get_space_cluster( ).get_all_elements( );
     const std::vector< lo > & time_elements = 
@@ -1178,12 +1364,12 @@ void besthea::linear_algebra::pFMM_matrix::apply_l2t_operations_p1(
         it != _spacetime_tree->get_leaves( ).end( ); ++it ) {
     // get references of local moment and all required matrices
     full_matrix_type & local = *( ( *it )->get_local_contribution( ) );
-    full_matrix_type & T = (*it)->get_space_cluster( ).get_chebyshev_quad( );
-    full_matrix_type & L = (*it)->get_time_cluster( ).get_lagrange_quad( );
-    lo n_space_nodes = (*it)->get_space_cluster( ).get_n_nodes( );
+    full_matrix_type & T = ( *it )->get_space_cluster( ).get_chebyshev_quad( );
+    full_matrix_type & L = ( *it )->get_time_cluster( ).get_lagrange_quad( );
+    lo n_space_nodes = ( *it )->get_space_cluster( ).get_n_nodes( );
     const std::vector< lo > & local_2_global_nodes = 
       ( *it )->get_space_cluster( ).get_local_2_global_nodes( );
-    lo n_time_elements = (*it)->get_time_cluster( ).get_n_elements( );
+    lo n_time_elements = ( *it )->get_time_cluster( ).get_n_elements( );
     const std::vector< lo > & time_elements = 
       ( *it )->get_time_cluster( ).get_all_elements( );
     // resize auxiliary matrix and matrix for targets appropriately
@@ -1193,6 +1379,120 @@ void besthea::linear_algebra::pFMM_matrix::apply_l2t_operations_p1(
     // compute D = trans(L) * lambda and then the result Y = D * trans(T)
     aux_matrix.multiply( L, local, true, false );
     targets.multiply( aux_matrix, T, false, true );
+    // add the results to the correct position in the result vector
+    for ( lo i_time = 0; i_time < n_time_elements; ++ i_time ) {
+      for ( lo i_space = 0; i_space < n_space_nodes; ++ i_space ) {
+        y.add( time_elements[ i_time ], local_2_global_nodes[ i_space ],
+               targets( i_time, i_space ) );
+      }
+    }
+  }
+}
+
+void besthea::linear_algebra::pFMM_matrix::apply_l2t_operations_curl_p1_hs( 
+  block_vector_type & y, const lo dim ) const {
+  lo max_elem_time_cluster = _spacetime_tree->get_time_cluster_tree( )->
+    get_n_max_elems_leaf( );
+  lo max_elem_space_cluster = _spacetime_tree->get_space_cluster_tree( )->
+    get_n_max_elems_leaf( );
+  lo n_multi_indices = 
+    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6;
+  // allocate large enough matrix for sources to avoid reallocation
+  // (3 * nr_elem is used as bound for the number of vertices in a cluster)
+  full_matrix_type targets( max_elem_time_cluster, 3 * max_elem_space_cluster, 
+                            false);
+  full_matrix_type T_curl( 3 * max_elem_space_cluster, n_multi_indices,
+                                 false );                             
+  full_matrix_type aux_matrix( max_elem_time_cluster, n_multi_indices, 
+                                 false );
+  for ( auto it = _spacetime_tree->get_leaves( ).begin( ); 
+        it != _spacetime_tree->get_leaves( ).end( ); ++it ) {
+    // get references of local moment and all required matrices and information
+    full_matrix_type & local = *( ( *it )->get_local_contribution( ) );
+    full_matrix_type & T = ( *it )->get_space_cluster( ).
+                                        get_chebyshev_quad( );
+    full_matrix_type & L = ( *it )->get_time_cluster( ).get_lagrange_quad( );
+    
+    // get the relevant entries of the block vector x and store them in sources
+    lo n_space_nodes = ( *it )->get_space_cluster( ).get_n_nodes( );
+    lo n_space_elements = ( *it )->get_space_cluster( ).get_n_elements( );
+    const std::vector< lo > & local_2_global_nodes = 
+      ( *it )->get_space_cluster( ).get_local_2_global_nodes( );
+    lo n_time_elements = ( *it )->get_time_cluster( ).get_n_elements( );
+    const std::vector< lo > & time_elements = 
+      ( *it )->get_time_cluster( ).get_all_elements( );
+    T_curl.resize( n_space_nodes, n_multi_indices );
+    T_curl.fill( 0.0 );
+    const std::vector< lo > & elems_2_local_nodes
+      = ( *it )->get_space_cluster( ).get_elems_2_local_nodes( );
+    const std::vector< sc > & surf_curls_curr_dim =
+      ( *it )->get_space_cluster( ).get_surf_curls( dim );
+    // use quadrature of plain Chebyshev polynomials to compute quadrature of
+    // Chebyshev polynomials times surface curls of p1 basis functions.
+    for ( lo i_beta = 0; i_beta < n_multi_indices; ++i_beta ) {
+      for ( lo i_el = 0; i_el < n_space_elements; ++i_el ) {
+        T_curl.add_atomic( elems_2_local_nodes[ 3 * i_el ], i_beta,
+                                  surf_curls_curr_dim[ 3 * i_el ] 
+                                  * T.get( i_el, i_beta ) );
+        T_curl.add_atomic( elems_2_local_nodes[ 3 * i_el + 1 ], i_beta,
+                                  surf_curls_curr_dim[ 3 * i_el + 1 ] 
+                                  * T.get( i_el, i_beta ) );     
+        T_curl.add_atomic( elems_2_local_nodes[ 3 * i_el + 2 ], i_beta,
+                                  surf_curls_curr_dim[ 3 * i_el + 2 ] 
+                                  * T.get( i_el, i_beta ) );
+      }
+    }
+    aux_matrix.resize( n_time_elements, n_multi_indices );
+    targets.resize( n_time_elements, n_space_nodes );
+    // compute D = trans(L) * lambda and then the result Y = D * trans(T_curl)
+    aux_matrix.multiply( L, local, true, false );
+    targets.multiply( aux_matrix, T_curl, false, true );
+    // add the results to the correct position in the result vector
+    for ( lo i_time = 0; i_time < n_time_elements; ++ i_time ) {
+      for ( lo i_space = 0; i_space < n_space_nodes; ++ i_space ) {
+        y.add( time_elements[ i_time ], local_2_global_nodes[ i_space ],
+               targets( i_time, i_space ) );
+      }
+    }
+  }
+}
+
+void besthea::linear_algebra::pFMM_matrix::apply_l2t_operations_p1_normal_hs( 
+  block_vector_type & y, const lo dim ) const {   
+  lo max_elem_time_cluster = _spacetime_tree->get_time_cluster_tree( )->
+    get_n_max_elems_leaf( );
+  lo max_elem_space_cluster = _spacetime_tree->get_space_cluster_tree( )->
+    get_n_max_elems_leaf( );
+  lo n_multi_indices = 
+    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6;
+  // allocate large enough matrix for sources to avoid reallocation
+  // (3 * nr_elem is used as bound for the number of vertices in a cluster)
+  full_matrix_type targets( max_elem_time_cluster, 3 * max_elem_space_cluster, 
+                            false);                            
+  full_matrix_type aux_matrix( max_elem_time_cluster, n_multi_indices, 
+                                 false );
+  for ( auto it = _spacetime_tree->get_leaves( ).begin( ); 
+        it != _spacetime_tree->get_leaves( ).end( ); ++it ) {
+    // get references of local moment and all required matrices and information
+    full_matrix_type & local = *( ( *it )->get_local_contribution( ) );
+    full_matrix_type & T_normal = ( *it )->get_space_cluster( ).
+                                        get_cheb_times_normal_quad( dim );
+    full_matrix_type & L = ( *it )->get_time_cluster( ).get_lagrange_quad( );
+    
+    // get the relevant entries of the block vector x and store them in sources
+    lo n_space_nodes = ( *it )->get_space_cluster( ).get_n_nodes( );
+    const std::vector< lo > & local_2_global_nodes = 
+      ( *it )->get_space_cluster( ).get_local_2_global_nodes( );
+    lo n_time_elements = ( *it )->get_time_cluster( ).get_n_elements( );
+    const std::vector< lo > & time_elements = 
+      ( *it )->get_time_cluster( ).get_all_elements( );
+
+      
+    aux_matrix.resize( n_time_elements, n_multi_indices );
+    targets.resize( n_time_elements, n_space_nodes );
+    // compute D = trans(L) * lambda and then the result Y = D * trans(T_curl)
+    aux_matrix.multiply( L, local, true, false );
+    targets.multiply( aux_matrix, T_normal, false, true );
     // add the results to the correct position in the result vector
     for ( lo i_time = 0; i_time < n_time_elements; ++ i_time ) {
       for ( lo i_space = 0; i_space < n_space_nodes; ++ i_space ) {

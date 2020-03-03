@@ -301,6 +301,35 @@ class besthea::linear_algebra::pFMM_matrix
 //     block_vector_type const & x ) const;
   
   /*!
+   * @brief Executes s2m operations for all leaves of the spacetime cluster 
+   * and a given vector \p x for dimension \p dim of the surface curls of p1
+   * basis functions (first term of the hypersingular operator) 
+   * @param[in] x Vector for multiplication.
+   * @param[in] dim Dimension of the surface curls (0,1,2) which is considered.
+   * @note The results are stored in the matrices \p _moment_contribution in the 
+   * respective spacetime clusters.
+   * @note The method uses matrices of integrals over polynomials and a surface
+   * curl mapping, which are computed in 
+   * \ref besthea::bem::fast_spacetime_be_assembler.
+   */
+  void apply_s2m_operations_curl_p1_hs( 
+    block_vector_type const & x, const lo dim ) const;
+    
+  /*!
+   * @brief Executes s2m operations for all leaves of the spacetime cluster 
+   * and a given vector \p x for dimension \p dim of the normal vector (second
+   * term of the hypersingular operator)
+   * @param[in] x Vector for multiplication.
+   * @param[in] dim Dimension of the surface curls (0,1,2) which is considered.
+   * @note The results are stored in the matrices \p _moment_contribution in the 
+   * respective spacetime clusters.
+   * @note The method uses matrices of integrals over polynomials which are 
+   * computed in \ref besthea::bem::fast_spacetime_be_assembler.
+   */
+  void apply_s2m_operations_p1_normal_hs( 
+    block_vector_type const & x, const lo dim ) const;
+  
+  /*!
    * @brief Executes all m2m operations recursively.
    * @param[in] root  M2m operations are applied for this spacetime cluster and
    *                  all its descendants.
@@ -390,6 +419,35 @@ class besthea::linear_algebra::pFMM_matrix
    * \ref besthea::bem::fast_spacetime_be_assembler.
    */
   void apply_l2t_operations_p1( block_vector_type & y ) const;
+  
+  /*!
+   * @brief Executes l2t operations for all leaves of the spacetime cluster 
+   * for dimension \p dim of the surface curls of p1 basis functions and adds 
+   * the results to a vector \p y (first term of the hypersingular operator) 
+   * @param[in,out] y Vector to which the results are added.
+   * @param[in] dim Dimension of the surface curls (0,1,2) which is considered.
+   * @note For the computations the matrices \p _local_contribution in the 
+   * respective spacetime clusters are used.
+   * @note The method uses matrices of integrals over polynomials and a surface
+   * curl mapping, which are computed in 
+   * \ref besthea::bem::fast_spacetime_be_assembler.
+   */
+  void apply_l2t_operations_curl_p1_hs( 
+    block_vector_type & y, const lo dim ) const; 
+    
+  /*!
+   * @brief Executes l2t operations for all leaves of the spacetime cluster 
+   * for dimension \p dim of the normal vector and adds the results to a 
+   * vector \p y (second term of the hypersingular operator)
+   * @param[in,out] y Vector to which the results are added.
+   * @param[in] dim Dimension of the surface curls (0,1,2) which is considered.
+   * @note For the computations the matrices \p _local_contribution in the 
+   * respective spacetime clusters are used.
+   * @note The method uses matrices of integrals over polynomials which are 
+   * computed in \ref besthea::bem::fast_spacetime_be_assembler.
+   */
+  void apply_l2t_operations_p1_normal_hs( 
+    block_vector_type & y, const lo dim ) const; 
   
  private:
   

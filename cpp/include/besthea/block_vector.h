@@ -216,6 +216,16 @@ class besthea::linear_algebra::block_vector {
       _data[ i ].add( v._data[ i ], alpha );
     }
   }
+  
+  /*!
+   * @brief Fills the block vector with the given value.
+   * @param[in] value
+   */
+  void fill( sc value ) {
+    for ( lo i = 0; i < _block_size; ++i ) {
+      _data[ i ].fill( value );
+    }
+  }
 
   /*!
    * @brief Prints the vector.
