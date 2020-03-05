@@ -114,23 +114,28 @@ int main( int argc, char * argv[] ) {
 
 //   sc st_coeff = 4.0;
 //   spacetime_cluster_tree tree( spacetime_mesh, 5, 2, 10, st_coeff );
-  sc st_coeff = 4.0;
+  sc st_coeff = 1.0;
   spacetime_cluster_tree tree( spacetime_mesh, 5, 2, 10, st_coeff );
+  
   fast_spacetime_be_space< basis_tri_p0 > space_p0_pFMM( tree );
   fast_spacetime_be_space< basis_tri_p1 > space_p1_pFMM( tree );
 
   lo temp_order = 2;
   lo spat_order = 2;
+  
   if ( argc > 1 ) {
     temp_order = std::atoi( argv[ 1 ] );
   }
   if ( argc > 2 ) {
     spat_order = std::atoi( argv[ 2 ] );
   }
+  if ( argc > 3 ) {
+    test_case = std::atoi( argv[ 3 ] );
+  }
 
   pFMM_matrix * K_pFMM = new pFMM_matrix( &tree, false, temp_order, spat_order, 
                                           cauchy_data::_alpha, false, true );
-//   tree.print( );
+  tree.print( );
 
   fast_spacetime_be_assembler fast_assembler_k(
     kernel_k, space_p0_pFMM, space_p1_pFMM, order_sing, order_reg, temp_order, 
@@ -154,15 +159,11 @@ int main( int argc, char * argv[] ) {
 //   applied_pFMM.get_block( 0 ).print_h( );
   
   if ( test_case == 1 ) {
-  //   lo block_id = n_blocks - 1 - 2;
+    lo entry_id = 0;
     lo block_id = 0;
     lo block_evaluation_id = 2;
-//     lo toeplitz_id = block_evaluation_id - block_id;
-  //   lo block_evaluation_id = n_blocks - 1;
-    
-    
     vector x_loc_0( cols_of_block );
-    x_loc_0(9) = 1.0;
+    x_loc_0( entry_id ) = 1.0;
     block_vector x_block_vec( n_blocks, cols_of_block, true );
     x_block_vec.get_block( block_id ) = x_loc_0;
     // multiplicate x_block_vec with Toeplitz matrix K
@@ -178,11 +179,11 @@ int main( int argc, char * argv[] ) {
     vector & subvec_pFMM = applied_pFMM.get_block( block_evaluation_id );
     vector & subvec_toeplitz = applied_toeplitz.get_block( 
       block_evaluation_id );
-    lo entry_id = 8;
-    std::cout << "id: " << entry_id << std::endl;
-    std::cout << "entry is " << subvec_pFMM[ entry_id ]
+    lo eval_entry_id = 8;
+    std::cout << "id: " << eval_entry_id << std::endl;
+    std::cout << "entry is " << subvec_pFMM[ eval_entry_id ]
               << std::endl;
-    std::cout << "should be " << subvec_toeplitz[ entry_id ] << std::endl;
+    std::cout << "should be " << subvec_toeplitz[ eval_entry_id ] << std::endl;
     subvec_pFMM.print_h( );
     std::cout << "exact result block" << std::endl;
     subvec_toeplitz.print_h( );
@@ -208,7 +209,57 @@ int main( int argc, char * argv[] ) {
                   / applied_toeplitz.get_block( i ).norm( ) << std::endl;
     }
   }
+  else if ( test_case == 3 ) {
+    lo block_id = 0;
+    lo block_evaluation_id = 2;
+    lo entry_id = 0;
+    vector x_loc_0( rows_of_block );
+    x_loc_0( entry_id ) = 1.0;
+    block_vector x_block_vec( n_blocks, rows_of_block, true );
+    x_block_vec.get_block( block_id ) = x_loc_0;
+    // multiplicate x_block_vec with Toeplitz matrix K
+    block_vector applied_toeplitz ( n_blocks, cols_of_block, true );
+    K->apply( x_block_vec, applied_toeplitz, true );
+    // multiplicate x_block_vec with pFMM matrix K
+    block_vector applied_pFMM ( n_blocks, cols_of_block, true );
+    K_pFMM->apply( x_block_vec, applied_pFMM, true );
 
+    std::cout << "resulting subblock pFMM multiplication" << std::endl;
+    std::cout << "source id " << block_id << std::endl;
+    std::cout << "target id " << block_evaluation_id << std::endl;
+    vector & subvec_pFMM = applied_pFMM.get_block( block_evaluation_id );
+    vector & subvec_toeplitz = applied_toeplitz.get_block( 
+      block_evaluation_id );
+    lo eval_entry_id = 0;
+    std::cout << "id: " << eval_entry_id << std::endl;
+    std::cout << "entry is " << subvec_pFMM[ eval_entry_id ]
+              << std::endl;
+    std::cout << "should be " << subvec_toeplitz[ eval_entry_id ] << std::endl;
+    subvec_pFMM.print_h( );
+    std::cout << "exact result block" << std::endl;
+    subvec_toeplitz.print_h( );
+    std::cout << "error timewise"  << std::endl;
+    subvec_pFMM.add( subvec_toeplitz , -1.0 ); 
+    std::cout << subvec_pFMM.norm( ) << ", rel. " 
+              << subvec_pFMM.norm( ) / subvec_toeplitz.norm( ) << std::endl;
+  }
+  else if ( test_case == 4 ) {
+    block_vector neu_proj;
+    space_p0.L2_projection( cauchy_data::neumann, neu_proj );
+    // multiplicate neu_proj with spatially adjoint Toeplitz matrix K
+    block_vector applied_toeplitz( n_blocks, cols_of_block, true );
+    K->apply( neu_proj, applied_toeplitz, true );
+    // multiplicate neu_proj with spatially adjoint pFMM matrix K
+    block_vector applied_pFMM( n_blocks, cols_of_block, true );
+    K_pFMM->apply( neu_proj, applied_pFMM, true );
+    std::cout << "error timewise"  << std::endl;
+    for ( lo i = 0; i < applied_toeplitz.get_block_size( ); ++ i ) {
+      applied_pFMM.get_block( i ).add( applied_toeplitz.get_block( i ) , -1.0 );
+      std::cout << applied_pFMM.get_block( i ).norm( ) << ", rel. " 
+                << applied_pFMM.get_block( i ).norm( )
+                  / applied_toeplitz.get_block( i ).norm( ) << std::endl;
+    }
+  }
   delete K;
 
   delete K_pFMM;

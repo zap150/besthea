@@ -67,7 +67,7 @@ struct cauchy_data {
     return value;
   }
 
-  static constexpr sc _alpha{ 1.0 };
+  static constexpr sc _alpha{ 4.0 };
   static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
   static constexpr sc _shift{ 0.0 };
 };
@@ -128,10 +128,10 @@ int main( int argc, char * argv[] ) {
 
   pFMM_matrix * D_pFMM = new pFMM_matrix( &tree, false, temp_order, spat_order, 
                                           cauchy_data::_alpha, false, false );
-  tree.print( );
+//   tree.print( );
   fast_spacetime_be_assembler fast_assembler_d( 
     kernel_d, space_p1_pFMM, space_p1_pFMM, order_sing, order_reg, temp_order,
-    spat_order, 1.5, true );
+    spat_order, 1.5, false );
   t.reset( "D_pFMM" );
   fast_assembler_d.assemble( *D_pFMM );
   t.measure( );

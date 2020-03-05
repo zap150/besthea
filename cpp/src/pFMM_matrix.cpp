@@ -91,11 +91,14 @@ void besthea::linear_algebra::pFMM_matrix::apply( const block_vector_type & x,
       }
     }
   }
+  bool source_space_is_p0 = ( trans ) ? 
+                              _target_space_is_p0 : _source_space_is_p0;
+  bool target_space_is_p0 = ( trans ) ? 
+                              _source_space_is_p0 : _target_space_is_p0;  
   // Next, use the pFMM for the computation of the farfield contribution 
   // according to the respective spaces. The result is stored in an auxiliary
   // vector y_pFMM and then added to y
-  // first: case (trans == false) and spaces are not both p1:
-  if ( !trans && ( _source_space_is_p0 || _target_space_is_p0 ) ) {
+  if ( ( source_space_is_p0 || target_space_is_p0 ) ) {
     // reset all moment and local contributions to zero
     _spacetime_tree->clean_local_contributions( _spacetime_tree->get_root( ) );
     _spacetime_tree->clean_moment_contributions( _spacetime_tree->get_root( ) );
@@ -123,7 +126,7 @@ void besthea::linear_algebra::pFMM_matrix::apply( const block_vector_type & x,
                               true );
     
     // S2M, M2M, M2L, L2L and L2T steps:
-    if ( _source_space_is_p0 ) {
+    if ( source_space_is_p0 ) {
       apply_s2m_operations_p0( x );
     }
     else {
@@ -133,7 +136,7 @@ void besthea::linear_algebra::pFMM_matrix::apply( const block_vector_type & x,
     call_m2l_operations( _spacetime_tree->get_root( ), buffer_for_gaussians, 
                         buffer_for_coeffs, aux_buffer_0, aux_buffer_1 );
     call_l2l_operations( _spacetime_tree->get_root( ), buffer_matrices );
-    if ( _target_space_is_p0 ) {
+    if ( target_space_is_p0 ) {
       apply_l2t_operations_p0( y_pFMM );
     }
     else {
@@ -143,12 +146,8 @@ void besthea::linear_algebra::pFMM_matrix::apply( const block_vector_type & x,
     // Add the scaled result to y.
     y.add( y_pFMM, alpha );
   }
-  else if ( trans && ( _source_space_is_p0 || _target_space_is_p0 ) ) {
-    //TODO: implement this!
-  }
-  else if ( !trans && !_source_space_is_p0 && !_target_space_is_p0 ) {
+  else {
     // Spezialiation for hypersingular operator.
-    
     //  Allocate buffers for the operations
     std::vector< full_matrix_type > buffer_matrices;
     buffer_matrices.resize( 8 );
@@ -185,11 +184,10 @@ void besthea::linear_algebra::pFMM_matrix::apply( const block_vector_type & x,
       call_l2l_operations( _spacetime_tree->get_root( ), buffer_matrices );
       apply_l2t_operations_curl_p1_hs( y_pFMM, dim );
     }
-    
     // Add the scaled result to y. 
     // (additional scaling by square of heat coefficient)
     y.add( y_pFMM, alpha * _alpha * _alpha );
-    
+
     // reset y_pFMM to zero
     y_pFMM.fill( 0.0 );
     
@@ -212,9 +210,6 @@ void besthea::linear_algebra::pFMM_matrix::apply( const block_vector_type & x,
     // Subtract the scaled result from y. 
     // (additional scaling by heat coefficient)
     y.add( y_pFMM, -alpha * _alpha );
-  }
-  else if ( trans && !_source_space_is_p0 && !_target_space_is_p0 ) {
-   //TODO: do we need this?!  
   }
   
 // TODO: eliminate the remaining lines?!
@@ -1364,7 +1359,8 @@ void besthea::linear_algebra::pFMM_matrix::apply_l2t_operations_p1(
         it != _spacetime_tree->get_leaves( ).end( ); ++it ) {
     // get references of local moment and all required matrices
     full_matrix_type & local = *( ( *it )->get_local_contribution( ) );
-    full_matrix_type & T = ( *it )->get_space_cluster( ).get_chebyshev_quad( );
+    full_matrix_type & T_drv = ( *it )->get_space_cluster( ).
+                                        get_normal_drv_chebyshev_quad( );
     full_matrix_type & L = ( *it )->get_time_cluster( ).get_lagrange_quad( );
     lo n_space_nodes = ( *it )->get_space_cluster( ).get_n_nodes( );
     const std::vector< lo > & local_2_global_nodes = 
@@ -1378,7 +1374,7 @@ void besthea::linear_algebra::pFMM_matrix::apply_l2t_operations_p1(
     targets.resize( n_time_elements, n_space_nodes );
     // compute D = trans(L) * lambda and then the result Y = D * trans(T)
     aux_matrix.multiply( L, local, true, false );
-    targets.multiply( aux_matrix, T, false, true );
+    targets.multiply( aux_matrix, T_drv, false, true );
     // add the results to the correct position in the result vector
     for ( lo i_time = 0; i_time < n_time_elements; ++ i_time ) {
       for ( lo i_space = 0; i_space < n_space_nodes; ++ i_space ) {

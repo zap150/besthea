@@ -1315,7 +1315,6 @@ void besthea::bem::fast_spacetime_be_assembler<
       compute_chebyshev_quadrature( *it );
     }
   }
-  
 //  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) && 
 //    ( ( *space_clusters_spacetime_leaves.begin( ) )->
 //          get_normal_drv_chebyshev_quad( ).get_n_columns( ) != 
@@ -1447,7 +1446,6 @@ void besthea::bem::fast_spacetime_be_assembler<
     }
   }
 }
-
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
@@ -1711,16 +1709,13 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
           value1 = 0.0;
           value2 = 0.0;
           value3 = 0.0;
-          
-          
-          sc quad = 0.0;
           for ( lo j = 0; j < size_quad; ++j ) {
-            quad += cheb_dim_0[ beta0 * size_quad + j ]
+            sc weigth_poly = cheb_dim_0[ beta0 * size_quad + j ]
               * cheb_dim_1[ beta1 * size_quad + j ]
               * cheb_dim_2[ beta2 * size_quad + j ] * wy[ j ] * elem_area;
-            value1 += quad * ( (sc) 1.0 - y1_ref[ j ] - y2_ref[ j ] );
-            value2 += quad * y1_ref[ j ];
-            value3 += quad * y2_ref[ j ];
+            value1 += weigth_poly * ( (sc) 1.0 - y1_ref[ j ] - y2_ref[ j ] );
+            value2 += weigth_poly * y1_ref[ j ];
+            value3 += weigth_poly * y2_ref[ j ];
           }
           T_dim0.add_atomic( elems_2_local_nodes[ 3 * i ],
             current_index, value1 * normal[ 0 ] );
