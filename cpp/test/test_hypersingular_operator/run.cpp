@@ -113,7 +113,7 @@ int main( int argc, char * argv[] ) {
 
 //   sc st_coeff = 4.0;
 //   spacetime_cluster_tree tree( spacetime_mesh, 5, 2, 10, st_coeff );
-  sc st_coeff = 4.0;
+  sc st_coeff = 1.0;
   spacetime_cluster_tree tree( spacetime_mesh, 5, 2, 10, st_coeff );
   fast_spacetime_be_space< basis_tri_p1 > space_p1_pFMM( tree );
 

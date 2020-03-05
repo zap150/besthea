@@ -1213,6 +1213,8 @@ void besthea::bem::fast_spacetime_be_assembler<
   std::vector< sc > & surf_curls_dim0 = cluster->get_surf_curls( 0 );
   std::vector< sc > & surf_curls_dim1 = cluster->get_surf_curls( 1 );
   std::vector< sc > & surf_curls_dim2 = cluster->get_surf_curls( 2 );
+  
+  const std::vector< lo > & space_elements = cluster->get_all_elements( );
   // check first whether the surface curls have already been computed
   // ATTENTION: the surface curls are only computed for the trial space (
   // assuming that test and trial spaces coincide)
@@ -1225,9 +1227,10 @@ void besthea::bem::fast_spacetime_be_assembler<
     sc local_curls[ 9 ];
     linear_algebra::coordinates< 3 > normal;
     for ( lo j = 0; j < n_space_elems; ++j ) {
-      _trial_space->get_mesh( )->get_spatial_normal( j, normal );
-      _trial_space->get_basis( ).evaluate_curl( j, normal, 0, 0, 0, 
-                                                local_curls );
+      _trial_space->get_mesh( )->
+        get_spatial_normal( space_elements[ j ], normal );
+      _trial_space->get_basis( ).
+        evaluate_curl( space_elements[ j ], normal, 0, 0, 0, local_curls );
       surf_curls_dim0[ 3 * j ] = local_curls[ 0 ];
       surf_curls_dim0[ 3 * j + 1 ] = local_curls[ 3 ];
       surf_curls_dim0[ 3 * j + 2 ] = local_curls[ 6 ];
