@@ -440,7 +440,7 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
             }
             value *= test_area * trial_area;
 
-            nearfield_matrix.add( 
+            nearfield_matrix.add_atomic( 
               test_l2g[ i_loc_test ], trial_l2g[ i_loc_trial ], value );
           }
         }
@@ -661,15 +661,24 @@ void besthea::bem::fast_spacetime_be_assembler<
           }
         }
 
-        nearfield_matrix.add( test_l2g[ 0 ], trial_l2g[ 0 ], value11 * areas );
-        nearfield_matrix.add( test_l2g[ 0 ], trial_l2g[ 1 ], value12 * areas );
-        nearfield_matrix.add( test_l2g[ 0 ], trial_l2g[ 2 ], value13 * areas );
-        nearfield_matrix.add( test_l2g[ 1 ], trial_l2g[ 0 ], value21 * areas );
-        nearfield_matrix.add( test_l2g[ 1 ], trial_l2g[ 1 ], value22 * areas );
-        nearfield_matrix.add( test_l2g[ 1 ], trial_l2g[ 2 ], value23 * areas );
-        nearfield_matrix.add( test_l2g[ 2 ], trial_l2g[ 0 ], value31 * areas );
-        nearfield_matrix.add( test_l2g[ 2 ], trial_l2g[ 1 ], value32 * areas );
-        nearfield_matrix.add( test_l2g[ 2 ], trial_l2g[ 2 ], value33 * areas );
+        nearfield_matrix.add_atomic( test_l2g[ 0 ], trial_l2g[ 0 ], 
+                                     value11 * areas );
+        nearfield_matrix.add_atomic( test_l2g[ 0 ], trial_l2g[ 1 ], 
+                                     value12 * areas );
+        nearfield_matrix.add_atomic( test_l2g[ 0 ], trial_l2g[ 2 ], 
+                                     value13 * areas );
+        nearfield_matrix.add_atomic( test_l2g[ 1 ], trial_l2g[ 0 ], 
+                                     value21 * areas );
+        nearfield_matrix.add_atomic( test_l2g[ 1 ], trial_l2g[ 1 ], 
+                                     value22 * areas );
+        nearfield_matrix.add_atomic( test_l2g[ 1 ], trial_l2g[ 2 ], 
+                                     value23 * areas );
+        nearfield_matrix.add_atomic( test_l2g[ 2 ], trial_l2g[ 0 ], 
+                                     value31 * areas );
+        nearfield_matrix.add_atomic( test_l2g[ 2 ], trial_l2g[ 1 ], 
+                                     value32 * areas );
+        nearfield_matrix.add_atomic( test_l2g[ 2 ], trial_l2g[ 2 ], 
+                                     value33 * areas );
       }
     }
   }

@@ -119,11 +119,19 @@ int main( int argc, char * argv[] ) {
 
   lo temp_order = 2;
   lo spat_order = 2;
+  lo entry_id = 0;
+  
   if ( argc > 1 ) {
     temp_order = std::atoi( argv[ 1 ] );
   }
   if ( argc > 2 ) {
     spat_order = std::atoi( argv[ 2 ] );
+  }
+  if ( argc > 3 ) {
+    test_case = std::atoi( argv[ 3 ] );
+  }
+  if ( argc > 4 ) {
+    entry_id = std::atoi( argv[ 4 ] );
   }
 
   pFMM_matrix * D_pFMM = new pFMM_matrix( &tree, false, temp_order, spat_order, 
@@ -153,13 +161,14 @@ int main( int argc, char * argv[] ) {
   if ( test_case == 1 ) {
   //   lo block_id = n_blocks - 1 - 2;
     lo block_id = 0;
-    lo block_evaluation_id = 2;
+    lo block_evaluation_id = 0;
 //     lo toeplitz_id = block_evaluation_id - block_id;
   //   lo block_evaluation_id = n_blocks - 1;
     
-    
+    std::cout << "cols_of_block is " << cols_of_block << std::endl;
+    std::cout << "entry_id is " << entry_id << std::endl;
     vector x_loc_0( cols_of_block );
-    x_loc_0(0) = 1.0;
+    x_loc_0( entry_id ) = 1.0;
     block_vector x_block_vec( n_blocks, cols_of_block, true );
     x_block_vec.get_block( block_id ) = x_loc_0;
     // multiplicate x_block_vec with Toeplitz matrix D
@@ -175,11 +184,12 @@ int main( int argc, char * argv[] ) {
     vector & subvec_pFMM = applied_pFMM.get_block( block_evaluation_id );
     vector & subvec_toeplitz = applied_toeplitz.get_block( 
       block_evaluation_id );
-    lo entry_id = 8;
-    std::cout << "id: " << entry_id << std::endl;
-    std::cout << "entry is " << subvec_pFMM[ entry_id ]
+    lo evaluation_entry_id = 8;
+    std::cout << "id: " << evaluation_entry_id << std::endl;
+    std::cout << "entry is " << subvec_pFMM[ evaluation_entry_id ]
               << std::endl;
-    std::cout << "should be " << subvec_toeplitz[ entry_id ] << std::endl;
+    std::cout << "should be " << subvec_toeplitz[ evaluation_entry_id ] 
+              << std::endl;
     subvec_pFMM.print_h( );
     std::cout << "exact result block" << std::endl;
     subvec_toeplitz.print_h( );

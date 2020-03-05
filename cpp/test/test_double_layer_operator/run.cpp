@@ -135,7 +135,7 @@ int main( int argc, char * argv[] ) {
 
   pFMM_matrix * K_pFMM = new pFMM_matrix( &tree, false, temp_order, spat_order, 
                                           cauchy_data::_alpha, false, true );
-  tree.print( );
+//   tree.print( );
 
   fast_spacetime_be_assembler fast_assembler_k(
     kernel_k, space_p0_pFMM, space_p1_pFMM, order_sing, order_reg, temp_order, 
