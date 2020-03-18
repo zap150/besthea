@@ -64,11 +64,15 @@ namespace besthea {
 template< class kernel_type, class test_space_type, class trial_space_type >
 class besthea::bem::fast_spacetime_be_assembler {
  private:
-  using sparse_matrix_type = besthea::linear_algebra::sparse_matrix;
-  using full_matrix_type = besthea::linear_algebra::full_matrix;
+  using sparse_matrix_type
+    = besthea::linear_algebra::sparse_matrix;  //!< shortcut for the sparse
+                                               //!< matrix type
+  using full_matrix_type
+    = besthea::linear_algebra::full_matrix;  //!< shortcut for the full matrix
+                                             //!< type
   using pfmm_matrix_type = besthea::linear_algebra::pFMM_matrix< kernel_type,
-    test_space_type, trial_space_type >;                  //!< pFMM matrix
-                                                          //!< type.
+    test_space_type, trial_space_type >;  //!< shortcut for the pFMM matrix type
+                                          //!< type.
   using time_cluster_type = besthea::mesh::time_cluster;  //!< time cluster type
   using spacetime_cluster_type
     = besthea::mesh::spacetime_cluster;  //!< time cluster type
@@ -148,6 +152,7 @@ class besthea::bem::fast_spacetime_be_assembler {
    * @param[in] order_regular Triangle quadrature order for regular quadrature.
    * @param[in] spat_order Degree of Chebyshev polynomials for expansion in pFMM
    * matrix.
+   * @param[in] alpha Heat conductivity paremeter.
    * @param[in] temp_order degree of Lagrange interpolation polynomials in time
    * for pFMM matrix.
    * @param[in] cutoff_param Cutoff parameter for the nearfield approximation
@@ -238,8 +243,7 @@ class besthea::bem::fast_spacetime_be_assembler {
    * @param[in] eta1 eta_1 variable in (0,1).
    * @param[in] eta2 eta_2 variable in (0,1).
    * @param[in] eta3 eta_3 variable in (0,1).
-   * @param[in] type Type of configuration (disjoint, shared vertex, shared
-   * edge, identical)
+   * @param[in] n_shared_vertices Number of vertices shared between elements.
    * @param[in] simplex Simplex index.
    * @param[out] x1_ref First coordinate of quadrature node to be mapped to the
    * test element.
@@ -309,7 +313,7 @@ class besthea::bem::fast_spacetime_be_assembler {
    * trial element.
    * @param[out] y2_ref Second coordinate of quadrature node to be mapped to the
    * trial element.
-   * @param[out]jacobian Jacobian of the transformation.
+   * @param[out] jacobian Jacobian of the transformation.
    */
   void hypercube_to_triangles_edge( sc ksi, sc eta1, sc eta2, sc eta3,
     int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref, sc & y2_ref,
@@ -373,11 +377,20 @@ class besthea::bem::fast_spacetime_be_assembler {
   /**
    * Maps from the spatial cluster to the interval [-1, 1] where the Chebyshev
    * polynomials are defined.
-   * @param[in] cluster_point Reference to the point in a given @p space_cluster
-   * @param[out] polynomial_point Mapping of the @p cluster_point to the
-   * interval [-1,1]
-   * @param[in] space_cluster Space cluster for which the Chebyshev polynomials
-   * are evaluated.
+   * @param[out] my_quadrature Structure holding mapping from the cluster
+   * to the interval [-1,1].
+   * @param[in] x_start Border of the space cluster for which the Chebyshev
+   * polynomials are evaluated.
+   * @param[in] x_end Border of the space cluster for which the Chebyshev
+   * polynomials are evaluated.
+   * @param[in] y_start Border of the space cluster for which the Chebyshev
+   * polynomials are evaluated.
+   * @param[in] y_end Border of the space cluster for which the Chebyshev
+   * polynomials are evaluated.
+   * @param[in] z_start Border of the space cluster for which the Chebyshev
+   * polynomials are evaluated.
+   * @param[in] z_end Border of the space cluster for which the Chebyshev
+   * polynomials are evaluated.
    *
    */
   void cluster_to_polynomials( quadrature_wrapper & my_quadrature, sc x_start,

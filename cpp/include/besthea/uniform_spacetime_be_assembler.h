@@ -167,8 +167,7 @@ class besthea::bem::uniform_spacetime_be_assembler {
    * @param[in] eta1 eta_1 variable in (0,1).
    * @param[in] eta2 eta_2 variable in (0,1).
    * @param[in] eta3 eta_3 variable in (0,1).
-   * @param[in] type Type of configuration (disjoint, shared vertex, shared
-   * edge, identical)
+   * @param[in] n_shared_vertices Number of vertices shared between elements.
    * @param[in] simplex Simplex index.
    * @param[out] x1_ref First coordinate of quadrature node to be mapped to the
    * test element.
@@ -238,7 +237,7 @@ class besthea::bem::uniform_spacetime_be_assembler {
    * trial element.
    * @param[out] y2_ref Second coordinate of quadrature node to be mapped to the
    * trial element.
-   * @param[out]jacobian Jacobian of the transformation.
+   * @param[out] jacobian Jacobian of the transformation.
    */
   void hypercube_to_triangles_edge( sc ksi, sc eta1, sc eta2, sc eta3,
     int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref, sc & y2_ref,

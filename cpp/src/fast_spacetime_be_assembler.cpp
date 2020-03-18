@@ -455,6 +455,7 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   }
 }
 
+//! template specialization for hypersingular p1p1 matrix
 template<>
 void besthea::bem::fast_spacetime_be_assembler<
   besthea::bem::spacetime_heat_hs_kernel_antiderivative,
@@ -1219,6 +1220,7 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   }
 }
 
+//! template specialization for hypersingular p1p1 matrix
 template<>
 void besthea::bem::fast_spacetime_be_assembler<
   besthea::bem::spacetime_heat_hs_kernel_antiderivative,
@@ -1272,6 +1274,7 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   std::set< space_cluster_type * > & space_clusters_spacetime_leaves ) const {
 }
 
+//! template specialization for single layer p0p0 matrix
 template<>
 void besthea::bem::fast_spacetime_be_assembler<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
@@ -1307,6 +1310,7 @@ void besthea::bem::fast_spacetime_be_assembler<
   }
 }
 
+//! template specialization for double layer p0p1 matrix
 template<>
 void besthea::bem::fast_spacetime_be_assembler<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
@@ -1357,6 +1361,7 @@ void besthea::bem::fast_spacetime_be_assembler<
   }
 }
 
+//! template specialization for double layer p1p0 matrix
 template<>
 void besthea::bem::fast_spacetime_be_assembler<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
@@ -1402,6 +1407,7 @@ void besthea::bem::fast_spacetime_be_assembler<
   }
 }
 
+//! template specialization for hypersingular p1p1 matrix
 template<>
 void besthea::bem::fast_spacetime_be_assembler<
   besthea::bem::spacetime_heat_hs_kernel_antiderivative,

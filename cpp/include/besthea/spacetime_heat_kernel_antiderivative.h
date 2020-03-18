@@ -64,7 +64,10 @@ class besthea::bem::spacetime_heat_kernel_antiderivative
       _sqrt_alpha( std::sqrt( alpha ) ),
       _alpha2( alpha * alpha ) {
   }
-  
+
+  /**
+   * Returns the heat conductivity parameter.
+   */
   sc get_alpha( ) const {
     return _alpha;
   }

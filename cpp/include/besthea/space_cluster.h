@@ -176,9 +176,9 @@ class besthea::mesh::space_cluster {
   lo get_element( lo idx ) const {
     return _elements[ idx ];
   }
-  
+
   /**
-   * Returns reference to vector of global element indices for elements in the 
+   * Returns reference to vector of global element indices for elements in the
    * cluster
    */
   const std::vector< lo > & get_all_elements( ) const {
@@ -372,18 +372,18 @@ class besthea::mesh::space_cluster {
   full_matrix_type & get_chebyshev_quad( ) {
     return _cheb_T;
   }
-  
+
   /**
-   * Returns a reference to the matrix storing quadratures of the normal 
+   * Returns a reference to the matrix storing quadratures of the normal
    * derivatives of Chebyshev polynomials over the elements of the cluster.
    */
   full_matrix_type & get_normal_drv_chebyshev_quad( ) {
     return _cheb_normal_drv_T;
   }
-  
+
   /**
-   * Returns a reference to the matrix storing quadratures of the product 
-   * of Chebyshev polynomials, p1 basis functions and the selected component of 
+   * Returns a reference to the matrix storing quadratures of the product
+   * of Chebyshev polynomials, p1 basis functions and the selected component of
    * the normal vector over the elements of the cluster.
    * \param[in] dim   Indicates which component of the normal vector is used
    *                  (0,1,2).
@@ -393,13 +393,13 @@ class besthea::mesh::space_cluster {
       return _cheb_times_normal_dim0;
     else if ( dim == 1 )
       return _cheb_times_normal_dim1;
-    else // if dim == 2
+    else  // if dim == 2
       return _cheb_times_normal_dim2;
   }
-  
+
   /**
-   * Returns a reference to the vector storing the selected component of the 
-   * surface curls of p1 basis functions. 
+   * Returns a reference to the vector storing the selected component of the
+   * surface curls of p1 basis functions.
    * \param[in] dim   Indicates which component of the surface curls is returned
    *                  (0,1,2).
    */
@@ -408,7 +408,7 @@ class besthea::mesh::space_cluster {
       return _surf_curls_dim0;
     else if ( dim == 1 )
       return _surf_curls_dim1;
-    else // if dim == 2
+    else  // if dim == 2
       return _surf_curls_dim2;
   }
 
@@ -419,14 +419,24 @@ class besthea::mesh::space_cluster {
     return _mesh;
   }
 
+  /**
+   * Returns mapping from elements to local local cluster nodes.
+   */
   const std::vector< lo > & get_elems_2_local_nodes( ) {
     return _elems_2_local_nodes;
   }
 
+  /**
+   * Returns mapping from local cluster nodes to global nodes.
+   */
   const std::vector< lo > & get_local_2_global_nodes( ) {
     return _local_2_global_nodes;
   }
 
+  /**
+   * Computes mapping from elements to local nodes and from local to global
+   * nodes.
+   */
   void compute_node_mapping( ) {
     // check first whether the mapping already exists
     if ( _local_2_global_nodes.size( ) == 0 ) {
@@ -439,7 +449,7 @@ class besthea::mesh::space_cluster {
       }
       std::sort( _local_2_global_nodes.begin( ), _local_2_global_nodes.end( ) );
       _local_2_global_nodes.erase( std::unique( _local_2_global_nodes.begin( ),
-                                    _local_2_global_nodes.end( ) ),
+                                     _local_2_global_nodes.end( ) ),
         _local_2_global_nodes.end( ) );
 
       _elems_2_local_nodes.resize( 3 * _elements.size( ) );
@@ -485,46 +495,49 @@ class besthea::mesh::space_cluster {
     _cheb_T;  //!< matrix storing quadrature of the Chebyshev polynomials (rows
               //!< - element of the cluster, columns - order of the polynomial)
   full_matrix_type
-    _cheb_normal_drv_T; //!< matrix storing quadrature of the normal derivatives
-                        //!< of the Chebyshev polynomials (weighted with heat 
-                        //!< coefficient alpha!) times p1 basis function
-                        //!< (rows - vertex of the cluster,
-                        //!<  columns - order of the polynomial)
+    _cheb_normal_drv_T;  //!< matrix storing quadrature of the normal
+                         //!< derivatives of the Chebyshev polynomials (weighted
+                         //!< with heat coefficient alpha!) times p1 basis
+                         //!< function (rows - vertex of the cluster,
+                         //!<  columns - order of the polynomial)
   full_matrix_type
     _cheb_times_normal_dim0;  //!< matrix storing quadrature of the Chebyshev
-                              //!< polynomials times p1 basis function times 
+                              //!< polynomials times p1 basis function times
                               //!< 0th component of the normal vector
                               //!< (rows - vertex of the cluster,
                               //!<  columns - order of the polynomial)
   full_matrix_type
     _cheb_times_normal_dim1;  //!< matrix storing quadrature of the Chebyshev
-                              //!< polynomials times p1 basis function times 
+                              //!< polynomials times p1 basis function times
                               //!< 1st component of the normal vector
                               //!< (rows - vertex of the cluster,
                               //!<  columns - order of the polynomial)
   full_matrix_type
     _cheb_times_normal_dim2;  //!< matrix storing quadrature of the Chebyshev
-                              //!< polynomials times p1 basis function times 
+                              //!< polynomials times p1 basis function times
                               //!< 2nd component of the normal vector
                               //!< (rows - vertex of the cluster,
                               //!<  columns - order of the polynomial)
-  std::vector< sc > 
-    _surf_curls_dim0; //!< vector storing the 0th component of the surface curls 
-                      //!< of p1 basis functions elementwise (wrt. local 
-                      //!< indices); entry at pos 3*i + j (j=0,1,2) corresponds 
-                      //!< to the j_th local basis function for the i_th element
-  std::vector< sc > 
-    _surf_curls_dim1; //!< vector storing the 1st component of the surface curls 
-                      //!< of p1 basis functions elementwise (wrt. local 
-                      //!< indices); entry at pos 3*i + j (j=0,1,2) corresponds 
-                      //!< to the j_th local basis function for the i_th element
-  std::vector< sc > 
-    _surf_curls_dim2; //!< vector storing the 2nd component of the surface curls 
-                      //!< of p1 basis functions elementwise (wrt. local 
-                      //!< indices); entry at pos 3*i + j (j=0,1,2) corresponds 
-                      //!< to the j_th local basis function for the i_th element                                
-  std::vector< lo > _elems_2_local_nodes;   //! mapping from element nodes
-                                            //! vertices to local node list
+  std::vector< sc >
+    _surf_curls_dim0;  //!< vector storing the 0th component of the surface
+                       //!< curls of p1 basis functions elementwise (wrt. local
+                       //!< indices); entry at pos 3*i + j (j=0,1,2) corresponds
+                       //!< to the j_th local basis function for the i_th
+                       //!< element
+  std::vector< sc >
+    _surf_curls_dim1;  //!< vector storing the 1st component of the surface
+                       //!< curls of p1 basis functions elementwise (wrt. local
+                       //!< indices); entry at pos 3*i + j (j=0,1,2) corresponds
+                       //!< to the j_th local basis function for the i_th
+                       //!< element
+  std::vector< sc >
+    _surf_curls_dim2;  //!< vector storing the 2nd component of the surface
+                       //!< curls of p1 basis functions elementwise (wrt. local
+                       //!< indices); entry at pos 3*i + j (j=0,1,2) corresponds
+                       //!< to the j_th local basis function for the i_th
+                       //!< element
+  std::vector< lo > _elems_2_local_nodes;   //!< mapping from element nodes
+                                            //!< vertices to local node list
   std::vector< lo > _local_2_global_nodes;  //!< mapping from local nodes
                                             //!< to the global ones
 };

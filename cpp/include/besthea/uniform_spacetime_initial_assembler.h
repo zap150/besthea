@@ -142,7 +142,7 @@ class besthea::bem::uniform_spacetime_initial_assembler {
    * @param[in] y1 Coordinates of the first node of the trial element.
    * @param[in] y2 Coordinates of the second node of the trial element.
    * @param[in] y3 Coordinates of the third node of the trial element.
-   * @param[in] y3 Coordinates of the fourth node of the trial element.
+   * @param[in] y4 Coordinates of the fourth node of the trial element.
    * @param[in,out] my_quadrature Structure holding the quadrature nodes.
    */
   void triangle_and_tetrahedron_to_geometry(

@@ -267,7 +267,6 @@ class besthea::linear_algebra::pFMM_matrix
    * Sets order of the Lagrange and Chebyshev polynomials.
    * @param[in] spat_order Order of the Chebyshev polynomials
    * @param[in] temp_order Order of the Lagrange polynomials
-   * @param[in] cheb_order Order of the
    */
   void set_order( int spat_order, int temp_order ) {
     _spat_order = spat_order;
@@ -288,6 +287,7 @@ class besthea::linear_algebra::pFMM_matrix
    * @brief Executes s2m operations for all leaves of the spacetime cluster
    * and a given vector x for spatial basis functions in p0
    * @param[in] x Vector for multiplication.
+   * @param[in] trans Whether to transpose the matrix.
    * @note The results are stored in the matrices \p _moment_contribution in the
    * respective spacetime clusters.
    * @note The method uses matrices of integrals over polynomials which are
@@ -426,6 +426,7 @@ class besthea::linear_algebra::pFMM_matrix
    * @brief Executes l2t operations for all leaves of the spacetime cluster
    * and adds the results to a vector y.
    * @param[in,out] y Vector to which the results are added.
+   * @param[in] trans Whether to transpose the matrix.
    * @note For the computations the matrices \p _local_contribution in the
    * respective spacetime clusters are used.
    * @note The method uses matrices of integrals over polynomials which are
@@ -523,7 +524,7 @@ class besthea::linear_algebra::pFMM_matrix
    * @param[in] cheb_nodes  Chebyshev nodes of degree ( _spat_order + 1 )
    * @param[in] evaluated_chebyshev  Vector of evaluated Chebyshev polynomials
    *      with degree <= _spat_order at \p cheb_nodes as given by
-   *      \ref chebyshev_evaluator.evaluate.
+   *       besthea::bem::chebyshev_evaluator::evaluate.
    * @param[in] half_size   Half size in space of the current clusters along the
    *                        dimension for which the coefficients are computed.
    * @param[in] center_diff   The appropriate component of the difference vector
@@ -561,8 +562,8 @@ class besthea::linear_algebra::pFMM_matrix
     _m2m_matrices_t_left;  //!< left temporal
                            //!< m2m matrices stored levelwise
   std::vector< full_matrix_type >
-    _m2m_matrices_t_right;  //! right temporal
-                            //! m2m matrices stored levelwise
+    _m2m_matrices_t_right;  //!< right temporal
+                            //!< m2m matrices stored levelwise
 
   std::vector< vector_type >
     _m2m_coeffs_s_dim_0_left;  //!< left spatial

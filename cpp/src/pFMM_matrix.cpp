@@ -73,6 +73,7 @@ void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
   std::cout << "apply: NOT IMPLEMENTED" << std::endl;
 }
 
+//! template specialization for single layer p0p0 matrix
 template<>
 void besthea::linear_algebra::pFMM_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
@@ -83,6 +84,7 @@ void besthea::linear_algebra::pFMM_matrix<
   apply_sl_dl( x, y, trans, alpha, beta );
 }
 
+//! template specialization for single layer p1p1 matrix
 template<>
 void besthea::linear_algebra::pFMM_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
@@ -93,6 +95,7 @@ void besthea::linear_algebra::pFMM_matrix<
   apply_sl_dl( x, y, trans, alpha, beta );
 }
 
+//! template specialization for double layer p0p1 matrix
 template<>
 void besthea::linear_algebra::pFMM_matrix<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
@@ -103,6 +106,7 @@ void besthea::linear_algebra::pFMM_matrix<
   apply_sl_dl( x, y, trans, alpha, beta );
 }
 
+//! template specialization for hypersingular p1p1 matrix
 template<>
 void besthea::linear_algebra::pFMM_matrix<
   besthea::bem::spacetime_heat_hs_kernel_antiderivative,
@@ -840,6 +844,7 @@ void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
   std::cout << "apply_s2m_operations: NOT IMPLEMENTED" << std::endl;
 }
 
+//! Specialization for the single layer p0p0 matrix
 template<>
 void besthea::linear_algebra::pFMM_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
@@ -849,6 +854,7 @@ void besthea::linear_algebra::pFMM_matrix<
   apply_s2m_operations_p0( x );
 }
 
+//! Specialization for the single layer p1p1 matrix
 template<>
 void besthea::linear_algebra::pFMM_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
@@ -858,6 +864,7 @@ void besthea::linear_algebra::pFMM_matrix<
   apply_s2m_operations_p1( x );
 }
 
+//! Specialization for the double layer p0p1 matrix
 template<>
 void besthea::linear_algebra::pFMM_matrix<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
@@ -871,6 +878,7 @@ void besthea::linear_algebra::pFMM_matrix<
   }
 }
 
+//! Specialization for the double layer p0p0 matrix
 template<>
 void besthea::linear_algebra::pFMM_matrix<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
@@ -1379,6 +1387,7 @@ void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
   std::cout << "apply_l2t_operations: NOT IMPLEMENTED" << std::endl;
 }
 
+//! Specialization for the single layer p0p0 matrix
 template<>
 void besthea::linear_algebra::pFMM_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
@@ -1388,6 +1397,7 @@ void besthea::linear_algebra::pFMM_matrix<
   this->apply_l2t_operations_p0( y );
 }
 
+//! Specialization for the single layer p1p1 matrix
 template<>
 void besthea::linear_algebra::pFMM_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
@@ -1397,6 +1407,7 @@ void besthea::linear_algebra::pFMM_matrix<
   this->apply_l2t_operations_p1( y );
 }
 
+//! Specialization for the double layer p0p1 matrix
 template<>
 void besthea::linear_algebra::pFMM_matrix<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
@@ -1410,6 +1421,7 @@ void besthea::linear_algebra::pFMM_matrix<
   }
 }
 
+//! Specialization for the double layer p0p0 matrix
 template<>
 void besthea::linear_algebra::pFMM_matrix<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,

@@ -115,7 +115,6 @@ class besthea::bem::uniform_spacetime_be_evaluator {
  private:
   /**
    * Initializes quadrature structures.
-   * @param[in] order_spatial Triangle spatial quadrature order.
    * @param[out] my_quadrature Wrapper holding quadrature data.
    */
   void init_quadrature( quadrature_wrapper & my_quadrature ) const;
