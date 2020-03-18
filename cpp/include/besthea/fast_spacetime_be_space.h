@@ -92,6 +92,11 @@ class besthea::bem::fast_spacetime_be_space
     = besthea::linear_algebra::block_vector;  //!< Block vector type.
 
  public:
+  /**
+   * Type of the basis function
+   */
+  typedef basis_type type;
+
   fast_spacetime_be_space( const fast_spacetime_be_space & that ) = delete;
 
   /**

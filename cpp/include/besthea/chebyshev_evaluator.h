@@ -40,7 +40,7 @@
 
 namespace besthea {
   namespace bem {
-    class chebyshev_evaluator; 
+    class chebyshev_evaluator;
   }
 }
 
@@ -59,6 +59,14 @@ class besthea::bem::chebyshev_evaluator {
   }
 
   chebyshev_evaluator( const chebyshev_evaluator & that ) = delete;
+
+  /**
+   * Sets the highest order of the polynomials.
+   * @param[in] order Highest order of the evaluated Chebyshev polynomials.
+   */
+  void set_order( int order ) {
+    _order = order;
+  }
 
   /**
    * Evaluate all Chebyshev polynomials up to given order for points in [-1, 1].
@@ -84,9 +92,9 @@ class besthea::bem::chebyshev_evaluator {
       }
     }
   }
-  
+
   /**
-   * Evaluate derivatives of all Chebyshev polynomial up to given order for 
+   * Evaluate derivatives of all Chebyshev polynomial up to given order for
    * points in [-1, 1].
    * @param[in] eval_points Points in [-1, 1] where polynomial is evaluated.
    * @param[in,out]  all_values  Resulting values (at input size should be at
@@ -103,15 +111,14 @@ class besthea::bem::chebyshev_evaluator {
       }
     }
     if ( _order > 1 ) {
-      for ( lo i = 0; i < sz; ++i ) { 
+      for ( lo i = 0; i < sz; ++i ) {
         all_values[ 2 * sz + i ] = 4.0 * eval_points[ i ];
       }
       for ( lo j = 3; j <= _order; ++j ) {
         for ( lo i = 0; i < sz; ++i ) {
-          all_values[ j * sz + i ]
-            = ( 2.0 * j ) / ( j - 1 ) * eval_points[ i ] 
+          all_values[ j * sz + i ] = ( 2.0 * j ) / ( j - 1 ) * eval_points[ i ]
             * all_values[ ( j - 1 ) * sz + i ];
-          all_values[ j * sz + i ] 
+          all_values[ j * sz + i ]
             -= ( j / ( j - 2.0 ) ) * all_values[ ( j - 2 ) * sz + i ];
         }
       }

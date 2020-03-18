@@ -88,6 +88,11 @@ class besthea::bem::spacetime_be_space {
 
  public:
   /**
+   * Type of the basis function
+   */
+  typedef basis_type type;
+
+  /**
    * Constructor
    */
   spacetime_be_space( const mesh_type & mesh );
