@@ -126,6 +126,8 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   global_matrix.set_order( _spat_order, _temp_order );
   global_matrix.set_alpha( _alpha );
   global_matrix.set_m2l_integration_order( _m2l_integration_order );
+  global_matrix.set_uniform(
+    false );  // for now, ignore the possible uniformity
 
   // number of timesteps should be the same for test and
   // trial meshes

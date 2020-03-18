@@ -476,6 +476,22 @@ class besthea::bem::fast_spacetime_be_assembler {
   trial_space_type * _trial_space;  //!< Boundary element trial space.
   int _order_singular;  //!< Line quadrature order for the singular integrals.
   int _order_regular;  //!< Triangle quadrature order for the regular integrals.
+  sc _cutoff_param;    //!< Coefficient for determining the spatial nearfield
+                       //!< (_cutoff_param * diagonal of the lowest level
+                       //!< cluster).
+  bool _uniform;       //!< uniform assembly
+  int _temp_order;     //!< degree of Lagrange interpolation polynomials in time
+                       //!< for pFMM
+  int _spat_order;     //!< degree of Chebyshev polynomials for expansion in
+                       //!< space in pFMM
+  int _m2l_integration_order;  //!< _m2l_integration_order + 1 quadrature
+                               //!< points are used for the approximation of
+                               //!< the m2l coefficients.
+  sc _alpha;                   //!< Heat conductivity
+  mutable bem::lagrange_interpolant
+    _lagrange;  //!< Evaluator of the Lagrange polynomials.
+  mutable bem::chebyshev_evaluator
+    _chebyshev;  //!< Evaluator of the Chebyshev polynomials.
   static constexpr std::array< int, 5 > map{ 0, 1, 2, 0,
     1 };  //!< Auxiliary array for mapping DOFs under
           // rotation (regularized quadrature). Performs fast modulo 3.
@@ -483,26 +499,10 @@ class besthea::bem::fast_spacetime_be_assembler {
     6 };  //!< Number of simplices for all configurations (disjoint, shared
           // vertex, shared edge, identical).
   sc _space_cluster_size;  //!< Size of the finest level space clusters.
-  sc _cutoff_param;  //!< Coefficient for determining the spatial nearfield
-                     //!< (_cutoff_param * diagonal of the lowest level
-                     //!< cluster).
-  bool _uniform;     //!< uniform assembly
-  std::vector< std::pair< lo, lo > >
-    _nonzeros;      //!< indices of spatial element contributing to the nonzero
-                    //!< pattern of the spatial matrices
-  int _temp_order;  //!< degree of Lagrange interpolation polynomials in time
-                    //!< for pFMM
-  int _spat_order;  //!< degree of Chebyshev polynomials for expansion in
-                    //!< space in pFMM
-  int _m2l_integration_order;  //!< _m2l_integration_order + 1 quadrature
-                               //!< points are used for the approximation of
-                               //!< the m2l coefficients.
 
-  mutable bem::lagrange_interpolant
-    _lagrange;  //!< Evaluator of the Lagrange polynomials.
-  mutable bem::chebyshev_evaluator
-    _chebyshev;  //!< Evaluator of the Chebyshev polynomials.
-  sc _alpha;     //!< Heat conductivity
+  std::vector< std::pair< lo, lo > >
+    _nonzeros;  //!< indices of spatial element contributing to the nonzero
+                //!< pattern of the spatial matrices
 };
 
 #endif /* INCLUDE_BESTHEA_FAST_SPACETIME_BE_ASSEMBLER_H_ */

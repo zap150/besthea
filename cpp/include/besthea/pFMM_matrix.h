@@ -100,34 +100,6 @@ class besthea::linear_algebra::pFMM_matrix
       _target_space_is_p0( true ) {
   }
 
-  //  /**
-  //   * Constructor.
-  //   * \param[in] spacetime_tree  Clustering of spacetime domain on which pFMM
-  //   *                            matrix is build.
-  //   * \param[in] uniform
-  //   * \param[in] temp_order  Interpolation order for temporal approximation.
-  //   * \param[in] spat_order  Expansion order for spatial Chebyshev
-  //   approximation.
-  //   * \param[in] alpha Heat conductivity.
-  //   * \param[in] source_space_is_p0 True if source space ( trial space ) is
-  //   p0.
-  //   * \param[in] target_space_is_p0 True if target space ( test space ) is
-  //   p0.
-  //   */
-  //  pFMM_matrix( spacetime_tree_type * spacetime_tree, bool uniform,
-  //    int temp_order, int spat_order, sc alpha, bool source_space_is_p0,
-  //    bool target_space_is_p0 )
-  //    : _spacetime_tree( spacetime_tree ),
-  //      _uniform( uniform ),
-  //      _temp_order( temp_order ),
-  //      _spat_order( spat_order ),
-  //      _m2l_integration_order( _spat_order ),
-  //      _chebyshev( _spat_order ),
-  //      _alpha( alpha ),
-  //      _source_space_is_p0( source_space_is_p0 ),
-  //      _target_space_is_p0( target_space_is_p0 ) {
-  //  }
-
   pFMM_matrix( const pFMM_matrix & that ) = delete;
 
   /**
@@ -192,6 +164,13 @@ class besthea::linear_algebra::pFMM_matrix
     this->_alpha = alpha;
   }
 
+  /*!
+   * Setter for the uniform parameter.
+   * @param[in] uniform Value of the uniform parameter.
+   */
+  void set_uniform( bool uniform ) {
+    _uniform = uniform;
+  }
   /*!
    * Sets the dimension of the matrix.
    * @param[in] block_dim Block dimension.
