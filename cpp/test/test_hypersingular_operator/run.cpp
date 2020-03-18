@@ -134,16 +134,11 @@ int main( int argc, char * argv[] ) {
     entry_id = std::atoi( argv[ 4 ] );
   }
 
-  pFMM_matrix< spacetime_heat_hs_kernel_antiderivative,
-    fast_spacetime_be_space< basis_tri_p1 >,
-    fast_spacetime_be_space< basis_tri_p1 > > * D_pFMM
-    = new pFMM_matrix< spacetime_heat_hs_kernel_antiderivative,
-      fast_spacetime_be_space< basis_tri_p1 >,
-      fast_spacetime_be_space< basis_tri_p1 > >(
-      &tree, false, temp_order, spat_order, cauchy_data::_alpha, false, false );
+  pFMM_matrix_heat_hs_p1p1 * D_pFMM = new pFMM_matrix_heat_hs_p1p1;
   //   tree.print( );
   fast_spacetime_be_assembler fast_assembler_d( kernel_d, space_p1_pFMM,
-    space_p1_pFMM, order_sing, order_reg, temp_order, spat_order, 1.5, false );
+    space_p1_pFMM, order_sing, order_reg, temp_order, spat_order,
+    cauchy_data::_alpha, 1.5, false );
   t.reset( "D_pFMM" );
   fast_assembler_d.assemble( *D_pFMM );
   t.measure( );

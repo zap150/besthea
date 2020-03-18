@@ -120,8 +120,8 @@ int main( int argc, char * argv[] ) {
   fast_spacetime_be_space< basis_tri_p0 > space_p0_pFMM( tree );
   fast_spacetime_be_space< basis_tri_p1 > space_p1_pFMM( tree );
 
-  lo temp_order = 2;
-  lo spat_order = 2;
+  lo temp_order = 6;
+  lo spat_order = 6;
 
   if ( argc > 1 ) {
     temp_order = std::atoi( argv[ 1 ] );
