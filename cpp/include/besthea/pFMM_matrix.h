@@ -311,7 +311,7 @@ class besthea::linear_algebra::pFMM_matrix
 
   /*!
    * @brief Executes s2m operations for all leaves of the spacetime cluster
-   * and a given vector x for spatial basis functions in p1
+   * and a given vector x for spatial basis functions in p1.
    * @param[in] x Vector for multiplication.
    * @note The results are stored in the matrices \p _moment_contribution in the
    * respective spacetime clusters.
@@ -320,10 +320,20 @@ class besthea::linear_algebra::pFMM_matrix
    * \ref besthea::bem::fast_spacetime_be_assembler.
    */
   void apply_s2m_operations_p1( block_vector_type const & x ) const;
-  //   template< class basis_type >
-  //   void apply_s2m_operations(
-  //     besthea::bem::fast_spacetime_be_space < basis_type > be_space,
-  //     block_vector_type const & x ) const;
+  
+    /*!
+   * @brief Executes s2m operations for all leaves of the spacetime cluster
+   * and a given vector x for spatial basis functions in p1.
+   * The integrals in space used for the s2m operations include the normal 
+   * derivatives of the Chebyshev polynomials. 
+   * @param[in] x Vector for multiplication.
+   * @note The results are stored in the matrices \p _moment_contribution in the
+   * respective spacetime clusters.
+   * @note The method uses matrices of integrals over polynomials which are
+   * computed in
+   * \ref besthea::bem::fast_spacetime_be_assembler.
+   */
+  void apply_s2m_operations_p1_normal_drv( block_vector_type const & x ) const;
 
   /*!
    * @brief Executes s2m operations for all leaves of the spacetime cluster
@@ -447,9 +457,9 @@ class besthea::linear_algebra::pFMM_matrix
    */
   void apply_l2t_operations_p0( block_vector_type & y ) const;
 
-  /*!
+   /*!
    * @brief Executes l2t operations for all leaves of the spacetime cluster
-   * and adds the results to a vector y for spatial basis functions in p1.
+   * and adds the results to a vector y for spatial basis functions in p1. 
    * @param[in,out] y Vector to which the results are added.
    * @note For the computations the matrices \p _local_contribution in the
    * respective spacetime clusters are used.
@@ -457,7 +467,21 @@ class besthea::linear_algebra::pFMM_matrix
    * computed in
    * \ref besthea::bem::fast_spacetime_be_assembler.
    */
-  void apply_l2t_operations_p1( block_vector_type & y ) const;
+  void apply_l2t_operations_p1( block_vector_type & y ) const; 
+
+  /*!
+   * @brief Executes l2t operations for all leaves of the spacetime cluster
+   * and adds the results to a vector y for spatial basis functions in p1.
+   * The integrals in space used for the l2t operations include the normal 
+   * derivatives of the Chebyshev polynomials. 
+   * @param[in,out] y Vector to which the results are added.
+   * @note For the computations the matrices \p _local_contribution in the
+   * respective spacetime clusters are used.
+   * @note The method uses matrices of integrals over polynomials which are
+   * computed in
+   * \ref besthea::bem::fast_spacetime_be_assembler.
+   */
+  void apply_l2t_operations_p1_normal_drv( block_vector_type & y ) const;
 
   /*!
    * @brief Executes l2t operations for all leaves of the spacetime cluster

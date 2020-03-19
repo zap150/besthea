@@ -47,7 +47,7 @@ struct cauchy_data {
     return value;
   }
 
-  static constexpr sc _alpha{ 0.5 };
+  static constexpr sc _alpha{ 4 };
   static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
 };
 
@@ -117,7 +117,7 @@ int main( int argc, char * argv[] ) {
 
   // V approximated by pFMM
   // sc st_coeff = 4.0;
-  sc st_coeff = 1.0;
+  sc st_coeff = 4.0;
   lo temp_order = 8;
   lo spat_order = 8;
   spacetime_cluster_tree tree( spacetime_mesh, 5, 2, 10, st_coeff );

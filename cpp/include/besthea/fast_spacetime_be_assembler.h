@@ -455,11 +455,20 @@ class besthea::bem::fast_spacetime_be_assembler {
     std::set< space_cluster_type * > & space_clusters_spacetime_leaves ) const;
 
   /**
-   * Compute quadrature of the Chebyshev polynomials for a space cluster.
+   * Compute quadrature of the Chebyshev polynomials and p0 basis functions for
+   * a space cluster.
    * \param[in] cluster   Space cluster for which the quadratures are computed
    *                      and where they are stored.
    */
-  void compute_chebyshev_quadrature( space_cluster_type * cluster ) const;
+  void compute_chebyshev_quadrature_p0( space_cluster_type * cluster ) const;
+
+  /**
+   * Compute quadrature of the Chebyshev polynomials and p1 basis functions for
+   * a space cluster.
+   * \param[in] cluster   Space cluster for which the quadratures are computed
+   *                      and where they are stored.
+   */
+  void compute_chebyshev_quadrature_p1( space_cluster_type * cluster ) const;
 
   /**
    * Compute quadrature of the normal derivatives of the Chebyshev polynomials

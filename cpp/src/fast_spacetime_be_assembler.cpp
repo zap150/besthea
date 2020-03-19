@@ -1288,8 +1288,8 @@ void besthea::bem::fast_spacetime_be_assembler<
   // WARNING: Only the number of columns of the Chebyshev quadrature of the
   //          first spatial cluster is checked.
   //   if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) &&
-  //     ( ( *space_clusters_spacetime_leaves.begin( ) )->get_chebyshev_quad( ).
-  //               get_n_columns( ) !=
+  //     ( ( *space_clusters_spacetime_leaves.begin( ) )->
+  //               get_chebyshev_quad_p0( ).get_n_columns( ) !=
   //     ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6
   //     ) )
   // ATTENTION: in the current version it is not checked if quadratures etc.
@@ -1298,7 +1298,35 @@ void besthea::bem::fast_spacetime_be_assembler<
   if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) ) {
     for ( auto it = space_clusters_spacetime_leaves.begin( );
           it != space_clusters_spacetime_leaves.end( ); ++it ) {
-      compute_chebyshev_quadrature( *it );
+      compute_chebyshev_quadrature_p0( *it );
+    }
+  }
+
+  if ( time_clusters_spacetime_leaves.size( ) > 0 ) {
+    for ( auto it = time_clusters_spacetime_leaves.begin( );
+          it != time_clusters_spacetime_leaves.end( ); ++it ) {
+      compute_lagrange_quadrature( *it );
+    }
+  }
+}
+
+//! template specialization for single layer p1p1 matrix
+template<>
+void besthea::bem::fast_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
+  compute_required_data(
+    std::set< time_cluster_type * > & time_clusters_spacetime_leaves,
+    std::set< space_cluster_type * > & space_clusters_spacetime_leaves ) const {
+  // ATTENTION: in the current version it is not checked if quadratures etc.
+  //            have been computed!!! still, each computation is done in a
+  //            separate step in case that the checks are added
+  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) ) {
+    for ( auto it = space_clusters_spacetime_leaves.begin( );
+          it != space_clusters_spacetime_leaves.end( ); ++it ) {
+      ( *it )->compute_node_mapping( );
+      compute_chebyshev_quadrature_p1( *it );
     }
   }
 
@@ -1324,8 +1352,8 @@ void besthea::bem::fast_spacetime_be_assembler<
   // WARNING: Only the number of columns of the quadratures of the
   //          first spatial cluster is checked.
   //  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) &&
-  //    ( ( *space_clusters_spacetime_leaves.begin( ) )->get_chebyshev_quad( ).
-  //              get_n_columns( ) !=
+  //    ( ( *space_clusters_spacetime_leaves.begin( ) )->
+  //              get_chebyshev_quad_p0( ).get_n_columns( ) !=
   //    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6
   //    ) )
   // ATTENTION: in the current version it is not checked if quadratures etc.
@@ -1334,7 +1362,7 @@ void besthea::bem::fast_spacetime_be_assembler<
   if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) ) {
     for ( auto it = space_clusters_spacetime_leaves.begin( );
           it != space_clusters_spacetime_leaves.end( ); ++it ) {
-      compute_chebyshev_quadrature( *it );
+      compute_chebyshev_quadrature_p0( *it );
     }
   }
   //  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) &&
@@ -1375,8 +1403,8 @@ void besthea::bem::fast_spacetime_be_assembler<
   // WARNING: Only the number of columns of the quadratures of the
   //          first spatial cluster is checked.
   //  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) &&
-  //    ( ( *space_clusters_spacetime_leaves.begin( ) )->get_chebyshev_quad( ).
-  //              get_n_columns( ) !=
+  //    ( ( *space_clusters_spacetime_leaves.begin( ) )->
+  //              get_chebyshev_quad_p0( ).get_n_columns( ) !=
   //    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6
   //    ) )
   // ATTENTION: in the current version it is not checked if quadratures etc.
@@ -1385,7 +1413,7 @@ void besthea::bem::fast_spacetime_be_assembler<
   if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) ) {
     for ( auto it = space_clusters_spacetime_leaves.begin( );
           it != space_clusters_spacetime_leaves.end( ); ++it ) {
-      compute_chebyshev_quadrature( *it );
+      compute_chebyshev_quadrature_p0( *it );
     }
   }
 
@@ -1425,14 +1453,14 @@ void besthea::bem::fast_spacetime_be_assembler<
   // WARNING: Only the number of columns of the quadratures of the
   //          first spatial cluster is checked.
   //  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) &&
-  //    ( ( *space_clusters_spacetime_leaves.begin( ) )->get_chebyshev_quad( ).
-  //              get_n_columns( ) !=
+  //    ( ( *space_clusters_spacetime_leaves.begin( ) )->
+  //              get_chebyshev_quad_p0( ).get_n_columns( ) !=
   //    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6
   //    ) )
   if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) ) {
     for ( auto it = space_clusters_spacetime_leaves.begin( );
           it != space_clusters_spacetime_leaves.end( ); ++it ) {
-      compute_chebyshev_quadrature( *it );
+      compute_chebyshev_quadrature_p0( *it );
     }
   }
 
@@ -1470,9 +1498,9 @@ void besthea::bem::fast_spacetime_be_assembler<
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
-  trial_space_type >::compute_chebyshev_quadrature( space_cluster_type *
+  trial_space_type >::compute_chebyshev_quadrature_p0( space_cluster_type *
     space_cluster ) const {
-  full_matrix_type & T = space_cluster->get_chebyshev_quad( );
+  full_matrix_type & T = space_cluster->get_chebyshev_quad_p0( );
 
   lo n_space_elems = space_cluster->get_n_elements( );
   T.resize( n_space_elems,
@@ -1532,6 +1560,98 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
           }
           quad *= elem_area;
           T.set( i, current_index, quad );
+          ++current_index;
+        }
+      }
+    }
+  }
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::
+  compute_chebyshev_quadrature_p1(
+    space_cluster_type * space_cluster ) const {
+  full_matrix_type & T = space_cluster->get_chebyshev_quad_p1( );
+  lo n_space_nodes = space_cluster->get_n_nodes( );
+  lo n_space_elems = space_cluster->get_n_elements( );
+  T.resize( n_space_nodes,
+    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 );
+  T.fill( 0.0 );
+
+  // get some info on the current cluster
+  vector_type cluster_center( 3 );
+  vector_type cluster_half( 3 );
+  space_cluster->get_center( cluster_center );
+  space_cluster->get_half_size( cluster_half );
+  sc padding = space_cluster->get_padding( );
+  sc start_0 = cluster_center[ 0 ] - cluster_half[ 0 ] - padding;
+  sc end_0 = cluster_center[ 0 ] + cluster_half[ 0 ] + padding;
+  sc start_1 = cluster_center[ 1 ] - cluster_half[ 1 ] - padding;
+  sc end_1 = cluster_center[ 1 ] + cluster_half[ 1 ] + padding;
+  sc start_2 = cluster_center[ 2 ] - cluster_half[ 2 ] - padding;
+  sc end_2 = cluster_center[ 2 ] + cluster_half[ 2 ] + padding;
+
+  // init quadrature data
+  quadrature_wrapper my_quadrature;
+  init_quadrature_polynomials( my_quadrature );
+  lo size_quad = my_quadrature._wy_cheb.size( );
+  sc * wy = my_quadrature._wy_cheb.data( );
+  linear_algebra::coordinates< 3 > y1, y2, y3;
+
+  // for storing the result of the Chebyshev evaluation in quadrature points
+  vector_type cheb_dim_0( ( _spat_order + 1 ) * size_quad );
+  vector_type cheb_dim_1( ( _spat_order + 1 ) * size_quad );
+  vector_type cheb_dim_2( ( _spat_order + 1 ) * size_quad );
+
+  sc elem_area;
+  lo elem;
+
+  sc * y1_ref = my_quadrature._y1_ref_cheb.data( );
+  sc * y2_ref = my_quadrature._y2_ref_cheb.data( );
+
+  sc value1, value2, value3;
+  const std::vector< lo > & elems_2_local_nodes
+    = space_cluster->get_elems_2_local_nodes( );
+
+  for ( lo i = 0; i < n_space_elems; ++i ) {
+    elem = space_cluster->get_element( i );
+    space_cluster->get_mesh( ).get_nodes( elem, y1, y2, y3 );
+    elem_area = space_cluster->get_mesh( ).area( elem );
+
+    triangle_to_geometry( y1, y2, y3, my_quadrature );
+
+    cluster_to_polynomials(
+      my_quadrature, start_0, end_0, start_1, end_1, start_2, end_2 );
+
+    _chebyshev.evaluate( my_quadrature._y1_polynomial, cheb_dim_0 );
+    _chebyshev.evaluate( my_quadrature._y2_polynomial, cheb_dim_1 );
+    _chebyshev.evaluate( my_quadrature._y3_polynomial, cheb_dim_2 );
+
+    lo current_index = 0;
+    for ( lo beta0 = 0; beta0 <= _spat_order; ++beta0 ) {
+      for ( lo beta1 = 0; beta1 <= _spat_order - beta0; ++beta1 ) {
+        for ( lo beta2 = 0; beta2 <= _spat_order - beta0 - beta1; ++beta2 ) {
+          value1 = 0.0;
+          value2 = 0.0;
+          value3 = 0.0;
+          for ( lo j = 0; j < size_quad; ++j ) {
+            sc weighted_cheb_prod = cheb_dim_0[ beta0 * size_quad + j ]
+              * cheb_dim_1[ beta1 * size_quad + j ]
+              * cheb_dim_2[ beta2 * size_quad + j ]
+              * wy[ j ] * elem_area;
+            value1 += weighted_cheb_prod
+              * ( (sc) 1.0 - y1_ref[ j ] - y2_ref[ j ] );
+            value2 += weighted_cheb_prod * y1_ref[ j ];
+            value3 += weighted_cheb_prod * y2_ref[ j ];
+          }
+
+          T.add_atomic( elems_2_local_nodes[ 3 * i ], current_index,
+            _kernel->get_alpha( ) * value1 );
+          T.add_atomic( elems_2_local_nodes[ 3 * i + 1 ], current_index,
+            _kernel->get_alpha( ) * value2 );
+          T.add_atomic( elems_2_local_nodes[ 3 * i + 2 ], current_index,
+            _kernel->get_alpha( ) * value3 );
           ++current_index;
         }
       }

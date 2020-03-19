@@ -63,7 +63,7 @@ struct cauchy_data {
 int main( int argc, char * argv[] ) {
   std::string file = "./mesh_files/cube_12.txt";
   //   int refine = 1;
-  int refine = 2;
+  int refine = 1;
   lo n_timesteps = 8;
   sc end_time = 1.0;
   std::string grid_file = "./mesh_files/grid_xy.txt";
@@ -153,23 +153,26 @@ int main( int argc, char * argv[] ) {
   fast_assembler_d.assemble( *D );
   t.measure( );
 
-  //   pFMM_matrix * V11 = new pFMM_matrix( );
-  //   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
-  //   fast_spacetime_be_assembler fast_assembler_v(
-  //     kernel_v, space_p1, space_p1, order_sing, order_reg, 1.5, true );
-  //   t.reset( "V11" );
-  //   fast_assembler_v.assemble( *V11 );
-  //   t.measure( );
-  //   spacetime_be_identity M11( space_p1, space_p1, 2 );
-  //   t.reset( "M11" );
-  //   M11.assemble( );
-  //   t.measure( );
-  //
-  //   block_mkl_cg_inverse M11_inv( M11, 1e-8, 100 );
-  //   compound_block_linear_operator preconditioner;
-  //   preconditioner.push_back( M11_inv );
-  //   preconditioner.push_back( *V11 );
-  //   preconditioner.push_back( M11_inv );
+  // pFMM_matrix_heat_sl_p1p1* V11 = new pFMM_matrix_heat_sl_p1p1( );
+  // spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
+  // fast_spacetime_be_assembler fast_assembler_v(
+  //   kernel_v, space_p1, space_p1, order_sing, order_reg, 1.5, false );
+  // t.reset( "V11" );
+  // fast_assembler_v.assemble( *V11 );
+  // t.measure( );
+  spacetime_be_identity M11( space_p1, space_p1, 2 );
+  t.reset( "M11" );
+  M11.assemble( );
+  t.measure( );
+
+  block_mkl_cg_inverse M11_inv( M11, 1e-8, 100 );
+  compound_block_linear_operator preconditioner;
+  // preconditioner.push_back( M11_inv );
+  // preconditioner.push_back( *V11 );
+  // preconditioner.push_back( M11_inv );
+
+  std::cout << "HERE " << std::endl;
+
   t.reset( "Solving the system" );
   block_vector rhs( dir );
   sc gmres_prec = 1e-8;
@@ -179,15 +182,15 @@ int main( int argc, char * argv[] ) {
             << std::endl;
   gmres_prec = 1e-8;
   gmres_iter = 500;
-  //   D->mkl_fgmres_solve(
-  //     preconditioner, rhs, dir, gmres_prec, gmres_iter, gmres_iter );
-  //   std::cout << "  iterations: " << gmres_iter << ", residual: " <<
-  //   gmres_prec
-  //             << std::endl;
+  // D->mkl_fgmres_solve(
+  //   preconditioner, rhs, dir, gmres_prec, gmres_iter, gmres_iter );
+  // std::cout << "  iterations: " << gmres_iter << ", residual: " <<
+  // gmres_prec
+  //           << std::endl;
   t.measure( );
 
   delete D;
-  //   delete V11;
+  // delete V11;
 
   std::cout << "Dirichlet L2 relative error: "
             << space_p1.L2_relative_error( cauchy_data::dirichlet, dir )

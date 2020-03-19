@@ -80,7 +80,8 @@ class besthea::mesh::space_cluster {
       _octant( octant ),
       _padding( 0.0 ),
       _box_coordinate( coordinate ),
-      _cheb_T( 1, 1 ),
+      _cheb_T_p0( 1, 1 ),
+      _cheb_T_p1( 1, 1 ),
       _cheb_normal_drv_T( 1, 1 ),
       _cheb_times_normal_dim0( 1, 1 ),
       _cheb_times_normal_dim1( 1, 1 ),
@@ -367,10 +368,18 @@ class besthea::mesh::space_cluster {
 
   /**
    * Returns a reference to the matrix storing quadratures of Chebyshev
-   * polynomials over the elements of the cluster.
+   * polynomials times p0 basis functions over the elements of the cluster.
    */
-  full_matrix_type & get_chebyshev_quad( ) {
-    return _cheb_T;
+  full_matrix_type & get_chebyshev_quad_p0( ) {
+    return _cheb_T_p0;
+  }
+
+  /**
+   * Returns a reference to the matrix storing quadratures of Chebyshev
+   * polynomials times p1 basis functions over the elements of the cluster.
+   */
+  full_matrix_type & get_chebyshev_quad_p1( ) {
+    return _cheb_T_p1;
   }
 
   /**
@@ -492,8 +501,15 @@ class besthea::mesh::space_cluster {
   std::vector< slou >
     _box_coordinate;  //!< coordinates of the box within boxes on given level
   full_matrix_type
-    _cheb_T;  //!< matrix storing quadrature of the Chebyshev polynomials (rows
-              //!< - element of the cluster, columns - order of the polynomial)
+    _cheb_T_p0;   //!< matrix storing quadrature of the Chebyshev polynomials 
+                  //!< times p0 basis functions
+                  //!< (rows element of the cluster,
+                  //!< columns - order of the polynomial)
+  full_matrix_type 
+    _cheb_T_p1;   //!< matrix storing quadrature of the Chebyshev polynomials 
+                  //!< times p1 basis functions
+                  //!< (rows element of the cluster,
+                  //!< columns - order of the polynomial)
   full_matrix_type
     _cheb_normal_drv_T;  //!< matrix storing quadrature of the normal
                          //!< derivatives of the Chebyshev polynomials (weighted
