@@ -36,14 +36,15 @@
 #include "besthea/spacetime_heat_sl_kernel_antiderivative.h"
 #include "besthea/timer.h"
 
+#include <set>
 #include <vector>
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::fast_spacetime_be_assembler( kernel_type & kernel,
   test_space_type & test_space, trial_space_type & trial_space,
-  int order_singular, int order_regular, int spat_order, int temp_order,
-  sc cutoff_param, bool uniform )
+  int order_singular, int order_regular, int temp_order, int spat_order,
+  sc alpha, sc cutoff_param, bool uniform )
   : _kernel( &kernel ),
     _test_space( &test_space ),
     _trial_space( &trial_space ),
@@ -51,8 +52,10 @@ besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
     _order_regular( order_regular ),
     _cutoff_param( cutoff_param ),
     _uniform( uniform ),
-    _spat_order( spat_order ),
     _temp_order( temp_order ),
+    _spat_order( spat_order ),
+    _m2l_integration_order( _spat_order ),
+    _alpha( alpha ),
     _lagrange( temp_order ),
     _chebyshev( spat_order ) {
   lo levels = _test_space->get_tree( )->get_space_tree( )->get_levels( );
@@ -64,8 +67,7 @@ besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
   _space_cluster_size
     = std::sqrt( size_x * size_x + size_y * size_y + size_z * size_z );
-
-  precompute_nonzeros( );
+  //   precompute_nonzeros( );
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -76,19 +78,21 @@ besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 template< class kernel_type, class test_space_type, class trial_space_type >
 bool besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::is_spatial_nearfield( lo test_idx, lo trial_idx ) const {
-  auto test_mesh = _test_space->get_spatial_mesh( );
-  auto trial_mesh = _trial_space->get_spatial_mesh( );
-
-  linear_algebra::coordinates< 3 > test_c;
-  linear_algebra::coordinates< 3 > trial_c;
-
-  test_mesh->get_centroid( test_idx, test_c );
-  trial_mesh->get_centroid( trial_idx, trial_c );
-  sc dist = ( test_c[ 0 ] - trial_c[ 0 ] ) * ( test_c[ 0 ] - trial_c[ 0 ] )
-    + ( test_c[ 1 ] - trial_c[ 1 ] ) * ( test_c[ 1 ] - trial_c[ 1 ] )
-    + ( test_c[ 2 ] - trial_c[ 2 ] ) * ( test_c[ 2 ] - trial_c[ 2 ] );
-  return dist <= _cutoff_param * _space_cluster_size * _cutoff_param
-    * _space_cluster_size;
+  //   auto test_mesh = _test_space->get_spatial_mesh( );
+  //   auto trial_mesh = _trial_space->get_spatial_mesh( );
+  //
+  //   linear_algebra::coordinates< 3 > test_c;
+  //   linear_algebra::coordinates< 3 > trial_c;
+  //
+  //   test_mesh->get_centroid( test_idx, test_c );
+  //   trial_mesh->get_centroid( trial_idx, trial_c );
+  //   sc dist = ( test_c[ 0 ] - trial_c[ 0 ] ) * ( test_c[ 0 ] - trial_c[ 0 ] )
+  //     + ( test_c[ 1 ] - trial_c[ 1 ] ) * ( test_c[ 1 ] - trial_c[ 1 ] )
+  //     + ( test_c[ 2 ] - trial_c[ 2 ] ) * ( test_c[ 2 ] - trial_c[ 2 ] );
+  // TODO: criterion turned off for debugging reasons
+  //   return dist <= _cutoff_param * _space_cluster_size * _cutoff_param
+  //     * _space_cluster_size;
+  return true;
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -113,13 +117,17 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
-  trial_space_type >::assemble( besthea::linear_algebra::pFMM_matrix &
-    global_matrix ) const {
+  trial_space_type >::assemble( pfmm_matrix_type & global_matrix ) const {
   auto & test_basis = _test_space->get_basis( );
   auto & trial_basis = _trial_space->get_basis( );
   auto test_mesh = _test_space->get_mesh( );
 
   global_matrix.set_tree( _test_space->get_tree( ) );
+  global_matrix.set_order( _spat_order, _temp_order );
+  global_matrix.set_alpha( _alpha );
+  global_matrix.set_m2l_integration_order( _m2l_integration_order );
+  global_matrix.set_uniform(
+    false );  // for now, ignore the possible uniformity
 
   // number of timesteps should be the same for test and
   // trial meshes
@@ -131,20 +139,26 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
   global_matrix.resize( n_timesteps, n_rows, n_columns );
 
-  std::vector< space_cluster_type * > & space_leaves
-    = _test_space->get_tree( )->get_space_cluster_tree( )->get_leaves( );
-  std::vector< time_cluster_type * > & time_leaves
-    = _test_space->get_tree( )->get_time_cluster_tree( )->get_leaves( );
+  std::vector< spacetime_cluster_type * > spacetime_leaves
+    = _test_space->get_tree( )->get_leaves( );
+  // find all space cluster and time clusters which are part of a spacetime
+  // leaf cluster and store them ( each only once ) in sets
+  std::set< time_cluster_type * > time_clusters_spacetime_leaves;
+  std::set< space_cluster_type * > space_clusters_spacetime_leaves;
+  for ( auto it = spacetime_leaves.begin( ); it != spacetime_leaves.end( );
+        ++it ) {
+    time_clusters_spacetime_leaves.insert( &( ( *it )->get_time_cluster( ) ) );
+    space_clusters_spacetime_leaves.insert(
+      &( ( *it )->get_space_cluster( ) ) );
+  }
 
-  for ( auto it = space_leaves.begin( ); it != space_leaves.end( ); ++it ) {
-    compute_chebyshev_quadrature( *it );
-  }
-  for ( auto it = time_leaves.begin( ); it != time_leaves.end( ); ++it ) {
-    compute_lagrange_quadrature( *it );
-  }
+  compute_required_data(
+    time_clusters_spacetime_leaves, space_clusters_spacetime_leaves );
 
   global_matrix.compute_spatial_m2m_coeffs( );
   global_matrix.compute_temporal_m2m_matrices( );
+
+  initialize_moment_and_local_contributions( );
 
   if ( !_uniform ) {
     assemble_nearfield( global_matrix );
@@ -156,8 +170,8 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
-  trial_space_type >::assemble_nearfield( besthea::linear_algebra::pFMM_matrix &
-    global_matrix ) const {
+  trial_space_type >::assemble_nearfield( pfmm_matrix_type & global_matrix )
+  const {
   std::vector< mesh::time_cluster * > & leaves
     = _test_space->get_tree( )->get_time_tree( )->get_leaves( );
 
@@ -166,7 +180,7 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
   lo global_elem_i, global_elem_j;
   sc t0, t1, tau0, tau1;
-  sparse_matrix_type * block;
+  full_matrix_type * block;
 
   for ( auto it = leaves.begin( ); it != leaves.end( ); ++it ) {
     current_cluster = *it;
@@ -222,8 +236,8 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
-  trial_space_type >::assemble_farfield_nonapproximated( besthea::
-    linear_algebra::pFMM_matrix & global_matrix ) const {
+  trial_space_type >::assemble_farfield_nonapproximated( pfmm_matrix_type &
+    global_matrix ) const {
   std::vector< mesh::time_cluster * > & leaves
     = _test_space->get_tree( )->get_time_tree( )->get_leaves( );
 
@@ -232,7 +246,7 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
   lo global_elem_i, global_elem_j;
   sc t0, t1, tau0, tau1;
-  sparse_matrix_type * block;
+  full_matrix_type * block;
 
   for ( auto it = leaves.begin( ); it != leaves.end( ); ++it ) {
     current_cluster = *it;
@@ -269,8 +283,8 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
-  trial_space_type >::assemble_nonapproximated_uniform( besthea::
-    linear_algebra::pFMM_matrix & global_matrix ) const {
+  trial_space_type >::assemble_nonapproximated_uniform( pfmm_matrix_type &
+    global_matrix ) const {
   std::vector< mesh::time_cluster * > & leaves
     = _test_space->get_tree( )->get_time_tree( )->get_leaves( );
 
@@ -278,7 +292,7 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
   lo global_elem_i, global_elem_j;
   sc t0, t1, tau0, tau1;
-  sparse_matrix_type * block;
+  full_matrix_type * block;
 
   for ( auto it = leaves.begin( ); it != leaves.end( ); ++it ) {
     current_cluster = *it;
@@ -307,22 +321,17 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::assemble_nearfield_matrix( sc t0, sc t1, sc tau0, sc tau1,
-  sparse_matrix_type & nearfield_matrix ) const {
+  full_matrix_type & nearfield_matrix ) const {
   auto & test_basis = _test_space->get_basis( );
   auto & trial_basis = _trial_space->get_basis( );
   auto test_mesh = _test_space->get_mesh( );
   auto trial_mesh = _trial_space->get_mesh( );
 
-  // size of individual blocks
-  lo n_rows = test_basis.dimension_global( );
-  lo n_columns = trial_basis.dimension_global( );
-
   lo n_loc_rows = test_basis.dimension_local( );
   lo n_loc_columns = trial_basis.dimension_local( );
 
-  std::vector< Eigen::Triplet< sc, los > > triplet_list;
-  lo nnz_size = _nonzeros.size( );
-  triplet_list.resize( nnz_size * n_loc_rows * n_loc_columns );
+  lo n_test_elements = test_mesh->get_n_spatial_elements( );
+  lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
 
 #pragma omp parallel
   {
@@ -360,16 +369,12 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
     bool shared_t_element = t0 == tau0;
     bool shared_t_vertex = t0 == tau1;
 
-    lo i_test, i_trial;
-
 #pragma omp for schedule( dynamic, 1 )
-    for ( lo i = 0; i < nnz_size; ++i ) {
-      i_test = _nonzeros[ i ].first;
-      i_trial = _nonzeros[ i ].second;
-      test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
-      test_mesh->get_spatial_normal( i_test, nx );
-      test_area = test_mesh->spatial_area( i_test );
-      if ( is_spatial_nearfield( i_test, i_trial ) ) {
+    for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
+      for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
+        test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
+        test_mesh->get_spatial_normal( i_test, nx );
+        test_area = test_mesh->spatial_area( i_test );
         if ( shared_t_element || shared_t_vertex ) {
           get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
         } else {
@@ -428,8 +433,8 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
                 ++i_loc_trial ) {
             value = 0.0;
 #pragma omp simd \
-	aligned( x1_ref, x2_ref, y1_ref, y2_ref, kernel_data : DATA_ALIGN ) \
-	private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
+  aligned( x1_ref, x2_ref, y1_ref, y2_ref, kernel_data : DATA_ALIGN ) \
+  private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
             for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
               test = test_basis.evaluate( i_test, i_loc_test, x1_ref[ i_quad ],
                 x2_ref[ i_quad ], nx_data, n_shared_vertices, rot_test, false );
@@ -441,38 +446,31 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
             }
             value *= test_area * trial_area;
 
-            triplet_list[ i * n_loc_rows * n_loc_columns
-              + i_loc_test * n_loc_columns + i_loc_trial ]
-              = Eigen::Triplet< sc, los >(
-                test_l2g[ i_loc_test ], trial_l2g[ i_loc_trial ], value );
+            nearfield_matrix.add_atomic(
+              test_l2g[ i_loc_test ], trial_l2g[ i_loc_trial ], value );
           }
         }
       }
     }
   }
-
-  nearfield_matrix.set_from_triplets( n_rows, n_columns, triplet_list );
 }
 
+//! template specialization for hypersingular p1p1 matrix
 template<>
 void besthea::bem::fast_spacetime_be_assembler<
   besthea::bem::spacetime_heat_hs_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
   assemble_nearfield_matrix( sc t0, sc t1, sc tau0, sc tau1,
-    sparse_matrix_type & nearfield_matrix ) const {
+    full_matrix_type & nearfield_matrix ) const {
   auto & test_basis = _test_space->get_basis( );
   auto & trial_basis = _trial_space->get_basis( );
   auto test_mesh = _test_space->get_mesh( );
   auto trial_mesh = _trial_space->get_mesh( );
 
   // size of individual blocks
-  lo n_rows = test_basis.dimension_global( );
-  lo n_columns = trial_basis.dimension_global( );
-
-  std::vector< Eigen::Triplet< sc, los > > triplet_list;
-  lo nnz_size = _nonzeros.size( );
-  triplet_list.resize( nnz_size * 3 * 3 );
+  lo n_test_elements = test_mesh->get_n_spatial_elements( );
+  lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
 
 #pragma omp parallel
   {
@@ -517,17 +515,14 @@ void besthea::bem::fast_spacetime_be_assembler<
 
     bool shared_t_element = t0 == tau0;
     bool shared_t_vertex = t0 == tau1;
-    lo i_test, i_trial;
 
 #pragma omp for schedule( dynamic, 1 )
-    for ( lo i = 0; i < nnz_size; ++i ) {
-      i_test = _nonzeros[ i ].first;
-      i_trial = _nonzeros[ i ].second;
-      test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
-      test_mesh->get_spatial_normal( i_test, nx );
-      test_area = test_mesh->spatial_area( i_test );
+    for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
+      for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
+        test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
+        test_mesh->get_spatial_normal( i_test, nx );
+        test_area = test_mesh->spatial_area( i_test );
 
-      if ( is_spatial_nearfield( i_test, i_trial ) ) {
         if ( shared_t_element || shared_t_vertex ) {
           get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
         } else {
@@ -673,29 +668,27 @@ void besthea::bem::fast_spacetime_be_assembler<
           }
         }
 
-        triplet_list[ i * 3 * 3 + 0 * 3 + 0 ] = Eigen::Triplet< sc, los >(
+        nearfield_matrix.add_atomic(
           test_l2g[ 0 ], trial_l2g[ 0 ], value11 * areas );
-        triplet_list[ i * 3 * 3 + 0 * 3 + 1 ] = Eigen::Triplet< sc, los >(
+        nearfield_matrix.add_atomic(
           test_l2g[ 0 ], trial_l2g[ 1 ], value12 * areas );
-        triplet_list[ i * 3 * 3 + 0 * 3 + 2 ] = Eigen::Triplet< sc, los >(
+        nearfield_matrix.add_atomic(
           test_l2g[ 0 ], trial_l2g[ 2 ], value13 * areas );
-        triplet_list[ i * 3 * 3 + 1 * 3 + 0 ] = Eigen::Triplet< sc, los >(
+        nearfield_matrix.add_atomic(
           test_l2g[ 1 ], trial_l2g[ 0 ], value21 * areas );
-        triplet_list[ i * 3 * 3 + 1 * 3 + 1 ] = Eigen::Triplet< sc, los >(
+        nearfield_matrix.add_atomic(
           test_l2g[ 1 ], trial_l2g[ 1 ], value22 * areas );
-        triplet_list[ i * 3 * 3 + 1 * 3 + 2 ] = Eigen::Triplet< sc, los >(
+        nearfield_matrix.add_atomic(
           test_l2g[ 1 ], trial_l2g[ 2 ], value23 * areas );
-        triplet_list[ i * 3 * 3 + 2 * 3 + 0 ] = Eigen::Triplet< sc, los >(
+        nearfield_matrix.add_atomic(
           test_l2g[ 2 ], trial_l2g[ 0 ], value31 * areas );
-        triplet_list[ i * 3 * 3 + 2 * 3 + 1 ] = Eigen::Triplet< sc, los >(
+        nearfield_matrix.add_atomic(
           test_l2g[ 2 ], trial_l2g[ 1 ], value32 * areas );
-        triplet_list[ i * 3 * 3 + 2 * 3 + 2 ] = Eigen::Triplet< sc, los >(
+        nearfield_matrix.add_atomic(
           test_l2g[ 2 ], trial_l2g[ 2 ], value33 * areas );
       }
     }
   }
-
-  nearfield_matrix.set_from_triplets( n_rows, n_columns, triplet_list );
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -900,6 +893,8 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
   lo size = my_quadrature._wy_cheb.size( );
 
+  // x1, x2, x3 are vectors in R^3,
+  // y%_mapped are the %th components of the vectors to which y#_ref is mapped
 #pragma omp simd aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref \
                           : DATA_ALIGN ) simdlen( DATA_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
@@ -1150,7 +1145,8 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
     lo elem = time_cluster->get_element( i );
     time_cluster->get_mesh( ).get_nodes( elem, elem_t_start, elem_t_end );
     elem_size = elem_t_end[ 0 ] - elem_t_start[ 0 ];
-
+    // compute the quadrature points in the current element in relative
+    // coordinates with respect to the time cluster and transform them to [-1,1]
     for ( std::vector< sc, besthea::allocator_type< sc > >::size_type j = 0;
           j < line_t.size( ); ++j ) {
       eval_points[ j ] = -1.0
@@ -1171,6 +1167,46 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::compute_lagrange_drv_integrals( time_cluster_type *
+    time_cluster ) const {
+  lo n_temp_elems = time_cluster->get_n_elements( );
+  full_matrix_type & L_drv = time_cluster->get_lagrange_drv_int( );
+  L_drv.resize( _temp_order + 1, n_temp_elems );
+
+  // Lagrange polynomials are evaluated at the borders of the elements
+  vector_type eval_points( 2 );
+  vector_type evaluation( 2 );
+  sc padding = _test_space->get_tree( )
+                 ->get_time_tree( )
+                 ->get_paddings( )[ time_cluster->get_level( ) ];
+  sc cluster_t_start
+    = time_cluster->get_center( ) - time_cluster->get_half_size( ) - padding;
+  sc cluster_t_end
+    = time_cluster->get_center( ) + time_cluster->get_half_size( ) + padding;
+
+  linear_algebra::coordinates< 1 > elem_t_start;
+  linear_algebra::coordinates< 1 > elem_t_end;
+
+  sc cluster_size = cluster_t_end - cluster_t_start;
+
+  for ( lo i = 0; i < n_temp_elems; ++i ) {
+    lo elem = time_cluster->get_element( i );
+    time_cluster->get_mesh( ).get_nodes( elem, elem_t_start, elem_t_end );
+    // compute the quadrature points in the current element in relative
+    // coordinates with respect to the time cluster and transform them to [-1,1]
+    eval_points[ 0 ]
+      = -1.0 + 2.0 * ( elem_t_start[ 0 ] - cluster_t_start ) / cluster_size;
+    eval_points[ 1 ]
+      = -1.0 + 2.0 * ( elem_t_end[ 0 ] - cluster_t_start ) / cluster_size;
+    for ( lo j = 0; j <= _temp_order; ++j ) {
+      _lagrange.evaluate( j, eval_points, evaluation );
+      L_drv.set( j, i, evaluation[ 1 ] - evaluation[ 0 ] );
+    }
+  }
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::cluster_to_polynomials( quadrature_wrapper &
                                                 my_quadrature,
   sc start_0, sc end_0, sc start_1, sc end_1, sc start_2, sc end_2 ) const {
@@ -1184,23 +1220,263 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   }
 }
 
-template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
-  trial_space_type >::compute_chebyshev_quadrature( space_cluster_type *
-    space_cluster ) const {
+//! template specialization for hypersingular p1p1 matrix
+template<>
+void besthea::bem::fast_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
+  compute_surface_curls( space_cluster_type * cluster ) const {
+  std::vector< sc > & surf_curls_dim0 = cluster->get_surf_curls( 0 );
+  std::vector< sc > & surf_curls_dim1 = cluster->get_surf_curls( 1 );
+  std::vector< sc > & surf_curls_dim2 = cluster->get_surf_curls( 2 );
+
+  const std::vector< lo > & space_elements = cluster->get_all_elements( );
+  // check first whether the surface curls have already been computed
+  // ATTENTION: the surface curls are only computed for the trial space (
+  // assuming that test and trial spaces coincide)
+  if ( ( surf_curls_dim0.size( ) == 0 ) && ( surf_curls_dim1.size( ) == 0 )
+    && ( surf_curls_dim2.size( ) == 0 ) ) {
+    lo n_space_elems = cluster->get_n_elements( );
+    surf_curls_dim0.resize( 3 * n_space_elems );
+    surf_curls_dim1.resize( 3 * n_space_elems );
+    surf_curls_dim2.resize( 3 * n_space_elems );
+    sc local_curls[ 9 ];
+    linear_algebra::coordinates< 3 > normal;
+    for ( lo j = 0; j < n_space_elems; ++j ) {
+      _trial_space->get_mesh( )->get_spatial_normal(
+        space_elements[ j ], normal );
+      _trial_space->get_basis( ).evaluate_curl(
+        space_elements[ j ], normal, 0, 0, 0, local_curls );
+      surf_curls_dim0[ 3 * j ] = local_curls[ 0 ];
+      surf_curls_dim0[ 3 * j + 1 ] = local_curls[ 3 ];
+      surf_curls_dim0[ 3 * j + 2 ] = local_curls[ 6 ];
+      surf_curls_dim1[ 3 * j ] = local_curls[ 1 ];
+      surf_curls_dim1[ 3 * j + 1 ] = local_curls[ 4 ];
+      surf_curls_dim1[ 3 * j + 2 ] = local_curls[ 7 ];
+      surf_curls_dim2[ 3 * j ] = local_curls[ 2 ];
+      surf_curls_dim2[ 3 * j + 1 ] = local_curls[ 5 ];
+      surf_curls_dim2[ 3 * j + 2 ] = local_curls[ 8 ];
+    }
+  }
 }
 
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::compute_surface_curls( space_cluster_type * cluster )
+  const {
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::compute_required_data( std::set< time_cluster_type * > &
+                                               time_clusters_spacetime_leaves,
+  std::set< space_cluster_type * > & space_clusters_spacetime_leaves ) const {
+}
+
+//! template specialization for single layer p0p0 matrix
 template<>
 void besthea::bem::fast_spacetime_be_assembler<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  compute_chebyshev_quadrature( space_cluster_type * space_cluster ) const {
+  compute_required_data(
+    std::set< time_cluster_type * > & time_clusters_spacetime_leaves,
+    std::set< space_cluster_type * > & space_clusters_spacetime_leaves ) const {
+  // Compute only Chebyshev quadratures (not their derivatives) only if they
+  // have not been computed yet.
+  // WARNING: Only the number of columns of the Chebyshev quadrature of the
+  //          first spatial cluster is checked.
+  //   if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) &&
+  //     ( ( *space_clusters_spacetime_leaves.begin( ) )->get_chebyshev_quad( ).
+  //               get_n_columns( ) !=
+  //     ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6
+  //     ) )
+  // ATTENTION: in the current version it is not checked if quadratures etc.
+  //            have been computed!!! still, each computation is done in a
+  //            separate step in case that the checks are added
+  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) ) {
+    for ( auto it = space_clusters_spacetime_leaves.begin( );
+          it != space_clusters_spacetime_leaves.end( ); ++it ) {
+      compute_chebyshev_quadrature( *it );
+    }
+  }
+
+  if ( time_clusters_spacetime_leaves.size( ) > 0 ) {
+    for ( auto it = time_clusters_spacetime_leaves.begin( );
+          it != time_clusters_spacetime_leaves.end( ); ++it ) {
+      compute_lagrange_quadrature( *it );
+    }
+  }
+}
+
+//! template specialization for double layer p0p1 matrix
+template<>
+void besthea::bem::fast_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
+  compute_required_data(
+    std::set< time_cluster_type * > & time_clusters_spacetime_leaves,
+    std::set< space_cluster_type * > & space_clusters_spacetime_leaves ) const {
+  // Compute quadratures of the Chebyshev polynomials and their derivatives in
+  // case that they do not have been computed yet.
+  // WARNING: Only the number of columns of the quadratures of the
+  //          first spatial cluster is checked.
+  //  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) &&
+  //    ( ( *space_clusters_spacetime_leaves.begin( ) )->get_chebyshev_quad( ).
+  //              get_n_columns( ) !=
+  //    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6
+  //    ) )
+  // ATTENTION: in the current version it is not checked if quadratures etc.
+  //            have been computed!!! still, each computation is done in a
+  //            separate step in case that the checks are added
+  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) ) {
+    for ( auto it = space_clusters_spacetime_leaves.begin( );
+          it != space_clusters_spacetime_leaves.end( ); ++it ) {
+      compute_chebyshev_quadrature( *it );
+    }
+  }
+  //  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) &&
+  //    ( ( *space_clusters_spacetime_leaves.begin( ) )->
+  //          get_normal_drv_chebyshev_quad( ).get_n_columns( ) !=
+  //    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6
+  //    ) )
+  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) ) {
+    for ( auto it = space_clusters_spacetime_leaves.begin( );
+          it != space_clusters_spacetime_leaves.end( ); ++it ) {
+      // update the node mappings (needed for non-leaf space clusters)
+      //       TODO: should this be done here, or somewhere else in the code?
+      ( *it )->compute_node_mapping( );
+      compute_normal_drv_chebyshev_quadrature( *it );
+    }
+  }
+
+  // Check if lagrange quadratures have already been set and set them if not.
+  if ( time_clusters_spacetime_leaves.size( ) > 0 ) {
+    for ( auto it = time_clusters_spacetime_leaves.begin( );
+          it != time_clusters_spacetime_leaves.end( ); ++it ) {
+      compute_lagrange_quadrature( *it );
+    }
+  }
+}
+
+//! template specialization for double layer p1p0 matrix
+template<>
+void besthea::bem::fast_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
+  compute_required_data(
+    std::set< time_cluster_type * > & time_clusters_spacetime_leaves,
+    std::set< space_cluster_type * > & space_clusters_spacetime_leaves ) const {
+  // Compute quadratures of the Chebyshev polynomials and their derivatives in
+  // case that they do not have been computed yet.
+  // WARNING: Only the number of columns of the quadratures of the
+  //          first spatial cluster is checked.
+  //  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) &&
+  //    ( ( *space_clusters_spacetime_leaves.begin( ) )->get_chebyshev_quad( ).
+  //              get_n_columns( ) !=
+  //    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6
+  //    ) )
+  // ATTENTION: in the current version it is not checked if quadratures etc.
+  //            have been computed!!! still, each computation is done in a
+  //            separate step in case that the checks are added
+  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) ) {
+    for ( auto it = space_clusters_spacetime_leaves.begin( );
+          it != space_clusters_spacetime_leaves.end( ); ++it ) {
+      compute_chebyshev_quadrature( *it );
+    }
+  }
+
+  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) ) {
+    for ( auto it = space_clusters_spacetime_leaves.begin( );
+          it != space_clusters_spacetime_leaves.end( ); ++it ) {
+      // update the node mappings (needed for non-leaf space clusters)
+      //       TODO: should this be done here, or somewhere else in the code?
+      ( *it )->compute_node_mapping( );
+      compute_normal_drv_chebyshev_quadrature( *it );
+    }
+  }
+
+  if ( time_clusters_spacetime_leaves.size( ) > 0 ) {
+    for ( auto it = time_clusters_spacetime_leaves.begin( );
+          it != time_clusters_spacetime_leaves.end( ); ++it ) {
+      compute_lagrange_quadrature( *it );
+    }
+  }
+}
+
+//! template specialization for hypersingular p1p1 matrix
+template<>
+void besthea::bem::fast_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
+  compute_required_data(
+    std::set< time_cluster_type * > & time_clusters_spacetime_leaves,
+    std::set< space_cluster_type * > & space_clusters_spacetime_leaves ) const {
+  // Compute quadratures of the Chebyshev polynomials and quadratures of
+  // Chebyshev polynomials times p1 basis functions times normal vectors in
+  // case that they do not have been computed yet.
+  // ATTENTION: in the current version it is not checked if quadratures etc.
+  //            have been computed!!! still, each computation is done in a
+  //            separate step in case that the checks are added
+  // WARNING: Only the number of columns of the quadratures of the
+  //          first spatial cluster is checked.
+  //  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) &&
+  //    ( ( *space_clusters_spacetime_leaves.begin( ) )->get_chebyshev_quad( ).
+  //              get_n_columns( ) !=
+  //    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6
+  //    ) )
+  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) ) {
+    for ( auto it = space_clusters_spacetime_leaves.begin( );
+          it != space_clusters_spacetime_leaves.end( ); ++it ) {
+      compute_chebyshev_quadrature( *it );
+    }
+  }
+
+  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) ) {
+    for ( auto it = space_clusters_spacetime_leaves.begin( );
+          it != space_clusters_spacetime_leaves.end( ); ++it ) {
+      // update the node mappings (needed for non-leaf space clusters)
+      //       TODO: should this be done here, or somewhere else in the code?
+      ( *it )->compute_node_mapping( );
+      compute_chebyshev_times_normal_quadrature( *it );
+    }
+  }
+
+  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) ) {
+    for ( auto it = space_clusters_spacetime_leaves.begin( );
+          it != space_clusters_spacetime_leaves.end( ); ++it ) {
+      compute_surface_curls( *it );
+    }
+  }
+
+  if ( time_clusters_spacetime_leaves.size( ) > 0 ) {
+    for ( auto it = time_clusters_spacetime_leaves.begin( );
+          it != time_clusters_spacetime_leaves.end( ); ++it ) {
+      compute_lagrange_quadrature( *it );
+    }
+  }
+
+  if ( time_clusters_spacetime_leaves.size( ) > 0 ) {
+    for ( auto it = time_clusters_spacetime_leaves.begin( );
+          it != time_clusters_spacetime_leaves.end( ); ++it ) {
+      compute_lagrange_drv_integrals( *it );
+    }
+  }
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::compute_chebyshev_quadrature( space_cluster_type *
+    space_cluster ) const {
   full_matrix_type & T = space_cluster->get_chebyshev_quad( );
 
   lo n_space_elems = space_cluster->get_n_elements( );
   T.resize( n_space_elems,
-    ( _spat_order + 1 ) * ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 );
 
   // get some info on the current cluster
   vector_type cluster_center( 3 );
@@ -1244,6 +1520,7 @@ void besthea::bem::fast_spacetime_be_assembler<
     _chebyshev.evaluate( my_quadrature._y2_polynomial, cheb_dim_1 );
     _chebyshev.evaluate( my_quadrature._y3_polynomial, cheb_dim_2 );
 
+    lo current_index = 0;
     for ( lo beta0 = 0; beta0 <= _spat_order; ++beta0 ) {
       for ( lo beta1 = 0; beta1 <= _spat_order - beta0; ++beta1 ) {
         for ( lo beta2 = 0; beta2 <= _spat_order - beta0 - beta1; ++beta2 ) {
@@ -1254,27 +1531,148 @@ void besthea::bem::fast_spacetime_be_assembler<
               * cheb_dim_2[ beta2 * size_quad + j ] * wy[ j ];
           }
           quad *= elem_area;
-          T.set( i,
-            beta0 * ( _spat_order + 1 ) * ( _spat_order + 1 )
-              + ( _spat_order + 1 ) * beta1 + beta2,
-            quad );
+          T.set( i, current_index, quad );
+          ++current_index;
         }
       }
     }
   }
 }
 
-template<>
-void besthea::bem::fast_spacetime_be_assembler<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
-  compute_chebyshev_quadrature( space_cluster_type * space_cluster ) const {
-  full_matrix_type & T = space_cluster->get_chebyshev_quad( );
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::
+  compute_normal_drv_chebyshev_quadrature(
+    space_cluster_type * space_cluster ) const {
+  full_matrix_type & T_drv = space_cluster->get_normal_drv_chebyshev_quad( );
   lo n_space_nodes = space_cluster->get_n_nodes( );
   lo n_space_elems = space_cluster->get_n_elements( );
-  T.resize( n_space_nodes,
-    ( _spat_order + 1 ) * ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+  T_drv.resize( n_space_nodes,
+    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 );
+  T_drv.fill( 0.0 );
+
+  // get some info on the current cluster
+  vector_type cluster_center( 3 );
+  vector_type cluster_half( 3 );
+  space_cluster->get_center( cluster_center );
+  space_cluster->get_half_size( cluster_half );
+  sc padding = space_cluster->get_padding( );
+  sc start_0 = cluster_center[ 0 ] - cluster_half[ 0 ] - padding;
+  sc end_0 = cluster_center[ 0 ] + cluster_half[ 0 ] + padding;
+  sc start_1 = cluster_center[ 1 ] - cluster_half[ 1 ] - padding;
+  sc end_1 = cluster_center[ 1 ] + cluster_half[ 1 ] + padding;
+  sc start_2 = cluster_center[ 2 ] - cluster_half[ 2 ] - padding;
+  sc end_2 = cluster_center[ 2 ] + cluster_half[ 2 ] + padding;
+
+  // init quadrature data
+  quadrature_wrapper my_quadrature;
+  init_quadrature_polynomials( my_quadrature );
+  lo size_quad = my_quadrature._wy_cheb.size( );
+  sc * wy = my_quadrature._wy_cheb.data( );
+  linear_algebra::coordinates< 3 > y1, y2, y3;
+
+  // for storing the result of the Chebyshev evaluation in quadrature points
+  vector_type cheb_dim_0( ( _spat_order + 1 ) * size_quad );
+  vector_type cheb_dim_1( ( _spat_order + 1 ) * size_quad );
+  vector_type cheb_dim_2( ( _spat_order + 1 ) * size_quad );
+  // same for evaluations of scaled derivatives of Chebyshev polynomials
+  vector_type cheb_drv_dim_0( ( _spat_order + 1 ) * size_quad );
+  vector_type cheb_drv_dim_1( ( _spat_order + 1 ) * size_quad );
+  vector_type cheb_drv_dim_2( ( _spat_order + 1 ) * size_quad );
+
+  sc elem_area;
+  lo elem;
+
+  sc * y1_ref = my_quadrature._y1_ref_cheb.data( );
+  sc * y2_ref = my_quadrature._y2_ref_cheb.data( );
+
+  sc value1, value2, value3;
+  linear_algebra::coordinates< 3 > grad;
+  const std::vector< lo > & elems_2_local_nodes
+    = space_cluster->get_elems_2_local_nodes( );
+
+  linear_algebra::coordinates< 3 > normal;
+  for ( lo i = 0; i < n_space_elems; ++i ) {
+    elem = space_cluster->get_element( i );
+    space_cluster->get_mesh( ).get_normal( elem, normal );
+    space_cluster->get_mesh( ).get_nodes( elem, y1, y2, y3 );
+    elem_area = space_cluster->get_mesh( ).area( elem );
+
+    triangle_to_geometry( y1, y2, y3, my_quadrature );
+
+    cluster_to_polynomials(
+      my_quadrature, start_0, end_0, start_1, end_1, start_2, end_2 );
+
+    _chebyshev.evaluate( my_quadrature._y1_polynomial, cheb_dim_0 );
+    _chebyshev.evaluate( my_quadrature._y2_polynomial, cheb_dim_1 );
+    _chebyshev.evaluate( my_quadrature._y3_polynomial, cheb_dim_2 );
+    _chebyshev.evaluate_derivative(
+      my_quadrature._y1_polynomial, cheb_drv_dim_0 );
+    _chebyshev.evaluate_derivative(
+      my_quadrature._y2_polynomial, cheb_drv_dim_1 );
+    _chebyshev.evaluate_derivative(
+      my_quadrature._y3_polynomial, cheb_drv_dim_2 );
+
+    lo current_index = 0;
+    for ( lo beta0 = 0; beta0 <= _spat_order; ++beta0 ) {
+      for ( lo beta1 = 0; beta1 <= _spat_order - beta0; ++beta1 ) {
+        for ( lo beta2 = 0; beta2 <= _spat_order - beta0 - beta1; ++beta2 ) {
+          value1 = 0.0;
+          value2 = 0.0;
+          value3 = 0.0;
+          for ( lo j = 0; j < size_quad; ++j ) {
+            grad[ 0 ] = cheb_drv_dim_0[ beta0 * size_quad + j ]
+              * cheb_dim_1[ beta1 * size_quad + j ]
+              * cheb_dim_2[ beta2 * size_quad + j ]
+              / ( cluster_half[ 0 ] + padding );
+            grad[ 1 ] = cheb_dim_0[ beta0 * size_quad + j ]
+              * cheb_drv_dim_1[ beta1 * size_quad + j ]
+              * cheb_dim_2[ beta2 * size_quad + j ]
+              / ( cluster_half[ 1 ] + padding );
+            grad[ 2 ] = cheb_dim_0[ beta0 * size_quad + j ]
+              * cheb_dim_1[ beta1 * size_quad + j ]
+              * cheb_drv_dim_2[ beta2 * size_quad + j ]
+              / ( cluster_half[ 2 ] + padding );
+            sc weighted_normal_derivative
+              = wy[ j ] * elem_area * normal.dot( grad );
+            value1 += weighted_normal_derivative
+              * ( (sc) 1.0 - y1_ref[ j ] - y2_ref[ j ] );
+            value2 += weighted_normal_derivative * y1_ref[ j ];
+            value3 += weighted_normal_derivative * y2_ref[ j ];
+          }
+
+          T_drv.add_atomic( elems_2_local_nodes[ 3 * i ], current_index,
+            _kernel->get_alpha( ) * value1 );
+          T_drv.add_atomic( elems_2_local_nodes[ 3 * i + 1 ], current_index,
+            _kernel->get_alpha( ) * value2 );
+          T_drv.add_atomic( elems_2_local_nodes[ 3 * i + 2 ], current_index,
+            _kernel->get_alpha( ) * value3 );
+          ++current_index;
+        }
+      }
+    }
+  }
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::
+  compute_chebyshev_times_normal_quadrature(
+    space_cluster_type * space_cluster ) const {
+  full_matrix_type & T_dim0 = space_cluster->get_cheb_times_normal_quad( 0 );
+  full_matrix_type & T_dim1 = space_cluster->get_cheb_times_normal_quad( 1 );
+  full_matrix_type & T_dim2 = space_cluster->get_cheb_times_normal_quad( 2 );
+  lo n_space_nodes = space_cluster->get_n_nodes( );
+  lo n_space_elems = space_cluster->get_n_elements( );
+  T_dim0.resize( n_space_nodes,
+    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 );
+  T_dim1.resize( n_space_nodes,
+    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 );
+  T_dim2.resize( n_space_nodes,
+    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6 );
+  T_dim0.fill( 0.0 );
+  T_dim1.fill( 0.0 );
+  T_dim2.fill( 0.0 );
 
   // get some info on the current cluster
   vector_type cluster_center( 3 );
@@ -1307,12 +1705,14 @@ void besthea::bem::fast_spacetime_be_assembler<
   sc * y1_ref = my_quadrature._y1_ref_cheb.data( );
   sc * y2_ref = my_quadrature._y2_ref_cheb.data( );
 
-  sc value1, value2, value3, chebs;
+  sc value1, value2, value3;
   const std::vector< lo > & elems_2_local_nodes
     = space_cluster->get_elems_2_local_nodes( );
 
+  linear_algebra::coordinates< 3 > normal;
   for ( lo i = 0; i < n_space_elems; ++i ) {
     elem = space_cluster->get_element( i );
+    space_cluster->get_mesh( ).get_normal( elem, normal );
     space_cluster->get_mesh( ).get_nodes( elem, y1, y2, y3 );
     elem_area = space_cluster->get_mesh( ).area( elem );
 
@@ -1325,6 +1725,7 @@ void besthea::bem::fast_spacetime_be_assembler<
     _chebyshev.evaluate( my_quadrature._y2_polynomial, cheb_dim_1 );
     _chebyshev.evaluate( my_quadrature._y3_polynomial, cheb_dim_2 );
 
+    lo current_index = 0;
     for ( lo beta0 = 0; beta0 <= _spat_order; ++beta0 ) {
       for ( lo beta1 = 0; beta1 <= _spat_order - beta0; ++beta1 ) {
         for ( lo beta2 = 0; beta2 <= _spat_order - beta0 - beta1; ++beta2 ) {
@@ -1332,126 +1733,53 @@ void besthea::bem::fast_spacetime_be_assembler<
           value2 = 0.0;
           value3 = 0.0;
           for ( lo j = 0; j < size_quad; ++j ) {
-            chebs = cheb_dim_0[ beta0 * size_quad + j ]
+            sc weigth_poly = cheb_dim_0[ beta0 * size_quad + j ]
               * cheb_dim_1[ beta1 * size_quad + j ]
-              * cheb_dim_2[ beta2 * size_quad + j ] * wy[ j ];
-
-            value1 += chebs * ( (sc) 1.0 - y1_ref[ j ] - y2_ref[ j ] );
-            value2 += chebs * y1_ref[ j ];
-            value3 += chebs * y2_ref[ j ];
+              * cheb_dim_2[ beta2 * size_quad + j ] * wy[ j ] * elem_area;
+            value1 += weigth_poly * ( (sc) 1.0 - y1_ref[ j ] - y2_ref[ j ] );
+            value2 += weigth_poly * y1_ref[ j ];
+            value3 += weigth_poly * y2_ref[ j ];
           }
+          T_dim0.add_atomic(
+            elems_2_local_nodes[ 3 * i ], current_index, value1 * normal[ 0 ] );
+          T_dim0.add_atomic( elems_2_local_nodes[ 3 * i + 1 ], current_index,
+            value2 * normal[ 0 ] );
+          T_dim0.add_atomic( elems_2_local_nodes[ 3 * i + 2 ], current_index,
+            value3 * normal[ 0 ] );
 
-          T.add_atomic( elems_2_local_nodes[ 3 * i ],
-            beta0 * ( _spat_order + 1 ) * ( _spat_order + 1 )
-              + ( _spat_order + 1 ) * beta1 + beta2,
-            value1 * elem_area );
-          T.add_atomic( elems_2_local_nodes[ 3 * i + 1 ],
-            beta0 * ( _spat_order + 1 ) * ( _spat_order + 1 )
-              + ( _spat_order + 1 ) * beta1 + beta2,
-            value2 * elem_area );
-          T.add_atomic( elems_2_local_nodes[ 3 * i + 2 ],
-            beta0 * ( _spat_order + 1 ) * ( _spat_order + 1 )
-              + ( _spat_order + 1 ) * beta1 + beta2,
-            value3 * elem_area );
+          T_dim1.add_atomic(
+            elems_2_local_nodes[ 3 * i ], current_index, value1 * normal[ 1 ] );
+          T_dim1.add_atomic( elems_2_local_nodes[ 3 * i + 1 ], current_index,
+            value2 * normal[ 1 ] );
+          T_dim1.add_atomic( elems_2_local_nodes[ 3 * i + 2 ], current_index,
+            value3 * normal[ 1 ] );
+
+          T_dim2.add_atomic(
+            elems_2_local_nodes[ 3 * i ], current_index, value1 * normal[ 2 ] );
+          T_dim2.add_atomic( elems_2_local_nodes[ 3 * i + 1 ], current_index,
+            value2 * normal[ 2 ] );
+          T_dim2.add_atomic( elems_2_local_nodes[ 3 * i + 2 ], current_index,
+            value3 * normal[ 2 ] );
+          ++current_index;
         }
       }
     }
   }
 }
 
-template<>
-void besthea::bem::fast_spacetime_be_assembler<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
-  compute_chebyshev_quadrature( space_cluster_type * space_cluster ) const {
-  full_matrix_type & T = space_cluster->get_chebyshev_quad( );
-  lo n_space_nodes = space_cluster->get_n_nodes( );
-  lo n_space_elems = space_cluster->get_n_elements( );
-  T.resize( n_space_nodes,
-    ( _spat_order + 1 ) * ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::initialize_moment_and_local_contributions( ) const {
+  lo n_rows_contribution = _temp_order + 1;
+  lo n_columns_contribution
+    = ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6;
 
-  // get some info on the current cluster
-  vector_type cluster_center( 3 );
-  vector_type cluster_half( 3 );
-  space_cluster->get_center( cluster_center );
-  space_cluster->get_half_size( cluster_half );
-  sc padding = space_cluster->get_padding( );
-  sc start_0 = cluster_center[ 0 ] - cluster_half[ 0 ] - padding;
-  sc end_0 = cluster_center[ 0 ] + cluster_half[ 0 ] + padding;
-  sc start_1 = cluster_center[ 1 ] - cluster_half[ 1 ] - padding;
-  sc end_1 = cluster_center[ 1 ] + cluster_half[ 1 ] + padding;
-  sc start_2 = cluster_center[ 2 ] - cluster_half[ 2 ] - padding;
-  sc end_2 = cluster_center[ 2 ] + cluster_half[ 2 ] + padding;
-
-  // init quadrature data
-  quadrature_wrapper my_quadrature;
-  init_quadrature_polynomials( my_quadrature );
-  lo size_quad = my_quadrature._wy_cheb.size( );
-  sc * wy = my_quadrature._wy_cheb.data( );
-  linear_algebra::coordinates< 3 > y1, y2, y3;
-
-  // for storing the result of the Chebyshev evaluation in quadrature points
-  vector_type cheb_dim_0( ( _spat_order + 1 ) * size_quad );
-  vector_type cheb_dim_1( ( _spat_order + 1 ) * size_quad );
-  vector_type cheb_dim_2( ( _spat_order + 1 ) * size_quad );
-
-  sc elem_area;
-  lo elem;
-
-  sc * y1_ref = my_quadrature._y1_ref_cheb.data( );
-  sc * y2_ref = my_quadrature._y2_ref_cheb.data( );
-
-  sc value1, value2, value3, chebs;
-  const std::vector< lo > & elems_2_local_nodes
-    = space_cluster->get_elems_2_local_nodes( );
-
-  for ( lo i = 0; i < n_space_elems; ++i ) {
-    elem = space_cluster->get_element( i );
-    space_cluster->get_mesh( ).get_nodes( elem, y1, y2, y3 );
-    elem_area = space_cluster->get_mesh( ).area( elem );
-
-    triangle_to_geometry( y1, y2, y3, my_quadrature );
-
-    cluster_to_polynomials(
-      my_quadrature, start_0, end_0, start_1, end_1, start_2, end_2 );
-
-    _chebyshev.evaluate( my_quadrature._y1_polynomial, cheb_dim_0 );
-    _chebyshev.evaluate( my_quadrature._y2_polynomial, cheb_dim_1 );
-    _chebyshev.evaluate( my_quadrature._y3_polynomial, cheb_dim_2 );
-
-    for ( lo beta0 = 0; beta0 <= _spat_order; ++beta0 ) {
-      for ( lo beta1 = 0; beta1 <= _spat_order - beta0; ++beta1 ) {
-        for ( lo beta2 = 0; beta2 <= _spat_order - beta0 - beta1; ++beta2 ) {
-          value1 = 0.0;
-          value2 = 0.0;
-          value3 = 0.0;
-          for ( lo j = 0; j < size_quad; ++j ) {
-            chebs = cheb_dim_0[ beta0 * size_quad + j ]
-              * cheb_dim_1[ beta1 * size_quad + j ]
-              * cheb_dim_2[ beta2 * size_quad + j ] * wy[ j ];
-
-            value1 += chebs * ( (sc) 1.0 - y1_ref[ j ] - y2_ref[ j ] );
-            value2 += chebs * y1_ref[ j ];
-            value3 += chebs * y2_ref[ j ];
-          }
-
-          T.add_atomic( elems_2_local_nodes[ 3 * i ],
-            beta0 * ( _spat_order + 1 ) * ( _spat_order + 1 )
-              + ( _spat_order + 1 ) * beta1 + beta2,
-            value1 * elem_area );
-          T.add_atomic( elems_2_local_nodes[ 3 * i + 1 ],
-            beta0 * ( _spat_order + 1 ) * ( _spat_order + 1 )
-              + ( _spat_order + 1 ) * beta1 + beta2,
-            value2 * elem_area );
-          T.add_atomic( elems_2_local_nodes[ 3 * i + 2 ],
-            beta0 * ( _spat_order + 1 ) * ( _spat_order + 1 )
-              + ( _spat_order + 1 ) * beta1 + beta2,
-            value3 * elem_area );
-        }
-      }
-    }
-  }
+  _trial_space->get_tree( )->initialize_moment_contributions(
+    _trial_space->get_tree( )->get_root( ), n_rows_contribution,
+    n_columns_contribution );
+  _test_space->get_tree( )->initialize_local_contributions(
+    _test_space->get_tree( )->get_root( ), n_rows_contribution,
+    n_columns_contribution );
 }
 
 template class besthea::bem::fast_spacetime_be_assembler<

@@ -158,13 +158,23 @@ class besthea::linear_algebra::block_vector {
   }
 
   /*!
-   * @brief Adds atomically to a single position of a vector.
+   * @brief Adds atomically(!) to a single position of a vector.
    * @param[in] d Block index.
    * @param[in] i Element index.
    * @param[in] value Value to be added.
    */
   void add_atomic( lo d, lo i, sc value ) {
 #pragma omp atomic update
+    _data[ d ][ i ] += value;
+  }
+  
+    /*!
+   * @brief Adds to a single position of a vector.
+   * @param[in] d Block index.
+   * @param[in] i Element index.
+   * @param[in] value Value to be added.
+   */
+  void add( lo d, lo i, sc value ) {
     _data[ d ][ i ] += value;
   }
 
@@ -204,6 +214,16 @@ class besthea::linear_algebra::block_vector {
   void add( block_vector const & v, sc alpha = 1.0 ) {
     for ( lo i = 0; i < _block_size; ++i ) {
       _data[ i ].add( v._data[ i ], alpha );
+    }
+  }
+  
+  /*!
+   * @brief Fills the block vector with the given value.
+   * @param[in] value
+   */
+  void fill( sc value ) {
+    for ( lo i = 0; i < _block_size; ++i ) {
+      _data[ i ].fill( value );
     }
   }
 

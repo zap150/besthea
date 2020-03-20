@@ -73,7 +73,8 @@ class besthea::mesh::time_cluster {
       _children( nullptr ),
       _mesh( mesh ),
       _level( level ),
-      _lagrange_quad( 1, 1 ) {
+      _lagrange_quad( 1, 1 ),
+      _lagrange_drv_int( 1, 1 ) {
     _elements.reserve( _n_elements );
   }
 
@@ -140,6 +141,14 @@ class besthea::mesh::time_cluster {
   lo get_element( lo idx ) const {
     return _elements[ idx ];
   }
+  
+  /**
+   * Returns reference to vector of global element indices for elements in the 
+   * cluster
+   */
+  const std::vector< lo > & get_all_elements( ) const {
+    return _elements;
+  }
 
   /**
    * Sets a number of children and allocates vector of pointers to children.
@@ -171,7 +180,14 @@ class besthea::mesh::time_cluster {
   std::vector< time_cluster * > * get_children( ) {
     return _children;
   }
-
+  
+    /**
+   * Returns a pointer to the parent.
+   */
+  time_cluster * get_parent( ) {
+    return _parent;
+  }
+    
   /**
    * Returns a pointer to the children.
    */
@@ -229,10 +245,19 @@ class besthea::mesh::time_cluster {
   }
 
   /**
-   * Returns vector storing quadrature of the Lagrange polynomials on a cluster.
+   * Returns a reference to the matrix storing the quadrature of the Lagrange 
+   * polynomials on a cluster.
    */
   full_matrix_type & get_lagrange_quad( ) {
     return _lagrange_quad;
+  }
+  
+  /**
+   * Returns a reference to the matrix storing the integrals of the derivatives
+   * of the Lagrange polynomials on a cluster.
+   */
+  full_matrix_type & get_lagrange_drv_int( ) {
+    return _lagrange_drv_int;
   }
 
   /**
@@ -240,6 +265,17 @@ class besthea::mesh::time_cluster {
    */
   const temporal_mesh & get_mesh( ) {
     return _mesh;
+  }
+  
+  /**
+   * Determines whether the current cluster is the left child of its parent.
+   * \note If the current cluster is the root of the tree \p false is returned.
+   */
+  bool is_left_child( ) const {
+    if ( _parent == nullptr )
+      return false;
+    else 
+      return ( this == _parent->_children->front( ) );
   }
 
  private:
@@ -253,10 +289,16 @@ class besthea::mesh::time_cluster {
   const temporal_mesh & _mesh;  //!< temporal mesh associated with the cluster
   lo _level;                    //!< level within the cluster tree
   full_matrix_type
-    _lagrange_quad;  //!< integrals of the Lagrange polynomials defined on
-                     //!< temporal clusters over temporal elements; each
-                     //!< std::vector entry of index i stores data associated
-                     //!< with i-th order polynomial
+    _lagrange_quad;   //!< quadrature of the Lagrange polynomials defined on
+                      //!< temporal clusters over temporal elements; 
+                      //!< (rows - indices of the polynomials,
+                      //!<  columns - element of the cluster)
+  full_matrix_type
+    _lagrange_drv_int;  //!< integrals of the derivatives of the Lagrange
+                        //!< polynomials defined on temporal clusters over 
+                        //!< temporal elements; 
+                        //!< (rows - indices of the polynomials,
+                        //!<  columns - element of the cluster)
 };
 
 #endif /* INCLUDE_BESTHEA_TIME_CLUSTER_H_ */

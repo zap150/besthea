@@ -58,7 +58,8 @@ class besthea::mesh::space_cluster_tree {
    * Constructor.
    * @param[in] mesh Reference to the underlying mesh.
    * @param[in] levels Maximum number of levels in the tree.
-   * @param[in] n_min_elems Minimum number of elements in leafs.
+   * @param[in] n_min_elems Minimum number of elements so that cluster can be
+   *                        split into octants
    */
   space_cluster_tree(
     const triangular_surface_mesh & mesh, lo levels, lo n_min_elems );
@@ -142,11 +143,16 @@ class besthea::mesh::space_cluster_tree {
 
   /**
    * Returns the number of levels in the tree.
-   * @warning Currently this number can be higher than the effective number of
-   * levels in the cluster tree (TODO)
    */
   lo get_levels( ) const {
     return _levels;
+  }
+
+  /**
+   * Returns the maximal number of elements in a leaf cluster
+   */
+  lo get_n_max_elems_leaf( ) const {
+    return _n_max_elems_leaf;
   }
 
   /**
@@ -178,6 +184,8 @@ class besthea::mesh::space_cluster_tree {
                         //!< levels (depending on _n_min_elems)
   lo _n_min_elems;  //!< minimum number of elements so that cluster can be split
                     //!< into octants
+  lo _n_max_elems_leaf;  //!< maximal number of elements in a leaf cluster after
+                         //!< construction.
   std::vector< std::vector< space_cluster * > >
     _non_empty_nodes;           //!< vectors of nonempty tree
                                 //!< nodes in each level

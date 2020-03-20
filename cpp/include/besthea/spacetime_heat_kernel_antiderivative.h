@@ -66,6 +66,13 @@ class besthea::bem::spacetime_heat_kernel_antiderivative
   }
 
   /**
+   * Returns the heat conductivity parameter.
+   */
+  sc get_alpha( ) const {
+    return _alpha;
+  }
+
+  /**
    * Destructor.
    */
   virtual ~spacetime_heat_kernel_antiderivative( ) {

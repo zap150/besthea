@@ -48,6 +48,7 @@
 #include "besthea/vector.h"
 
 #include <omp.h>
+#include <set>
 #include <vector>
 
 namespace besthea {
@@ -63,10 +64,15 @@ namespace besthea {
 template< class kernel_type, class test_space_type, class trial_space_type >
 class besthea::bem::fast_spacetime_be_assembler {
  private:
-  using sparse_matrix_type = besthea::linear_algebra::sparse_matrix;
-  using full_matrix_type = besthea::linear_algebra::full_matrix;
-  using pfmm_matrix_type
-    = besthea::linear_algebra::pFMM_matrix;               //!< pFMM matrix type.
+  using sparse_matrix_type
+    = besthea::linear_algebra::sparse_matrix;  //!< shortcut for the sparse
+                                               //!< matrix type
+  using full_matrix_type
+    = besthea::linear_algebra::full_matrix;  //!< shortcut for the full matrix
+                                             //!< type
+  using pfmm_matrix_type = besthea::linear_algebra::pFMM_matrix< kernel_type,
+    test_space_type, trial_space_type >;  //!< shortcut for the pFMM matrix type
+                                          //!< type.
   using time_cluster_type = besthea::mesh::time_cluster;  //!< time cluster type
   using spacetime_cluster_type
     = besthea::mesh::spacetime_cluster;  //!< time cluster type
@@ -146,6 +152,7 @@ class besthea::bem::fast_spacetime_be_assembler {
    * @param[in] order_regular Triangle quadrature order for regular quadrature.
    * @param[in] spat_order Degree of Chebyshev polynomials for expansion in pFMM
    * matrix.
+   * @param[in] alpha Heat conductivity paremeter.
    * @param[in] temp_order degree of Lagrange interpolation polynomials in time
    * for pFMM matrix.
    * @param[in] cutoff_param Cutoff parameter for the nearfield approximation
@@ -155,8 +162,9 @@ class besthea::bem::fast_spacetime_be_assembler {
    */
   fast_spacetime_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
-    int order_singular = 4, int order_regular = 4, int spat_order = 5,
-    int temp_order = 5, sc cutoff_param = 3.0, bool uniform = false );
+    int order_singular = 4, int order_regular = 4, int temp_order = 5,
+    int spat_order = 5, sc alpha = 1.0, sc cutoff_param = 3.0,
+    bool uniform = false );
 
   fast_spacetime_be_assembler( const fast_spacetime_be_assembler & that )
     = delete;
@@ -170,7 +178,7 @@ class besthea::bem::fast_spacetime_be_assembler {
    * Assembles the fast spacetime matrix.
    * @param[out] global_matrix Assembled pFMM matrix.
    */
-  void assemble( besthea::linear_algebra::pFMM_matrix & global_matrix ) const;
+  void assemble( pfmm_matrix_type & global_matrix ) const;
 
  private:
   /**
@@ -188,21 +196,23 @@ class besthea::bem::fast_spacetime_be_assembler {
   /**
    * Assembles temporal nearfield matrices.
    * @param[out] global_matrix Partially assembled pFMM matrix.
+   * \todo If the number of levels in the spacetime cluster tree is less than
+   * the number of levels in the time tree than not enough nearfield matrices
+   * are computed. Change is necessary!
    */
-  void assemble_nearfield(
-    besthea::linear_algebra::pFMM_matrix & global_matrix ) const;
+  void assemble_nearfield( pfmm_matrix_type & global_matrix ) const;
 
   /** Assembles temporal farfield nonapproximated by the pFMM.
    * @param[out] global_matrix Partially assembled pFMM matrix.
    */
   void assemble_farfield_nonapproximated(
-    besthea::linear_algebra::pFMM_matrix & global_matrix ) const;
+    pfmm_matrix_type & global_matrix ) const;
 
   /** Assembles temporal farfield nonapproximated by the pFMM.
    * @param[out] global_matrix Partially assembled pFMM matrix.
    */
   void assemble_nonapproximated_uniform(
-    besthea::linear_algebra::pFMM_matrix & global_matrix ) const;
+    pfmm_matrix_type & global_matrix ) const;
 
   /**
    * Assembles nearfield matrix
@@ -213,8 +223,8 @@ class besthea::bem::fast_spacetime_be_assembler {
    * @param[out] nearfield_matrix Reference to the matrix which should be
    * assembled.
    */
-  void assemble_nearfield_matrix( sc t0, sc t1, sc tau0, sc tau1,
-    sparse_matrix_type & nearfield_matrix ) const;
+  void assemble_nearfield_matrix(
+    sc t0, sc t1, sc tau0, sc tau1, full_matrix_type & nearfield_matrix ) const;
 
   /**
    * Determines the configuration of two triangular elements.
@@ -233,8 +243,7 @@ class besthea::bem::fast_spacetime_be_assembler {
    * @param[in] eta1 eta_1 variable in (0,1).
    * @param[in] eta2 eta_2 variable in (0,1).
    * @param[in] eta3 eta_3 variable in (0,1).
-   * @param[in] type Type of configuration (disjoint, shared vertex, shared
-   * edge, identical)
+   * @param[in] n_shared_vertices Number of vertices shared between elements.
    * @param[in] simplex Simplex index.
    * @param[out] x1_ref First coordinate of quadrature node to be mapped to the
    * test element.
@@ -304,7 +313,7 @@ class besthea::bem::fast_spacetime_be_assembler {
    * trial element.
    * @param[out] y2_ref Second coordinate of quadrature node to be mapped to the
    * trial element.
-   * @param[out]jacobian Jacobian of the transformation.
+   * @param[out] jacobian Jacobian of the transformation.
    */
   void hypercube_to_triangles_edge( sc ksi, sc eta1, sc eta2, sc eta3,
     int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref, sc & y2_ref,
@@ -368,11 +377,20 @@ class besthea::bem::fast_spacetime_be_assembler {
   /**
    * Maps from the spatial cluster to the interval [-1, 1] where the Chebyshev
    * polynomials are defined.
-   * @param[in] cluster_point Reference to the point in a given @p space_cluster
-   * @param[out] polynomial_point Mapping of the @p cluster_point to the
-   * interval [-1,1]
-   * @param[in] space_cluster Space cluster for which the Chebyshev polynomials
-   * are evaluated.
+   * @param[out] my_quadrature Structure holding mapping from the cluster
+   * to the interval [-1,1].
+   * @param[in] x_start Border of the space cluster for which the Chebyshev
+   * polynomials are evaluated.
+   * @param[in] x_end Border of the space cluster for which the Chebyshev
+   * polynomials are evaluated.
+   * @param[in] y_start Border of the space cluster for which the Chebyshev
+   * polynomials are evaluated.
+   * @param[in] y_end Border of the space cluster for which the Chebyshev
+   * polynomials are evaluated.
+   * @param[in] z_start Border of the space cluster for which the Chebyshev
+   * polynomials are evaluated.
+   * @param[in] z_end Border of the space cluster for which the Chebyshev
+   * polynomials are evaluated.
    *
    */
   void cluster_to_polynomials( quadrature_wrapper & my_quadrature, sc x_start,
@@ -393,21 +411,100 @@ class besthea::bem::fast_spacetime_be_assembler {
   void precompute_nonzeros( );
 
   /**
-   * Computes quadrature of the Lagrange polynomials up to a given order over an
-   * element in the cluster.
+   * Computes quadrature of the Lagrange polynomials up to a given order over
+   * all elements in the cluster.
+   * \param[in] cluster   Time cluster for which the quadratures are computed
+   *                      and where they are stored.
    */
   void compute_lagrange_quadrature( time_cluster_type * cluster ) const;
 
   /**
-   * Compute quadrature of the Chebyshev polynomials.
+   * Computes integrals of the derivatives of the Lagrange polynomials up to a
+   * given order over all elements in the cluster.
+   * \param[in] cluster   Time cluster for which the integrals are computed
+   *                      and where they are stored.
+   */
+  void compute_lagrange_drv_integrals( time_cluster_type * cluster ) const;
+
+  /**
+   * Compute the surface curls of p1 functions and store them in the
+   * space_cluster.
+   * \param[in] cluster   Space cluster for which the curls are computed
+   *                      and where they are stored.
+   * \see besthea::mesh::space_cluster for a detailed explanation on
+   * how the curls area stored.
+   * \warning Only the information from \p _trial_space is used for the
+   * computation (Could cause problems if test and trial space differ).
+   */
+  void compute_surface_curls( space_cluster_type * cluster ) const;
+
+  /**
+   * Computes various data which is needed for the application of the pFMM
+   * matrix. This includes quadratures of Chebyshev polynomials
+   * (various variants depending on the operator), quadratures of Lagrange
+   * polynomials(or their derivatives) and in case of the hypersingular operator
+   * also the mappings to realize the integrals of curls of p1 functions
+   * \note If the required quadratures are already computed they are not
+   * recomputed. TODO: currently disactivated
+   * \warning Only the number of columns of the Chebyshev quadrature (or its
+   *          derivative ) of the first spatial leaf cluster is checked to see
+   *          if the quadratures have been computed.
+   */
+  void compute_required_data(
+    std::set< time_cluster_type * > & time_clusters_spacetime_leaves,
+    std::set< space_cluster_type * > & space_clusters_spacetime_leaves ) const;
+
+  /**
+   * Compute quadrature of the Chebyshev polynomials for a space cluster.
+   * \param[in] cluster   Space cluster for which the quadratures are computed
+   *                      and where they are stored.
    */
   void compute_chebyshev_quadrature( space_cluster_type * cluster ) const;
+
+  /**
+   * Compute quadrature of the normal derivatives of the Chebyshev polynomials
+   * times p1 basis functions for a space cluster.
+   * \param[in] cluster   Space cluster for which the quadratures are computed
+   *                      and where they are stored.
+   */
+  void compute_normal_drv_chebyshev_quadrature(
+    space_cluster_type * cluster ) const;
+
+  /**
+   * Compute quadrature of the the Chebyshev polynomials times p1 basis
+   * functions times normal vector for a space cluster.
+   * \param[in] cluster   Space cluster for which the quadratures are computed
+   *                      and where they are stored.
+   */
+  void compute_chebyshev_times_normal_quadrature(
+    space_cluster_type * cluster ) const;
+
+  /**
+   * \todo do documentation
+   */
+  void initialize_moment_and_local_contributions( ) const;
 
   kernel_type * _kernel;            //!< Kernel temporal antiderivative.
   test_space_type * _test_space;    //!< Boundary element test space.
   trial_space_type * _trial_space;  //!< Boundary element trial space.
   int _order_singular;  //!< Line quadrature order for the singular integrals.
   int _order_regular;  //!< Triangle quadrature order for the regular integrals.
+  sc _cutoff_param;    //!< Coefficient for determining the spatial nearfield
+                       //!< (_cutoff_param * diagonal of the lowest level
+                       //!< cluster).
+  bool _uniform;       //!< uniform assembly
+  int _temp_order;     //!< degree of Lagrange interpolation polynomials in time
+                       //!< for pFMM
+  int _spat_order;     //!< degree of Chebyshev polynomials for expansion in
+                       //!< space in pFMM
+  int _m2l_integration_order;  //!< _m2l_integration_order + 1 quadrature
+                               //!< points are used for the approximation of
+                               //!< the m2l coefficients.
+  sc _alpha;                   //!< Heat conductivity
+  mutable bem::lagrange_interpolant
+    _lagrange;  //!< Evaluator of the Lagrange polynomials.
+  mutable bem::chebyshev_evaluator
+    _chebyshev;  //!< Evaluator of the Chebyshev polynomials.
   static constexpr std::array< int, 5 > map{ 0, 1, 2, 0,
     1 };  //!< Auxiliary array for mapping DOFs under
           // rotation (regularized quadrature). Performs fast modulo 3.
@@ -415,22 +512,10 @@ class besthea::bem::fast_spacetime_be_assembler {
     6 };  //!< Number of simplices for all configurations (disjoint, shared
           // vertex, shared edge, identical).
   sc _space_cluster_size;  //!< Size of the finest level space clusters.
-  sc _cutoff_param;  //!< Coefficient for determining the spatial nearfield
-                     //!< (_cutoff_param * diagonal of the lowest level
-                     //!< cluster).
-  bool _uniform;     //!< uniform assembly
+
   std::vector< std::pair< lo, lo > >
     _nonzeros;  //!< indices of spatial element contributing to the nonzero
                 //!< pattern of the spatial matrices
-
-  int _spat_order;  //!< degree of Chebyshev polynomials for expansion in
-                    //!< space in pFMM
-  int _temp_order;  //!< degree of Lagrange interpolation polynomials in time
-                    //!< for pFMM
-  mutable bem::lagrange_interpolant
-    _lagrange;  //!< Evaluator of the Lagrange polynomials.
-  mutable bem::chebyshev_evaluator
-    _chebyshev;  //!< Evaluator of the Chebyshev polynomials.
 };
 
 #endif /* INCLUDE_BESTHEA_FAST_SPACETIME_BE_ASSEMBLER_H_ */

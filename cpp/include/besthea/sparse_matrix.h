@@ -54,7 +54,8 @@ namespace besthea {
  */
 class besthea::linear_algebra::sparse_matrix
   : public besthea::linear_algebra::matrix {
-  using vector = besthea::linear_algebra::vector;
+  using vector = besthea::linear_algebra::
+    vector;  //!< shortcut for the besthea::linear_algebra::vector type
 
  public:
   /**
