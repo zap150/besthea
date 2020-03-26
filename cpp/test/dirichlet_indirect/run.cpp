@@ -28,7 +28,7 @@
 
 #include "besthea/besthea.h"
 
-// #define USE_P0_BASIS
+#define USE_P0_BASIS
 
 #include <cstdlib>
 #include <filesystem>

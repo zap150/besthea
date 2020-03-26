@@ -1927,7 +1927,7 @@ void besthea::bem::fast_spacetime_be_assembler<
 //! template specialization for adjoint double layer p1p0 matrix
 template<>
 void besthea::bem::fast_spacetime_be_assembler<
-  besthea::bem::spacetime_heat_adjdl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
   compute_required_data(
@@ -1956,46 +1956,6 @@ void besthea::bem::fast_spacetime_be_assembler<
   //          get_normal_drv_chebyshev_quad( ).get_n_columns( ) !=
   //    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6
   //    ) )
-  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) ) {
-    for ( auto it = space_clusters_spacetime_leaves.begin( );
-          it != space_clusters_spacetime_leaves.end( ); ++it ) {
-      // update the node mappings (needed for non-leaf space clusters)
-      //       TODO: should this be done here, or somewhere else in the code?
-      ( *it )->compute_node_mapping( );
-      compute_normal_drv_chebyshev_quadrature( *it );
-    }
-  }
-}
-
-
-//! template specialization for double layer p1p0 matrix
-template<>
-void besthea::bem::fast_spacetime_be_assembler<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  compute_required_data(
-    std::set< time_cluster_type * > & time_clusters_spacetime_leaves,
-    std::set< space_cluster_type * > & space_clusters_spacetime_leaves ) const {
-  // Compute quadratures of the Chebyshev polynomials and their derivatives in
-  // case that they do not have been computed yet.
-  // WARNING: Only the number of columns of the quadratures of the
-  //          first spatial cluster is checked.
-  //  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) &&
-  //    ( ( *space_clusters_spacetime_leaves.begin( ) )->
-  //              get_chebyshev_quad_p0( ).get_n_columns( ) !=
-  //    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6
-  //    ) )
-  // ATTENTION: in the current version it is not checked if quadratures etc.
-  //            have been computed!!! still, each computation is done in a
-  //            separate step in case that the checks are added
-  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) ) {
-    for ( auto it = space_clusters_spacetime_leaves.begin( );
-          it != space_clusters_spacetime_leaves.end( ); ++it ) {
-      compute_chebyshev_quadrature_p0( *it );
-    }
-  }
-
   if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) ) {
     for ( auto it = space_clusters_spacetime_leaves.begin( );
           it != space_clusters_spacetime_leaves.end( ); ++it ) {
