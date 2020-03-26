@@ -317,8 +317,8 @@ class besthea::mesh::spacetime_cluster {
   std::vector< spacetime_cluster * > * _interaction_list; //!< interaction list
                                                           //!< of the cluster
   std::vector< spacetime_cluster * > * 
-    _nearfield_list;  //! nearfield list of the cluster (only computed for 
-                      //! leaf clusters)
+    _nearfield_list;  //!< nearfield list of the cluster (only computed for 
+                      //!< leaf clusters)
   
   lo _level;  //!< level within the cluster tree
 };

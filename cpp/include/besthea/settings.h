@@ -48,7 +48,7 @@
 #endif
 
 // pragma to switch between cluster- and timestep-wise nearfield computation
-#define NEARFIELD_CLUSTERWISE
+#define NEARFIELD_CLUSTERWISE //!< Pragma to control nearfield computation
 
 namespace besthea {
   using scalar = double;  //!< Floating point type.

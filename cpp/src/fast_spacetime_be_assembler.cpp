@@ -37,7 +37,6 @@
 #include "besthea/timer.h"
 
 #include <set>
-#include <iomanip>
 #include <vector>
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -540,6 +539,7 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   }
 }
 
+/** specialization for p1p1 hypersingular operator */
 template<>
 void besthea::bem::fast_spacetime_be_assembler<
   besthea::bem::spacetime_heat_hs_kernel_antiderivative,

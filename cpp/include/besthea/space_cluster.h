@@ -605,7 +605,7 @@ void besthea::mesh::space_cluster::local_elem_to_local_dofs<
 }
 
 /** specialization for p1 basis functions
- * \todo Is a more elegant implementation with map as in \ref basis_tri_p1.cpp 
+ * \todo Is a more elegant implementation with map as in basis_tri_p1.cpp
  * possible without wasting too much storage.
  */
 template<> inline

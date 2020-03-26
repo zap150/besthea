@@ -593,10 +593,10 @@ class besthea::linear_algebra::pFMM_matrix
     _nearfield_block_map;  //!< mapping from block index to pair of matching
                            //!< temporal clusters
 
-  std::vector< std::vector< full_matrix_type * > >
-    _clusterwise_nearfield_matrices;  //! nearfield matrices for all the space-
-                                      //! time leaf clusters and their
-                                      //! nearfield clusters
+  std::vector< std::vector< full_matrix_type * > > 
+    _clusterwise_nearfield_matrices;  //!< nearfield matrices for all the space-
+                                      //!< time leaf clusters and their
+                                      //!< nearfield clusters.
 
   std::vector< full_matrix_type * >
     _farfield_matrices;  //!< nonapproximated temporal farfield blocks
