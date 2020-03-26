@@ -46,6 +46,7 @@
 #include "besthea/space_cluster_tree.h"
 #include "besthea/spacetime_cluster.h"
 #include "besthea/spacetime_cluster_tree.h"
+#include "besthea/spacetime_heat_adjdl_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_hs_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_sl_kernel_antiderivative.h"
@@ -107,8 +108,15 @@ class besthea::linear_algebra::pFMM_matrix
    * Destructor
    */
   virtual ~pFMM_matrix( ) {
+    #ifdef NEARFIELD_CLUSTERWISE
+    for ( auto it = _clusterwise_nearfield_matrices.begin( );
+          it != _clusterwise_nearfield_matrices.end( ); ++it ) {
+      for ( auto it_in = ( *it ).begin( ); it_in != ( *it ).end( ); ++it_in ) {
+        delete *it_in;
+      }
+    }
+    #else
     lo matrix_idx = 0;
-
     for ( auto it = _nearfield_matrices.begin( );
           it != _nearfield_matrices.end( ); ++it ) {
       const std::pair< lo, lo > & indices
@@ -125,6 +133,7 @@ class besthea::linear_algebra::pFMM_matrix
       }
       matrix_idx++;
     }
+    #endif
 
     for ( auto it = _farfield_matrices.begin( );
           it != _farfield_matrices.end( ); ++it ) {
@@ -672,6 +681,13 @@ typedef besthea::linear_algebra::pFMM_matrix<
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >
   pFMM_matrix_heat_dl_p0p1;
+
+/** Typedef for the spatially adjoint double layer p1-p0 PFMM matrix */
+typedef besthea::linear_algebra::pFMM_matrix<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >
+  pFMM_matrix_heat_adjdl_p1p0;
 
 /** Typedef for the hypersingular p1-p1 PFMM matrix */
 typedef besthea::linear_algebra::pFMM_matrix<

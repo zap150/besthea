@@ -74,7 +74,7 @@ struct cauchy_data {
 
 int main( int argc, char * argv[] ) {
   std::string file = "./mesh_files/cube_12.txt";
-  lo test_case = 1;
+  lo test_case = 3;
   std::cout << "test case is " << test_case << std::endl;
   //   int refine = 1;
   int refine = 1;
@@ -206,12 +206,10 @@ int main( int argc, char * argv[] ) {
     }
     delete K_pFMM;
   } else if ( test_case == 3 ) {
-    spacetime_heat_adjdl_kernel_antiderivative kernel_k_adj( 
-      cauchy_data::_alpha );
     pFMM_matrix_heat_adjdl_p1p0 * K_adj_pFMM = new pFMM_matrix_heat_adjdl_p1p0;
     //   tree.print( );
 
-    fast_spacetime_be_assembler fast_assembler_k_adj( kernel_k_adj, 
+    fast_spacetime_be_assembler fast_assembler_k_adj( kernel_k, 
       space_p1_pFMM, space_p0_pFMM, order_sing, order_reg, temp_order, 
       spat_order, cauchy_data::_alpha, 1.5, false );
     t.reset( "K_adj_pFMM" );
@@ -252,12 +250,10 @@ int main( int argc, char * argv[] ) {
 
     delete K_adj_pFMM;
   } else if ( test_case == 4 ) {
-    spacetime_heat_adjdl_kernel_antiderivative kernel_k_adj( 
-      cauchy_data::_alpha );
     pFMM_matrix_heat_adjdl_p1p0 * K_adj_pFMM = new pFMM_matrix_heat_adjdl_p1p0;
     //   tree.print( );
 
-    fast_spacetime_be_assembler fast_assembler_k_adj( kernel_k_adj, 
+    fast_spacetime_be_assembler fast_assembler_k_adj( kernel_k, 
       space_p1_pFMM, space_p0_pFMM, order_sing, order_reg, temp_order, 
       spat_order, cauchy_data::_alpha, 1.5, false );
     t.reset( "K_adj_pFMM" );

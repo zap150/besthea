@@ -93,6 +93,8 @@ class besthea::mesh::spacetime_cluster {
       delete _local_contribution;
     if ( _interaction_list != nullptr )
       delete _interaction_list;
+    if ( _nearfield_list != nullptr )
+      delete _nearfield_list;
   }
 
   /**

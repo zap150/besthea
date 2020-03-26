@@ -143,7 +143,7 @@ void besthea::linear_algebra::pFMM_matrix<
 //! template specialization for spatially adjoint double layer p1p0 matrix
 template<>
 void besthea::linear_algebra::pFMM_matrix<
-  besthea::bem::spacetime_heat_adjdl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
   apply( const block_vector_type & x, block_vector_type & y, bool trans,
@@ -176,14 +176,13 @@ void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
 
 
 #ifndef NEARFIELD_CLUSTERWISE
-  std::cout << "timestep wise nearfield computation" << std::endl;
   lo count = 0;
-// #pragma omp parallel
+#pragma omp parallel
   {
     full_matrix_type * current_block;
     vector_type local_y( y.get_size_of_block( ) );
     // first, multiply by the nearfield blocks
-// #pragma omp for
+#pragma omp for
     for ( std::vector< full_matrix_type * >::size_type i = 0;
           i < _nearfield_matrices.size( ); ++i ) {
       current_block = _nearfield_matrices.at( i );
@@ -203,12 +202,11 @@ void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
     }
   }
 #else
-std::cout << "clusterwise nearfield computation" << std::endl;
-// #pragma omp parallel
+#pragma omp parallel
   {
     full_matrix_type * current_block;
     vector_type local_x;
-// #pragma omp for
+#pragma omp for
     for ( std::vector< std::vector< full_matrix_type * > >::size_type 
           leaf_index = 0; leaf_index < _clusterwise_nearfield_matrices.size( ); 
           ++leaf_index ) {
@@ -225,13 +223,6 @@ std::cout << "clusterwise nearfield computation" << std::endl;
                                                         local_x );
         current_block = 
           _clusterwise_nearfield_matrices[ leaf_index ][ src_index];
-        std::cout << "target is " << std::endl;
-        curr_leaf->print( );
-        std::cout << "source is " << std::endl;
-        curr_source->print( );
-        current_block->print( );
-        std::cout << " ################################ " << std::endl;
-        std::cout << " ################################ " << std::endl;
         current_block->apply( local_x, local_y, trans, alpha, 1.0 );
         
       }
@@ -297,7 +288,6 @@ void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
   }
 
 #ifndef NEARFIELD_CLUSTERWISE
-  std::cout << "timestep wise nearfield computation" << std::endl;
 #pragma omp parallel
   {
     full_matrix_type * current_block;
@@ -318,12 +308,11 @@ void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
     }
   }
 #else
-  std::cout << "clusterwise nearfield computation" << std::endl;
-// #pragma omp parallel
+#pragma omp parallel
   {
     full_matrix_type * current_block;
     vector_type local_x;
-// #pragma omp for
+#pragma omp for
     for ( std::vector< std::vector< full_matrix_type * > >::size_type 
           leaf_index = 0; leaf_index < _clusterwise_nearfield_matrices.size( ); 
           ++leaf_index ) {
@@ -340,15 +329,7 @@ void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
                                                         local_x );
         current_block = 
           _clusterwise_nearfield_matrices[ leaf_index ][ src_index];
-        // std::cout << "target is " << std::endl;
-        // curr_leaf->print( );
-        // std::cout << "source is " << std::endl;
-        // curr_source->print( );
-        // current_block->print( );
-        // std::cout << " ################################ " << std::endl;
-        // std::cout << " ################################ " << std::endl;
-        current_block->apply( local_x, local_y, trans, alpha, 1.0 );
-        
+        current_block->apply( local_x, local_y, trans, alpha, 1.0 );    
       }
       add_local_part_to_block_vector< target_space >( curr_leaf, local_y, y );
     }
@@ -1014,6 +995,16 @@ void besthea::linear_algebra::pFMM_matrix<
 //   apply_s2m_operations_p0( x );
 // }
 
+//! Specialization for the adjoint double layer p1p0 matrix
+template<>
+void besthea::linear_algebra::pFMM_matrix<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
+  apply_s2m_operations( block_vector_type const & x, bool trans ) const {
+  apply_s2m_operations_p0( x );
+}
+
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
   source_space >::apply_s2m_operations_p0( block_vector_type const & x ) const {
@@ -1597,6 +1588,16 @@ void besthea::linear_algebra::pFMM_matrix<
   }
 }
 
+//! Specialization for the adjoint double layer p1p0 matrix
+template<>
+void besthea::linear_algebra::pFMM_matrix<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
+  apply_l2t_operations( block_vector_type & y, bool trans ) const {
+  this->apply_l2t_operations_p1_normal_drv( y );
+}
+
 //! Specialization for the double layer p0p0 matrix
 //TODO: Do we use/need this?
 // template<>
@@ -1949,7 +1950,7 @@ template class besthea::linear_algebra::pFMM_matrix<
 //   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >;  
 
 template class besthea::linear_algebra::pFMM_matrix<
-  besthea::bem::spacetime_heat_adjdl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
 template class besthea::linear_algebra::pFMM_matrix<
