@@ -161,14 +161,16 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
   initialize_moment_and_local_contributions( );
 
-  assemble_clusterwise_nearfield( global_matrix );
-
-  if ( !_uniform ) {
-    assemble_nearfield( global_matrix );
-    // assemble_farfield_nonapproximated( global_matrix );
-  } else {
-    assemble_nonapproximated_uniform( global_matrix );
-  }
+  #ifdef NEARFIELD_CLUSTERWISE
+    assemble_clusterwise_nearfield( global_matrix );
+  #else 
+    if ( !_uniform ) {
+      assemble_nearfield( global_matrix );
+      // assemble_farfield_nonapproximated( global_matrix );
+    } else {
+      assemble_nonapproximated_uniform( global_matrix );
+    }
+  #endif 
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -590,8 +592,316 @@ void besthea::bem::fast_spacetime_be_assembler<
   spacetime_cluster_type * target_cluster, 
   spacetime_cluster_type * source_cluster,
   full_matrix_type & nearfield_matrix ) const {
-  std::cout << "not implemented yet!" << std::endl;
-  nearfield_matrix.fill( 0.0 );
+
+  auto & test_basis = _test_space->get_basis( );
+  auto & trial_basis = _trial_space->get_basis( );
+  auto test_mesh = _test_space->get_mesh( );
+  auto trial_mesh = _trial_space->get_mesh( );
+
+  time_cluster_type & test_time_cluster = target_cluster->get_time_cluster( );
+  lo n_test_time_elem = test_time_cluster.get_n_elements( );
+  space_cluster_type & test_space_cluster = target_cluster->
+    get_space_cluster( );
+  lo n_test_space_dofs = test_space_cluster.get_n_dofs< 
+    besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > > ( );
+  lo n_test_space_elem = test_space_cluster.get_n_elements( );
+  std::vector< lo > test_space_elems = test_space_cluster.get_all_elements( );
+
+  time_cluster_type & trial_time_cluster = source_cluster->get_time_cluster( );
+  lo n_trial_time_elem = trial_time_cluster.get_n_elements( );
+  space_cluster_type & trial_space_cluster = source_cluster->
+    get_space_cluster( );
+  lo n_trial_space_dofs = trial_space_cluster.get_n_dofs< 
+    besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >( );
+  lo n_trial_space_elem = trial_space_cluster.get_n_elements( );
+  std::vector< lo > trial_space_elems = trial_space_cluster.get_all_elements( );
+
+  bool same_time_cluster = ( test_time_cluster.get_center( ) ==
+                             trial_time_cluster.get_center( ) );
+// #pragma omp parallel 
+  {
+    std::vector< lo > test_loc_access( 3 );
+    std::vector< lo > trial_loc_access( 3 );
+
+    sc areas, test_area;
+    sc value11, value12, value13;
+    sc value21, value22, value23;
+    sc value31, value32, value33;
+    lo size;
+    int n_shared_vertices = 0;
+    int rot_test = 0;
+    int rot_trial = 0;
+
+    sc t0, t1, tau0, tau1;
+    linear_algebra::coordinates< 3 > x1, x2, x3;
+    linear_algebra::coordinates< 3 > y1, y2, y3;
+    linear_algebra::coordinates< 3 > nx, ny;
+
+    sc * nx_data = nx.data( );
+    sc * ny_data = ny.data( );
+
+    sc test_curls[ 9 ], trial_curls[ 9 ];
+    sc phi1x, phi1y;
+    sc kernel1, kernel2;
+    lo test_curl_offset, trial_curl_offset;
+    sc curl_dot[ 9 ];
+
+    quadrature_wrapper my_quadrature;
+    init_quadrature( my_quadrature );
+    sc * x1_ref = nullptr;
+    sc * x2_ref = nullptr;
+    sc * y1_ref = nullptr;
+    sc * y2_ref = nullptr;
+    sc * w = nullptr;
+    sc * x1_mapped = my_quadrature._x1.data( );
+    sc * x2_mapped = my_quadrature._x2.data( );
+    sc * x3_mapped = my_quadrature._x3.data( );
+    sc * y1_mapped = my_quadrature._y1.data( );
+    sc * y2_mapped = my_quadrature._y2.data( );
+    sc * y3_mapped = my_quadrature._y3.data( );
+
+    lo gl_test_elem_time, gl_test_elem_space;
+    lo gl_trial_elem_time, gl_trial_elem_space;
+
+    for ( lo i_test_time = 0; i_test_time < n_test_time_elem; ++ i_test_time ) {
+      gl_test_elem_time = test_time_cluster.get_element( i_test_time );
+      test_mesh->get_temporal_nodes( gl_test_elem_time, &t0, &t1 );
+      for ( lo i_trial_time = 0; i_trial_time < n_trial_time_elem; 
+            ++ i_trial_time ) {
+        gl_trial_elem_time = trial_time_cluster.get_element( i_trial_time ); 
+        trial_mesh->get_temporal_nodes( gl_trial_elem_time, &tau0, &tau1 );
+
+        bool shared_t_element = t0 == tau0;
+        bool shared_t_vertex = t0 == tau1;
+        if ( !same_time_cluster || ( i_trial_time <= i_test_time ) ) {
+          // #pragma omp for schedule( dynamic, 1 )
+          for ( lo i_test_space = 0; i_test_space < n_test_space_elem; 
+                ++i_test_space ) {
+            gl_test_elem_space = test_space_elems[ i_test_space ];
+            // std::cout << "clusters are " << std::endl;
+            // target_cluster->print( );
+            // source_cluster->print( );
+            // std::cout << "global index is " << gl_test_elem_space << std::endl;
+            // std::cout << " ############################## " << std::endl;
+            // if ( gl_test_elem_space == 143 ) {
+            //   std::cout << " ############################## " << std::endl;
+            //   std::cout << " ############################## " << std::endl;
+            //   std::cout << " ############################## " << std::endl;
+            //   std::cout << " ############################## " << std::endl;
+            // }
+
+            test_mesh->get_spatial_nodes( gl_test_elem_space, x1, x2, x3 );
+            test_mesh->get_spatial_normal( gl_test_elem_space, nx );
+            test_area = test_mesh->spatial_area( gl_test_elem_space );
+
+            for ( lo i_trial_space = 0; i_trial_space < n_trial_space_elem; 
+                  ++i_trial_space ) {
+              gl_trial_elem_space = trial_space_elems[ i_trial_space ];
+
+              if ( shared_t_element || shared_t_vertex ) {
+                get_type( gl_test_elem_space, gl_trial_elem_space, 
+                          n_shared_vertices, rot_test, rot_trial );
+              } else {
+                n_shared_vertices = 0;
+                rot_test = 0;
+                rot_trial = 0;
+              }
+              trial_mesh->get_spatial_nodes( gl_trial_elem_space, y1, y2, y3 );
+              trial_mesh->get_spatial_normal( gl_trial_elem_space, ny );
+              areas = 
+                test_area * trial_mesh->spatial_area( gl_trial_elem_space );
+
+              test_space_cluster.local_elem_to_local_dofs<
+                besthea::bem::fast_spacetime_be_space< 
+                besthea::bem::basis_tri_p1 > >( 
+                i_test_space, n_shared_vertices, rot_test, false, 
+                test_loc_access );
+              trial_space_cluster.local_elem_to_local_dofs< 
+                besthea::bem::fast_spacetime_be_space< 
+                besthea::bem::basis_tri_p1 > >( 
+                i_trial_space, n_shared_vertices, rot_trial, true, 
+                trial_loc_access );
+
+              triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices,
+                rot_test, rot_trial, my_quadrature );
+              x1_ref = my_quadrature._x1_ref[ n_shared_vertices ].data( );
+              x2_ref = my_quadrature._x2_ref[ n_shared_vertices ].data( );
+              y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
+              y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
+              w = my_quadrature._w[ n_shared_vertices ].data( );
+
+              size = my_quadrature._w[ n_shared_vertices ].size( );
+
+              test_basis.evaluate_curl( gl_test_elem_space, nx, 
+                n_shared_vertices, rot_test, false, test_curls );
+              trial_basis.evaluate_curl( gl_trial_elem_space, ny, 
+                n_shared_vertices, rot_trial, true, trial_curls );
+
+              for ( lo i_loc_test = 0; i_loc_test < 3; ++i_loc_test ) {
+                for ( lo i_loc_trial = 0; i_loc_trial < 3; ++i_loc_trial ) {
+                  test_curl_offset = 3 * i_loc_test;
+                  trial_curl_offset = 3 * i_loc_trial;
+                  curl_dot[ i_loc_trial * 3 + i_loc_test ]
+                    = test_curls[ test_curl_offset ]
+                      * trial_curls[ trial_curl_offset ]
+                    + test_curls[ test_curl_offset + 1 ]
+                      * trial_curls[ trial_curl_offset + 1 ]
+                    + test_curls[ test_curl_offset + 2 ]
+                      * trial_curls[ trial_curl_offset + 2 ];
+                }
+              }
+
+              value11 = value12 = value13 = 0.0;
+              value21 = value22 = value23 = 0.0;
+              value31 = value32 = value33 = 0.0;
+
+              if ( shared_t_element ) {
+      #pragma omp simd \
+              aligned( x1_mapped, x2_mapped, x3_mapped, x1_ref, x2_ref : DATA_ALIGN ) \
+              aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, w : DATA_ALIGN ) \
+              private( kernel1, kernel2, phi1x, phi1y ) \
+              reduction( + : value11, value12, value13 ) \
+              reduction( + : value21, value22, value23 ) \
+              reduction( + : value31, value32, value33 ) \
+              simdlen( DATA_WIDTH )
+                for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+                  _kernel->definite_integral_over_same_interval(
+                    x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                    x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                    x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data, t0,
+                    t1, &kernel1, &kernel2 );
+
+                  phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
+                  phi1y = (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ];
+                  // phi2* = *1_ref[ i_quad ] and phi3* = *2_ref[ i_quad ];
+
+                  value11 += ( kernel1 * curl_dot[ 0 ] + kernel2 * phi1x * phi1y )
+                    * w[ i_quad ];
+                  value21 += ( kernel1 * curl_dot[ 1 ]
+                              + kernel2 * x1_ref[ i_quad ] * phi1y )
+                    * w[ i_quad ];
+                  value31 += ( kernel1 * curl_dot[ 2 ]
+                              + kernel2 * x2_ref[ i_quad ] * phi1y )
+                    * w[ i_quad ];
+                  value12 += ( kernel1 * curl_dot[ 3 ]
+                              + kernel2 * phi1x * y1_ref[ i_quad ] )
+                    * w[ i_quad ];
+                  value22 += ( kernel1 * curl_dot[ 4 ]
+                              + kernel2 * x1_ref[ i_quad ] * y1_ref[ i_quad ] )
+                    * w[ i_quad ];
+                  value32 += ( kernel1 * curl_dot[ 5 ]
+                              + kernel2 * x2_ref[ i_quad ] * y1_ref[ i_quad ] )
+                    * w[ i_quad ];
+                  value13 += ( kernel1 * curl_dot[ 6 ]
+                              + kernel2 * phi1x * y2_ref[ i_quad ] )
+                    * w[ i_quad ];
+                  value23 += ( kernel1 * curl_dot[ 7 ]
+                              + kernel2 * x1_ref[ i_quad ] * y2_ref[ i_quad ] )
+                    * w[ i_quad ];
+                  value33 += ( kernel1 * curl_dot[ 8 ]
+                              + kernel2 * x2_ref[ i_quad ] * y2_ref[ i_quad ] )
+                    * w[ i_quad ];
+                }
+              } else {
+      #pragma omp simd \
+              aligned( x1_mapped, x2_mapped, x3_mapped, x1_ref, x2_ref : DATA_ALIGN ) \
+              aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, w : DATA_ALIGN ) \
+              private( kernel1, kernel2, phi1x, phi1y ) \
+              reduction( + : value11, value12, value13 ) \
+              reduction( + : value21, value22, value23 ) \
+              reduction( + : value31, value32, value33 ) \
+              simdlen( DATA_WIDTH )
+                for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+                  _kernel->definite_integral_over_different_intervals(
+                    x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                    x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                    x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data, t0,
+                    t1, tau0, tau1, &kernel1, &kernel2 );
+
+                  phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
+                  phi1y = (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ];
+                  // phi2* = *1_ref[ i_quad ] and phi3* = *2_ref[ i_quad ];
+
+                  value11 += ( kernel1 * curl_dot[ 0 ] + kernel2 * phi1x * phi1y )
+                    * w[ i_quad ];
+                  value21 += ( kernel1 * curl_dot[ 1 ]
+                              + kernel2 * x1_ref[ i_quad ] * phi1y )
+                    * w[ i_quad ];
+                  value31 += ( kernel1 * curl_dot[ 2 ]
+                              + kernel2 * x2_ref[ i_quad ] * phi1y )
+                    * w[ i_quad ];
+                  value12 += ( kernel1 * curl_dot[ 3 ]
+                              + kernel2 * phi1x * y1_ref[ i_quad ] )
+                    * w[ i_quad ];
+                  value22 += ( kernel1 * curl_dot[ 4 ]
+                              + kernel2 * x1_ref[ i_quad ] * y1_ref[ i_quad ] )
+                    * w[ i_quad ];
+                  value32 += ( kernel1 * curl_dot[ 5 ]
+                              + kernel2 * x2_ref[ i_quad ] * y1_ref[ i_quad ] )
+                    * w[ i_quad ];
+                  value13 += ( kernel1 * curl_dot[ 6 ]
+                              + kernel2 * phi1x * y2_ref[ i_quad ] )
+                    * w[ i_quad ];
+                  value23 += ( kernel1 * curl_dot[ 7 ]
+                              + kernel2 * x1_ref[ i_quad ] * y2_ref[ i_quad ] )
+                    * w[ i_quad ];
+                  value33 += ( kernel1 * curl_dot[ 8 ]
+                              + kernel2 * x2_ref[ i_quad ] * y2_ref[ i_quad ] )
+                    * w[ i_quad ];
+                }
+              } 
+
+              nearfield_matrix.add_atomic(
+                i_test_time * n_test_space_dofs 
+                  + test_loc_access[ 0 ], 
+                i_trial_time * n_trial_space_dofs
+                  + trial_loc_access[ 0 ], value11 * areas );
+              nearfield_matrix.add_atomic(
+                i_test_time * n_test_space_dofs 
+                  + test_loc_access[ 0 ], 
+                i_trial_time * n_trial_space_dofs
+                  + trial_loc_access[ 1 ], value12 * areas );
+              nearfield_matrix.add_atomic(
+                i_test_time * n_test_space_dofs 
+                  + test_loc_access[ 0 ], 
+                i_trial_time * n_trial_space_dofs
+                  + trial_loc_access[ 2 ], value13 * areas );
+              nearfield_matrix.add_atomic(
+                i_test_time * n_test_space_dofs 
+                  + test_loc_access[ 1 ], 
+                i_trial_time * n_trial_space_dofs
+                  + trial_loc_access[ 0 ], value21 * areas );
+              nearfield_matrix.add_atomic(
+                i_test_time * n_test_space_dofs 
+                  + test_loc_access[ 1 ], 
+                i_trial_time * n_trial_space_dofs
+                  + trial_loc_access[ 1 ], value22 * areas );
+              nearfield_matrix.add_atomic(
+                i_test_time * n_test_space_dofs 
+                  + test_loc_access[ 1 ], 
+                i_trial_time * n_trial_space_dofs
+                  + trial_loc_access[ 2 ], value23 * areas );
+              nearfield_matrix.add_atomic(
+                i_test_time * n_test_space_dofs 
+                  + test_loc_access[ 2 ], 
+                i_trial_time * n_trial_space_dofs
+                  + trial_loc_access[ 0 ], value31 * areas );
+              nearfield_matrix.add_atomic(
+                i_test_time * n_test_space_dofs 
+                  + test_loc_access[ 2 ], 
+                i_trial_time * n_trial_space_dofs
+                  + trial_loc_access[ 1 ], value32 * areas );
+              nearfield_matrix.add_atomic(
+                i_test_time * n_test_space_dofs 
+                  + test_loc_access[ 2 ], 
+                i_trial_time * n_trial_space_dofs
+                  + trial_loc_access[ 2 ], value33 * areas );
+            }
+          }
+        }
+      } 
+    }  
+  }
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -603,11 +913,11 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   auto test_mesh = _test_space->get_mesh( );
   auto trial_mesh = _trial_space->get_mesh( );
 
-  lo n_loc_rows = test_basis.dimension_local( );
-  lo n_loc_columns = trial_basis.dimension_local( );
-
   lo n_test_elements = test_mesh->get_n_spatial_elements( );
   lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
+
+  lo n_loc_rows = test_basis.dimension_local( );
+  lo n_loc_columns = trial_basis.dimension_local( );
 
 #pragma omp parallel
   {
@@ -1665,6 +1975,50 @@ void besthea::bem::fast_spacetime_be_assembler<
   }
 }
 
+//! template specialization for adjoint double layer p1p0 matrix
+template<>
+void besthea::bem::fast_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_adjdl_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
+  compute_required_data(
+    std::set< time_cluster_type * > & time_clusters_spacetime_leaves,
+    std::set< space_cluster_type * > & space_clusters_spacetime_leaves ) const {
+  // Compute quadratures of the Chebyshev polynomials and their derivatives in
+  // case that they do not have been computed yet.
+  // WARNING: Only the number of columns of the quadratures of the
+  //          first spatial cluster is checked.
+  //  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) &&
+  //    ( ( *space_clusters_spacetime_leaves.begin( ) )->
+  //              get_chebyshev_quad_p0( ).get_n_columns( ) !=
+  //    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6
+  //    ) )
+  // ATTENTION: in the current version it is not checked if quadratures etc.
+  //            have been computed!!! still, each computation is done in a
+  //            separate step in case that the checks are added
+  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) ) {
+    for ( auto it = space_clusters_spacetime_leaves.begin( );
+          it != space_clusters_spacetime_leaves.end( ); ++it ) {
+      compute_chebyshev_quadrature_p0( *it );
+    }
+  }
+  //  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) &&
+  //    ( ( *space_clusters_spacetime_leaves.begin( ) )->
+  //          get_normal_drv_chebyshev_quad( ).get_n_columns( ) !=
+  //    ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6
+  //    ) )
+  if ( ( space_clusters_spacetime_leaves.size( ) > 0 ) ) {
+    for ( auto it = space_clusters_spacetime_leaves.begin( );
+          it != space_clusters_spacetime_leaves.end( ); ++it ) {
+      // update the node mappings (needed for non-leaf space clusters)
+      //       TODO: should this be done here, or somewhere else in the code?
+      ( *it )->compute_node_mapping( );
+      compute_normal_drv_chebyshev_quadrature( *it );
+    }
+  }
+}
+
+
 //! template specialization for double layer p1p0 matrix
 template<>
 void besthea::bem::fast_spacetime_be_assembler<
@@ -2193,17 +2547,22 @@ template class besthea::bem::fast_spacetime_be_assembler<
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
 
 template class besthea::bem::fast_spacetime_be_assembler<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
-template class besthea::bem::fast_spacetime_be_assembler<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
-template class besthea::bem::fast_spacetime_be_assembler<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_adjdl_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
+
+// template class besthea::bem::fast_spacetime_be_assembler<
+//   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+//   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+//   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
+template class besthea::bem::fast_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+// template class besthea::bem::fast_spacetime_be_assembler<
+//   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+//   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+//   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
 
 template class besthea::bem::fast_spacetime_be_assembler<
   besthea::bem::spacetime_heat_hs_kernel_antiderivative,
