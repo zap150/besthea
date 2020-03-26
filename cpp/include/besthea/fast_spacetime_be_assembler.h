@@ -202,6 +202,12 @@ class besthea::bem::fast_spacetime_be_assembler {
    */
   void assemble_nearfield( pfmm_matrix_type & global_matrix ) const;
 
+  /**
+   * Assembles temporal nearfield matrices clusterwise.
+   * @param[in,out] global_matrix pFMM matrix which is partially assembled.
+   */
+  void assemble_clusterwise_nearfield( pfmm_matrix_type & global_matrix ) const;
+
   /** Assembles temporal farfield nonapproximated by the pFMM.
    * @param[out] global_matrix Partially assembled pFMM matrix.
    */
@@ -225,6 +231,19 @@ class besthea::bem::fast_spacetime_be_assembler {
    */
   void assemble_nearfield_matrix(
     sc t0, sc t1, sc tau0, sc tau1, full_matrix_type & nearfield_matrix ) const;
+
+  /**
+   * Assembles clusterwise nearfield matrix
+   * @param[in] target_cluster  Target for which the matrix is assembled.
+   * @param[in] source_cluster  Source in the nearfield of the target for which 
+   *                            the matrix is assembled.
+   * @param[in,out] nearfield_matrix Reference to the matrix which should be
+   * assembled.
+   */  
+  void assemble_clusterwise_nearfield_matrix( 
+    spacetime_cluster_type * target_cluster, 
+    spacetime_cluster_type * source_cluster, 
+    full_matrix_type & nearfield_matrix ) const;
 
   /**
    * Determines the configuration of two triangular elements.

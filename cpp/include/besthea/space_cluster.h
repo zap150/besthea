@@ -33,6 +33,9 @@
 #ifndef INCLUDE_BESTHEA_SPACE_CLUSTER_H_
 #define INCLUDE_BESTHEA_SPACE_CLUSTER_H_
 
+// TODO: is the include list ok (fast be spaces are not included directly, but
+// via forward declaration) 
+// #include "besthea/fast_spacetime_be_space.h"
 #include "besthea/full_matrix.h"
 #include "besthea/settings.h"
 #include "besthea/triangular_surface_mesh.h"
@@ -44,6 +47,16 @@
 namespace besthea {
   namespace mesh {
     class space_cluster;
+  }
+}
+
+// forward declaration of fast_spacetime_be_space and basis functions
+namespace besthea {
+  namespace bem {
+    template< class basis_type >
+    class fast_spacetime_be_space;
+    class basis_tri_p1;
+    class basis_tri_p0;
   }
 }
 
@@ -443,6 +456,30 @@ class besthea::mesh::space_cluster {
   }
 
   /**
+   * Provides local indices for a given, possibly transformed element.
+   * In case of p0 elements only the element index is returned
+   * In case of p1 elements the local vertex indices are returned
+   * @param[in] i_loc_elem Element index.
+   * @param[in] n_shared_vertices Number of shared vertives in current elements
+   * (regularized quadrature).
+   * @param[in] rotation Virtual element rotation (regularized quadrature).
+   * @param[in] swap Virtual element inversion (regularized quadrature).
+   * @param[out] indices Local indices for the current (transformed) element.
+   */
+  template< class space_type >
+  void local_elem_to_local_dofs( 
+    lo i_loc_elem, int n_shared_vertices, int rotation, bool swap, 
+    std::vector< lo > & indices ) const;
+
+  /**
+   * Returns the degrees of freedom depending on the space.
+   * For p0 elements the number of elements in the cluster is returned.
+   * For p1 elements the number of vertices in the cluster is returned.
+   */
+  template< class space_type >
+  lo get_n_dofs( ) const;
+
+  /**
    * Computes mapping from elements to local nodes and from local to global
    * nodes.
    */
@@ -557,5 +594,75 @@ class besthea::mesh::space_cluster {
   std::vector< lo > _local_2_global_nodes;  //!< mapping from local nodes
                                             //!< to the global ones
 };
+
+/** specialization for p0 basis functions */
+template<> inline
+void besthea::mesh::space_cluster::local_elem_to_local_dofs< 
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >(
+  lo i_loc_elem, int n_shared_vertices, int rotation, bool swap, 
+  std::vector< lo > & indices ) const {
+  indices[ 0 ] = i_loc_elem;
+}
+
+/** specialization for p1 basis functions
+ * \todo Is a more elegant implementation with map as in \ref basis_tri_p1.cpp 
+ * possible without wasting too much storage.
+ */
+template<> inline
+void besthea::mesh::space_cluster::local_elem_to_local_dofs< 
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >(
+  lo i_loc_elem, int n_shared_vertices, int rotation, bool swap, 
+  std::vector< lo > & indices ) const {
+  std::vector< lo > local_indices = { _elems_2_local_nodes[ 3* i_loc_elem ],
+    _elems_2_local_nodes[ 3* i_loc_elem + 1 ], 
+    _elems_2_local_nodes[ 3* i_loc_elem + 2 ] };
+
+  switch ( rotation ) {
+    case 0:
+      if ( n_shared_vertices == 2 && swap ) {
+        indices[ 0 ] = local_indices[ 1 ];
+        indices[ 1 ] = local_indices[ 0 ];
+      } else {
+        indices[ 0 ] = local_indices[ 0 ];
+        indices[ 1 ] = local_indices[ 1 ];
+      }
+      indices[ 2 ] = local_indices[ 2 ];
+      break;
+    case 1:
+      if ( n_shared_vertices == 2 && swap ) {
+        indices[ 0 ] = local_indices[ 2 ];
+        indices[ 1 ] = local_indices[ 1 ];
+      } else {
+        indices[ 0 ] = local_indices[ 1 ];
+        indices[ 1 ] = local_indices[ 2 ];
+      }
+      indices[ 2 ] = local_indices[ 0 ];
+      break;
+    case 2:
+      if ( n_shared_vertices == 2 && swap ) {
+        indices[ 0 ] = local_indices[ 0 ];
+        indices[ 1 ] = local_indices[ 2 ];
+      } else {
+        indices[ 0 ] = local_indices[ 2 ];
+        indices[ 1 ] = local_indices[ 0 ];
+      }
+      indices[ 2 ] = local_indices[ 1 ];
+      break;
+  }
+}
+
+/** specialization for p0 basis functions */
+template<> inline
+lo besthea::mesh::space_cluster::get_n_dofs<
+besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >( ) const {
+  return _n_elements;
+}
+
+/** specialization for p1 basis functions */
+template<> inline
+lo besthea::mesh::space_cluster::get_n_dofs<
+besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >( ) const {
+  return _local_2_global_nodes.size( );
+}
 
 #endif /* INCLUDE_BESTHEA_SPACE_CLUSTER_H_ */

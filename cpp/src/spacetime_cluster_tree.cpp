@@ -130,6 +130,9 @@ besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
 
   // fill interaction lists
   determine_interactions( *_root );
+
+  // fill nearfield lists
+  determine_nearfield( );
 }
 
 void besthea::mesh::spacetime_cluster_tree::build_tree(
@@ -319,6 +322,41 @@ void besthea::mesh::spacetime_cluster_tree::determine_interactions(
     for ( auto it = root_children->begin( ); it != root_children->end( );
           ++it ) {
       determine_interactions( **it );
+    }
+  }
+}
+
+void besthea::mesh::spacetime_cluster_tree::determine_nearfield( ) {
+  for ( auto it = _leaves.begin( ); it != _leaves.end( ); ++it ) {
+    space_cluster & curr_space_cluster = ( *it )->get_space_cluster( );
+    time_cluster & curr_time_cluster = ( *it )->get_time_cluster( );
+    // construct nearfield lists in time and space separately and combine them
+    // later to get the spacetime list
+    std::vector< time_cluster * > nearfield_list_time;
+    // if the left neighbor of the time cluster exists, add it to the list
+    if ( curr_time_cluster.get_left_neighbour( ) != nullptr ) {
+      nearfield_list_time.push_back( curr_time_cluster.get_left_neighbour( ) );
+    }
+    // in any case, add the cluster itself to the temporal nearfield list
+    nearfield_list_time.push_back( &curr_time_cluster );
+
+    std::vector< space_cluster * > nearfield_list_space;
+    _space_tree->find_neighbors(
+      curr_space_cluster, _spatial_nearfield_limit, nearfield_list_space );
+
+    // construct the nearfield list of the spacetime cluster from the
+    // nearfield lists of its spatial and temporal component.
+    for ( auto it_time = nearfield_list_time.begin( );
+          it_time != nearfield_list_time.end( ); ++it_time ) {
+      for ( auto it_space = nearfield_list_space.begin( );
+            it_space != nearfield_list_space.end( ); ++it_space ) {
+        // find space time cluster corresponding to the current spatial and
+        // temporal clusters in the respective nearfield lists
+        spacetime_cluster * nearfield_st_cluster
+          = _map_to_spacetime_clusters[ std::pair< space_cluster *,
+            time_cluster * >( *it_space, *it_time ) ];
+        ( *it )->add_to_nearfield_list( nearfield_st_cluster );
+      }
     }
   }
 }

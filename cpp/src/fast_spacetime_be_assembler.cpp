@@ -37,6 +37,7 @@
 #include "besthea/timer.h"
 
 #include <set>
+#include <iomanip>
 #include <vector>
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -160,11 +161,43 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
   initialize_moment_and_local_contributions( );
 
+  assemble_clusterwise_nearfield( global_matrix );
+
   if ( !_uniform ) {
     assemble_nearfield( global_matrix );
     // assemble_farfield_nonapproximated( global_matrix );
   } else {
     assemble_nonapproximated_uniform( global_matrix );
+  }
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::assemble_clusterwise_nearfield( 
+  pfmm_matrix_type & global_matrix ) const {
+  std::vector< spacetime_cluster_type * > & leaves
+    = _test_space->get_tree( )->get_leaves( );
+
+  spacetime_cluster_type * current_cluster;
+  spacetime_cluster_type * nearfield_cluster;
+
+  full_matrix_type * block;
+  
+  for ( std::vector< spacetime_cluster_type * >::size_type leaf_index = 0; 
+        leaf_index < leaves.size( ); ++leaf_index ) {
+    current_cluster = leaves[ leaf_index ];
+    std::vector< spacetime_cluster_type * > & nearfield_list 
+      = *( current_cluster->get_nearfield_list( ) );
+    for ( std::vector< spacetime_cluster_type * >::size_type source_index = 0; 
+          source_index < nearfield_list.size( ); ++source_index ) {
+      nearfield_cluster = nearfield_list[ source_index ];
+
+      block = global_matrix.create_clusterwise_nearfield_matrix(
+        leaf_index, source_index );
+
+      assemble_clusterwise_nearfield_matrix( 
+        current_cluster, nearfield_cluster, *block);
+    }
   }
 }
 
@@ -316,6 +349,249 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
       assemble_nearfield_matrix( t0, t1, tau0, tau1, *block );
     }
   }
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
+  trial_space_type >::assemble_clusterwise_nearfield_matrix( 
+  spacetime_cluster_type * target_cluster, 
+  spacetime_cluster_type * source_cluster,
+  full_matrix_type & nearfield_matrix ) const {
+  nearfield_matrix.fill( 0.0 );
+
+  auto & test_basis = _test_space->get_basis( );
+  auto & trial_basis = _trial_space->get_basis( );
+  auto test_mesh = _test_space->get_mesh( );
+  auto trial_mesh = _trial_space->get_mesh( );
+
+  time_cluster_type & test_time_cluster = target_cluster->get_time_cluster( );
+  lo n_test_time_elem = test_time_cluster.get_n_elements( );
+  space_cluster_type & test_space_cluster = target_cluster->
+    get_space_cluster( );
+  lo n_test_space_dofs = test_space_cluster.get_n_dofs< test_space_type> ( );
+  lo n_test_space_elem = test_space_cluster.get_n_elements( );
+  std::vector< lo > test_space_elems = test_space_cluster.get_all_elements( );
+
+  time_cluster_type & trial_time_cluster = source_cluster->get_time_cluster( );
+  lo n_trial_time_elem = trial_time_cluster.get_n_elements( );
+  space_cluster_type & trial_space_cluster = source_cluster->
+    get_space_cluster( );
+  lo n_trial_space_dofs = trial_space_cluster.get_n_dofs< trial_space_type >( );
+  lo n_trial_space_elem = trial_space_cluster.get_n_elements( );
+  std::vector< lo > trial_space_elems = trial_space_cluster.get_all_elements( );
+
+  lo n_loc_rows = test_basis.dimension_local( );
+  lo n_loc_columns = trial_basis.dimension_local( );
+
+  bool same_time_cluster = ( test_time_cluster.get_center( ) ==
+                             trial_time_cluster.get_center( ) );
+
+
+
+  // vector_type trial_space_center( 3 ), test_space_center( 3 );
+  // test_space_cluster.get_center( test_space_center );
+  // trial_space_cluster.get_center( trial_space_center );
+  // bool print = ( std::abs( test_time_cluster.get_center( ) - 1./32 ) < 1e-5 &&
+  //             std::abs( trial_time_cluster.get_center( ) - 1./32.) < 1e-5 &&
+  //             std::abs( test_space_center[ 0 ] + 0.5 ) 
+  //             + std::abs( test_space_center[ 1 ] - 0.5 ) 
+  //             + std::abs( test_space_center[ 2 ] + 0.5 ) < 1e-5 &&
+  //             std::abs( trial_space_center[ 0 ] - 0.5 ) 
+  //             + std::abs( trial_space_center[ 1 ] - 0.5 ) 
+  //             + std::abs( trial_space_center[ 2 ] - 0.5 ) < 1e-5 );
+
+// #pragma omp parallel 
+  {
+    std::vector< lo > test_loc_access( n_loc_rows );
+    std::vector< lo > trial_loc_access( n_loc_columns );
+
+    sc test, trial, value, test_area, trial_area;
+    lo size;
+    int n_shared_vertices = 0;
+    int rot_test = 0;
+    int rot_trial = 0;
+
+    sc t0, t1, tau0, tau1;
+    linear_algebra::coordinates< 3 > x1, x2, x3;
+    linear_algebra::coordinates< 3 > y1, y2, y3;
+    linear_algebra::coordinates< 3 > nx, ny;
+
+    sc * nx_data = nx.data( );
+    sc * ny_data = ny.data( );
+
+    quadrature_wrapper my_quadrature;
+    init_quadrature( my_quadrature );
+    sc * x1_ref = nullptr;
+    sc * x2_ref = nullptr;
+    sc * y1_ref = nullptr;
+    sc * y2_ref = nullptr;
+    sc * w = nullptr;
+    sc * x1_mapped = my_quadrature._x1.data( );
+    sc * x2_mapped = my_quadrature._x2.data( );
+    sc * x3_mapped = my_quadrature._x3.data( );
+    sc * y1_mapped = my_quadrature._y1.data( );
+    sc * y2_mapped = my_quadrature._y2.data( );
+    sc * y3_mapped = my_quadrature._y3.data( );
+    sc * kernel_data = my_quadrature._kernel_values.data( );
+
+    lo gl_test_elem_time, gl_test_elem_space;
+    lo gl_trial_elem_time, gl_trial_elem_space;
+
+    for ( lo i_test_time = 0; i_test_time < n_test_time_elem; ++ i_test_time ) {
+      gl_test_elem_time = test_time_cluster.get_element( i_test_time );
+      test_mesh->get_temporal_nodes( gl_test_elem_time, &t0, &t1 );
+      for ( lo i_trial_time = 0; i_trial_time < n_trial_time_elem; 
+            ++ i_trial_time ) {
+        gl_trial_elem_time = trial_time_cluster.get_element( i_trial_time ); 
+        trial_mesh->get_temporal_nodes( gl_trial_elem_time, &tau0, &tau1 );
+
+        bool shared_t_element = t0 == tau0;
+        bool shared_t_vertex = t0 == tau1;
+        if ( !same_time_cluster || ( i_trial_time <= i_test_time ) ) {
+          // #pragma omp for schedule( dynamic, 1 )
+          for ( lo i_test_space = 0; i_test_space < n_test_space_elem; 
+                ++i_test_space ) {
+            gl_test_elem_space = test_space_elems[ i_test_space ];
+            // std::cout << "clusters are " << std::endl;
+            // target_cluster->print( );
+            // source_cluster->print( );
+            // std::cout << "global index is " << gl_test_elem_space << std::endl;
+            // std::cout << " ############################## " << std::endl;
+            // if ( gl_test_elem_space == 143 ) {
+            //   std::cout << " ############################## " << std::endl;
+            //   std::cout << " ############################## " << std::endl;
+            //   std::cout << " ############################## " << std::endl;
+            //   std::cout << " ############################## " << std::endl;
+            // }
+
+            test_mesh->get_spatial_nodes( gl_test_elem_space, x1, x2, x3 );
+            test_mesh->get_spatial_normal( gl_test_elem_space, nx );
+            test_area = test_mesh->spatial_area( gl_test_elem_space );
+            for ( lo i_trial_space = 0; i_trial_space < n_trial_space_elem; 
+                  ++i_trial_space ) {
+              gl_trial_elem_space = trial_space_elems[ i_trial_space ];
+              if ( shared_t_element || shared_t_vertex ) {
+                get_type( gl_test_elem_space, gl_trial_elem_space, 
+                          n_shared_vertices, rot_test, rot_trial );
+              } else {
+                n_shared_vertices = 0;
+                rot_test = 0;
+                rot_trial = 0;
+              }
+
+              // if ( gl_trial_elem_space == 175 ) {
+              //   std::cout << "+++++++++++++" << std::endl;
+              // }
+
+              trial_mesh->get_spatial_nodes( gl_trial_elem_space, y1, y2, y3 );
+              trial_mesh->get_spatial_normal( gl_trial_elem_space, ny );
+              trial_area = trial_mesh->spatial_area( gl_trial_elem_space );
+
+              test_space_cluster.local_elem_to_local_dofs< test_space_type >( 
+                i_test_space, n_shared_vertices, rot_test, false, 
+                test_loc_access );
+              trial_space_cluster.local_elem_to_local_dofs< trial_space_type >( 
+                i_trial_space, n_shared_vertices, rot_trial, true, 
+                trial_loc_access );
+
+              triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices,
+                rot_test, rot_trial, my_quadrature );
+              x1_ref = my_quadrature._x1_ref[ n_shared_vertices ].data( );
+              x2_ref = my_quadrature._x2_ref[ n_shared_vertices ].data( );
+              y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
+              y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
+              w = my_quadrature._w[ n_shared_vertices ].data( );
+
+              size = my_quadrature._w[ n_shared_vertices ].size( );
+
+              if ( shared_t_element ) {
+      // #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
+      //                           y2_mapped, y3_mapped, kernel_data, w        \
+      //                           : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+                  kernel_data[ i_quad ]
+                    = _kernel->definite_integral_over_same_interval(
+                        x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                        x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                        x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data, 
+                        t0, t1 )
+                    * w[ i_quad ];
+                }
+              } else {
+      // #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
+      //                           y2_mapped, y3_mapped, kernel_data, w        \
+      //                           : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+                  kernel_data[ i_quad ]
+                    = _kernel->definite_integral_over_different_intervals(
+                        x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                        x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                        x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data, t0, 
+                        t1, tau0, tau1 )
+                    * w[ i_quad ];
+                }
+              }
+
+              for ( lo i_loc_test = 0; i_loc_test < n_loc_rows; ++i_loc_test ) {
+                for ( lo i_loc_trial = 0; i_loc_trial < n_loc_columns;
+                      ++i_loc_trial ) {
+                  value = 0.0;
+      // #pragma omp simd \
+      //   aligned( x1_ref, x2_ref, y1_ref, y2_ref, kernel_data : DATA_ALIGN ) \
+      //   private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
+                  for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+                    test = test_basis.evaluate( gl_test_elem_space, i_loc_test, 
+                      x1_ref[ i_quad ], x2_ref[ i_quad ], nx_data, 
+                      n_shared_vertices, rot_test, false );
+                    trial = trial_basis.evaluate( gl_trial_elem_space, 
+                      i_loc_trial, y1_ref[ i_quad ], y2_ref[ i_quad ], 
+                      ny_data, n_shared_vertices, rot_trial, true );
+                    value += kernel_data[ i_quad ] * test * trial;
+                    // if ( print ) {
+                    //   std::cout << "kernel data: " << kernel_data[ i_quad ] << std::endl;
+                    //   std::cout << "test: " << test << std::endl;
+                    //   std::cout << "trial: " << trial << std::endl;
+                    // }
+                  }
+                  
+                  value *= test_area * trial_area;
+                  // std::cout << "size is: " 
+                  //           << nearfield_matrix.get_n_rows( ) << ", "
+                  //           << nearfield_matrix.get_n_columns( )
+                  //           << std::endl;
+                  // std::cout << "access point is " 
+                  //           << i_trial_time * n_trial_space_dofs 
+                  //               + trial_loc_access[ i_loc_trial ] << ", "
+                  //           << i_test_time * n_test_space_dofs
+                  //               + test_loc_access[ i_loc_test ]
+                  //           << std::endl;
+                  nearfield_matrix.add_atomic(
+                    i_test_time * n_test_space_dofs 
+                      + test_loc_access[ i_loc_test ], 
+                    i_trial_time * n_trial_space_dofs
+                      + trial_loc_access[ i_loc_trial ], 
+                    value );                  
+                }
+              }
+            }
+          }
+        }
+      } 
+    }  
+  }
+}
+
+template<>
+void besthea::bem::fast_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
+  assemble_clusterwise_nearfield_matrix( 
+  spacetime_cluster_type * target_cluster, 
+  spacetime_cluster_type * source_cluster,
+  full_matrix_type & nearfield_matrix ) const {
+  std::cout << "not implemented yet!" << std::endl;
+  nearfield_matrix.fill( 0.0 );
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -1646,12 +1922,17 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
             value3 += weighted_cheb_prod * y2_ref[ j ];
           }
 
-          T.add_atomic( elems_2_local_nodes[ 3 * i ], current_index,
-            _kernel->get_alpha( ) * value1 );
-          T.add_atomic( elems_2_local_nodes[ 3 * i + 1 ], current_index,
-            _kernel->get_alpha( ) * value2 );
+          // if ( elems_2_local_nodes[ 3 * i ] == 9 ) {
+          //   std::cout << "element is " << i << std::endl;
+
+          // }
+
+          T.add_atomic( elems_2_local_nodes[ 3 * i ], current_index, 
+                        value1 );
+          T.add_atomic( elems_2_local_nodes[ 3 * i + 1 ], current_index, 
+                        value2 );
           T.add_atomic( elems_2_local_nodes[ 3 * i + 2 ], current_index,
-            _kernel->get_alpha( ) * value3 );
+                        value3 );
           ++current_index;
         }
       }

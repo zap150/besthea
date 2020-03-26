@@ -40,6 +40,7 @@
 #include "besthea/fast_spacetime_be_space.h"
 #include "besthea/full_matrix.h"
 #include "besthea/lagrange_interpolant.h"
+#include "besthea/local_vector_routines.h"
 #include "besthea/matrix.h"
 #include "besthea/settings.h"
 #include "besthea/space_cluster_tree.h"
@@ -149,12 +150,11 @@ class besthea::linear_algebra::pFMM_matrix
   //    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
 
   /*!
-   * Sets the underlying spacetime tree.
+   * Sets the underlying spacetime tree. The size of the clusterwise nearfield
+   * matrix container is set appropriately.
    * @param[in] spacetime_tree The tree.
    */
-  void set_tree( spacetime_tree_type * spacetime_tree ) {
-    _spacetime_tree = spacetime_tree;
-  }
+  void set_tree( spacetime_tree_type * spacetime_tree );
 
   /*!
    * Setter for the heat conductivity parameter.
@@ -192,6 +192,15 @@ class besthea::linear_algebra::pFMM_matrix
    */
   full_matrix_type * create_nearfield_matrix(
     lo test_idx, lo trial_idx, lo n_duplications = 1 );
+
+  /*!
+   * Creates a nearfield matrix for two clusters
+   * @param[in] leaf_index  Index of the target leaf cluster.
+   * @param[in] source_index  Index of the source cluster in the nearfield of 
+   *                          the target cluster.  
+   */
+  full_matrix_type * create_clusterwise_nearfield_matrix( 
+    lo leaf_index, lo source_index );
 
   /*!
    * Allocates sparse matrix of given farfield nonapproximated block and
@@ -575,6 +584,12 @@ class besthea::linear_algebra::pFMM_matrix
   std::vector< std::pair< lo, lo > >
     _nearfield_block_map;  //!< mapping from block index to pair of matching
                            //!< temporal clusters
+
+  std::vector< std::vector< full_matrix_type * > >
+    _clusterwise_nearfield_matrices;  //! nearfield matrices for all the space-
+                                      //! time leaf clusters and their
+                                      //! nearfield clusters
+
   std::vector< full_matrix_type * >
     _farfield_matrices;  //!< nonapproximated temporal farfield blocks
   std::vector< std::pair< lo, lo > >

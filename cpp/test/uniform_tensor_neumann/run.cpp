@@ -74,7 +74,7 @@ struct cauchy_data {
 
 int main( int argc, char * argv[] ) {
   std::string file = "./mesh_files/cube_12_vol.txt";
-  int refine = 1;
+  int refine = 2;
   lo n_timesteps = 8;
   sc end_time = 1.0;
   std::string grid_file;
@@ -215,7 +215,7 @@ int main( int argc, char * argv[] ) {
   block_mkl_cg_inverse M11_inv( M11, 1e-8, 100 );
   compound_block_linear_operator preconditioner;
   preconditioner.push_back( M11_inv );
-  // preconditioner.push_back( *V11 );
+  preconditioner.push_back( *V11 );
   preconditioner.push_back( M11_inv );
   t.reset( "Solving the system" );
   block_vector rhs( dir );

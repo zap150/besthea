@@ -216,6 +216,11 @@ class besthea::mesh::spacetime_cluster_tree {
    */
   void determine_interactions( spacetime_cluster & root );
 
+  /**
+   * Fills the nearfield lists of all leaf clusters.
+   */
+  void determine_nearfield( );
+
  private:
   using full_matrix_type = besthea::linear_algebra::
     full_matrix;  //!< shortcut for the

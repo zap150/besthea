@@ -75,8 +75,9 @@ struct cauchy_data {
 int main( int argc, char * argv[] ) {
   std::string file = "./mesh_files/cube_12.txt";
   lo test_case = 1;
+  std::cout << "test case is " << test_case << std::endl;
   //   int refine = 1;
-  int refine = 1;
+  int refine = 2;
   lo n_timesteps = 8;
   sc end_time = 1.0;
   std::string grid_file = "./mesh_files/grid_xy.txt";
@@ -114,7 +115,7 @@ int main( int argc, char * argv[] ) {
 
   //   sc st_coeff = 4.0;
   //   spacetime_cluster_tree tree( spacetime_mesh, 5, 2, 10, st_coeff );
-  sc st_coeff = 1.0;
+  sc st_coeff = 4.0;
   spacetime_cluster_tree tree( spacetime_mesh, 5, 2, 10, st_coeff );
 
   fast_spacetime_be_space< basis_tri_p0 > space_p0_pFMM( tree );
@@ -160,7 +161,7 @@ int main( int argc, char * argv[] ) {
   if ( test_case == 1 ) {
     lo entry_id = 0;
     lo block_id = 0;
-    lo block_evaluation_id = 2;
+    lo block_evaluation_id = 0;
     vector x_loc_0( cols_of_block );
     x_loc_0( entry_id ) = 1.0;
     block_vector x_block_vec( n_blocks, cols_of_block, true );

@@ -69,6 +69,7 @@ class besthea::mesh::spacetime_cluster {
       _moment_contribution( nullptr ),
       _local_contribution( nullptr ),
       _interaction_list( nullptr ),
+      _nearfield_list( nullptr ),
       _level( level ) {
   }
 
@@ -124,6 +125,17 @@ class besthea::mesh::spacetime_cluster {
   }
   
   /**
+   * Adds cluster to the nearfield list.
+   * @param[in] cluster Cluster to be added.
+   */
+  void add_to_nearfield_list( spacetime_cluster * cluster ) {
+    if ( _nearfield_list == nullptr ) {
+      _nearfield_list = new std::vector< spacetime_cluster * > ( );
+    }
+    _nearfield_list->push_back( cluster );
+  }
+
+  /**
    * Adds cluster to the interaction list.
    * @param[in] cluster Cluster to be added.
    */
@@ -139,6 +151,13 @@ class besthea::mesh::spacetime_cluster {
    */
   std::vector< spacetime_cluster * > * get_interaction_list( ) {
     return _interaction_list;
+  }
+
+  /**
+   * Returns cluster's nearfield list.
+   */
+  std::vector< spacetime_cluster * > * get_nearfield_list( ) {
+    return _nearfield_list;
   }
 
   /**
@@ -183,7 +202,7 @@ class besthea::mesh::spacetime_cluster {
                                                   n_columns_contribution );
     }
     else {
-//       TODO: see comment above
+  //   TODO: see comment above
       _local_contribution->resize( n_rows_contribution, 
                                    n_columns_contribution );
       _local_contribution->fill( 0.0 );
@@ -214,7 +233,7 @@ class besthea::mesh::spacetime_cluster {
                                                    n_columns_contribution );
     }
     else {
-//       TODO: see comment above
+  // TODO: see comment above
       _moment_contribution->resize( n_rows_contribution, 
                                     n_columns_contribution );
       _moment_contribution->fill( 0.0 );
@@ -252,6 +271,22 @@ class besthea::mesh::spacetime_cluster {
   }
 
   /**
+   * Returns number of elements in the cluster.
+   */
+  lo get_n_elements( ) const {
+    return _spatial_cluster.get_n_elements( ) 
+      * _temporal_cluster.get_n_elements( );
+  }
+
+  /**
+   * Returns number of degrees of freedom in the cluster (depending on the 
+   * underlying space) 
+   */
+  template< class space_type >
+  lo get_n_dofs( ) const;
+
+
+  /**
    * Prints info of the object.
    */
   void print( ) {
@@ -264,6 +299,8 @@ class besthea::mesh::spacetime_cluster {
               << spat_center[ 1] << ", " << spat_center[ 2 ] << ")" 
               << std::endl;
     std::cout << "temporal center: " << temp_center << std::endl;
+    std::cout << "nr temporal elements: " << _temporal_cluster.get_n_elements( )
+              << std::endl;
   }
 
  private:
@@ -277,7 +314,29 @@ class besthea::mesh::spacetime_cluster {
                                          //!< products in the downpward FMM step
   std::vector< spacetime_cluster * > * _interaction_list; //!< interaction list
                                                           //!< of the cluster
+  std::vector< spacetime_cluster * > * 
+    _nearfield_list;  //! nearfield list of the cluster (only computed for 
+                      //! leaf clusters)
+  
   lo _level;  //!< level within the cluster tree
 };
+
+/** specialization for p0 basis functions */
+template<> inline
+lo besthea::mesh::spacetime_cluster::get_n_dofs<
+besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >( ) const {
+  return _temporal_cluster.get_n_elements( ) * 
+    _spatial_cluster.get_n_dofs< 
+    besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >( );
+}
+
+/** specialization for p1 basis functions */
+template<> inline
+lo besthea::mesh::spacetime_cluster::get_n_dofs<
+besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >( ) const {
+  return _temporal_cluster.get_n_elements( ) * 
+    _spatial_cluster.get_n_dofs< 
+    besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >( );
+}
 
 #endif /* INCLUDE_BESTHEA_SPACETIME_CLUSTER_H_ */
