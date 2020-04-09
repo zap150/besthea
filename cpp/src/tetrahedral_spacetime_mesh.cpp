@@ -139,8 +139,7 @@ void besthea::mesh::tetrahedral_spacetime_mesh::refine( int level ) {
   linear_algebra::indices< 2 > edge;
   linear_algebra::indices< 4 > element;
   linear_algebra::indices< 6 > edges;
-  lo node1, node2, node3, node4, node5, node6, node12, node13, node14, node23,
-    node24, node34;
+  lo node1, node2, node3, node4, node12, node13, node14, node23, node24, node34;
 
   for ( int l = 0; l < level; ++l ) {
     // allocate new arrays
