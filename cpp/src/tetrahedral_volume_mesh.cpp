@@ -39,7 +39,8 @@ besthea::mesh::tetrahedral_volume_mesh::tetrahedral_volume_mesh( )
     _n_elements( 0 ),
     _n_surface_elements( 0 ),
     _n_edges( 0 ),
-    _n_surface_edges( 0 ) {
+    _n_surface_edges( 0 ),
+    _n_faces( 0 ) {
 }
 
 besthea::mesh::tetrahedral_volume_mesh::tetrahedral_volume_mesh(
@@ -48,7 +49,8 @@ besthea::mesh::tetrahedral_volume_mesh::tetrahedral_volume_mesh(
     _n_surface_nodes( 0 ),
     _n_elements( 0 ),
     _n_surface_elements( 0 ),
-    _n_surface_edges( 0 ) {
+    _n_surface_edges( 0 ),
+    _n_faces( 0 ) {
   load( file );
 }
 
@@ -132,6 +134,7 @@ bool besthea::mesh::tetrahedral_volume_mesh::load( const std::string & file ) {
   init_areas( );
   init_edges( );
   init_surface_nodes( );
+  init_faces( );
 
   return true;
 }
@@ -870,4 +873,112 @@ void besthea::mesh::tetrahedral_volume_mesh::print( const std::string & file ) {
   data_file.close( );
 
   // std::cout << "done." << std::endl;
+}
+
+void besthea::mesh::tetrahedral_volume_mesh::init_faces( ) {
+  // allocate aux. variables
+  linear_algebra::indices< 6 > element_edges;
+  linear_algebra::indices< 4 > element;
+  std::vector< std::vector< lo > > local_faces;
+  // highest index does not have any neighbours with higher index
+  local_faces.resize( _n_edges );
+  std::vector< std::vector< lo > > offsets;
+  offsets.resize(
+    _n_edges );  // offsets of nodes in edges vector defining a face
+  // edge + certain nodes = face:
+  lo face2edge[] = { 0, 2, 4, 3, 4, 5, 1, 2, 5, 0, 1,
+    3 };  // [0,2,4] - edges of 1st face, [ 3,4,5] - 2nd, etc
+  lo edge2node[] = { 3, 1, 0, 3, 2, 1, 3, 2, 0, 2, 1,
+    3 };  // nodes associated with given edge forming a face
+  linear_algebra::indices< 3 > face_edges;
+  std::vector< std::pair< lo, lo > > element_to_faces_tmp;
+  element_to_faces_tmp.resize( 4 * _n_elements );
+
+  linear_algebra::indices< 2 > edge;
+
+  typedef typename std::vector< lo >::iterator it;
+  it node_position;
+
+  // iterate over elements
+  for ( lo i = 0; i < _n_elements; ++i ) {
+    get_edges( i, element_edges );
+    get_element( i, element );
+
+    // iterate over its faces
+    for ( lo j = 0; j < 4; ++j ) {
+      face_edges[ 0 ] = element_edges[ face2edge[ j * 3 ] ];
+      face_edges[ 1 ] = element_edges[ face2edge[ j * 3 + 1 ] ];
+      face_edges[ 2 ] = element_edges[ face2edge[ j * 3 + 2 ] ];
+
+      // find the edge with smallest global index
+      lo min_val = _n_edges;
+      lo min_idx = 0;
+      for ( lo k = 0; k < 3; ++k ) {
+        if ( face_edges[ k ] < min_val ) {
+          min_idx = k;
+          min_val = face_edges[ k ];
+        }
+      }
+
+      // add the couple min_val (edge) + element[edge2node[j*3+k]] (node) to the
+      // list of faces if it is not yet present
+      node_position = std::find< it, lo >( local_faces[ min_val ].begin( ),
+        local_faces[ min_val ].end( ),
+        element[ edge2node[ j * 3 + min_idx ] ] );
+      // not found
+      if ( node_position == local_faces[ min_val ].end( ) ) {
+        local_faces[ min_val ].push_back(
+          element[ edge2node[ j * 3 + min_idx ] ] );
+      }
+      node_position = std::find< it, lo >( local_faces[ min_val ].begin( ),
+        local_faces[ min_val ].end( ),
+        element[ edge2node[ j * 3 + min_idx ] ] );
+
+      // store temporary mapping from element to edge-node pair
+      element_to_faces_tmp[ 4 * i + j ] = std::pair< lo, lo >( min_val,
+        std::distance( local_faces[ min_val ].begin( ), node_position ) );
+    }
+  }
+
+  lo offset = 0;
+  for ( lo i = 0; i < _n_edges; ++i ) {
+    if ( local_faces[ i ].size( ) != 0 ) {
+      for ( auto it = local_faces[ i ].begin( ); it != local_faces[ i ].end( );
+            ++it ) {
+        offsets[ i ].push_back( offset );
+        offset++;
+        get_edge( i, edge );
+        _faces.push_back( edge[ 0 ] );
+        _faces.push_back( edge[ 1 ] );
+        _faces.push_back( *it );
+      }
+    }
+  }
+  _faces.resize( offset );
+  _n_faces = _faces.size( );
+
+  _element_to_faces.resize( 4 * _n_elements );
+  for ( lo i = 0; i < _n_elements; ++i ) {
+    for ( lo j = 0; j < 4; ++j ) {
+      std::pair< lo, lo > idx = element_to_faces_tmp[ 4 * i + j ];
+      // std::cout << idx.first << " " << idx.second << std::endl;
+      lo offset = offsets[ idx.first ][ idx.second ];
+      // std::cout << offset << std::endl;
+      _element_to_faces[ 4 * i + j ] = offset;
+    }
+  }
+
+//  for ( lo i = 0; i < _n_elements; ++i ) {
+//    for ( lo j = 0; j < 4; ++j ) {
+//      std::cout << _element_to_faces[ 4 * i + j ] << " ";
+//    }
+//    std::cout << std::endl;
+//  }
+//
+//  for ( lo i = 0; i < _n_faces; ++i ) {
+//    for ( lo j = 0; j < 3; ++j ) {
+//      std::cout << _faces[ 3 * i + j ] << " ";
+//    }
+//    std::cout << std::endl;
+//  }
 }
