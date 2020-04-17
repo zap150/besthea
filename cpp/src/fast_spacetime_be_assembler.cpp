@@ -487,7 +487,7 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
                   = _kernel->definite_integral_over_same_interval(
                       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                       x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                      x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data, 
+                      x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data,
                       t0, t1 )
                   * w[ i_quad ];
               }
@@ -500,7 +500,7 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
                   = _kernel->definite_integral_over_different_intervals(
                       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                       x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                      x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data, t0, 
+                      x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data, t0,
                       t1, tau0, tau1 )
                   * w[ i_quad ];
               }
@@ -945,7 +945,7 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
               = _kernel->definite_integral_over_same_interval(
                   x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                   x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                  x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data, t0, t1 )
+                  x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data, t0, t1 )
               * w[ i_quad ];
           }
         } else {
@@ -957,7 +957,7 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
               = _kernel->definite_integral_over_different_intervals(
                   x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                   x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                  x3_mapped[ i_quad ] - y3_mapped[ i_quad ], ny_data, t0, t1,
+                  x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data, t0, t1,
                   tau0, tau1 )
               * w[ i_quad ];
           }

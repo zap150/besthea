@@ -169,7 +169,7 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
                   = _kernel->anti_tau_limit(
                       x1[ i_point ] - y1_mapped[ i_quad ],
                       x2[ i_point ] - y2_mapped[ i_quad ],
-                      x3[ i_point ] - y3_mapped[ i_quad ], ny_data )
+                      x3[ i_point ] - y3_mapped[ i_quad ], nullptr, ny_data )
                   * wy[ i_quad ];
               }  // i_point
 
@@ -200,11 +200,11 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
   x1, x2, x3, y1_mapped, y2_mapped, y3_mapped, kernel_data, wy \
   : DATA_ALIGN ) simdlen( DATA_WIDTH )
             for ( lo i_point = 0; i_point < size_chunk; ++i_point ) {
-              kernel_data[ i_point ]
-                = _kernel->anti_tau_regular(
-                    x1[ i_point ] - y1_mapped[ i_quad ],
-                    x2[ i_point ] - y2_mapped[ i_quad ],
-                    x3[ i_point ] - y3_mapped[ i_quad ], ny_data, ttau )
+              kernel_data[ i_point ] = _kernel->anti_tau_regular(
+                                         x1[ i_point ] - y1_mapped[ i_quad ],
+                                         x2[ i_point ] - y2_mapped[ i_quad ],
+                                         x3[ i_point ] - y3_mapped[ i_quad ],
+                                         nullptr, ny_data, ttau )
                 * wy[ i_quad ];
             }  // i_point
 
