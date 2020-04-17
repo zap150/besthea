@@ -1,4 +1,4 @@
-classdef kernel_heat_dl_2 < kernel & matlab.mixin.Copyable
+classdef kernel_heat_adl_2 < kernel & matlab.mixin.Copyable
   
   properties (Access = public)
     alpha;
@@ -7,16 +7,16 @@ classdef kernel_heat_dl_2 < kernel & matlab.mixin.Copyable
   end
   
   methods    
-    function obj = kernel_heat_dl_2( alpha )
+    function obj = kernel_heat_adl_2( alpha )
       obj.alpha = alpha;
       obj.ht = 0;
       obj.d = 0;
     end
         
-    function value = eval( obj, x, y, ~, ny )
+    function value = eval( obj, x, y, nx, ~ )
       xy = x - y;
       norm = sqrt( xy.^2 * [ 1; 1; 1 ] );
-      dot = xy * ny';
+      dot = -xy * nx';
       if obj.d > 0
         value = ...
           - dnG_anti_tau_anti_t( obj, norm, dot, ( obj.d + 1 ) * obj.ht ) ...
@@ -27,14 +27,6 @@ classdef kernel_heat_dl_2 < kernel & matlab.mixin.Copyable
           + dnG_anti_tau_anti_t( obj, norm, dot, 0 ) ...
           + obj.ht * dnG_anti_tau_limit( obj, norm, dot );
       end
-    end
-    
-    function value = eval_repr( obj, x, y, ny )
-      xy = x - y;
-      norm = sqrt( xy.^2 * [ 1; 1; 1 ] );
-      dot = xy * ny';
-      value = dnG_anti_tau( obj, norm, dot, ( obj.d - 1 ) * obj.ht ) ...
-        - dnG_anti_tau( obj, norm, dot, obj.d * obj.ht );
     end
   end
   
@@ -50,14 +42,6 @@ classdef kernel_heat_dl_2 < kernel & matlab.mixin.Copyable
         res = dnG_anti_tau_anti_t_regular( obj, norm, dot, delta );
       else
         res = dnG_anti_tau_anti_t_limit( obj, norm, dot );
-      end     
-    end
-    
-    function res = dnG_anti_tau( obj, norm, dot, delta )
-      if( delta > 0 )
-        res = dnG_anti_tau_regular( obj, norm, dot, delta );
-      else
-        res = dnG_anti_tau_limit( obj, norm, dot );
       end     
     end
  
@@ -81,16 +65,7 @@ classdef kernel_heat_dl_2 < kernel & matlab.mixin.Copyable
     %%%%% Limit for delta -> 0, assuming norm > 0
     function res = dnG_anti_tau_anti_t_limit( obj, norm, dot )
         res = - dot ./ ( 8 * pi * norm * obj.alpha );  
-    end
-
-    %%%%% int dG/dn dtau      
-    %%%%% delta > 0 && norm > 0
-    function res = dnG_anti_tau_regular( obj, norm, dot, delta )
-      res = dot ./ ( 4 * pi * norm.^2 ) ...
-        .* ( erf( norm / sqrt( 4 * delta * obj.alpha ) ) ./ norm ...
-        - 1 / sqrt( pi * delta * obj.alpha ) ...
-        * exp( - norm.^2 / ( 4 * delta * obj.alpha ) ) );
-    end    
+    end   
     
     %%%%% int dG/dn dtau      
     %%%%% Limit for delta -> 0, assuming norm > 0

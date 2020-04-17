@@ -175,7 +175,7 @@ class besthea::bem::spacetime_kernel_antiderivative {
   }
 
   /**
-   * Evaluates the definite integral over the different time intervals.
+   * Evaluates the definite integral over different time intervals.
    * @param[in] xy1 First coordinate of `x - y`.
    * @param[in] xy2 Second coordinate of `x - y`.
    * @param[in] xy3 Third coordinate of `x - y`.
