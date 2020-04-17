@@ -40,6 +40,7 @@
 #include "besthea/fast_spacetime_be_space.h"
 #include "besthea/fe_space.h"
 #include "besthea/spacetime_be_identity.h"
+#include "besthea/spacetime_heat_adl_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_hs_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_initial_m0_kernel_antiderivative.h"

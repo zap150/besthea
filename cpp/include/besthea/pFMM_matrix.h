@@ -46,6 +46,7 @@
 #include "besthea/space_cluster_tree.h"
 #include "besthea/spacetime_cluster.h"
 #include "besthea/spacetime_cluster_tree.h"
+#include "besthea/spacetime_heat_adl_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_hs_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_sl_kernel_antiderivative.h"
@@ -683,7 +684,7 @@ typedef besthea::linear_algebra::pFMM_matrix<
 
 /** Typedef for the spatially adjoint double layer p1-p0 PFMM matrix */
 typedef besthea::linear_algebra::pFMM_matrix<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_adl_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >
   pFMM_matrix_heat_adjdl_p1p0;

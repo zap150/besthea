@@ -127,13 +127,23 @@ int main( int argc, char * argv[] ) {
 
   block_lower_triangular_toeplitz_matrix * K
     = new block_lower_triangular_toeplitz_matrix( );
+  ///*
   spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
   uniform_spacetime_be_assembler assembler_k(
     kernel_k, space_p0, space_p1, order_sing, order_reg );
   t.reset( "K" );
   assembler_k.assemble( *K );
   t.measure( );
+  //*/
   // K->print( );
+  /*
+  spacetime_heat_adl_kernel_antiderivative kernel_ak( cauchy_data::_alpha );
+  uniform_spacetime_be_assembler assembler_ak(
+    kernel_ak, space_p1, space_p0, order_sing, order_reg );
+  t.reset( "AK" );
+  assembler_ak.assemble( *K );
+  t.measure( );
+  */
 
   uniform_spacetime_be_identity M( space_p0, space_p1, 1 );
   t.reset( "M" );
@@ -152,9 +162,16 @@ int main( int argc, char * argv[] ) {
 
   block_vector neu;
   neu.resize( K->get_block_dim( ) );
+  ///*
   neu.resize_blocks( K->get_n_rows( ), true );
   M.apply( dir_proj, neu, false, 0.5, 0.0 );
   K->apply( dir_proj, neu, false, 1.0, 1.0 );
+  //*/
+  /*
+  neu.resize_blocks( K->get_n_columns( ), true );
+  M.apply( dir_proj, neu, false, 0.5, 0.0 );
+  K->apply( dir_proj, neu, true, 1.0, 1.0 );
+  */
 
   delete K;
 

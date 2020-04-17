@@ -103,6 +103,7 @@ int main( int argc, char * argv[] ) {
   block_lower_triangular_toeplitz_matrix * K
     = new block_lower_triangular_toeplitz_matrix( );
   spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
+  spacetime_heat_adl_kernel_antiderivative kernel_ak( cauchy_data::_alpha );
   uniform_spacetime_be_assembler assembler_k(
     kernel_k, space_p0, space_p1, order_sing, order_reg );
   t.reset( "K" );
@@ -209,7 +210,7 @@ int main( int argc, char * argv[] ) {
     pFMM_matrix_heat_adjdl_p1p0 * K_adj_pFMM = new pFMM_matrix_heat_adjdl_p1p0;
     //   tree.print( );
 
-    fast_spacetime_be_assembler fast_assembler_k_adj( kernel_k, 
+    fast_spacetime_be_assembler fast_assembler_k_adj( kernel_ak,
       space_p1_pFMM, space_p0_pFMM, order_sing, order_reg, temp_order, 
       spat_order, cauchy_data::_alpha, 1.5, false );
     t.reset( "K_adj_pFMM" );
@@ -253,7 +254,7 @@ int main( int argc, char * argv[] ) {
     pFMM_matrix_heat_adjdl_p1p0 * K_adj_pFMM = new pFMM_matrix_heat_adjdl_p1p0;
     //   tree.print( );
 
-    fast_spacetime_be_assembler fast_assembler_k_adj( kernel_k, 
+    fast_spacetime_be_assembler fast_assembler_k_adj( kernel_ak,
       space_p1_pFMM, space_p0_pFMM, order_sing, order_reg, temp_order, 
       spat_order, cauchy_data::_alpha, 1.5, false );
     t.reset( "K_adj_pFMM" );
