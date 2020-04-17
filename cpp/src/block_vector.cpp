@@ -102,3 +102,83 @@ void besthea::linear_algebra::block_vector::copy_to_vector(
     _data[ i ].copy_to_raw( data.data( ) + i * _size );
   }
 }
+
+template<>
+void besthea::linear_algebra::block_vector::get_local_part<
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >(
+  besthea::mesh::spacetime_cluster * cluster,
+  besthea::linear_algebra::vector & local_vector ) const {
+  lo n_time_elements = cluster->get_time_cluster( ).get_n_elements( );
+  const std::vector< lo > & time_elements
+    = cluster->get_time_cluster( ).get_all_elements( );
+  lo n_space_elements = cluster->get_space_cluster( ).get_n_elements( );
+  const std::vector< lo > & space_elements
+    = cluster->get_space_cluster( ).get_all_elements( );
+
+  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
+    for ( lo i_space = 0; i_space < n_space_elements; ++i_space ) {
+      local_vector[ i_time * n_space_elements + i_space ]
+        = this->get( time_elements[ i_time ], space_elements[ i_space ] );
+    }
+  }
+}
+
+template<>
+void besthea::linear_algebra::block_vector::get_local_part<
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >(
+  besthea::mesh::spacetime_cluster * cluster,
+  besthea::linear_algebra::vector & local_vector ) const {
+  lo n_time_elements = cluster->get_time_cluster( ).get_n_elements( );
+  const std::vector< lo > & time_elements
+    = cluster->get_time_cluster( ).get_all_elements( );
+  lo n_space_nodes = cluster->get_space_cluster( ).get_n_nodes( );
+  const std::vector< lo > & local_2_global_nodes
+    = cluster->get_space_cluster( ).get_local_2_global_nodes( );
+
+  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
+    for ( lo i_space = 0; i_space < n_space_nodes; ++i_space ) {
+      local_vector[ i_time * n_space_nodes + i_space ]
+        = this->get( time_elements[ i_time ], local_2_global_nodes[ i_space ] );
+    }
+  }
+}
+
+template<>
+void besthea::linear_algebra::block_vector::add_local_part<
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >(
+  besthea::mesh::spacetime_cluster * cluster,
+  const besthea::linear_algebra::vector & local_vector ) {
+  lo n_time_elements = cluster->get_time_cluster( ).get_n_elements( );
+  const std::vector< lo > & time_elements
+    = cluster->get_time_cluster( ).get_all_elements( );
+  lo n_space_elements = cluster->get_space_cluster( ).get_n_elements( );
+  const std::vector< lo > & space_elements
+    = cluster->get_space_cluster( ).get_all_elements( );
+
+  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
+    for ( lo i_space = 0; i_space < n_space_elements; ++i_space ) {
+      this->add( time_elements[ i_time ], space_elements[ i_space ],
+        local_vector[ i_time * n_space_elements + i_space ] );
+    }
+  }
+}
+
+template<>
+void besthea::linear_algebra::block_vector::add_local_part<
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >(
+  besthea::mesh::spacetime_cluster * cluster,
+  const besthea::linear_algebra::vector & local_vector ) {
+  lo n_time_elements = cluster->get_time_cluster( ).get_n_elements( );
+  const std::vector< lo > & time_elements
+    = cluster->get_time_cluster( ).get_all_elements( );
+  lo n_space_nodes = cluster->get_space_cluster( ).get_n_nodes( );
+  const std::vector< lo > & local_2_global_nodes
+    = cluster->get_space_cluster( ).get_local_2_global_nodes( );
+
+  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
+    for ( lo i_space = 0; i_space < n_space_nodes; ++i_space ) {
+      this->add( time_elements[ i_time ], local_2_global_nodes[ i_space ],
+        local_vector[ i_time * n_space_nodes + i_space ] );
+    }
+  }
+}

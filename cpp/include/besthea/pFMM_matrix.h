@@ -40,6 +40,7 @@
 #include "besthea/fast_spacetime_be_space.h"
 #include "besthea/full_matrix.h"
 #include "besthea/lagrange_interpolant.h"
+#include "besthea/local_vector_routines.h"
 #include "besthea/matrix.h"
 #include "besthea/settings.h"
 #include "besthea/space_cluster_tree.h"
@@ -106,8 +107,15 @@ class besthea::linear_algebra::pFMM_matrix
    * Destructor
    */
   virtual ~pFMM_matrix( ) {
+    #ifdef NEARFIELD_CLUSTERWISE
+    for ( auto it = _clusterwise_nearfield_matrices.begin( );
+          it != _clusterwise_nearfield_matrices.end( ); ++it ) {
+      for ( auto it_in = ( *it ).begin( ); it_in != ( *it ).end( ); ++it_in ) {
+        delete *it_in;
+      }
+    }
+    #else
     lo matrix_idx = 0;
-
     for ( auto it = _nearfield_matrices.begin( );
           it != _nearfield_matrices.end( ); ++it ) {
       const std::pair< lo, lo > & indices
@@ -124,6 +132,7 @@ class besthea::linear_algebra::pFMM_matrix
       }
       matrix_idx++;
     }
+    #endif
 
     for ( auto it = _farfield_matrices.begin( );
           it != _farfield_matrices.end( ); ++it ) {
@@ -149,12 +158,11 @@ class besthea::linear_algebra::pFMM_matrix
   //    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
 
   /*!
-   * Sets the underlying spacetime tree.
+   * Sets the underlying spacetime tree. The size of the clusterwise nearfield
+   * matrix container is set appropriately.
    * @param[in] spacetime_tree The tree.
    */
-  void set_tree( spacetime_tree_type * spacetime_tree ) {
-    _spacetime_tree = spacetime_tree;
-  }
+  void set_tree( spacetime_tree_type * spacetime_tree );
 
   /*!
    * Setter for the heat conductivity parameter.
@@ -192,6 +200,15 @@ class besthea::linear_algebra::pFMM_matrix
    */
   full_matrix_type * create_nearfield_matrix(
     lo test_idx, lo trial_idx, lo n_duplications = 1 );
+
+  /*!
+   * Creates a nearfield matrix for two clusters
+   * @param[in] leaf_index  Index of the target leaf cluster.
+   * @param[in] source_index  Index of the source cluster in the nearfield of 
+   *                          the target cluster.  
+   */
+  full_matrix_type * create_clusterwise_nearfield_matrix( 
+    lo leaf_index, lo source_index );
 
   /*!
    * Allocates sparse matrix of given farfield nonapproximated block and
@@ -311,7 +328,7 @@ class besthea::linear_algebra::pFMM_matrix
 
   /*!
    * @brief Executes s2m operations for all leaves of the spacetime cluster
-   * and a given vector x for spatial basis functions in p1
+   * and a given vector x for spatial basis functions in p1.
    * @param[in] x Vector for multiplication.
    * @note The results are stored in the matrices \p _moment_contribution in the
    * respective spacetime clusters.
@@ -320,10 +337,20 @@ class besthea::linear_algebra::pFMM_matrix
    * \ref besthea::bem::fast_spacetime_be_assembler.
    */
   void apply_s2m_operations_p1( block_vector_type const & x ) const;
-  //   template< class basis_type >
-  //   void apply_s2m_operations(
-  //     besthea::bem::fast_spacetime_be_space < basis_type > be_space,
-  //     block_vector_type const & x ) const;
+  
+    /*!
+   * @brief Executes s2m operations for all leaves of the spacetime cluster
+   * and a given vector x for spatial basis functions in p1.
+   * The integrals in space used for the s2m operations include the normal 
+   * derivatives of the Chebyshev polynomials. 
+   * @param[in] x Vector for multiplication.
+   * @note The results are stored in the matrices \p _moment_contribution in the
+   * respective spacetime clusters.
+   * @note The method uses matrices of integrals over polynomials which are
+   * computed in
+   * \ref besthea::bem::fast_spacetime_be_assembler.
+   */
+  void apply_s2m_operations_p1_normal_drv( block_vector_type const & x ) const;
 
   /*!
    * @brief Executes s2m operations for all leaves of the spacetime cluster
@@ -447,9 +474,9 @@ class besthea::linear_algebra::pFMM_matrix
    */
   void apply_l2t_operations_p0( block_vector_type & y ) const;
 
-  /*!
+   /*!
    * @brief Executes l2t operations for all leaves of the spacetime cluster
-   * and adds the results to a vector y for spatial basis functions in p1.
+   * and adds the results to a vector y for spatial basis functions in p1. 
    * @param[in,out] y Vector to which the results are added.
    * @note For the computations the matrices \p _local_contribution in the
    * respective spacetime clusters are used.
@@ -457,7 +484,21 @@ class besthea::linear_algebra::pFMM_matrix
    * computed in
    * \ref besthea::bem::fast_spacetime_be_assembler.
    */
-  void apply_l2t_operations_p1( block_vector_type & y ) const;
+  void apply_l2t_operations_p1( block_vector_type & y ) const; 
+
+  /*!
+   * @brief Executes l2t operations for all leaves of the spacetime cluster
+   * and adds the results to a vector y for spatial basis functions in p1.
+   * The integrals in space used for the l2t operations include the normal 
+   * derivatives of the Chebyshev polynomials. 
+   * @param[in,out] y Vector to which the results are added.
+   * @note For the computations the matrices \p _local_contribution in the
+   * respective spacetime clusters are used.
+   * @note The method uses matrices of integrals over polynomials which are
+   * computed in
+   * \ref besthea::bem::fast_spacetime_be_assembler.
+   */
+  void apply_l2t_operations_p1_normal_drv( block_vector_type & y ) const;
 
   /*!
    * @brief Executes l2t operations for all leaves of the spacetime cluster
@@ -551,6 +592,12 @@ class besthea::linear_algebra::pFMM_matrix
   std::vector< std::pair< lo, lo > >
     _nearfield_block_map;  //!< mapping from block index to pair of matching
                            //!< temporal clusters
+
+  std::vector< std::vector< full_matrix_type * > > 
+    _clusterwise_nearfield_matrices;  //!< nearfield matrices for all the space-
+                                      //!< time leaf clusters and their
+                                      //!< nearfield clusters.
+
   std::vector< full_matrix_type * >
     _farfield_matrices;  //!< nonapproximated temporal farfield blocks
   std::vector< std::pair< lo, lo > >
@@ -633,6 +680,13 @@ typedef besthea::linear_algebra::pFMM_matrix<
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >
   pFMM_matrix_heat_dl_p0p1;
+
+/** Typedef for the spatially adjoint double layer p1-p0 PFMM matrix */
+typedef besthea::linear_algebra::pFMM_matrix<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >
+  pFMM_matrix_heat_adjdl_p1p0;
 
 /** Typedef for the hypersingular p1-p1 PFMM matrix */
 typedef besthea::linear_algebra::pFMM_matrix<

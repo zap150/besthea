@@ -28,6 +28,8 @@
 
 #include "besthea/besthea.h"
 
+#define USE_P0_BASIS
+
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
@@ -47,14 +49,14 @@ struct cauchy_data {
     return value;
   }
 
-  static constexpr sc _alpha{ 0.5 };
+  static constexpr sc _alpha{ 4 };
   static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
 };
 
 int main( int argc, char * argv[] ) {
   lo test_case = 3;
   std::string file = "./mesh_files/cube_12.txt";
-  int refine = 2;
+  int refine = 1;
   lo n_timesteps = 8;
   sc end_time = 1.0;
   std::string grid_file = "./mesh_files/grid_xy.txt";
@@ -86,25 +88,31 @@ int main( int argc, char * argv[] ) {
   spacetime_mesh.refine( refine, 1 );
   spacetime_mesh.print_info( );
 
-  uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
-
   lo order_sing = 4;
   lo order_reg = 4;
+
+   block_vector dir_proj;
 
   // V without approximation
   block_lower_triangular_toeplitz_matrix * V
     = new block_lower_triangular_toeplitz_matrix( );
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
+
+uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
+#ifdef USE_P0_BASIS
+  space_p0.L2_projection( cauchy_data::dirichlet, dir_proj );
+  besthea::bem::uniform_spacetime_be_identity M( space_p0, space_p0 );
   besthea::bem::uniform_spacetime_be_assembler assembler_v(
     kernel_v, space_p0, space_p0, order_sing, order_reg );
+#else
+  uniform_spacetime_be_space< basis_tri_p1 > space_p1( spacetime_mesh );
+  space_p1.L2_projection( cauchy_data::dirichlet, dir_proj );
+  besthea::bem::uniform_spacetime_be_identity M( space_p1, space_p1 );
+  besthea::bem::uniform_spacetime_be_assembler assembler_v(
+    kernel_v, space_p1, space_p1, order_sing, order_reg );
+#endif
 
   assembler_v.assemble( *V );
-
-  block_vector dir_proj;
-  //   uniform_spacetime_be_space< basis_tri_p1 > space_p1( spacetime_mesh );
-  space_p0.L2_projection( cauchy_data::dirichlet, dir_proj );
-
-  besthea::bem::uniform_spacetime_be_identity M( space_p0, space_p0 );
   M.assemble( );
   block_vector M_dir_proj;
 
@@ -117,34 +125,41 @@ int main( int argc, char * argv[] ) {
 
   // V approximated by pFMM
   // sc st_coeff = 4.0;
-  sc st_coeff = 1.0;
-  lo temp_order = 8;
-  lo spat_order = 8;
+  sc st_coeff = 4.0;
+  lo temp_order = 6;
+  lo spat_order = 6;
   spacetime_cluster_tree tree( spacetime_mesh, 5, 2, 10, st_coeff );
-  //   tree.print( );
+  
+  // tree.print( );
+#ifdef USE_P0_BASIS
   fast_spacetime_be_space< basis_tri_p0 > space_p0_pFMM( tree );
   pFMM_matrix_heat_sl_p0p0 * V_pFMM = new pFMM_matrix_heat_sl_p0p0;
-
   fast_spacetime_be_assembler fast_assembler_v( kernel_v, space_p0_pFMM,
     space_p0_pFMM, order_sing, order_reg, temp_order, spat_order,
     cauchy_data::_alpha, 1.5, false );
-  // t.reset( "V" );
+#else
+  fast_spacetime_be_space< basis_tri_p1 > space_p1_pFMM( tree ); 
+  pFMM_matrix_heat_sl_p1p1 * V_pFMM = new pFMM_matrix_heat_sl_p1p1;
+  fast_spacetime_be_assembler fast_assembler_v( kernel_v, space_p1_pFMM,
+    space_p1_pFMM, order_sing, order_reg, temp_order, spat_order,
+    cauchy_data::_alpha, 1.5, false );
+  #endif
+
   fast_assembler_v.assemble( *V_pFMM );
-  // t.measure( );
 
   // t.reset( "Solving the system" );
 
   if ( test_case == 1 ) {
     //   lo block_id = n_blocks - 1 - 2;
     lo block_id = 0;
-    lo block_evaluation_id = 4;
+    lo block_evaluation_id = 0;
     lo toeplitz_id = block_evaluation_id - block_id;
     //   lo block_evaluation_id = n_blocks - 1;
 
     full_matrix & V_block_loc = V->get_block( toeplitz_id );
     vector y_loc( size_of_block );
     vector x_loc_0( size_of_block );
-    x_loc_0( 0 ) = 1.0;
+    x_loc_0( 9 ) = 1.0;
     //   x_loc_0.fill( 1.0 );
     V_block_loc.apply( x_loc_0, y_loc );
 
@@ -214,8 +229,15 @@ int main( int argc, char * argv[] ) {
 
       block_vector repr;
       block_vector repr_pFMM;
+    #ifdef USE_P0_BASIS
       besthea::bem::uniform_spacetime_be_evaluator evaluator_v(
         kernel_v, space_p0 );
+    #else
+      besthea::bem::uniform_spacetime_be_evaluator evaluator_v(
+        kernel_v, space_p1 );
+    #endif
+      // besthea::bem::uniform_spacetime_be_evaluator evaluator_v(
+      //   kernel_v, space_p1 ); 
       evaluator_v.evaluate( grid_space_mesh.get_nodes( ), dens, repr );
       evaluator_v.evaluate(
         grid_space_mesh.get_nodes( ), dens_pFMM, repr_pFMM );
@@ -231,20 +253,19 @@ int main( int argc, char * argv[] ) {
                 << grid_space_p1.l2_relative_error( sol_interp, repr_pFMM )
                 << std::endl;
 
-      // // print the result in the Ensight format
-      // std::vector< std::string > grid_node_labels{
-      // "Temperature_interpolation",
-      //   "Temperature_result" };
-      // std::vector< block_vector * > grid_node_data{ &sol_interp, &repr };
-      // std::string ensight_grid_dir = "ensight_grid";
-      // std::filesystem::create_directory( ensight_grid_dir );
-      // grid_spacetime_mesh.print_ensight_case(
-      //   ensight_grid_dir, &grid_node_labels );
-      // grid_spacetime_mesh.print_ensight_geometry( ensight_grid_dir );
-      // grid_spacetime_mesh.print_ensight_datafiles(
-      //   ensight_grid_dir, &grid_node_labels, &grid_node_data, nullptr,
-      //   nullptr );
-      //   }
+      // print the result in the Ensight format
+      std::vector< std::string > grid_node_labels{
+      "Temperature_interpolation",
+        "Temperature_result" };
+      std::vector< block_vector * > grid_node_data{ &sol_interp, &repr };
+      std::string ensight_grid_dir = "ensight_grid";
+      std::filesystem::create_directory( ensight_grid_dir );
+      grid_spacetime_mesh.print_ensight_case(
+        ensight_grid_dir, &grid_node_labels );
+      grid_spacetime_mesh.print_ensight_geometry( ensight_grid_dir );
+      grid_spacetime_mesh.print_ensight_datafiles(
+        ensight_grid_dir, &grid_node_labels, &grid_node_data, nullptr,
+        nullptr );
     }
   }
 }

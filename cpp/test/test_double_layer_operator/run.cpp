@@ -74,7 +74,8 @@ struct cauchy_data {
 
 int main( int argc, char * argv[] ) {
   std::string file = "./mesh_files/cube_12.txt";
-  lo test_case = 1;
+  lo test_case = 3;
+  std::cout << "test case is " << test_case << std::endl;
   //   int refine = 1;
   int refine = 1;
   lo n_timesteps = 8;
@@ -114,7 +115,7 @@ int main( int argc, char * argv[] ) {
 
   //   sc st_coeff = 4.0;
   //   spacetime_cluster_tree tree( spacetime_mesh, 5, 2, 10, st_coeff );
-  sc st_coeff = 1.0;
+  sc st_coeff = 4.0;
   spacetime_cluster_tree tree( spacetime_mesh, 5, 2, 10, st_coeff );
 
   fast_spacetime_be_space< basis_tri_p0 > space_p0_pFMM( tree );
@@ -133,34 +134,20 @@ int main( int argc, char * argv[] ) {
     test_case = std::atoi( argv[ 3 ] );
   }
 
-  pFMM_matrix_heat_dl_p0p1 * K_pFMM = new pFMM_matrix_heat_dl_p0p1;
-  //   tree.print( );
-
-  fast_spacetime_be_assembler fast_assembler_k( kernel_k, space_p0_pFMM,
-    space_p1_pFMM, order_sing, order_reg, temp_order, spat_order,
-    cauchy_data::_alpha, 1.5, false );
-  t.reset( "K_pFMM" );
-  fast_assembler_k.assemble( *K_pFMM );
-  t.measure( );
-
-  //   block_vector applied_pFMM ( n_blocks, rows_of_block, true );
-  //
-  //   K_pFMM->apply( dir_proj, applied_pFMM );
-  //   std::cout << "applied K_pFMM" << std::endl;
-  //
-  //   std::cout << "error: "
-  //             << space_p0.l2_relative_error( applied_std, applied_pFMM )
-  //             << std::endl;
-  //
-  //   std::cout << "standard " << std::endl;
-  //   applied_std.get_block( 0 ).print_h( );
-  //   std::cout << "pFMM " << std::endl;
-  //   applied_pFMM.get_block( 0 ).print_h( );
-
   if ( test_case == 1 ) {
+    pFMM_matrix_heat_dl_p0p1 * K_pFMM = new pFMM_matrix_heat_dl_p0p1;
+    //   tree.print( );
+
+    fast_spacetime_be_assembler fast_assembler_k( kernel_k, space_p0_pFMM,
+      space_p1_pFMM, order_sing, order_reg, temp_order, spat_order,
+      cauchy_data::_alpha, 1.5, false );
+    t.reset( "K_pFMM" );
+    fast_assembler_k.assemble( *K_pFMM );
+    t.measure( );
+
     lo entry_id = 0;
     lo block_id = 0;
-    lo block_evaluation_id = 2;
+    lo block_evaluation_id = 0;
     vector x_loc_0( cols_of_block );
     x_loc_0( entry_id ) = 1.0;
     block_vector x_block_vec( n_blocks, cols_of_block, true );
@@ -189,7 +176,18 @@ int main( int argc, char * argv[] ) {
     subvec_pFMM.add( subvec_toeplitz, -1.0 );
     std::cout << subvec_pFMM.norm( ) << ", rel. "
               << subvec_pFMM.norm( ) / subvec_toeplitz.norm( ) << std::endl;
+    delete K_pFMM;
   } else if ( test_case == 2 ) {
+    pFMM_matrix_heat_dl_p0p1 * K_pFMM = new pFMM_matrix_heat_dl_p0p1;
+    //   tree.print( );
+
+    fast_spacetime_be_assembler fast_assembler_k( kernel_k, space_p0_pFMM,
+      space_p1_pFMM, order_sing, order_reg, temp_order, spat_order,
+      cauchy_data::_alpha, 1.5, false );
+    t.reset( "K_pFMM" );
+    fast_assembler_k.assemble( *K_pFMM );
+    t.measure( );
+
     block_vector dir_proj;
     space_p1.L2_projection( cauchy_data::dirichlet, dir_proj );
     // multiplicate dir_proj with Toeplitz matrix K
@@ -206,9 +204,20 @@ int main( int argc, char * argv[] ) {
           / applied_toeplitz.get_block( i ).norm( )
                 << std::endl;
     }
+    delete K_pFMM;
   } else if ( test_case == 3 ) {
+    pFMM_matrix_heat_adjdl_p1p0 * K_adj_pFMM = new pFMM_matrix_heat_adjdl_p1p0;
+    //   tree.print( );
+
+    fast_spacetime_be_assembler fast_assembler_k_adj( kernel_k, 
+      space_p1_pFMM, space_p0_pFMM, order_sing, order_reg, temp_order, 
+      spat_order, cauchy_data::_alpha, 1.5, false );
+    t.reset( "K_adj_pFMM" );
+    fast_assembler_k_adj.assemble( *K_adj_pFMM );
+    t.measure( );
+
     lo block_id = 0;
-    lo block_evaluation_id = 2;
+    lo block_evaluation_id = 0;
     lo entry_id = 0;
     vector x_loc_0( rows_of_block );
     x_loc_0( entry_id ) = 1.0;
@@ -219,7 +228,7 @@ int main( int argc, char * argv[] ) {
     K->apply( x_block_vec, applied_toeplitz, true );
     // multiplicate x_block_vec with pFMM matrix K
     block_vector applied_pFMM( n_blocks, cols_of_block, true );
-    K_pFMM->apply( x_block_vec, applied_pFMM, true );
+    K_adj_pFMM->apply( x_block_vec, applied_pFMM );
 
     std::cout << "resulting subblock pFMM multiplication" << std::endl;
     std::cout << "source id " << block_id << std::endl;
@@ -238,7 +247,19 @@ int main( int argc, char * argv[] ) {
     subvec_pFMM.add( subvec_toeplitz, -1.0 );
     std::cout << subvec_pFMM.norm( ) << ", rel. "
               << subvec_pFMM.norm( ) / subvec_toeplitz.norm( ) << std::endl;
+
+    delete K_adj_pFMM;
   } else if ( test_case == 4 ) {
+    pFMM_matrix_heat_adjdl_p1p0 * K_adj_pFMM = new pFMM_matrix_heat_adjdl_p1p0;
+    //   tree.print( );
+
+    fast_spacetime_be_assembler fast_assembler_k_adj( kernel_k, 
+      space_p1_pFMM, space_p0_pFMM, order_sing, order_reg, temp_order, 
+      spat_order, cauchy_data::_alpha, 1.5, false );
+    t.reset( "K_adj_pFMM" );
+    fast_assembler_k_adj.assemble( *K_adj_pFMM );
+    t.measure( );
+
     block_vector neu_proj;
     space_p0.L2_projection( cauchy_data::neumann, neu_proj );
     // multiplicate neu_proj with spatially adjoint Toeplitz matrix K
@@ -246,7 +267,7 @@ int main( int argc, char * argv[] ) {
     K->apply( neu_proj, applied_toeplitz, true );
     // multiplicate neu_proj with spatially adjoint pFMM matrix K
     block_vector applied_pFMM( n_blocks, cols_of_block, true );
-    K_pFMM->apply( neu_proj, applied_pFMM, true );
+    K_adj_pFMM->apply( neu_proj, applied_pFMM);
     std::cout << "error timewise" << std::endl;
     for ( lo i = 0; i < applied_toeplitz.get_block_size( ); ++i ) {
       applied_pFMM.get_block( i ).add( applied_toeplitz.get_block( i ), -1.0 );
@@ -255,8 +276,7 @@ int main( int argc, char * argv[] ) {
           / applied_toeplitz.get_block( i ).norm( )
                 << std::endl;
     }
+    delete K_adj_pFMM;
   }
   delete K;
-
-  delete K_pFMM;
 }

@@ -26,25 +26,46 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file mesh_structures.h
- * @brief
- */
+#include "besthea/besthea.h"
 
-#ifndef INCLUDE_BESTHEA_MESH_STRUCTURES_H_
-#define INCLUDE_BESTHEA_MESH_STRUCTURES_H_
+#include <cstdlib>
+#include <filesystem>
+#include <iostream>
 
-#include "besthea/space_cluster.h"
-#include "besthea/space_cluster_tree.h"
-#include "besthea/spacetime_cluster.h"
-#include "besthea/spacetime_cluster_tree.h"
-#include "besthea/spacetime_slice.h"
-#include "besthea/spacetime_tensor_mesh.h"
-#include "besthea/temporal_mesh.h"
-#include "besthea/tetrahedral_spacetime_mesh.h"
-#include "besthea/tetrahedral_volume_mesh.h"
-#include "besthea/time_cluster.h"
-#include "besthea/time_cluster_tree.h"
-#include "besthea/triangular_surface_mesh.h"
-#include "besthea/uniform_spacetime_tensor_mesh.h"
+using namespace besthea::mesh;
+using namespace besthea::linear_algebra;
+using namespace besthea::bem;
+using namespace besthea::tools;
 
-#endif /* INCLUDE_BESTHEA_MESH_STRUCTURES_H_ */
+struct cauchy_data {
+  static sc dirichlet( sc x1, sc x2, sc x3, const coordinates< 3 > & n, sc t ) {
+    sc norm2 = ( x1 - _y[ 0 ] ) * ( x1 - _y[ 0 ] )
+      + ( x2 - _y[ 1 ] ) * ( x2 - _y[ 1 ] )
+      + ( x3 - _y[ 2 ] ) * ( x3 - _y[ 2 ] );
+    sc value = std::pow( 4.0 * M_PI * _alpha * t, -1.5 )
+      * std::exp( -norm2 / ( 4.0 * _alpha * t ) );
+    return value;
+  }
+
+  static constexpr sc _alpha{ 0.5 };
+  static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
+};
+
+int main( int argc, char * argv[] ) {
+  lo test_case = 3;
+  std::string file = "./mesh_files/cube_12_st.txt";
+  int refine = 1;
+  lo n_timesteps = 8;
+
+  if ( argc > 1 ) {
+    file.assign( argv[ 1 ] );
+  }
+  if ( argc > 2 ) {
+    refine = std::atoi( argv[ 4 ] );
+  }
+
+  tetrahedral_spacetime_mesh spacetime_mesh( file );
+  spacetime_mesh.print_info( );
+  spacetime_mesh.refine( 1 );
+  spacetime_mesh.print_info( );
+}

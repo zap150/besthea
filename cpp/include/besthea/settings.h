@@ -47,6 +47,9 @@
 #define M_PI 3.14159265358979323846  //!< pi
 #endif
 
+// pragma to switch between cluster- and timestep-wise nearfield computation
+#define NEARFIELD_CLUSTERWISE //!< Pragma to control nearfield computation
+
 namespace besthea {
   using scalar = double;  //!< Floating point type.
   // using index = std::size_t; //!< Indexing type.
