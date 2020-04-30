@@ -195,8 +195,8 @@ class besthea::linear_algebra::block_linear_operator {
 
  protected:
   lo _block_dim;   //!< Number of blocks in a row (column).
-  lo _dim_domain;  //!< domain dimension
-  lo _dim_range;   //!< range dimension
+  lo _dim_domain;  //!< domain dimension (number of rows in a block)
+  lo _dim_range;   //!< range dimension (number of columns in a block)
 };
 
 #endif /* INCLUDE_BESTHEA_BLOCK_LINEAR_OPERATOR_H_ */
