@@ -121,10 +121,92 @@ Output:
 \subsection{Data format for distributed meshes }
 missing
 
-\subsection{Data format for cluster trees}
-\paragraph{Basic idea:} Fix the order of the tree traversal and store the information which children are created. In binary format, the result is an appropriate sequence of zeros and ones. From this information, we can recreate the tree. The order of the traversal should match the order of the tree generation.
-  
-Some enhancement of this idea is needed to allow initial levels which have more clusters. This is necessary to describe certain space-time cluster trees (or rather space-time cluster forests) with initial spatial decompositions (such forests have to be considered if the spatial extent of a space-time domain is large compared to its temporal extent).
+\subsection{Data format for binary tree structures}
+We need a data format to represent the structure of the initial time cluster tree created by the mesh generator which can be written to and read from a file. The data format described below is used for this purpose. It is suitable to represent binary trees and could be generalized to handle space-time cluster trees as well, if necessary in the future. 
+
+The structure of the tree is represented as a vector of characters. For every non-leaf cluster there are two characters in the vector which indicate the status of its children, which can be:
+\begin{itemize}
+  \item 0, if the cluster does not exist in the tree,
+  \item 1, if the cluster exists and is not a leaf,
+  \item 2, if the cluster exists and is a leaf.
+\end{itemize}
+The characters are sorted according to a fixed order of tree traversal that is defined as follows: We start at the root and recursively visit all clusters by traversing first the left subtree and then the right subtree of the root. 
+
+The following algorithms can be used to create a vector representing the structure of a given time cluster tree in the above data format, or reconstruct the structure from a given vector. 
+\begin{algorithm}
+  \caption{Create the structural vector from a given time cluster tree}
+  \begin{algorithmic}[1]
+    \Statex \textbf{input}: time cluster tree $\mathcal{T}$
+    \Statex \textbf{output}: structural vector \texttt{treevec} of $\mathcal{T}$
+    \State Create empty vector \texttt{treevec};
+    \If{$\treeroot(\mathcal{T})$ is a leaf}
+      \State \texttt{treevec.push\_back(2)};
+    \Else
+      \State \texttt{treevec.push\_back(1)};
+      \State \Call{createVectorFromTree}{$\treeroot(\mathcal{T})$, \texttt{treevec}};
+    \EndIf
+    \Statex
+    \Function{createVectorFromTree}{\texttt{I}, \texttt{treevec}}
+      \State \texttt{left\_child\_status =} \Call{determineStatus}{$\leftchild(\texttt{I})$};
+      \Statex \Comment{either non-existent (0), or non-leaf (1), or leaf (2)}
+      \State \texttt{treevec.push\_back}(\texttt{left\_child\_status});
+      \State \texttt{right\_child\_status =}  \Call{determineStatus}{$\rightchild(\texttt{I})$};
+      \State \texttt{treevec.push\_back}(\texttt{right\_child\_status});
+      \If{\texttt{left\_child\_status == 1}}
+        \State \Call{createVectorFromTree}{$\leftchild(\texttt{I})$, \texttt{treevec}};
+      \EndIf
+      \If{\texttt{right\_child\_status == 1}}
+        \State \Call{createVectorFromTree}{$\rightchild(\texttt{I})$, \texttt{treevec}};
+      \EndIf
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+  \caption{Create the time cluster tree from a given structural vector} \label{alg:vector_to_tree}
+  \begin{algorithmic}[1]
+    \State \textbf{input}: structural vector \texttt{treevec}
+    \State \textbf{output}: time cluster tree $\mathcal{T}$
+    \State Create an empty tree $\mathcal{T}$;
+    \If{\texttt{treevec[0] != 0 }}
+      \State Create $\texttt{root}$ and add it to $\mathcal{T}$;
+      \If{\texttt{treevecv[1] == 1}}
+        \State \texttt{position = 1};
+        \State \Call{createTreeFromVector}{\texttt{root}, \texttt{treevec}, \texttt{position}, $\mathcal{T}$};
+      \EndIf
+    \EndIf
+    \Statex
+    \Function{createTreeFromVector}{\texttt{I}, \texttt{treevec}, \texttt{position}, $\mathcal{T}$}
+      \State \texttt{left\_child\_status} = \texttt{treevec[position]};
+      \State \texttt{++position};
+      \State \texttt{right\_child\_status} = \texttt{treevec[position]};
+      \State \texttt{++position};
+      \If{\texttt{left\_child\_status > 0}}
+        \State Create \texttt{l\_child} and add it to $\mathcal{T}$ as child of \texttt{I};
+      \EndIf
+      \If{\texttt{right\_child\_status > 0}}
+        \State Create \texttt{r\_child} and add it to $\mathcal{T}$ as child of \texttt{I};
+      \EndIf
+      \If{\texttt{left\_child\_status == 1}}
+        \State \Call{createTreeFromVector}{\texttt{l\_child}, \texttt{treevec}, \texttt{position}, $\mathcal{T}$};
+      \EndIf
+      \If{\texttt{left\_child\_status == 1}}
+        \State \Call{createTreeFromVector}{\texttt{r\_child}, \texttt{treevec}, \texttt{position}, $\mathcal{T}$};
+      \EndIf
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+\newpage
+Some remarks:
+\begin{itemize}
+  \item In Alg.~\ref{alg:vector_to_tree} only the structure of a cluster tree is reconstructed without additional geometrical information, since the vector in our tree format does not include such information. However, in case of a uniform time cluster tree we only need the initial time interval and a vector of the level-wise padding to also reconstruct the cluster extensions.   
+  \item Zeros mark gaps in the tree. In a full binary tree there are no zeros and the number of characters in the vector corresponds to the number $n_\mathrm{c}$ of clusters in the tree. In general, the number of stored characters is bounded by $2\,n_\mathrm{c}-1$.
+  \item In \texttt{C++} the size of a character is typically one byte. Also the size of a bool is typically one byte, so using characters and storing the additional information that a cluster is a leaf does not increase the required storage, unless special data formats (bit fields, \texttt{vector<bool>}) are used to store bools bitwise. However, an optimization with respect to storage should not be necessary for our application.
+\end{itemize}
+
+
+
+% Some enhancement of this idea is needed to allow initial levels which have more clusters. This is necessary to describe certain space-time cluster trees (or rather space-time cluster forests) with initial spatial decompositions (such forests have to be considered if the spatial extent of a space-time domain is large compared to its temporal extent).
 
 \subsection{Data format for the cluster assignment}
 
@@ -602,6 +684,7 @@ In case of a uniform space-time cluster tree many M2M and L2L operators coincide
   \item The downward pass (or evaluation of the local contributions) could be handled exclusively by the clusters in the L--list (in the current version it is included in both the M2L--list and L--list). If a downward pass cannot be directly executed (because the M2L operations have not yet been completed), the cluster is not removed from the L--list. After the M2L operations for the cluster are executed, it is invoked again in the L--list, and the downward pass can be completed. Only then the cluster is removed from the L--list.
   \item A decomposition of the nearfield operations into smaller fractions could be useful to avoid that a process is kept busy with nearfield operations while other operations might be executed.
   \item In the current algorithm operations are always grouped with respect to the time clusters and executed in one piece. However, this granularity could be too coarse. For example, when an M2L operation is started for a time cluster, all M2L operations for the associated space-time clusters are executed. In the meantime, moments from other processes could be received that would allow to continue the computations in the upward path, which has a higher priority. A finer granularity could be realized by executing only a certain amount of operations per time cluster and thus checking more frequently for received data. It has to be evaluated, if such a finer granularity is necessary.
+  \item Instead of filling the 4 execution list completely at the beginning of the FMM operation, one could update these lists also on the fly: At the beginning one adds only clusters whose operations are executable. When the operations corresponding to a cluster are completed new clusters are added to the list, whose dependencies are now satisfied. With such a strategy we avoid to traverse lists which contain many clusters with unresolved dependencies. However, when adding clusters to the lists we need to decide on the fly on their positions, which makes it harder to control the order of execution. However, we could establish certain orders of execution in advance, and sort the new clusters into the lists according to these orders.
 \end{itemize}
 
 \subsection{Possibilities to improve the load balance}
