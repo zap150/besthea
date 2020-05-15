@@ -26,7 +26,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <besthea/spacetime_cluster_tree.h>
+#include "besthea/spacetime_cluster_tree.h"
 
 #include <algorithm>
 #include <cmath>
