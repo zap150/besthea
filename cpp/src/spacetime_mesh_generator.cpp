@@ -36,4 +36,5 @@ besthea::mesh::spacetime_mesh_generator::spacetime_mesh_generator(
 
 besthea::mesh::spacetime_mesh_generator::spacetime_mesh_generator(
   triangular_surface_mesh & space_mesh, sc start_time, sc end_time ) {
+  _space_mesh = &space_mesh;
 }
