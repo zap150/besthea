@@ -100,7 +100,7 @@ int main( int argc, char * argv[] ) {
   time_tree->print_tree_structure( tree_vector_file );
   time_tree->print( );
 
-  std::vector< char > tree_vector = time_tree->load_tree_structure( 
+  std::vector< char > tree_vector = read_vector_from_bin_file< char >( 
     tree_vector_file );
 
   std::cout << "read tree structure from file: " << std::endl;
@@ -108,6 +108,7 @@ int main( int argc, char * argv[] ) {
     std::cout << ( int ) tree_vector[ i ] << std::endl;
   }
   std::cout << "RECONSTRUCTED TREE" << std::endl;
-  tree_structure skeleton( tree_vector_file );
+  tree_structure skeleton( tree_vector_file, time_mesh.get_start( ),
+    time_mesh.get_end( ) );
   skeleton.print( );
 }

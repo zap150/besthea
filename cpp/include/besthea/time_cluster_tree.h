@@ -33,6 +33,7 @@
 #ifndef INCLUDE_BESTHEA_TIME_CLUSTER_TREE_H_
 #define INCLUDE_BESTHEA_TIME_CLUSTER_TREE_H_
 
+#include "io_routines.h"
 #include "besthea/settings.h"
 #include "besthea/temporal_mesh.h"
 #include "besthea/time_cluster.h"
@@ -59,17 +60,6 @@ class besthea::mesh::time_cluster_tree {
    *                        split in halves in the construction of the tree.
    */
   time_cluster_tree( const temporal_mesh & mesh, lo levels, lo n_min_elems );
-
-  /**
-   * Constructs a skeleton time tree by reading it from a file.
-   * @param[in] mesh Mesh to include in the tree.
-   * @param[in] filename Name of the input file containing the tree structure.
-   * @note The start and end point of the mesh are used to generate the 
-   * geometrical data of the clusters.
-   * @warning Only the structure of the tree is reconstructed. The elements of
-   * the mesh are not added to the clusters.
-   */
-  time_cluster_tree( const temporal_mesh & mesh, const std::string filename );
 
   /**
    * Destructor.
@@ -144,12 +134,6 @@ class besthea::mesh::time_cluster_tree {
   void print_tree_structure( const std::string filename ) const;
 
   /**
-   * Reads a vector corresponding to a tree structure from a binary file
-   * @param[in] filename Name of the input file
-   */
-  std::vector< char > load_tree_structure( const std::string filename ) const;
-
-  /**
    * Prints levels of the tree.
    */
   void print( ) {
@@ -196,18 +180,6 @@ class besthea::mesh::time_cluster_tree {
    */
   void tree_2_vector( const time_cluster & root,
     std::vector<char> & tree_vector ) const;
-
-  /**
-   * Recursively constructs the tree structure from a given vector.
-   * @param[in] tree_vector Contains the data needed for tree construction.
-   * @param[in,out] root  Current cluster, to which the next clusters are added.
-   * @param[in,out] position  Auxiliary variable to keep track of the current
-   *                          position in the tree_vector.
-   * \note  This method is supposed to be called by the corresponding 
-   *        constructor.
-   */
-  void vector_2_tree( const std::vector<char> & tree_vector, 
-    time_cluster & root, lou & position );
 
   /**
    * Collects all clusters without descendants and stores them in the internal

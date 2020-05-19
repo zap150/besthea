@@ -143,7 +143,7 @@ void besthea::linear_algebra::pFMM_matrix<
 //! template specialization for spatially adjoint double layer p1p0 matrix
 template<>
 void besthea::linear_algebra::pFMM_matrix<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_adl_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
   apply( const block_vector_type & x, block_vector_type & y, bool trans,
@@ -1002,7 +1002,7 @@ void besthea::linear_algebra::pFMM_matrix<
 //! Specialization for the adjoint double layer p1p0 matrix
 template<>
 void besthea::linear_algebra::pFMM_matrix<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_adl_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
   apply_s2m_operations( block_vector_type const & x, bool trans ) const {
@@ -1593,7 +1593,7 @@ void besthea::linear_algebra::pFMM_matrix<
 //! Specialization for the adjoint double layer p1p0 matrix
 template<>
 void besthea::linear_algebra::pFMM_matrix<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_adl_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
   apply_l2t_operations( block_vector_type & y, bool trans ) const {

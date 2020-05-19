@@ -33,6 +33,7 @@
 #ifndef INCLUDE_BESTHEA_TREE_STRUCTURE_H_
 #define INCLUDE_BESTHEA_TREE_STRUCTURE_H_
 
+#include "besthea/io_routines.h"
 #include "besthea/scheduling_time_cluster.h"
 #include "besthea/settings.h"
 #include "besthea/time_cluster.h"
@@ -61,9 +62,11 @@ class besthea::mesh::tree_structure {
    * geometrical data of the clusters.
    * @warning Only the structure of the tree is reconstructed. The elements of
    * the mesh are not added to the clusters.
-   * \todo update this
+   * \todo use a different constructor if the tree structure is used for more
+   * general trees, not only temporal
    */
-  tree_structure( const std::string filename );
+  tree_structure( const std::string filename, const sc start_time, 
+    const sc end_time );
 
   /**
    * Destructor.
@@ -110,12 +113,6 @@ class besthea::mesh::tree_structure {
    * @param[in] filename Name of the output file
    */
   void print_tree_structure( const std::string filename ) const;
-
-  /**
-   * Reads a vector corresponding to a tree structure from a binary file
-   * @param[in] filename Name of the input file
-   */
-  std::vector< char > load_tree_structure( const std::string filename ) const;
 
   /**
    * Prints levels of the tree.

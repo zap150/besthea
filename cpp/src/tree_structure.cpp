@@ -30,9 +30,16 @@
 
 #include <fstream> //for ofstream and ifstream
 
+template < class cluster_type >
+void besthea::mesh::tree_structure< cluster_type >::vector_2_tree( 
+  const std::vector<char> & tree_vector, cluster_type & root, 
+  lou & position ) {
+  std::cout << "vector_2_tree: NOT IMPLEMENTED!" << std::endl;
+}
+
 template <>
 void besthea::mesh::tree_structure< besthea::mesh::scheduling_time_cluster >::
-  vector_2_tree( const std::vector<char> & tree_vector, 
+  vector_2_tree( const std::vector< char > & tree_vector, 
   besthea::mesh::scheduling_time_cluster & root, lou & position ) {
   using scheduling_time_cluster = besthea::mesh::scheduling_time_cluster;
   // get the cluster data of root
@@ -82,49 +89,24 @@ void besthea::mesh::tree_structure< besthea::mesh::scheduling_time_cluster >::
 }
 
 template < class cluster_type >
-void besthea::mesh::tree_structure< cluster_type >::vector_2_tree( 
-  const std::vector<char> & tree_vector, cluster_type & root, 
-  lou & position ) {
-  std::cout << "vector_2_tree: NOT IMPLEMENTED!" << std::endl;
-}
-
-
-template < class cluster_type >
 besthea::mesh::tree_structure< cluster_type >::tree_structure( 
-  const std::string filename )
+  const std::string filename, const sc start_time, const sc end_time )
   : _levels( 0 ) {
     std::cout << "Constructor NOT IMPLEMENTED!" << std::endl;
-  // // load tree structure from file
-  // std::vector< char > tree_vector = load_tree_structure( filename );
-  // // create tree structure from vector 
-  // if ( ( tree_vector.size( ) > 0 ) && ( tree_vector[ 0 ] != 0 ) ) {
-  //   sc center = 0.5 * ( _mesh.get_end( ) + _mesh.get_start( ) );
-  //   sc half_size = 0.5 * ( _mesh.get_end( ) - _mesh.get_start( ) );
-  //   _root = new time_cluster(
-  //     center, half_size, 0, nullptr, 0, _mesh );
-  //   _real_max_levels = 1;
-  //   if ( tree_vector[ 0 ] == 1 ) {
-  //     lou position = 1;
-  //     vector_2_tree( tree_vector, *_root, position );
-  //   }
-  // } else {
-  //   _root = nullptr;
-  // }
-  // _levels = _real_max_levels;
-  // _paddings = std::move( std::vector< sc > (_levels, -1.0) );
-  // collect_leaves( *_root );
 }
 
 template <>
 besthea::mesh::tree_structure< besthea::mesh::scheduling_time_cluster >::
-  tree_structure( const std::string filename )
+  tree_structure( const std::string filename, const sc start_time, 
+    const sc end_time )
   : _levels( 0 ) {
   // load tree structure from file
-  std::vector< char > tree_vector = load_tree_structure( filename );
+  std::vector< char > tree_vector = read_vector_from_bin_file< char >( 
+    filename );
   // create tree structure from vector 
   if ( ( tree_vector.size( ) > 0 ) && ( tree_vector[ 0 ] != 0 ) ) {
-    sc center = 0.5; //TODO: correct this
-    sc half_size = 0.5; //TODO: correct this
+    sc center = 0.5 * ( start_time + end_time ); //TODO: correct this
+    sc half_size = 0.5 * ( end_time - start_time ); //TODO: correct this
     _root = new scheduling_time_cluster( center, half_size, nullptr, 0 );
       _levels = 1;
     if ( tree_vector[ 0 ] == 1 ) {
@@ -158,40 +140,7 @@ template < class cluster_type >
 void besthea::mesh::tree_structure< cluster_type >::print_tree_structure( 
   const std::string filename ) const
 {
-  const std::vector< char > tree_vector = compute_tree_structure( );
-  std::ofstream file_out( filename.c_str( ), std::ios::binary );
-  if ( file_out.is_open( ) )
-  {
-    lou n_chars = tree_vector.size( );
-    const char * tree_vector_data = tree_vector.data( );
-    file_out.write( tree_vector_data, n_chars );
-    file_out.close();
-  } else {
-    std::cout << "Error. Could not open the output file for printing the tree \
-                  structure." << std::endl;
-  }
-}
-
-template < class cluster_type >
-std::vector< char > besthea::mesh::tree_structure< cluster_type >::
-  load_tree_structure( const std::string filename ) const {
-  std::vector< char > tree_vector;
-  std::ifstream read_file;
-  read_file.open( filename.c_str( ) );
-  if ( read_file.is_open( ) ) {
-    //determine the number of chars to be received
-    read_file.seekg( 0, read_file.end );
-    lo n_chars = read_file.tellg( );
-    read_file.seekg( 0 );
-    tree_vector.resize( n_chars );
-    //load all chars from file
-    read_file.read( tree_vector.data( ), n_chars );
-    read_file.close();
-  } else {
-    std::cout << "Error. Could not open the input file for reading the tree \
-                  structure." << std::endl;
-  }
-  return tree_vector;
+  write_vector_to_bin_file( compute_tree_structure( ), filename );
 }
 
 template < class cluster_type >

@@ -26,14 +26,58 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file tools.h
- * @brief
- */
+#include "besthea/io_routines.h"
 
-#ifndef INCLUDE_BESTHEA_TOOLS_H_
-#define INCLUDE_BESTHEA_TOOLS_H_
+#include <iostream>
+#include <fstream> //for ofstream and ifstream
 
-#include "besthea/timer.h"
-#include "io_routines.h"
+template <>
+void write_vector_to_bin_file( const std::vector< char > & print_vector, 
+  const std::string & filename ) {
+  std::ofstream file_out( filename.c_str( ), std::ios::binary );
+  if ( file_out.is_open( ) )
+  {
+    lou n_chars = print_vector.size( );
+    const char * print_vector_data = print_vector.data( );
+    file_out.write( print_vector_data, n_chars );
+    file_out.close();
+  } else {
+    std::cout << "Error. Could not open the output file for printing the tree \
+                  structure." << std::endl;
+  }
+}
 
-#endif /* INCLUDE_BESTHEA_TOOLS_H_ */
+template < class T >
+void write_vector_to_bin_file( const std::vector< T > & print_vector, 
+  const std::string & filename ) {
+  std::cout << "write_vector_to_bin_file NOT IMPLEMENTED" << std::endl;
+}
+
+template <>
+std::vector< char > read_vector_from_bin_file( const std::string & filename ) {
+  std::vector< char > out_vector;
+  std::ifstream read_file;
+  read_file.open( filename.c_str( ) );
+  if ( read_file.is_open( ) ) {
+    //determine the number of chars to be received
+    read_file.seekg( 0, read_file.end );
+    lo n_chars = read_file.tellg( );
+    read_file.seekg( 0 );
+    out_vector.resize( n_chars );
+    //load all chars from file
+    read_file.read( out_vector.data( ), n_chars );
+    read_file.close();
+  } else {
+    std::cout << "Error. Could not open the input file for reading the tree \
+                  structure." << std::endl;
+  }
+  return out_vector;
+}
+
+template < class T >
+std::vector< T > read_vector_from_bin_file( const std::string & filename ) {
+  std::cout << "read_vector_from_bin_file NOT IMPLEMENTED" << std::endl;
+}
+
+
+

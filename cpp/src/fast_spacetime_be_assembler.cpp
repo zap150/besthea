@@ -1793,6 +1793,7 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::compute_required_data( std::set< time_cluster_type * > &
                                                time_clusters_spacetime_leaves,
   std::set< space_cluster_type * > & space_clusters_spacetime_leaves ) const {
+    std::cout << "compute_required_data NOT IMPLEMENTED" << std::endl;
 }
 
 //! template specialization for single layer p0p0 matrix
@@ -1913,7 +1914,7 @@ void besthea::bem::fast_spacetime_be_assembler<
 //! template specialization for adjoint double layer p1p0 matrix
 template<>
 void besthea::bem::fast_spacetime_be_assembler<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_adl_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
   compute_required_data(
