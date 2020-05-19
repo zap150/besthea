@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, VSB - Technical University of Ostrava and Graz University of
+ * Copyright 2020, VSB - Technical University of Ostrava and Graz University of
  * Technology All rights reserved. Redistribution and use in source and binary
  * forms, with or without modification, are permitted provided that the
  * following conditions are met:
@@ -26,55 +26,49 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file time_cluster_tree.h
- * @brief Tree of temporal cluster.
+/** @file tree_structure.h
+ * @brief General tree structure.
  */
 
-#ifndef INCLUDE_BESTHEA_TIME_CLUSTER_TREE_H_
-#define INCLUDE_BESTHEA_TIME_CLUSTER_TREE_H_
+#ifndef INCLUDE_BESTHEA_TREE_STRUCTURE_H_
+#define INCLUDE_BESTHEA_TREE_STRUCTURE_H_
 
+#include "besthea/scheduling_time_cluster.h"
 #include "besthea/settings.h"
-#include "besthea/temporal_mesh.h"
 #include "besthea/time_cluster.h"
 
 #include <iostream>
 #include <string>
+#include <vector>
 
 namespace besthea {
   namespace mesh {
-    class time_cluster_tree;
+    template< class cluster_type >
+    class tree_structure;
   }
 }
 
 /**
  * Class representing (not necessarily binary) tree of temporal clusters.
  */
-class besthea::mesh::time_cluster_tree {
+template< class cluster_type >
+class besthea::mesh::tree_structure {
  public:
   /**
-   * Constructor
-   * @param[in] mesh Reference to the underlying mesh.
-   * @param[in] levels Maximum number of levels in the tree.
-   * @param[in] n_min_elems Minimum number of elements so that a cluster can be 
-   *                        split in halves in the construction of the tree.
-   */
-  time_cluster_tree( const temporal_mesh & mesh, lo levels, lo n_min_elems );
-
-  /**
-   * Constructs a skeleton time tree by reading it from a file.
-   * @param[in] mesh Mesh to include in the tree.
+   * Constructs a tree structure by reading it from a file.
    * @param[in] filename Name of the input file containing the tree structure.
    * @note The start and end point of the mesh are used to generate the 
    * geometrical data of the clusters.
    * @warning Only the structure of the tree is reconstructed. The elements of
    * the mesh are not added to the clusters.
+   * \todo update this
    */
-  time_cluster_tree( const temporal_mesh & mesh, const std::string filename );
+  tree_structure( const std::string filename );
 
   /**
    * Destructor.
    */
-  virtual ~time_cluster_tree( ) {
+  virtual ~tree_structure( ) {
     if ( _root != nullptr ) {
       delete _root;
     }
@@ -86,44 +80,18 @@ class besthea::mesh::time_cluster_tree {
   lo get_levels( ) const {
     return _levels;
   }
-  
-  /**
-   * Returns the maximal number of elements in a leaf cluster
-   */
-  lo get_n_max_elems_leaf( ) const {
-    return _n_max_elems_leaf;
-  }
 
   /**
    * Returns the root of the tree.
    */
-  time_cluster * get_root( ) {
+  cluster_type * get_root( ) {
     return _root;
-  }
-
-  /**
-   * Returns the vector of levelwise paddings.
-   */
-  const std::vector< sc > & get_paddings( ) const {
-    return _paddings;
-  }
-
-  /**
-   * Computes padding of temporal clusters
-   */
-  sc compute_padding( time_cluster & root );
-
-  /**
-   * Returns the underlying temporal mesh.
-   */
-  const temporal_mesh & get_mesh( ) {
-    return _mesh;
   }
 
   /**
    * Returns clusters without descendants.
    */
-  std::vector< time_cluster * > & get_leaves( ) {
+  std::vector< cluster_type * > & get_leaves( ) {
     return _leaves;
   }
 
@@ -153,48 +121,27 @@ class besthea::mesh::time_cluster_tree {
    * Prints levels of the tree.
    */
   void print( ) {
+    std::cout << "number of levels: " << _levels << std::endl;
     // print cluster information recursively
     print_internal( _root );
-    // print general tree information
-    std::cout << "number of levels: " << _levels << std::endl;
-    // print vector of paddings
-    std::cout << "padding: " << std::endl;
-    for ( lou i = 0; i < _paddings.size( ); ++ i ) {
-      std::cout << _paddings[ i ] << " ";
-    }
-    std::cout << std::endl;
   }
 
 
  private:
-  time_cluster * _root;         //!< root cluster of the tree
-  const temporal_mesh & _mesh;  //!< underlying mesh
+  cluster_type * _root;         //!< root cluster of the tree structure
   lo _levels;                   //!< number of levels in the tree
-  lo _real_max_levels;  //!< auxiliary value to determine number of real tree
-                        //!< levels (depending on _n_min_elems)
-  lo _n_min_elems;  //!< minimum number of elements so that cluster can be split
-                    //!< in halves
-  lo _n_max_elems_leaf; //!< maximal number of elements in a leaf cluster after 
-                        //!< construction.
-  std::vector< sc > _paddings;  //!< vector of paddings on each level
-  std::vector< time_cluster * >
+  std::vector< cluster_type * >
     _leaves;  //!< vector of all clusters without descendants
 
   /**
-   * Builds tree recursively
-   * @param[in] root Node to stem from.
-   * @param[in] level Current level.
-   */
-  void build_tree( time_cluster & root, lo level );
-
-  /**
-   * Recursively constructs the structural vector of a tree.
+   * Recursively constructs the structural vector of a tree structure.
    * @param[in] root Current cluster, whose children are considered to determine
    *                 the next characters in the structural vector.
    * @param[in,out] tree_vector Vector to store the tree structure.
    * \note This method is supposed to be called by @ref compute_tree_structure
+   * \warning currently this works only for time clusters
    */
-  void tree_2_vector( const time_cluster & root,
+  void tree_2_vector( const cluster_type & root,
     std::vector<char> & tree_vector ) const;
 
   /**
@@ -205,23 +152,24 @@ class besthea::mesh::time_cluster_tree {
    *                          position in the tree_vector.
    * \note  This method is supposed to be called by the corresponding 
    *        constructor.
+   * \todo adapt this for the individual cluster types
    */
   void vector_2_tree( const std::vector<char> & tree_vector, 
-    time_cluster & root, lou & position );
+    cluster_type & root, lou & position );
 
   /**
    * Collects all clusters without descendants and stores them in the internal
    * _leaves vector.
    */
-  void collect_leaves( time_cluster & root );
+  void collect_leaves( cluster_type & root );
 
   /**
    * Aux for printing
    */
-  void print_internal( time_cluster * root ) {
+  void print_internal( cluster_type * root ) {
     if ( root != nullptr ) {
       root->print( );
-      std::vector< time_cluster * > * children = root->get_children( );
+      std::vector< cluster_type * > * children = root->get_children( );
       if ( children != nullptr )
         for ( auto it = children->begin( ); it != children->end( ); ++it ) {
           for ( lo i = 0; i < ( *it )->get_level( ); ++i ) std::cout << " ";
@@ -231,4 +179,4 @@ class besthea::mesh::time_cluster_tree {
   }
 };
 
-#endif /* INCLUDE_BESTHEA_TIME_CLUSTER_TREE_H_ */
+#endif /* INCLUDE_BESTHEA_TREE_STRUCTURE_H_ */

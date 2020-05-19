@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, VSB - Technical University of Ostrava and Graz University of
+ * Copyright 2020, VSB - Technical University of Ostrava and Graz University of
  * Technology All rights reserved. Redistribution and use in source and binary
  * forms, with or without modification, are permitted provided that the
  * following conditions are met:
@@ -26,16 +26,14 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file time_cluster.h
- * @brief Cluster of temporal elements.
+/** @file scheduling_time_cluster.h
+ * @brief Reduced time cluster used for job scheduling.
  */
 
-#ifndef INCLUDE_BESTHEA_TIME_CLUSTER_H_
-#define INCLUDE_BESTHEA_TIME_CLUSTER_H_
+#ifndef INCLUDE_BESTHEA_SCHEDULING_TIME_CLUSTER_H_
+#define INCLUDE_BESTHEA_SCHEDULING_TIME_CLUSTER_H_
 
-#include "besthea/full_matrix.h"
 #include "besthea/settings.h"
-#include "besthea/temporal_mesh.h"
 #include "besthea/vector.h"
 
 #include <iostream>
@@ -43,47 +41,37 @@
 
 namespace besthea {
   namespace mesh {
-    class time_cluster;
+    class scheduling_time_cluster;
   }
 }
 
 /**
  * Class representing 1D temporal cluster.
  */
-class besthea::mesh::time_cluster {
+class besthea::mesh::scheduling_time_cluster {
  public:
   using vector_type = besthea::linear_algebra::vector;  //!< Block vector type.
-  using full_matrix_type
-    = besthea::linear_algebra::full_matrix;  //!< Full matrix type.
   /**
    * Constructor.
    * @param[in] center Center of the cluster.
-   * @param[in] half_size Half size of the cluster.
-   * @param[in] n_elements Number of temporal elements in the cluster.
    * @param[in] parent Pointer to the cluster's parent.
    * @param[in] level Level within the cluster tree.
-   * @param[in] mesh Reference to the underlying temporal mesh.
    */
-  time_cluster( sc center, sc half_size, lo n_elements, time_cluster * parent,
-    lo level, const temporal_mesh & mesh )
-    : _n_elements( n_elements ),
-      _center( center ),
-      _half_size( half_size ),
+  scheduling_time_cluster( sc center, sc half_size, 
+    scheduling_time_cluster * parent, lo level )
+    : _center( center ),
+      _half_size ( half_size ),
       _parent( parent ),
       _children( nullptr ),
-      _mesh( mesh ),
-      _level( level ),
-      _lagrange_quad( 1, 1 ),
-      _lagrange_drv_int( 1, 1 ) {
-    _elements.reserve( _n_elements );
+      _level( level ) {
   }
 
-  time_cluster( const time_cluster & that ) = delete;
+  scheduling_time_cluster( const scheduling_time_cluster & that ) = delete;
 
   /**
    * Destructor.
    */
-  virtual ~time_cluster( ) {
+  virtual ~scheduling_time_cluster( ) {
     if ( _children != nullptr ) {
       for ( auto it = _children->begin( ); it != _children->end( ); ++it ) {
         if ( *it != nullptr ) {
@@ -95,20 +83,12 @@ class besthea::mesh::time_cluster {
   }
 
   /**
-   * Adds temporal element to the cluster.
-   * @param[in] idx Index of the temporal element in the underlying mesh.
-   */
-  void add_element( lo idx ) {
-    _elements.push_back( idx );
-  }
-
-  /**
    * Adds cluster's child to the list
    * @param[in] child Child cluster.
    */
-  void add_child( time_cluster * child ) {
+  void add_child( scheduling_time_cluster * child ) {
     if ( _children == nullptr ) {
-      _children = new std::vector< time_cluster * >( );
+      _children = new std::vector< scheduling_time_cluster * >( );
     }
     _children->push_back( child );
   }
@@ -128,35 +108,12 @@ class besthea::mesh::time_cluster {
   }
 
   /**
-   * Returns number of elements in the cluster.
-   */
-  lo get_n_elements( ) const {
-    return _n_elements;
-  }
-
-  /**
-   * Returns element index in the mesh.
-   * @param[in] idx Index of element in the cluster's internal storage.
-   */
-  lo get_element( lo idx ) const {
-    return _elements[ idx ];
-  }
-  
-  /**
-   * Returns reference to vector of global element indices for elements in the 
-   * cluster
-   */
-  const std::vector< lo > & get_all_elements( ) const {
-    return _elements;
-  }
-
-  /**
    * Sets a number of children and allocates vector of pointers to children.
    * @param[in] n_children Number of cluster's children clusters.
    */
   void set_n_children( lo n_children ) {
     if ( n_children > 0 ) {
-      _children = new std::vector< time_cluster * >( );
+      _children = new std::vector< scheduling_time_cluster * >( );
       _children->reserve( n_children );
     } else {
       _children = nullptr;
@@ -177,21 +134,21 @@ class besthea::mesh::time_cluster {
   /**
    * Returns a pointer to the children.
    */
-  std::vector< time_cluster * > * get_children( ) {
+  std::vector< scheduling_time_cluster * > * get_children( ) {
     return _children;
   }
   
     /**
    * Returns a pointer to the parent.
    */
-  time_cluster * get_parent( ) {
+  scheduling_time_cluster * get_parent( ) {
     return _parent;
   }
     
   /**
    * Returns a pointer to the children.
    */
-  const std::vector< time_cluster * > * get_children( ) const {
+  const std::vector< scheduling_time_cluster * > * get_children( ) const {
     return _children;
   }
 
@@ -203,32 +160,9 @@ class besthea::mesh::time_cluster {
   }
 
   /**
-   * Computes padding of the cluster (distance of the farthest point to the
-   * cluster's boundary)
-   */
-  sc compute_padding( ) const {
-    linear_algebra::coordinates< 1 > node1;
-    linear_algebra::coordinates< 1 > node2;
-
-    sc padding = 0.0;
-
-    // loop over elements in cluster
-    for ( lo i = 0; i < _n_elements; ++i ) {
-      _mesh.get_nodes( _elements[ i ], node1, node2 );
-      if ( ( ( _center - _half_size ) - node1( 0 ) > padding ) ) {
-        padding = _center - _half_size - node1( 0 );
-      }
-      if ( ( node2( 0 ) - ( _center + _half_size ) > padding ) ) {
-        padding = node2( 0 ) - ( _center + _half_size );
-      }
-    }
-    return padding;
-  }
-
-  /**
    * Returns a pointer to left neighbour.
    */
-  time_cluster * get_left_neighbour( ) {
+  scheduling_time_cluster * get_left_neighbour( ) {
     if ( _parent == nullptr ) {
       // for the root cluster
       return nullptr;
@@ -242,29 +176,6 @@ class besthea::mesh::time_cluster {
     } else {
       return nullptr;
     }
-  }
-
-  /**
-   * Returns a reference to the matrix storing the quadrature of the Lagrange 
-   * polynomials on a cluster.
-   */
-  full_matrix_type & get_lagrange_quad( ) {
-    return _lagrange_quad;
-  }
-  
-  /**
-   * Returns a reference to the matrix storing the integrals of the derivatives
-   * of the Lagrange polynomials on a cluster.
-   */
-  full_matrix_type & get_lagrange_drv_int( ) {
-    return _lagrange_drv_int;
-  }
-
-  /**
-   * Returns the associated mesh.
-   */
-  const temporal_mesh & get_mesh( ) {
-    return _mesh;
   }
   
   /**
@@ -284,30 +195,15 @@ class besthea::mesh::time_cluster {
   void print( ) {
     std::cout << "level: " << _level << std::endl;
     std::cout << "center: " << _center << ", half size: " << _half_size
-              << ", elements: " << _n_elements << std::endl;
+              << std::endl;
   }
 
  private:
-  lo _n_elements;  //!< number of elements in the cluster
   sc _center;      //!< center of the cluster
   sc _half_size;   //!< half size of the cluster
-  std::vector< lo >
-    _elements;  //!< indices of the cluster's elements within the temporal mesh
-  time_cluster * _parent;                     //!< parent of the cluster
-  std::vector< time_cluster * > * _children;  //!< children of the cluster
-  const temporal_mesh & _mesh;  //!< temporal mesh associated with the cluster
+  scheduling_time_cluster * _parent;                     //!< parent of the cluster
+  std::vector< scheduling_time_cluster * > * _children;  //!< children of the cluster
   lo _level;                    //!< level within the cluster tree
-  full_matrix_type
-    _lagrange_quad;   //!< quadrature of the Lagrange polynomials defined on
-                      //!< temporal clusters over temporal elements; 
-                      //!< (rows - indices of the polynomials,
-                      //!<  columns - element of the cluster)
-  full_matrix_type
-    _lagrange_drv_int;  //!< integrals of the derivatives of the Lagrange
-                        //!< polynomials defined on temporal clusters over 
-                        //!< temporal elements; 
-                        //!< (rows - indices of the polynomials,
-                        //!<  columns - element of the cluster)
 };
 
-#endif /* INCLUDE_BESTHEA_TIME_CLUSTER_H_ */
+#endif /* INCLUDE_BESTHEA_SCHEDULING_TIME_CLUSTER_H_ */
