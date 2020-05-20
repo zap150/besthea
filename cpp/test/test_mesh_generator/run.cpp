@@ -25,56 +25,36 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "besthea/chebyshev_evaluator.h"
-#include "besthea/lagrange_interpolant.h"
+#include "besthea/distributed_spacetime_tensor_mesh.h"
 #include "besthea/settings.h"
-#include "besthea/vector.h"
-
+#include "besthea/spacetime_mesh_generator.h"
 
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <mpi.h>
+
+using besthea::mesh::distributed_spacetime_tensor_mesh;
+using besthea::mesh::spacetime_mesh_generator;
 
 int main( int argc, char * argv[] ) {
-  using vector_type = besthea::linear_algebra::vector;
-  using lagrange_interpolant = besthea::bem::lagrange_interpolant;
-  using chebyshev_evaluator = besthea::bem::chebyshev_evaluator;
-  // test of lagrange_interpolant class;
-  // set order of lagrange polynomials, number of evaluation points and index of
-  // polynomial which is evaluated
-  lo order = 5;
-  lo n_eval_points = 10;
-  lo poly_index = 0;
-  // declare evaluation points and lagrange_values
-  vector_type eval_points( n_eval_points ), lagrange_values( n_eval_points );
-  // initialize evaluation points uniformly in [-1, 1]
-  for ( lo i = 0; i < n_eval_points; ++i ) {
-    eval_points[ i ] = -1.0 + 2.0 * i / (n_eval_points - 1.0);
+  int provided;
+  MPI_Init_thread( &argc, &argv, MPI_THREAD_MULTIPLE, &provided );
+
+  int myRank;
+  MPI_Comm_rank( MPI_COMM_WORLD, &myRank );
+
+  if ( myRank == 0 ) {
+    std::string space_file = "./mesh_files/cube_12.txt";
+    std::string time_file = "./testfile.txt";
+
+    spacetime_mesh_generator generator( space_file, time_file );
+
+    generator.generate( 3, "", "test_mesh", "txt" );
   }
-  // evaluate lagrange polynomial
-  lagrange_interpolant lagrange(order);
-  lagrange.evaluate( poly_index, eval_points, lagrange_values );
-  std::cout << "values of lagrange polynomial are: " << std::endl;
-  for ( lo i = 0; i < n_eval_points; ++i )
-    std::cout << lagrange_values[ i ] << " ";
-  std::cout << std::endl;
-  // evaluate chebyshev polynomial
-  vector_type all_cheb_values( n_eval_points * (order + 1));
-  chebyshev_evaluator chebyshev(order);
-  chebyshev.evaluate( eval_points, all_cheb_values );
-  std::cout << "values of chebyshev polynomials (order <= " << order;
-  std::cout << " are: " << std::endl;
-  for ( lo i = 0; i <= order; ++i ) {
-    for ( lo j = 0; j < n_eval_points; ++j ) 
-      printf("%.4f ", all_cheb_values[ n_eval_points * i + j ]);
-    std::cout << std::endl;
-  }
-  chebyshev.evaluate_derivative( eval_points, all_cheb_values );
-  std::cout << "values of derived chebyshev polynomials (order <= " << order;
-  std::cout << " are: " << std::endl;
-  for ( lo i = 0; i <= order; ++i ) {
-    for ( lo j = 0; j < n_eval_points; ++j ) 
-      printf("%.4f ", all_cheb_values[ n_eval_points * i + j ]);
-    std::cout << std::endl;
-  }
+  MPI_Barrier( MPI_COMM_WORLD );
+  MPI_Comm comm = MPI_COMM_WORLD;
+  distributed_spacetime_tensor_mesh( "test_mesh_d.txt", &comm );
+
+  MPI_Finalize( );
 }

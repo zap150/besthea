@@ -202,6 +202,15 @@ class besthea::mesh::temporal_mesh {
       / 2;
   }
 
+  /**
+   * Saves the mesh into a textfile readable by besthea load method.
+   * @param[in] directory Directory where to put the file.
+   * @param[in] filename Name of the output file.
+   * @param[in] suffix Suffix of the output file.
+   */
+  bool save( const std::string & directory, const std::string & filename,
+    const std::string & suffix );
+
  protected:
   sc _start_time;  //!< temporal interval set to (start_time, end_time)
   sc _end_time;    //!< temporal interval set to (start_time, end_time)
