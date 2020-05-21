@@ -66,9 +66,44 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
     const std::string & decomposition_file, MPI_Comm * comm );
 
   /**
-   * Destructor
+   * Destructor.
    */
   ~distributed_spacetime_tensor_mesh( );
+
+  /**
+   * Mapping from local temporal element index to global temporal element
+   * index.
+   * @param[in] local_idx Local time index.
+   */
+  lo local_2_global_time( lo local_idx ) {
+    return _my_start_idx + local_idx;
+  }
+
+  /**
+   * Mapping from local spacetime element index to global spacetime element
+   * index.
+   * @param[in] local_idx Local spacetime index.
+   */
+  lo local_2_global( lo local_idx ) {
+    return _my_start_idx * _space_mesh->get_n_elements( ) + local_idx;
+  }
+
+  /**
+   * Mapping from global temporal element index to local temporal element index.
+   * @param[in] global_idx Global temporal element index.
+   */
+  lo global_2_local_time( lo global_idx ) {
+    return global_idx - _my_start_idx;
+  }
+
+  /**
+   * Mapping from global spacetime element index to local spacetime element
+   * index.
+   * @param[in] global_idx Global spacetime element index.
+   */
+  lo global_2_local( lo global_idx ) {
+    return global_idx - _my_start_idx * _space_mesh->get_n_elements( );
+  }
 
  protected:
   /**
@@ -84,6 +119,12 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
   lo _n_meshes_per_rank;  //!< number of meshes owned by this process
   spacetime_tensor_mesh *
     _my_mesh;  //!< part of the global mesh owned by the rank
+  triangular_surface_mesh *
+    _space_mesh;  //!< surface mesh the spacetime mesh is composed of
+  temporal_mesh *
+    _time_mesh;      //!< temporal mesh the spacetime mesh is composed of
+  lo _my_start_idx;  //!< initial timestep on this MPI rank (used for loc/glob
+                     //!< mapping)
 };
 
 #endif /* INCLUDE_BESTHEA_DISTRIBUTED_SPACETIME_TENSOR_MESH_H_ */

@@ -64,6 +64,12 @@ class besthea::mesh::temporal_mesh {
   temporal_mesh( sc start_time, sc end_time, lo n_timesteps );
 
   /**
+   * Constructor taking std::vector of timesteps.
+   * @param[in] timesteps Vector of timesteps of the mesh.
+   */
+  temporal_mesh( std::vector< sc > & timesteps );
+
+  /**
    * Constructor loading temporal mesh data from a file.
    * @param[in] file Name of the source file.
    */

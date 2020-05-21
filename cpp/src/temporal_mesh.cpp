@@ -58,6 +58,22 @@ besthea::mesh::temporal_mesh::temporal_mesh(
   init_lengths( );
 }
 
+besthea::mesh::temporal_mesh::temporal_mesh( std::vector< sc > & timesteps ) {
+  _start_time = timesteps.at( 0 );
+  _end_time = timesteps.at( timesteps.size( ) - 1 );
+  _n_timesteps = timesteps.size( ) - 1;
+  _n_temporal_nodes = _n_timesteps + 1;
+
+  _elements.resize( 2 * _n_timesteps );
+  _nodes = timesteps;
+
+  for ( lo i_elem = 0; i_elem < _n_timesteps; ++i_elem ) {
+    _elements[ 2 * i_elem ] = i_elem;
+    _elements[ 2 * i_elem + 1 ] = i_elem + 1;
+  }
+  init_lengths( );
+}
+
 besthea::mesh::temporal_mesh::~temporal_mesh( ) {
 }
 

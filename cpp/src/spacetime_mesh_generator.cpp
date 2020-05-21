@@ -125,7 +125,7 @@ bool besthea::mesh::spacetime_mesh_generator::generate( lo n_meshes,
            << element[ 1 ] - curr_start_timestep << "\n";
     }
 
-    file << "\n" << curr_start_timestep << "\n";
+    d_file << "\n" << curr_start_timestep << "\n";
     curr_start_timestep += n_local_timesteps;
     file.close( );
 

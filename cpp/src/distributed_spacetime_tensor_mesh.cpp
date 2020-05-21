@@ -33,7 +33,10 @@
 besthea::mesh::distributed_spacetime_tensor_mesh::
   distributed_spacetime_tensor_mesh(
     const std::string & decomposition_file, MPI_Comm * comm )
-  : _comm( comm ), _my_mesh( nullptr ) {
+  : _comm( comm ),
+    _my_mesh( nullptr ),
+    _space_mesh( nullptr ),
+    _time_mesh( nullptr ) {
   MPI_Comm_rank( *_comm, &_my_rank );
   MPI_Comm_size( *_comm, &_n_processes );
 
@@ -44,6 +47,12 @@ besthea::mesh::distributed_spacetime_tensor_mesh::
   ~distributed_spacetime_tensor_mesh( ) {
   if ( _my_mesh != nullptr ) {
     delete _my_mesh;
+  }
+  if ( _space_mesh != nullptr ) {
+    delete _space_mesh;
+  }
+  if ( _time_mesh != nullptr ) {
+    delete _time_mesh;
   }
 }
 
@@ -72,21 +81,52 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
   my_start_mesh = _my_rank * ( _n_meshes / _n_processes );
   my_start_mesh += ( rem < _my_rank ? rem : _my_rank );
   my_end_mesh = my_start_mesh + _n_meshes_per_rank;
-  std::cout << "Rank: " << _my_rank << ". " << my_start_mesh << " "
-            << my_end_mesh << std::endl;
 
   std::vector< spacetime_tensor_mesh * > my_meshes;
   my_meshes.resize( _n_meshes_per_rank );
 
+  std::vector< sc > my_time_nodes;
+
+  lo my_start_idx;
   std::string t_file_path;
   std::string s_file_path;
   for ( lo i = 0; i < _n_meshes; ++i ) {
+    filestream >> my_start_idx;
     filestream >> t_file_path;
     filestream >> s_file_path;
     if ( i >= my_start_mesh && i < my_end_mesh ) {
-      std::cout << t_file_path << " \n" << s_file_path << std::endl;
+      if ( i == my_start_mesh ) {
+        _my_start_idx = my_start_idx;
+      }
+
+      std::ifstream temp_file( t_file_path.c_str( ) );
+      if ( !temp_file.is_open( ) ) {
+        std::cout << "File " << t_file_path << " could not be opened!"
+                  << std::endl;
+        return false;
+      }
+      lo dummy;
+
+      temp_file >> dummy;  // dimension (1)
+      temp_file >> dummy;  // nodes per element (2)
+
+      lo n_nodes;
+      sc node;
+      temp_file >> n_nodes;
+      for ( lo i_node = 0; i_node < n_nodes; ++i_node ) {
+        temp_file >> node;
+        if ( i_node != 0 || i == my_start_mesh ) {
+          my_time_nodes.push_back( node );
+        }
+      }
+
+      temp_file.close( );
     }
   }
+
+  _time_mesh = new temporal_mesh( my_time_nodes );
+  _space_mesh = new triangular_surface_mesh( s_file_path );
+  _my_mesh = new spacetime_tensor_mesh( *_space_mesh, *_time_mesh );
 
   filestream.close( );
   return true;
