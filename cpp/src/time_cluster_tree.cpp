@@ -28,6 +28,8 @@
 
 #include "besthea/time_cluster_tree.h"
 
+#include <fstream> //for ofstream and ifstream
+
 besthea::mesh::time_cluster_tree::time_cluster_tree(
   const temporal_mesh & mesh, lo levels, lo n_min_elems )
   : _mesh( mesh ),
@@ -55,10 +57,32 @@ besthea::mesh::time_cluster_tree::time_cluster_tree(
   collect_leaves( *_root );
 }
 
+std::vector< char > besthea::mesh::time_cluster_tree::
+  compute_tree_structure( ) const {
+  std::vector< char > tree_vector;
+  if ( _root == nullptr ) {
+    tree_vector.push_back( 0 );
+  }
+  else if ( _root->get_n_children( ) == 0 ) {
+    tree_vector.push_back( 2 );
+  }
+  else {
+    tree_vector.push_back( 1 );
+    tree_2_vector( *_root, tree_vector );
+  }
+  return tree_vector;
+}
+
+void besthea::mesh::time_cluster_tree::print_tree_structure( 
+  const std::string filename ) const
+{
+  write_vector_to_bin_file( compute_tree_structure( ), filename );
+}
+
 void besthea::mesh::time_cluster_tree::build_tree(
   time_cluster & root, lo level ) {
-  // stop recursion if maximum number of levels is reached
-
+  // stop recursion if maximum number of levels is reached or root contains less
+  // than _n_min_elems elements
   if ( level > _levels - 1 || root.get_n_elements( ) < _n_min_elems ) {
     root.set_n_children( 0 );
     if ( root.get_n_elements( ) > _n_max_elems_leaf ) {
@@ -113,6 +137,27 @@ void besthea::mesh::time_cluster_tree::build_tree(
   this->build_tree( *left_cluster, level + 1 );
   root.add_child( right_cluster );
   this->build_tree( *right_cluster, level + 1 );
+}
+
+void besthea::mesh::time_cluster_tree::tree_2_vector( const time_cluster & root, 
+  std::vector<char> & tree_vector ) const {
+  // get the children of root and determine if they are leaves or not 
+  // WARNING: it is assumed that root always has two children; this assumption
+  // is reasonable if the method is called for a non-leaf cluster in the tree,
+  // since the tree is a full binary tree by construction (in build tree)
+  const std::vector< time_cluster * > * children = root.get_children( );
+  char left_child_status = 
+    ( ( *children )[ 0 ]->get_n_children( ) > 0 ) ? 1 : 2;
+  char right_child_status = 
+    ( ( *children )[ 1 ]->get_n_children( ) > 0 ) ? 1 : 2;
+  tree_vector.push_back( left_child_status );
+  tree_vector.push_back( right_child_status );
+  if ( left_child_status == 1 ) {
+    tree_2_vector( *( *children )[ 0 ], tree_vector );
+  } 
+  if ( right_child_status == 1 ) {
+    tree_2_vector( *( *children )[ 1 ], tree_vector );
+  }
 }
 
 sc besthea::mesh::time_cluster_tree::compute_padding( time_cluster & root ) {

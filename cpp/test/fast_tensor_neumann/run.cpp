@@ -63,7 +63,7 @@ struct cauchy_data {
 int main( int argc, char * argv[] ) {
   std::string file = "./mesh_files/cube_12.txt";
   //   int refine = 1;
-  int refine = 1;
+  int refine = 2;
   lo n_timesteps = 8;
   sc end_time = 1.0;
   std::string grid_file = "./mesh_files/grid_xy.txt";
@@ -107,15 +107,15 @@ int main( int argc, char * argv[] ) {
   lo temp_order = 6;
   lo spat_order = 6;
 
-  pFMM_matrix_heat_dl_p0p1 * K = new pFMM_matrix_heat_dl_p0p1;
+  pFMM_matrix_heat_adl_p1p0 * K_adj = new pFMM_matrix_heat_adl_p1p0;
   //   tree.print( );
 
-  spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
-  fast_spacetime_be_assembler fast_assembler_k( kernel_k, space_p0, space_p1,
-    order_sing, order_reg, temp_order, spat_order, cauchy_data::_alpha, 1.5,
-    false );
-  t.reset( "K" );
-  fast_assembler_k.assemble( *K );
+  spacetime_heat_adl_kernel_antiderivative kernel_ak( cauchy_data::_alpha );
+  fast_spacetime_be_assembler fast_assembler_adj_k( kernel_ak, 
+    space_p1, space_p0, order_sing, order_reg, temp_order, spat_order, 
+    cauchy_data::_alpha, 1.5, false );
+  t.reset( "K_adj" );
+  fast_assembler_adj_k.assemble( *K_adj );
   t.measure( );
 
   spacetime_be_identity M( space_p0, space_p1, 1 );
@@ -135,13 +135,13 @@ int main( int argc, char * argv[] ) {
 
   t.reset( "Setting up RHS" );
   block_vector dir;
-  dir.resize( K->get_block_dim( ) );
-  dir.resize_blocks( K->get_dim_range( ), true );
+  dir.resize( K_adj->get_block_dim( ) );
+  dir.resize_blocks( K_adj->get_dim_domain( ), true );
   M.apply( neu_proj, dir, true, 0.5, 0.0 );
-  K->apply( neu_proj, dir, true, -1.0, 1.0 );
+  K_adj->apply( neu_proj, dir, false, -1.0, 1.0 );
   t.measure( );
 
-  delete K;
+  delete K_adj;
 
   pFMM_matrix_heat_hs_p1p1 * D = new pFMM_matrix_heat_hs_p1p1;
 
@@ -211,6 +211,7 @@ int main( int argc, char * argv[] ) {
     t.measure( );
 
     block_vector dlp;
+    spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
     uniform_spacetime_be_evaluator evaluator_k( kernel_k, space_p1, order_reg ); 
     t.reset( "DLP" ); 
     evaluator_k.evaluate( grid_space_mesh.get_nodes( ), dir, dlp ); 
