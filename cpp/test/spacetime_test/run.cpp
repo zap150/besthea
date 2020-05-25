@@ -43,35 +43,30 @@ int main( int argc, char * argv[] ) {
   using tree_structure = besthea::mesh::tree_structure< scheduling_time_cluster >;
   using time_cluster_tree = besthea::mesh::time_cluster_tree;
   using space_time_cluster_tree = besthea::mesh::spacetime_cluster_tree;
-  // using full_matrix = besthea::linear_algebra::full_matrix;
 
-  std::string file = "./mesh_files/time_nuniform.txt";
-  // std::string file = "./mesh_files/time_1_10.txt";
-
+  // uncomment appropriate mesh or provide it as console input
+  std::string file_temporal = "./mesh_files/time_nuniform.txt";
+  // std::string file_temporal = "./mesh_files/time_1_10.txt";
   if ( argc > 1 ) {
-    file.assign( argv[ 1 ] );
+    file_temporal.assign( argv[ 1 ] );
   }
-
-  // b_t_mesh time_mesh( file );
+  // uncomment to load mesh from file
+  // b_t_mesh time_mesh( file_temporal );
   // time_mesh.refine( 1 );
-  // time_mesh.print_info( );
 
+  // uncomment to generate regular mesh
   lo levels = 5;
   b_t_mesh time_mesh( 0, 1, 1 << ( levels + 1 ) );
 
+
   // time_mesh.print_info( );
-
-
 
   // std::string file_spatial = "./test/mesh_files/icosahedron.txt";
   // std::string file_spatial = "./mesh_files/nuniform.txt";
   std::string file_spatial =  "./mesh_files/cube_12.txt";
   b_s_mesh space_mesh( file_spatial );
 
-  // tensor_mesh.print_info( );
-
   // tensor_mesh.refine( 1 );
-
   // tensor_mesh.print_info( );
 
   // b_ust_mesh uniform_time_mesh( space_mesh, 1, 10 );
@@ -83,50 +78,40 @@ int main( int argc, char * argv[] ) {
 
   space_mesh.refine( 1 );
   // space_mesh.print_info( );
-  space_mesh.print_vtu( "spacetime_test" );
+  // space_mesh.print_vtu( "spacetime_test" );
 
   // space_cluster_tree ct( space_mesh, 4, 8 );
   // time_cluster_tree tt( time_mesh, 2, 4 );
   // ct.print_tree_separately( "test", false );
-
   // time_mesh.refine( 1 );
 
   b_st_mesh tensor_mesh( space_mesh, time_mesh );
 
   // coefficient to determine coupling of spatial and temoral levels
   sc st_coeff = 4.0;  // corresponds to \rho_L = 8 in Messner's paper
-// const spacetime_tensor_mesh & spacetime_mesh,
-//     lo time_levels, lo n_min_time_elems, lo n_min_space_elems, sc st_coeff,
-//     lo spatial_nearfield_limit = 3 
   space_time_cluster_tree spt( tensor_mesh, 20, 3, 10, st_coeff );
 
+
+  // TEST OF TREE STRUCTURE AND PROCESS ASSIGNMENT (INCLUDING IO)
+
   time_cluster_tree* time_tree = spt.get_time_tree( );
+  // write tree structure to file
   std::string tree_vector_file = "./spacetime_test/tree_structure.bin";
   time_tree->print_tree_structure( tree_vector_file );
-  time_tree->print( );
 
-  std::vector< char > tree_vector = read_vector_from_bin_file< char >( 
-    tree_vector_file );
-
-  std::cout << "read tree structure from file: " << std::endl;
-  std::cout << "size is " << tree_vector.size( ) << std::endl;
-  for ( lou i = 0; i < tree_vector.size( ); ++i ) {
-    std::cout << ( int ) tree_vector[ i ] << std::endl;
-  }
-  std::cout << "reconstructed tree" << std::endl;
-  tree_structure skeleton( tree_vector_file, time_mesh.get_start( ),
-    time_mesh.get_end( ) );
-  skeleton.print( );
-
+  // compute process assignment and write it to file
   lo strategy = 1;
-  lo n_processes = 15;
-  std::cout << std::endl << "#######################" << std::endl;
-  std::cout << "n_processes: " << n_processes << std::endl;
+  lo n_processes = 6;
+  std::cout << "n_processes: " << n_processes << ", strategy: "
+            << strategy << std::endl;
   std::string process_assignment_file = 
     "./spacetime_test/process_assignment.bin";
   time_tree->print_process_assignments( n_processes, strategy, 
     process_assignment_file );
 
+  // generate tree_structure from file, load process assignments and print
+  tree_structure skeleton( tree_vector_file, time_mesh.get_start( ),
+    time_mesh.get_end( ) );
   skeleton.load_process_assignments( process_assignment_file );
   skeleton.print( );
 }

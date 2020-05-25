@@ -77,7 +77,6 @@ std::vector< char > besthea::mesh::time_cluster_tree::
 std::vector< lo > besthea::mesh::time_cluster_tree::
   compute_process_assignments( 
   const lo n_processes, const lo strategy ) const {
-  bool print = false;
   // determine the minimal level of all leaf clusters
   // for the assignment of processes only the clusters up to this level are 
   // considered
@@ -92,11 +91,6 @@ std::vector< lo > besthea::mesh::time_cluster_tree::
   lo thresh_level = ( lo ) ceil( log2( n_processes ) );
   thresh_level = ( thresh_level < 2 ) ? 2 : thresh_level;
 
-  if ( print ) {
-    std::cout << "trunc and thresh levels: " << trunc_level << ", "
-              << thresh_level << std::endl;
-  }
-
   if ( trunc_level <= 1 ) {
     std::cout << "Error: Temporal cluster tree is too coarse!"
               << std::endl; 
@@ -109,7 +103,7 @@ std::vector< lo > besthea::mesh::time_cluster_tree::
   } else {
     // Create a vector to store the assignment in a levelwise format.
     // Let k = ceil(log_2(n_processes)). In the first 2 * n_processes
-    //  entries of the vector the processes assigned to the clusters at level 2 
+    // entries of the vector the processes assigned to the clusters at level 2 
     // up to (k-1) are given, cluster after cluster (from left to right), level 
     // after level. Starting at entry number 2 * n_processes there are 
     // n_processes entries per level which indicate how many clusters are 
@@ -153,24 +147,10 @@ std::vector< lo > besthea::mesh::time_cluster_tree::
         }
       }
     }
-
-    if ( print ) {
-      std::cout << "clusters at level " << trunc_level << std::endl;
-    }
-    lo check_sum = 0;
     for ( lo proc_id = 0; proc_id < n_processes; ++ proc_id ) {
-      if ( print ) {
-        std::cout << "process " << proc_id << ": " 
-                  << levelwise_assignment[ access_index + proc_id ] 
-                  << std::endl;
-      }
-      check_sum += levelwise_assignment[ access_index + proc_id ];
       clusters_per_process.push_back(
         std::pair< lo, lo >( proc_id, 
         levelwise_assignment[ access_index + proc_id ] ) );
-    }
-    if ( print ) {
-      std::cout << "checksum: " << check_sum << std::endl;
     }
 
     // assign the clusters at levels >= thresh_level in such a way that on all 
@@ -228,22 +208,9 @@ std::vector< lo > besthea::mesh::time_cluster_tree::
           proc_id++;
         }
       }
-      if ( print ) {
-        std::cout << "clusters at level " << level << std::endl;
-      }
-      check_sum = 0;
       for ( lo proc_id = 0; proc_id < n_processes; ++proc_id ) {
         clusters_per_process[ proc_id ].second += 
           levelwise_assignment[ access_index + proc_id ];
-        if ( print ) {
-        std::cout << "process " << proc_id << ": " 
-                  << levelwise_assignment[ access_index + proc_id ] 
-                  << std::endl;
-        }
-        check_sum += levelwise_assignment[ access_index + proc_id ];
-      }
-      if ( print ) {
-        std::cout << "check_sum = " << check_sum << std::endl;
       }
     }
 
@@ -269,16 +236,6 @@ std::vector< lo > besthea::mesh::time_cluster_tree::
           n_assigned_clusters++;
         }
       }
-
-      if ( print ) {
-        std::cout << "process assignment at level " << thresh_level - 1 
-                  << std::endl;
-        for ( lo cluster_id = 0; cluster_id < n_clusters; ++cluster_id ) {
-          std::cout << "cluster " << cluster_id << ": " 
-                    << levelwise_assignment[ access_index + cluster_id ] 
-                    << std::endl;
-        }
-      }
     }
     if ( strategy == 0) {
       // assign clusters at all levels l satisfying 2 < l < thresh_level - 1 to
@@ -298,14 +255,6 @@ std::vector< lo > besthea::mesh::time_cluster_tree::
           // update counter of the process
           clusters_per_process[ cluster_id ].second += 1;
         }
-        if ( print ) {
-          std::cout << "process assignment at level " << level << std::endl;
-          for ( lo cluster_id = 0; cluster_id < n_clusters; ++cluster_id ) {
-            std::cout << "cluster " << cluster_id << ": " 
-                      << levelwise_assignment[ access_index + cluster_id ] 
-                      << std::endl;
-          }
-        }
       }
 
       if ( thresh_level > 3 ) { 
@@ -322,13 +271,6 @@ std::vector< lo > besthea::mesh::time_cluster_tree::
         clusters_per_process[ 0 ].second += 1;
         levelwise_assignment[ 3 ] = clusters_per_process[ 1 ].first;
         clusters_per_process[ 1 ].second += 1;
-        if ( print ) {
-          std::cout << "process assignment at level 2" << std::endl;
-          for ( lo cluster_id = 0; cluster_id < 4; ++cluster_id ) {
-            std::cout << "cluster " << cluster_id << ": " 
-                      << levelwise_assignment[ cluster_id ] << std::endl;
-          }
-        }
       }
     }
     else if ( strategy == 1 ) {
@@ -355,14 +297,6 @@ std::vector< lo > besthea::mesh::time_cluster_tree::
           clusters_per_process[ min_proc_id ].second += 1;
 
         }
-        if ( print ) {
-          std::cout << "process assignment at level " << level << std::endl;
-          for ( lo cluster_id = 0; cluster_id < n_clusters; ++cluster_id ) {
-            std::cout << "cluster " << cluster_id << ": " 
-                      << levelwise_assignment[ access_index + cluster_id ] 
-                      << std::endl;
-          }
-        }
       }
 
       if ( thresh_level > 3 ) { 
@@ -387,13 +321,6 @@ std::vector< lo > besthea::mesh::time_cluster_tree::
           levelwise_assignment[ cluster_id ] = min_proc_id;
           clusters_per_process[ min_proc_id ].second += 1;
         }
-        if ( print ) {
-          std::cout << "process assignment at level 2" << std::endl;
-          for ( lo cluster_id = 0; cluster_id < 4; ++cluster_id ) {
-            std::cout << "cluster " << cluster_id << ": " 
-                      << levelwise_assignment[ cluster_id ] << std::endl;
-          }
-        }
       }
     } else {
       // assign a cluster at a level l < thresh_level - 1  to the same process 
@@ -408,21 +335,6 @@ std::vector< lo > besthea::mesh::time_cluster_tree::
           levelwise_assignment[ access_index + cluster_id ] = proc_id;
           clusters_per_process[ proc_id ].second += 1;
         }
-        if ( print ) {
-          std::cout << "process assignment at level " << level << std::endl;
-          for ( lo cluster_id = 0; cluster_id < n_clusters; ++cluster_id ) {
-            std::cout << "cluster " << cluster_id << ": " 
-                      << levelwise_assignment[ access_index + cluster_id ] 
-                      << std::endl;
-          }
-        }
-      }
-    }
-    if ( print ) {
-      std::cout << "number of clusters per process" << std::endl;
-      for ( lo i = 0; i < n_processes; ++i ) {
-        std::cout << "process " << clusters_per_process[ i ].first 
-                  << ": " << clusters_per_process[ i ].second << std::endl; 
       }
     }
 

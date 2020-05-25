@@ -202,8 +202,8 @@ class besthea::mesh::scheduling_time_cluster {
    * Prints info of the object.
    */
   void print( ) {
-    std::cout << "level: " << _level << std::endl;
-    std::cout << "center: " << _center << ", half size: " << _half_size
+    std::cout << "level: " << _level 
+              << ", center: " << _center << ", half size: " << _half_size
               << ", proc_id: " << _process_id << std::endl;
       
   }
