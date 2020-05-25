@@ -28,8 +28,6 @@
 
 #include "besthea/tree_structure.h"
 
-#include <fstream> //for ofstream and ifstream
-
 template < class cluster_type >
 void besthea::mesh::tree_structure< cluster_type >::vector_2_tree( 
   const std::vector<char> & tree_vector, cluster_type & root, 
@@ -88,16 +86,35 @@ void besthea::mesh::tree_structure< besthea::mesh::scheduling_time_cluster >::
   }
 }
 
+template <>
+void besthea::mesh::tree_structure< besthea::mesh::scheduling_time_cluster >::
+  set_process_assignments( const std::vector< lo > process_assignments, 
+  besthea::mesh::scheduling_time_cluster & root, lou & position ) {
+  using scheduling_time_cluster = besthea::mesh::scheduling_time_cluster;
+  lo left_child_process_id = process_assignments[ position++ ];
+  lo right_child_process_id = process_assignments[ position++ ];
+  scheduling_time_cluster* left_child = ( *root.get_children( ) )[ 0 ];
+  scheduling_time_cluster* right_child = ( *root.get_children( ) )[ 1 ];
+  left_child->set_process_id( left_child_process_id );
+  right_child->set_process_id( right_child_process_id );
+  if ( left_child->get_n_children( ) > 0 ) {
+    set_process_assignments( process_assignments, *left_child, position );
+  }
+  if ( right_child->get_n_children( ) > 0 ) {
+    set_process_assignments( process_assignments, *right_child, position );
+  }
+}
+
 template < class cluster_type >
 besthea::mesh::tree_structure< cluster_type >::tree_structure( 
-  const std::string filename, const sc start_time, const sc end_time )
+  const std::string & filename, const sc start_time, const sc end_time )
   : _levels( 0 ) {
     std::cout << "Constructor NOT IMPLEMENTED!" << std::endl;
 }
 
 template <>
 besthea::mesh::tree_structure< besthea::mesh::scheduling_time_cluster >::
-  tree_structure( const std::string filename, const sc start_time, 
+  tree_structure( const std::string & filename, const sc start_time, 
     const sc end_time )
   : _levels( 0 ) {
   // load tree structure from file
@@ -119,6 +136,16 @@ besthea::mesh::tree_structure< besthea::mesh::scheduling_time_cluster >::
   collect_leaves( *_root );
 }
 
+template <>
+void besthea::mesh::tree_structure< besthea::mesh::scheduling_time_cluster >::
+  load_process_assignments( const std::string & filename ) {
+  std::vector< lo > process_assignments = 
+    read_vector_from_bin_file< lo >( filename );
+  _root->set_process_id( process_assignments[ 0 ] );
+  lou position = 1;
+  set_process_assignments( process_assignments, *_root, position );
+}
+
 template < class cluster_type >
 std::vector< char > besthea::mesh::tree_structure< cluster_type >::
   tree_structure::compute_tree_structure( ) const {
@@ -138,7 +165,7 @@ std::vector< char > besthea::mesh::tree_structure< cluster_type >::
 
 template < class cluster_type >
 void besthea::mesh::tree_structure< cluster_type >::print_tree_structure( 
-  const std::string filename ) const
+  const std::string & filename ) const
 {
   write_vector_to_bin_file( compute_tree_structure( ), filename );
 }

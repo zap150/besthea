@@ -65,7 +65,7 @@ class besthea::mesh::tree_structure {
    * \todo use a different constructor if the tree structure is used for more
    * general trees, not only temporal
    */
-  tree_structure( const std::string filename, const sc start_time, 
+  tree_structure( const std::string & filename, const sc start_time, 
     const sc end_time );
 
   /**
@@ -99,6 +99,11 @@ class besthea::mesh::tree_structure {
   }
 
   /**
+   * 
+   */
+  void load_process_assignments( const std::string & filename );
+
+  /**
    * Returns the structure of the tree represented as a vector of chars.
    * 
    * The chars are sorted according to the traversal of the tree (recursive, 
@@ -112,7 +117,7 @@ class besthea::mesh::tree_structure {
    * Computes the tree structure and prints it to a binary file
    * @param[in] filename Name of the output file
    */
-  void print_tree_structure( const std::string filename ) const;
+  void print_tree_structure( const std::string & filename ) const;
 
   /**
    * Prints levels of the tree.
@@ -139,7 +144,7 @@ class besthea::mesh::tree_structure {
    * \warning currently this works only for time clusters
    */
   void tree_2_vector( const cluster_type & root,
-    std::vector<char> & tree_vector ) const;
+    std::vector< char > & tree_vector ) const;
 
   /**
    * Recursively constructs the tree structure from a given vector.
@@ -152,6 +157,12 @@ class besthea::mesh::tree_structure {
    * \todo adapt this for the individual cluster types
    */
   void vector_2_tree( const std::vector<char> & tree_vector, 
+    cluster_type & root, lou & position );
+
+  /**
+   * 
+   */
+  void set_process_assignments( const std::vector< lo > process_assignments, 
     cluster_type & root, lou & position );
 
   /**

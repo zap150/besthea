@@ -52,11 +52,16 @@ int main( int argc, char * argv[] ) {
     file.assign( argv[ 1 ] );
   }
 
-  b_t_mesh time_mesh( file );
-  time_mesh.print_info( );
-
+  // b_t_mesh time_mesh( file );
   // time_mesh.refine( 1 );
   // time_mesh.print_info( );
+
+  lo levels = 5;
+  b_t_mesh time_mesh( 0, 1, 1 << ( levels + 1 ) );
+
+  // time_mesh.print_info( );
+
+
 
   // std::string file_spatial = "./test/mesh_files/icosahedron.txt";
   // std::string file_spatial = "./mesh_files/nuniform.txt";
@@ -77,7 +82,7 @@ int main( int argc, char * argv[] ) {
   // b_st_slice slice( file_spatial, file );
 
   space_mesh.refine( 1 );
-  space_mesh.print_info( );
+  // space_mesh.print_info( );
   space_mesh.print_vtu( "spacetime_test" );
 
   // space_cluster_tree ct( space_mesh, 4, 8 );
@@ -93,7 +98,7 @@ int main( int argc, char * argv[] ) {
 // const spacetime_tensor_mesh & spacetime_mesh,
 //     lo time_levels, lo n_min_time_elems, lo n_min_space_elems, sc st_coeff,
 //     lo spatial_nearfield_limit = 3 
-  space_time_cluster_tree spt( tensor_mesh, 7, 3, 10, st_coeff );
+  space_time_cluster_tree spt( tensor_mesh, 20, 3, 10, st_coeff );
 
   time_cluster_tree* time_tree = spt.get_time_tree( );
   std::string tree_vector_file = "./spacetime_test/tree_structure.bin";
@@ -104,11 +109,24 @@ int main( int argc, char * argv[] ) {
     tree_vector_file );
 
   std::cout << "read tree structure from file: " << std::endl;
+  std::cout << "size is " << tree_vector.size( ) << std::endl;
   for ( lou i = 0; i < tree_vector.size( ); ++i ) {
     std::cout << ( int ) tree_vector[ i ] << std::endl;
   }
-  std::cout << "RECONSTRUCTED TREE" << std::endl;
+  std::cout << "reconstructed tree" << std::endl;
   tree_structure skeleton( tree_vector_file, time_mesh.get_start( ),
     time_mesh.get_end( ) );
+  skeleton.print( );
+
+  lo strategy = 1;
+  lo n_processes = 15;
+  std::cout << std::endl << "#######################" << std::endl;
+  std::cout << "n_processes: " << n_processes << std::endl;
+  std::string process_assignment_file = 
+    "./spacetime_test/process_assignment.bin";
+  time_tree->print_process_assignments( n_processes, strategy, 
+    process_assignment_file );
+
+  skeleton.load_process_assignments( process_assignment_file );
   skeleton.print( );
 }

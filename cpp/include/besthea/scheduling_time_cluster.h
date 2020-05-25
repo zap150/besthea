@@ -58,12 +58,13 @@ class besthea::mesh::scheduling_time_cluster {
    * @param[in] level Level within the cluster tree.
    */
   scheduling_time_cluster( sc center, sc half_size, 
-    scheduling_time_cluster * parent, lo level )
+    scheduling_time_cluster * parent, lo level, lo process_id = -1 )
     : _center( center ),
       _half_size ( half_size ),
       _parent( parent ),
       _children( nullptr ),
-      _level( level ) {
+      _level( level ),
+      _process_id( process_id ) {
   }
 
   scheduling_time_cluster( const scheduling_time_cluster & that ) = delete;
@@ -159,6 +160,14 @@ class besthea::mesh::scheduling_time_cluster {
     return _level;
   }
 
+  lo get_process_id( ) const {
+    return _process_id;
+  }
+
+  void set_process_id( lo process_id ) {
+    _process_id = process_id;
+  }
+
   /**
    * Returns a pointer to left neighbour.
    */
@@ -195,15 +204,18 @@ class besthea::mesh::scheduling_time_cluster {
   void print( ) {
     std::cout << "level: " << _level << std::endl;
     std::cout << "center: " << _center << ", half size: " << _half_size
-              << std::endl;
+              << ", proc_id: " << _process_id << std::endl;
+      
   }
 
  private:
   sc _center;      //!< center of the cluster
   sc _half_size;   //!< half size of the cluster
-  scheduling_time_cluster * _parent;                     //!< parent of the cluster
-  std::vector< scheduling_time_cluster * > * _children;  //!< children of the cluster
+  scheduling_time_cluster * _parent;  //!< parent of the cluster
+  std::vector< scheduling_time_cluster * > 
+    * _children;  //!< children of the cluster
   lo _level;                    //!< level within the cluster tree
+  lo _process_id;   //!< id of the process to which the cluster is assigned
 };
 
 #endif /* INCLUDE_BESTHEA_SCHEDULING_TIME_CLUSTER_H_ */
