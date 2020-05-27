@@ -156,8 +156,8 @@ class besthea::mesh::time_cluster_tree {
    * with the fewest clusters in the subtree).
    * Strategy 2: Always assign a cluster to the same process which handles its
    * left child.
-   * \param[in] n_processes Number of processes.
-   * \param[in] strategy  Indicates which strategy is used (default 2).
+   * @param[in] n_processes Number of processes.
+   * @param[in] strategy  Indicates which strategy is used (default 2).
    * \return A vector representing the distribution of the clusters. It contains
    * the process ids according to the tree format. 
    */
@@ -166,6 +166,10 @@ class besthea::mesh::time_cluster_tree {
 
   /**
    * Computes the process assignments and prints them to a binary file
+   * @param[in] n_processes Number of processes used for the assignment
+   * @param[in] strategy  Value between 0 and 2 indicating one of three
+   *                      strategies to assign the processes. See documentation
+   *                      of @ref compute_process_assignments for details.
    * @param[in] filename Name of the output file
    */
   void print_process_assignments( const lo n_processes, const lo strategy, 
@@ -217,11 +221,37 @@ class besthea::mesh::time_cluster_tree {
    * @param[in] root Current cluster, whose children are considered to determine
    *                 the next characters in the structural vector.
    * @param[in,out] tree_vector Vector to store the tree structure.
-   * \note This method is supposed to be called by @ref compute_tree_structure
+   * @note This method is supposed to be called by @ref compute_tree_structure
    */
   void tree_2_vector( const time_cluster & root,
     std::vector< char > & tree_vector ) const;
 
+  /**
+   * Takes a process assignment vector created in the routine
+   * @ref compute_process_assignments and converts it into a vector of process
+   * assignments in the format, which is used to represent the tree structure.
+   * This is done by traversing the tree recursively.
+   * @param[in] root  Current cluster in the recursion.
+   * @param[in] levelwise_assignment  Process assignment in the original format
+   * @param[in] thresh_level  First level in the tree which is larger or equal
+   *                          then the number of processes.
+   * @param[in] trunc_level Level of the earliest leaf cluster in the tree.
+   * @param[in] n_processes Number of processes for the assignment.
+   * @param[in] my_id Process id of the cluster which calls the routine. This is
+   *                  used to assign the same process id to the children of a 
+   *                  cluster at levels below trunc_level.
+   * @param[in,out] assigned_clusters Counters for each level to keep track of 
+   *                                  the number of clusters which have been
+   *                                  assigned.
+   * @param[in,out] process_pointers  Auxiliary vector for the assignment of 
+   *                                  processes to clusters starting from
+   *                                  trunc_level. Contains an index for each 
+   *                                  such level which indicates the process 
+   *                                  which was last assigned.
+   * @param[in,out] process_assignment  Vector of process assignments in the 
+   *                                    tree structure format.
+   * @note This method is solely used by @ref compute_process_assignments .
+   */
   void convert_assignment_vector_2_tree_format( 
     const time_cluster & root, const std::vector< lo > & levelwise_assignment,
     const lo thresh_level, const lo trunc_level, const lo n_processes,

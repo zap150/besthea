@@ -227,7 +227,7 @@ class besthea::mesh::spacetime_cluster_tree {
 
   /**
    * Recursively fills the interaction lists of clusters starting at root.
-   * \param[in] root  Starting cluster for the recursion.
+   * @param[in] root  Starting cluster for the recursion.
    */
   void determine_interactions( spacetime_cluster & root );
 

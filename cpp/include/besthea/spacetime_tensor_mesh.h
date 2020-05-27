@@ -121,7 +121,7 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * Returns node indices of a space-time element.
    * @param[in] i_element Index of the element.
    * @param[out] element Element indices (array of 6 indices).
-   * \todo Should element really be 3 and not 6 here?!
+   * @todo Should element really be 3 and not 6 here?!
    */
   void get_element(
     lo i_element, linear_algebra::indices< 3 > & element ) const {

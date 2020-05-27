@@ -38,13 +38,19 @@
 #include <string>
 #include <vector>
 
+/**
+ * Writes the values of a vector consecutively to a binary file
+ * @param[in] print_vector  Vector which is printed to the file.
+ * @param[in] filename Name of the output file
+ */
 template < class T >
 void write_vector_to_bin_file( const std::vector< T > & print_vector, 
   const std::string & filename );
 
 /**
- * Reads a vector corresponding to a tree structure from a binary file
- * @param[in] filename Name of the input file
+ * Reads a vector of consecutive values (of same type T) from a binary file.
+ * @param[in] filename Name of the input file.
+ * @return  Standard vector containing all values read from file.
  */
 template < class T >
 std::vector< T > read_vector_from_bin_file( const std::string & filename );
