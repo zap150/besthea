@@ -34,9 +34,7 @@
 
 int main( int argc, char * argv[] ) {
   using b_t_mesh = besthea::mesh::temporal_mesh;
-  using scheduling_time_cluster = besthea::mesh::scheduling_time_cluster;
-  using tree_structure 
-    = besthea::mesh::tree_structure< scheduling_time_cluster >;
+  using tree_structure = besthea::mesh::tree_structure;
   using time_cluster_tree = besthea::mesh::time_cluster_tree;
 
   // uncomment appropriate mesh

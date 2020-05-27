@@ -44,15 +44,14 @@
 
 namespace besthea {
   namespace mesh {
-    template< class cluster_type >
     class tree_structure;
   }
 }
 
 /**
- * Class representing (not necessarily binary) tree of temporal clusters.
+ * Class representing the structure of a tree of temporal clusters.
+ * It is meant to be used for the scheduling of jobs in a parallel FMM.
  */
-template< class cluster_type >
 class besthea::mesh::tree_structure {
  public:
   /**
@@ -62,10 +61,6 @@ class besthea::mesh::tree_structure {
    * @param[in] end_time  End time of the time mesh.
    * @note The start and end point of the mesh are used to generate the 
    * geometrical data of the clusters.
-   * @warning Only the structure of the tree is reconstructed. The elements of
-   * the mesh are not added to the clusters.
-   * @todo use a different constructor if the tree structure is used for more
-   * general trees, not only temporal
    */
   tree_structure( const std::string & filename, const sc start_time, 
     const sc end_time );
@@ -89,14 +84,14 @@ class besthea::mesh::tree_structure {
   /**
    * Returns the root of the tree.
    */
-  cluster_type * get_root( ) {
+  scheduling_time_cluster * get_root( ) {
     return _root;
   }
 
   /**
    * Returns clusters without descendants.
    */
-  std::vector< cluster_type * > & get_leaves( ) {
+  std::vector< scheduling_time_cluster * > & get_leaves( ) {
     return _leaves;
   }
 
@@ -148,19 +143,12 @@ class besthea::mesh::tree_structure {
    *                    ids. Its value should be larger than the number of
    *                    digits the highest process id has.
    */
-  void print_processes_human_readable( lo digits ) {
-    std::vector< std::string > print_strings;
-    print_strings.resize( _levels );
-    determine_processes_string( digits, _root, print_strings );
-    for ( lou i = 0; i < print_strings.size( ); ++i ) {
-      std::cout << print_strings[ i ] << std::endl;
-    }
-  } 
+  void print_processes_human_readable( lo digits ) const; 
 
  private:
-  cluster_type * _root;         //!< root cluster of the tree structure
-  lo _levels;                   //!< number of levels in the tree
-  std::vector< cluster_type * >
+  scheduling_time_cluster * _root;  //!< root cluster of the tree structure
+  lo _levels;                       //!< number of levels in the tree
+  std::vector< scheduling_time_cluster * >
     _leaves;  //!< vector of all clusters without descendants
 
   /**
@@ -171,7 +159,7 @@ class besthea::mesh::tree_structure {
    * @note This method is supposed to be called by @ref compute_tree_structure
    * @warning currently this works only for time clusters
    */
-  void tree_2_vector( const cluster_type & root,
+  void tree_2_vector( const scheduling_time_cluster & root,
     std::vector< char > & tree_vector ) const;
 
   /**
@@ -185,7 +173,7 @@ class besthea::mesh::tree_structure {
    * @todo adapt this for the individual cluster types
    */
   void vector_2_tree( const std::vector<char> & tree_vector, 
-    cluster_type & root, lou & position );
+    scheduling_time_cluster & root, lou & position );
 
   /** Assigns to each cluster in the tree structure its respective process 
    * given in process_assignments by traversing the tree structure.
@@ -196,13 +184,13 @@ class besthea::mesh::tree_structure {
 
    */
   void set_process_assignments( const std::vector< lo > process_assignments, 
-    cluster_type & root, lou & position );
+    scheduling_time_cluster & root, lou & position );
 
   /**
    * Collects all clusters without descendants and stores them in the internal
    * _leaves vector.
    */
-  void collect_leaves( cluster_type & root );
+  void collect_leaves( scheduling_time_cluster & root );
 
   /**
    * Sets the levelwise indices of all clusters in the tree structure by 
@@ -212,14 +200,15 @@ class besthea::mesh::tree_structure {
    * @param[in,out] index_counters  A counter for each level to keep track of 
    *                                the indices.
    */
-  void set_indices( cluster_type & root, std::vector< lo > & index_counters );
+  void set_indices( scheduling_time_cluster & root, 
+    std::vector< lo > & index_counters );
 
   /**
    * Computes and sets the nearfield and interaction list for every cluster in 
    * the tree structure by recursively traversing the tree.
    * @param[in] root  Current cluster in the tree traversal.
    */
-  void set_nearfield_and_interaction_list( cluster_type & root );
+  void set_nearfield_and_interaction_list( scheduling_time_cluster & root );
 
   /**
    * Executes the reduction of the tree structure to the locally essential part.
@@ -237,7 +226,7 @@ class besthea::mesh::tree_structure {
    * @note @p _leaves and @p _levels are reset, as well as the indices of the
    * time clusters.
    */
-  void execute_essential_reduction( cluster_type & root, 
+  void execute_essential_reduction( scheduling_time_cluster & root, 
     std::vector< std::vector< char > > & levelwise_status ); 
 
   /**
@@ -264,16 +253,18 @@ class besthea::mesh::tree_structure {
    * meets one of the above requirements. Such clusters are not detected.
    * @note This method is solely used by @ref reduce_2_essential .
    */
-  void determine_essential_clusters( const lo my_id, const cluster_type & root, 
+  void determine_essential_clusters( const lo my_id, 
+    const scheduling_time_cluster & root, 
     std::vector< std::vector< char > > & levelwise_status );
 
   /**
    * Aux for printing
    */
-  void print_internal( cluster_type * root ) {
+  void print_internal( scheduling_time_cluster * root ) {
     if ( root != nullptr ) {
       root->print( );
-      std::vector< cluster_type * > * children = root->get_children( );
+      std::vector< scheduling_time_cluster * > * children 
+        = root->get_children( );
       if ( children != nullptr )
         for ( auto it = children->begin( ); it != children->end( ); ++it ) {
           for ( lo i = 0; i < ( *it )->get_level( ); ++i ) std::cout << " ";
@@ -293,78 +284,9 @@ class besthea::mesh::tree_structure {
    *                                          output strings for each cluster
    *                                          are added.
    */
-  void determine_processes_string( const lo digits, cluster_type * root,
-    std::vector< std::string > & levelwise_output_strings ) {
-    if ( root != nullptr ) {
-      lo current_level = root->get_level( );
-      lo process_id = root->get_process_id( );
-      // compute the number of digits the process_id needs
-      lo id_digits = 1;
-      if ( process_id > 0 ) {
-        id_digits = ( lo ) ceil( log10( process_id + 1 ) );
-      }
-      // construct the string for the cluster and append it to the output string
-      // at the appropriate level
-      lo n_digits_level = ( 1 << ( _levels - 1 - current_level ) ) * digits;
-      lo n_trailing_whitespace = n_digits_level - id_digits;
-      std::string next_string = std::to_string( process_id )
-        + std::string( n_trailing_whitespace, ' ');
-      levelwise_output_strings[ current_level ] += next_string;
-      // proceed for the children
-      if ( root->get_n_children( ) == 2 ) {
-        // call the routine for each child
-        auto children = root->get_children( );
-        for ( auto child : *children ) {
-          determine_processes_string( digits, child, levelwise_output_strings );
-        }
-      }
-      else if ( root->get_n_children( ) == 1 ) {
-        // call the routine for the existing child and add / and whitespaces for
-        // the non-existing child
-        auto child = ( * root->get_children( ) )[ 0 ];
-        sc parent_center = root->get_center( );
-        sc child_center = child->get_center( );
-        std::vector< bool > child_exists( 2, false );
-        if ( child_center < parent_center ) {
-          child_exists[ 0 ] = true;
-        } else {
-          child_exists[ 1 ] = true;
-        }
-        for ( lou i = 0; i < 2; ++i ) {
-          if ( child_exists[ i ] == true ) {
-            determine_processes_string( digits, child, 
-              levelwise_output_strings );
-          } else {
-            // add / and whitespaces for non-existing clusters starting from
-            // the non-existing leaf to the bottom of the tree
-            lo n_children = 1;
-            lo n_digits_level_mod = n_digits_level;
-            for ( lo level = current_level + 1; level < _levels; ++level ) {
-              n_digits_level_mod /= 2;
-              std::string child_string 
-                = '/' + std::string(n_digits_level_mod - 1, ' ');
-              for ( lo child = 0; child < n_children; ++child ) {
-                levelwise_output_strings[ level ] += child_string; 
-              }
-              n_children *= 2;
-            }
-          }
-        }
-      } else {
-        // add / and whitespaces for non-existing clusters starting from the
-        // non-existing leaves to the bottom of the tree
-        lo n_children = 1;
-        for ( lo level = current_level + 1; level < _levels; ++level ) {
-          n_children *= 2;
-          n_digits_level /= 2;
-          std::string child_string = '/' + std::string(n_digits_level - 1, ' ');
-          for ( lo child = 0; child < n_children; ++child ) {
-            levelwise_output_strings[ level ] += child_string; 
-          }
-        }
-      }
-    }
-  }
+  void determine_processes_string( const lo digits, 
+    scheduling_time_cluster * root,
+    std::vector< std::string > & levelwise_output_strings ) const;
 };
 
 #endif /* INCLUDE_BESTHEA_TREE_STRUCTURE_H_ */
