@@ -116,12 +116,12 @@ with the duality pairing between $X^\ast$ and $X$
 \begin{equation*}
   \langle v, w \rangle_\Sigma := \int_0^T \int_{\partial\Omega} v(\vx,t) w(\vx,t) \,\dif\vs_\vx \,\dif t.
 \end{equation*}
-For the duality pairing with the hypersingular operator we have an alternative representation
+For the duality pairing with the hypersingular operator we have an alternative representation removing the non-integrable singularity, namely
 \begin{equation}
 \label{eq:D_bil}
 \begin{aligned}
-  \langle Du, r \rangle_\Sigma &= \alpha^2 \int_0^T \int_{\partial\Omega} \curl_{\partial\Omega} r(\vx,t)^\top \int_0^t \int_{\partial\Omega} \curl_{\partial\Omega} u(\vy,\tau) G_\alpha(\vx-\vy,t-\tau) \,\dif\vs_\vy \,\dif\tau \,\dif\vs_\vx \,\dif t \\
-  &- \alpha \int_0^T \int_{\partial\Omega} \vn(\vx)^\top r(\vx,t) \int_0^t \int_{\partial\Omega} \vn(\vy) u(\vy,t) \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\vs_\vy \,\dif\tau \,\dif\vs_\vx \,\dif t.
+  \langle Du, r \rangle_\Sigma &= \alpha^2 \int_0^T \int_{\partial\Omega} \curl_{\partial\Omega} r(\vx,t) \cdot \bigg( \int_0^t \int_{\partial\Omega} \curl_{\partial\Omega} u(\vy,\tau) G_\alpha(\vx-\vy,t-\tau) \,\dif\vs_\vy \,\dif\tau \bigg) \,\dif\vs_\vx \,\dif t \\
+  &- \alpha \int_0^T \int_{\partial\Omega} r(\vx,t) \vn(\vx) \cdot \bigg( \int_0^t \int_{\partial\Omega} \vn(\vy) u(\vy,t) \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\vs_\vy \,\dif\tau \bigg) \,\dif\vs_\vx \,\dif t.
 \end{aligned}
 \end{equation}
 
@@ -197,45 +197,25 @@ with
 \end{equation}
 for $d \in \{1,\ldots,E_t-1\}$ and $w^d_j := w_{d+1,j}$.
 
-To set up $\matV_h$ we will use analytic integration in time and a regularized quadrature in space as used in stationary problems. We thus have to evaluate
+To set up $\matV_h$ we will use analytic integration in time and a regularized quadrature in space as used in stationary problems. Using $t_d = dh_t$ we thus have to evaluate
 \begin{equation}
 \label{eq:V_d}
   V^d(\vr) := 
   \begin{cases}
   \displaystyle
-    \int_{0}^{t_1} \int_{0}^{t} G_\alpha(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d = 0, \\[4mm]
+    \int_{0}^{h_t} \int_{0}^{t} G_\alpha(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d = 0, \\[4mm]
   \displaystyle
-    \int_{t_d}^{t_{d+1}} \int_{0}^{t_1} G_\alpha(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d \in \{1,\ldots,E_t-1\}.
+    \int_{dh_t}^{(d+1)h_t} \int_{0}^{h_t} G_\alpha(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d \in \{1,\ldots,E_t-1\}.
   \end{cases}
 \end{equation}
-Let us start with the latter case. Using the substitution
-\begin{equation}
-\label{eq:subst_tau_t}
-\begin{aligned}
-  \tau &= h_t \hat\tau, \quad \hat\tau = \tau/h_t, \quad \dif\tau = h_t\,\dif\hat\tau, \\
-  t &= h_t (d+\hat t), \quad \hat t = t/h_t - d, \quad \dif t = h_t\,\dif\hat t
-\end{aligned}
-\end{equation}
-we obtain
+Let us start with the latter case. Integrating with respect to $\tau$ leads to
 \begin{equation*}
-  V^d(\vr) = h_t^2 \int_{0}^{1} \int_{0}^{1} G_\alpha(\vr,h_t(d+\hat t-\hat\tau)) \,\dif\hat\tau \,\dif\hat t.
-\end{equation*}
-With the scaling from~\eqref{eq:G_scaling} we can further write
-\begin{equation*}
-  V^d(\vr) = \sqrt{\frac{h_t}{\alpha^3}} \int_{0}^{1} \int_{0}^{1} G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+\hat t-\hat\tau\bigg) \,\dif\hat\tau \,\dif\hat t
-\end{equation*}
-with 
-\begin{equation*}
-  G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+\hat t-\hat\tau\bigg) = \frac{1}{(4\pi(d+\hat t-\hat\tau))^{3/2}}\exp\bigg( -\frac{\|\vr\|^2/\alpha h_t}{4(d+\hat t-\hat\tau)} \bigg).
-\end{equation*}
-We thus obtain
-\begin{equation*}
-  V^d(\vr) = \sqrt{\frac{h_t}{\alpha^3}} \int_{0}^{1} G^{\dif \hat\tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+\hat t-1\bigg) - G^{\dif \hat\tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+\hat t\bigg) \,\dif\hat t
+  V^d(\vr) = \int_{dh_t}^{(d+1)h_t} G^{\dif\tau}_\alpha(\vr,t-h_t) - G^{\dif\tau}_\alpha(\vr,t) \,\dif t
 \end{equation*}
 with
 \begin{equation}
   \label{eq:G_dtau}
-  G^{\dif \hat\tau}_1(\tilde\vr,\delta) = \frac{1}{4\pi \|\tilde \vr\|} \erf\bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} \bigg)
+  G^{\dif\tau}_\alpha(\vr,\delta) = \frac{1}{4\pi \alpha \|\vr\|} \erf\bigg( \frac{\|\vr\|}{2\sqrt{\alpha\delta}} \bigg)
 \end{equation}
 and the error function
 \begin{equation*}
@@ -243,31 +223,31 @@ and the error function
 \end{equation*}
 Continuing in the integration we obtain
 \begin{equation*}
-  V^d(\vr) = \sqrt{\frac{h_t}{\alpha^3}} \bigg[ 2G^{\dif\hat\tau\dif\hat t}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d\bigg) - G^{\dif\hat\tau\dif\hat t}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+1\bigg) - G^{\dif\hat\tau\dif\hat t}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d-1\bigg) \bigg]
+  V^d(\vr) = 2G^{\dif\tau\dif t}_\alpha(\vr,d h_\tau) - G^{\dif\tau\dif t}_\alpha(\vr,(d+1)h_t) - G^{\dif\tau\dif t}_\alpha(\vr,(d-1)h_t)
 \end{equation*}
 with 
 \begin{equation*}
-  G^{\dif\hat\tau\dif\hat t}_1(\tilde\vr,\delta) = \frac{\sqrt{\delta}}{4\pi} \bigg[ \bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} + \frac{\sqrt{\delta}}{\|\tilde \vr\|} \bigg) \erf\bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} \bigg) + \frac{1}{\sqrt{\pi}}\exp\bigg( -\frac{\|\tilde \vr\|^2}{4\delta} \bigg) \bigg] \quad\text{for } \delta > 0.
+  G^{\dif\tau\dif t}_\alpha(\vr,\delta) = \frac{1}{4\pi} \bigg[ \bigg( \frac{\|\vr\|}{2\alpha^2} + \frac{\delta}{\alpha \|\vr\|} \bigg) \erf\bigg( \frac{\|\vr\|}{2\sqrt{\alpha\delta}} \bigg) + \frac{\sqrt{\delta}}{\sqrt{\pi\alpha^3}}\exp\bigg( -\frac{\|\vr\|^2}{4\alpha\delta} \bigg) \bigg] \quad\text{for } \delta > 0.
 \end{equation*}
-For $\|\tilde \vr\| > 0$ we have to treat the case
+For $\|\vr\| > 0$ we have to treat the case
 \begin{equation*}
-  \lim_{\delta \to 0+} G^{\dif\hat\tau\dif\hat t}_1(\tilde\vr,\delta) = \frac{\|\tilde \vr\|}{8\pi}.
+  \lim_{\delta \to 0+} G^{\dif\tau\dif t}_\alpha(\vr,\delta) = \frac{\|\vr\|}{8\pi\alpha^2}.
 \end{equation*} 
 Similarly, for well separated $t$ and $\tau$, i.e. for $\delta > 0$, we compute the limit
 \begin{equation*}
-  \lim_{\|\tilde\vr\|\to 0+} G^{\dif\hat\tau\dif\hat t}_1(\tilde\vr,\delta) = \frac{\sqrt{\delta}}{2\pi^{3/2}}.
+  \lim_{\|\vr\|\to 0+} G^{\dif\tau\dif t}_\alpha(\vr,\delta) = \frac{\sqrt{\delta}}{2\sqrt{\pi^3\alpha^3}}.
 \end{equation*}
 Thus, if either the spatial or temporal variables are well separated, i.e. we integrate over disjoint triangles or time intervals, standard quadrature routines can be applied. For the near field, regularized quadrature techniques based on the Duffy transformation can be used \cite{SauSch2010,ManTau2019}. 
 
 For $V^0(\vr)$ we obtain in a similar fashion
 \begin{align*}
-  V^0(\vr) &= \sqrt{\frac{h_t}{\alpha^3}} \int_{0}^{1} G^{\dif\hat \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) - G^{\dif\hat \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},\hat t\bigg) \,\dif\hat t \\
-  &= \sqrt{\frac{h_t}{\alpha^3}} \bigg[ G^{\dif\hat \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) - G^{\dif\hat\tau\dif\hat t}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},1\bigg) + G^{\dif\hat\tau\dif\hat t}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) \bigg].
+  V^0(\vr) &= \int_{0}^{t} G^{\dif \tau}_\alpha(\vr,0) - G^{\dif \tau}_\alpha(\vr, t) \,\dif t 
+  =h_t G^{\dif\tau}_\alpha(\vr,0) - G^{\dif\tau\dif t}_\alpha(\vr,h_t) + G^{\dif\tau\dif t}_\alpha(\vr,0).
 \end{align*}
-Again, we have to consider the limiting case for $\|\tilde \vr\| > 0$,
+Again, we have to consider the limiting case for $\|\vr\| > 0$,
 \begin{equation}
   \label{eq:G_dtau_lim_d}
-  \lim_{\delta \to 0+} G^{\dif\hat \tau}_1(\tilde \vr,\delta) = \frac{1}{4\pi\|\tilde \vr\|}.
+  \lim_{\delta \to 0+} G^{\dif\tau}_\alpha(\vr,\delta) = \frac{1}{4\pi\alpha\|\vr\|}.
 \end{equation}
 
 \subsection{Double-layer operator}
