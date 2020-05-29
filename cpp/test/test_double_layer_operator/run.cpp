@@ -207,7 +207,7 @@ int main( int argc, char * argv[] ) {
     }
     delete K_pFMM;
   } else if ( test_case == 3 ) {
-    pFMM_matrix_heat_adjdl_p1p0 * K_adj_pFMM = new pFMM_matrix_heat_adjdl_p1p0;
+    pFMM_matrix_heat_adl_p1p0 * K_adj_pFMM = new pFMM_matrix_heat_adl_p1p0;
     //   tree.print( );
 
     fast_spacetime_be_assembler fast_assembler_k_adj( kernel_ak,
@@ -218,7 +218,7 @@ int main( int argc, char * argv[] ) {
     t.measure( );
 
     lo block_id = 0;
-    lo block_evaluation_id = 0;
+    lo block_evaluation_id = 2;
     lo entry_id = 0;
     vector x_loc_0( rows_of_block );
     x_loc_0( entry_id ) = 1.0;
@@ -251,7 +251,7 @@ int main( int argc, char * argv[] ) {
 
     delete K_adj_pFMM;
   } else if ( test_case == 4 ) {
-    pFMM_matrix_heat_adjdl_p1p0 * K_adj_pFMM = new pFMM_matrix_heat_adjdl_p1p0;
+    pFMM_matrix_heat_adl_p1p0 * K_adj_pFMM = new pFMM_matrix_heat_adl_p1p0;
     //   tree.print( );
 
     fast_spacetime_be_assembler fast_assembler_k_adj( kernel_ak,

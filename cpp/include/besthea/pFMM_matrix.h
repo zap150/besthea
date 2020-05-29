@@ -687,7 +687,7 @@ typedef besthea::linear_algebra::pFMM_matrix<
   besthea::bem::spacetime_heat_adl_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >
-  pFMM_matrix_heat_adjdl_p1p0;
+  pFMM_matrix_heat_adl_p1p0;
 
 /** Typedef for the hypersingular p1-p1 PFMM matrix */
 typedef besthea::linear_algebra::pFMM_matrix<
