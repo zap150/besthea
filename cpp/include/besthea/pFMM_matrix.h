@@ -388,7 +388,7 @@ class besthea::linear_algebra::pFMM_matrix
    *                  all its descendants.
    * @param[in] buffer_matrices Vector of 8 matrices of size >=
    *    ( _temp_order + 1 ) * ( ( _spat_order + 3 ) choose 3 ).
-   * \todo Currently some unnecessary m2m operations are executed (for clusters
+   * @todo Currently some unnecessary m2m operations are executed (for clusters
    * without direct interactions or parental interactions).
    */
   void call_m2m_operations( spacetime_cluster * root,
@@ -409,7 +409,7 @@ class besthea::linear_algebra::pFMM_matrix
    *  ( ( _spat_order + 3 ) choose 3 ) entries for intermediate m2l results.
    * @param[in] aux_buffer_1  Matrix with ( _temp_order + 1 )^2 times
    *  ( ( _spat_order + 3 ) choose 3 ) entries for intermediate m2l results.
-   * \todo Routine requires changes if source and target cluster are from
+   * @todo Routine requires changes if source and target cluster are from
    *       different cluster trees.
    */
   void apply_m2l_operation( spacetime_cluster * target_cluster,
@@ -444,7 +444,7 @@ class besthea::linear_algebra::pFMM_matrix
    *                  all its descendants.
    * @param[in] buffer_matrices Vector of 8 matrices of size >=
    *    ( _temp_order + 1 ) * ( ( _spat_order + 3 ) choose 3 ).
-   * \todo Currently some unnecessary l2l operations are executed (for clusters
+   * @todo Currently some unnecessary l2l operations are executed (for clusters
    * without direct interactions or parental interactions).
    */
   void call_l2l_operations( spacetime_cluster * root,
@@ -648,14 +648,14 @@ class besthea::linear_algebra::pFMM_matrix
 
   mutable bem::chebyshev_evaluator
     _chebyshev;  //!< Evaluator of the Chebyshev polynomials.
-                 //!< \todo TODO check if necessary in the final code
+                 //!< @todo TODO check if necessary in the final code
 
   sc _alpha;  //!< Heat conductivity.
 
   bool _source_space_is_p0;  //!< True if spatial source space is p0.
-                             //!< \todo TODO: control more elegantly.
+                             //!< @todo TODO: control more elegantly.
   bool _target_space_is_p0;  //!< True if spatial target space is p0.
-                             //!< \todo TODO: control more elegantly.
+                             //!< @todo TODO: control more elegantly.
 
   //   besthea::bem::spacetime_heat_kernel
   //     _heat_kernel; //!< Evaluator of the Heat Kernel

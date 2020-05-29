@@ -196,7 +196,7 @@ class besthea::bem::fast_spacetime_be_assembler {
   /**
    * Assembles temporal nearfield matrices.
    * @param[out] global_matrix Partially assembled pFMM matrix.
-   * \todo If the number of levels in the spacetime cluster tree is less than
+   * @todo If the number of levels in the spacetime cluster tree is less than
    * the number of levels in the time tree than not enough nearfield matrices
    * are computed. Change is necessary!
    */
@@ -432,7 +432,7 @@ class besthea::bem::fast_spacetime_be_assembler {
   /**
    * Computes quadrature of the Lagrange polynomials up to a given order over
    * all elements in the cluster.
-   * \param[in] cluster   Time cluster for which the quadratures are computed
+   * @param[in] cluster   Time cluster for which the quadratures are computed
    *                      and where they are stored.
    */
   void compute_lagrange_quadrature( time_cluster_type * cluster ) const;
@@ -440,7 +440,7 @@ class besthea::bem::fast_spacetime_be_assembler {
   /**
    * Computes integrals of the derivatives of the Lagrange polynomials up to a
    * given order over all elements in the cluster.
-   * \param[in] cluster   Time cluster for which the integrals are computed
+   * @param[in] cluster   Time cluster for which the integrals are computed
    *                      and where they are stored.
    */
   void compute_lagrange_drv_integrals( time_cluster_type * cluster ) const;
@@ -448,11 +448,11 @@ class besthea::bem::fast_spacetime_be_assembler {
   /**
    * Compute the surface curls of p1 functions and store them in the
    * space_cluster.
-   * \param[in] cluster   Space cluster for which the curls are computed
+   * @param[in] cluster   Space cluster for which the curls are computed
    *                      and where they are stored.
    * \see besthea::mesh::space_cluster for a detailed explanation on
    * how the curls area stored.
-   * \warning Only the information from \p _trial_space is used for the
+   * @warning Only the information from \p _trial_space is used for the
    * computation (Could cause problems if test and trial space differ).
    */
   void compute_surface_curls( space_cluster_type * cluster ) const;
@@ -463,9 +463,9 @@ class besthea::bem::fast_spacetime_be_assembler {
    * (various variants depending on the operator), quadratures of Lagrange
    * polynomials(or their derivatives) and in case of the hypersingular operator
    * also the mappings to realize the integrals of curls of p1 functions
-   * \note If the required quadratures are already computed they are not
+   * @note If the required quadratures are already computed they are not
    * recomputed. TODO: currently disactivated
-   * \warning Only the number of columns of the Chebyshev quadrature (or its
+   * @warning Only the number of columns of the Chebyshev quadrature (or its
    *          derivative ) of the first spatial leaf cluster is checked to see
    *          if the quadratures have been computed.
    */
@@ -476,7 +476,7 @@ class besthea::bem::fast_spacetime_be_assembler {
   /**
    * Compute quadrature of the Chebyshev polynomials and p0 basis functions for
    * a space cluster.
-   * \param[in] cluster   Space cluster for which the quadratures are computed
+   * @param[in] cluster   Space cluster for which the quadratures are computed
    *                      and where they are stored.
    */
   void compute_chebyshev_quadrature_p0( space_cluster_type * cluster ) const;
@@ -484,7 +484,7 @@ class besthea::bem::fast_spacetime_be_assembler {
   /**
    * Compute quadrature of the Chebyshev polynomials and p1 basis functions for
    * a space cluster.
-   * \param[in] cluster   Space cluster for which the quadratures are computed
+   * @param[in] cluster   Space cluster for which the quadratures are computed
    *                      and where they are stored.
    */
   void compute_chebyshev_quadrature_p1( space_cluster_type * cluster ) const;
@@ -492,7 +492,7 @@ class besthea::bem::fast_spacetime_be_assembler {
   /**
    * Compute quadrature of the normal derivatives of the Chebyshev polynomials
    * times p1 basis functions for a space cluster.
-   * \param[in] cluster   Space cluster for which the quadratures are computed
+   * @param[in] cluster   Space cluster for which the quadratures are computed
    *                      and where they are stored.
    */
   void compute_normal_drv_chebyshev_quadrature(
@@ -501,14 +501,14 @@ class besthea::bem::fast_spacetime_be_assembler {
   /**
    * Compute quadrature of the the Chebyshev polynomials times p1 basis
    * functions times normal vector for a space cluster.
-   * \param[in] cluster   Space cluster for which the quadratures are computed
+   * @param[in] cluster   Space cluster for which the quadratures are computed
    *                      and where they are stored.
    */
   void compute_chebyshev_times_normal_quadrature(
     space_cluster_type * cluster ) const;
 
   /**
-   * \todo do documentation
+   * @todo do documentation
    */
   void initialize_moment_and_local_contributions( ) const;
 

@@ -46,24 +46,31 @@ namespace besthea {
 }
 
 /**
- * Class representing 1D temporal cluster.
+ * Class representing 1D temporal cluster used for job scheduling in 3+1D FMM.
  */
 class besthea::mesh::scheduling_time_cluster {
  public:
   using vector_type = besthea::linear_algebra::vector;  //!< Block vector type.
   /**
    * Constructor.
-   * @param[in] center Center of the cluster.
+   * @param[in] center  Center of the cluster.
+   * @param[in] half_size Half size of the cluster. 
    * @param[in] parent Pointer to the cluster's parent.
-   * @param[in] level Level within the cluster tree.
+   * @param[in] level Level within the cluster tree structure.
+   * @param[in] process_id  Id of the process which is responsible for the 
+   *                        cluster in an MPI parallelized FMM.
    */
   scheduling_time_cluster( sc center, sc half_size, 
-    scheduling_time_cluster * parent, lo level )
+    scheduling_time_cluster * parent, lo level, lo process_id = -1 )
     : _center( center ),
       _half_size ( half_size ),
       _parent( parent ),
       _children( nullptr ),
-      _level( level ) {
+      _level( level ),
+      _index ( -1 ),
+      _process_id( process_id ),
+      _nearfield( nullptr ),
+      _interaction_list( nullptr ) {
   }
 
   scheduling_time_cluster( const scheduling_time_cluster & that ) = delete;
@@ -80,6 +87,32 @@ class besthea::mesh::scheduling_time_cluster {
       }
       delete _children;
     }
+    delete _nearfield;
+    delete _interaction_list;
+  }
+
+  /**
+   * Deletes the nearfield 
+   */
+  void delete_nearfield( ) {
+    delete _nearfield;
+    _nearfield = nullptr;
+  }
+
+  /**
+   * Deletes the interaction list
+   */
+  void delete_interaction_list( ) {
+    delete _interaction_list;
+    _interaction_list = nullptr;
+  }
+
+  /**
+   * Deletes the vector of children
+   */
+  void delete_children( ) {
+    delete _children;
+    _children = nullptr;
   }
 
   /**
@@ -123,7 +156,7 @@ class besthea::mesh::scheduling_time_cluster {
   /**
    * Returns number of cluster's children.
    */
-  lo get_n_children( ) {
+  lo get_n_children( ) const {
     if ( _children != nullptr ) {
       return _children->size( );
     } else {
@@ -137,6 +170,13 @@ class besthea::mesh::scheduling_time_cluster {
   std::vector< scheduling_time_cluster * > * get_children( ) {
     return _children;
   }
+
+  /**
+   * Returns a const pointer to the children.
+   */
+  const std::vector< scheduling_time_cluster * > * get_children( ) const {
+    return _children;
+  }
   
     /**
    * Returns a pointer to the parent.
@@ -144,19 +184,111 @@ class besthea::mesh::scheduling_time_cluster {
   scheduling_time_cluster * get_parent( ) {
     return _parent;
   }
-    
-  /**
-   * Returns a pointer to the children.
-   */
-  const std::vector< scheduling_time_cluster * > * get_children( ) const {
-    return _children;
-  }
 
   /**
    * Returns level of the cluster in the cluster tree.
    */
   lo get_level( ) const {
     return _level;
+  }
+
+  /**
+   * Returns id of the process to which the cluster is assigned.
+   */
+  lo get_process_id( ) const {
+    return _process_id;
+  }
+
+  /**
+   * Sets the process id of the cluster.
+   * @param[in] process_id  Id of the process.
+   */
+  void set_process_id( lo process_id ) {
+    _process_id = process_id;
+  }
+
+  /**
+   * Returns the levelwise index of the cluster in the cluster tree.
+   * @note The clusters are enumerated levelwise from left to right. 
+   */
+  lo get_index( ) const {
+    return _index;
+  }
+
+  /**
+   * Sets the index of the cluster.
+   * @param[in] index Index which is set.
+   */
+  void set_index( lo index ) {
+    _index = index;
+  }
+
+  /**
+   * Adds a pointer to a nearfield cluster to the vector _nearfield.
+   * @param[in] src_cluster Pointer to a nearfield cluster.
+   * @note If _nearfield is not allocated this is done here.
+   */
+  void add_to_nearfield( scheduling_time_cluster * src_cluster ) {
+    if ( _nearfield == nullptr ) {
+      _nearfield = new std::vector< scheduling_time_cluster * >( );
+    }
+    _nearfield->push_back( src_cluster );
+  }
+
+  /**
+   * Returns a pointer to the const nearfield.
+   */
+  const std::vector< scheduling_time_cluster * > * get_nearfield( ) const {
+    return _nearfield;
+  }
+
+  /**
+   * Returns a pointer to the nearfield.
+   */
+  std::vector< scheduling_time_cluster * > * get_nearfield( ) {
+    return _nearfield;
+  }
+
+   /**
+   * Returns a pointer to the const interaction list.
+   */
+  const std::vector< scheduling_time_cluster * > * 
+    get_interaction_list( ) const {
+    return _interaction_list;
+  }
+
+  /**
+   * Returns a pointer to the interaction list.
+   */
+  std::vector< scheduling_time_cluster * > * get_interaction_list( ) {
+    return _interaction_list;
+  }
+
+  /**
+   * Adds a pointer to a farfield cluster to the vector _interaction_list.
+   * @param[in] src_cluster Pointer to a farfield cluster.
+   * @note If _interaction_list is not allocated this is done here.
+   */
+  void add_to_interaction_list( scheduling_time_cluster * src_cluster ) {
+    if ( _interaction_list == nullptr ) {
+      _interaction_list = new std::vector< scheduling_time_cluster * >( );
+    }
+    _interaction_list->push_back( src_cluster );
+  }
+
+  /**
+   * Determines admissibility based on neighborhood criterion.
+   * @param[in] src_cluster Source cluster whose admissibility is checked.
+   * @warning This check of admissibility is only reasonable for clusters at the
+   * same level of a tree.
+   */
+  bool determine_admissibility( scheduling_time_cluster * src_cluster ) {
+    bool admissibility = false;
+    if ( src_cluster != this && src_cluster->get_center( ) < _center 
+                             && src_cluster != get_left_neighbour( ) ) {
+      admissibility = true;
+    } 
+    return admissibility;
   }
 
   /**
@@ -180,7 +312,7 @@ class besthea::mesh::scheduling_time_cluster {
   
   /**
    * Determines whether the current cluster is the left child of its parent.
-   * \note If the current cluster is the root of the tree \p false is returned.
+   * @note If the current cluster is the root of the tree \p false is returned.
    */
   bool is_left_child( ) const {
     if ( _parent == nullptr )
@@ -193,17 +325,41 @@ class besthea::mesh::scheduling_time_cluster {
    * Prints info of the object.
    */
   void print( ) {
-    std::cout << "level: " << _level << std::endl;
-    std::cout << "center: " << _center << ", half size: " << _half_size
-              << std::endl;
+    std::cout << "level: " << _level 
+              << ", center: " << _center << ", half size: " << _half_size
+              << ", index: " << _index << ", proc_id: " << _process_id;
+    // if ( _nearfield != nullptr ) {
+    //   std::cout << ", nearfield: ";
+    //   for ( lou i = 0; i < _nearfield->size( ); ++i ) {
+    //     std::cout << "(" << ( *_nearfield )[ i ]->get_level( ) << ", "  
+    //               << ( *_nearfield )[ i ]->get_index( ) << "), ";
+    //   }
+    // }
+    // std::cout << std::endl;
+    // if ( _interaction_list != nullptr ) {
+    //   std::cout << ", interaction_list: ";
+    //   for ( lou i = 0; i < _interaction_list->size( ); ++i ) {
+    //     std::cout << "(" << ( *_interaction_list )[ i ]->get_level( ) << ", "  
+    //               << ( *_interaction_list )[ i ]->get_index( ) << "), ";
+    //   }
+    // }
+    std::cout << std::endl;
   }
 
  private:
-  sc _center;      //!< center of the cluster
-  sc _half_size;   //!< half size of the cluster
-  scheduling_time_cluster * _parent;                     //!< parent of the cluster
-  std::vector< scheduling_time_cluster * > * _children;  //!< children of the cluster
-  lo _level;                    //!< level within the cluster tree
+  sc _center;       //!< center of the cluster
+  sc _half_size;    //!< half size of the cluster
+  scheduling_time_cluster * _parent;  //!< parent of the cluster
+  std::vector< scheduling_time_cluster * > 
+    * _children;    //!< children of the cluster
+  lo _level;        //!< level within the cluster tree
+  lo _index;        //!< index of the cluster at the current level according
+                    //!< to an enumeration from left to right
+  lo _process_id;   //!< id of the process to which the cluster is assigned
+  std::vector< scheduling_time_cluster * >
+    * _nearfield;   //!< nearfield of the cluster
+  std::vector< scheduling_time_cluster * >
+    * _interaction_list;  //!< interaction list of the cluster
 };
 
 #endif /* INCLUDE_BESTHEA_SCHEDULING_TIME_CLUSTER_H_ */

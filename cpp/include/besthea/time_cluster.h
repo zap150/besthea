@@ -269,7 +269,7 @@ class besthea::mesh::time_cluster {
   
   /**
    * Determines whether the current cluster is the left child of its parent.
-   * \note If the current cluster is the root of the tree \p false is returned.
+   * @note If the current cluster is the root of the tree \p false is returned.
    */
   bool is_left_child( ) const {
     if ( _parent == nullptr )

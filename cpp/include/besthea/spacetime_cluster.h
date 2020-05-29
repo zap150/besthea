@@ -193,9 +193,9 @@ class besthea::mesh::spacetime_cluster {
    * Initialize local contribution as full matrix of zeros.
    * @param[in] n_rows_contribution Number of rows.
    * @param[in] n_columns_contribution Number of columns.
-   * \note If the contributions are set already, then they are resized and
+   * @note If the contributions are set already, then they are resized and
    * reset to zero.
-   * \todo Is resizing of a full matrix allocated with new safe?
+   * @todo Is resizing of a full matrix allocated with new safe?
    */
   void set_local_contribution( lo n_rows_contribution, 
                                lo n_columns_contribution ) {
@@ -224,9 +224,9 @@ class besthea::mesh::spacetime_cluster {
    * Initialize moment contribution as full matrix of zeros.
    * @param[in] n_rows_contribution Number of rows.
    * @param[in] n_columns_contribution Number of columns.
-   * \note If the contributions are set already, then they are resized and
+   * @note If the contributions are set already, then they are resized and
    * reset to zero.
-   * \todo Is resizing of a full matrix allocated with new safe?
+   * @todo Is resizing of a full matrix allocated with new safe?
    */
   void set_moment_contribution( lo n_rows_contribution, 
                                 lo n_columns_contribution ) {

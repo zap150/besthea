@@ -31,15 +31,16 @@
 #include <iostream>
 #include <fstream> //for ofstream and ifstream
 
-template <>
-void write_vector_to_bin_file( const std::vector< char > & print_vector, 
+template < class T >
+void write_vector_to_bin_file( const std::vector< T > & print_vector, 
   const std::string & filename ) {
   std::ofstream file_out( filename.c_str( ), std::ios::binary );
   if ( file_out.is_open( ) )
   {
-    lou n_chars = print_vector.size( );
-    const char * print_vector_data = print_vector.data( );
-    file_out.write( print_vector_data, n_chars );
+    lou n_chars = print_vector.size( ) * sizeof( T );
+    const T * print_vector_data = print_vector.data( );
+    file_out.write( reinterpret_cast< const char* >( print_vector_data ), 
+      n_chars );
     file_out.close();
   } else {
     std::cout << "Error. Could not open the output file for printing the tree \
@@ -48,14 +49,8 @@ void write_vector_to_bin_file( const std::vector< char > & print_vector,
 }
 
 template < class T >
-void write_vector_to_bin_file( const std::vector< T > & print_vector, 
-  const std::string & filename ) {
-  std::cout << "write_vector_to_bin_file NOT IMPLEMENTED" << std::endl;
-}
-
-template <>
-std::vector< char > read_vector_from_bin_file( const std::string & filename ) {
-  std::vector< char > out_vector;
+std::vector< T > read_vector_from_bin_file( const std::string & filename ) {
+  std::vector< T > out_vector;
   std::ifstream read_file;
   read_file.open( filename.c_str( ) );
   if ( read_file.is_open( ) ) {
@@ -63,9 +58,9 @@ std::vector< char > read_vector_from_bin_file( const std::string & filename ) {
     read_file.seekg( 0, read_file.end );
     lo n_chars = read_file.tellg( );
     read_file.seekg( 0 );
-    out_vector.resize( n_chars );
+    out_vector.resize( n_chars / sizeof( T ) );
     //load all chars from file
-    read_file.read( out_vector.data( ), n_chars );
+    read_file.read( reinterpret_cast< char* >( out_vector.data( ) ), n_chars );
     read_file.close();
   } else {
     std::cout << "Error. Could not open the input file for reading the tree \
@@ -74,10 +69,15 @@ std::vector< char > read_vector_from_bin_file( const std::string & filename ) {
   return out_vector;
 }
 
-template < class T >
-std::vector< T > read_vector_from_bin_file( const std::string & filename ) {
-  std::cout << "read_vector_from_bin_file NOT IMPLEMENTED" << std::endl;
-}
+// explicitly instantiate required template functions
+template void write_vector_to_bin_file< char >( 
+  const std::vector< char > & print_vector, const std::string & filename );
 
+template void write_vector_to_bin_file< lo >( 
+  const std::vector< lo > & print_vector, const std::string & filename );
 
+template std::vector< char > read_vector_from_bin_file< char >( 
+  const std::string & filename );
 
+template std::vector< lo > read_vector_from_bin_file< lo >( 
+  const std::string & filename );
