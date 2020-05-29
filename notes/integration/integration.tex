@@ -270,28 +270,30 @@ We have to analytically evaluate the integrals
   K^d(\vr) := 
   \begin{cases}
   \displaystyle
-    \alpha \frac{\partial}{\partial \vn_\vy} \int_{0}^{t_1} \int_{0}^{t} G_\alpha(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d = 0, \\[4mm]
+    \alpha \frac{\partial}{\partial \vn_\vy} \int_{0}^{h_t} \int_{0}^{t} G_\alpha(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d = 0, \\[4mm]
   \displaystyle
-    \alpha \frac{\partial}{\partial \vn_\vy} \int_{t_d}^{t_{d+1}} \int_{0}^{t_1} G_\alpha(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d \in \{1,\ldots,E_t-1\}.
+    \alpha \frac{\partial}{\partial \vn_\vy} \int_{dh_t}^{(d+1)h_t} \int_{0}^{h_t} G_\alpha(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d \in \{1,\ldots,E_t-1\}.
   \end{cases}
 \end{equation*}
 For $d > 0$ we thus obtain from the evaluation of \eqref{eq:V_d} that
 \begin{align*}
-  K^d(\vr) = \sqrt{\frac{h_t}{\alpha}} \bigg[ 2 \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy} \bigg(\frac{\vr}{\sqrt{\alpha h_t}},d\bigg) - \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+1\bigg) - \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d-1\bigg) \bigg]
+  K^d(\vr) = \alpha \bigg( 2 \frac{\partial G^{\dif\tau\dif t}_\alpha}{\partial \vn_\vy} (\vr,dh_t) - \frac{\partial G^{\dif\tau\dif t}_\alpha}{\partial \vn_\vy}(\vr,(d+1)h_t) - \frac{\partial G^{\dif\tau\dif t}_\alpha}{\partial \vn_\vy}(\vr,(d-1)h_t) \bigg)
 \end{align*}
-Since $G^{\dif\hat\tau\dif\hat t}_1$ only depends on the norm of its first argument, we can write 
+Since $G^{\dif\tau\dif t}_\alpha$ only depends on the norm of its first argument, we can write 
 \begin{equation}
   \label{eq:G_to_g}
-  G^{\dif\hat\tau\dif\hat t}_1(\tilde\vr,\delta) =: g^{\dif\hat\tau\dif\hat t}(\|\tilde\vr\|,\delta) \quad\text{with}\quad g^{\dif\hat\tau\dif\hat t}(\rho,\delta)\colon \R\times\R\to\R
+  G^{\dif\tau\dif t}_\alpha(\vr,\delta) =: g^{\dif\tau\dif t}(\|\vr\|,\delta) \quad\text{with}\quad g^{\dif\tau\dif t}(\rho,\delta)\colon \R\times\R\to\R
 \end{equation}
 to obtain
 \begin{equation}
 \label{eq:dn_G_dt_dtau}
 \begin{aligned}
-  \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}(\tilde\vr,\delta) &= \frac{\partial g^{\dif\hat\tau\dif\hat t}}{\partial \rho}(\|\tilde\vr\|,\delta) \vn_\vy \cdot \nabla_\vy \frac{\|\vx-\vy\|}{\sqrt{\alpha h_t}} \\
-  &= -\frac{1}{\sqrt{\alpha h_t}} \frac{\partial g^{\dif\hat\tau\dif\hat t}}{\partial \rho}(\|\tilde\vr\|,\delta) \frac{(\vx-\vy)\cdot \vn_\vy}{\|\vx-\vy\|} = -\frac{1}{\sqrt{\alpha h_t}} \frac{\partial g^{\dif\hat\tau\dif\hat t}}{\partial \rho}(\|\tilde\vr\|,\delta) \frac{\tilde \vr \cdot \vn_\vy}{\|\tilde \vr\|}
+  \frac{\partial G^{\dif\tau\dif t}_\alpha}{\partial \vn_\vy}(\tilde\vr,\delta) &= \frac{\partial g^{\dif\tau\dif t}}{\partial \rho}(\|\vr\|,\delta) \vn_\vy \cdot \nabla_\vy \|\vx-\vy\| 
+  = -\frac{\partial g^{\dif\tau\dif t}}{\partial \rho}(\|\vr\|,\delta) \frac{(\vx-\vy)\cdot \vn_\vy}{\|\vx-\vy\|} \\
+  &= - \frac{\partial g^{\dif\tau\dif t}}{\partial \rho}(\|\vr\|,\delta) \frac{ \vr \cdot \vn_\vy}{\| \vr\|}
 \end{aligned}
 \end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%% CONTINUE HERE
 with
 \begin{equation*}
   \frac{\partial g^{\dif\hat\tau\dif\hat t}}{\partial \rho}(\|\tilde\vr\|,\delta) =\frac{\sqrt{\delta}}{4\pi\|\tilde \vr\|} \bigg[  \bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} - \frac{\sqrt{\delta}}{\|\tilde \vr\|} \bigg) \erf\bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} \bigg) + \frac{1}{\sqrt{\pi}} \exp \bigg( -\frac{\|\tilde \vr\|^2}{4\delta} \bigg) \bigg].
