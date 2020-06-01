@@ -54,7 +54,7 @@ class besthea::mesh::spacetime_mesh_generator {
    * Constructor taking spatial and temporal mesh
    * @param[in] space_mesh Initial spatial mesh
    * @param[in] time_mesh Initial temporal mesh with nodes and elements in
-   * time-ascending order
+   * time-ascending order. Each temporal element represents a time-slice.
    */
   spacetime_mesh_generator(
     triangular_surface_mesh & space_mesh, temporal_mesh & time_mesh );
@@ -63,11 +63,11 @@ class besthea::mesh::spacetime_mesh_generator {
    * Constructor taking spatial and temporal mesh
    * @param[in] space_mesh Initial spatial mesh
    * @param[in] end_time End of the interval [ 0, end_time ]
-   * @param[in] n_timesteps Number of timesteps to equally divide the interval
+   * @param[in] n_timeslices Number of timeslices to equally divide the interval
    * into
    */
   spacetime_mesh_generator(
-    triangular_surface_mesh & space_mesh, sc end_time, lo n_timesteps );
+    triangular_surface_mesh & space_mesh, sc end_time, lo n_timeslices );
 
   /**
    * Constructs generator from spatial and temporal mesh files
