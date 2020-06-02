@@ -48,9 +48,9 @@ int main( int argc, char * argv[] ) {
     std::string space_file = "./mesh_files/cube_12.txt";
     std::string time_file = "./testfile.txt";
 
-    spacetime_mesh_generator generator( space_file, time_file );
+    spacetime_mesh_generator generator( space_file, time_file, 4 );
 
-    generator.generate( 3, "", "test_mesh", "txt" );
+    generator.generate( "", "test_mesh", "txt" );
   }
   MPI_Barrier( MPI_COMM_WORLD );
   MPI_Comm comm = MPI_COMM_WORLD;

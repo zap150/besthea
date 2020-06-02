@@ -29,26 +29,32 @@
 #include "besthea/spacetime_mesh_generator.h"
 
 besthea::mesh::spacetime_mesh_generator::spacetime_mesh_generator(
-  triangular_surface_mesh & space_mesh, temporal_mesh & time_mesh ) {
+  triangular_surface_mesh & space_mesh, temporal_mesh & time_mesh,
+  lo refinement ) {
   _space_mesh = &space_mesh;
   _time_mesh = &time_mesh;
+  _refinement = refinement;
   _delete_time_mesh = false;
   _delete_space_mesh = false;
 }
 
 besthea::mesh::spacetime_mesh_generator::spacetime_mesh_generator(
-  triangular_surface_mesh & space_mesh, sc end_time, lo n_timesteps ) {
+  triangular_surface_mesh & space_mesh, sc end_time, lo n_timesteps,
+  lo refinement ) {
   _space_mesh = &space_mesh;
 
   _time_mesh = new temporal_mesh( 0.0, end_time, n_timesteps );
+  _refinement = refinement;
   _delete_time_mesh = true;
   _delete_space_mesh = false;
 }
 
 besthea::mesh::spacetime_mesh_generator::spacetime_mesh_generator(
-  const std::string & file_space, const std::string & file_time ) {
+  const std::string & file_space, const std::string & file_time,
+  lo refinement ) {
   _time_mesh = new temporal_mesh( file_time );
   _space_mesh = new triangular_surface_mesh( file_space );
+  _refinement = refinement;
   _delete_space_mesh = true;
   _delete_time_mesh = true;
 }
@@ -62,15 +68,12 @@ besthea::mesh::spacetime_mesh_generator::~spacetime_mesh_generator( ) {
   }
 }
 
-bool besthea::mesh::spacetime_mesh_generator::generate( lo n_meshes,
+bool besthea::mesh::spacetime_mesh_generator::generate(
   const std::string & directory, const std::string & file_name,
   const std::string & suffix ) {
-  if ( n_meshes > _time_mesh->get_n_elements( ) ) {
-    std::cout << "Error: Number of output meshes must not exceed number of "
-                 "temporal elements in the input mesh."
-              << std::endl;
-    return false;
-  }
+  lo n_meshes = _time_mesh->get_n_elements( );
+
+  _time_mesh->refine( _refinement );
 
   lo n_timesteps_per_mesh = _time_mesh->get_n_elements( ) / n_meshes;
   lo n_remaining_timesteps = _time_mesh->get_n_elements( ) % n_meshes;
