@@ -314,7 +314,7 @@ void besthea::mesh::tree_structure::collect_leaves(
   } else {
     for ( auto it = root.get_children( )->begin( );
           it != root.get_children( )->end( ); ++it ) {
-      determine_cluster_activity( **it );
+      collect_leaves( **it );
     }
   }
 }
