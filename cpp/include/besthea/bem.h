@@ -55,4 +55,6 @@
 #include "besthea/uniform_spacetime_initial_assembler.h"
 #include "besthea/uniform_spacetime_initial_evaluator.h"
 
+#include "besthea/parallel_fmm.h"
+
 #endif /* INCLUDE_BESTHEA_BEM_H_ */

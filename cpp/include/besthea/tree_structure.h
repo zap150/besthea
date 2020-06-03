@@ -39,6 +39,7 @@
 #include "besthea/time_cluster.h"
 
 #include <iostream>
+#include <list>
 #include <string>
 #include <vector>
 
@@ -105,11 +106,43 @@ class besthea::mesh::tree_structure {
   /**
    * Reduces the tree structure by deleting all clusters which are not contained
    * in the locally essential tree of the current process.
-   * @param[in] my_id Id of the current process.
-   * @note @p _leaves and @p _levels are reset, as well as the indices of the
-   * time clusters.
+   * @param[in] my_process_id Id of the current process.
+   * @note @p _leaves and @p _levels are reset.
+   * @note The original global_indices of the clusters are not modified. This 
+   * allows to identify clusters between different processes.
    */
-  void reduce_2_essential( const lo my_id );
+  void reduce_2_essential( const lo my_process_id );
+
+  /**
+   * Fills the 4 lists used for scheduling the FMM operations by adding pointers
+   * to clusters assigned to the process with id @p _my_process_id . In addition
+   * it determines all pairs of clusters and process ids from which data is 
+   * received, and initializes the data in the scheduling time clusters which is
+   * used to check the dependencies.
+   * @param[in,out] m_list  List for scheduling upward path operations.
+   * @param[in,out] m2l_list  List for scheduling interactions and downward pass
+   *                          operations.
+   * @param[in,out] l_list  List for scheduling downward path operations.
+   * @param[in,out] n_list  List for scheduling nearfield operations.
+   * @param[in,out] receive_vector  Is filled with the pairs of clusters and 
+   *                                process ids from which data is received.
+   * @param[out]  n_moments_to_receive  The first @p n_moments_to_receive pairs
+   *                                    in the receive vector correspond to 
+   *                                    operations where moments are received,
+   *                                    not local contributions.
+   * @note All lists are constructed anew, existing values are overwritten.
+   * @note The clusters in the m_list are sorted using the comparison operator
+   *       @ref compare_clusters_bottom_up_right_2_left, the others using
+   *       @ref compare_clusters_top_down_right_2_left .
+   * @todo Determine n_list differently, when coupling with space-time cluster
+   *       tree is ready.
+   */
+  void prepare_fmm( std::list< scheduling_time_cluster* > & m_list,
+    std::list< scheduling_time_cluster* > & m2l_list,
+    std::list< scheduling_time_cluster* > & l_list,
+    std::list< scheduling_time_cluster* > & n_list,
+    std::vector< std::pair< scheduling_time_cluster*, lo > > & receive_vector,
+    lou & n_moments_to_receive ) const;
 
   /**
    * Returns the structure of the tree represented as a vector of chars.
@@ -143,13 +176,16 @@ class besthea::mesh::tree_structure {
    *                    ids. Its value should be larger than the number of
    *                    digits the highest process id has.
    */
-  void print_processes_human_readable( lo digits ) const; 
+  void print_tree_human_readable( 
+    const lo digits, const bool print_process_ids ) const; 
 
  private:
   scheduling_time_cluster * _root;  //!< root cluster of the tree structure
   lo _levels;                       //!< number of levels in the tree
   std::vector< scheduling_time_cluster * >
     _leaves;  //!< vector of all clusters without descendants
+  lo _my_process_id;  //!< id of the process executing the operations
+                      //!< @todo This can later be replaced by an MPI query. 
 
   /**
    * Recursively constructs the structural vector of a tree structure.
@@ -193,41 +229,68 @@ class besthea::mesh::tree_structure {
   void collect_leaves( scheduling_time_cluster & root );
 
   /**
-   * Sets the levelwise indices of all clusters in the tree structure by 
-   * traversing it recursively. The indices correspond to a levelwise 
-   * consecutive enumeration of the clusters from left to right.
+   * Sets the global indices of all clusters in the tree structure by traversing
+   * it recursively. The indices correspond to a consecutive enumeration of the 
+   * clusters according to the tree traversal. The index of a parent is set
+   * after its children and therefore greater.
    * @param[in] root Current cluster in the tree traversal.
-   * @param[in,out] index_counters  A counter for each level to keep track of 
-   *                                the indices.
+   * @param[in,out] next_index Next index which is assigned to a cluster.
    */
-  void set_indices( scheduling_time_cluster & root, 
-    std::vector< lo > & index_counters );
+  void set_indices( scheduling_time_cluster & root, lo & next_index );
 
   /**
    * Computes and sets the nearfield and interaction list for every cluster in 
    * the tree structure by recursively traversing the tree.
    * @param[in] root  Current cluster in the tree traversal.
    */
-  void set_nearfield_and_interaction_list( scheduling_time_cluster & root );
+  void set_nearfield_interaction_and_send_list( 
+    scheduling_time_cluster & root );
 
   /**
-   * Executes the reduction of the tree structure to the locally essential part.
-   * The method is based on a tree traversal.
+   * Determines if clusters are active in the upward or downward path (needed 
+   * for FMM).
    * @param[in] root  Current cluster in the tree traversal.
-   * @param[in,out] levelwise_status  Status of the clusters in the tree,
-   *                                  indicating if a cluster is essential or 
-   *                                  not. This is updated by setting clusters
-   *                                  to essential which are on a path from the
-   *                                  root of the tree structure to an existing
-   *                                  essential cluster. 
+   */
+  void determine_cluster_activity( scheduling_time_cluster & root );
+
+  /**
+   * Traverses the tree recursively and adds all clusters assigned to the 
+   * process @p _my_process_id to the given list.
+   * @param[in] root Current cluster in the tree traversal.
+   * @param[in,out] cluster_list  List which is filled with the local clusters.
+   * @note The routine is called solely by @ref prepare_fmm_lists .
+   */
+  void init_fmm_lists_and_dependency_data( scheduling_time_cluster & root,
+    std::list< scheduling_time_cluster* > & m_list,
+    std::list< scheduling_time_cluster* > & m2l_list,
+    std::list< scheduling_time_cluster* > & l_list ) const;
+
+  /**
+   * Prepares the reduction of the tree structure to the locally essential part,
+   * by updating nearfields, interaction lists and send lists and detecting
+   * the remaining essential clusters (those which lie on a path between the
+   * root and another essential cluster). In addition, @p _levels is reset. The 
+   * method is based on a tree traversal.
+   * @param[in] root  Current cluster in the tree traversal.
+   * @param[in,out] status_vector  Status of the clusters in the tree, 
+   *                               indicating if a cluster is essential or not. 
+   *                               This is updated. 
    * @note This method is solely used by @ref reduce_2_essential .
    * @note Clusters in the tree structure which are not contained in the
    * locally essential part of the tree are deleted. 
-   * @note @p _leaves and @p _levels are reset, as well as the indices of the
-   * time clusters.
+   */
+  void prepare_essential_reduction( scheduling_time_cluster & root, 
+    std::vector< char > & status_vector );
+
+  /**
+   * Deletes clusters form the tree structure which are not locally essential.
+   * The method is based on a tree traversal.
+   * @param[in] root  Current cluster in the tree traversal.
+   * @param[in] status_vector Status of the clusters in the tree, ordered by the
+   *                          global indices of the clusters.
    */
   void execute_essential_reduction( scheduling_time_cluster & root, 
-    std::vector< std::vector< char > > & levelwise_status ); 
+    const std::vector< char > & status_vector ); 
 
   /**
    * Determines the clusters which are essential for the current process by
@@ -241,21 +304,22 @@ class besthea::mesh::tree_structure {
    * -  It is a child of a cluster which is assigned to the process.
    * -  It is in the nearfield of a leaf cluster which is assigned to the 
    *    process.
-   * @param[in] my_id Id of the current process.
+   * @param[in] my_process_id Id of the current process.
    * @param[in] root  Current cluster in the tree traversal.
-   * @param[in,out] levelwise_status  Consists of a vector for each level in 
-   *                                  which the status of the clusters is given
-   *                                  in the order of their indices. Tree status
-   *                                  are used: 0 (not essential), 1 (assigned
-   *                                  to the process), 2 (other essential)
+   * @param[in,out] status_vector  Contains the status of the clusters in the 
+   *                               order of their indices. Tree status are used: 
+   *                               - 0 (not essential), 
+   *                               - 1 (assigned to the process), 
+   *                               - 2 (other essential).
    * @note The locally essential tree should also contain clusters which are 
    * contained in a path from the root of the tree structure to a cluster which
-   * meets one of the above requirements. Such clusters are not detected.
+   * meets one of the above requirements. Such clusters are not detected here, 
+   * but in the routine @ref execute_essential_reduction .
    * @note This method is solely used by @ref reduce_2_essential .
    */
-  void determine_essential_clusters( const lo my_id, 
+  void determine_essential_clusters( const lo my_process_id, 
     const scheduling_time_cluster & root, 
-    std::vector< std::vector< char > > & levelwise_status );
+    std::vector< char > & status_vector ) const;
 
   /**
    * Aux for printing
@@ -284,9 +348,31 @@ class besthea::mesh::tree_structure {
    *                                          output strings for each cluster
    *                                          are added.
    */
-  void determine_processes_string( const lo digits, 
-    scheduling_time_cluster * root,
-    std::vector< std::string > & levelwise_output_strings ) const;
+  void determine_levelwise_output_string( const lo digits, 
+  const bool print_process_ids, scheduling_time_cluster * root, 
+  std::vector< std::string > & levelwise_output_strings ) const;
+
+  /**
+   * Comparison operator for two clusters.
+   * @param[in] first Pointer to the first cluster.
+   * @param[in] second Pointer to the second cluster.
+   * @return True if first's level is greater than second's level, or, in case 
+   *         of equality of the levels, if first's global index is greater than
+   *         second's global index
+   */
+  static bool compare_clusters_bottom_up_right_2_left( 
+    scheduling_time_cluster* first, scheduling_time_cluster* second );
+
+  /**
+   * Comparison operator for two clusters.
+   * @param[in] first Pointer to the first cluster.
+   * @param[in] second Pointer to the second cluster.
+   * @return True if first's level is less than second's level, or, in case 
+   *         of equality of the levels, if first's global index is greater than
+   *         second's global index
+   */
+  static bool compare_clusters_top_down_right_2_left( 
+    scheduling_time_cluster* first, scheduling_time_cluster* second );
 };
 
 #endif /* INCLUDE_BESTHEA_TREE_STRUCTURE_H_ */

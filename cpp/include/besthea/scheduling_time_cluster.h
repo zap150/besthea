@@ -67,10 +67,17 @@ class besthea::mesh::scheduling_time_cluster {
       _parent( parent ),
       _children( nullptr ),
       _level( level ),
-      _index ( -1 ),
+      _global_index ( -1 ),
       _process_id( process_id ),
       _nearfield( nullptr ),
-      _interaction_list( nullptr ) {
+      _interaction_list( nullptr ),
+      _send_list( nullptr ),
+      _active_upward_path( false ),
+      _active_downward_path( false ),
+      _upward_path_counter( -1 ),
+      _ready_interaction_list( nullptr ),
+      _m2l_counter( 0 ),
+      _downward_path_status( 0 ) {
   }
 
   scheduling_time_cluster( const scheduling_time_cluster & that ) = delete;
@@ -87,8 +94,14 @@ class besthea::mesh::scheduling_time_cluster {
       }
       delete _children;
     }
-    delete _nearfield;
-    delete _interaction_list;
+    if ( _nearfield != nullptr )
+      delete _nearfield;
+    if ( _interaction_list != nullptr )
+      delete _interaction_list;
+    if ( _send_list != nullptr )
+      delete _send_list;
+    if ( _ready_interaction_list != nullptr )
+      delete _ready_interaction_list;
   }
 
   /**
@@ -108,10 +121,34 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
+   * Deletes the ready interaction list
+   */
+  void delete_ready_interaction_list( ) {
+    delete _ready_interaction_list;
+    _ready_interaction_list = nullptr;
+  }
+
+  /**
+   * Deletes the send list
+   */
+  void delete_send_list( ) {
+    delete _send_list;
+    _send_list = nullptr;
+  }
+
+  /**
    * Deletes the vector of children
+   * @warning If _children still contains elements these are also deleted!
    */
   void delete_children( ) {
-    delete _children;
+    if ( _children != nullptr ) {
+      for ( auto it = _children->begin( ); it != _children->end( ); ++it ) {
+        if ( *it != nullptr ) {
+          delete *it;
+        }
+      }
+      delete _children;
+    }
     _children = nullptr;
   }
 
@@ -211,8 +248,8 @@ class besthea::mesh::scheduling_time_cluster {
    * Returns the levelwise index of the cluster in the cluster tree.
    * @note The clusters are enumerated levelwise from left to right. 
    */
-  lo get_index( ) const {
-    return _index;
+  lo get_global_index( ) const {
+    return _global_index;
   }
 
   /**
@@ -220,13 +257,13 @@ class besthea::mesh::scheduling_time_cluster {
    * @param[in] index Index which is set.
    */
   void set_index( lo index ) {
-    _index = index;
+    _global_index = index;
   }
 
   /**
-   * Adds a pointer to a nearfield cluster to the vector _nearfield.
+   * Adds a pointer to a nearfield cluster to @p _nearfield.
    * @param[in] src_cluster Pointer to a nearfield cluster.
-   * @note If _nearfield is not allocated this is done here.
+   * @note If @p _nearfield is not allocated this is done here.
    */
   void add_to_nearfield( scheduling_time_cluster * src_cluster ) {
     if ( _nearfield == nullptr ) {
@@ -265,9 +302,9 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Adds a pointer to a farfield cluster to the vector _interaction_list.
+   * Adds a pointer to a farfield cluster to @p _interaction_list.
    * @param[in] src_cluster Pointer to a farfield cluster.
-   * @note If _interaction_list is not allocated this is done here.
+   * @note If @p _interaction_list is not allocated this is done here.
    */
   void add_to_interaction_list( scheduling_time_cluster * src_cluster ) {
     if ( _interaction_list == nullptr ) {
@@ -289,6 +326,143 @@ class besthea::mesh::scheduling_time_cluster {
       admissibility = true;
     } 
     return admissibility;
+  }
+
+  /**
+   * Adds a pointer to a target cluster to @p _send_list.
+   * @param[in] tar_cluster Pointer to a target cluster.
+   * @note If @p _send_list is not allocated this is done here.
+   */
+  void add_to_send_list( scheduling_time_cluster * tar_cluster ) {
+    if ( _send_list == nullptr ) {
+      _send_list = new std::vector< scheduling_time_cluster * >( );
+    }
+    _send_list->push_back( tar_cluster );
+  }
+
+  /**
+   * Returns a pointer to the const send list.
+   */
+  const std::vector< scheduling_time_cluster * > * get_send_list( ) const {
+    return _send_list;
+  }
+
+  /**
+   * Returns a pointer to the send list.
+   */
+  std::vector< scheduling_time_cluster * > * get_send_list( ) {
+    return _send_list;
+  }
+
+  /**
+   * Adds a pointer to a source cluster to @p _ready_interaction_list.
+   * @param[in] src_cluster Pointer to a target cluster.
+   * @note If @p _ready_interaction_list is not allocated this is done here.
+   */
+  void add_to_ready_interaction_list( scheduling_time_cluster * src_cluster ) {
+    if ( _ready_interaction_list == nullptr ) {
+      _ready_interaction_list = new std::vector< scheduling_time_cluster * >( );
+    }
+    _ready_interaction_list->push_back( src_cluster );
+  }
+
+  /**
+   * Returns a pointer to the list of clusters which are ready for interactions.
+   */
+  std::vector< scheduling_time_cluster * > * get_ready_interaction_list( ) {
+    return _ready_interaction_list;
+  }
+
+  /**
+   * Returns a pointer to the (const!) list of clusters which are ready for 
+   * interactions.
+   */
+  const std::vector< scheduling_time_cluster * > * 
+    get_ready_interaction_list( ) const {
+    return _ready_interaction_list;
+  }
+
+  /**
+   * Sets a flag which indicates if the cluster is active in the upward path of 
+   * the FMM
+   * \param[in] active_upward_path  Value to set.
+   */
+  void set_active_upward_path( const bool active_upward_path ) {
+    _active_upward_path = active_upward_path;
+  }
+
+  /**
+   * Returns the value of @p _active_upward_path
+   */
+  const bool get_active_upward_path( ) const {
+    return _active_upward_path;
+  }
+
+  /**
+   * Sets a flag which indicates if the cluster is active in the downward path 
+   * of the FMM
+   * \param[in] active_downward_path  Value to set.
+   */
+  void set_active_downward_path( const bool active_downward_path ) {
+    _active_downward_path = active_downward_path;
+  }
+
+  /**
+   * Returns the value of @p _active_downard_path
+   */
+  const bool get_active_downward_path( ) const {
+    return _active_downward_path;
+  }
+
+  /**
+   * Sets the upward path counter to the given value.
+   * @param[in] upward_path_counter Value to set.
+   */
+  void set_upward_path_counter( const lo upward_path_counter ) {
+    _upward_path_counter = upward_path_counter;
+  }
+
+  /**
+   * Returns the value of @p _upward_path_counter .
+   */
+  const lo get_upward_path_counter( ) const {
+    return _upward_path_counter;
+  }
+
+  /**
+   * Reduces @p _upward_path_counter by one
+   */
+  void reduce_upward_path_counter( ) {
+    _upward_path_counter -= 1;
+  }
+
+  /**
+   * Increases the m2l counter by one
+   */
+  void increase_m2l_counter( ) {
+    _m2l_counter += 1;
+  }
+
+  /**
+   * Returns the value of @p _m2l_counter .
+   */
+  const lou get_m2l_counter( ) const {
+    return _m2l_counter;
+  }
+
+  /**
+   * Sets the downward path status to the given value.
+   * @param[in] new_status  Value to be set.
+   */
+  void set_downward_path_status( const char new_status ) {
+    _downward_path_status = new_status;
+  }
+
+  /**
+   * Returns the value of @p _downward_path_status .
+   */
+  const char get_downward_path_status( ) const {
+    return _downward_path_status;
   }
 
   /**
@@ -327,39 +501,74 @@ class besthea::mesh::scheduling_time_cluster {
   void print( ) {
     std::cout << "level: " << _level 
               << ", center: " << _center << ", half size: " << _half_size
-              << ", index: " << _index << ", proc_id: " << _process_id;
+              << ", global_index: " << _global_index 
+              << ", proc_id: " << _process_id;
     // if ( _nearfield != nullptr ) {
     //   std::cout << ", nearfield: ";
     //   for ( lou i = 0; i < _nearfield->size( ); ++i ) {
     //     std::cout << "(" << ( *_nearfield )[ i ]->get_level( ) << ", "  
-    //               << ( *_nearfield )[ i ]->get_index( ) << "), ";
+    //               << ( *_nearfield )[ i ]->get_global_index( ) << "), ";
     //   }
     // }
-    // std::cout << std::endl;
+    // std::cout << ", ";
     // if ( _interaction_list != nullptr ) {
-    //   std::cout << ", interaction_list: ";
+    //   std::cout << "interaction_list: ";
     //   for ( lou i = 0; i < _interaction_list->size( ); ++i ) {
     //     std::cout << "(" << ( *_interaction_list )[ i ]->get_level( ) << ", "  
-    //               << ( *_interaction_list )[ i ]->get_index( ) << "), ";
+    //               << ( *_interaction_list )[ i ]->get_global_index( ) 
+    //               << "), ";
     //   }
     // }
+    // if ( _send_list != nullptr ) {
+    //   std::cout << "send_list: ";
+    //   for ( lou i = 0; i < _send_list->size( ); ++i ) {
+    //     std::cout << "(" << ( *_send_list )[ i ]->get_level( ) << ", "  
+    //               << ( *_send_list )[ i ]->get_global_index( ) 
+    //               << "), ";
+    //   }
+    // }
+    std::cout << ", upward_path_counter: " << _upward_path_counter;
+    std::cout << ", downward_path_status: " << (lo) _downward_path_status;
+    std::cout << ", m2l counter: " << _m2l_counter;
     std::cout << std::endl;
   }
 
  private:
-  sc _center;       //!< center of the cluster
-  sc _half_size;    //!< half size of the cluster
-  scheduling_time_cluster * _parent;  //!< parent of the cluster
+  sc _center;       //!< Center of the cluster.
+  sc _half_size;    //!< Half size of the cluster.
+  scheduling_time_cluster * _parent;  //!< Parent of the cluster.
   std::vector< scheduling_time_cluster * > 
-    * _children;    //!< children of the cluster
-  lo _level;        //!< level within the cluster tree
-  lo _index;        //!< index of the cluster at the current level according
-                    //!< to an enumeration from left to right
-  lo _process_id;   //!< id of the process to which the cluster is assigned
+    * _children;    //!< Children of the cluster.
+  lo _level;        //!< Level within the cluster tree.
+  lo _global_index; //!< Index of the cluster at the current level according
+                    //!< to an enumeration from left to right in the global
+                    //!< tree structure.
+  lo _process_id;   //!< Id of the process to which the cluster is assigned.
   std::vector< scheduling_time_cluster * >
-    * _nearfield;   //!< nearfield of the cluster
+    * _nearfield;   //!< Nearfield of the cluster.
   std::vector< scheduling_time_cluster * >
-    * _interaction_list;  //!< interaction list of the cluster
+    * _interaction_list;  //!< Interaction list of the cluster.
+  std::vector< scheduling_time_cluster * >
+    * _send_list;   //!< Contains all clusters in whose interaction list the 
+                    //!< cluster is contained. 
+  bool _active_upward_path; //!< Indicates if the cluster is active in the
+                            //!< upward path of the FMM.
+  bool _active_downward_path; //!< Indicates if the cluster is active in the
+                              //!< downward path of the FMM.
+  lo _upward_path_counter; //!< Used to keep track of the dependencies in the 
+                           //!< upward path. If it is 0, the dependencies are
+                           //!< fulfilled.
+  std::vector< scheduling_time_cluster * > 
+    * _ready_interaction_list; //!< Clusters from the interaction list
+                                       //!< are added to this list, when their
+                                       //!< moments are ready.
+  lou _m2l_counter;  //!< Used to keep track of the completed m2l operations.
+  char _downward_path_status; //!< Used to keep track of the status in the 
+                              //!< downward path. Three status:
+                              //!< - 0: l2l not executed,
+                              //!< - 1: l2l executed, local contributions not 
+                              //!<      ready,
+                              //!< - 2: local contributions ready.
 };
 
 #endif /* INCLUDE_BESTHEA_SCHEDULING_TIME_CLUSTER_H_ */

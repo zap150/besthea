@@ -31,23 +31,25 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <list>
 
 int main( int argc, char * argv[] ) {
   using b_t_mesh = besthea::mesh::temporal_mesh;
   using tree_structure = besthea::mesh::tree_structure;
   using time_cluster_tree = besthea::mesh::time_cluster_tree;
+  using scheduling_time_cluster = besthea::mesh::scheduling_time_cluster;
 
   // uncomment appropriate mesh
   std::string file_temporal = "./mesh_files/time_nuniform.txt";
   // std::string file_temporal = "./mesh_files/time_1_10.txt";
 
   // uncomment to load mesh from file
-  b_t_mesh time_mesh( file_temporal );
-  time_mesh.refine( 1 );
+  // b_t_mesh time_mesh( file_temporal );
+  // time_mesh.refine( 1 );
 
   // uncomment to generate regular mesh
-  // lo levels = 5;
-  // b_t_mesh time_mesh( 0, 1, 1 << ( levels + 1 ) );
+  lo levels = 5;
+  b_t_mesh time_mesh( 0, 1, 1 << ( levels + 1 ) );
 
   lo time_levels = 20;
   lo n_min_time_elems = 3;
@@ -74,13 +76,41 @@ int main( int argc, char * argv[] ) {
     time_mesh.get_end( ) );
   skeleton.load_process_assignments( process_assignment_file );
   lo digits = ( lo ) ( ceil( log10( n_processes + 1 ) ) + 1 );
-  skeleton.print_processes_human_readable( digits );
+  bool print_process_ids = true;
+
+  // lo digits = 3;
+  // bool print_process_ids = false;
+
+  skeleton.print_tree_human_readable( digits, true );
 
   // reduce to locally essential tree
-  lo my_process_id = 6;
+  lo my_process_id = 4;
   std::cout << "reducing to locally essential tree for process "
             << my_process_id << std::endl;
   skeleton.reduce_2_essential( my_process_id );
+  skeleton.print_tree_human_readable( digits, print_process_ids );
   // skeleton.print( );
-  skeleton.print_processes_human_readable( digits );
+
+  std::cout << "preparing fmm" << std::endl;
+  std::list< scheduling_time_cluster* > m_list, m2l_list, l_list, n_list;
+  std::vector< std::pair< scheduling_time_cluster*, lo > > receive_vector;
+  lou n_moments_to_receive;
+  skeleton.prepare_fmm( m_list, m2l_list, l_list, n_list, receive_vector,
+                        n_moments_to_receive );
+  // skeleton.print( );
+  std::cout << "m list" << std::endl;
+  for ( auto it = m_list.begin( ); it != m_list.end( ); ++it ) {
+    ( *it )->print( );
+  }
+  std::cout << "m2l list" << std::endl;
+  for ( auto it = m2l_list.begin( ); it != m2l_list.end( ); ++it ) {
+    ( *it )->print( );
+  }
+  std::cout << "l list" << std::endl;
+  for ( auto it = l_list.begin( ); it != l_list.end( ); ++it ) {
+    ( *it )->print( );
+  }
+  
+  // apply_fmm( my_process_id, receive_vector, n_moments_to_receive, m_list,
+  //   m2l_list, l_list, n_list );
 }
