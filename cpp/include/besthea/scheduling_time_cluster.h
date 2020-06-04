@@ -77,7 +77,10 @@ class besthea::mesh::scheduling_time_cluster {
       _upward_path_counter( -1 ),
       _ready_interaction_list( nullptr ),
       _m2l_counter( 0 ),
-      _downward_path_status( 0 ) {
+      _downward_path_status( 0 ),
+      _leaf_index( -1 ),
+      _moment( 0.0 ),
+      _local_contribution( 0.0 ) {
   }
 
   scheduling_time_cluster( const scheduling_time_cluster & that ) = delete;
@@ -466,6 +469,73 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
+   * Returns the cluster's moment
+   * @note TEMPORARY
+   */
+  sc get_moment( ) const {
+    return _moment;
+  }
+
+  /**
+   * Returns a pointer to the cluster's moment
+   * @note TEMPORARY
+   */
+  sc * get_moment_pointer( ) {
+    return &_moment;
+  }
+
+  /**
+   * Sets the cluster's moment to a given value.
+   * @param[in] moment Value to be set.
+   * @note TEMPORARY
+   */
+  void set_moment( const sc moment ) {
+    _moment = moment;
+  }
+
+  /**
+   * Returns the cluster's local contribution
+   * @note TEMPORARY
+   */
+  sc get_local_contribution( ) const {
+    return _local_contribution;
+  }
+
+  /**
+   * Returns a pointer to the cluster's local contribution
+   * @note TEMPORARY
+   */
+  sc * get_local_contribution_pointer( ) {
+    return &_local_contribution;
+  }
+
+  /**
+   * Sets the cluster's local contribution to a given value.
+   * @param[in] local_contribution Value to be set.
+   * @note TEMPORARY
+   */
+  void set_local_contribution( const sc local_contribution ) {
+    _local_contribution = local_contribution;
+  }
+
+  /**
+   * Returns the leaf index of the cluster.
+   * @note TEMPORARY
+   */
+  lo get_leaf_index( ) const {
+    return _leaf_index;
+  }
+
+  /**
+   * Sets the leaf index of the cluster to the given value.
+   * @param[in] leaf_index Value to be set.
+   * @note TEMPORARY
+   */
+  void set_leaf_index( lo leaf_index ) {
+    _leaf_index = leaf_index;
+  }
+
+  /**
    * Returns a pointer to left neighbour.
    */
   scheduling_time_cluster * get_left_neighbour( ) {
@@ -527,9 +597,9 @@ class besthea::mesh::scheduling_time_cluster {
     //               << "), ";
     //   }
     // }
-    std::cout << ", upward_path_counter: " << _upward_path_counter;
-    std::cout << ", downward_path_status: " << (lo) _downward_path_status;
-    std::cout << ", m2l counter: " << _m2l_counter;
+    // std::cout << ", upward_path_counter: " << _upward_path_counter;
+    // std::cout << ", downward_path_status: " << (lo) _downward_path_status;
+    // std::cout << ", m2l counter: " << _m2l_counter;
     std::cout << std::endl;
   }
 
@@ -569,6 +639,10 @@ class besthea::mesh::scheduling_time_cluster {
                               //!< - 1: l2l executed, local contributions not 
                               //!<      ready,
                               //!< - 2: local contributions ready.
+  lo _leaf_index; //!< Index which is assigned consecutively to all leaves. For
+                  //!< non-leaf clusters it is -1 TEMPORARY
+  sc _moment; //!< Stores a moment in FMM TEMPORARY
+  sc _local_contribution; //!< Stores a local contribution in FMM TEMPORARY
 };
 
 #endif /* INCLUDE_BESTHEA_SCHEDULING_TIME_CLUSTER_H_ */

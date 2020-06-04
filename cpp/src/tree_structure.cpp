@@ -56,6 +56,8 @@ besthea::mesh::tree_structure::tree_structure( const std::string & filename,
   // determine activity of clusters in upward and downward path of FMM
   determine_cluster_activity( *_root );
   collect_leaves( *_root );
+  lo next_id = 0;
+  set_leaf_ids( *_root, next_id );
 }
 
 void besthea::mesh::tree_structure::load_process_assignments( 
@@ -106,14 +108,14 @@ void besthea::mesh::tree_structure::
   std::vector< std::pair< scheduling_time_cluster*, lo > > & receive_vector,
   lou & n_moments_to_receive ) const {
   m_list.clear( );
-  init_fmm_lists_and_dependency_data( *_root, m_list, m2l_list, l_list );
+  init_fmm_lists_and_dependency_data( 
+    *_root, m_list, m2l_list, l_list, n_list );
   // sort the m_list from bottom up, right to left
   m_list.sort( compare_clusters_bottom_up_right_2_left );
   // sort the m2l_list and l_list from top down, right to left and create 
   // n_list as copy of l_list
   m2l_list.sort( compare_clusters_top_down_right_2_left );
   l_list.sort( compare_clusters_top_down_right_2_left );
-  n_list = l_list;
 
   // fill the receive list by determining all incoming data.
   // check for receive operations in the upward path
@@ -319,6 +321,20 @@ void besthea::mesh::tree_structure::collect_leaves(
   }
 }
 
+void besthea::mesh::tree_structure::set_leaf_ids( 
+  scheduling_time_cluster & root, lo & next_id ) {
+  if ( root.get_n_children( ) == 0 ) {
+    root.set_leaf_index( next_id );
+    // std::cout << "setting id to " << root.get_leaf_index( next_id ) << std::endl;
+    next_id++;
+  } else {
+    for ( auto it = root.get_children( )->begin( );
+          it != root.get_children( )->end( ); ++it ) {
+      set_leaf_ids( **it, next_id );
+    }
+  }
+}
+
 void besthea::mesh::tree_structure::set_indices( 
   scheduling_time_cluster & root, lo & next_index ) {
   if ( root.get_n_children( ) > 0 ) {
@@ -359,7 +375,13 @@ void besthea::mesh::tree_structure::set_nearfield_interaction_and_send_list(
               root.add_to_interaction_list( src_cluster );
               src_cluster->add_to_send_list( &root );
             } else {
-              root.add_to_nearfield( src_cluster );
+              // if root is not a leaf, add src_cluster directly, else add all
+              // of the leaves of src_cluster to the nearfield
+              if ( root.get_n_children( ) > 0 ) {
+                root.add_to_nearfield( src_cluster );
+              } else {
+                add_leaves_to_nearfield( *src_cluster, root );
+              }
             }
           }
         }
@@ -370,6 +392,23 @@ void besthea::mesh::tree_structure::set_nearfield_interaction_and_send_list(
     std::vector< scheduling_time_cluster* >* children = root.get_children( ); 
     for ( lou i = 0; i < children->size( ); ++i ){
       set_nearfield_interaction_and_send_list( *( *children )[ i ] );
+    }
+  }
+}
+
+void besthea::mesh::tree_structure::add_leaves_to_nearfield( 
+  scheduling_time_cluster & current_cluster, 
+  scheduling_time_cluster & target_cluster ) {
+  if ( current_cluster.get_n_children( ) == 0 ) {
+    target_cluster.add_to_nearfield( &current_cluster );
+    // std::cout << "called this " << std::endl;
+    // target_cluster.print( );
+    // current_cluster.print( );
+  } else {
+    std::vector< scheduling_time_cluster* > * children 
+      = current_cluster.get_children( );
+    for ( auto it = children->begin( ); it != children->end( ); ++it ) {
+      add_leaves_to_nearfield( **it, target_cluster );
     }
   }
 }
@@ -401,7 +440,8 @@ void besthea::mesh::tree_structure::init_fmm_lists_and_dependency_data(
   scheduling_time_cluster & root, 
   std::list< scheduling_time_cluster* > & m_list,
   std::list< scheduling_time_cluster* > & m2l_list,
-  std::list< scheduling_time_cluster* > & l_list ) const {
+  std::list< scheduling_time_cluster* > & l_list,
+  std::list< scheduling_time_cluster* > & n_list ) const {
   // if the cluster is local and active in the upward path add it to the 
   // m-list and initialize the appropriate dependency data
   if ( root.get_process_id( ) == _my_process_id &&
@@ -431,13 +471,20 @@ void besthea::mesh::tree_structure::init_fmm_lists_and_dependency_data(
     m2l_list.push_back( &root );
   }
 
+  // add the cluster to the n-list, if it is a leaf
+  // TODO: change this later: A cluster is in the n-list if there is a
+  // space-time leaf cluster associated to it.
+  if ( root.get_n_children( ) == 0 ){
+    n_list.push_back( &root );
+  }
+
   // recursive call for all children
   if ( root.get_n_children( ) > 0 ) {
     const std::vector< scheduling_time_cluster* >* children 
       = root.get_children( );
     for ( auto it = children->begin( ); it != children->end( ); ++it ) {
       init_fmm_lists_and_dependency_data( 
-        **it, m_list, m2l_list, l_list );
+        **it, m_list, m2l_list, l_list, n_list );
     }
   }
 }

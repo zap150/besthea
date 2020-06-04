@@ -224,9 +224,18 @@ class besthea::mesh::tree_structure {
 
   /**
    * Collects all clusters without descendants and stores them in the internal
-   * _leaves vector.
+   * @p _leaves vector. The routine is based on a tree traversal.
+   * @param[in] root  Current cluster in the tree traversal.
    */
   void collect_leaves( scheduling_time_cluster & root );
+
+  /**
+   * Assigns consecutive indices to all leaf clusters. The routine is based on a
+   * tree traversal.
+   * @param[in] root  Current cluster in the tree traversal.
+   * @param[in,out] next_id Next id which is set.
+   */
+  void set_leaf_ids( scheduling_time_cluster & root, lo & next_id );
 
   /**
    * Sets the global indices of all clusters in the tree structure by traversing
@@ -246,6 +255,9 @@ class besthea::mesh::tree_structure {
   void set_nearfield_interaction_and_send_list( 
     scheduling_time_cluster & root );
 
+  void add_leaves_to_nearfield( scheduling_time_cluster & current_cluster, 
+    scheduling_time_cluster & target_cluster );
+
   /**
    * Determines if clusters are active in the upward or downward path (needed 
    * for FMM).
@@ -263,7 +275,8 @@ class besthea::mesh::tree_structure {
   void init_fmm_lists_and_dependency_data( scheduling_time_cluster & root,
     std::list< scheduling_time_cluster* > & m_list,
     std::list< scheduling_time_cluster* > & m2l_list,
-    std::list< scheduling_time_cluster* > & l_list ) const;
+    std::list< scheduling_time_cluster* > & l_list,
+    std::list< scheduling_time_cluster* > & n_list ) const;
 
   /**
    * Prepares the reduction of the tree structure to the locally essential part,

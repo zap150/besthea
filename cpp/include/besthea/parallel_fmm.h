@@ -50,7 +50,29 @@ void apply_fmm( const lo my_process_id,
   std::list< besthea::mesh::scheduling_time_cluster* > & m_list,
   std::list< besthea::mesh::scheduling_time_cluster* > & m2l_list,
   std::list< besthea::mesh::scheduling_time_cluster* > & l_list,
-  std::list< besthea::mesh::scheduling_time_cluster* > & n_list );
+  std::list< besthea::mesh::scheduling_time_cluster* > & n_list,
+  const std::vector< sc > & input_vector, std::vector< sc > & output_vector );
+
+void call_s2m_operations( const std::vector< sc > & sources,
+  besthea::mesh::scheduling_time_cluster* time_cluster );
+
+void call_m2m_operations( 
+  besthea::mesh::scheduling_time_cluster* time_cluster );
+
+void call_m2l_operations( besthea::mesh::scheduling_time_cluster* src_cluster,
+  besthea::mesh::scheduling_time_cluster* tar_cluster );
+
+void call_l2l_operations( 
+  besthea::mesh::scheduling_time_cluster* time_cluster );
+
+void call_l2t_operations( besthea::mesh::scheduling_time_cluster* time_cluster, 
+  std::vector< sc > & output_vector );
+
+void call_nearfield_operations( const std::vector< sc > & sources,
+  besthea::mesh::scheduling_time_cluster* src_cluster, 
+  besthea::mesh::scheduling_time_cluster* tar_cluster, 
+  std::vector< sc > & output_vector );
+
 
 /**
  * Returns an iterator pointing to the next cluster in the l-list whose 
@@ -61,7 +83,7 @@ void apply_fmm( const lo my_process_id,
  * @ref prepare_fmm .
  * @param[out] status Set to 2 if a cluster is found.
  */
-  void find_cluster_in_l_list( 
+void find_cluster_in_l_list( 
   std::list< besthea::mesh::scheduling_time_cluster* > & l_list,
   std::list< besthea::mesh::scheduling_time_cluster* >::iterator & 
     it_next_cluster, char & status );
@@ -75,7 +97,7 @@ void apply_fmm( const lo my_process_id,
  * @ref prepare_fmm .
  * @param[out] status Set to 1 if a cluster is found.
  */
-  void find_cluster_in_m_list( 
+void find_cluster_in_m_list( 
   std::list< besthea::mesh::scheduling_time_cluster* > & m_list,
   std::list< besthea::mesh::scheduling_time_cluster* >::iterator & 
     it_next_cluster, char & status );
@@ -89,7 +111,7 @@ void apply_fmm( const lo my_process_id,
  * @ref prepare_fmm .
  * @param[out] status Set to 3 if a cluster is found.
  */
-  void find_cluster_in_m2l_list( 
+void find_cluster_in_m2l_list( 
   std::list< besthea::mesh::scheduling_time_cluster* > & m2l_list,
   std::list< besthea::mesh::scheduling_time_cluster* >::iterator & 
     it_next_cluster, char & status );

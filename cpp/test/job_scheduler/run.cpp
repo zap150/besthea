@@ -63,7 +63,7 @@ int main( int argc, char * argv[] ) {
 
   // compute process assignment and write it to file
   lo strategy = 1;
-  lo n_processes = 7;
+  lo n_processes = 1;
   std::cout << "n_processes: " << n_processes << ", strategy: "
             << strategy << std::endl;
   std::string process_assignment_file = 
@@ -82,35 +82,43 @@ int main( int argc, char * argv[] ) {
   // bool print_process_ids = false;
 
   skeleton.print_tree_human_readable( digits, true );
+  lou n_leaves = skeleton.get_leaves( ).size( );
+
+  // std::vector< scheduling_time_cluster* > leaves = skeleton.get_leaves( );
+  // for ( auto it = leaves.begin( ); it != leaves.end( ); ++it ) {
+  //   std::cout << "cluster is: " << std::endl;
+  //   ( *it )->print( );
+  //   std::vector< scheduling_time_cluster* > * nearfield
+  //     = ( *it )->get_nearfield( );
+  //   std::cout << "nearfield clusters are " << std::endl;
+  //   for ( auto it_nf = nearfield->begin( ); it_nf != nearfield->end( ); 
+  //         ++it_nf ) {
+  //     ( *it_nf )->print( );
+  //   }
+  //   std::cout << "###############################" << std::endl;
+  // }
 
   // reduce to locally essential tree
-  lo my_process_id = 4;
+  lo my_process_id = 0;
   std::cout << "reducing to locally essential tree for process "
             << my_process_id << std::endl;
   skeleton.reduce_2_essential( my_process_id );
   skeleton.print_tree_human_readable( digits, print_process_ids );
   // skeleton.print( );
 
-  std::cout << "preparing fmm" << std::endl;
+  std::cout << "preparing and executing pseudo-fmm" << std::endl;
   std::list< scheduling_time_cluster* > m_list, m2l_list, l_list, n_list;
   std::vector< std::pair< scheduling_time_cluster*, lo > > receive_vector;
   lou n_moments_to_receive;
   skeleton.prepare_fmm( m_list, m2l_list, l_list, n_list, receive_vector,
                         n_moments_to_receive );
-  // skeleton.print( );
-  std::cout << "m list" << std::endl;
-  for ( auto it = m_list.begin( ); it != m_list.end( ); ++it ) {
-    ( *it )->print( );
+  std::vector< sc > input_vector( n_leaves, 1.0 );
+  std::vector< sc > output_vector( input_vector );
+
+  apply_fmm( my_process_id, receive_vector, n_moments_to_receive, m_list,
+    m2l_list, l_list, n_list, input_vector, output_vector );
+  std::cout << "output vector: " << std::endl;
+  for ( lou i = 0; i < output_vector.size( ); ++i ) {
+    std::cout << output_vector[ i ] << std::endl;
   }
-  std::cout << "m2l list" << std::endl;
-  for ( auto it = m2l_list.begin( ); it != m2l_list.end( ); ++it ) {
-    ( *it )->print( );
-  }
-  std::cout << "l list" << std::endl;
-  for ( auto it = l_list.begin( ); it != l_list.end( ); ++it ) {
-    ( *it )->print( );
-  }
-  
-  // apply_fmm( my_process_id, receive_vector, n_moments_to_receive, m_list,
-  //   m2l_list, l_list, n_list );
 }
