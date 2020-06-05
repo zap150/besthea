@@ -81,14 +81,14 @@ Differentiating we obtain
   \end{cases}
 \end{equation*}  
 
-\begin{remark}
-  \label{rem:scaling}
-  It can be easily verified that there holds the scaling relation
-  \begin{equation}
-  \label{eq:G_scaling}
-    G_\alpha(\vx-\vy,\beta(t-\tau)) = \frac{1}{(\alpha\beta)^{3/2}} G_1\bigg( \frac{\vx-\vy}{\sqrt{\alpha\beta}}, t-\tau \bigg).
-  \end{equation}
-\end{remark}
+%\begin{remark}
+%  \label{rem:scaling}
+%  It can be easily verified that there holds the scaling relation
+%  \begin{equation}
+%  \label{eq:G_scaling}
+%    G_\alpha(\vx-\vy,\beta(t-\tau)) = \frac{1}{(\alpha\beta)^{3/2}} G_1\bigg( \frac{\vx-\vy}{\sqrt{\alpha\beta}}, t-\tau \bigg).
+%  \end{equation}
+%\end{remark}
 
 To obtain the Cauchy data we apply the Dirichlet and Neumann trace operators to the representation formula \eqref{eq:repr} to obtain the boundary integral equations \cite{Cos1990,Cos2004,Noo1988,DohNiiSte2018}
 \begin{align*}
@@ -288,94 +288,79 @@ to obtain
 \begin{equation}
 \label{eq:dn_G_dt_dtau}
 \begin{aligned}
-  \frac{\partial G^{\dif\tau\dif t}_\alpha}{\partial \vn_\vy}(\tilde\vr,\delta) &= \frac{\partial g^{\dif\tau\dif t}}{\partial \rho}(\|\vr\|,\delta) \vn_\vy \cdot \nabla_\vy \|\vx-\vy\| 
-  = -\frac{\partial g^{\dif\tau\dif t}}{\partial \rho}(\|\vr\|,\delta) \frac{(\vx-\vy)\cdot \vn_\vy}{\|\vx-\vy\|} \\
-  &= - \frac{\partial g^{\dif\tau\dif t}}{\partial \rho}(\|\vr\|,\delta) \frac{ \vr \cdot \vn_\vy}{\| \vr\|}
+  \frac{\partial G^{\dif\tau\dif t}_\alpha}{\partial \vn_\vy}(\vr,\delta) &= \frac{\partial g^{\dif\tau\dif t}}{\partial \rho}(\|\vr\|,\delta) \vn_\vy \cdot \nabla_\vy \|\vx-\vy\| 
+  = - \frac{\partial g^{\dif\tau\dif t}}{\partial \rho}(\|\vr\|,\delta) \frac{ \vr \cdot \vn_\vy}{\| \vr\|}
 \end{aligned}
 \end{equation}
-%%%%%%%%%%%%%%%%%%%%%%%% CONTINUE HERE
 with
 \begin{equation*}
-  \frac{\partial g^{\dif\hat\tau\dif\hat t}}{\partial \rho}(\|\tilde\vr\|,\delta) =\frac{\sqrt{\delta}}{4\pi\|\tilde \vr\|} \bigg[  \bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} - \frac{\sqrt{\delta}}{\|\tilde \vr\|} \bigg) \erf\bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} \bigg) + \frac{1}{\sqrt{\pi}} \exp \bigg( -\frac{\|\tilde \vr\|^2}{4\delta} \bigg) \bigg].
+  \frac{\partial g^{\dif\tau\dif t}}{\partial \rho}(\|\vr\|,\delta) =\frac{1}{4\pi} \bigg[  \bigg( \frac{1}{2\alpha^2} - \frac{\delta}{\alpha\|\vr\|^2} \bigg) \erf\bigg( \frac{\|\vr\|}{2\sqrt{\alpha\delta}} \bigg) + \frac{\sqrt{\delta}}{\|\vr\|\sqrt{\pi\alpha^3}} \exp \bigg( -\frac{\|\vr\|^2}{4\alpha\delta} \bigg) \bigg].
 \end{equation*}
 Collecting all intermediate steps brings us to
 \begin{align*}
-  K^d(\vr) = \frac{1}{\alpha} \bigg[ 2 \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy} \bigg(\frac{\vr}{\sqrt{\alpha h_t}},d\bigg) - \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+1\bigg) - \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d-1\bigg) \bigg]
+  \alpha\frac{\partial G^{\dif\tau\dif t}_\alpha}{\partial \vn_\vy}(\vr,\delta) = -\frac{1}{4\pi} \frac{ \vr \cdot \vn_\vy}{\|\vr\|}\bigg[  \bigg( \frac{1}{2\alpha} - \frac{\delta}{\|\vr\|^2} \bigg) \erf\bigg( \frac{\|\vr\|}{2\sqrt{\alpha\delta}} \bigg) + \frac{\sqrt{\delta}}{\|\vr\|\sqrt{\pi\alpha}} \exp \bigg( -\frac{\|\vr\|^2}{4\alpha\delta} \bigg) \bigg].
 \end{align*}
-with
-\begin{align*}
-  \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}(\tilde \vr,\delta) &:= \sqrt{\alpha h_t}\frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}(\tilde \vr,\delta) \\
-  &= - \frac{\sqrt{\delta}}{4\pi} \frac{\tilde \vr \cdot \vn_\vy}{\|\tilde \vr\|^2} \bigg[  \bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} - \frac{\sqrt{\delta}}{\|\tilde \vr\|} \bigg) \erf\bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} \bigg) + \frac{1}{\sqrt{\pi}} \exp \bigg( -\frac{\|\tilde \vr\|^2}{4\delta} \bigg) \bigg].
-\end{align*}
-For $\|\tilde \vr\|>0$ we have
+For $\|\vr\|>0$ we have
 \begin{equation*}
-  \lim_{\delta \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}(\tilde \vr,\delta) = -\frac{\tilde \vr \cdot \vn_\vy}{8 \pi \|\tilde \vr\|}.
+  \lim_{\delta \to 0_+}  \alpha\frac{\partial G^{\dif\tau\dif t}_\alpha}{\partial \vn_\vy}(\vr,\delta)  = -\frac{\vr \cdot \vn_\vy}{8 \pi\alpha \| \vr\|}.
 \end{equation*}
 Conversely, for $\delta > 0$ we have
 \begin{equation*} 
-%\label{eq:lim_double_primitive}
-  \lim_{\|\tilde \vr\| \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}(\tilde \vr,\delta) = 0.
+  \lim_{\|\vr\| \to 0_+} \alpha\frac{\partial G^{\dif\tau\dif t}_\alpha}{\partial \vn_\vy}(\vr,\delta) = 0.
 \end{equation*}
 This follows by estimating 
 \begin{equation*}
-	\left| \frac{\partial \widetilde{G}_1^{\dif \hat\tau \dif\hat t}}{\partial \vn_\vy}
-	(\tilde\vr, \delta) \right| 
+	\left| \frac{\partial G_\alpha^{\dif\tau \dif t}}{\partial \vn_\vy}
+	(\vr, \delta) \right| 
 	\leq \left| 
-	\frac{\left(\frac{\| \tilde \vr \|^2}{2} - \delta \right)
-	\erf\left(\frac{\|\tilde \vr \|}{\sqrt{4\delta}}  \right)
-	+ \frac{\sqrt{\delta} \| \tilde \vr \|}{\sqrt{\pi}} 
-	\exp \left( -\frac{\|\tilde \vr\|^2}{4 \delta} \right)}
-	{4 \pi \|\tilde \vr\|^2 }
-	 \right| =: \big|\tilde g^{\dif \hat\tau \dif\hat t}(\|\tilde\vr \|, \delta)\big|
+	\frac{\left(\frac{\| \vr \|^2}{2\alpha} - \delta \right)
+	\erf\left(\frac{\| \vr \|}{2\sqrt{\alpha\delta}}  \right)
+	+ \frac{\sqrt{\delta} \| \vr \|}{\sqrt{\pi\alpha}} 
+	\exp \left( -\frac{\| \vr\|^2}{4\alpha \delta} \right)}
+	{4 \pi \| \vr\|^2 }
+	 \right| =: \big|\tilde g^{\dif \tau \dif t}(\|\vr \|, \delta)\big|
 \end{equation*}
-and observing that the limit of the function $\tilde g^{\dif \hat\tau \dif\hat t}$ for $\rho = \|\tilde \vr\| \rightarrow 0_+$ is zero. Indeed, L'Hospital's rule yields
+and observing that the limit of the function $\tilde g^{\dif \tau \dif t}$ for $\rho = \| \vr\| \rightarrow 0_+$ is zero. Indeed, L'Hospital's rule yields
 \begin{align*}
-	\lim_{\rho \rightarrow 0_+} \tilde g^{\dif \hat\tau \dif\hat t}(\rho,\delta) &=
+	\lim_{\rho \rightarrow 0_+} \tilde g^{\dif \tau \dif t}(\rho,\delta) &=
 	\lim_{\rho \rightarrow 0_+} \frac{
-	\left(\frac{\rho^2}{2}-\delta \right) \erf\left(\frac{\rho}{\sqrt{4\delta}} \right)
-	+ \frac{\sqrt{\delta} \rho}{\sqrt{\pi}} \exp \left( -\frac{\rho^2}{4 \delta} \right)}
+	\left(\frac{\rho^2}{2\alpha}-\delta \right) \erf\left(\frac{\rho}{2\sqrt{\alpha\delta}} \right)
+	+ \frac{\sqrt{\delta} \rho}{\sqrt{\pi\alpha}} \exp \left( -\frac{\rho^2}{4 \alpha\delta} \right)}
 	{4\pi \rho^2} \\ &= 
-	\lim_{\rho \rightarrow 0_+} \frac{2 \rho \erf\left(\frac{\rho}{\sqrt{4\delta}}\right)
-	+\exp\left(-\frac{\rho^2}{4\delta}\right) 
-	\left( \frac{1}{\sqrt{\pi \delta}} \left(\left( \frac{\rho^2}{2} - \delta \right)
-	+ \left( \delta - \frac{\rho^2}{2}\right) \right) \right)}
+	\lim_{\rho \rightarrow 0_+} \frac{ \frac{\rho}{\alpha} \erf\left(\frac{\rho}{2\sqrt{\alpha\delta}}\right)
+	+\exp\left(-\frac{\rho^2}{4\alpha\delta}\right) 
+	\left( \frac{1}{\sqrt{\pi \alpha\delta}} \left(\left( \frac{\rho^2}{2\alpha} - \delta \right)
+	+ \left( \delta - \frac{\rho^2}{2\alpha}\right) \right) \right)}
 	{8 \pi \rho} \\
-	&= \lim_{\rho \rightarrow 0_+}\frac{1}{4 \pi} \erf\left(-\frac{\rho^2}{4\delta}\right) = 0.
+	&= \lim_{\rho \rightarrow 0_+}\frac{1}{8 \pi \alpha} \bigg( \erf\bigg( \frac{\rho}{2\sqrt{\alpha\delta}} \bigg) + \frac{\rho}{\sqrt{\pi\alpha\delta}} \exp\bigg(-\frac{\rho^2}{4\alpha\delta}\bigg)\bigg)  = 0.
 \end{align*}
 
 For $K^0(\vr)$ we can write
 \begin{align*}
-  K^0(\vr) &= \sqrt{\frac{h_t}{\alpha}} \frac{\partial}{\partial \vn_\vy} \int_{0}^{1} G^{\dif\hat \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) - G^{\dif\hat \tau}_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},\hat t\bigg) \,\dif\hat t \\
-  &= \sqrt{\frac{h_t}{\alpha}} \bigg[ \frac{\partial G^{\dif\hat \tau}_1}{\partial \vn_\vy} \bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) - \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},1\bigg) + \frac{\partial G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) \bigg]
+  K^0(\vr) &= \alpha\frac{\partial}{\partial \vn_\vy} \int_{0}^{h_t} G^{\dif \tau}_\alpha(\vr,0) - G^{\dif \tau}_\alpha(\vr, t) \,\dif t 
+  = \alpha \bigg( \frac{\partial G^{\dif\tau}_\alpha}{\partial \vn_\vy} (\vr,0) - \frac{\partial G^{\dif\tau\dif t}_\alpha}{\partial \vn_\vy}(\vr,h_t) + \frac{\partial G^{\dif\tau\dif t}_1}{\partial \vn_\vy}(\vr,0) \bigg).
 \end{align*}
 Similarly as in \eqref{eq:dn_G_dt_dtau} with \eqref{eq:G_to_g} we have
 \begin{equation*}
-  \frac{\partial G^{\dif\hat\tau}_1}{\partial \vn_\vy}(\tilde \vr,\delta) = -\frac{1}{\sqrt{\alpha h_t}} \frac{\partial g^{\dif\hat\tau}}{\partial \rho}(\|\tilde \vr\|,\delta) \frac{\tilde \vr \cdot \vn_\vy}{\|\tilde \vr\|}
+  \frac{\partial G^{\dif\tau}_\alpha}{\partial \vn_\vy}(\vr,\delta) = -\frac{\partial g^{\dif\tau}}{\partial \rho}(\|\vr\|,\delta) \frac{\vr \cdot \vn_\vy}{\|\vr\|}
 \end{equation*}
-with $G^{\dif\hat\tau}_1(\tilde\vr,\delta) =: g^{\dif\hat\tau}(\|\tilde\vr\|,\delta)$ and 
+with $G^{\dif\tau}_\alpha(\vr,\delta) =: g^{\dif\tau}(\|\vr\|,\delta)$ and 
 \begin{equation*}
-  \frac{\partial g^{\dif\hat\tau}}{\partial \rho}(\|\tilde \vr\|,\delta) = -\frac{1}{4\pi\|\tilde\vr\|} \bigg[ \frac{1}{\|\tilde \vr\|} \erf\bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} \bigg) - \frac{1}{\sqrt{\pi\delta}} \exp\bigg( -\frac{\|\tilde \vr\|^2}{4\delta} \bigg) \bigg].
+  \frac{\partial g^{\dif\tau}}{\partial \rho}(\|\vr\|,\delta) = -\frac{1}{4\pi} \frac{1}{|\vr\|}\bigg[ \frac{1}{\alpha\|\vr\|} \erf\bigg( \frac{\|\vr\|}{2\sqrt{\alpha\delta}} \bigg) - \frac{1}{\sqrt{\pi\alpha^3\delta}} \exp\bigg( -\frac{\|\vr\|^2}{4\alpha\delta} \bigg) \bigg].
 \end{equation*}
 We thus finally obtain
-\begin{equation*}
-  K^0(\vr) = \frac{1}{\alpha} \bigg[ \frac{\partial \widetilde G^{\dif\hat \tau}_1}{\partial \vn_\vy} \bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) - \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},1\bigg) + \frac{\partial \widetilde G^{\dif\hat\tau\dif\hat t}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) \bigg]
-\end{equation*}
-with 
 \begin{equation}
 \label{eq:dn_G_dtau}
-\begin{aligned}
-   \frac{\partial \widetilde G^{\dif\hat\tau}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},1\bigg) &:= \sqrt{\alpha h_t} \frac{\partial G^{\dif\hat\tau}_1}{\partial \vn_\vy}\bigg(\frac{\vr}{\sqrt{\alpha h_t}},1\bigg) \\
-   &= \frac{\tilde \vr \cdot \vn_\vy}{4\pi\|\tilde\vr\|^2} \bigg[ \frac{1}{\|\tilde \vr\|} \erf\bigg( \frac{\|\tilde \vr\|}{\sqrt{4\delta}} \bigg) - \frac{1}{\sqrt{\pi\delta}} \exp\bigg( -\frac{\|\tilde \vr\|^2}{4\delta} \bigg) \bigg]
-\end{aligned}
+  \alpha \frac{\partial G^{\dif\tau}_\alpha}{\partial \vn_\vy}(\vr,\delta) = \frac{1}{4\pi} \frac{\vr \cdot \vn_\vy}{\|\vr\|^2}\bigg[ \frac{1}{\|\vr\|} \erf\bigg( \frac{\|\vr\|}{2\sqrt{\alpha\delta}} \bigg) - \frac{1}{\sqrt{\pi\alpha\delta}} \exp\bigg( -\frac{\|\vr\|^2}{4\alpha\delta} \bigg) \bigg].
 \end{equation}
-For $\|\tilde \vr\| > 0$ it holds
+For $\|\vr\| > 0$ it holds
 \begin{equation}
 \label{eq:dn_G_dtau_lim_r}
-  \lim_{\delta \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau}_1}{\partial \vn_\vy}(\tilde \vr,\delta) = \frac{\tilde \vr \cdot \vn_\vy}{4\pi\|\tilde\vr\|^3}.
+  \lim_{\delta \to 0_+} \frac{\partial G^{\dif\tau}_\alpha}{\partial \vn_\vy}(\vr,\delta) = \frac{ \vr \cdot \vn_\vy}{4\pi\|\vr\|^3}.
 \end{equation}
 For $\delta > 0$ we again have
 \begin{equation*}
-  \lim_{\|\tilde \vr\| \to 0_+} \frac{\partial \widetilde G^{\dif\hat\tau}_1}{\partial \vn_\vy}(\tilde \vr,\delta) = 0.
+  \lim_{\|\vr\| \to 0_+} \frac{\partial G^{\dif\tau}_\alpha}{\partial \vn_\vy}(\vr,\delta) = 0.
 \end{equation*}
 
 The layout of the block matrix $\matK_h$ is the same as in \eqref{eq:V_mat}. The individual blocks in $\matK_h$ are set up as
@@ -429,32 +414,28 @@ For the second part we have to analytically evaluate the integrals
   D^{2,d}(\vr) := 
   \begin{cases}
   \displaystyle
-    -\alpha \int_{0}^{t_1} \int_{0}^{t} \frac{\partial G_\alpha}{\partial \tau}(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d = 0, \\[4mm]
+    -\alpha \int_{0}^{h_t} \int_{0}^{t} \frac{\partial G_\alpha}{\partial \tau}(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d = 0, \\[4mm]
   \displaystyle
-    -\alpha \int_{t_d}^{t_{d+1}} \int_{0}^{t_1} \frac{\partial G_\alpha}{\partial \tau}(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d \in \{1,\ldots,E_t-1\}.
+    -\alpha \int_{dh_t}^{(d+1)h_t} \int_{0}^{h_t} \frac{\partial G_\alpha}{\partial \tau}(\vr,t-\tau) \,\dif\tau \,\dif t & \text{for } d \in \{1,\ldots,E_t-1\}.
   \end{cases}
 \end{equation*}
 For $d>0$ we can write
-\begin{equation*}
-  D^{2,d}(\vr) = -\alpha \int_{t_d}^{t_{d+1}} G_\alpha(\vr,t-t_1) - G_\alpha(\vr,t) \,\dif t
-\end{equation*}
-Using the substitution \eqref{eq:subst_tau_t} and the scaling condition~\eqref{eq:G_scaling} we obtain
 \begin{align*}
-  D^{2,d}(\vr) &= -\frac{1}{\sqrt{\alpha h_t}} \int_0^1 G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d+\hat t-1\bigg) - G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},d + \hat t\bigg) \,\dif \hat t \\
-  &= -\frac{1}{\sqrt{\alpha h_t}} \bigg[ 2 G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, d \bigg) - G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, d + 1 \bigg) - G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, d - 1 \bigg) \bigg]
+  D^{2,d}(\vr) &= -\alpha \int_{dh_t}^{(d+1)h_t} G_\alpha(\vr,t-h_t) - G_\alpha(\vr,t) \,\dif t \\
+  &= -\alpha \big[ 2 G_\alpha^{\dif t}( \vr, dh_t ) - G_\alpha^{\dif t}(\vr, (d + 1)h_t) - G_\alpha^{\dif t}(\vr, (d - 1)h_t ) \big]
 \end{align*}
-with $G_1^{\dif\hat t} = -G_1^{\dif\hat \tau}$ from \eqref{eq:G_dtau}. In addition to the limiting case \eqref{eq:G_dtau_lim_d} we have to treat the limit for $\delta>0$,
+with $G_\alpha^{\dif t} = -G_\alpha^{\dif \tau}$ from \eqref{eq:G_dtau}. In addition to the limiting case \eqref{eq:G_dtau_lim_d} we have to treat the limit for $\delta>0$,
 \begin{equation*}
-  \lim_{\|\tilde \vr\| \to 0_+} G^{\dif\hat t}_1(\tilde \vr,\delta) = -\frac{1}{4\pi\sqrt{\pi\delta}}.
+  \lim_{\|\vr\| \to 0_+} G^{\dif t}_\alpha(\vr,\delta) = -\frac{1}{4\pi\alpha\sqrt{\pi\alpha\delta}}.
 \end{equation*}
 
 For $d=0$ we have
 \begin{equation*}
-  D^{2,0}(\vr) = -\frac{1}{\sqrt{\alpha h_t}} \int_0^1 G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},0\bigg) - G_1\bigg(\frac{\vr}{\sqrt{\alpha h_t}},\hat t\bigg) \,\dif \hat t.
+  D^{2,0}(\vr) = -\alpha \int_0^{h_t} G_\alpha(\vr,0) - G_\alpha(\vr, t) \,\dif t.
 \end{equation*}
-Since $G_1(\tilde \vr,0) = 0$ for any $\tilde \vr,\,\|\tilde \vr\|>0$ it holds
+Since $G_\alpha(\vr,0) = 0$ for any $\vr$ with $\| \vr\|>0$ it holds
 \begin{equation*}
-  D^{2,0}(\vr) = -\frac{1}{\sqrt{\alpha h_t}} \bigg[ G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, 0 \bigg) - G_1^{\dif\hat t}\bigg( \frac{\vr}{\sqrt{\alpha h_t}}, 1 \bigg) \bigg].
+  D^{2,0}(\vr) = -\alpha ( G_\alpha^{\dif t}( \vr, 0 ) - G_\alpha^{\dif t}(\vr, h_t ) ).
 \end{equation*}
 Finally, $\matD_h = \matD_h^1 + \matD_h^2$ possesses the same layout as \eqref{eq:V_mat}. The individual blocks in $\matD_h^2$ are set up as
 \begin{equation*}
@@ -466,23 +447,19 @@ Finally, $\matD_h = \matD_h^1 + \matD_h^2$ possesses the same layout as \eqref{e
 To evaluate the discretized representation formula in $\vx\in\Omega$ and the temporal nodes $t_k = k h_t$ we have to compute the contribution of the single-layer potential
 \begin{align*}
  Vw_h(\vx, t_k) &= \sum_{i=1}^{k} \sum_{j=1}^{E_\vx} w_{i,j} \int_{\gamma_j} \int_{t_{i-1}}^{t_i} G_\alpha(\vx-\vy,t_k-\tau) \,\dif\tau \,\dif\vs_\vy \\
- &= \sum_{d=0}^{k-1} \sum_{j=1}^{E_\vx} w_{i,j} \int_{\gamma_j} \int_{0}^{t_1} G_\alpha(\vx-\vy,h_t(d+1)-\tau) \,\dif\tau \,\dif\vs_\vy
+ &= \sum_{d=0}^{k-1} \sum_{j=1}^{E_\vx} w_{i,j} \int_{\gamma_j} \int_{0}^{h_t} G_\alpha(\vx-\vy,(d+1)h_t-\tau) \,\dif\tau \,\dif\vs_\vy \\
+  &= \sum_{j=1}^{E_\vx} \int_{\gamma_j} \sum_{d=0}^{k-1} w_{i,j} [ G_\alpha^{\dif\tau}(\vx-\vy, dh_t) - G_\alpha^{\dif\tau}(\vx-\vy, (d+1)h_t) ] \,\dif\vs_\vy
 \end{align*}
-Substituting \eqref{eq:subst_tau_t} and scaling by \eqref{eq:G_scaling} leads to
-\begin{align*}
-  Vw_h(\vx, t_k) &= \sum_{d=0}^{k-1} \sum_{j=1}^{E_\vx} w_{i,j} \int_{\gamma_j} \frac{1}{\sqrt{\alpha^3 h_t}}\int_0^1 G_1\bigg(\frac{\vx-\vy}{\sqrt{\alpha h_t}},d+1-\hat\tau\bigg) \,\dif\hat\tau \,\dif\vs_\vy \\
-  &= \sum_{j=1}^{E_\vx} \int_{\gamma_j} \sum_{d=0}^{k-1} w_{i,j} \frac{1}{\sqrt{\alpha^3 h_t}} \bigg[ G_1^{\dif\hat\tau}(\tilde \vr, d) - G_1^{\dif\hat\tau}(\tilde \vr, d+1) \bigg] \,\dif\vs_\vy
-\end{align*}
-with $G_1^{\dif\hat\tau}$ from \eqref{eq:G_dtau} and its limit for $\delta \to 0_+$ in \eqref{eq:G_dtau_lim_d}. Note that as in the case of matrix assembly, one can reuse the analytic evaluations for all combinations of $k,i$ such that $k-i=d$ is constant.
+with $G_1^{\dif\tau}$ from \eqref{eq:G_dtau} and its limit for $\delta \to 0_+$ in \eqref{eq:G_dtau_lim_d}. Note that as in the case of matrix assembly, one can reuse the analytic evaluations for all combinations of $k,i$ such that $k-i=d$ is constant.
 
 \subsection{Double-layer potential}
 
 For the double-layer potential we similarly obtain
 \begin{align*}
   Ku_h(\vx, t_k) &= \sum_{i=1}^{k} \sum_{j=1}^{N_\vx} u_{i,j} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \int_{t_{i-1}}^{t_i} \alpha \frac{\partial G_\alpha}{\partial \vn_\vy}(\vx-\vy,t_k-\tau) \,\dif\tau \,\dif\vs_\vy \\
-  &= \sum_{j=1}^{N_\vx} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \sum_{d=0}^{k-1} u_{i,j} \frac{1}{\alpha h_t} \bigg[ \frac{\partial \widetilde G_1^{\dif\hat\tau}}{\partial \vn_\vy}(\tilde \vr, d) - \frac{\partial \widetilde G_1^{\dif\hat\tau}}{\partial \vn_\vy}(\tilde \vr, d+1) \bigg] \,\dif\vs_\vy
+  &= \sum_{j=1}^{N_\vx} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \sum_{d=0}^{k-1} u_{i,j} \alpha \bigg[ \frac{\partial G_\alpha^{\dif\tau}}{\partial \vn_\vy}(\vr, dh_t) - \frac{\partial G_\alpha^{\dif\tau}}{\partial \vn_\vy}(\vr, (d+1)h_t) \bigg] \,\dif\vs_\vy
 \end{align*}
-with $\partial \widetilde G_1^{\dif\hat\tau} / \partial \vn_\vy$ from \eqref{eq:dn_G_dtau} and its limit for $\delta \to 0_+$ in \eqref{eq:dn_G_dtau_lim_r}.
+with $\alpha\partial G_\alpha^{\dif\tau} / \partial \vn_\vy$ from \eqref{eq:dn_G_dtau} and its limit for $\delta \to 0_+$ in \eqref{eq:dn_G_dtau_lim_r}.
 
 \newpage
 \bibliographystyle{acm}
