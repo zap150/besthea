@@ -29,25 +29,49 @@
 #include "besthea/parallel_fmm.h"
 
 #include <iostream>
+#include <chrono>         // std::chrono::seconds
+#include <thread>         // std::this_thread::sleep_for
 
 using scheduling_time_cluster = besthea::mesh::scheduling_time_cluster;
 
-void apply_fmm( const lo my_process_id,
+void apply_fmm( const MPI_Comm communicator,
   const std::vector< std::pair< scheduling_time_cluster*, lo > > &
-    receive_vector, const lou n_moments_to_receive,
+    receive_vector, const lou n_moments_upward, const lou n_moments_m2l,
   std::list< scheduling_time_cluster* > & m_list,
   std::list< scheduling_time_cluster* > & m2l_list,
   std::list< scheduling_time_cluster* > & l_list,
   std::list< scheduling_time_cluster* > & n_list,
   const std::vector< sc > & input_vector, std::vector< sc > & output_vector ) {
   
+  int my_process_id;
+  MPI_Comm_rank( communicator, &my_process_id );
+  
   // start the receive operations
-  // TODO: currently this is just a dummy function.
-  start_receive_operations( receive_vector, n_moments_to_receive );
+  MPI_Request array_of_requests[ receive_vector.size( ) ];
+  start_receive_operations( 
+    receive_vector, n_moments_upward, n_moments_m2l, array_of_requests );
+  
+  // if ( my_process_id == 0 ) {
+  //   std::cout << "reached this point" << std::endl;
+  // }
+  // MPI_Barrier( communicator );
+  // if ( my_process_id != 0 ) {
+  //   std::this_thread::sleep_for( std::chrono::milliseconds(500) );
+  // }
+  
+  // initialize data which is used to check for received data.
+  int outcount = 0;
+  int array_of_indices[ receive_vector.size( ) ];
+  for ( lou i = 0; i < receive_vector.size( ); ++i ) {
+    array_of_indices[ i ] = 0;
+  }
 
   while ( !m_list.empty( ) || !m2l_list.empty( ) || !l_list.empty( ) 
           || !n_list.empty( ) ) {
-    // TODO: check for received data and process it appropriately
+    if ( outcount != MPI_UNDEFINED ) {
+      check_for_received_data( communicator, receive_vector, n_moments_upward, 
+        n_moments_m2l, array_of_requests, array_of_indices, outcount );
+    }
     // #################
     char status = 0;
     std::list< scheduling_time_cluster* >::iterator it_current_cluster;
@@ -72,40 +96,33 @@ void apply_fmm( const lo my_process_id,
     // statements above. Switch is used for better clarity.
     switch ( status ) {
       case 1: {
-        // std::cout << "applying m-list operation" << std::endl;
-        // apply S2M for leaf clusters
+        // apply S2M operations for leaf clusters
         call_s2m_operations( input_vector, *it_current_cluster );
-        //update dependencies for interactions
-        std::vector< scheduling_time_cluster* > * send_list
-          = ( *it_current_cluster )->get_send_list( );
-        if ( send_list != nullptr ) {
-          for ( auto it = send_list->begin( ); it != send_list->end( ); ++it ) {
-            if ( ( *it )->get_process_id( ) == my_process_id ) {
-              ( *it )->add_to_ready_interaction_list( *it_current_cluster );
-            }
-          } 
-        }
-        // TODO: else: start sending of moments for interaction
-
+        // update dependencies of targets in send list if they are local or send
+        // data for interactions 
+        provide_moments_for_m2l( communicator, *it_current_cluster );
+        // apply M2M operations 
         call_m2m_operations( *it_current_cluster );       
-        // update dependencies in upward path
-        if ( ( *it_current_cluster )->get_parent( )->get_process_id( ) 
-              == my_process_id ) {
-          ( *it_current_cluster )->get_parent( )->reduce_upward_path_counter( );
-        }
-        // TODO: else: start sending of moments by parent
+        // update dependencies of parent if it is handled by the same process or
+        // send data to other process if not
+        provide_moments_to_parents( communicator, *it_current_cluster );
+        // remove cluster from the list
         m_list.erase( it_current_cluster );
         break;
       }
       case 2: {
-        // std::cout << "applying l-list operation" << std::endl;
+        // apply L2L operations
         call_l2l_operations( *it_current_cluster );
         if ( ( *it_current_cluster )->get_interaction_list( ) == nullptr ||
              ( *it_current_cluster )->get_m2l_counter( ) 
               == ( *it_current_cluster )->get_interaction_list( )->size( ) ) {
+          // set status of parent's local contributions to completed
           ( *it_current_cluster )->set_downward_path_status( 2 );
+          // apply L2T operations
           call_l2t_operations( *it_current_cluster, output_vector );
-          // TODO: sending if a child is not handled by the same process
+          // send data to all other processes which handle a child
+          provide_local_contributions_to_children( 
+            communicator, *it_current_cluster );
         } else {
           ( *it_current_cluster )->set_downward_path_status( 1 );
         }
@@ -125,9 +142,13 @@ void apply_fmm( const lo my_process_id,
         if ( ( *it_current_cluster )->get_m2l_counter( ) ==
             ( *it_current_cluster )->get_interaction_list( )->size( ) ) {
           if ( ( *it_current_cluster )->get_downward_path_status( ) == 1 ) {
+            // set status of parent's local contributions to completed
             ( *it_current_cluster )->set_downward_path_status( 2 );
+            // apply L2T operations
             call_l2t_operations( *it_current_cluster, output_vector );
-            // TODO: sending if a child is not handled by the same process
+            // send data to all other processes which handle a child
+            provide_local_contributions_to_children( 
+              communicator, *it_current_cluster );
           }
           m2l_list.erase( it_current_cluster );
         }
@@ -197,6 +218,51 @@ void call_nearfield_operations( const std::vector< sc > & sources,
   output_vector[ tar_ind ] -= sources[ src_ind ];
 }
 
+void check_for_received_data( const MPI_Comm communicator,
+  const std::vector< std::pair< besthea::mesh::scheduling_time_cluster*, lo > > 
+    & receive_vector, const lou n_moments_upward, const lou n_moments_m2l, 
+  MPI_Request * array_of_requests, int array_of_indices[ ], int & outcount ) {
+
+  MPI_Testsome( receive_vector.size( ), array_of_requests, &outcount, 
+    array_of_indices, MPI_STATUSES_IGNORE );
+  if ( outcount != MPI_UNDEFINED && outcount > 0 ) {
+    for ( lou i = 0; i < (lou) outcount; ++i ) {
+      lou current_index = array_of_indices[ i ];
+      scheduling_time_cluster* current_cluster 
+        = receive_vector[ current_index ].first;
+      // distinguish which data has been received
+      if ( current_index < n_moments_upward ) {
+        // received data are moments in the upward path. add up 
+        // moments and update dependencies.
+        lo source_id = receive_vector[ current_index ].second;
+        sc old_moment = current_cluster->get_moment( );
+        sc received_moment 
+          = *( current_cluster->get_extraneous_moment_pointer( source_id ) );
+        current_cluster->set_moment( old_moment + received_moment );
+        current_cluster->reduce_upward_path_counter( );
+      }
+      else if ( current_index < n_moments_upward + n_moments_m2l ) {
+        // received data are moments for m2l. update dependencies.
+        int my_process_id;
+        MPI_Comm_rank( communicator, &my_process_id );
+        std::vector< scheduling_time_cluster* > * send_list 
+          = current_cluster->get_send_list( );
+        if ( send_list != nullptr ) {
+          for ( auto it = send_list->begin( ); it != send_list->end( ); ++it ) {
+            lo tar_process_id = ( *it )->get_process_id( );
+            if ( tar_process_id == my_process_id ) {
+              ( *it )->add_to_ready_interaction_list( current_cluster );
+            }
+          }
+        }
+      } else {
+        // received data are local contributions. update dependencies.
+        current_cluster->set_downward_path_status( 2 );
+      }
+    }
+  }
+}
+
 void find_cluster_in_l_list( std::list< scheduling_time_cluster* > & l_list, 
   std::list< scheduling_time_cluster* >::iterator & it_next_cluster,
   char & status ) {
@@ -241,22 +307,113 @@ void find_cluster_in_m2l_list( std::list< scheduling_time_cluster* > & m2l_list,
   }
 }
 
+void provide_moments_for_m2l( MPI_Comm communicator, 
+  scheduling_time_cluster* src_cluster ) {
+  int my_process_id;
+  MPI_Comm_rank( communicator, &my_process_id );
+  std::vector< scheduling_time_cluster* > * send_list 
+    = src_cluster->get_send_list( );
+  if ( send_list != nullptr ) {
+    for ( auto it = send_list->begin( ); it != send_list->end( ); ++it ) {
+      lo tar_process_id = ( *it )->get_process_id( );
+      if ( tar_process_id == my_process_id ) {
+        ( *it )->add_to_ready_interaction_list( src_cluster );
+      } else {
+        lo tag = 2 * src_cluster->get_global_index( );
+        sc* moment_buffer = src_cluster->get_moment_pointer( );
+        MPI_Request req;
+        MPI_Isend( moment_buffer, 1, MPI_DOUBLE, tar_process_id, tag, 
+          communicator, &req );
+        MPI_Request_free( &req ); 
+      } 
+    } 
+  }
+}
+
+void provide_moments_to_parents( const MPI_Comm communicator, 
+  scheduling_time_cluster* child_cluster ) {
+  int my_process_id;
+  MPI_Comm_rank( communicator, &my_process_id );
+  scheduling_time_cluster* parent_cluster = child_cluster->get_parent( );
+  lo parent_process_id = parent_cluster->get_process_id( );
+  if ( parent_process_id == my_process_id ) {
+    parent_cluster->reduce_upward_path_counter( );
+  } 
+  else if ( parent_process_id != -1 )  {
+    lo tag = 2 * parent_cluster->get_global_index( );
+    sc* moment_buffer = parent_cluster->get_moment_pointer( );
+    MPI_Request req;
+    MPI_Isend( moment_buffer, 1, MPI_DOUBLE, parent_process_id, tag, 
+      communicator, &req );
+    MPI_Request_free( &req );
+  }
+} 
+
+void provide_local_contributions_to_children( const MPI_Comm communicator, 
+  scheduling_time_cluster* parent_cluster ) {
+  int my_process_id;
+  MPI_Comm_rank( communicator, &my_process_id );
+  std::vector< scheduling_time_cluster* > * children 
+    = parent_cluster->get_children( );
+  if ( children != nullptr ) {
+    for ( auto it = children->begin( ); it != children->end( ); ++it ) {
+      lo child_process_id = ( *it )->get_process_id( );
+      if ( child_process_id != my_process_id ) {
+        lo tag = 2 * parent_cluster->get_global_index( ) + 1;
+        sc* local_contribution_buffer 
+          = parent_cluster->get_local_contribution_pointer( );
+        MPI_Request req;
+        MPI_Isend( local_contribution_buffer, 1, MPI_DOUBLE, child_process_id, 
+          tag, communicator, &req );
+        MPI_Request_free( &req );
+      }
+    }
+  }
+}
+
 void start_receive_operations( 
   const std::vector< std::pair< scheduling_time_cluster*, lo > > 
-  & receive_vector, const lou n_moments_to_receive ) {
-  // currently, this function is just used to print a message to console for
-  // every receive operation. Later on, this should be exchanged by appropriate
-  // calls of MPI_IRecv
-  std::cout << "receive operations for moments: " << std::endl;
-  for ( lou i = 0; i < n_moments_to_receive; ++i ) {
-    std::cout << "source: " << receive_vector[ i ].second
-              << ", tag: " << receive_vector[ i ].first->get_global_index( )
-              << std::endl;
+  & receive_vector, const lou n_moments_upward, const lou n_moments_m2l,
+  MPI_Request array_of_requests[ ] ) {
+  // start the receive operations for the moments in the upward path
+  int process_id;
+  MPI_Comm_rank( MPI_COMM_WORLD, &process_id );
+
+  // std::cout << "call receive operations for moments in upward path: " 
+  //           << std::endl;
+  for ( lou i = 0; i < n_moments_upward; ++i ) {
+    lo source_id = receive_vector[ i ].second;
+    lo tag = 2 * receive_vector[ i ].first->get_global_index( );
+    sc* moment_buffer 
+      = receive_vector[ i ].first->get_extraneous_moment_pointer( source_id );
+    MPI_Irecv( moment_buffer, 1, MPI_DOUBLE, source_id, tag, MPI_COMM_WORLD, 
+               &array_of_requests[ i ] );
+    // std::cout << "source: " << source_id << ", tag: " << tag << std::endl;
   }
-  std::cout << "receive operations for local contributions: " << std::endl;
-  for ( lou i = n_moments_to_receive; i < receive_vector.size( ); ++i ) {
-    std::cout << "source: " << receive_vector[ i ].second
-              << ", tag: " << -receive_vector[ i ].first->get_global_index( )
-              << std::endl;
+  
+  // start the receive operations for the moments needed for m2l
+  // std::cout << "call receive operations for moments needed for m2l: " 
+  //           << std::endl;
+  for ( lou i = n_moments_upward; i < n_moments_upward + n_moments_m2l; ++i ) {
+    lo source_id = receive_vector[ i ].second;
+    lo tag = 2 * receive_vector[ i ].first->get_global_index( );
+    sc* moment_buffer = receive_vector[ i ].first->get_moment_pointer( );
+    MPI_Irecv( moment_buffer, 1, MPI_DOUBLE, source_id, tag, MPI_COMM_WORLD, 
+               &array_of_requests[ i ] );
+    // std::cout << "source: " << source_id << ", tag: " << tag << std::endl;
+  }
+
+  // start the receive operations for the local contributions
+  // std::cout << "receive operations for local contributions: " << std::endl;
+  for ( lou i =  n_moments_upward + n_moments_m2l; i < receive_vector.size( ); 
+        ++i ) {
+    lo source_id = receive_vector[ i ].second;
+    lo tag = 2 * receive_vector[ i ].first->get_global_index( ) + 1;
+    sc* local_contribution_buffer 
+      = receive_vector[ i ].first->get_local_contribution_pointer( );
+    MPI_Irecv( local_contribution_buffer, 1, MPI_DOUBLE, source_id, tag, 
+               MPI_COMM_WORLD, &array_of_requests[ i ] );
+
+    // std::cout << "source: " << source_id << ", tag: " << tag << std::endl;
   }
 }

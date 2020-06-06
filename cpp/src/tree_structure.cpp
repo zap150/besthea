@@ -106,7 +106,7 @@ void besthea::mesh::tree_structure::
   std::list< scheduling_time_cluster* > & l_list,
   std::list< scheduling_time_cluster* > & n_list, 
   std::vector< std::pair< scheduling_time_cluster*, lo > > & receive_vector,
-  lou & n_moments_to_receive ) const {
+  lou & n_moments_upward, lou & n_moments_m2l ) const {
   m_list.clear( );
   init_fmm_lists_and_dependency_data( 
     *_root, m_list, m2l_list, l_list, n_list );
@@ -129,13 +129,14 @@ void besthea::mesh::tree_structure::
         // process p the current process has to receive the processed moments 
         // from p.
         if ( ( *it_child )->get_process_id( ) != _my_process_id ) {
-          receive_vector.push_back( 
-            std::pair( *it, ( *it_child )->get_process_id( ) ) );
+          receive_vector.push_back( std::pair< scheduling_time_cluster*, lo >( 
+                                      *it, ( *it_child )->get_process_id( ) ) );
+          ( *it )->add_receive_buffer( ( *it_child )->get_process_id( ) );
         }
       }
     } 
   }
-  lou n_moments_upward = receive_vector.size( );
+  n_moments_upward = receive_vector.size( );
   // check for receive operations in the interaction phase
   for ( auto it = m2l_list.begin( ); it != m2l_list.end( ); 
         ++it ) {
@@ -148,8 +149,8 @@ void besthea::mesh::tree_structure::
       // if the source cluster is handled by a different process p the current
       // process has to receive its moments from p.
       if ( ( *it_src )->get_process_id( ) != _my_process_id ) {
-        receive_vector.push_back( 
-          std::pair( *it_src, ( *it_src )->get_process_id( ) ) ); 
+        receive_vector.push_back( std::pair< scheduling_time_cluster*, lo >(
+                                    *it_src, ( *it_src )->get_process_id( ) ) ); 
       }
     }
   }
@@ -170,7 +171,7 @@ void besthea::mesh::tree_structure::
             return pair_one.first == pair_two.first;
           } );
   receive_vector.resize( std::distance( receive_vector.begin(), new_end ) );
-  n_moments_to_receive = receive_vector.size( );
+  n_moments_m2l = receive_vector.size( ) - n_moments_upward;
   // check for receive operations in the downward path
   for ( auto it = l_list.begin( ); it != l_list.end( ); ++it ) {
     scheduling_time_cluster * parent = ( *it )->get_parent( );
@@ -178,8 +179,8 @@ void besthea::mesh::tree_structure::
     // process has to receive its local contributions from p.
     if ( parent->get_process_id( ) != _my_process_id && 
          parent->get_process_id( ) != -1 ) {
-      receive_vector.push_back(
-        std::pair( parent, parent->get_process_id( ) ) );
+      receive_vector.push_back( std::pair< scheduling_time_cluster*, lo >( 
+                                  parent, parent->get_process_id( ) ) );
     }
   }
 }
@@ -474,7 +475,8 @@ void besthea::mesh::tree_structure::init_fmm_lists_and_dependency_data(
   // add the cluster to the n-list, if it is a leaf
   // TODO: change this later: A cluster is in the n-list if there is a
   // space-time leaf cluster associated to it.
-  if ( root.get_n_children( ) == 0 ){
+  if ( root.get_process_id( ) == _my_process_id && 
+       root.get_n_children( ) == 0 ){
     n_list.push_back( &root );
   }
 
