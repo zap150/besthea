@@ -411,19 +411,19 @@ A sketch of the FMM algorithm discussed in the previous sections is given in Alg
           \State \texttt{list\_index} = 3;
         \EndIf
       \EndWhile
-      \Return [\texttt{next\_cluster}, \texttt{list\_index}]
+      \State \algorithmicreturn \ [\texttt{next\_cluster}, \texttt{list\_index}]
     \EndFunction
     \Statex
     \Function{findClusterInList}{list}
       \State \texttt{it} = list\algdot begin();
-      \While{ \texttt{it} != M--list\algdot end() \textbf{and} \texttt{next\_cluster} == \texttt{NULL}}
+      \While{ \texttt{it} != list\algdot end() \textbf{and} \texttt{next\_cluster} == \texttt{NULL}}
         \If{dependencies of cluster $\ast$it are satisfied }
           \State \texttt{next\_cluster} = $\ast$\texttt{it}; 
         \Else
           \State ++\texttt{it};
         \EndIf
       \EndWhile
-      \Return \texttt{next\_cluster};
+      \State \algorithmicreturn \ \texttt{next\_cluster};
     \EndFunction
   \end{algorithmic}
 \end{algorithm}
