@@ -384,7 +384,7 @@ we obtain for $d=k-i$ that
   &\sum_{i=1}^{k-1} \sum_{j=1}^{N_\vx} u_{i,j}\int_{\partial\Omega} \int_{\partial\Omega} \curl_{\partial\Omega} \varphi^1_{\vx,\ell}(\vx) \cdot \curl_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \alpha^2 \int_{t_{d}}^{t_{d+1}} \int_{0}^{t_1} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
     &+\sum_{j=1}^{N_\vx} u_{k,j}\int_{\partial\Omega} \int_{\partial\Omega} \curl_{\partial\Omega} \varphi^1_{\vx,\ell}(\vx) \cdot \curl_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \alpha^2 \int_{0}^{t_1} \int_{0}^{t} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
   &- \sum_{i=1}^{k-1} \sum_{j=1}^{N_\vx} u_{i,j} \int_{\partial\Omega} \int_{\partial\Omega} \vn(\vx) \cdot \vn(\vy) \varphi^1_{\vx,\ell}(\vx) \varphi^1_{\vx,j}(\vy) \alpha \int_{t_d}^{t_{d+1}} \int_0^{t_1} \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
-    &- \sum_{j=1}^{N_\vx} u_{k,j} \int_{\partial\Omega} \int_{\partial\Omega} \vn(\vx) \cdot \vn(\vy) \varphi^1_{\vx,\ell}(\vx) \varphi^1_{\vx,j}(\vy) \alpha \int_{t_d}^{t_{d+1}} \int_0^{t} \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx.
+    &- \sum_{j=1}^{N_\vx} u_{k,j} \int_{\partial\Omega} \int_{\partial\Omega} \vn(\vx) \cdot \vn(\vy) \varphi^1_{\vx,\ell}(\vx) \varphi^1_{\vx,j}(\vy) \alpha \int_{0}^{t_1} \int_0^{t} \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx.
 \end{align*}
 Since the surface curls of spatially piecewise linear functions are piecewise constant, we can rewrite one of the summands in the first part as
 \begin{align*}
