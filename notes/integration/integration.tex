@@ -310,7 +310,7 @@ Conversely, for $\delta > 0$ we have
 \end{equation*}
 This follows by estimating 
 \begin{equation*}
-	\left| \frac{\partial G_\alpha^{\dif\tau \dif t}}{\partial \vn_\vy}
+	\left| \alpha\frac{\partial G_\alpha^{\dif\tau \dif t}}{\partial \vn_\vy}
 	(\vr, \delta) \right| 
 	\leq \left| 
 	\frac{\left(\frac{\| \vr \|^2}{2\alpha} - \delta \right)
@@ -332,7 +332,7 @@ and observing that the limit of the function $\tilde g^{\dif \tau \dif t}$ for $
 	\left( \frac{1}{\sqrt{\pi \alpha\delta}} \left(\left( \frac{\rho^2}{2\alpha} - \delta \right)
 	+ \left( \delta - \frac{\rho^2}{2\alpha}\right) \right) \right)}
 	{8 \pi \rho} \\
-	&= \lim_{\rho \rightarrow 0_+}\frac{1}{8 \pi \alpha} \bigg( \erf\bigg( \frac{\rho}{2\sqrt{\alpha\delta}} \bigg) + \frac{\rho}{\sqrt{\pi\alpha\delta}} \exp\bigg(-\frac{\rho^2}{4\alpha\delta}\bigg)\bigg)  = 0.
+	&= \lim_{\rho \rightarrow 0_+}\frac{1}{8 \pi \alpha} \erf\bigg( \frac{\rho}{2\sqrt{\alpha\delta}} \bigg)  = 0.
 \end{align*}
 
 For $K^0(\vr)$ we can write
@@ -356,7 +356,7 @@ We thus finally obtain
 For $\|\vr\| > 0$ it holds
 \begin{equation}
 \label{eq:dn_G_dtau_lim_r}
-  \lim_{\delta \to 0_+} \frac{\partial G^{\dif\tau}_\alpha}{\partial \vn_\vy}(\vr,\delta) = \frac{ \vr \cdot \vn_\vy}{4\pi\|\vr\|^3}.
+  \lim_{\delta \to 0_+} \alpha\frac{\partial G^{\dif\tau}_\alpha}{\partial \vn_\vy}(\vr,\delta) = \frac{ \vr \cdot \vn_\vy}{4\pi\|\vr\|^3}.
 \end{equation}
 For $\delta > 0$ we again have
 \begin{equation*}
@@ -457,7 +457,7 @@ with $G_1^{\dif\tau}$ from \eqref{eq:G_dtau} and its limit for $\delta \to 0_+$ 
 For the double-layer potential we similarly obtain
 \begin{align*}
   Ku_h(\vx, t_k) &= \sum_{i=1}^{k} \sum_{j=1}^{N_\vx} u_{i,j} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \int_{t_{i-1}}^{t_i} \alpha \frac{\partial G_\alpha}{\partial \vn_\vy}(\vx-\vy,t_k-\tau) \,\dif\tau \,\dif\vs_\vy \\
-  &= \sum_{j=1}^{N_\vx} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \sum_{d=0}^{k-1} u_{i,j} \alpha \bigg[ \frac{\partial G_\alpha^{\dif\tau}}{\partial \vn_\vy}(\vr, dh_t) - \frac{\partial G_\alpha^{\dif\tau}}{\partial \vn_\vy}(\vr, (d+1)h_t) \bigg] \,\dif\vs_\vy
+  &= \sum_{j=1}^{N_\vx} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \sum_{d=0}^{k-1} u_{i,j} \alpha \bigg[ \frac{\partial G_\alpha^{\dif\tau}}{\partial \vn_\vy}(\vx-\vy, dh_t) - \frac{\partial G_\alpha^{\dif\tau}}{\partial \vn_\vy}(\vx-\vy, (d+1)h_t) \bigg] \,\dif\vs_\vy
 \end{align*}
 with $\alpha\partial G_\alpha^{\dif\tau} / \partial \vn_\vy$ from \eqref{eq:dn_G_dtau} and its limit for $\delta \to 0_+$ in \eqref{eq:dn_G_dtau_lim_r}.
 
