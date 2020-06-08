@@ -39,6 +39,7 @@
 
 #include <list>
 #include "mpi.h"
+#include <string>
 #include <vector>
 
 /**
@@ -66,7 +67,8 @@ void apply_fmm( const MPI_Comm communicator,
   std::list< besthea::mesh::scheduling_time_cluster* > & m2l_list,
   std::list< besthea::mesh::scheduling_time_cluster* > & l_list,
   std::list< besthea::mesh::scheduling_time_cluster* > & n_list,
-  const std::vector< sc > & input_vector, std::vector< sc > & output_vector );
+  const std::vector< sc > & input_vector, std::vector< sc > & output_vector,
+  bool verbose = false, std::string verbose_dir = "./verbose/" );
 
 /**
  * Calls all S2M operations associated with a given scheduling time cluster.
@@ -149,7 +151,8 @@ void call_nearfield_operations( const std::vector< sc > & sources,
 void check_for_received_data( const MPI_Comm communicator,
   const std::vector< std::pair< besthea::mesh::scheduling_time_cluster*, lo > > 
     & receive_vector, const lou n_moments_upward, const lou n_moments_m2l, 
-  MPI_Request * array_of_requests, int array_of_indices[ ], int & outcount );
+  MPI_Request * array_of_requests, int array_of_indices[ ], int & outcount, 
+  bool verbose, std::string verbose_dir );
 
 /**
  * Returns an iterator pointing to the next cluster in the l-list whose 

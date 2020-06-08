@@ -49,7 +49,7 @@ int main( int argc, char * argv[] ) {
 
   // Choose the number of MPI processes used for computation and the id of the
   // cluster which is responsible for the output.
-  lo n_processes = 15;
+  lo n_processes = 7;
   lo output_id = 2;
 
   MPI_Init(&argc,&argv);
@@ -69,7 +69,7 @@ int main( int argc, char * argv[] ) {
       // time_mesh.refine( 2 );
 
       // uncomment to generate regular mesh
-      lo levels = 10;
+      lo levels = 5;
       b_t_mesh time_mesh( 0, 1, 1 << ( levels + 1 ) );
 
       lo time_levels = 20;
@@ -105,13 +105,16 @@ int main( int argc, char * argv[] ) {
       tree_structure.load_process_assignments( process_assignment_file );
       
       // help variables to print the process ids in human readable format
-      lo digits = ( lo ) ( ceil( log10( n_processes + 1 ) ) + 1 );
+      // lo digits = ( lo ) ( ceil( log10( n_processes + 1 ) ) + 1 );
+      // bool print_process_ids = true;
+      lo digits = 3;
       bool print_process_ids = true;
-      // lo digits = 5;
-      // bool print_process_ids = false;
 
       if ( process_id == output_id ) {
+        std::cout << "process ids:" << std::endl;
         tree_structure.print_tree_human_readable( digits, true );
+        std::cout << "global cluster ids: " << std::endl;
+        tree_structure.print_tree_human_readable( digits, false );
       }
 
       lou n_leaves = tree_structure.get_leaves( ).size( );
@@ -143,7 +146,8 @@ int main( int argc, char * argv[] ) {
       std::vector< sc > output_vector( input_vector );
       // apply the distributed pseudo fmm
       apply_fmm( communicator, receive_vector, n_moments_upward, n_moments_m2l,
-        m_list, m2l_list, l_list, n_list, input_vector, output_vector );
+        m_list, m2l_list, l_list, n_list, input_vector, output_vector, true,
+        "./job_scheduler/output_verbose" );
       
       // collect the results using a reduce operation and output result.
       if ( process_id == output_id ) {

@@ -28,9 +28,13 @@
 
 #include "besthea/parallel_fmm.h"
 
+#include <fstream>
 #include <iostream>
 #include <chrono>         // std::chrono::seconds
+// #include <stdio.h>        // for removing of files
+#include <sstream> 
 #include <thread>         // std::this_thread::sleep_for
+
 
 using scheduling_time_cluster = besthea::mesh::scheduling_time_cluster;
 
@@ -41,23 +45,23 @@ void apply_fmm( const MPI_Comm communicator,
   std::list< scheduling_time_cluster* > & m2l_list,
   std::list< scheduling_time_cluster* > & l_list,
   std::list< scheduling_time_cluster* > & n_list,
-  const std::vector< sc > & input_vector, std::vector< sc > & output_vector ) {
+  const std::vector< sc > & input_vector, std::vector< sc > & output_vector,
+  bool verbose, std::string verbose_dir ) {
   
   int my_process_id;
   MPI_Comm_rank( communicator, &my_process_id );
+  std::string verbose_file = verbose_dir + "/process_";
+  verbose_file += std::to_string( my_process_id );
+
+  if ( verbose ) {
+    // remove existing verbose file and write to new one
+    remove( verbose_file.c_str( ) ); 
+  }
   
   // start the receive operations
   MPI_Request array_of_requests[ receive_vector.size( ) ];
   start_receive_operations( 
     receive_vector, n_moments_upward, n_moments_m2l, array_of_requests );
-  
-  // if ( my_process_id == 0 ) {
-  //   std::cout << "reached this point" << std::endl;
-  // }
-  // MPI_Barrier( communicator );
-  // if ( my_process_id != 0 ) {
-  //   std::this_thread::sleep_for( std::chrono::milliseconds(500) );
-  // }
   
   // initialize data which is used to check for received data.
   int outcount = 0;
@@ -70,7 +74,8 @@ void apply_fmm( const MPI_Comm communicator,
           || !n_list.empty( ) ) {
     if ( outcount != MPI_UNDEFINED ) {
       check_for_received_data( communicator, receive_vector, n_moments_upward, 
-        n_moments_m2l, array_of_requests, array_of_indices, outcount );
+        n_moments_m2l, array_of_requests, array_of_indices, outcount, verbose,
+        verbose_dir );
     }
     // #################
     char status = 0;
@@ -90,6 +95,32 @@ void apply_fmm( const MPI_Comm communicator,
           }
         }
       }
+    }
+    // if verbose mode is chosen, write info about next operation to file
+    if ( verbose && status != 0 ) {
+      std::stringstream outss;
+      outss << "executing ";
+      switch (status)
+      {
+        case 1:
+          outss << "m-list operations ";
+          break;
+        case 2:
+          outss << "l-list operations ";
+          break;
+        case 3:
+          outss << "m2l-list operations ";
+          break;
+        case 4:
+          outss << "n-list operations ";
+          break;
+      }
+      outss << "for cluster " << ( *it_current_cluster )->get_global_index( );
+      std::ofstream outfile ( verbose_file.c_str( ), std::ios::app );
+        if ( outfile.is_open( ) ) {
+          outfile << outss.str( ) << std::endl;
+          outfile.close( );
+        }
     }
     // start the appropriate fmm operations according to status
     // TODO: the switch routine could be avoided by using several else 
@@ -221,7 +252,14 @@ void call_nearfield_operations( const std::vector< sc > & sources,
 void check_for_received_data( const MPI_Comm communicator,
   const std::vector< std::pair< besthea::mesh::scheduling_time_cluster*, lo > > 
     & receive_vector, const lou n_moments_upward, const lou n_moments_m2l, 
-  MPI_Request * array_of_requests, int array_of_indices[ ], int & outcount ) {
+  MPI_Request * array_of_requests, int array_of_indices[ ], int & outcount,
+  bool verbose, std::string verbose_dir ) {
+
+  int my_process_id;
+  MPI_Comm_rank( communicator, &my_process_id );
+
+  std::string verbose_file = verbose_dir + "./process_";
+  verbose_file += std::to_string( my_process_id );
 
   MPI_Testsome( receive_vector.size( ), array_of_requests, &outcount, 
     array_of_indices, MPI_STATUSES_IGNORE );
@@ -230,6 +268,16 @@ void check_for_received_data( const MPI_Comm communicator,
       lou current_index = array_of_indices[ i ];
       scheduling_time_cluster* current_cluster 
         = receive_vector[ current_index ].first;
+      if ( verbose ) {
+        std::ofstream outfile ( verbose_file.c_str( ), std::ios::app );
+        if ( outfile.is_open( ) ) {
+          outfile << "received data of cluster " 
+                  << current_cluster->get_global_index( ) 
+                  << " from process " << receive_vector[ current_index ].second
+                  << std::endl; 
+          outfile.close( );
+        }
+      }
       // distinguish which data has been received
       if ( current_index < n_moments_upward ) {
         // received data are moments in the upward path. add up 
@@ -243,8 +291,6 @@ void check_for_received_data( const MPI_Comm communicator,
       }
       else if ( current_index < n_moments_upward + n_moments_m2l ) {
         // received data are moments for m2l. update dependencies.
-        int my_process_id;
-        MPI_Comm_rank( communicator, &my_process_id );
         std::vector< scheduling_time_cluster* > * send_list 
           = current_cluster->get_send_list( );
         if ( send_list != nullptr ) {
