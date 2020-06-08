@@ -28,6 +28,9 @@
 #include "besthea/distributed_spacetime_tensor_mesh.h"
 #include "besthea/settings.h"
 #include "besthea/spacetime_mesh_generator.h"
+#include "besthea/temporal_mesh.h"
+#include "besthea/time_cluster_tree.h"
+#include "besthea/tree_structure.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -38,23 +41,55 @@ using besthea::mesh::distributed_spacetime_tensor_mesh;
 using besthea::mesh::spacetime_mesh_generator;
 
 int main( int argc, char * argv[] ) {
+  using b_t_mesh = besthea::mesh::temporal_mesh;
+  using time_cluster_tree = besthea::mesh::time_cluster_tree;
+
   int provided;
   MPI_Init_thread( &argc, &argv, MPI_THREAD_MULTIPLE, &provided );
 
-  int myRank;
+  int myRank, n_processes;
+  MPI_Comm comm = MPI_COMM_WORLD;
   MPI_Comm_rank( MPI_COMM_WORLD, &myRank );
+  MPI_Comm_size( comm, &n_processes );
+
+  // output/input files for temporal tree and distribution of clusters among
+  // processes
+  std::string tree_vector_file = "./job_scheduler/tree_structure.bin";
+  std::string process_assignment_file
+    = "./job_scheduler/process_assignment.bin";
 
   if ( myRank == 0 ) {
     std::string space_file = "./mesh_files/cube_12.txt";
     std::string time_file = "./testfile.txt";
+    lo time_refinement = 2;  // defining mesh within slices
 
-    spacetime_mesh_generator generator( space_file, time_file, 4 );
+    // load time mesh defining slices and create temporal tree
+    b_t_mesh time_mesh( time_file );
+    lo time_levels = 20;
+    lo n_min_time_elems = 2;
+    time_cluster_tree time_tree( time_mesh, time_levels, n_min_time_elems );
+    time_tree.print_internal( time_tree.get_root( ) );
+
+    // write tree structure to file
+    time_tree.print_tree_structure( tree_vector_file );
+
+    // compute process assignment and write it to file
+    lo strategy = 1;
+    std::cout << "n_processes: " << n_processes << ", strategy: " << strategy
+              << std::endl;
+
+    time_tree.print_process_assignments(
+      n_processes, strategy, process_assignment_file );
+
+    spacetime_mesh_generator generator(
+      space_file, time_file, time_refinement );
 
     generator.generate( "", "test_mesh", "txt" );
   }
   MPI_Barrier( MPI_COMM_WORLD );
-  MPI_Comm comm = MPI_COMM_WORLD;
-  distributed_spacetime_tensor_mesh( "test_mesh_d.txt", &comm );
+
+  distributed_spacetime_tensor_mesh(
+    "test_mesh_d.txt", tree_vector_file, process_assignment_file, &comm );
 
   MPI_Finalize( );
 }

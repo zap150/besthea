@@ -34,8 +34,11 @@
 #ifndef INCLUDE_BESTHEA_DISTRIBUTED_SPACETIME_TENSOR_MESH_H_
 #define INCLUDE_BESTHEA_DISTRIBUTED_SPACETIME_TENSOR_MESH_H_
 
+#include "besthea/io_routines.h"
+#include "besthea/scheduling_time_cluster.h"
 #include "besthea/spacetime_tensor_mesh.h"
 #include "besthea/temporal_mesh.h"
+#include "besthea/tree_structure.h"
 #include "besthea/triangular_surface_mesh.h"
 
 #include <mpi.h>
@@ -62,8 +65,9 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
    * @param[in] comm Pointer to the MPI communicator associated with
    * decomposition.
    */
-  distributed_spacetime_tensor_mesh(
-    const std::string & decomposition_file, MPI_Comm * comm );
+  distributed_spacetime_tensor_mesh( const std::string & decomposition_file,
+    const std::string & tree_file, const std::string & distribution_file,
+    MPI_Comm * comm );
 
   /**
    * Destructor.
@@ -109,14 +113,30 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
   /**
    * Loads submeshes assigned to the current rank and merges them into one mesh.
    * @param[in] decomposition_file Path to the file describing the input mesh.
+   * @param[in] distribution_file Path to the file describing the time-slices
+   * distribution among MPI processes.
    */
-  bool load( const std::string & decomposition_file );
+  bool load( const std::string & decomposition_file,
+    const std::string & tree_file, const std::string & distribution_file );
+
+  /**
+   * Goes through the temporal tree and finds leaf clusters with the same owner
+   * @param[in] root Root cluster of the tree.
+   * @param[in] center Center of the current cluster.
+   * @param[in] half_size Half size of the current cluster.
+   * @param[in,out] slices_indices Indices of the slices owned by the process.
+   * @param[in] start Start index of curren cluster.
+   * @param[in] end End index of current clusters.
+   */
+  void find_my_slices( scheduling_time_cluster * root, sc center, sc half_size,
+    std::vector< lo > & slices_indices, lo start, lo end );
 
   MPI_Comm * _comm;  //!< MPI communicator associated with the distributed mesh
   int _my_rank;      //!< MPI rank of current processor
   int _n_processes;  //!< total number of MPI processes in the communicator
   lo _n_meshes;      //!< total number of input meshes
-  lo _n_meshes_per_rank;  //!< number of meshes owned by this process
+  lo _n_meshes_per_rank;      //!< number of meshes owned by this process
+  std::vector< sc > _slices;  //!< vector defining the global mesh slices
   spacetime_tensor_mesh *
     _my_mesh;  //!< part of the global mesh owned by the rank
   triangular_surface_mesh *

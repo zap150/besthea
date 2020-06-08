@@ -36,6 +36,7 @@
 #include "besthea/temporal_mesh.h"
 #include "besthea/triangular_surface_mesh.h"
 
+#include <sstream>
 #include <string>
 
 namespace besthea {

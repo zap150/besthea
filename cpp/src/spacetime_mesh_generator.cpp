@@ -73,6 +73,13 @@ bool besthea::mesh::spacetime_mesh_generator::generate(
   const std::string & suffix ) {
   lo n_meshes = _time_mesh->get_n_elements( );
 
+  // print the original time slices structure
+  std::stringstream slices;
+  for ( lo i = 0; i < _time_mesh->get_n_nodes( ); ++i ) {
+    slices << _time_mesh->get_node( i ) << " ";
+  }
+  slices << "\n";
+
   _time_mesh->refine( _refinement );
 
   lo n_timesteps_per_mesh = _time_mesh->get_n_elements( ) / n_meshes;
@@ -88,7 +95,11 @@ bool besthea::mesh::spacetime_mesh_generator::generate(
               << std::endl;
     return false;
   }
-  d_file << n_meshes << "\n\n";
+  // time interval
+  d_file << _time_mesh->get_start( ) << " " << _time_mesh->get_end( ) << "\n";
+  // number of time slices (saved meshes)
+  d_file << n_meshes << "\n";
+  d_file << slices.str( );
 
   for ( lo i = 0; i < n_meshes; ++i ) {
     lo add_one = i < n_remaining_timesteps ? 1 : 0;
@@ -115,7 +126,10 @@ bool besthea::mesh::spacetime_mesh_generator::generate(
          << "2\n\n"
          << n_local_nodes << "\n";
 
-    for ( lo i = 0; i < n_local_timesteps; ++i ) {
+    _time_mesh->get_element( curr_start_timestep, element );
+    file << _time_mesh->get_node( element[ 0 ] ) << "\n";
+
+    for ( lo i = 1; i < n_local_timesteps; ++i ) {
       _time_mesh->get_element( curr_start_timestep + i, element );
       file << _time_mesh->get_node( element[ 0 ] ) << "\n";
     }

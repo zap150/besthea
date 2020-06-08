@@ -28,11 +28,13 @@
 
 #include "besthea/distributed_spacetime_tensor_mesh.h"
 
+#include <cmath>
 #include <iostream>
 
 besthea::mesh::distributed_spacetime_tensor_mesh::
-  distributed_spacetime_tensor_mesh(
-    const std::string & decomposition_file, MPI_Comm * comm )
+  distributed_spacetime_tensor_mesh( const std::string & decomposition_file,
+    const std::string & tree_file, const std::string & distribution_file,
+    MPI_Comm * comm )
   : _comm( comm ),
     _my_mesh( nullptr ),
     _space_mesh( nullptr ),
@@ -40,7 +42,7 @@ besthea::mesh::distributed_spacetime_tensor_mesh::
   MPI_Comm_rank( *_comm, &_my_rank );
   MPI_Comm_size( *_comm, &_n_processes );
 
-  load( decomposition_file );
+  load( decomposition_file, tree_file, distribution_file );
 }
 
 besthea::mesh::distributed_spacetime_tensor_mesh::
@@ -56,8 +58,36 @@ besthea::mesh::distributed_spacetime_tensor_mesh::
   }
 }
 
+void besthea::mesh::distributed_spacetime_tensor_mesh::find_my_slices(
+  scheduling_time_cluster * root, sc center, sc half_size,
+  std::vector< lo > & slice_indices, lo start, lo end ) {
+  if ( root->get_n_children( ) > 0 ) {
+    std::vector< scheduling_time_cluster * > * children = root->get_children( );
+    lo split_index;
+    // sc center = ( _slices[ end ] + _slices[ start ] ) / 2.0;
+    for ( lo i = start; i < end; ++i ) {
+      if ( ( _slices[ i + 1 ] + _slices[ i ] ) / 2.0 <= center ) {
+        split_index = i + 1;
+      }
+    }
+    find_my_slices( children->at( 0 ), center - half_size / 2, half_size / 2,
+      slice_indices, start, split_index );
+    find_my_slices( children->at( 1 ), center + half_size / 2, half_size / 2,
+      slice_indices, split_index, end );
+  } else {
+    lo cluster_owner = root->get_process_id( );
+    if ( cluster_owner == _my_rank ) {
+      for ( lo i = 0; i < end - start; ++i ) {
+        slice_indices.push_back( start + i );
+      }
+    }
+  }
+}
+
 bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
-  const std::string & decomposition_file ) {
+  const std::string & decomposition_file, const std::string & tree_file,
+  const std::string & distribution_file ) {
+  // load the file with basic description of the decomposed mesh
   std::ifstream filestream( decomposition_file.c_str( ) );
 
   if ( !filestream.is_open( ) ) {
@@ -66,24 +96,39 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
     return false;
   }
 
-  filestream >> _n_meshes;
-  _n_meshes_per_rank = _n_meshes / _n_processes;
-  lo rem = _n_meshes % _n_processes;
-  if ( _my_rank < rem ) {
-    // if number of meshes is not divisible by number of processes, first ranks
-    // will own additional mesh
-    _n_meshes_per_rank++;
+  // load the boundary of the time interval
+  sc t_start, t_end;
+  filestream >> t_start;
+  filestream >> t_end;
+
+  filestream >> _n_meshes;  // read total number of time slices
+
+  // read the slices definition
+  _slices.resize( _n_meshes + 1 );
+  sc node;
+  for ( lo i = 0; i < _n_meshes + 1; ++i ) {
+    filestream >> node;
+    _slices[ i ] = node;
   }
 
-  lo my_start_mesh = 0;
-  lo my_end_mesh;
+  // read and reconstruct temporal tree and distribution of clusters
+  tree_structure temp_tree( tree_file, t_start, t_end );
+  temp_tree.load_process_assignments( distribution_file );
+  std::vector< scheduling_time_cluster * > leaves = temp_tree.get_leaves( );
 
-  my_start_mesh = _my_rank * ( _n_meshes / _n_processes );
-  my_start_mesh += ( rem < _my_rank ? rem : _my_rank );
-  my_end_mesh = my_start_mesh + _n_meshes_per_rank;
+  if ( _my_rank == 0 )
+    temp_tree.print_processes_human_readable( 3 );
 
-  std::vector< spacetime_tensor_mesh * > my_meshes;
-  my_meshes.resize( _n_meshes_per_rank );
+  std::vector< lo > slice_indices;
+  find_my_slices( temp_tree.get_root( ),
+    ( _slices[ _n_meshes ] + _slices[ 0 ] ) / 2.0,
+    ( _slices[ _n_meshes ] - _slices[ 0 ] ) / 2.0, slice_indices, 0,
+    _n_meshes );
+
+  _n_meshes_per_rank = slice_indices.size( );
+
+  lo my_start_mesh = slice_indices.front( );
+  lo my_end_mesh = slice_indices.back( );
 
   std::vector< sc > my_time_nodes;
 
@@ -94,7 +139,7 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
     filestream >> my_start_idx;
     filestream >> t_file_path;
     filestream >> s_file_path;
-    if ( i >= my_start_mesh && i < my_end_mesh ) {
+    if ( i >= my_start_mesh && i <= my_end_mesh ) {
       if ( i == my_start_mesh ) {
         _my_start_idx = my_start_idx;
       }
