@@ -68,7 +68,6 @@ int main( int argc, char * argv[] ) {
     lo time_levels = 20;
     lo n_min_time_elems = 2;
     time_cluster_tree time_tree( time_mesh, time_levels, n_min_time_elems );
-    time_tree.print_internal( time_tree.get_root( ) );
 
     // write tree structure to file
     time_tree.print_tree_structure( tree_vector_file );

@@ -63,8 +63,8 @@ void besthea::mesh::distributed_spacetime_tensor_mesh::find_my_slices(
   std::vector< lo > & slice_indices, lo start, lo end ) {
   if ( root->get_n_children( ) > 0 ) {
     std::vector< scheduling_time_cluster * > * children = root->get_children( );
-    lo split_index;
-    // sc center = ( _slices[ end ] + _slices[ start ] ) / 2.0;
+    lo split_index = 0;
+
     for ( lo i = start; i < end; ++i ) {
       if ( ( _slices[ i + 1 ] + _slices[ i ] ) / 2.0 <= center ) {
         split_index = i + 1;
@@ -115,9 +115,6 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
   tree_structure temp_tree( tree_file, t_start, t_end );
   temp_tree.load_process_assignments( distribution_file );
   std::vector< scheduling_time_cluster * > leaves = temp_tree.get_leaves( );
-
-  if ( _my_rank == 0 )
-    temp_tree.print_processes_human_readable( 3 );
 
   std::vector< lo > slice_indices;
   find_my_slices( temp_tree.get_root( ),

@@ -137,27 +137,27 @@ class besthea::mesh::time_cluster_tree {
 
   /**
    * Assigns clusters of the tree to a given number of processes.
-  * Only those clusters whose level is less or equal than the level of the 
-   * earliest leaf and greater than 1 are assigned to processes. The clusters 
+   * Only those clusters whose level is less or equal than the level of the
+   * earliest leaf and greater than 1 are assigned to processes. The clusters
    * are distributed levelwise:
-   *  - For levels where the number of clusters is larger than the number of 
+   *  - For levels where the number of clusters is larger than the number of
    *    processes the clusters are distributed as uniformly as possible (each
-   *    process gets the same amount of clusters +/- 1) with the constraint that 
-   *    if a cluster is assigned to a certain process at least one of its 
+   *    process gets the same amount of clusters +/- 1) with the constraint that
+   *    if a cluster is assigned to a certain process at least one of its
    *    children has to be assigned to the same process.
    *  - Clusters at the first level where the number of processes is larger than
-   *    the number of clusters are assigned to the same process as their left 
-   *    child. 
+   *    the number of clusters are assigned to the same process as their left
+   *    child.
    *  - Clusters above this level are distributed according to one of three
    *    strategies:
-   *    * Strategy 0: Assign clusters to those processes which handle the fewest 
+   *    * Strategy 0: Assign clusters to those processes which handle the fewest
    *      clusters at higher levels.
-   *    * Strategy 1: Similar to 0, but split the processes into groups for each 
-   *      level and pick a process from each group (underlying idea: pick the 
+   *    * Strategy 1: Similar to 0, but split the processes into groups for each
+   *      level and pick a process from each group (underlying idea: pick the
    *      process with the fewest clusters in the subtree).
    *    * Strategy 2: Always assign a cluster to the same process which handles
    *      its left child.
-   * 
+   *
    * @param[in] n_processes Number of processes.
    * @param[in] strategy  Indicates which strategy is used (default 2).
    * \return A vector representing the distribution of the clusters. It contains
@@ -239,9 +239,9 @@ class besthea::mesh::time_cluster_tree {
    * @param[in] trunc_level Level of the earliest leaf cluster in the tree.
    * @param[in] n_processes Number of processes for the assignment.
    * @param[in] my_id Process id of the cluster which calls the routine. This is
-  *                  used to assign the same process id to the children of a 
+   *                  used to assign the same process id to the children of a
    *                  cluster at levels below @p trunc_level.
-   * @param[in,out] assigned_clusters Counters for each level to keep track of 
+   * @param[in,out] assigned_clusters Counters for each level to keep track of
    *                                  the number of clusters which have been
    *                                  assigned.
    * @param[in,out] process_pointers  Auxiliary vector for the assignment of
@@ -268,7 +268,6 @@ class besthea::mesh::time_cluster_tree {
   /**
    * Aux for printing
    */
- public:
   void print_internal( time_cluster * root ) {
     if ( root != nullptr ) {
       root->print( );
