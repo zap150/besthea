@@ -56,9 +56,14 @@
  * @param[in] n_list  List for scheduling nearfield operations.  
  * @param[in] input_vector  Vector containing the sources for FMM.
  * @param[in,out] output_vector Vector to store the results of the FMM.
+ * @param[in] verbose If true, each process creates a verbose output file where
+ *                    it documents its actions.
+ * @param[in] verbose_dir If @p verbose is true, the output file of each process
+ *                        is stored in this directory.
  * @note The receive vector and the 4 lists should be constructed using 
  *       the method @ref besthea::mesh::tree_structure::prepare_fmm .
- * \todo write documentation
+ * @note The directory @p verbose_dir needs to be created manually before 
+ *       execution.
  */
 void apply_fmm( const MPI_Comm communicator,
   const std::vector< std::pair< besthea::mesh::scheduling_time_cluster*, lo > >&
@@ -75,46 +80,57 @@ void apply_fmm( const MPI_Comm communicator,
  * @param[in] sources Global sources containing the once used for the M2L 
  *                    operation.
  * @param[in] time_cluster  Considered scheduling time cluster.
+ * @param[in] verbose If true, the required time is written to file.
+ * @param[in] verbose_file  If @p verbose is true, this is used as output file.
  * @todo Currently dummy routine. 
  */
 void call_s2m_operations( const std::vector< sc > & sources,
-  besthea::mesh::scheduling_time_cluster* time_cluster );
+  besthea::mesh::scheduling_time_cluster* time_cluster, bool verbose, 
+  std::string verbose_file );
 
 /**
  * Calls all M2M operations associated with a given scheduling time cluster.
  * @param[in] time_cluster  Considered scheduling time cluster.
+ * @param[in] verbose If true, the required time is written to file.
+ * @param[in] verbose_file  If @p verbose is true, this is used as output file.
  * @todo Currently dummy routine. 
  */
 void call_m2m_operations( 
-  besthea::mesh::scheduling_time_cluster* time_cluster );
+  besthea::mesh::scheduling_time_cluster* time_cluster, bool verbose, 
+  std::string verbose_file );
 
 /**
  * Calls all M2L operations associated with a given pair of scheduling time 
  * clusters.
  * @param[in] src_cluster Scheduling time cluster which acts as source in M2L.
  * @param[in] tar_cluster Scheduling time cluster which acts as target in M2L.
+ * @param[in] verbose If true, the required time is written to file.
+ * @param[in] verbose_file  If @p verbose is true, this is used as output file.
  * @todo Currently dummy routine. 
  */
 void call_m2l_operations( besthea::mesh::scheduling_time_cluster* src_cluster,
-  besthea::mesh::scheduling_time_cluster* tar_cluster );
-
+  besthea::mesh::scheduling_time_cluster* tar_cluster, bool verbose, 
+  std::string verbose_file );
 /**
  * Calls all L2L operations associated with a given scheduling time cluster.
  * @param[in] time_cluster  Considered scheduling time cluster.
+ * @param[in] verbose If true, the required time is written to file.
+ * @param[in] verbose_file  If @p verbose is true, this is used as output file.
  * @todo Currently dummy routine. 
  */
 void call_l2l_operations( 
-  besthea::mesh::scheduling_time_cluster* time_cluster );
-
+  besthea::mesh::scheduling_time_cluster* time_cluster, bool verbose, 
+  std::string verbose_file );
 /**
  * Calls all L2T operations associated with a given scheduling time cluster.
  * @param[in] time_cluster  Considered scheduling time cluster.
  * @param[in,out] output_vector Vector to which the results are added.
+ * @param[in] verbose If true, the required time is written to file.
+ * @param[in] verbose_file  If @p verbose is true, this is used as output file.
  * @todo Currently dummy routine. 
  */
 void call_l2t_operations( besthea::mesh::scheduling_time_cluster* time_cluster, 
-  std::vector< sc > & output_vector );
-
+  std::vector< sc > & output_vector, bool verbose, std::string verbose_file );
 /**
  * Calls all nearfield operations associated with a given pair of scheduling 
  * time clusters.
@@ -125,12 +141,14 @@ void call_l2t_operations( besthea::mesh::scheduling_time_cluster* time_cluster,
  * @param[in] tar_cluster Scheduling time cluster which acts as target for the
  *                        nearfield operations.
  * @param[in,out] output_vector Vector to which the results are added.
+ * @param[in] verbose If true, the required time is written to file.
+ * @param[in] verbose_file  If @p verbose is true, this is used as output file.
  * @todo Currently dummy routine. 
  */
 void call_nearfield_operations( const std::vector< sc > & sources,
   besthea::mesh::scheduling_time_cluster* src_cluster, 
   besthea::mesh::scheduling_time_cluster* tar_cluster, 
-  std::vector< sc > & output_vector );
+  std::vector< sc > & output_vector, bool verbose, std::string verbose_file );
 
 /**
  * Calls MPI_Testsome for an array of Requests to check for received data.
@@ -147,12 +165,16 @@ void call_nearfield_operations( const std::vector< sc > & sources,
  *                                  input variable to avoid reallocation in each
  *                                  function call.
  * @param[in,out] outcount  Stores the number of Requests which are completed.
+ * @param[in] verbose If true, the process lists all the received data, and 
+ *                    reports about the time needed to process it (in case 
+ *                    moments in the upward path were received)
+ * @param[in] verbose_file  If @p verbose is true, this is used as output file.
  */
 void check_for_received_data( const MPI_Comm communicator,
   const std::vector< std::pair< besthea::mesh::scheduling_time_cluster*, lo > > 
     & receive_vector, const lou n_moments_upward, const lou n_moments_m2l, 
   MPI_Request * array_of_requests, int array_of_indices[ ], int & outcount, 
-  bool verbose, std::string verbose_dir );
+  bool verbose, std::string verbose_file );
 
 /**
  * Returns an iterator pointing to the next cluster in the l-list whose 

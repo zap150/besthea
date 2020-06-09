@@ -32,6 +32,7 @@
 #include <cmath>
 #include <iostream>
 #include <list>
+#include <string>
 #include <thread>         // std::this_thread::sleep_for
 
 
@@ -46,6 +47,9 @@ int main( int argc, char * argv[] ) {
   bool generate_structure_and_process_assignment = true;
   // choose if the pseudo FMM should be executed.
   bool execute_pseudo_fmm = true;
+  // choose verbose mode or not
+  bool verbose = true;
+  std::string verbose_dir = "./job_scheduler/output_verbose";
 
   // Choose the number of MPI processes used for computation and the id of the
   // cluster which is responsible for the output.
@@ -146,8 +150,8 @@ int main( int argc, char * argv[] ) {
       std::vector< sc > output_vector( input_vector );
       // apply the distributed pseudo fmm
       apply_fmm( communicator, receive_vector, n_moments_upward, n_moments_m2l,
-        m_list, m2l_list, l_list, n_list, input_vector, output_vector, true,
-        "./job_scheduler/output_verbose" );
+        m_list, m2l_list, l_list, n_list, input_vector, output_vector, verbose,
+        verbose_dir );
       
       // collect the results using a reduce operation and output result.
       if ( process_id == output_id ) {
