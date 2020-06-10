@@ -509,7 +509,7 @@ In Alg.~\ref{alg:s2m_and_m2m_traversal} and~\ref{alg:s2m_and_m2m_mapping} we ske
           with $\texttt{Z}_\mathrm{c}=\texttt{Y}\times \texttt{J}_\mathrm{c}$ }
           \Task \texttt{final}($(\texttt{target\_level} - \texttt{current\_level}) \leq \texttt{thresh}$)
           \State \Call{callS2MOperationsSpaceTime}{}($\texttt{Z}_\mathrm{c}$, $\texttt{I}$, \texttt{target\_level}, 
-          \Statexindent \hskip\algorithmicindent $\texttt{current\_level}+1$)
+          \Statexindent \hskip\algorithmicindent $\texttt{current\_level}+1$);
         \EndFor
       \EndIf
     \EndFunction
