@@ -118,7 +118,7 @@ class besthea::mesh::spacetime_cluster {
   /**
    * Returns number of cluster's children.
    */
-  lo get_n_children( ) {
+  lo get_n_children( ) const {
     if ( _children != nullptr ) {
       return _children->size( );
     } else {
@@ -292,17 +292,18 @@ class besthea::mesh::spacetime_cluster {
    * Prints info of the object.
    */
   void print( ) {
-    std::cout << _level << ", space: " << _spatial_cluster.get_level( ) 
-              << " time: " << _temporal_cluster.get_level( ) << std::endl;
+    std::cout << "level, overall: " << _level << ", space: " 
+              << _spatial_cluster.get_level( )  << " time: " 
+              << _temporal_cluster.get_level( );
     besthea::linear_algebra::vector spat_center( 3, false );
     _spatial_cluster.get_center( spat_center );
     sc temp_center = _temporal_cluster.get_center( );
-    std::cout << "spatial center: (" << spat_center[ 0 ] << ", "
-              << spat_center[ 1] << ", " << spat_center[ 2 ] << ")" 
-              << std::endl;
-    std::cout << "temporal center: " << temp_center << std::endl;
-    std::cout << "nr temporal elements: " << _temporal_cluster.get_n_elements( )
-              << std::endl;
+    std::cout << ", spatial center: (" << spat_center[ 0 ] << ", "
+              << spat_center[ 1] << ", " << spat_center[ 2 ] << ")";
+    std::cout << ", temporal center: " << temp_center;
+    // std::cout << "nr temporal elements: " 
+    //           << _temporal_cluster.get_n_elements( );
+    std::cout << std::endl;
   }
 
  private:

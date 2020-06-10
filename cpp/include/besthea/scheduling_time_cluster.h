@@ -34,6 +34,7 @@
 #define INCLUDE_BESTHEA_SCHEDULING_TIME_CLUSTER_H_
 
 #include "besthea/settings.h"
+#include "besthea/spacetime_cluster.h"
 #include "besthea/vector.h"
 
 #include <iostream>
@@ -80,6 +81,8 @@ class besthea::mesh::scheduling_time_cluster {
       _ready_interaction_list( nullptr ),
       _m2l_counter( 0 ),
       _downward_path_status( 0 ),
+      _associated_spacetime_clusters( nullptr ),
+      _n_associated_leaves( 0 ),
       _leaf_index( -1 ),
       _moment( 0.0 ),
       _local_contribution( 0.0 ),
@@ -109,6 +112,8 @@ class besthea::mesh::scheduling_time_cluster {
       delete _send_list;
     if ( _ready_interaction_list != nullptr )
       delete _ready_interaction_list;
+    if ( _associated_spacetime_clusters != nullptr )
+      delete _associated_spacetime_clusters;
     if ( _receive_moments != nullptr ) 
       delete _receive_moments;
     if ( _map_to_moment_positions != nullptr )
@@ -479,6 +484,48 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
+   * Adds a space-time cluster to @p _associated_spacetime_clusters.
+   * @param[in] cluster Cluster which is added to the list.
+   * @note If @p _associated_spacetime_clusters is not allocated this is done 
+   * here.
+   */
+  void add_associated_spacetime_cluster( spacetime_cluster* cluster ) {
+    if ( _associated_spacetime_clusters == nullptr ) {
+      _associated_spacetime_clusters = new std::vector< spacetime_cluster* >( );
+    }
+    _associated_spacetime_clusters->push_back( cluster );
+  }
+
+  /**
+   * Returns a pointer to the const list of associated spacetime clusters.
+   */
+  const std::vector< spacetime_cluster* >* 
+    get_associated_spacetime_clusters( ) const {
+    return _associated_spacetime_clusters;
+  }
+
+  /**
+   * Returns a pointer to the list of associated spacetime clusters.
+   */
+  std::vector< spacetime_cluster* >* get_associated_spacetime_clusters( ) {
+    return _associated_spacetime_clusters;
+  }
+
+  /**
+   * Returns the number of associated spacetime leaf clusters.
+   */
+  lou get_n_associated_leaves( ) const {
+    return _n_associated_leaves;
+  }
+
+  /**
+   * Increases the number of associated spacetime leaf clusters by one.
+   */
+  void increase_n_associated_leaves( ) {
+    _n_associated_leaves ++;
+  }
+
+  /**
    * Returns the cluster's moment
    * @note TEMPORARY
    */
@@ -639,6 +686,15 @@ class besthea::mesh::scheduling_time_cluster {
     // std::cout << ", downward_path_status: " << (lo) _downward_path_status;
     // std::cout << ", m2l counter: " << _m2l_counter;
     std::cout << std::endl;
+    if ( _associated_spacetime_clusters != nullptr ) {
+      std::cout << "number of associated leaves: " << _n_associated_leaves
+                << std::endl;
+      for ( auto it = _associated_spacetime_clusters->begin( ); 
+            it != _associated_spacetime_clusters->end( ); ++it ) {
+        ( *it )->print( );
+      }
+      std::cout << std::endl;
+    }
   }
 
  private:
@@ -677,6 +733,14 @@ class besthea::mesh::scheduling_time_cluster {
                               //!< - 1: L2L executed, local contributions not 
                               //!<      ready,
                               //!< - 2: local contributions ready.
+  std::vector< spacetime_cluster* >
+    * _associated_spacetime_clusters; //!< List of space-time clusters 
+                                      //!< associated to the scheduling time 
+                                      //!< cluster.
+  lou _n_associated_leaves;  //!< Number of associated space-time leaf clusters.
+                             //!< These are first in the list of associated 
+                             //!< space-time clusters.
+
   lo _leaf_index; //!< Index which is assigned consecutively to all leaves. For
                   //!< non-leaf clusters it is -1 TEMPORARY
   sc _moment; //!< Stores a moment in FMM TEMPORARY
