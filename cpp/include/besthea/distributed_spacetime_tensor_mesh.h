@@ -109,6 +109,13 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
     return global_idx - _my_start_idx * _space_mesh->get_n_elements( );
   }
 
+  /**
+   * Returns the mesh associated with current MPI process.
+   */
+  spacetime_tensor_mesh * get_my_mesh( ) {
+    return _my_mesh;
+  }
+
  protected:
   /**
    * Loads submeshes assigned to the current rank and merges them into one mesh.
@@ -135,10 +142,10 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
   int _my_rank;      //!< MPI rank of current processor
   int _n_processes;  //!< total number of MPI processes in the communicator
   lo _n_meshes;      //!< total number of input meshes
-  lo _n_meshes_per_rank;      //!< number of meshes owned by this process
-  std::vector< sc > _slices;  //!< vector defining the global mesh slices
-  spacetime_tensor_mesh *
-    _my_mesh;  //!< part of the global mesh owned by the rank
+  lo _n_meshes_per_rank;             //!< number of meshes owned by this process
+  std::vector< sc > _slices;         //!< vector defining the global mesh slices
+  spacetime_tensor_mesh * _my_mesh;  //!< part of the global mesh owned by the
+                                     //!< rank (including the nearfield)
   triangular_surface_mesh *
     _space_mesh;  //!< surface mesh the spacetime mesh is composed of
   temporal_mesh *

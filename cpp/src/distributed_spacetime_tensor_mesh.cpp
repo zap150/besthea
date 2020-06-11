@@ -125,6 +125,10 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
   _n_meshes_per_rank = slice_indices.size( );
 
   lo my_start_mesh = slice_indices.front( );
+  if ( slice_indices.front( ) > 0 ) {
+    // let's load also the temporal nearfield slice
+    my_start_mesh -= 1;
+  }
   lo my_end_mesh = slice_indices.back( );
 
   std::vector< sc > my_time_nodes;

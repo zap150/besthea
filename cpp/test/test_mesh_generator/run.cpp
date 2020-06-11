@@ -59,9 +59,9 @@ int main( int argc, char * argv[] ) {
     = "./job_scheduler/process_assignment.bin";
 
   if ( myRank == 0 ) {
-    std::string space_file = "./mesh_files/cube_12.txt";
-    std::string time_file = "./testfile.txt";
-    lo time_refinement = 2;  // defining mesh within slices
+    std::string space_file = "./mesh_files/cube_12.txt";  // spatial mesh
+    std::string time_file = "./testfile.txt";  // file defining temporal slices
+    lo time_refinement = 2;                    // defining mesh within slices
 
     // load time mesh defining slices and create temporal tree
     b_t_mesh time_mesh( time_file );
