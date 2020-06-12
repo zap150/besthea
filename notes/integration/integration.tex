@@ -262,7 +262,7 @@ into \eqref{eq:D_bil} and testing with
 \end{equation*}
 we obtain for $d=k-i$ that
 \begin{align*}
-  \langle Ku_h, q \rangle_\Sigma &= \sum_{i=1}^{k-1} \sum_{j=1}^{N_\vx} u_{i,j} \int_{\gamma_\ell} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \alpha \int_{t_d}^{t_{d+1}} \int_{0}^{t_1} \frac{\partial G_\alpha}{\partial \vn_\vy}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
+  \langle Ku_h, q \rangle_\Sigma &= \sum_{d=1}^{k-1} \sum_{j=1}^{N_\vx} u_{k-d,j} \int_{\gamma_\ell} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \alpha \int_{t_d}^{t_{d+1}} \int_{0}^{t_1} \frac{\partial G_\alpha}{\partial \vn_\vy}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
   &+ \sum_{j=1}^{N_\vx} u_{k,j} \int_{\gamma_\ell} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \alpha \int_{0}^{t_1} \int_{0}^{t} \frac{\partial G_\alpha}{\partial \vn_\vy}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx.
 \end{align*}
 We have to analytically evaluate the integrals
@@ -310,7 +310,7 @@ Conversely, for $\delta > 0$ we have
 \end{equation*}
 This follows by estimating 
 \begin{equation*}
-	\left| \frac{\partial G_\alpha^{\dif\tau \dif t}}{\partial \vn_\vy}
+	\left| \alpha\frac{\partial G_\alpha^{\dif\tau \dif t}}{\partial \vn_\vy}
 	(\vr, \delta) \right| 
 	\leq \left| 
 	\frac{\left(\frac{\| \vr \|^2}{2\alpha} - \delta \right)
@@ -332,7 +332,7 @@ and observing that the limit of the function $\tilde g^{\dif \tau \dif t}$ for $
 	\left( \frac{1}{\sqrt{\pi \alpha\delta}} \left(\left( \frac{\rho^2}{2\alpha} - \delta \right)
 	+ \left( \delta - \frac{\rho^2}{2\alpha}\right) \right) \right)}
 	{8 \pi \rho} \\
-	&= \lim_{\rho \rightarrow 0_+}\frac{1}{8 \pi \alpha} \bigg( \erf\bigg( \frac{\rho}{2\sqrt{\alpha\delta}} \bigg) + \frac{\rho}{\sqrt{\pi\alpha\delta}} \exp\bigg(-\frac{\rho^2}{4\alpha\delta}\bigg)\bigg)  = 0.
+	&= \lim_{\rho \rightarrow 0_+}\frac{1}{8 \pi \alpha} \erf\bigg( \frac{\rho}{2\sqrt{\alpha\delta}} \bigg)  = 0.
 \end{align*}
 
 For $K^0(\vr)$ we can write
@@ -360,7 +360,7 @@ For $\|\vr\| > 0$ it holds
 \end{equation}
 For $\delta > 0$ we again have
 \begin{equation*}
-  \lim_{\|\vr\| \to 0_+}\alp \frac{\partial G^{\dif\tau}_\alpha}{\partial \vn_\vy}(\vr,\delta) = 0.
+  \lim_{\|\vr\| \to 0_+}\alpha \frac{\partial G^{\dif\tau}_\alpha}{\partial \vn_\vy}(\vr,\delta) = 0.
 \end{equation*}
 
 The layout of the block matrix $\matK_h$ is the same as in \eqref{eq:V_mat}. The individual blocks in $\matK_h$ are set up as
@@ -381,10 +381,10 @@ into \eqref{eq:D_bil} and testing with
 we obtain for $d=k-i$ that
 \begin{align*}
   &\langle Du_h, r \rangle_\Sigma = \\ 
-  &\sum_{i=1}^{k-1} \sum_{j=1}^{N_\vx} u_{i,j}\int_{\partial\Omega} \int_{\partial\Omega} \curl_{\partial\Omega} \varphi^1_{\vx,\ell}(\vx) \cdot \curl_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \alpha^2 \int_{t_{d}}^{t_{d+1}} \int_{0}^{t_1} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
+  &\sum_{d=1}^{k-1} \sum_{j=1}^{N_\vx} u_{k-d,j}\int_{\partial\Omega} \int_{\partial\Omega} \curl_{\partial\Omega} \varphi^1_{\vx,\ell}(\vx) \cdot \curl_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \alpha^2 \int_{t_{d}}^{t_{d+1}} \!\!\! \int_{0}^{t_1} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
     &+\sum_{j=1}^{N_\vx} u_{k,j}\int_{\partial\Omega} \int_{\partial\Omega} \curl_{\partial\Omega} \varphi^1_{\vx,\ell}(\vx) \cdot \curl_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \alpha^2 \int_{0}^{t_1} \int_{0}^{t} G_\alpha(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
-  &- \sum_{i=1}^{k-1} \sum_{j=1}^{N_\vx} u_{i,j} \int_{\partial\Omega} \int_{\partial\Omega} \vn(\vx) \cdot \vn(\vy) \varphi^1_{\vx,\ell}(\vx) \varphi^1_{\vx,j}(\vy) \alpha \int_{t_d}^{t_{d+1}} \int_0^{t_1} \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
-    &- \sum_{j=1}^{N_\vx} u_{k,j} \int_{\partial\Omega} \int_{\partial\Omega} \vn(\vx) \cdot \vn(\vy) \varphi^1_{\vx,\ell}(\vx) \varphi^1_{\vx,j}(\vy) \alpha \int_{t_d}^{t_{d+1}} \int_0^{t} \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx.
+  &- \sum_{d=1}^{k-1} \sum_{j=1}^{N_\vx} u_{k-d,j} \int_{\partial\Omega} \int_{\partial\Omega} \vn(\vx) \cdot \vn(\vy) \varphi^1_{\vx,\ell}(\vx) \varphi^1_{\vx,j}(\vy) \alpha \int_{t_d}^{t_{d+1}} \!\!\! \int_0^{t_1} \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx \\
+    &- \sum_{j=1}^{N_\vx} u_{k,j} \int_{\partial\Omega} \int_{\partial\Omega} \vn(\vx) \cdot \vn(\vy) \varphi^1_{\vx,\ell}(\vx) \varphi^1_{\vx,j}(\vy) \alpha \int_{0}^{t_1} \int_0^{t} \frac{\partial G_\alpha}{\partial \tau}(\vx-\vy,t-\tau) \,\dif\tau \,\dif t \,\dif\vs_\vy \,\dif\vs_\vx.
 \end{align*}
 Since the surface curls of spatially piecewise linear functions are piecewise constant, we can rewrite one of the summands in the first part as
 \begin{align*}
@@ -457,7 +457,7 @@ with $G_1^{\dif\tau}$ from \eqref{eq:G_dtau} and its limit for $\delta \to 0_+$ 
 For the double-layer potential we similarly obtain
 \begin{align*}
   Ku_h(\vx, t_k) &= \sum_{i=1}^{k} \sum_{j=1}^{N_\vx} u_{i,j} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \int_{t_{i-1}}^{t_i} \alpha \frac{\partial G_\alpha}{\partial \vn_\vy}(\vx-\vy,t_k-\tau) \,\dif\tau \,\dif\vs_\vy \\
-  &= \sum_{j=1}^{N_\vx} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \sum_{d=0}^{k-1} u_{i,j} \alpha \bigg[ \frac{\partial G_\alpha^{\dif\tau}}{\partial \vn_\vy}(\vr, dh_t) - \frac{\partial G_\alpha^{\dif\tau}}{\partial \vn_\vy}(\vr, (d+1)h_t) \bigg] \,\dif\vs_\vy
+  &= \sum_{j=1}^{N_\vx} \int_{\partial\Omega} \varphi^1_{\vx,j}(\vy) \sum_{d=0}^{k-1} u_{i,j} \alpha \bigg[ \frac{\partial G_\alpha^{\dif\tau}}{\partial \vn_\vy}(\vx-\vy, dh_t) - \frac{\partial G_\alpha^{\dif\tau}}{\partial \vn_\vy}(\vx-\vy, (d+1)h_t) \bigg] \,\dif\vs_\vy
 \end{align*}
 with $\alpha\partial G_\alpha^{\dif\tau} / \partial \vn_\vy$ from \eqref{eq:dn_G_dtau} and its limit for $\delta \to 0_+$ in \eqref{eq:dn_G_dtau_lim_r}.
 
