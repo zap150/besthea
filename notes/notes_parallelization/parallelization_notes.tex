@@ -102,12 +102,12 @@ the data is ready and groups of operations can be executed when their dependenci
 \section{Mesh generator and scheduler}
 
 Input:
-\todo{Discuss the initial temporal stepsize/ 1d decomposition. Do we require "nice" stepsizes or decompositions?}
-% (stepsizes only negative powers of two, decompositions matching to leaves of a non-padded time cluster tree?)
+\todo{Discuss the initial temporal step size/ 1d decomposition. Do we require "nice" step sizes or decompositions?}
+% (step sizes only negative powers of two, decompositions matching to leaves of a non-padded time cluster tree?)
 \begin{itemize}
   \item an initial spatial mesh
   \item a time interval
-  \item an initial temporal stepsize or a 1d decompositon of the time interval
+  \item an initial temporal step size or a 1d decomposition of the time interval
   \item the number of processes
   \item (later: additional parameters for a local (tetrahedral) refinement)
 \end{itemize}
@@ -316,7 +316,7 @@ Instead of using the original recursive routine, switch to a level-wise tree gen
 Some remarks: 
 \begin{itemize}
   \item In step \ref{enum:gen_cluster_tree_up}, (a) and (c) can be executed completely in parallel by all processes. Only (b) involves communication and induces a barrier.
-  \item The total amount of globally exchanged data in \ref{enum:gen_cluster_tree_up}(b) is proportional to the number of total clusters/elements. This seems to be acceptable. For example, if the intial time cluster tree has depth 10 and the standard alternating space-time refinement scheme is used (spatial refinements every second level), the number of space-time clusters is bounded by $2^5 16^5 \approx 33.5$ million. 
+  \item The total amount of globally exchanged data in \ref{enum:gen_cluster_tree_up}(b) is proportional to the number of total clusters/elements. This seems to be acceptable. For example, if the initial time cluster tree has depth 10 and the standard alternating space-time refinement scheme is used (spatial refinements every second level), the number of space-time clusters is bounded by $2^5 16^5 \approx 33.5$ million. 
   \item If necessary, the communication in \ref{enum:gen_cluster_tree_up}(b) might be reduced by using a (possibly tricky) localization strategy.
   \item In principle, the padding of the space-time clusters could have an impact on the computation of the nearfield and interaction list. However, we assume that this can be neglected in our case, since padding in space is in general not critical (FGT is applied to larger boxes) and padding in time is in general small if we start from an appropriate tensor product grid.
   \item Since the FMM algorithm discussed in Sec.~\ref{sec:fmm} works by grouping operations in time, the structure of the space-time cluster tree should also establish a grouping in time: The children of a space-time cluster should be sorted with respect to their temporal component, and accessing the clusters with the same temporal component should be uncomplicated and fast.
@@ -333,7 +333,7 @@ The last step is necessary, since the locally essential time cluster tree needs 
 
 \section{FMM algorithm} \label{sec:fmm}
 The FMM algorithm is executed in parallel and involves communication. Each process runs a modified version of the 
-algorithm which is based on a grouping of operations via time clusters, including both computations and communication. A process executes operations only for time clusters for which it is responsible. These clusters are collected in appropriate lists, which are used to control the execution. Dependencies are checked on the level of the time clusters and handled with explicit flags. Priorities are handled by the order of the clusters in the lists. In the following sections the algorithm is described in detail, including a pseudocode in Sec.~\ref{sec:FMM_pseudocode}.
+algorithm which is based on a grouping of operations in the space-time cluster tree by their temporal components, i.e. via time clusters. A process executes operations only for time clusters for which it is responsible. These clusters are collected in appropriate lists, which are used to control the execution. Dependencies are checked on the level of the time clusters and handled with explicit flags. Priorities are handled by the order of the clusters in the lists. In the following sections the algorithm is described in detail, including a pseudocode in Sec.~\ref{sec:FMM_pseudocode}.
 
 \subsection{The general procedure} \label{sec:fmm_general_procedure}
 The idea is to use 4 lists to control the execution of the FMM operations and the communication. The different lists are used to trigger different operations. We distinguish the following lists and associated operations:
@@ -343,18 +343,17 @@ The idea is to use 4 lists to control the execution of the FMM operations and th
   \item L--list: Transform local contributions from the parent (L2L) and send them downwards or evaluate them (L2T) when ready.
   \item N--list: Evaluate the nearfield.
 \end{itemize}
-Each cluster of the local time tree, i.e.~the time clusters for which a process is responsible, is added to each of the above lists once. The execution of the operations is realized by traversing the lists, searching for the next cluster and operations to execute. First the M--list is traversed, then the L--list followed by the M2L--list, and finally the N--list. For each cluster in a list it is checked whether the dependencies for the operations corresponding to this list are satisfied. If yes, the operations are executed, else the cluster is skipped. When all operations associated with a cluster in a list are completed, the cluster is removed from it and the lists are traversed anew starting at the front again. This procedure is repeated until all 4 lists are empty.
+Each cluster of the local time tree, i.e.~the time clusters for which a process is responsible, is added to the above lists once, if there are corresponding list operations which have to be executed for it. For example, if all space-time clusters associated with a certain time cluster are non-leaf clusters, this time cluster is not added to the N--list.  The execution of the operations is realized by traversing the lists, searching for the next cluster and operations to execute. First the M--list is traversed, then the L--list followed by the M2L--list, and finally the N--list. For each cluster in a list it is checked whether the dependencies for the operations corresponding to this list are satisfied. If yes, the operations are executed, else the cluster is skipped. When all operations associated with a cluster in a list are completed, the cluster is removed from it and the lists are traversed anew starting at the front again. This procedure is repeated until all 4 lists are empty.
 
-The operations on the level of the time cluster tree are denoted as primary tasks or operations. The primary operations responsible for calculations (S2M, M2M, M2L, ...) simply invoke the appropriate operations, called secondary tasks or operations, of the associated clusters in the space-time cluster tree. More details about this procedure are discussed in Sec.~\ref{sec:primary_operations}. The communication is realized by sending or receiving the appropriate data (moment or local contributions) of all associated space-time clusters at once. If the sending and receiving cluster is handled by the same process, no real communication is necessary and we only need to set a flag to remember that the dependency is satisfied. Otherwise an appropriate MPI routine (non-blocking) is used for communication.
+The operations on the level of the time cluster tree are denoted as primary tasks or operations. The primary operations responsible for calculations (S2M, M2M, M2L, ...) simply invoke the appropriate operations, called secondary tasks or operations, of the associated clusters in the space-time cluster tree. More details about this procedure are discussed in Sec.~\ref{sec:primary_operations}. The communication is realized by sending or receiving the appropriate data (moment or local contributions) of all associated space-time clusters at once. If the sending and receiving cluster is handled by the same process, no real communication is necessary and we only need to mark the dependency as satisfied. Otherwise an appropriate MPI routine (non-blocking) is used for communication.
 
 To reduce the communication the M2M operations are not executed by the parent time cluster, but by its two temporal children and the results are sent to the parent, which adds them up. This reduces the number of moments which have to be sent, because of the (alternating) spatial coarsening in the space-time cluster tree. Similarly, the L2L operations are not executed by the parent time cluster, but the local contributions are sent to the temporal children, who execute the L2L operations.
 
 \subsection{Strategy for the realization of the data reception}
-\todo{Discuss if this is reasonable or generates too much overhead}
-The data reception is realized by starting non-blocking receive operations for all data which has to be received from other processes. Every time when the operations of a cluster are completed, it is checked whether data has been received in the meantime. If yes, the data is processed appropriately, i.e.~the received moment or local contributions are added to the appropriate contributions, and the corresponding dependency is marked as resolved by setting an appropriate flag.
+The data reception is realized by starting non-blocking receive operations for all data which has to be received from other processes before starting the effective calculations. Every time when the operations of a cluster are completed, it is checked whether data has been received in the meantime. If yes, this data is processed appropriately, i.e.~the received moment or local contributions are added to the appropriate contributions, and the corresponding dependency is marked as resolved.
 
-\subsection{Dependencies}
-The dependencies of the individual operations have to be checked explicitly. This is done in a grouped manner at the level of the time clusters and controlled via appropriate flags. In the upward path we need to ensure that all operations of the children of a time cluster are executed and the processed moments are available before we can start the operations of the parent cluster. Similarly, in the downward path we need to ensure that the moments of clusters in the interaction list and the local contributions of the parent cluster are available. However, a group of M2L operations can be executed as soon as all the moments corresponding to a single temporal cluster in the interaction list are available, even if the local contributions of the parent cluster are not ready yet. Similarly, the L2L operations can be executed as soon as the local contributions of the parent cluster are available. The local contributions can of course only be evaluated or sent downwards when all M2L and L2L operations have been completed. This is the reason why we distinguish the M2L-- and L--list, but include the evaluation and downward pass in both the lists. These operations are executed only once when the local contributions are fully computed. Finally, the nearfield operations can be executed at any time without any restrictions.
+\subsection{Dependencies} \label{sec:dependencies}
+The dependencies of the individual operations have to be checked explicitly. This is done in a grouped manner at the level of the time clusters and controlled via appropriate auxiliary data. In the upward path we need to ensure that all operations of the children of a time cluster are executed and the processed moments are available before we can start the operations of the parent cluster. Similarly, in the downward path we need to ensure that the moments of clusters in the interaction list and the local contributions of the parent cluster are available. However, a group of M2L operations can be executed as soon as all the moments corresponding to a single temporal cluster in the interaction list are available, even if the local contributions of the parent cluster are not ready yet. Similarly, the L2L operations can be executed as soon as the local contributions of the parent cluster are available. The local contributions can of course only be evaluated or sent downwards when all M2L and L2L operations have been completed. This is the reason why we distinguish the M2L-- and L--list, but include the evaluation and downward pass in both the lists. These operations are executed only once when the local contributions are fully computed. Finally, the nearfield operations can be executed at any time without any restrictions.
 
 In summary, the execution of the operations of a cluster in the respective list depends on:
 \begin{itemize}
@@ -362,6 +361,18 @@ In summary, the execution of the operations of a cluster in the respective list 
   \item L--list: the local contributions of its parent
   \item M2L--list: the moments of the clusters in the interaction list
   \item N--list: nothing.
+\end{itemize}
+We introduce the following auxiliary data to check on the dependencies:
+\begin{itemize}
+  \item M--list: Each cluster gets an \texttt{upward-path-counter}, which is initialized by the number of children it has. When a child finishes its M--list operations it reduces the counter of its parent by one. When the \texttt{upward-path-counter} of a cluster equals 0 its dependencies are satisfied.
+  \item L--list: Each cluster gets a \texttt{downward-status}, which is initialized by 0 and can attain one of three values:
+  \begin{itemize}
+    \item 0:  L2L operations are not completed.
+    \item 1:  L2L operations are completed, but M2L operations are not.
+    \item 2:  L2L and M2L operations are completed.
+  \end{itemize}
+  The dependencies of a cluster are satisfied if the \texttt{downward-status} of its parent equals 2.
+  \item M2L--list: Each target cluster gets a \texttt{ready-interaction-list}, to which source clusters of its interaction list are added once their moments are available, and an \texttt{M2L-counter}, which records the completed M2L operations. A target cluster is admissible if the size of the \texttt{ready-interaction-list} is greater than \texttt{M2L-counter}. A cluster is only removed from the M2L--list if the value of \texttt{M2L-counter} equals the number of clusters in the interaction list.
 \end{itemize}
 
 \subsection{Priorities and execution order}
@@ -374,7 +385,7 @@ In the downward path the dependencies of the L--list are more restrictive than t
 The nearfield operations can be executed at any time, but have the lowest priority since no other operations depend on them. Therefore, the N--list is only traversed in search of the next cluster, if no cluster is found in the other lists. The order of the clusters in the N--list is not as relevant as the order in the other lists. However, it could be preferable to sort the clusters in ascending order of the effort of their nearfield operations. In this way, the first nearfield operations can be completed faster and it can be checked, if in the meantime some data has been received. When the first nearfield operations are executed, the other lists could still contain more clusters, which is why this strategy could be advantageous.
 
 \subsection{Pseudocode of the main algorithm} \label{sec:FMM_pseudocode}
-A sketch of the FMM algorithm discussed in the previous sections is given in Alg.~\ref{alg:fmm_lists}. The main procedure is given in lines \ref{alg_lin:fmm_fill_lists}--\ref{alg_lin:remove_cluster}. Depending on the list the function \textproc{callOperations} calls the appropriate operations (see Sec.\ref{sec:fmm_general_procedure}) and returns a boolean which indicates whether the cluster can be removed from its list or not. Controlling this with a boolean, gives us more flexibility for the execution of the M2L operations. To see this consider the case of a cluster with more than one cluster in its interaction list. Assume that the moments of one cluster are available while the other ones are not. Then the corresponding M2L operations can be executed, but the cluster should not be removed from the M2L--list. In this case the function \textproc{callOperations} returns \texttt{false}, and the cluster is scheduled for execution again, if the other moments are available. When the complete interaction list is processed, the function returns \texttt{true} and the cluster can be removed from the M2L--list. 
+A sketch of the FMM algorithm discussed in the previous sections is given in Alg.~\ref{alg:fmm_lists}. The main procedure is given in lines \ref{alg_lin:fmm_fill_lists}--\ref{alg_lin:remove_cluster}. Depending on the list the function \textproc{callOperations} calls the appropriate operations (see Sec.\ref{sec:fmm_general_procedure}) and returns a boolean which indicates whether the cluster can be removed from its list or not. This boolean is used to keep clusters in the M2L--list if not all of their M2L--operations have been executed yet.
 
 \begin{algorithm}
   \caption{Parallel FMM based on grouping operations via lists} \label{alg:fmm_lists}
@@ -428,7 +439,7 @@ A sketch of the FMM algorithm discussed in the previous sections is given in Alg
   \end{algorithmic}
 \end{algorithm}
 
-A pseudocode for the function \textproc{callOperations} is given in Alg.\ref{alg:fmm_call_operations}. It includes  so-called "\texttt{provide}"-routines which send data to other processes or update local dependency flags, depending on whether the target cluster is handled by a different process or not. Furthermore it includes so-called "\texttt{call}"-routines, which trigger the appropriate computations in the space-time cluster tree. More details about these routines are given in the next section. In particular, we discuss how the space-time clusters associated with a given time cluster can be identified.
+A pseudocode for the function \textproc{callOperations} is given in Alg.\ref{alg:fmm_call_operations}. It includes  so-called "\texttt{provide}"-routines which send data to other processes or update the dependency data introduced in Sec.~\ref{sec:dependencies}, depending on whether the target cluster is handled by a different process or not. In particular, \textproc{provideProcessedMoments} updates the \texttt{upward-path-counter} of a parent cluster and \textproc{provideMomentsForM2L} adds the source cluster to the \texttt{ready-interaction-list} of a target cluster, if the parent or the target cluster is local, respectively. Otherwise this dependency data is updated after reception of the data. The pseudocode in Alg.\ref{alg:fmm_call_operations} also includes so-called "\texttt{call}"-routines, which trigger the appropriate computations in the space-time cluster tree. More details about these routines are given in the next section. In particular, we discuss how the space-time clusters associated with a given time cluster can be identified.
 
 \begin{algorithm}
   \caption{The execution of the primary operations} \label{alg:fmm_call_operations}
@@ -444,8 +455,9 @@ A pseudocode for the function \textproc{callOperations} is given in Alg.\ref{alg
         \State \Return \texttt{true}
       \ElsIf{\texttt{list\_index} == 1}
         \State \Call{callL2LOperations}{\texttt{I}};
-        \State Set L2L completion flag;
+        \State \texttt{downward-status} = 1;
         \If{all M2L and L2L operations are completed}
+          \State \texttt{downward-status} = 2;
           \State \Call{callL2TOperations}{\texttt{I}};
           \For{$\texttt{I}_{\mathrm{c}} \in \children(\texttt{I})$}
             \State \Call{provideParentalLocals}{\texttt{I}, $\texttt{I}_{\mathrm{c}}$};
@@ -453,13 +465,14 @@ A pseudocode for the function \textproc{callOperations} is given in Alg.\ref{alg
         \EndIf
         \State \Return \texttt{true}
       \ElsIf{\texttt{list\_index} == 2}
-        \For{\texttt{J} $\in \mathcal{I}(\texttt{I})$}
-          \If{M2L for \texttt{J} is ready but not completed}
+        \For{\texttt{J} $\in \ $\texttt{ready-interaction-list}$(\texttt{I})$}
+          \If{M2L for \texttt{J} is not completed}
             \State \Call{callM2LOperations}{\texttt{J}, \texttt{I}};
-            \State Set M2L completion flag for \texttt{J};
+            \State $\texttt{M2L-counter} \pluseq 1$
           \EndIf
         \EndFor
         \If{all M2L and L2L operations are completed}
+          \State \texttt{downward-status} = 2;
           \State \Call{callL2TOperations}{\texttt{I}};
           \For{$\texttt{I}_{\mathrm{c}} \in \children(\texttt{I})$}
             \State \Call{provideParentalLocals}{\texttt{I}, $\texttt{I}_{\mathrm{c}}$};
@@ -509,7 +522,7 @@ In Alg.~\ref{alg:s2m_and_m2m_traversal} and~\ref{alg:s2m_and_m2m_mapping} we ske
           with $\texttt{Z}_\mathrm{c}=\texttt{Y}\times \texttt{J}_\mathrm{c}$ }
           \Task \texttt{final}($(\texttt{target\_level} - \texttt{current\_level}) \leq \texttt{thresh}$)
           \State \Call{callS2MOperationsSpaceTime}{}($\texttt{Z}_\mathrm{c}$, $\texttt{I}$, \texttt{target\_level}, 
-          \Statexindent \hskip\algorithmicindent $\texttt{current\_level}+1$)
+          \Statexindent \hskip\algorithmicindent $\texttt{current\_level}+1$);
         \EndFor
       \EndIf
     \EndFunction

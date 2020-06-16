@@ -520,6 +520,19 @@ class besthea::mesh::space_cluster {
     }
   }
 
+  /**
+   * Prints info of the object.
+   */
+  void print( ) {
+    std::cout << "level: " << _level;
+    std::cout << ", center ( " 
+              << _center[ 0 ] << ", " << _center[ 1 ] << ", " << _center[ 2 ] 
+              << "), half size: " 
+              << _half_size[ 0 ] << ", " << _half_size[ 1 ] << ", "
+              << _half_size[ 1 ]
+              << "), elements: " << _n_elements << std::endl;
+  }
+
  private:
   lo _n_elements;          //!< number of elements in the cluster
   vector_type _center;     //!< center of the cluster

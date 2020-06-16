@@ -36,6 +36,8 @@
 #include "besthea/io_routines.h"
 #include "besthea/scheduling_time_cluster.h"
 #include "besthea/settings.h"
+#include "besthea/spacetime_cluster.h"
+#include "besthea/spacetime_cluster_tree.h"
 #include "besthea/time_cluster.h"
 
 #include <iostream>
@@ -112,6 +114,16 @@ class besthea::mesh::tree_structure {
    * allows to identify clusters between different processes.
    */
   void reduce_2_essential( const lo my_process_id );
+
+  /**
+   * Finds the associated spacetime clusters for each scheduling time cluster in
+   * the tree structure.
+   * @param[in] spacetime_tree  Spacetime cluster tree in which the associated 
+   *                            clusters are searched.
+   */
+  void find_associated_space_time_clusters( 
+    spacetime_cluster_tree * spacetime_tree );
+    
 
   /**
    * Fills the 4 lists used for scheduling the FMM operations by adding pointers
@@ -274,6 +286,30 @@ class besthea::mesh::tree_structure {
    */
   void add_leaves_to_nearfield( scheduling_time_cluster & current_cluster, 
     scheduling_time_cluster & target_cluster );
+
+  /**
+   * Recursively finds the associated spacetime leaf clusters for each 
+   * scheduling time cluster in the tree structure. For this purpose the 
+   * tree structure and a spacetime cluster tree are traversed simultaneously.
+   * @param[in] spacetime_root  Current cluster in the spacetime cluster tree.
+   * @param[in] root  Current cluster in the tree structure.
+   * @todo If instead of the full space-time cluster tree only a locally
+   * essential part of it is given, "real" space-time leaf clusters need
+   * to be marked to distinguish them from leaves created by the truncation. In
+   * particular, the code needs to be modified.
+   */
+  void find_associated_space_time_leaves( 
+    spacetime_cluster* spacetime_root, scheduling_time_cluster* root );
+
+  /**
+   * Recursively finds the associated spacetime (non-leaf) clusters for each 
+   * scheduling time cluster in the tree structure. For this purpose the 
+   * tree structure and a spacetime cluster tree are traversed simultaneously.
+   * @param[in] spacetime_root  Current cluster in the spacetime cluster tree.
+   * @param[in] root  Current cluster in the tree structure.
+   */
+  void find_associated_space_time_non_leaves( 
+    spacetime_cluster* spacetime_root, scheduling_time_cluster* root );
 
   /**
    * Determines if clusters are active in the upward or downward path (needed 

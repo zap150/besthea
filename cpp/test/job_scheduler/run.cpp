@@ -32,6 +32,7 @@
 #include <cmath>
 #include <iostream>
 #include <list>
+#include <string>
 #include <thread>         // std::this_thread::sleep_for
 
 
@@ -46,6 +47,9 @@ int main( int argc, char * argv[] ) {
   bool generate_structure_and_process_assignment = true;
   // choose if the pseudo FMM should be executed.
   bool execute_pseudo_fmm = true;
+  // choose verbose mode or not
+  bool verbose = true;
+  std::string verbose_dir = "./job_scheduler/output_verbose";
 
   // Choose the number of MPI processes used for computation and the id of the
   // cluster which is responsible for the output.
@@ -101,8 +105,8 @@ int main( int argc, char * argv[] ) {
       std::string tree_vector_file = "./job_scheduler/tree_structure.bin";
       std::string process_assignment_file = 
         "./job_scheduler/process_assignment.bin";
-      tree_structure tree_structure( tree_vector_file, mesh_start, mesh_end );
-      tree_structure.load_process_assignments( process_assignment_file );
+      tree_structure time_structure( tree_vector_file, mesh_start, mesh_end );
+      time_structure.load_process_assignments( process_assignment_file );
       
       // help variables to print the process ids in human readable format
       // lo digits = ( lo ) ( ceil( log10( n_processes + 1 ) ) + 1 );
@@ -112,23 +116,23 @@ int main( int argc, char * argv[] ) {
 
       if ( process_id == output_id ) {
         std::cout << "process ids:" << std::endl;
-        tree_structure.print_tree_human_readable( digits, true );
+        time_structure.print_tree_human_readable( digits, true );
         std::cout << "global cluster ids: " << std::endl;
-        tree_structure.print_tree_human_readable( digits, false );
+        time_structure.print_tree_human_readable( digits, false );
       }
 
-      lou n_leaves = tree_structure.get_leaves( ).size( );
+      lou n_leaves = time_structure.get_leaves( ).size( );
 
       // reduce to locally essential tree
       
-      tree_structure.reduce_2_essential( process_id );
+      time_structure.reduce_2_essential( process_id );
 
       if ( process_id == output_id ) {
         std::cout << "original number of leaves is " << n_leaves << std::endl;
         std::cout << "reducing to locally essential tree for process "
                   << process_id << std::endl;
-        tree_structure.print_tree_human_readable( digits, print_process_ids );
-        // tree_structure.print( );
+        time_structure.print_tree_human_readable( digits, print_process_ids );
+        // time_structure.print( );
         std::cout << "preparing and executing pseudo-fmm" << std::endl;
       }
       // let the processes start computations at the same time
@@ -139,15 +143,15 @@ int main( int argc, char * argv[] ) {
       std::vector< std::pair< scheduling_time_cluster*, lo > > receive_vector;
       lou n_moments_upward;
       lou n_moments_m2l;
-      tree_structure.prepare_fmm( m_list, m2l_list, l_list, n_list, 
+      time_structure.prepare_fmm( m_list, m2l_list, l_list, n_list, 
                                   receive_vector, n_moments_upward, 
                                   n_moments_m2l );
       std::vector< sc > input_vector( n_leaves, 1.0 );
       std::vector< sc > output_vector( input_vector );
       // apply the distributed pseudo fmm
       apply_fmm( communicator, receive_vector, n_moments_upward, n_moments_m2l,
-        m_list, m2l_list, l_list, n_list, input_vector, output_vector, true,
-        "./job_scheduler/output_verbose" );
+        m_list, m2l_list, l_list, n_list, input_vector, output_vector, verbose,
+        verbose_dir );
       
       // collect the results using a reduce operation and output result.
       if ( process_id == output_id ) {

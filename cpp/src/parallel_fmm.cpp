@@ -28,13 +28,24 @@
 
 #include "besthea/parallel_fmm.h"
 
+#include <chrono>         // std::chrono::seconds
+#include <cmath>
 #include <fstream>
 #include <iostream>
-#include <chrono>         // std::chrono::seconds
-// #include <stdio.h>        // for removing of files
 #include <sstream> 
 #include <thread>         // std::this_thread::sleep_for
 
+#define DEG_TIME_P1 5
+#define DEG_SPACE 5
+#define SPACE_COEFFS ((DEG_SPACE + 3) * (DEG_SPACE + 2) * (DEG_SPACE + 1) / 6)
+#define EST_TIME_MUL 5
+#define EST_TIME_ADD 2
+#define N_CLUSTERS_SPACE_INIT 1
+#define N_CLUSTERS_SPACE_REF 5
+#define N_IA_BOX 2
+#define N_ELEMENTS_LEAF (2*150)
+#define EFFORT_INT_FMM 1
+#define EFFORT_INT_NF 1
 
 using scheduling_time_cluster = besthea::mesh::scheduling_time_cluster;
 
@@ -75,7 +86,7 @@ void apply_fmm( const MPI_Comm communicator,
     if ( outcount != MPI_UNDEFINED ) {
       check_for_received_data( communicator, receive_vector, n_moments_upward, 
         n_moments_m2l, array_of_requests, array_of_indices, outcount, verbose,
-        verbose_dir );
+        verbose_file );
     }
     // #################
     char status = 0;
@@ -117,10 +128,10 @@ void apply_fmm( const MPI_Comm communicator,
       }
       outss << "for cluster " << ( *it_current_cluster )->get_global_index( );
       std::ofstream outfile ( verbose_file.c_str( ), std::ios::app );
-        if ( outfile.is_open( ) ) {
-          outfile << outss.str( ) << std::endl;
-          outfile.close( );
-        }
+      if ( outfile.is_open( ) ) {
+        outfile << outss.str( ) << std::endl;
+        outfile.close( );
+      }
     }
     // start the appropriate fmm operations according to status
     // TODO: the switch routine could be avoided by using several else 
@@ -128,12 +139,13 @@ void apply_fmm( const MPI_Comm communicator,
     switch ( status ) {
       case 1: {
         // apply S2M operations for leaf clusters
-        call_s2m_operations( input_vector, *it_current_cluster );
+        call_s2m_operations( 
+          input_vector, *it_current_cluster, verbose, verbose_file );
         // update dependencies of targets in send list if they are local or send
         // data for interactions 
         provide_moments_for_m2l( communicator, *it_current_cluster );
         // apply M2M operations 
-        call_m2m_operations( *it_current_cluster );       
+        call_m2m_operations( *it_current_cluster, verbose, verbose_file );       
         // update dependencies of parent if it is handled by the same process or
         // send data to other process if not
         provide_moments_to_parents( communicator, *it_current_cluster );
@@ -143,14 +155,15 @@ void apply_fmm( const MPI_Comm communicator,
       }
       case 2: {
         // apply L2L operations
-        call_l2l_operations( *it_current_cluster );
+        call_l2l_operations( *it_current_cluster, verbose, verbose_file );
         if ( ( *it_current_cluster )->get_interaction_list( ) == nullptr ||
              ( *it_current_cluster )->get_m2l_counter( ) 
               == ( *it_current_cluster )->get_interaction_list( )->size( ) ) {
           // set status of parent's local contributions to completed
           ( *it_current_cluster )->set_downward_path_status( 2 );
           // apply L2T operations
-          call_l2t_operations( *it_current_cluster, output_vector );
+          call_l2t_operations( 
+            *it_current_cluster, output_vector, verbose, verbose_file );
           // send data to all other processes which handle a child
           provide_local_contributions_to_children( 
             communicator, *it_current_cluster );
@@ -167,7 +180,8 @@ void apply_fmm( const MPI_Comm communicator,
         for ( lou i = ( *it_current_cluster )->get_m2l_counter( ); 
               i < ready_interaction_list->size( ); ++i ) {
           call_m2l_operations( ( 
-            *ready_interaction_list )[ i ], *it_current_cluster );
+            *ready_interaction_list )[ i ], *it_current_cluster, verbose, 
+            verbose_file );
           ( *it_current_cluster )->increase_m2l_counter( );
         }
         if ( ( *it_current_cluster )->get_m2l_counter( ) ==
@@ -176,7 +190,8 @@ void apply_fmm( const MPI_Comm communicator,
             // set status of parent's local contributions to completed
             ( *it_current_cluster )->set_downward_path_status( 2 );
             // apply L2T operations
-            call_l2t_operations( *it_current_cluster, output_vector );
+            call_l2t_operations( *it_current_cluster, output_vector, verbose,
+              verbose_file );
             // send data to all other processes which handle a child
             provide_local_contributions_to_children( 
               communicator, *it_current_cluster );
@@ -191,76 +206,191 @@ void apply_fmm( const MPI_Comm communicator,
           = ( *it_current_cluster )->get_nearfield( );
         for ( auto it = nearfield->begin( ); it != nearfield->end( ); ++it ) {
           call_nearfield_operations(
-            input_vector, *it, *it_current_cluster, output_vector );
+            input_vector, *it, *it_current_cluster, output_vector, verbose,
+            verbose_file );
         }
         n_list.erase( it_current_cluster );
         break;
+      }
+    }
+    if ( verbose ) {
+      std::ofstream outfile ( verbose_file.c_str( ), std::ios::app );
+      if ( outfile.is_open( ) ) {
+        outfile << std::endl;
+        outfile.close( );
       }
     }
   }
 }
 
 void call_s2m_operations( const std::vector< sc > & sources,
-  scheduling_time_cluster* time_cluster ) {
+  scheduling_time_cluster* time_cluster, bool verbose, 
+  std::string verbose_file ) {
   // execute only for leaf clusters
   if ( time_cluster->get_n_children( ) == 0 ) {
     // copy source value to moment
     lo cluster_index = time_cluster->get_leaf_index( );
     time_cluster->set_moment( sources[ cluster_index ] );
+    // artificial wait to simulate real operation
+    lo level = time_cluster->get_level( );
+    lou wait = ( lou ) N_CLUSTERS_SPACE_INIT 
+                * std::pow( N_CLUSTERS_SPACE_REF, level / 2 ) * N_ELEMENTS_LEAF
+                * DEG_TIME_P1 * SPACE_COEFFS * EFFORT_INT_FMM * EST_TIME_MUL;
+    if ( verbose ) {
+      std::ofstream outfile ( verbose_file.c_str( ), std::ios::app );
+      if ( outfile.is_open( ) ) {
+        outfile << "call S2M: waiting " << wait * 1e-9 << " seconds"
+                << std::endl; 
+        outfile.close( );
+      }
+    }
+    std::this_thread::sleep_for(std::chrono::nanoseconds( wait ));
   }
 }
 
-void call_m2m_operations( scheduling_time_cluster* time_cluster ) {
+void call_m2m_operations( scheduling_time_cluster* time_cluster, bool verbose, 
+  std::string verbose_file ) {
   // add child moment to parent moment
   sc parent_moment = time_cluster->get_parent( )->get_moment( );
   time_cluster->get_parent( )->set_moment( 
     parent_moment + time_cluster->get_moment( ) );
+  // artificial wait to simulate real operation
+  lo level = time_cluster->get_level( );
+  lou wait;
+  if ( level % 2 ) {
+    wait = ( lou ) N_CLUSTERS_SPACE_INIT 
+            * std::pow( N_CLUSTERS_SPACE_REF, level / 2 ) * DEG_TIME_P1
+            * DEG_TIME_P1 * SPACE_COEFFS * EST_TIME_MUL;
+  } else {
+    wait = ( lou ) N_CLUSTERS_SPACE_INIT 
+            * std::pow( N_CLUSTERS_SPACE_REF, level / 2 ) * EST_TIME_MUL 
+            * ( DEG_TIME_P1 * DEG_TIME_P1 * SPACE_COEFFS 
+              + 3 * N_CLUSTERS_SPACE_REF * DEG_TIME_P1 * SPACE_COEFFS
+                * DEG_SPACE / 4 );
+  }
+  if ( verbose ) {
+    std::ofstream outfile ( verbose_file.c_str( ), std::ios::app );
+    if ( outfile.is_open( ) ) {
+      outfile << "call M2M: waiting " << wait * 1e-9 << " seconds"
+              << std::endl; 
+      outfile.close( );
+    }
+  }
+  std::this_thread::sleep_for(std::chrono::nanoseconds( wait ));
 }
 
 void call_m2l_operations( scheduling_time_cluster* src_cluster,
-  scheduling_time_cluster* tar_cluster ) {
+  scheduling_time_cluster* tar_cluster, bool verbose, 
+  std::string verbose_file ) {
   // add moment of src_cluster to local contribution of tar_cluster
   sc tar_local = tar_cluster->get_local_contribution( );
   tar_cluster->set_local_contribution( tar_local + src_cluster->get_moment( ) );
+  // artificial wait to simulate real operation
+  lo level = tar_cluster->get_level( );
+  lou n_clusters_at_level = ( lou ) N_CLUSTERS_SPACE_INIT 
+            * std::pow( N_CLUSTERS_SPACE_REF, level / 2 );
+  lou n_est_max_interactions = ( lou ) N_CLUSTERS_SPACE_REF / 8.0
+            * std::pow( ( N_IA_BOX + 1 ), 3 );
+  lou n_est_interact = std::min( n_clusters_at_level, n_est_max_interactions );
+  lou wait = n_clusters_at_level * n_est_interact * DEG_TIME_P1 * DEG_TIME_P1
+            * SPACE_COEFFS * ( DEG_SPACE + 2 ) * 1.5 * EST_TIME_MUL;
+  if ( verbose ) {
+    std::ofstream outfile ( verbose_file.c_str( ), std::ios::app );
+    if ( outfile.is_open( ) ) {
+      outfile << "call M2L: waiting " << wait * 1e-9 << " seconds"
+              << std::endl; 
+      outfile.close( );
+    }
+  }
+  std::this_thread::sleep_for(std::chrono::nanoseconds( wait ));
 }
 
-void call_l2l_operations( scheduling_time_cluster* time_cluster ) {
+void call_l2l_operations( scheduling_time_cluster* time_cluster, bool verbose, 
+  std::string verbose_file ) {
   // add local contribution of the parent of the time cluster to its own
   sc child_local = time_cluster->get_local_contribution( );
   time_cluster->set_local_contribution( 
     child_local + time_cluster->get_parent( )->get_local_contribution( ) );
+  // artificial wait to simulate real operation
+  lo level = time_cluster->get_level( );
+  lou wait;
+  if ( level % 2 ) {
+    wait = ( lou ) N_CLUSTERS_SPACE_INIT 
+            * std::pow( N_CLUSTERS_SPACE_REF, level / 2 ) * DEG_TIME_P1
+            * DEG_TIME_P1 * SPACE_COEFFS * EST_TIME_MUL;
+  } else {
+    wait = ( lou ) N_CLUSTERS_SPACE_INIT 
+            * std::pow( N_CLUSTERS_SPACE_REF, level / 2 ) * EST_TIME_MUL 
+            * ( DEG_TIME_P1 * DEG_TIME_P1 * SPACE_COEFFS 
+              + 3 * N_CLUSTERS_SPACE_REF * DEG_TIME_P1 * SPACE_COEFFS
+                * DEG_SPACE / 4 );
+  }
+  if ( verbose ) {
+    std::ofstream outfile ( verbose_file.c_str( ), std::ios::app );
+    if ( outfile.is_open( ) ) {
+      outfile << "call L2L: waiting " << wait * 1e-9 << " seconds"
+              << std::endl; 
+      outfile.close( );
+    }
+  }
+  std::this_thread::sleep_for(std::chrono::nanoseconds( wait ));
 }
 
 void call_l2t_operations( scheduling_time_cluster* time_cluster, 
-    std::vector< sc > & output_vector ) {
+  std::vector< sc > & output_vector, bool verbose, std::string verbose_file ) {
   // execute only for leaf clusters
   if ( time_cluster->get_n_children( ) == 0 ) {
     // subtract local contribution from correct position of output vector
     lo cluster_index = time_cluster->get_leaf_index( );
     output_vector[ cluster_index ] -= time_cluster->get_local_contribution( );
+    // artificial wait to simulate real operation
+    lo level = time_cluster->get_level( );
+    lou wait = ( lou ) N_CLUSTERS_SPACE_INIT 
+                * std::pow( N_CLUSTERS_SPACE_REF, level / 2 ) * N_ELEMENTS_LEAF
+                * DEG_TIME_P1 * SPACE_COEFFS * EFFORT_INT_FMM * EST_TIME_MUL;
+    std::this_thread::sleep_for(std::chrono::nanoseconds( wait ));
+    if ( verbose ) {
+      std::ofstream outfile ( verbose_file.c_str( ), std::ios::app );
+      if ( outfile.is_open( ) ) {
+        outfile << "call L2T: waiting " << wait * 1e-9 << " seconds"
+                << std::endl; 
+        outfile.close( );
+      }
+    }
   }
 }
 
 void call_nearfield_operations( const std::vector< sc > & sources,
   scheduling_time_cluster* src_cluster, scheduling_time_cluster* tar_cluster, 
-  std::vector< sc > & output_vector ) {
+  std::vector< sc > & output_vector, bool verbose, std::string verbose_file ) {
   lo tar_ind = tar_cluster->get_leaf_index( );
   lo src_ind = src_cluster->get_leaf_index( );
   output_vector[ tar_ind ] -= sources[ src_ind ];
+  // artificial wait to simulate real operation
+  lo level = tar_cluster->get_level( );
+  lou n_clusters_at_level = ( lou ) N_CLUSTERS_SPACE_INIT 
+            * std::pow( N_CLUSTERS_SPACE_REF, level / 2 );
+  lou n_est_max_interactions = ( lou ) N_CLUSTERS_SPACE_REF / 8.0
+            * std::pow( ( N_IA_BOX + 1 ), 3 );
+  lou n_est_interact = std::min( n_clusters_at_level, n_est_max_interactions );
+  lou wait = n_clusters_at_level * n_est_interact * N_ELEMENTS_LEAF 
+            * N_ELEMENTS_LEAF * EFFORT_INT_NF * EST_TIME_MUL;
+  if ( verbose ) {
+    std::ofstream outfile ( verbose_file.c_str( ), std::ios::app );
+    if ( outfile.is_open( ) ) {
+      outfile << "call NF: waiting " << wait * 1e-9 << " seconds"
+              << std::endl; 
+      outfile.close( );
+    }
+  }
+  std::this_thread::sleep_for(std::chrono::nanoseconds( wait ));
 }
 
 void check_for_received_data( const MPI_Comm communicator,
   const std::vector< std::pair< besthea::mesh::scheduling_time_cluster*, lo > > 
     & receive_vector, const lou n_moments_upward, const lou n_moments_m2l, 
   MPI_Request * array_of_requests, int array_of_indices[ ], int & outcount,
-  bool verbose, std::string verbose_dir ) {
-
-  int my_process_id;
-  MPI_Comm_rank( communicator, &my_process_id );
-
-  std::string verbose_file = verbose_dir + "./process_";
-  verbose_file += std::to_string( my_process_id );
-
+  bool verbose, std::string verbose_file ) {
   MPI_Testsome( receive_vector.size( ), array_of_requests, &outcount, 
     array_of_indices, MPI_STATUSES_IGNORE );
   if ( outcount != MPI_UNDEFINED && outcount > 0 ) {
@@ -288,9 +418,25 @@ void check_for_received_data( const MPI_Comm communicator,
           = *( current_cluster->get_extraneous_moment_pointer( source_id ) );
         current_cluster->set_moment( old_moment + received_moment );
         current_cluster->reduce_upward_path_counter( );
+        // artificial wait to simulate real operation
+        lo level = current_cluster->get_level( );
+        lou wait = ( lou ) N_CLUSTERS_SPACE_INIT 
+                    * std::pow( N_CLUSTERS_SPACE_REF, level / 2 )
+                    * DEG_TIME_P1 * SPACE_COEFFS * EST_TIME_ADD;
+        if ( verbose ) {
+          std::ofstream outfile ( verbose_file.c_str( ), std::ios::app );
+          if ( outfile.is_open( ) ) {
+            outfile << "adding up moments: waiting " << wait * 1e-9
+                    << " seconds" << std::endl;  
+            outfile.close( );
+          }
+        }
+        std::this_thread::sleep_for(std::chrono::nanoseconds( wait ));
       }
       else if ( current_index < n_moments_upward + n_moments_m2l ) {
         // received data are moments for m2l. update dependencies.
+        int my_process_id;
+        MPI_Comm_rank( communicator, &my_process_id );
         std::vector< scheduling_time_cluster* > * send_list 
           = current_cluster->get_send_list( );
         if ( send_list != nullptr ) {

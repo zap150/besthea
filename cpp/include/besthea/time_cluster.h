@@ -282,8 +282,8 @@ class besthea::mesh::time_cluster {
    * Prints info of the object.
    */
   void print( ) {
-    std::cout << "level: " << _level << std::endl;
-    std::cout << "center: " << _center << ", half size: " << _half_size
+    std::cout << "level: " << _level;
+    std::cout << ", center: " << _center << ", half size: " << _half_size
               << ", elements: " << _n_elements << std::endl;
   }
 
