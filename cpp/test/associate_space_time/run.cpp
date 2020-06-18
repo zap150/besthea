@@ -41,14 +41,16 @@ int main( int argc, char * argv[] ) {
   using time_cluster_tree = besthea::mesh::time_cluster_tree;
   using spacetime_cluster_tree = besthea::mesh::spacetime_cluster_tree;
 
+  //############################################################################
   // load the geometry, create the trees and tree structure and write the 
   // tree structure and process assignments to file
   //############################################################################
+
   // choose the parameters for the process assignments, and a process id for
   // reconstruction 
   lo strategy = 1;
   lo n_processes = 6;
-  lo proc_id = 3;
+  lo proc_id = 4;
   std::cout << "n_processes: " << n_processes << ", strategy: "
             << strategy << ", proc_id: " << proc_id << std::endl;
 
@@ -70,7 +72,7 @@ int main( int argc, char * argv[] ) {
   time_mesh.refine( 1 );
 
   // uncomment to generate regular mesh
-  // lo levels = 5;
+  // lo levels = 3;
   // file_temporal = "time_uniform_" + std::to_string( levels );
   // b_t_mesh time_mesh( 0, 1, 1 << ( levels + 1 ) );
 
@@ -86,9 +88,7 @@ int main( int argc, char * argv[] ) {
   spacetime_cluster_tree st_tree( tensor_mesh, 20, 3, 10, st_coeff );
   // st_tree.print( );
   std::cout << "time tree " << std::endl;
-  st_tree.get_time_cluster_tree( )->print( );
   std::cout << "space tree " << std::endl;
-  st_tree.get_space_cluster_tree( )->print( );
 
   time_cluster_tree* time_tree = st_tree.get_time_tree( );
 
@@ -101,25 +101,62 @@ int main( int argc, char * argv[] ) {
     process_assignment_file );
 
   //############################################################################
-  // reconstruct tree structure, reduce it to locally essential tree and find
-  // associate spacetime clusters for all its clusters
+  // reconstruct the tree structure and reduce it to the locally essential tree
   //############################################################################
 
   tree_structure time_structure( 
     tree_vector_file, time_mesh.get_start( ), time_mesh.get_end( ) );
   time_structure.load_process_assignments( process_assignment_file );
 
+  // print process ids at cluster positions
+  // lo digits = ( lo ) ( ceil( log10( n_processes + 1 ) ) + 1 );
+  // bool print_process_ids = true;
+
+  // print global cluster ids at cluster positions
+  lo digits = 4;
+  bool print_process_ids = false;
+
   // print original tree structure
-  lo digits = ( lo ) ( ceil( log10( n_processes + 1 ) ) + 1 );
-  bool print_process_ids = true;
-  std::cout << "process ids:" << std::endl;
+  std::cout << "printing full tree structure:" << std::endl;
   time_structure.print_tree_human_readable( digits, print_process_ids );
 
   // print locally essential tree structure
+  std::cout << "printing reduced tree structure:" << std::endl;
   time_structure.reduce_2_essential( proc_id );
   time_structure.print_tree_human_readable( digits, print_process_ids );
 
-  time_structure.find_associated_space_time_clusters( &st_tree );
-  time_structure.print( );
+  //############################################################################
+  // refine the spacetime mesh, create a new spacetime tree, expand the 
+  // locally essential tree and find the associated spacetime clusters for all 
+  // its clusters
+  //############################################################################
+  
+  tensor_mesh.refine( 1, 2 );
+  spacetime_cluster_tree st_tree_refined( tensor_mesh, 20, 3, 10, st_coeff );
 
+  std::cout << "refined time tree" << std::endl;
+  st_tree_refined.get_time_cluster_tree( )->print( );
+  std::cout << "refined space tree" << std::endl;
+  st_tree_refined.get_space_cluster_tree( )->print( );
+
+  time_structure.expand_tree_structure_essentially( &st_tree_refined  );
+  std::cout << "expanded tree structure" << std::endl; 
+
+  // time_structure.print_tree_human_readable( 2, print_process_ids );
+  time_structure.print_tree_human_readable( 4, false );
+  time_structure.print_tree_human_readable( 4, true );
+
+  // deactivate to construct refined tree structure for comparison
+  std::string refined_tree_vector_file = output_basis + "_refined.tree_vec";
+  st_tree_refined.get_time_cluster_tree( )->print_tree_structure(
+    refined_tree_vector_file );
+  tree_structure refined_time_structure( 
+    refined_tree_vector_file, 0.0, 1.0 );
+  std::cout << "complete refined tree structure for comparison " 
+            << std::endl;
+  refined_time_structure.print_tree_human_readable( 4, false );
+  
+  std::cout << "find associated space time clusters" << std::endl;
+  time_structure.find_associated_space_time_clusters( &st_tree_refined );
+  time_structure.print( );
 }

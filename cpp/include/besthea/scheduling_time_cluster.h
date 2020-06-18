@@ -665,7 +665,6 @@ class besthea::mesh::scheduling_time_cluster {
     //               << ( *_nearfield )[ i ]->get_global_index( ) << "), ";
     //   }
     // }
-    // std::cout << ", ";
     // if ( _interaction_list != nullptr ) {
     //   std::cout << "interaction_list: ";
     //   for ( lou i = 0; i < _interaction_list->size( ); ++i ) {
@@ -685,16 +684,14 @@ class besthea::mesh::scheduling_time_cluster {
     // std::cout << ", upward_path_counter: " << _upward_path_counter;
     // std::cout << ", downward_path_status: " << (lo) _downward_path_status;
     // std::cout << ", m2l counter: " << _m2l_counter;
-    std::cout << std::endl;
+
     if ( _associated_spacetime_clusters != nullptr ) {
-      std::cout << "number of associated leaves: " << _n_associated_leaves
-                << std::endl;
-      for ( auto it = _associated_spacetime_clusters->begin( ); 
-            it != _associated_spacetime_clusters->end( ); ++it ) {
-        ( *it )->print( );
-      }
-      std::cout << std::endl;
+      std::cout << ", number of associated leaves: " << _n_associated_leaves
+                << ", number of associated non-leaves: "
+                <<  _associated_spacetime_clusters->size( ) 
+                    - _n_associated_leaves;
     }
+    std::cout << std::endl;
   }
 
  private:

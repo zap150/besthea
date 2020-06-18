@@ -43,6 +43,7 @@
 #include <iostream>
 #include <list>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace besthea {
@@ -112,6 +113,9 @@ class besthea::mesh::tree_structure {
    * @note @p _leaves and @p _levels are reset.
    * @note The original global_indices of the clusters are not modified. This 
    * allows to identify clusters between different processes.
+   * @note A slightly larger part of the tree is kept then the locally essential
+   * tree: If a non-local leaf cluster has a local cluster in its nearfield it
+   * is also kept.
    */
   void reduce_2_essential( const lo my_process_id );
 
@@ -123,8 +127,22 @@ class besthea::mesh::tree_structure {
    */
   void find_associated_space_time_clusters( 
     spacetime_cluster_tree * spacetime_tree );
-    
 
+  /**
+   * Expands the tree structure by adding relevant time clusters which appear as
+   * components of spacetime clusters in the given spacetime cluster tree but
+   * are not in the tree structure.
+   * @param[in] spacetime_tree  Spacetime tree which is traversed to find
+   *                            clusters to add to the temporal tree structure.
+   * @note The clusters which are refined are determined using the routine 
+   *       @ref determine_clusters_to_refine and the refinement is executed by
+   *       @ref expand_tree_structure_recursively.
+   * @note The nearfields, interaction lists and send lists are cleared using 
+   *       the routine clear_cluster_lists and filled anew.
+   */
+  void expand_tree_structure_essentially( 
+    spacetime_cluster_tree * spacetime_tree );
+    
   /**
    * Fills the 4 lists used for scheduling the FMM operations by adding pointers
    * to clusters assigned to the process with id @p _my_process_id . In addition
@@ -204,7 +222,8 @@ class besthea::mesh::tree_structure {
   scheduling_time_cluster * _root;  //!< root cluster of the tree structure
   lo _levels;                       //!< number of levels in the tree
   std::vector< scheduling_time_cluster * >
-    _leaves;  //!< vector of all clusters without descendants
+    _leaves;  //!< vector of all clusters without descendants 
+              //!< @todo Do we need this?
   lo _my_process_id;  //!< id of the process executing the operations
                       //!< @todo Exchange by an MPI query later?
 
@@ -244,6 +263,7 @@ class besthea::mesh::tree_structure {
    * Collects all clusters without descendants and stores them in the internal
    * @p _leaves vector. The routine is based on a tree traversal.
    * @param[in] root  Current cluster in the tree traversal.
+   * @todo Do we need this?
    */
   void collect_leaves( scheduling_time_cluster & root );
 
@@ -258,15 +278,12 @@ class besthea::mesh::tree_structure {
 
   /**
    * Sets the global indices of all clusters in the tree structure by traversing
-   * it recursively. The indices correspond to a consecutive enumeration of the 
-   * clusters according to the tree traversal. The index of a parent is set
-   * after its children and therefore greater.
+   * it recursively. The parent cluster with id k sets the indices of its 
+   * children: the left gets the index 2k+1, the right the index 2k+2.
    * @param[in] root Current cluster in the tree traversal.
-   * @param[in,out] next_index Next index which is assigned to a cluster.
-   * @note The index of the root equals the number of cluster in the tree -1.
-   * @note The ordering is not the same as in the tree format used for IO.
+   * @note The index of the root s assumed to be 0 before the routine is called.
    */
-  void set_indices( scheduling_time_cluster & root, lo & next_index );
+  void set_indices( scheduling_time_cluster & root );
 
   /**
    * Computes and sets the nearfield, interaction list and send list for every 
@@ -312,6 +329,55 @@ class besthea::mesh::tree_structure {
     spacetime_cluster* spacetime_root, scheduling_time_cluster* root );
 
   /**
+   * Determines all clusters which should be refined during an expansion of the
+   * tree structure. Therefore, an entry is added to @p refine_map for every 
+   * leaf cluster in the tree structure, with the global cluster index as key
+   * and a bool indicating if it should be refined or not.
+   * A leaf cluster should be refined if: 
+   * - it is handled by process @p _my_process_id
+   * - it is in the nearfield of a cluster which is handled by process 
+   *    @p _my_process_id
+   * - there is a cluster handled by process @p _my_process_id in its direct
+   *   nearfield or one of the descendants of such a cluster is handled by it.
+   * The routine is based on a recursive tree traversal.
+   * @param[in] root  Current cluster in the tree traversal.
+   * @param[in] refine_map  Stores which clusters should be refined. The keys
+   *                        of the entries are the global indices of the 
+   *                        clusters.
+   */
+  void determine_clusters_to_refine( scheduling_time_cluster* root, 
+    std::unordered_map< lo, bool > & refine_map ) const;
+
+  /**
+   * Checks if the subtree of @p root contains a cluster handled by process
+   * @p _my_process_id by a recursive tree traversal.
+   * @param[in] root  Current cluster in the tree traversal. 
+   */
+  bool subtree_contains_local_cluster( 
+    const scheduling_time_cluster* root ) const;
+
+  /**
+   * Expands the temporal tree structure by recursively traversing the current 
+   * tree structure and the given spacetime cluster tree. It uses @p refine_map
+   * and the spacetime cluster tree to determine if clusters should be added to
+   * the temporal tree structure.
+   * @param[in] spacetime_root Current cluster in the spacetime cluster tree.
+   * @param[in] root  Current cluster in the tree structure.
+   * @param[in,out] refine_map  Map which indicates if the tree should be 
+   *                            expanded at a leaf cluster or not. This is
+   *                            updated if new clusters are added.
+   */
+  void expand_tree_structure_recursively(
+    spacetime_cluster* spacetime_root, scheduling_time_cluster* root,
+    std::unordered_map< lo, bool > & refine_map );
+
+  /**
+   * Clears the nearfield, interaction and send list of all clusters in the 
+   * tree. The method relies on a tree traversal.
+   * @param[in] root  Current cluster in the tree traversal.
+   */
+  void clear_cluster_lists( scheduling_time_cluster* root );
+  /**
    * Determines if clusters are active in the upward or downward path (needed 
    * for FMM).
    * @param[in] root  Current cluster in the tree traversal.
@@ -343,24 +409,26 @@ class besthea::mesh::tree_structure {
    * root and another essential cluster). In addition, @p _levels is reset. The 
    * method is based on a tree traversal.
    * @param[in] root  Current cluster in the tree traversal.
-   * @param[in,out] status_vector  Status of the clusters in the tree, 
-   *                               indicating if a cluster is essential or not. 
-   *                               This is updated. 
+   * @param[in,out] status_map  Status of the clusters in the tree, indicating
+   *                            if a cluster is essential or not. The status of 
+   *                            a cluster is obtained by using its global index  
+   *                            as key. This is updated. 
    * @note This method is solely used by @ref reduce_2_essential .
    */
   void prepare_essential_reduction( scheduling_time_cluster & root, 
-    std::vector< char > & status_vector );
+    std::unordered_map< lo, char > & status_map );
 
   /**
    * Deletes clusters form the tree structure which are not locally essential.
    * The method is based on a tree traversal.
    * @param[in] root  Current cluster in the tree traversal.
-   * @param[in] status_vector Status of the clusters in the tree, indicating if 
-   *                          a cluster is essential or not. It is ordered by
-   *                          the global indices of the clusters.
+   * @param[in] status_map  Status of the clusters in the tree, indicating if 
+   *                        a cluster is essential or not. The status of a
+   *                        cluster is obtained by using its global index as 
+   *                        key.
    */
   void execute_essential_reduction( scheduling_time_cluster & root, 
-    const std::vector< char > & status_vector ); 
+    const std::unordered_map< lo, char > & status_map ); 
 
   /**
    * Determines the clusters which are essential for the current process by
@@ -374,13 +442,16 @@ class besthea::mesh::tree_structure {
    * -  It is a child of a cluster which is assigned to the process.
    * -  It is in the nearfield of a leaf cluster which is assigned to the 
    *    process.
+   * -  It is a leaf cluster and one of the clusters in its nearfield is 
+   *    assigned to the process. (Such a cluster is strictly speaking not
+   *    essential, but we keep it to make expansions simpler)
    * @param[in] my_process_id Id of the current process.
    * @param[in] root  Current cluster in the tree traversal.
-   * @param[in,out] status_vector  Contains the status of the clusters in the 
-   *                               order of their indices. Tree status are used: 
-   *                               - 0 (not essential), 
-   *                               - 1 (assigned to the process), 
-   *                               - 2 (other essential).
+   * @param[in,out] status_map  Contains the status of the clusters using their 
+   *                            global indices as keys. Tree status are used: 
+   *                            - 0 (not essential), 
+   *                            - 1 (assigned to the process), 
+   *                            - 2 (other essential).
    * @note The locally essential tree should also contain clusters which are 
    * contained in a path from the root of the tree structure to a cluster which
    * meets one of the above requirements. Such clusters are not detected here, 
@@ -389,7 +460,7 @@ class besthea::mesh::tree_structure {
    */
   void determine_essential_clusters( const lo my_process_id, 
     const scheduling_time_cluster & root, 
-    std::vector< char > & status_vector ) const;
+    std::unordered_map< lo, char > & status_map ) const;
 
   /**
    * Aux for printing
