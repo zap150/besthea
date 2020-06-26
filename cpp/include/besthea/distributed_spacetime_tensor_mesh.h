@@ -62,6 +62,8 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
    * communicator, the class automatically evenly distributes meshes among MPI
    * processes.
    * @param[in] decomposition_file Path to the file describing the input mesh.
+   * @param[in] tree_file Path to the file describing the initial temporal
+   * cluster tree
    * @param[in] comm Pointer to the MPI communicator associated with
    * decomposition.
    */
@@ -79,7 +81,7 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
    * index.
    * @param[in] local_idx Local time index.
    */
-  lo local_2_global_time( lo local_idx ) {
+  lo local_2_global_time( lo local_idx ) const {
     return _my_start_idx + local_idx;
   }
 
@@ -88,7 +90,7 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
    * index.
    * @param[in] local_idx Local spacetime index.
    */
-  lo local_2_global( lo local_idx ) {
+  lo local_2_global( lo local_idx ) const {
     return _my_start_idx * _space_mesh->get_n_elements( ) + local_idx;
   }
 
@@ -96,7 +98,7 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
    * Mapping from global temporal element index to local temporal element index.
    * @param[in] global_idx Global temporal element index.
    */
-  lo global_2_local_time( lo global_idx ) {
+  lo global_2_local_time( lo global_idx ) const {
     return global_idx - _my_start_idx;
   }
 
@@ -105,21 +107,41 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
    * index.
    * @param[in] global_idx Global spacetime element index.
    */
-  lo global_2_local( lo global_idx ) {
+  lo global_2_local( lo global_idx ) const {
     return global_idx - _my_start_idx * _space_mesh->get_n_elements( );
   }
 
   /**
    * Returns the mesh associated with current MPI process.
    */
-  spacetime_tensor_mesh * get_my_mesh( ) {
+  spacetime_tensor_mesh * const get_my_mesh( ) const {
     return _my_mesh;
+  }
+
+  /**
+   * Returns the tree composed of scheduling_time_clusters.
+   */
+  tree_structure * const get_distribution_tree( ) const {
+    return _dist_tree;
+  }
+
+  /**
+   * Returns start of the global time interval
+   */
+  sc get_start( ) const {
+    return _t_start;
+  }
+
+  sc get_end( ) const {
+    return _t_end;
   }
 
  protected:
   /**
    * Loads submeshes assigned to the current rank and merges them into one mesh.
    * @param[in] decomposition_file Path to the file describing the input mesh.
+   * @param[in] tree_file Path to the file describing the initial temporal
+   * cluster tree
    * @param[in] distribution_file Path to the file describing the time-slices
    * distribution among MPI processes.
    */
@@ -152,6 +174,10 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
     _time_mesh;      //!< temporal mesh the spacetime mesh is composed of
   lo _my_start_idx;  //!< initial timestep on this MPI rank (used for loc/glob
                      //!< mapping)
+  tree_structure * _dist_tree;  //!< temporal tree with distribution of clusters
+                                //!< among MPI processes
+  sc _t_start;                  //!< start of the global time interval
+  sc _t_end;                    //!< end of the global time interval
 };
 
 #endif /* INCLUDE_BESTHEA_DISTRIBUTED_SPACETIME_TENSOR_MESH_H_ */

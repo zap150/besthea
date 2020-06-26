@@ -114,13 +114,13 @@ class besthea::mesh::spacetime_cluster_tree {
     // print vector of paddings in time and space
     const std::vector< sc > time_paddings = _time_tree->get_paddings( );
     std::cout << "padding in time (level-wise): " << std::endl;
-    for ( lou i = 0; i < time_paddings.size( ); ++ i ) {
+    for ( lou i = 0; i < time_paddings.size( ); ++i ) {
       std::cout << time_paddings[ i ] << " ";
     }
     std::cout << std::endl;
     const std::vector< sc > space_paddings = _space_tree->get_paddings( );
     std::cout << "padding in space (level-wise): " << std::endl;
-    for ( lou i = 0; i < space_paddings.size( ); ++ i ) {
+    for ( lou i = 0; i < space_paddings.size( ); ++i ) {
       std::cout << space_paddings[ i ] << " ";
     }
     std::cout << std::endl;
@@ -249,6 +249,9 @@ class besthea::mesh::spacetime_cluster_tree {
 
   /**
    * Recursively builds the tree of spacetime clusters
+   * param[in] root Current root cluster
+   * param[in] level Current level
+   * param[in] split_space Indicating whether to split space or only time
    */
   void build_tree( spacetime_cluster * root, lo level, bool split_space );
 
