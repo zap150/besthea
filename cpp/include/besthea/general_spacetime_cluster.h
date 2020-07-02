@@ -81,7 +81,7 @@ class besthea::mesh::general_spacetime_cluster {
   general_spacetime_cluster( const vector_type & space_center, sc time_center,
     const vector_type & space_half_size, sc time_half_size, lo n_elements,
     general_spacetime_cluster * parent, lo level, short octant,
-    short left_right, std::vector< slou > & coordinate,
+    std::vector< slou > & coordinate, short left_right,
     const distributed_spacetime_tensor_mesh & mesh,
     bool reserve_elements = false )
     : _n_elements( n_elements ),

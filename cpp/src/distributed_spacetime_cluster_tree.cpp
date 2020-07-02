@@ -35,10 +35,10 @@
 besthea::mesh::distributed_spacetime_cluster_tree::
   distributed_spacetime_cluster_tree(
     const distributed_spacetime_tensor_mesh & spacetime_mesh, lo time_levels,
-    lo n_min_time_elems, lo n_min_space_elems, sc st_coeff,
-    lo spatial_nearfield_limit, MPI_Comm * comm )
+    lo n_min_elems, sc st_coeff, lo spatial_nearfield_limit, MPI_Comm * comm )
   : _levels( 0 ),
     _spacetime_mesh( spacetime_mesh ),
+    _n_min_elems( n_min_elems ),
     _s_t_coeff( st_coeff ),
     _spatial_nearfield_limit( spatial_nearfield_limit ),
     _comm( comm ) {
@@ -123,16 +123,207 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   sc time_half_size
     = ( _spacetime_mesh.get_end( ) - _spacetime_mesh.get_start( ) ) / 2.0;
 
-  //_root = new general_spacetime_cluster( space_center, time_center,
-  //space_half_sizes, time_half_size, nullptr, -1,  )
+  std::vector< slou > coordinates = { 0, 0, 0, 0 };
+  _root = new general_spacetime_cluster( space_center, time_center,
+    space_half_sizes, time_half_size, spacetime_mesh.get_n_elements( ), nullptr,
+    0, 0, coordinates, 0, _spacetime_mesh, false );
+  build_tree( _root );
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
-  general_spacetime_cluster * root, lo level, bool split_space ) {
+  general_spacetime_cluster * root ) {
+  tree_structure * dist_tree = _spacetime_mesh.get_distribution_tree( );
+  lo dist_tree_depth = dist_tree->get_levels( );
+
+  std::vector< lo > n_elems_per_subdivisioning;
+  n_elems_per_subdivisioning.resize( 0 );
+
+  bool split_space = false;
+  for ( lo i = 1; i < 2; ++i ) {
+    get_n_elements_in_subdivisioning(
+      _root, split_space, n_elems_per_subdivisioning );
+
+    std::vector< lo > global_n_elems_per_subdivisioning(
+      n_elems_per_subdivisioning.size( ) );
+
+    MPI_Allreduce( n_elems_per_subdivisioning.data( ),
+      global_n_elems_per_subdivisioning.data( ),
+      n_elems_per_subdivisioning.size( ), get_scalar_type< sc >::MPI_SC( ),
+      MPI_SUM, *_comm );
+    for ( auto it : global_n_elems_per_subdivisioning ) {
+      std::cout << it << " ";
+    }
+
+    split_space = !split_space;
+  }
+}
+
+void besthea::mesh::distributed_spacetime_cluster_tree::
+  get_n_elements_in_subdivisioning( general_spacetime_cluster * root,
+    bool split_space, std::vector< lo > & n_elems_per_subd ) {
+  if ( root->get_children( ) > 0 ) {
+    std::vector< general_spacetime_cluster * > * children;
+    for ( auto it = children->begin( ); it != children->end( ); ++it ) {
+      get_n_elements_in_subdivisioning( *it, split_space, n_elems_per_subd );
+    }
+  } else {
+    vector_type space_center;
+    space_center.resize( 3 );
+    vector_type half_size;
+    half_size.resize( 3 );
+    sc time_center, time_half_size;
+    root->get_center( space_center, time_center );
+    root->get_half_size( half_size, time_half_size );
+    lo curr_size = n_elems_per_subd.size( );
+    linear_algebra::coordinates< 4 > centroid;
+
+    if ( !split_space ) {
+      n_elems_per_subd.resize( curr_size + 2, 0 );
+      for ( lo i = 0; i < _spacetime_mesh.get_my_mesh( )->get_n_elements( );
+            ++i ) {
+        _spacetime_mesh.get_my_mesh( )->get_centroid( i, centroid );
+        if ( centroid[ 3 ] > time_center - time_half_size
+          && centroid[ 3 ] <= time_center ) {
+          n_elems_per_subd[ curr_size ] += 1;
+        } else if ( centroid[ 3 ] > time_center
+          && centroid[ 3 ] <= time_center + time_half_size ) {
+          n_elems_per_subd[ curr_size + 1 ] += 1;
+        }
+      }
+
+    } else {
+      n_elems_per_subd.resize( curr_size + 16, 0 );
+
+      for ( lo i = 0; i < _spacetime_mesh.get_my_mesh( )->get_n_elements( );
+            ++i ) {
+        _spacetime_mesh.get_my_mesh( )->get_centroid( i, centroid );
+        if ( centroid[ 3 ] > time_center - time_half_size
+          && centroid[ 3 ] <= time_center ) {
+          if ( centroid[ 0 ] >= space_center( 0 )
+            && centroid[ 1 ] >= space_center( 1 )
+            && centroid[ 2 ] >= space_center( 2 )
+            && centroid[ 0 ] < space_center( 0 ) + half_size( 0 )
+            && centroid[ 1 ] < space_center( 1 ) + half_size( 1 )
+            && centroid[ 2 ] < space_center( 2 ) + half_size( 2 ) ) {
+            n_elems_per_subd[ curr_size ] += 1;
+          } else if ( centroid[ 0 ] < space_center( 0 )
+            && centroid[ 1 ] >= space_center( 1 )
+            && centroid[ 2 ] >= space_center( 2 )
+            && centroid[ 0 ] >= space_center( 0 ) - half_size( 0 )
+            && centroid[ 1 ] < space_center( 1 ) + half_size( 1 )
+            && centroid[ 2 ] < space_center( 2 ) + half_size( 2 ) ) {
+            n_elems_per_subd[ curr_size + 1 ] += 1;
+          } else if ( centroid[ 0 ] < space_center( 0 )
+            && centroid[ 1 ] < space_center( 1 )
+            && centroid[ 2 ] >= space_center( 2 )
+            && centroid[ 0 ] >= space_center( 0 ) - half_size( 0 )
+            && centroid[ 1 ] >= space_center( 1 ) - half_size( 1 )
+            && centroid[ 2 ] < space_center( 2 ) + half_size( 2 ) ) {
+            n_elems_per_subd[ curr_size + 2 ] += 1;
+          } else if ( centroid[ 0 ] >= space_center( 0 )
+            && centroid[ 1 ] < space_center( 1 )
+            && centroid[ 2 ] >= space_center( 2 )
+            && centroid[ 0 ] < space_center( 0 ) + half_size( 0 )
+            && centroid[ 1 ] >= space_center( 1 ) - half_size( 1 )
+            && centroid[ 2 ] < space_center( 2 ) + half_size( 2 ) ) {
+            n_elems_per_subd[ curr_size + 3 ] += 1;
+          } else if ( centroid[ 0 ] >= space_center( 0 )
+            && centroid[ 1 ] >= space_center( 1 )
+            && centroid[ 2 ] < space_center( 2 )
+            && centroid[ 0 ] < space_center( 0 ) + half_size( 0 )
+            && centroid[ 1 ] < space_center( 1 ) + half_size( 1 )
+            && centroid[ 2 ] >= space_center( 2 ) - half_size( 2 ) ) {
+            n_elems_per_subd[ curr_size + 4 ] += 1;
+          } else if ( centroid[ 0 ] < space_center( 0 )
+            && centroid[ 1 ] >= space_center( 1 )
+            && centroid[ 2 ] < space_center( 2 )
+            && centroid[ 0 ] >= space_center( 0 ) - half_size( 0 )
+            && centroid[ 1 ] < space_center( 1 ) + half_size( 1 )
+            && centroid[ 2 ] >= space_center( 2 ) - half_size( 2 ) ) {
+            n_elems_per_subd[ curr_size + 5 ] += 1;
+          } else if ( centroid[ 0 ] < space_center( 0 )
+            && centroid[ 1 ] < space_center( 1 )
+            && centroid[ 2 ] < space_center( 2 )
+            && centroid[ 0 ] >= space_center( 0 ) - half_size( 0 )
+            && centroid[ 1 ] >= space_center( 1 ) - half_size( 1 )
+            && centroid[ 2 ] >= space_center( 2 ) - half_size( 2 ) ) {
+            n_elems_per_subd[ curr_size + 6 ] += 1;
+          } else if ( centroid[ 0 ] >= space_center( 0 )
+            && centroid[ 1 ] < space_center( 1 )
+            && centroid[ 2 ] < space_center( 2 )
+            && centroid[ 0 ] < space_center( 0 ) + half_size( 0 )
+            && centroid[ 1 ] >= space_center( 1 ) - half_size( 1 )
+            && centroid[ 2 ] >= space_center( 2 ) - half_size( 2 ) ) {
+            n_elems_per_subd[ curr_size + 7 ] += 1;
+          }
+        } else if ( centroid[ 3 ] > time_center
+          && centroid[ 3 ] <= time_center + time_half_size ) {
+          if ( centroid[ 0 ] >= space_center( 0 )
+            && centroid[ 1 ] >= space_center( 1 )
+            && centroid[ 2 ] >= space_center( 2 )
+            && centroid[ 0 ] < space_center( 0 ) + half_size( 0 )
+            && centroid[ 1 ] < space_center( 1 ) + half_size( 1 )
+            && centroid[ 2 ] < space_center( 2 ) + half_size( 2 ) ) {
+            n_elems_per_subd[ curr_size + 8 ] += 1;
+          } else if ( centroid[ 0 ] < space_center( 0 )
+            && centroid[ 1 ] >= space_center( 1 )
+            && centroid[ 2 ] >= space_center( 2 )
+            && centroid[ 0 ] >= space_center( 0 ) - half_size( 0 )
+            && centroid[ 1 ] < space_center( 1 ) + half_size( 1 )
+            && centroid[ 2 ] < space_center( 2 ) + half_size( 2 ) ) {
+            n_elems_per_subd[ curr_size + 9 ] += 1;
+          } else if ( centroid[ 0 ] < space_center( 0 )
+            && centroid[ 1 ] < space_center( 1 )
+            && centroid[ 2 ] >= space_center( 2 )
+            && centroid[ 0 ] >= space_center( 0 ) - half_size( 0 )
+            && centroid[ 1 ] >= space_center( 1 ) - half_size( 1 )
+            && centroid[ 2 ] < space_center( 2 ) + half_size( 2 ) ) {
+            n_elems_per_subd[ curr_size + 10 ] += 1;
+          } else if ( centroid[ 0 ] >= space_center( 0 )
+            && centroid[ 1 ] < space_center( 1 )
+            && centroid[ 2 ] >= space_center( 2 )
+            && centroid[ 0 ] < space_center( 0 ) + half_size( 0 )
+            && centroid[ 1 ] >= space_center( 1 ) - half_size( 1 )
+            && centroid[ 2 ] < space_center( 2 ) + half_size( 2 ) ) {
+            n_elems_per_subd[ curr_size + 11 ] += 1;
+          } else if ( centroid[ 0 ] >= space_center( 0 )
+            && centroid[ 1 ] >= space_center( 1 )
+            && centroid[ 2 ] < space_center( 2 )
+            && centroid[ 0 ] < space_center( 0 ) + half_size( 0 )
+            && centroid[ 1 ] < space_center( 1 ) + half_size( 1 )
+            && centroid[ 2 ] >= space_center( 2 ) - half_size( 2 ) ) {
+            n_elems_per_subd[ curr_size + 12 ] += 1;
+          } else if ( centroid[ 0 ] < space_center( 0 )
+            && centroid[ 1 ] >= space_center( 1 )
+            && centroid[ 2 ] < space_center( 2 )
+            && centroid[ 0 ] >= space_center( 0 ) - half_size( 0 )
+            && centroid[ 1 ] < space_center( 1 ) + half_size( 1 )
+            && centroid[ 2 ] >= space_center( 2 ) - half_size( 2 ) ) {
+            n_elems_per_subd[ curr_size + 13 ] += 1;
+          } else if ( centroid[ 0 ] < space_center( 0 )
+            && centroid[ 1 ] < space_center( 1 )
+            && centroid[ 2 ] < space_center( 2 )
+            && centroid[ 0 ] >= space_center( 0 ) - half_size( 0 )
+            && centroid[ 1 ] >= space_center( 1 ) - half_size( 1 )
+            && centroid[ 2 ] >= space_center( 2 ) - half_size( 2 ) ) {
+            n_elems_per_subd[ curr_size + 14 ] += 1;
+          } else if ( centroid[ 0 ] >= space_center( 0 )
+            && centroid[ 1 ] < space_center( 1 )
+            && centroid[ 2 ] < space_center( 2 )
+            && centroid[ 0 ] < space_center( 0 ) + half_size( 0 )
+            && centroid[ 1 ] >= space_center( 1 ) - half_size( 1 )
+            && centroid[ 2 ] >= space_center( 2 ) - half_size( 2 ) ) {
+            n_elems_per_subd[ curr_size + 15 ] += 1;
+          }
+        }
+      }
+    }
+  }
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::compute_bounding_box(
   sc & xmin, sc & xmax, sc & ymin, sc & ymax, sc & zmin, sc & zmax ) {
+  // only local computation since spatial mesh is now duplicated
   xmin = ymin = zmin = std::numeric_limits< sc >::max( );
   xmax = ymax = zmax = std::numeric_limits< sc >::min( );
 

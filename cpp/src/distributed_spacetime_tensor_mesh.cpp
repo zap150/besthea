@@ -44,6 +44,13 @@ besthea::mesh::distributed_spacetime_tensor_mesh::
   MPI_Comm_size( *_comm, &_n_processes );
 
   load( decomposition_file, tree_file, distribution_file );
+
+  // get global data
+  MPI_Barrier( *_comm );
+  lo local_n_elems = _my_mesh->get_n_elements( );
+
+  MPI_Allreduce( &local_n_elems, &_n_global_elements, 1,
+    get_index_type< lo >::MPI_LO( ), MPI_SUM, *_comm );
 }
 
 besthea::mesh::distributed_spacetime_tensor_mesh::
@@ -129,21 +136,47 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
   _n_meshes_per_rank = slice_indices.size( );
 
   lo my_start_mesh = slice_indices.front( );
-  if ( slice_indices.front( ) > 0 ) {
-    // let's load also the temporal nearfield slice
-    my_start_mesh -= 1;
-  }
+  //  if ( slice_indices.front( ) > 0 ) {
+  //    // let's load also the temporal nearfield slice
+  //    my_start_mesh -= 1;
+  //  }
   lo my_end_mesh = slice_indices.back( );
 
   std::vector< sc > my_time_nodes;
+  std::vector< sc > my_nearfield_time_nodes;
 
   lo my_start_idx;
   std::string t_file_path;
   std::string s_file_path;
+
   for ( lo i = 0; i < _n_meshes; ++i ) {
     filestream >> my_start_idx;
     filestream >> t_file_path;
     filestream >> s_file_path;
+
+    if ( ( i == my_start_mesh - 1 ) ) {
+      std::ifstream temp_file( t_file_path.c_str( ) );
+      if ( !temp_file.is_open( ) ) {
+        std::cout << "File " << t_file_path << " could not be opened!"
+                  << std::endl;
+        return false;
+      }
+      lo dummy;
+
+      temp_file >> dummy;  // dimension (1)
+      temp_file >> dummy;  // nodes per element (2)
+
+      lo n_nodes;
+      sc node;
+      temp_file >> n_nodes;
+      for ( lo i_node = 0; i_node < n_nodes; ++i_node ) {
+        temp_file >> node;
+        my_nearfield_time_nodes.push_back( node );
+      }
+
+      temp_file.close( );
+    }
+
     if ( i >= my_start_mesh && i <= my_end_mesh ) {
       if ( i == my_start_mesh ) {
         _my_start_idx = my_start_idx;
@@ -177,6 +210,15 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
   _time_mesh = new temporal_mesh( my_time_nodes );
   _space_mesh = new triangular_surface_mesh( s_file_path );
   _my_mesh = new spacetime_tensor_mesh( *_space_mesh, *_time_mesh );
+
+  if ( my_nearfield_time_nodes.size( ) > 0 ) {
+    _nearfield_time_mesh = new temporal_mesh( my_nearfield_time_nodes );
+    _nearfield_mesh
+      = new spacetime_tensor_mesh( *_space_mesh, *_nearfield_time_mesh );
+  } else {
+    _nearfield_time_mesh = nullptr;
+    _nearfield_mesh = nullptr;
+  }
 
   filestream.close( );
   return true;

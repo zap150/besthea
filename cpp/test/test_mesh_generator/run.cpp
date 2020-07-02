@@ -25,6 +25,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include "besthea/distributed_spacetime_cluster_tree.h"
 #include "besthea/distributed_spacetime_tensor_mesh.h"
 #include "besthea/settings.h"
 #include "besthea/spacetime_mesh_generator.h"
@@ -61,7 +62,7 @@ int main( int argc, char * argv[] ) {
   if ( myRank == 0 ) {
     std::string space_file = "./mesh_files/cube_12.txt";  // spatial mesh
     std::string time_file = "./testfile.txt";  // file defining temporal slices
-    lo time_refinement = 2;                    // defining mesh within slices
+    lo time_refinement = 0;                    // defining mesh within slices
 
     // load time mesh defining slices and create temporal tree
     b_t_mesh time_mesh( time_file );
@@ -87,8 +88,12 @@ int main( int argc, char * argv[] ) {
   }
   MPI_Barrier( MPI_COMM_WORLD );
 
-  distributed_spacetime_tensor_mesh(
+  distributed_spacetime_tensor_mesh mesh(
     "test_mesh_d.txt", tree_vector_file, process_assignment_file, &comm );
+  // std::cout << mesh.get_n_elements( ) << std::endl;
+
+  besthea::mesh::distributed_spacetime_cluster_tree tree(
+    mesh, 4, 10, 1.0, 1, &comm );
 
   MPI_Finalize( );
 }

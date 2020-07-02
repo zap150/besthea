@@ -410,7 +410,7 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
     map_index( i_elem, space_elem_idx, time_elem_idx );
 
     linear_algebra::coordinates< 3 > x1, x2, x3;
-    _space_mesh->get_nodes( i_elem, x1, x2, x3 );
+    _space_mesh->get_nodes( space_elem_idx, x1, x2, x3 );
 
     centroid[ 0 ] = ( x1[ 0 ] + x2[ 0 ] + x3[ 0 ] ) / 3.0;
     centroid[ 1 ] = ( x1[ 1 ] + x2[ 1 ] + x3[ 1 ] ) / 3.0;

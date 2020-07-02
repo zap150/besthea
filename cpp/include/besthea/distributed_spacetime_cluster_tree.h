@@ -63,15 +63,13 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    */
   distributed_spacetime_cluster_tree(
     const distributed_spacetime_tensor_mesh & spacetime_mesh, lo time_levels,
-    lo n_min_time_elems, lo n_min_space_elems, sc st_coeff,
-    lo spatial_nearfield_limit, MPI_Comm * comm );
+    lo n_min_elems, sc st_coeff, lo spatial_nearfield_limit, MPI_Comm * comm );
 
  private:
   /**
    *
    */
-  void build_tree(
-    general_spacetime_cluster * root, lo level, bool split_space );
+  void build_tree( general_spacetime_cluster * root );
   lo _levels;  //!< number of levels in the tree
   const distributed_spacetime_tensor_mesh &
     _spacetime_mesh;                  //!< underlying distributed spacetime mesh
@@ -81,8 +79,9 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   lo _start_temporal_level;  //!< auxiliary variable to determine in which level
                              //!< the spatial refinement starts
                              //!< (meaningful only if _start_spatial_level = 0)
-  sc _s_t_coeff;  //!< coefficient to determine the coupling of the spatial
-                  //!< and temporal levels
+  sc _s_t_coeff;    //!< coefficient to determine the coupling of the spatial
+                    //!< and temporal levels
+  lo _n_min_elems;  //!< minimum number of elements so that cluster can be split
   lo _spatial_nearfield_limit;  //!< number of the clusters in the vicinity to
                                 //!< be considered as nearfield
   const std::vector< std::vector< lo > > _idx_2_coord = { { 1, 1, 1 },
@@ -107,6 +106,17 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    */
   void compute_bounding_box(
     sc & xmin, sc & xmax, sc & ymin, sc & ymax, sc & zmin, sc & zmax );
+
+  /**
+   * Collectively computes number of elements in subdivisioning of 1Dx3D
+   * bounding box
+   * @param[in] space_order How many times is space divided.
+   * @param[in] time_order How many times is time divided.
+   * @param[inout] n_el_per_part Vector for storing number of spacetime
+   * elements.
+   */
+  void get_n_elements_in_subdivisioning( general_spacetime_cluster * root,
+    bool split_space, std::vector< lo > & n_elems_per_subd );
 };
 
 #endif /* INCLUDE_BESTHEA_DISTRIBUTED_SPACETIME_CLUSTER_TREE_H_ */

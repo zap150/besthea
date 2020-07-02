@@ -132,8 +132,18 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
     return _t_start;
   }
 
+  /**
+   * Returns end of the global time interval
+   */
   sc get_end( ) const {
     return _t_end;
+  }
+
+  /**
+   * Returns total number of elements in the distributed mesh
+   */
+  lo get_n_elements( ) const {
+    return _n_global_elements;
   }
 
  protected:
@@ -168,16 +178,21 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
   std::vector< sc > _slices;         //!< vector defining the global mesh slices
   spacetime_tensor_mesh * _my_mesh;  //!< part of the global mesh owned by the
                                      //!< rank (including the nearfield)
+  spacetime_tensor_mesh * _nearfield_mesh;  //!< temporal nearfield mesh
   triangular_surface_mesh *
     _space_mesh;  //!< surface mesh the spacetime mesh is composed of
   temporal_mesh *
-    _time_mesh;      //!< temporal mesh the spacetime mesh is composed of
+    _time_mesh;  //!< temporal mesh the spacetime mesh is composed of
+  temporal_mesh *
+    _nearfield_time_mesh;  //!< nearfiel temporal mesh the nearfield spacetime
+                           //!< mesh is composed of
   lo _my_start_idx;  //!< initial timestep on this MPI rank (used for loc/glob
                      //!< mapping)
   tree_structure * _dist_tree;  //!< temporal tree with distribution of clusters
                                 //!< among MPI processes
   sc _t_start;                  //!< start of the global time interval
   sc _t_end;                    //!< end of the global time interval
+  lo _n_global_elements;  //!< total number of elements in the distributed mesh
 };
 
 #endif /* INCLUDE_BESTHEA_DISTRIBUTED_SPACETIME_TENSOR_MESH_H_ */
