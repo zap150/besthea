@@ -85,10 +85,10 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
 
   MPI_Allreduce( &dist_tree_depth, &dist_tree_depth_coll, 1,
     get_index_type< lo >::MPI_LO( ), MPI_MAX, *_comm );
-  if ( _my_rank == 1 ) {
-    dist_tree->print_tree_human_readable( 2, true );
-    dist_tree->print( );
-  }
+  //  if ( _my_rank == 1 ) {
+  //    dist_tree->print_tree_human_readable( 2, true );
+  //    dist_tree->print( );
+  //  }
   std::vector< lo > n_elems_per_subdivisioning;
   n_elems_per_subdivisioning.resize( 0 );
 
