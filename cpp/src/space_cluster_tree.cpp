@@ -155,7 +155,8 @@ void besthea::mesh::space_cluster_tree::build_tree(
       root.compute_suboctant( i, new_center, new_half_size );
       ++n_clusters;
 
-      // there was a problem with wrong index here( coord[0] instead [1])
+      // there was a problem with wrong index here( coord[0] instead [1]), first
+      // one is level
       slou coord_x
         = 2 * root.get_box_coordinate( )[ 1 ] + _idx_2_coord[ i ][ 0 ];
       slou coord_y

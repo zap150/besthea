@@ -30,31 +30,34 @@
 
 besthea::mesh::spacetime_mesh_generator::spacetime_mesh_generator(
   triangular_surface_mesh & space_mesh, temporal_mesh & time_mesh,
-  lo refinement ) {
+  lo time_refinement, lo space_refinement ) {
   _space_mesh = &space_mesh;
   _time_mesh = &time_mesh;
-  _refinement = refinement;
+  _refinement = time_refinement;
+  _space_refinement = space_refinement;
   _delete_time_mesh = false;
   _delete_space_mesh = false;
 }
 
 besthea::mesh::spacetime_mesh_generator::spacetime_mesh_generator(
   triangular_surface_mesh & space_mesh, sc end_time, lo n_timesteps,
-  lo refinement ) {
+  lo time_refinement, lo space_refinement ) {
   _space_mesh = &space_mesh;
 
   _time_mesh = new temporal_mesh( 0.0, end_time, n_timesteps );
-  _refinement = refinement;
+  _refinement = time_refinement;
+  _space_refinement = space_refinement;
   _delete_time_mesh = true;
   _delete_space_mesh = false;
 }
 
 besthea::mesh::spacetime_mesh_generator::spacetime_mesh_generator(
   const std::string & file_space, const std::string & file_time,
-  lo refinement ) {
+  lo time_refinement, lo space_refinement ) {
   _time_mesh = new temporal_mesh( file_time );
   _space_mesh = new triangular_surface_mesh( file_space );
-  _refinement = refinement;
+  _refinement = time_refinement;
+  _space_refinement = space_refinement;
   _delete_space_mesh = true;
   _delete_time_mesh = true;
 }
@@ -148,6 +151,7 @@ bool besthea::mesh::spacetime_mesh_generator::generate(
 
     // for completeness, save also spatial mesh (although it is the same for all
     // temporal meshes)
+    _space_mesh->refine( _space_refinement );
     std::string space_file = file_name + "_s_" + std::to_string( i );
     _space_mesh->save( directory, space_file, suffix );
 

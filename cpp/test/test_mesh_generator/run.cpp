@@ -62,7 +62,8 @@ int main( int argc, char * argv[] ) {
   if ( myRank == 0 ) {
     std::string space_file = "./mesh_files/cube_12.txt";  // spatial mesh
     std::string time_file = "./testfile.txt";  // file defining temporal slices
-    lo time_refinement = 0;                    // defining mesh within slices
+    lo time_refinement = 2;                    // defining mesh within slices
+    lo space_refinement = 0;
 
     // load time mesh defining slices and create temporal tree
     b_t_mesh time_mesh( time_file );
@@ -82,7 +83,7 @@ int main( int argc, char * argv[] ) {
       n_processes, strategy, process_assignment_file );
 
     spacetime_mesh_generator generator(
-      space_file, time_file, time_refinement );
+      space_file, time_file, time_refinement, space_refinement );
 
     generator.generate( "", "test_mesh", "txt" );
   }
@@ -93,7 +94,7 @@ int main( int argc, char * argv[] ) {
   // std::cout << mesh.get_n_elements( ) << std::endl;
 
   besthea::mesh::distributed_spacetime_cluster_tree tree(
-    mesh, 4, 10, 1.0, 1, &comm );
+    mesh, 6, 1, 1.0, 1, &comm );
 
   MPI_Finalize( );
 }

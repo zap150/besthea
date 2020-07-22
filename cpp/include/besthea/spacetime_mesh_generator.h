@@ -56,11 +56,13 @@ class besthea::mesh::spacetime_mesh_generator {
    * @param[in] space_mesh Initial spatial mesh
    * @param[in] time_mesh Initial temporal mesh with nodes and elements in
    * time-ascending order. Each temporal element represents a time-slice.
-   * @param[in] refinement How much to refine individual slices before saving
-   * (number of bisections).
+   * @param[in] time_refinement How much to refine individual slices before
+   * saving (number of bisections).
+   * @param[in] space_refinement How much to refine spatial input mesh.
    */
   spacetime_mesh_generator( triangular_surface_mesh & space_mesh,
-    temporal_mesh & time_mesh, lo refinement = 0 );
+    temporal_mesh & time_mesh, lo time_refinement = 0,
+    lo space_refinement = 0 );
 
   /**
    * Constructor taking spatial and temporal mesh
@@ -68,22 +70,25 @@ class besthea::mesh::spacetime_mesh_generator {
    * @param[in] end_time End of the interval [ 0, end_time ]
    * @param[in] n_timeslices Number of timeslices to equally divide the interval
    * into. Each temporal element represents a time-slice.
-   * @param[in] refinement How much to refine individual slices before saving
-   * (number of bisections).
+   * @param[in] time_refinement How much to refine individual slices before
+   * saving (number of bisections).
+   * @param[in] space_refinement How much to refine spatial input mesh.
    */
   spacetime_mesh_generator( triangular_surface_mesh & space_mesh, sc end_time,
-    lo n_timeslices, lo refinement = 0 );
+    lo n_timeslices, lo time_refinement = 0, lo space_refinement = 0 );
 
   /**
    * Constructs generator from spatial and temporal mesh files
    * @param[in] file_space File storing the spatial mesh
    * @param[in] file_time File storing the temporal mesh with nodes and elements
    * in time-ascending order. Each temporal element represents a time-slice.
-   * @param[in] refinement How much to refine individual slices before saving
-   * (number of bisections).
+   * @param[in] time_refinement How much to refine individual slices before
+   * saving (number of bisections).
+   * @param[in] space_refinement How much to refine spatial mesh.
    */
   spacetime_mesh_generator( const std::string & file_space,
-    const std::string & file_time, lo refinement = 0 );
+    const std::string & file_time, lo time_refinement = 0,
+    lo space_refinement = 0 );
 
   /** Copy constructor */
   spacetime_mesh_generator( spacetime_mesh_generator & that ) = delete;
@@ -106,6 +111,7 @@ class besthea::mesh::spacetime_mesh_generator {
   temporal_mesh * _time_mesh;  //!< pointer to a temporal_mesh.h
   lo _refinement;  //!< number of bisection refinements of the initial temporal
                    //!< slices
+  lo _space_refinement;     //!< number of input space mesh refinement
   bool _delete_time_mesh;   //!< time mesh was created by the class, delete it
   bool _delete_space_mesh;  //!< space mesh was created by the class, delete it
 };

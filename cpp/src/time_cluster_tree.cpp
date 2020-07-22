@@ -381,7 +381,6 @@ void besthea::mesh::time_cluster_tree::build_tree(
     elem_idx = root.get_element( i );
     el_centroid = _mesh.get_centroid( elem_idx );
     if ( el_centroid <= center ) {
-      // if ( el_centroid - center <= 1e-12 ) {
       ++n_left;
     } else {
       ++n_right;

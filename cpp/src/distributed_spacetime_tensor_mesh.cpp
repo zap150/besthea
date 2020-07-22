@@ -125,7 +125,8 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
   // read and reconstruct temporal tree and distribution of clusters
   _dist_tree = new tree_structure( tree_file, _t_start, _t_end );
   _dist_tree->load_process_assignments( distribution_file );
-  std::vector< scheduling_time_cluster * > leaves = _dist_tree->get_leaves( );
+  // std::vector< scheduling_time_cluster * > leaves = _dist_tree->get_leaves(
+  // );
 
   std::vector< lo > slice_indices;
   find_my_slices( _dist_tree->get_root( ),
@@ -221,5 +222,8 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
   }
 
   filestream.close( );
+
+  _dist_tree->reduce_2_essential( _my_rank );
+
   return true;
 }

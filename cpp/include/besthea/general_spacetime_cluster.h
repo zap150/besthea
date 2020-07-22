@@ -77,13 +77,16 @@ class besthea::mesh::general_spacetime_cluster {
    * @param[in] coordinate Coordinates of the box within boxes on given level
    * @param[in] mesh Reference to the underlying distributed spacetime tensor
    * mesh.
+   * @param[in] process_id Rank of an MPI process owning the cluster.
+   * @param[in] reserve_elements Whether to allocate data for cluster's
+   * elements.
    */
   general_spacetime_cluster( const vector_type & space_center, sc time_center,
     const vector_type & space_half_size, sc time_half_size, lo n_elements,
     general_spacetime_cluster * parent, lo level, short octant,
-    std::vector< slou > & coordinate, short left_right,
-    const distributed_spacetime_tensor_mesh & mesh,
-    bool reserve_elements = false )
+    std::vector< slou > & coordinate, short left_right, lo n_space_div,
+    lo n_time_div, const distributed_spacetime_tensor_mesh & mesh,
+    lo process_id, bool reserve_elements = false )
     : _n_elements( n_elements ),
       _time_center( time_center ),
       _space_center( space_center ),
@@ -95,8 +98,11 @@ class besthea::mesh::general_spacetime_cluster {
       _level( level ),
       _octant( octant ),
       _left_right( left_right ),
+      _n_space_div( n_space_div ),
+      _n_time_div( n_time_div ),
       _padding( 0.0 ),
-      _box_coordinate( coordinate ) {
+      _box_coordinate( coordinate ),
+      _process_id( process_id ) {
     if ( reserve_elements ) {
       _elements.reserve( _n_elements );
     }
@@ -249,12 +255,27 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
+   * Returns parent's octant of the cluster.
+   *
+   * For parent cluster with center at (0, 0, 0) the following octant ordering
+   * holds:
+   *
+   * oct/coord	1 2 3 4 5 6 7 8
+   * 	x		+ - - + + - - +
+   * 	y		+ + - - + + - -
+   * 	z		+ + + + - - - -
+   */
+  short get_spatial_octant( ) const {
+    return _octant;
+  }
+
+  /**
    * Computes center and half-sizes of the child in a given octant
    * @param[in] octant Spatial suboctant of the cluster.
    * @param[out] new_center Center of the suboctant.
    * @param[out] new_half_size Half-size of the suboctant.
    */
-  void compute_suboctant(
+  void compute_spatial_suboctant(
     lo octant, vector_type & new_center, vector_type & new_half_size ) {
     new_half_size[ 0 ] = _space_half_size[ 0 ] / 2;
     new_half_size[ 1 ] = _space_half_size[ 1 ] / 2;
@@ -354,6 +375,53 @@ class besthea::mesh::general_spacetime_cluster {
     }
   }
 
+  /**
+   * Returns level of the cluster in the cluster tree.
+   */
+  lo get_level( ) {
+    return _level;
+  }
+
+  /**
+   * Returns coordinates of the box within boxes on given level.
+   */
+  const std::vector< slou > & get_box_coordinate( ) const {
+    return _box_coordinate;
+  }
+
+  /**
+   * Returns id of the process to which the cluster is assigned.
+   */
+  lo get_process_id( ) const {
+    return _process_id;
+  }
+
+  /**
+   * Allocates memory for elements.
+   * @param[in] size Requested size.
+   */
+  void reserve_elements( lo size ) {
+    _elements.reserve( size );
+  }
+
+  /**
+   * Return numbers of spatial and temporal subdivisioning of the bounding box.
+   * @param[in] n_space_div Number of spatial subdivisioning.
+   * @param[in]
+   */
+  void get_n_divs( lo & n_space_div, lo & n_time_div ) {
+    n_space_div = _n_space_div;
+    n_time_div = _n_time_div;
+  }
+
+  void set_time_center( sc center ) {
+    _time_center = center;
+  }
+
+  void set_time_half_size( sc half_size ) {
+    _time_half_size = half_size;
+  }
+
  private:
   lo _n_elements;             //!< number of spacetime elements in the cluster
   sc _time_center;            //!< temporal center of the cluster
@@ -374,6 +442,11 @@ class besthea::mesh::general_spacetime_cluster {
   sc _padding;        //!< padding of the cluster
   std::vector< slou >
     _box_coordinate;  //!< coordinates of the box within boxes on given level
+  std::vector< std::vector< lo > >
+    _idx_2_coord;   //!< auxiliary mapping from octant indexing to coordinates
+  lo _process_id;   //!< rank of an MPI process owning the cluster
+  lo _n_space_div;  //!< number of splittings in space dimensions
+  lo _n_time_div;   //!< number of splittings in temporal dimension
 };
 
 #endif /* INCLUDE_BESTHEA_GENERAL_SPACETIME_CLUSTER_H_ */

@@ -146,6 +146,13 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
     return _n_global_elements;
   }
 
+  /**
+   * Returns vector defining time slices
+   */
+  const std::vector< sc > & get_slices( ) const {
+    return _slices;
+  }
+
  protected:
   /**
    * Loads submeshes assigned to the current rank and merges them into one mesh.
@@ -189,7 +196,7 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
   lo _my_start_idx;  //!< initial timestep on this MPI rank (used for loc/glob
                      //!< mapping)
   tree_structure * _dist_tree;  //!< temporal tree with distribution of clusters
-                                //!< among MPI processes
+                                //!< among MPI processes (reduced to essential)
   sc _t_start;                  //!< start of the global time interval
   sc _t_end;                    //!< end of the global time interval
   lo _n_global_elements;  //!< total number of elements in the distributed mesh
