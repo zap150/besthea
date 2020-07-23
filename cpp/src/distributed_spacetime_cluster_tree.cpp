@@ -125,6 +125,10 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
 
     build_subtree( *it, false );
   }
+
+  // exchange necessary data
+  MPI_Allreduce( MPI_IN_PLACE, &_real_max_levels, 1,
+    get_index_type< lo >::MPI_LO( ), MPI_MAX, *_comm );
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::
@@ -143,7 +147,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     = n_space_clusters * n_space_clusters * n_space_clusters * n_time_clusters;
 
   elems_in_clusters.resize( n_clusters );
-  std::vector< lo > loc_elems_in_clusters( n_clusters );
+  std::vector< lo > loc_elems_in_clusters( n_clusters, 0 );
   linear_algebra::coordinates< 4 > centroid;
   lo pos_x, pos_y, pos_z, pos_t;
 
@@ -622,6 +626,10 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
   if ( root.get_level( ) + 1 > _max_levels - 1
     || root.get_n_elements( ) < _n_min_elems ) {
     root.set_n_children( 0 );
+
+    if ( root.get_level( ) + 1 > _real_max_levels ) {
+      _real_max_levels = root.get_level( ) + 1;
+    }
     return;
   }
 
@@ -943,4 +951,5 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
     root.add_child( right_child );
     build_subtree( *right_child, !split_space );
   }
+  root.shrink_children( );
 }

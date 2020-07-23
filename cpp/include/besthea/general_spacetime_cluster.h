@@ -414,10 +414,16 @@ class besthea::mesh::general_spacetime_cluster {
     n_time_div = _n_time_div;
   }
 
+  /**
+   * Sets new center of the cluster.
+   */
   void set_time_center( sc center ) {
     _time_center = center;
   }
 
+  /**
+   * Sets new half size of the cluster.
+   */
   void set_time_half_size( sc half_size ) {
     _time_half_size = half_size;
   }
