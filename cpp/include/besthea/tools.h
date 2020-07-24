@@ -34,5 +34,6 @@
 #define INCLUDE_BESTHEA_TOOLS_H_
 
 #include "besthea/timer.h"
+#include "io_routines.h"
 
 #endif /* INCLUDE_BESTHEA_TOOLS_H_ */

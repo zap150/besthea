@@ -47,11 +47,11 @@ namespace besthea {
 }
 
 /**
- * Class representing a space-time cluster
+ * Class representing a tensor-product space-time cluster
  */
 class besthea::mesh::spacetime_cluster {
  public:
-   using full_matrix_type
+  using full_matrix_type
     = besthea::linear_algebra::full_matrix;  //!< Sparse matrix type.
   /**
    * Constructor.
@@ -118,21 +118,21 @@ class besthea::mesh::spacetime_cluster {
   /**
    * Returns number of cluster's children.
    */
-  lo get_n_children( ) {
+  lo get_n_children( ) const {
     if ( _children != nullptr ) {
       return _children->size( );
     } else {
       return 0;
     }
   }
-  
+
   /**
    * Adds cluster to the nearfield list.
    * @param[in] cluster Cluster to be added.
    */
   void add_to_nearfield_list( spacetime_cluster * cluster ) {
     if ( _nearfield_list == nullptr ) {
-      _nearfield_list = new std::vector< spacetime_cluster * > ( );
+      _nearfield_list = new std::vector< spacetime_cluster * >( );
     }
     _nearfield_list->push_back( cluster );
   }
@@ -147,7 +147,7 @@ class besthea::mesh::spacetime_cluster {
     }
     _interaction_list->push_back( cluster );
   }
-  
+
   /**
    * Returns cluster's interaction list.
    */
@@ -188,25 +188,24 @@ class besthea::mesh::spacetime_cluster {
       _children = nullptr;
     }
   }
-  
+
   /**
    * Initialize local contribution as full matrix of zeros.
    * @param[in] n_rows_contribution Number of rows.
    * @param[in] n_columns_contribution Number of columns.
-   * \note If the contributions are set already, then they are resized and
+   * @note If the contributions are set already, then they are resized and
    * reset to zero.
-   * \todo Is resizing of a full matrix allocated with new safe?
+   * @todo Is resizing of a full matrix allocated with new safe?
    */
-  void set_local_contribution( lo n_rows_contribution, 
-                               lo n_columns_contribution ) {
+  void set_local_contribution(
+    lo n_rows_contribution, lo n_columns_contribution ) {
     if ( _local_contribution == nullptr ) {
-      _local_contribution = new full_matrix_type( n_rows_contribution, 
-                                                  n_columns_contribution );
-    }
-    else {
-  //   TODO: see comment above
-      _local_contribution->resize( n_rows_contribution, 
-                                   n_columns_contribution );
+      _local_contribution
+        = new full_matrix_type( n_rows_contribution, n_columns_contribution );
+    } else {
+      //   TODO: see comment above
+      _local_contribution->resize(
+        n_rows_contribution, n_columns_contribution );
       _local_contribution->fill( 0.0 );
     }
   }
@@ -219,25 +218,24 @@ class besthea::mesh::spacetime_cluster {
       _local_contribution->fill( 0.0 );
     }
   }
-  
+
   /**
    * Initialize moment contribution as full matrix of zeros.
    * @param[in] n_rows_contribution Number of rows.
    * @param[in] n_columns_contribution Number of columns.
-   * \note If the contributions are set already, then they are resized and
+   * @note If the contributions are set already, then they are resized and
    * reset to zero.
-   * \todo Is resizing of a full matrix allocated with new safe?
+   * @todo Is resizing of a full matrix allocated with new safe?
    */
-  void set_moment_contribution( lo n_rows_contribution, 
-                                lo n_columns_contribution ) {
+  void set_moment_contribution(
+    lo n_rows_contribution, lo n_columns_contribution ) {
     if ( _moment_contribution == nullptr ) {
-      _moment_contribution = new full_matrix_type( n_rows_contribution, 
-                                                   n_columns_contribution );
-    }
-    else {
-  // TODO: see comment above
-      _moment_contribution->resize( n_rows_contribution, 
-                                    n_columns_contribution );
+      _moment_contribution
+        = new full_matrix_type( n_rows_contribution, n_columns_contribution );
+    } else {
+      // TODO: see comment above
+      _moment_contribution->resize(
+        n_rows_contribution, n_columns_contribution );
       _moment_contribution->fill( 0.0 );
     }
   }
@@ -250,14 +248,14 @@ class besthea::mesh::spacetime_cluster {
       _moment_contribution->fill( 0.0 );
     }
   }
-  
+
   /**
    * Returns pointer to the local contribution.
    */
   full_matrix_type * get_local_contribution( ) {
     return _local_contribution;
   }
-  
+
   /**
    * Returns pointer to the moment contribution.
    */
@@ -276,33 +274,33 @@ class besthea::mesh::spacetime_cluster {
    * Returns number of elements in the cluster.
    */
   lo get_n_elements( ) const {
-    return _spatial_cluster.get_n_elements( ) 
+    return _spatial_cluster.get_n_elements( )
       * _temporal_cluster.get_n_elements( );
   }
 
   /**
-   * Returns number of degrees of freedom in the cluster (depending on the 
-   * underlying space) 
+   * Returns number of degrees of freedom in the cluster (depending on the
+   * underlying space)
    */
   template< class space_type >
   lo get_n_dofs( ) const;
-
 
   /**
    * Prints info of the object.
    */
   void print( ) {
-    std::cout << _level << ", space: " << _spatial_cluster.get_level( ) 
-              << " time: " << _temporal_cluster.get_level( ) << std::endl;
+    std::cout << "level, overall: " << _level
+              << ", space: " << _spatial_cluster.get_level( )
+              << " time: " << _temporal_cluster.get_level( );
     besthea::linear_algebra::vector spat_center( 3, false );
     _spatial_cluster.get_center( spat_center );
     sc temp_center = _temporal_cluster.get_center( );
-    std::cout << "spatial center: (" << spat_center[ 0 ] << ", "
-              << spat_center[ 1] << ", " << spat_center[ 2 ] << ")" 
-              << std::endl;
-    std::cout << "temporal center: " << temp_center << std::endl;
-    std::cout << "nr temporal elements: " << _temporal_cluster.get_n_elements( )
-              << std::endl;
+    std::cout << ", spatial center: (" << spat_center[ 0 ] << ", "
+              << spat_center[ 1 ] << ", " << spat_center[ 2 ] << ")";
+    std::cout << ", temporal center: " << temp_center;
+    // std::cout << "nr temporal elements: "
+    //           << _temporal_cluster.get_n_elements( );
+    std::cout << std::endl;
   }
 
  private:
@@ -310,35 +308,39 @@ class besthea::mesh::spacetime_cluster {
   time_cluster & _temporal_cluster;  //!< underlying temporal cluster
   spacetime_cluster * _parent;       //!< parent of the space-time cluster
   std::vector< spacetime_cluster * > * _children;  //!< children of the cluster
-  full_matrix_type *_moment_contribution; //!< matrix to store the intermediate 
-                                          //!< products in the upward FMM step
-  full_matrix_type *_local_contribution; //!< matrix to store the intermediate 
-                                         //!< products in the downpward FMM step
-  std::vector< spacetime_cluster * > * _interaction_list; //!< interaction list
-                                                          //!< of the cluster
-  std::vector< spacetime_cluster * > * 
-    _nearfield_list;  //!< nearfield list of the cluster (only computed for 
+  full_matrix_type *
+    _moment_contribution;  //!< matrix to store the intermediate
+                           //!< products in the upward FMM step
+  full_matrix_type *
+    _local_contribution;  //!< matrix to store the intermediate
+                          //!< products in the downpward FMM step
+  std::vector< spacetime_cluster * > * _interaction_list;  //!< interaction list
+                                                           //!< of the cluster
+  std::vector< spacetime_cluster * > *
+    _nearfield_list;  //!< nearfield list of the cluster (only computed for
                       //!< leaf clusters)
-  
+
   lo _level;  //!< level within the cluster tree
 };
 
 /** specialization for p0 basis functions */
-template<> inline
-lo besthea::mesh::spacetime_cluster::get_n_dofs<
-besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >( ) const {
-  return _temporal_cluster.get_n_elements( ) * 
-    _spatial_cluster.get_n_dofs< 
-    besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >( );
+template<>
+inline lo besthea::mesh::spacetime_cluster::get_n_dofs<
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >( )
+  const {
+  return _temporal_cluster.get_n_elements( )
+    * _spatial_cluster.get_n_dofs<
+      besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >( );
 }
 
 /** specialization for p1 basis functions */
-template<> inline
-lo besthea::mesh::spacetime_cluster::get_n_dofs<
-besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >( ) const {
-  return _temporal_cluster.get_n_elements( ) * 
-    _spatial_cluster.get_n_dofs< 
-    besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >( );
+template<>
+inline lo besthea::mesh::spacetime_cluster::get_n_dofs<
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >( )
+  const {
+  return _temporal_cluster.get_n_elements( )
+    * _spatial_cluster.get_n_dofs<
+      besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >( );
 }
 
 #endif /* INCLUDE_BESTHEA_SPACETIME_CLUSTER_H_ */

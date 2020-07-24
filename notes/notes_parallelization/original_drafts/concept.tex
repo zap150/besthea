@@ -1,0 +1,299 @@
+\documentclass[a4paper]{scrartcl}
+%\documentclass[a4paper,DIV15]{scrartcl}
+\usepackage[utf8]{inputenc}   % damit man Umlaute direkt eingeben kann und diese erkannt werden.
+\usepackage[T1]{fontenc}        % Umlaute werden als eine Einheit angesehen -> richtige Trennung;
+                                % au"serdem: die T1-Fonts gibt es auch in
+                                % größeren Größen 
+
+\usepackage[english]{babel}      %hiermit erhält man z.B. 'Abb.' statt 'Fig.' bei Bildbeschriftungen  
+\usepackage[english]{nomencl}    % fuer Abkuerzungsverzeichnis, wie bei bibtex
+\usepackage{amsmath,amsthm,amsfonts,bbm}
+\usepackage{color}
+\usepackage{pgfplots}
+\usepackage{pgf}
+\usepackage{tikz}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\algrenewcommand{\algorithmiccomment}[1]{$\triangleright$ \emph{#1}}
+\usepackage{todonotes}
+
+\begin{document}
+
+\title{Concept for distributed parallelization}
+\date{\today}
+\maketitle
+
+\section{General idea}
+A mesh generator creates a decomposition of the mesh and
+an assignment of tasks on the temporal level in an initial step. The processes
+generate an overlapping decomposition of the space-time cluster tree and run
+the FMM algorithm in parallel.
+\subsection{Restrictions}
+\begin{itemize}
+\item  We do not aim at general space-time meshes. There will be a basic
+  tensor product structure to generate the slice and a subsequent, limited local
+  simplicial refinement.
+\item Increasing the number of processes only effects the temporal
+  parallelization. We will not achieve scalability for general meshes and general
+  mesh refinement.
+\end{itemize}
+\subsection{Sequential initial step}
+ A (sequential) mesh generator (and scheduler) creates a decomposition of the
+ global space-time mesh into time slices, an initial temporal cluster tree, and an
+ assignment of tasks to the processes.
+\begin{itemize}
+\item Aim of the scheduler: rough load balance (in case of adaptivity we need more time slices
+  than processes)
+\item advantage: All  information is available, even spatial. The information can
+  be used to improve estimations of the workload.
+\end{itemize}
+
+\subsection{Parallel execution of the algorithm}
+
+\subsubsection{Generation of the data structures}
+
+\begin{itemize}
+\item Each process creates the data structures which are required for executing the
+  assigned operations. This results in an overlapping decomposition of the
+  space-time cluster tree.
+\item We decompose the cluster tree but we have to distribute the FMM operations.
+  To do so, we mark responsibilities of the process for the expansions on the
+  temporal level.
+\end{itemize}
+
+\subsubsection{FMM algorithm}
+The FMM algorithm is executed in parallel. This involves communication.
+\begin{itemize}
+  \item Based on the created responsibilities the process / the (local) FMM algorithm
+    decides which operations have to executed.   
+\item The implementation has to be quite flexible with respect to the order of
+  the operations to hide the algorithmic dependencies and the
+  communication.
+\item possibilities to improve the load balance:
+  \begin{itemize}
+   \item local redistribution of work between partners: change assignment for
+     temporal M2L or even splitting etc 
+   \item Global redistribution of responsibilities, i.e., assignment of clusters
+     and expansions might be tricky.
+  \end{itemize}
+\end{itemize}
+
+
+\section{Mesh generator and scheduler}
+
+Input:
+\begin{itemize}
+\item  an initial spatial mesh
+\item a time interval
+\item an initial time stepsize or a 1d decompositon
+\item the number of processes
+\item (later: additional simplicial refinement)
+\end{itemize}
+Output:
+\begin{itemize}
+\item sequence of space-time meshes in time-ascending order, one per process
+\item initial temporal cluster tree (alternatively: complete space-time cluster tree)
+\item assignment of one process to every expansions (multipole and local) and
+  related operations along the initial temporal cluster tree 
+\end{itemize}
+
+\subsection{Data format for distributed meshes }
+missing
+
+\subsection{Data format for cluster trees}
+\begin{itemize}
+\item We fix the order of the tree traversal and store the information which children are
+created (0 or 1 in binary format, length maximal number of children).
+\item From this information, we can recreate the tree.
+\item Maybe we need some enhancement to provide initial levels which have more
+  clusters.
+\item or maybe some standard format
+\item Note that the ordering should match the order of the parallel generation.
+\end{itemize}
+
+\subsection{Data format for the  task assignment}
+\begin{itemize}
+\item With the fixed order of the tree traversal and the subdivision information, we
+  have a strict order of the clusters.
+\item We can use two lists (with this ordering) to assign the responsibilities
+  of the processes, i.e., its index, to compute the related multipole and local expansions. 
+\end{itemize}
+
+
+\subsection{Strategy for load balancing}
+\begin{itemize}
+\item Every second time cluster involves two M2L operations. Keep this in mind
+  when assigning clusters/expansions on coarser levels.
+\item idea: always the process with smaller index while ascending in the binary
+  tree: Less communication for M2M and L2L, but somehow sequential.
+\item idea: process with smaller index on the level above leaf level; in total
+  2 clusters per process.
+  about 1.5 times the communication effort for M2M and L2L, but more flexible.
+\item later more elaborated strategies possible
+\item less computational effort on coarser levels
+\end{itemize}
+
+\section{FMM setup}
+\begin{itemize}
+\item The global initial temporal cluster tree and the assignments of
+  responsibilities (expansions)  are known to each process.
+\item Each process reads the assigned mesh and the meshes in the temporal nearfield from
+  files. Thus the nearfield calculations can be done without communication. 
+\item Each process generates the part of the global space-time cluster tree
+  which is necessary for the assigned operations and sets up the related
+  communication patterns.
+\item The starting point are the assigned temporal expansions. These have to be
+  enhanced by the  expansions which are needed to execute the related
+  operations. This will result in a local segment of the global time cluster tree.
+\item We have to assign the detailed status to the expansions reflecting the
+  responsibilities and the communication. There are several cases for both the
+  multipole and the local expansions:
+  \begin{itemize}
+  \item compute and send
+  \item receive and send
+  \item receive 
+  \item compute when other information is available
+  \item purely local operations
+  \item no action (cluster exits for traversal but not responsible for local or multipole expansion)
+  \item \ldots ?
+  \end{itemize}
+  The terms send and receive do not refer to the action but the status.
+  \item As we do not have operation lists, the FMM algorithm decides on these responsibilities
+    which operations have to executed and when. 
+\item Based on the local segment of the global time cluster tree, the local
+  segment of space-time cluster tree is created. This can be done independently
+  for fixed spatial meshes and fixed time steps.
+\item For more general meshes the spatial subdivisioning depends on the
+  specific position of the elements. Thus the spatial part of the tree may
+  differ over time on coarse levels already. Therefore the upper part of
+  space-time cluster tree has to be created collaboratively. The lower part can
+  be create top down independently and be communicated. We can use the
+  described format again. 
+\item We have to communicate padding.
+\end{itemize}
+
+\subsection{Some ideas on generating the cluster tree}
+
+\paragraph{bottom up approach}
+\begin{itemize}
+\item A purely bottom up approach might create a tree with many different
+  related operations.
+\end{itemize}
+
+\paragraph{sequential collaborative top down generation}
+\begin{itemize}
+\item use the original recursive routine to generate the tree
+\item only change: after counting the local elements assigned to each subbox
+  there is a global allreduce operation before creating the children
+\item many global allreduce operations and sequential process
+\end{itemize}
+
+\paragraph{level-wise collaborative top down generation}
+
+level-wise generation of the tree in several steps:
+\begin{enumerate}
+  \item generate physical cluster tree (clusters to which the process
+    contributes elements):
+    \begin{enumerate}
+      \item traverse the tree to the current level, count the local elements in
+        each (possible) subbox and write this number to a global array.
+      \item allreduce operation on the array
+      \item traverse to the current level and generate the local (physical)
+        segment of the tree.
+      \item continue with next level
+    \end{enumerate}
+    The steps a) and c) are fully parallel. Only step b) involves communication. In
+    total, the amount of global data exchange is proportional to the number of total
+    clusters/elements. This seems to be acceptable; some estimate:
+    $2^{10}$ processes, 10 temporal levels, maximal $2^5 16^5 \approx 33.5$
+    million (possible) clusters, i.e. communicated numbers.
+    A tricky localization of the communication is possible, but I guess it is not
+    worth to spend  time on this task.
+  \item Additional refinement beyond the level of partitioning can be done
+      locally and distributed later. 
+\item Enhancement of the local cluster tree (creating local essential tree):
+  \begin{enumerate}
+  \item Communicate padding etc. This is necessary to create the correct
+    nearfields etc. We guess that the padding is not so critical
+    because of the FGT in space and in time we start from a tensor product grid.
+  \item Blow up the local cluster tree, such that all operations can be
+    performed, i.e. add clusters in the nearfields and interaction lists:
+    \begin{itemize}
+    \item This can be done (up to the level of partitioning) independently, as all necessary information has be
+    distributed before.
+    \item Only the additional local extensions of the tree have to be
+      communicated to neighbors, maybe by one-sided communication with \texttt{mpi\_get}. 
+    \end{itemize}
+  \end{enumerate}
+\end{enumerate}
+
+
+
+  
+\section{FMM algorithm}
+The FMM algorithm is executed in parallel. This involves communication.
+\begin{itemize}
+  \item Each process runs a modified version of the algorithm on its local segment
+    of the global space-time cluster tree.
+  \item Based on the created responsibilities the process and the FMM
+    algorithm, respectively, decides which operations have to executed.   
+\item We have to account for data dependencies in the original algorithm and we
+  would like to hide the communication.
+\item The implementation has to be quite flexible (maybe not even level-wise)
+  with respect to the order of the operations, e.g., we should allow M2L before
+  the initial L2L.
+\item There is a clear priority of the operations for parallelization:
+  \begin{enumerate}
+  \item operations to compute expansions which have to be provided for other processes
+  \item operations independent of communication (nearfield, purely local
+    calculations, etc )
+  \item operations which depend on data from other processes
+  \end{enumerate}
+\item But there are algorithmic dependencies of the operations. We need
+  some kind of breakpoints to implement these. There might be quite a lot.
+\item We cannot easily reorder the FMM operations without operation lists.
+  I do not see how to avoid multiple traversal of the tree without a stack
+  of open tasks. How to identify open tasks in multiple traversal of the tree?
+    Maybe we can create a short task queue (of postponed operations) which
+    is checked from time to time (and executed) during the tree traversal.
+\item Some operations are bound to certain processes:
+  \begin{itemize}
+  \item S2M and S2L require geometric information and therefore assigned to the
+    sender 
+  \item M2M, L2L and M2L can be redistribute between sender and receiver.
+  \item L2T and M2T require geometric information and therefore assigned to the
+    receiver
+  \end{itemize}
+\item possibilities to improve the load balance:
+  \begin{itemize}
+   \item local redistribution of work between partners: change assignment for
+     temporal M2L or even splitting etc 
+   \item Global redistribution of responsibilities, i.e., assignment of clusters
+     and expansions might be tricky.
+  \end{itemize}
+\end{itemize}
+
+\subsection{A pseucode version of the algorithm}
+\input{sketchfmm.tex}
+
+\section{Tasks}
+\begin{itemize}
+\item add Raphael's list of the information required for each operation
+\item more details on strategies for scheduler, see Raphael
+\item data format for distributed meshes. Which information is required for
+  communication? global indices of vertices?
+\item How to deal with discrepancies of the temporal refinement of the
+  space-time cluster tree from  the temporal cluster tree?
+  \item details on flexible FMM algorithm
+  \item How to implement the assignment of S2L and M2T ?
+  \item How to collect communication without increasing the data dependencies?
+\end{itemize}
+
+
+\end{document}
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:

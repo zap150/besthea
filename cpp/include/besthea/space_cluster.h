@@ -407,7 +407,7 @@ class besthea::mesh::space_cluster {
    * Returns a reference to the matrix storing quadratures of the product
    * of Chebyshev polynomials, p1 basis functions and the selected component of
    * the normal vector over the elements of the cluster.
-   * \param[in] dim   Indicates which component of the normal vector is used
+   * @param[in] dim   Indicates which component of the normal vector is used
    *                  (0,1,2).
    */
   full_matrix_type & get_cheb_times_normal_quad( lo dim ) {
@@ -422,7 +422,7 @@ class besthea::mesh::space_cluster {
   /**
    * Returns a reference to the vector storing the selected component of the
    * surface curls of p1 basis functions.
-   * \param[in] dim   Indicates which component of the surface curls is returned
+   * @param[in] dim   Indicates which component of the surface curls is returned
    *                  (0,1,2).
    */
   std::vector< sc > & get_surf_curls( lo dim ) {
@@ -520,6 +520,19 @@ class besthea::mesh::space_cluster {
     }
   }
 
+  /**
+   * Prints info of the object.
+   */
+  void print( ) {
+    std::cout << "level: " << _level;
+    std::cout << ", center: (" 
+              << _center[ 0 ] << ", " << _center[ 1 ] << ", " << _center[ 2 ] 
+              << "), half size: (" 
+              << _half_size[ 0 ] << ", " << _half_size[ 1 ] << ", "
+              << _half_size[ 1 ]
+              << "), elements: " << _n_elements << std::endl;
+  }
+
  private:
   lo _n_elements;          //!< number of elements in the cluster
   vector_type _center;     //!< center of the cluster
@@ -605,7 +618,7 @@ void besthea::mesh::space_cluster::local_elem_to_local_dofs<
 }
 
 /** specialization for p1 basis functions
- * \todo Is a more elegant implementation with map as in basis_tri_p1.cpp
+ * @todo Is a more elegant implementation with map as in basis_tri_p1.cpp
  * possible without wasting too much storage.
  */
 template<> inline

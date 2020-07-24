@@ -103,12 +103,31 @@ class besthea::mesh::spacetime_cluster_tree {
    * Prints levels of the tree.
    */
   void print( ) {
+    // print cluster information recursively
     print_internal( _root );
+    // print general tree information
     std::cout << "number of levels of spacetime tree " << _levels << std::endl;
     std::cout << "number of levels of space tree " << _space_tree->get_levels( )
               << std::endl;
     std::cout << "number of levels of time tree " << _time_tree->get_levels( )
               << std::endl;
+    std::cout << "_start_spatial_level is " << _start_spatial_level 
+              << std::endl;
+    std::cout << "_start_temporal_level is " << _start_temporal_level 
+              << std::endl;
+    // print vector of paddings in time and space
+    const std::vector< sc > time_paddings = _time_tree->get_paddings( );
+    std::cout << "padding in time (level-wise): " << std::endl;
+    for ( lou i = 0; i < time_paddings.size( ); ++i ) {
+      std::cout << time_paddings[ i ] << " ";
+    }
+    std::cout << std::endl;
+    const std::vector< sc > space_paddings = _space_tree->get_paddings( );
+    std::cout << "padding in space (level-wise): " << std::endl;
+    for ( lou i = 0; i < space_paddings.size( ); ++i ) {
+      std::cout << space_paddings[ i ] << " ";
+    }
+    std::cout << std::endl;
   }
 
   /**
@@ -212,7 +231,7 @@ class besthea::mesh::spacetime_cluster_tree {
 
   /**
    * Recursively fills the interaction lists of clusters starting at root.
-   * \param[in] root  Starting cluster for the recursion.
+   * @param[in] root  Starting cluster for the recursion.
    */
   void determine_interactions( spacetime_cluster & root );
 
@@ -234,6 +253,9 @@ class besthea::mesh::spacetime_cluster_tree {
 
   /**
    * Recursively builds the tree of spacetime clusters
+   * param[in] root Current root cluster
+   * param[in] level Current level
+   * param[in] split_space Indicating whether to split space or only time
    */
   void build_tree( spacetime_cluster * root, lo level, bool split_space );
 

@@ -26,7 +26,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <besthea/spacetime_cluster_tree.h>
+#include "besthea/spacetime_cluster_tree.h"
 
 #include <algorithm>
 #include <cmath>
@@ -97,7 +97,7 @@ besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
   //   time_cluster * >( _space_tree->get_root( ), _time_tree->get_root( ) ),
   //   & _root ) );
 
-  // if the space has to be split to fullfil the condition, the individual roots
+  // if the space has to be split to fulfill the condition, the individual roots
   // are stored in the space_roots vector
   std::vector< space_cluster * > space_roots;
   get_space_clusters_on_level(

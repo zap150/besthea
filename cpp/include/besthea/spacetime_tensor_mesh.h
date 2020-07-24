@@ -121,10 +121,9 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * Returns node indices of a space-time element.
    * @param[in] i_element Index of the element.
    * @param[out] element Element indices (array of 6 indices).
-   * \todo Should element really be 3 and not 6 here?!
    */
   void get_element(
-    lo i_element, linear_algebra::indices< 3 > & element ) const {
+    lo i_element, linear_algebra::indices< 6 > & element ) const {
     lo space_elem_idx;
     lo time_elem_idx;
     map_index( i_element, space_elem_idx, time_elem_idx );
@@ -330,6 +329,59 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
   }
 
   /**
+   * Returns coordinates of all  nodes of an element.
+   * @param[in] i_element Index of the temporal element.
+   * @param[out] nodes Vector of linear_algebra::coordinates. If the size is not
+   * corresponding to the number of nodes per element, it will be resized.
+   */
+  void get_nodes( lo i_element,
+    std::vector< linear_algebra::coordinates< 4 > > & nodes ) const {
+    if ( nodes.size( ) != (long unsigned int) _n_nodes_per_element ) {
+      nodes.resize( _n_nodes_per_element );
+    }
+
+    lo space_elem_idx;
+    lo time_elem_idx;
+    map_index( i_element, space_elem_idx, time_elem_idx );
+
+    linear_algebra::coordinates< 3 > x1, x2, x3;
+    linear_algebra::coordinates< 1 > t1, t2;
+
+    _space_mesh->get_nodes( space_elem_idx, x1, x2, x3 );
+    _time_mesh->get_nodes( time_elem_idx, t1, t2 );
+
+    ( nodes[ 0 ] )[ 0 ] = x1[ 0 ];
+    ( nodes[ 0 ] )[ 1 ] = x1[ 1 ];
+    ( nodes[ 0 ] )[ 2 ] = x1[ 2 ];
+    ( nodes[ 0 ] )[ 3 ] = t1[ 0 ];
+
+    ( nodes[ 1 ] )[ 0 ] = x2[ 0 ];
+    ( nodes[ 1 ] )[ 1 ] = x2[ 1 ];
+    ( nodes[ 1 ] )[ 2 ] = x2[ 2 ];
+    ( nodes[ 1 ] )[ 3 ] = t1[ 0 ];
+
+    ( nodes[ 2 ] )[ 0 ] = x2[ 0 ];
+    ( nodes[ 2 ] )[ 1 ] = x2[ 1 ];
+    ( nodes[ 2 ] )[ 2 ] = x2[ 2 ];
+    ( nodes[ 2 ] )[ 3 ] = t1[ 0 ];
+
+    ( nodes[ 3 ] )[ 0 ] = x1[ 0 ];
+    ( nodes[ 3 ] )[ 1 ] = x1[ 1 ];
+    ( nodes[ 3 ] )[ 2 ] = x1[ 2 ];
+    ( nodes[ 3 ] )[ 3 ] = t2[ 0 ];
+
+    ( nodes[ 4 ] )[ 0 ] = x2[ 0 ];
+    ( nodes[ 4 ] )[ 1 ] = x2[ 1 ];
+    ( nodes[ 4 ] )[ 2 ] = x2[ 2 ];
+    ( nodes[ 4 ] )[ 3 ] = t2[ 0 ];
+
+    ( nodes[ 5 ] )[ 0 ] = x2[ 0 ];
+    ( nodes[ 5 ] )[ 1 ] = x2[ 1 ];
+    ( nodes[ 5 ] )[ 2 ] = x2[ 2 ];
+    ( nodes[ 5 ] )[ 3 ] = t2[ 0 ];
+  }
+
+  /**
    * Returns the length of  time interval.
    * @param[in] i_element Index of the element.
    */
@@ -350,6 +402,20 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
     centroid[ 0 ] = ( x1[ 0 ] + x2[ 0 ] + x3[ 0 ] ) / 3.0;
     centroid[ 1 ] = ( x1[ 1 ] + x2[ 1 ] + x3[ 1 ] ) / 3.0;
     centroid[ 2 ] = ( x1[ 2 ] + x2[ 2 ] + x3[ 2 ] ) / 3.0;
+  }
+
+  void get_centroid( lo i_elem, linear_algebra::coordinates< 4 > & centroid ) {
+    lo space_elem_idx;
+    lo time_elem_idx;
+    map_index( i_elem, space_elem_idx, time_elem_idx );
+
+    linear_algebra::coordinates< 3 > x1, x2, x3;
+    _space_mesh->get_nodes( space_elem_idx, x1, x2, x3 );
+
+    centroid[ 0 ] = ( x1[ 0 ] + x2[ 0 ] + x3[ 0 ] ) / 3.0;
+    centroid[ 1 ] = ( x1[ 1 ] + x2[ 1 ] + x3[ 1 ] ) / 3.0;
+    centroid[ 2 ] = ( x1[ 2 ] + x2[ 2 ] + x3[ 2 ] ) / 3.0;
+    centroid[ 3 ] = _time_mesh->get_centroid( time_elem_idx );
   }
 
   /**
@@ -468,7 +534,7 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
   virtual void refine_time( int level );
 
   /**
-   * Maps global space-time index to separate space and time indices.
+   * Maps space-time index to separate space and time indices.
    * @param[in] i_element Space-time element index.
    * @param[out] i_space_element Spatial element index.
    * @param[out] i_time_element Temporal element index.
@@ -482,6 +548,7 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
   triangular_surface_mesh *
     _space_mesh;               //!< pointer to a triangular_surface_mesh.h
   temporal_mesh * _time_mesh;  //!< pointer to a temporal_mesh.h
+  const lo _n_nodes_per_element = 6;
 };
 
 #endif /* INCLUDE_BESTHEA_SPACETIME_TENSOR_MESH_H_ */

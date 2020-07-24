@@ -933,6 +933,38 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_datafiles(
   return true;
 }
 
+bool besthea::mesh::triangular_surface_mesh::save(
+  const std::string & directory, const std::string & filename,
+  const std::string & suffix ) {
+  std::string file_path = directory + filename + "." + suffix;
+
+  std::ofstream file( file_path.c_str( ) );
+
+  if ( !file.is_open( ) ) {
+    std::cout << "File '" << file_path << "' could not be opened!" << std::endl;
+    return false;
+  }
+
+  file << "3\n"
+       << "3\n\n"
+       << _n_nodes << "\n";
+
+  for ( lo i = 0; i < _n_nodes; ++i ) {
+    file << _nodes[ 3 * i ] << " " << _nodes[ 3 * i + 1 ] << " "
+         << _nodes[ 3 * i + 2 ] << "\n";
+  }
+
+  file << "\n" << _n_elements << "\n";
+
+  for ( lo i = 0; i < _n_elements; ++i ) {
+    file << _elements[ 3 * i ] << " " << _elements[ 3 * i + 1 ] << " "
+         << _elements[ 3 * i + 2 ] << "\n";
+  }
+
+  file.close( );
+  return true;
+}
+
 bool besthea::mesh::triangular_surface_mesh::print_ensight(
   const std::string & directory, const std::vector< std::string > * node_labels,
   const std::vector< linear_algebra::vector * > * node_data,

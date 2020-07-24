@@ -36,8 +36,10 @@
 #include "besthea/settings.h"
 #include "besthea/temporal_mesh.h"
 #include "besthea/time_cluster.h"
+#include "io_routines.h"
 
 #include <iostream>
+#include <string>
 
 namespace besthea {
   namespace mesh {
@@ -54,7 +56,7 @@ class besthea::mesh::time_cluster_tree {
    * Constructor
    * @param[in] mesh Reference to the underlying mesh.
    * @param[in] levels Maximum number of levels in the tree.
-   * @param[in] n_min_elems Minimum number of elements so that a cluster can be 
+   * @param[in] n_min_elems Minimum number of elements so that a cluster can be
    *                        split in halves in the construction of the tree.
    */
   time_cluster_tree( const temporal_mesh & mesh, lo levels, lo n_min_elems );
@@ -63,7 +65,9 @@ class besthea::mesh::time_cluster_tree {
    * Destructor.
    */
   virtual ~time_cluster_tree( ) {
-    delete _root;
+    if ( _root != nullptr ) {
+      delete _root;
+    }
   }
 
   /**
@@ -72,7 +76,7 @@ class besthea::mesh::time_cluster_tree {
   lo get_levels( ) const {
     return _levels;
   }
-  
+
   /**
    * Returns the maximal number of elements in a leaf cluster
    */
@@ -113,6 +117,85 @@ class besthea::mesh::time_cluster_tree {
     return _leaves;
   }
 
+  /**
+   * Returns the structure of the tree represented as a vector of chars.
+   *
+   * The chars are sorted according to the traversal of the tree (recursive,
+   * left subtree first). For every non-leaf cluster two chars are in the list
+   * indicating the status of its children
+   * (0: not existent, 1: non-leaf, 2: leaf)
+   */
+  std::vector< char > compute_tree_structure( ) const;
+
+  /**
+   * Computes the tree structure and prints it to a binary file
+   * @param[in] filename Name of the output file
+   */
+  void print_tree_structure( const std::string filename ) const {
+    write_vector_to_bin_file( compute_tree_structure( ), filename );
+  }
+
+  /**
+   * Assigns clusters of the tree to a given number of processes.
+   * Only those clusters whose level is less or equal than the level of the
+   * earliest leaf and greater than 1 are assigned to processes. The clusters
+   * are distributed levelwise:
+   *  - For levels where the number of clusters is larger than the number of
+   *    processes the clusters are distributed as uniformly as possible (each
+   *    process gets the same amount of clusters +/- 1) with the constraint that
+   *    if a cluster is assigned to a certain process at least one of its
+   *    children has to be assigned to the same process.
+   *  - Clusters at the first level where the number of processes is larger than
+   *    the number of clusters are assigned to the same process as their left
+   *    child.
+   *  - Clusters above this level are distributed according to one of three
+   *    strategies:
+   *    * Strategy 0: Assign clusters to those processes which handle the fewest
+   *      clusters at higher levels.
+   *    * Strategy 1: Similar to 0, but split the processes into groups for each
+   *      level and pick a process from each group (underlying idea: pick the
+   *      process with the fewest clusters in the subtree).
+   *    * Strategy 2: Always assign a cluster to the same process which handles
+   *      its left child.
+   *
+   * @param[in] n_processes Number of processes.
+   * @param[in] strategy  Indicates which strategy is used (default 2).
+   * \return A vector representing the distribution of the clusters. It contains
+   * the process ids according to the tree format.
+   */
+  std::vector< lo > compute_process_assignments(
+    const lo n_processes, const lo strategy ) const;
+
+  /**
+   * Computes the process assignments and prints them to a binary file
+   * @param[in] n_processes Number of processes used for the assignment.
+   * @param[in] strategy  Value between 0 and 2 indicating one of three
+   *                      strategies to assign the processes. See documentation
+   *                      of @ref compute_process_assignments for details.
+   * @param[in] filename Name of the output file.
+   */
+  void print_process_assignments( const lo n_processes, const lo strategy,
+    const std::string filename ) const {
+    write_vector_to_bin_file(
+      compute_process_assignments( n_processes, strategy ), filename );
+  }
+
+  /**
+   * Prints levels of the tree.
+   */
+  void print( ) {
+    // print cluster information recursively
+    print_internal( _root );
+    // print general tree information
+    std::cout << "number of levels: " << _levels << std::endl;
+    // print vector of paddings
+    std::cout << "padding: " << std::endl;
+    for ( lou i = 0; i < _paddings.size( ); ++i ) {
+      std::cout << _paddings[ i ] << " ";
+    }
+    std::cout << std::endl;
+  }
+
  private:
   time_cluster * _root;         //!< root cluster of the tree
   const temporal_mesh & _mesh;  //!< underlying mesh
@@ -121,8 +204,8 @@ class besthea::mesh::time_cluster_tree {
                         //!< levels (depending on _n_min_elems)
   lo _n_min_elems;  //!< minimum number of elements so that cluster can be split
                     //!< in halves
-  lo _n_max_elems_leaf; //!< maximal number of elements in a leaf cluster after 
-                        //!< construction.
+  lo _n_max_elems_leaf;  //!< maximal number of elements in a leaf cluster after
+                         //!< construction.
   std::vector< sc > _paddings;  //!< vector of paddings on each level
   std::vector< time_cluster * >
     _leaves;  //!< vector of all clusters without descendants
@@ -135,10 +218,67 @@ class besthea::mesh::time_cluster_tree {
   void build_tree( time_cluster & root, lo level );
 
   /**
+   * Recursively constructs the structural vector of a tree.
+   * @param[in] root Current cluster, whose children are considered to determine
+   *                 the next characters in the structural vector.
+   * @param[in,out] tree_vector Vector to store the tree structure.
+   * @note This method is supposed to be called by @ref compute_tree_structure.
+   */
+  void tree_2_vector(
+    const time_cluster & root, std::vector< char > & tree_vector ) const;
+
+  /**
+   * Takes a process assignment vector created in the routine
+   * @ref compute_process_assignments and converts it into a vector of process
+   * assignments in the format, which is used to represent the tree structure.
+   * This is done by traversing the tree recursively.
+   * @param[in] root  Current cluster in the recursion.
+   * @param[in] levelwise_assignment  Process assignment in the original format
+   * @param[in] thresh_level  First level in the tree which is larger or equal
+   *                          then the number of processes.
+   * @param[in] trunc_level Level of the earliest leaf cluster in the tree.
+   * @param[in] n_processes Number of processes for the assignment.
+   * @param[in] my_id Process id of the cluster which calls the routine. This is
+   *                  used to assign the same process id to the children of a
+   *                  cluster at levels below @p trunc_level.
+   * @param[in,out] assigned_clusters Counters for each level to keep track of
+   *                                  the number of clusters which have been
+   *                                  assigned.
+   * @param[in,out] process_pointers  Auxiliary vector for the assignment of
+   *                                  processes to clusters starting from
+   *                                  trunc_level. Contains an index for each
+   *                                  such level which indicates the process
+   *                                  which was last assigned.
+   * @param[in,out] process_assignment  Vector of process assignments in the
+   *                                    tree structure format.
+   * @note This method is solely used by @ref compute_process_assignments .
+   */
+  void convert_assignment_vector_2_tree_format( const time_cluster & root,
+    const std::vector< lo > & levelwise_assignment, const lo thresh_level,
+    const lo trunc_level, const lo n_processes, const lo my_id,
+    std::vector< lo > & assigned_clusters, std::vector< lo > & process_pointers,
+    std::vector< lo > & process_assignment ) const;
+
+  /**
    * Collects all clusters without descendants and stores them in the internal
    * _leaves vector.
    */
   void collect_leaves( time_cluster & root );
+
+  /**
+   * Aux for printing
+   */
+  void print_internal( time_cluster * root ) {
+    if ( root != nullptr ) {
+      root->print( );
+      std::vector< time_cluster * > * children = root->get_children( );
+      if ( children != nullptr )
+        for ( auto it = children->begin( ); it != children->end( ); ++it ) {
+          for ( lo i = 0; i < ( *it )->get_level( ); ++i ) std::cout << " ";
+          print_internal( *it );
+        }
+    }
+  }
 };
 
 #endif /* INCLUDE_BESTHEA_TIME_CLUSTER_TREE_H_ */

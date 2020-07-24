@@ -1,6 +1,8 @@
 .cproject
 .project
 .settings
+*.proc_assign
+*.tree_vec
 external
 lib
 build

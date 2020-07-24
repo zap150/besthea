@@ -66,8 +66,8 @@ besthea::mesh::space_cluster_tree::space_cluster_tree(
   std::vector< slou > coordinates = { 0, 0, 0, 0 };
   _root = new space_cluster( center, half_sizes, _mesh.get_n_elements( ),
     nullptr, 0, 0, coordinates, _mesh );
-  _coord_2_cluster.insert( std::pair< std::vector< slou >, space_cluster * >(
-    coordinates, _root ) );
+  _coord_2_cluster.insert(
+    std::pair< std::vector< slou >, space_cluster * >( coordinates, _root ) );
 
   for ( lo i = 0; i < _mesh.get_n_elements( ); ++i ) {
     _root->add_element( i );
@@ -155,12 +155,14 @@ void besthea::mesh::space_cluster_tree::build_tree(
       root.compute_suboctant( i, new_center, new_half_size );
       ++n_clusters;
 
+      // there was a problem with wrong index here( coord[0] instead [1]), first
+      // one is level
       slou coord_x
-        = 2 * root.get_box_coordinate( )[ 0 ] + _idx_2_coord[ i ][ 0 ];
+        = 2 * root.get_box_coordinate( )[ 1 ] + _idx_2_coord[ i ][ 0 ];
       slou coord_y
-        = 2 * root.get_box_coordinate( )[ 1 ] + _idx_2_coord[ i ][ 1 ];
+        = 2 * root.get_box_coordinate( )[ 2 ] + _idx_2_coord[ i ][ 1 ];
       slou coord_z
-        = 2 * root.get_box_coordinate( )[ 2 ] + _idx_2_coord[ i ][ 2 ];
+        = 2 * root.get_box_coordinate( )[ 3 ] + _idx_2_coord[ i ][ 2 ];
 
       std::vector< slou > coordinates
         = { static_cast< slou >( level ), coord_x, coord_y, coord_z };
@@ -284,20 +286,17 @@ void besthea::mesh::space_cluster_tree::find_neighbors( space_cluster & cluster,
 
   slou cluster_level = static_cast< slou >( cluster.get_level( ) );
   std::vector< slou > current_coordinates( 4 );
-  
+
   // compute lower bounds of following loops manually to avoid overflow
-  slou i_low = ( (lo) coordinates[ 1 ] - limit > 0 ? 
-                coordinates[ 1 ] - limit : 0 );
-  slou j_low = ( (lo) coordinates[ 2 ] - limit > 0 ? 
-                coordinates[ 2 ] - limit : 0 );
-  slou k_low = ( (lo) coordinates[ 3 ] - limit > 0 ? 
-                coordinates[ 3 ] - limit : 0 );
-  for ( slou i = i_low; i < coordinates[ 1 ] + limit + 1;
-        ++i ) {
-    for ( slou j = j_low; j < coordinates[ 2 ] + limit + 1;
-          ++j ) {
-      for ( slou k = k_low; k < coordinates[ 3 ] + limit + 1;
-            ++k ) {
+  slou i_low
+    = ( (lo) coordinates[ 1 ] - limit > 0 ? coordinates[ 1 ] - limit : 0 );
+  slou j_low
+    = ( (lo) coordinates[ 2 ] - limit > 0 ? coordinates[ 2 ] - limit : 0 );
+  slou k_low
+    = ( (lo) coordinates[ 3 ] - limit > 0 ? coordinates[ 3 ] - limit : 0 );
+  for ( slou i = i_low; i < coordinates[ 1 ] + limit + 1; ++i ) {
+    for ( slou j = j_low; j < coordinates[ 2 ] + limit + 1; ++j ) {
+      for ( slou k = k_low; k < coordinates[ 3 ] + limit + 1; ++k ) {
         current_coordinates = { cluster_level, i, j, k };
         if ( _coord_2_cluster.count( current_coordinates ) > 0 ) {
           neighbors.push_back(
