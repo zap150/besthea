@@ -979,6 +979,11 @@ void besthea::mesh::tree_structure::determine_essential_clusters(
     status_map.emplace( root.get_global_index( ), cluster_status );
     // if root is a leaf and the status of a cluster in the nearfield is 1 set
     // status to 2.
+    // TODO: Check later, whether this has to be changed! According to the 
+    // current assignment of processes to clusters all descendants of the 
+    // neighbors of root would be assigned to the same process as the neighbor
+    // itself. If this changes, one has to traverse the nearfield starting from
+    // the neighboring clusters.
     if ( root.get_n_children( ) == 0 ) {
       const std::vector< scheduling_time_cluster* >* nearfield
         = root.get_nearfield( );
@@ -997,7 +1002,7 @@ void besthea::mesh::tree_structure::determine_essential_clusters(
 
 void besthea::mesh::tree_structure::
   determine_levelwise_output_string( const lo digits, 
-  const bool print_process_ids, scheduling_time_cluster * root, 
+  bool print_process_ids, scheduling_time_cluster * root, 
   std::vector< std::string > & levelwise_output_strings ) const {
   if ( root != nullptr ) {
     lo current_level = root->get_level( );

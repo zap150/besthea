@@ -113,9 +113,9 @@ class besthea::mesh::tree_structure {
    * @note @p _leaves and @p _levels are reset.
    * @note The original global_indices of the clusters are not modified. This 
    * allows to identify clusters between different processes.
-   * @note A slightly larger part of the tree is kept then the locally essential
-   * tree: If a non-local leaf cluster has a local cluster in its nearfield it
-   * is also kept.
+   * @note A slightly larger part of the tree is kept then the usual locally 
+   * essential tree: If a non-local leaf cluster has a local cluster in its 
+   * nearfield it is also kept.
    */
   void reduce_2_essential( const lo my_process_id );
 
@@ -492,7 +492,7 @@ class besthea::mesh::tree_structure {
    *                                          are added.
    */
   void determine_levelwise_output_string( const lo digits, 
-  const bool print_process_ids, scheduling_time_cluster * root, 
+  bool print_process_ids, scheduling_time_cluster * root, 
   std::vector< std::string > & levelwise_output_strings ) const;
 
   /**
