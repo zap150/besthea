@@ -98,11 +98,11 @@ class besthea::mesh::general_spacetime_cluster {
       _level( level ),
       _octant( octant ),
       _left_right( left_right ),
-      _n_space_div( n_space_div ),
-      _n_time_div( n_time_div ),
       _padding( 0.0 ),
       _box_coordinate( coordinate ),
-      _process_id( process_id ) {
+      _process_id( process_id ),
+      _n_space_div( n_space_div ),
+      _n_time_div( n_time_div ) {
     if ( reserve_elements ) {
       _elements.reserve( _n_elements );
     }
@@ -330,7 +330,7 @@ class besthea::mesh::general_spacetime_cluster {
       _mesh.get_my_mesh( )->get_nodes(
         _mesh.global_2_local( _elements[ i ] ), node_vector );
       // loop over element's nodes
-      for ( lo j = 0; j < node_vector.size( ); ++j ) {
+      for ( lo j = 0; j < static_cast< lo >( node_vector.size( ) ); ++j ) {
         curr_node = node_vector.at( j ).data( );
         if ( ( ( _space_center[ 0 ] - _space_half_size[ 0 ] ) - curr_node[ 0 ]
                > space_padding ) ) {

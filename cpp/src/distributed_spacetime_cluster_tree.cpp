@@ -39,8 +39,8 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   : _max_levels( levels ),
     _real_max_levels( 0 ),
     _spacetime_mesh( spacetime_mesh ),
-    _n_min_elems( n_min_elems ),
     _s_t_coeff( st_coeff ),
+    _n_min_elems( n_min_elems ),
     _spatial_nearfield_limit( spatial_nearfield_limit ),
     _comm( comm ) {
   MPI_Comm_rank( *_comm, &_my_rank );
@@ -111,7 +111,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
         n_time_div, n_elems_per_subdivisioning );
     }
 
-    // level++;
     n_time_div++;
     if ( level % 2 == 0 ) {
       n_space_div++;
@@ -123,7 +122,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
   for ( auto it : my_leaves ) {
     fill_elements( *it );
 
-    build_subtree( *it, false );
+    build_subtree( *it, it->get_level( ) % 2 );
   }
 
   // exchange necessary data
@@ -149,7 +148,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   elems_in_clusters.resize( n_clusters );
   std::vector< lo > loc_elems_in_clusters( n_clusters, 0 );
   linear_algebra::coordinates< 4 > centroid;
-  lo pos_x, pos_y, pos_z, pos_t;
+  lo pos_x, pos_y, pos_z, pos_t = 0;
 
   vector_type space_center;
   space_center.resize( 3 );
@@ -192,8 +191,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   std::vector< sc > ends( timesteps.size( ) - 1, -1.0 );
   sc center;
 
-  for ( lo i = 0; i < timesteps.size( ) - 1; ++i ) {
-    for ( lo j = 0; j < slices.size( ) - 1; ++j ) {
+  for ( lo i = 0; i < static_cast< lo >( timesteps.size( ) ) - 1; ++i ) {
+    for ( lo j = 0; j < static_cast< lo >( slices.size( ) ) - 1; ++j ) {
       center = ( slices[ j ] + slices[ j + 1 ] ) / 2.0;
       if ( center > timesteps[ i ] && center <= timesteps[ i + 1 ] ) {
         if ( slices[ j ] < starts[ i ] ) {
@@ -222,7 +221,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
 
     lo start, end;
 
-    for ( lo i = 0; i < timesteps.size( ) - 1; ++i ) {
+    for ( lo i = 0; i < static_cast< lo >( timesteps.size( ) ) - 1; ++i ) {
       if ( centroid[ 3 ] > starts[ i ] && centroid[ 3 ] <= ends[ i ] ) {
         pos_t = i;
         break;
@@ -230,7 +229,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     }
 
     start = pos_x > 0 ? pos_x - 1 : pos_x;
-    end = pos_x < steps_x.size( ) - 2 ? pos_x + 1 : pos_x;
+    end = pos_x < static_cast< lo >( steps_x.size( ) ) - 2 ? pos_x + 1 : pos_x;
     for ( lo i = start; i <= end; ++i ) {
       if ( ( centroid[ 0 ] >= steps_x[ i ] )
         && ( centroid[ 0 ] < steps_x[ i + 1 ] ) ) {
@@ -240,7 +239,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     }
 
     start = pos_y > 0 ? pos_y - 1 : pos_y;
-    end = pos_y < steps_y.size( ) - 2 ? pos_y + 1 : pos_y;
+    end = pos_y < static_cast< lo >( steps_y.size( ) ) - 2 ? pos_y + 1 : pos_y;
     for ( lo i = start; i <= end; ++i ) {
       if ( ( centroid[ 1 ] >= steps_y[ i ] )
         && ( centroid[ 1 ] < steps_y[ i + 1 ] ) ) {
@@ -249,7 +248,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
       }
     }
     start = pos_z > 0 ? pos_z - 1 : pos_z;
-    end = pos_z < steps_z.size( ) - 2 ? pos_z + 1 : pos_z;
+    end = pos_z < static_cast< lo >( steps_z.size( ) ) - 2 ? pos_z + 1 : pos_z;
     for ( lo i = start; i <= end; ++i ) {
       if ( ( centroid[ 2 ] >= steps_z[ i ] )
         && ( centroid[ 2 ] < steps_z[ i + 1 ] ) ) {
@@ -342,14 +341,13 @@ void besthea::mesh::distributed_spacetime_cluster_tree::split_cluster(
   cluster.get_half_size( space_half_size, time_half_size );
 
   sc new_time_center, new_time_half_size;
-  lo coord_t;
 
   lo pos;
 
   // first, create left temporal cluster
   new_time_half_size = time_half_size / 2.0;
   new_time_center = time_center - new_time_half_size;
-  coord_t = 2 * parent_coord[ 4 ];
+  slou coord_t = 2 * parent_coord[ 4 ];
 
   bool is_my_cluster = false;
   lo owner = -1;
@@ -555,7 +553,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
   sc start_time = std::numeric_limits< sc >::infinity( );
   sc end_time = -1.0;
   sc slice_center;
-  for ( lo j = 0; j < slices.size( ) - 1; ++j ) {
+  for ( lo j = 0; j < static_cast< lo >( slices.size( ) ) - 1; ++j ) {
     slice_center = ( slices[ j ] + slices[ j + 1 ] ) / 2.0;
     if ( slice_center > cluster_start && slice_center <= cluster_end ) {
       if ( slices[ j ] < start_time ) {
@@ -595,19 +593,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
     beginning -= 1.0;
   }
 
-  lo n_elems = 0;
-
-  for ( lo i = 0; i < my_mesh->get_n_elements( ); ++i ) {
-    my_mesh->get_centroid( i, centroid );
-
-    if ( ( centroid[ 0 ] >= left ) && ( centroid[ 0 ] < right )
-      && ( centroid[ 1 ] >= front ) && ( centroid[ 1 ] < back )
-      && ( centroid[ 2 ] >= bottom ) && ( centroid[ 2 ] < top )
-      && ( centroid[ 3 ] > beginning ) && ( centroid[ 3 ] <= end ) ) {
-      n_elems++;
-    }
-  }
-  cluster.reserve_elements( n_elems );
+  cluster.reserve_elements( cluster.get_n_elements( ) );
 
   for ( lo i = 0; i < my_mesh->get_n_elements( ); ++i ) {
     my_mesh->get_centroid( i, centroid );
@@ -658,7 +644,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
   vector_type new_space_center( 3 );
   vector_type new_space_half_size( 3 );
 
-  slou coord_x, coord_y, coord_z, coord_t;
+  slou coord_x, coord_y, coord_z, coord_t = 0;
 
   if ( split_space ) {
     for ( lo i = 0; i < root.get_n_elements( ); ++i ) {

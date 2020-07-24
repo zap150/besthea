@@ -91,10 +91,11 @@ int main( int argc, char * argv[] ) {
 
   distributed_spacetime_tensor_mesh mesh(
     "test_mesh_d.txt", tree_vector_file, process_assignment_file, &comm );
+
   // std::cout << mesh.get_n_elements( ) << std::endl;
 
   besthea::mesh::distributed_spacetime_cluster_tree tree(
-    mesh, 6, 1, 1.0, 1, &comm );
+    mesh, 6, 10, 1.0, 1, &comm );
 
   MPI_Finalize( );
 }
