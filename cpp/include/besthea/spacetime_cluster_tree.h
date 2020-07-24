@@ -111,6 +111,10 @@ class besthea::mesh::spacetime_cluster_tree {
               << std::endl;
     std::cout << "number of levels of time tree " << _time_tree->get_levels( )
               << std::endl;
+    std::cout << "_start_spatial_level is " << _start_spatial_level 
+              << std::endl;
+    std::cout << "_start_temporal_level is " << _start_temporal_level 
+              << std::endl;
     // print vector of paddings in time and space
     const std::vector< sc > time_paddings = _time_tree->get_paddings( );
     std::cout << "padding in time (level-wise): " << std::endl;

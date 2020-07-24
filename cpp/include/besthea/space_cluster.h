@@ -525,9 +525,9 @@ class besthea::mesh::space_cluster {
    */
   void print( ) {
     std::cout << "level: " << _level;
-    std::cout << ", center ( " 
+    std::cout << ", center: (" 
               << _center[ 0 ] << ", " << _center[ 1 ] << ", " << _center[ 2 ] 
-              << "), half size: " 
+              << "), half size: (" 
               << _half_size[ 0 ] << ", " << _half_size[ 1 ] << ", "
               << _half_size[ 1 ]
               << "), elements: " << _n_elements << std::endl;

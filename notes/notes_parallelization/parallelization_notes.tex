@@ -259,14 +259,16 @@ The \textit{locally essential time cluster tree} of a process $p$ is the subtree
 \begin{enumerate}
   \item $p$ is responsible for $I$. \label{enum:lett_responsible}
   \item $I$ is in the interaction list of a cluster for which $p$ is responsible. \label{enum:lett_recv_m2l}
+  \item $I$ is in the nearfield of a leaf cluster for which $p$ is responsible. \label{enum:lett_nearfield_of_leaf}
   \item $I$'s interaction list contains a cluster for which $p$ is responsible. \label{enum:lett_send_m2l}
   \item $I$ is a child of a cluster for which $p$ is responsible. \label{enum:lett_send_l2l}
+  \item $I$ is a leaf and in its nearfield there is a cluster for which $p$ is responsible.\label{enum:lett_symmetric_nearfield} 
   \item $I$ has to be visited on a path from the root to one of the clusters in the local essential tree. 
   \label{enum:lett_path}
 \end{enumerate}
-Clusters satisfying only condition \ref{enum:lett_send_m2l} or \ref{enum:lett_send_l2l} are contained in the locally essential time tree to enable a sending process to determine the receiving processes.
+Clusters satisfying only condition \ref{enum:lett_send_m2l} or \ref{enum:lett_send_l2l} are contained in the locally essential time tree to identify the receiving process for a corresponding sending operation. Typically, a cluster satisfying only condition \ref{enum:lett_symmetric_nearfield} would not be included in the locally essential time tree, since it is not needed for any FMM or communication operations. However, keeping such clusters allows for an easier refinement of a locally essential time tree when necessary.
 
-The \textit{locally essential space-time cluster tree} of a process is defined as the subtree of the full space-time cluster tree which contains all clusters satisfying condition \ref{enum:lett_responsible}, \ref{enum:lett_recv_m2l} or \ref{enum:lett_path} in the above list. Clusters satisfying the other two conditions are not necessary, since communication is handled on the temporal level.
+The \textit{locally essential space-time cluster tree} of a process is defined as the subtree of the full space-time cluster tree which contains all clusters satisfying condition \ref{enum:lett_responsible}, \label{enum:lett_nearfield_of_leaf}, \ref{enum:lett_recv_m2l} or \ref{enum:lett_path} in the above list. Clusters satisfying the other three conditions are not included, since communication is handled on the temporal level and locally essential space-time cluster trees are typically not refined.
 
 \subsection{Some ideas on generating the space-time cluster tree} \label{sec:generation_spacetime_ct}
 
