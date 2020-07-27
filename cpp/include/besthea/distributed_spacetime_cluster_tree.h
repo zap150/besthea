@@ -73,6 +73,16 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     const distributed_spacetime_tensor_mesh & spacetime_mesh, lo max_levels,
     lo n_min_elems, sc st_coeff, lo spatial_nearfield_limit, MPI_Comm * comm );
 
+  /**
+   * Prints levels of the tree.
+   */
+  void print( ) {
+    // print general tree information
+    std::cout << "number of levels of spacetime tree " << _max_levels << std::endl;
+    // print cluster information recursively
+    print_internal( *_root );
+  }
+
  private:
   /**
    *
@@ -213,6 +223,23 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @param[in] split_space Indicate space split.
    */
   void build_subtree( general_spacetime_cluster & root, bool split_space );
+
+  void update_temporal_cluster_bounds( general_spacetime_cluster & root );
+
+  /**
+   * Aux for printing
+   */
+  void print_internal( general_spacetime_cluster & root ) {
+    root.print( );
+    std::vector< general_spacetime_cluster * > * children 
+      = root.get_children( );
+    // std::cout << children->size( ) << std::endl;
+    if ( children != nullptr )
+      for ( auto it = children->begin( ); it != children->end( ); ++it ) {
+        for ( lo i = 0; i < ( *it )->get_level( ); ++i ) std::cout << " ";
+        print_internal( **it );
+      }
+  }
 };
 
 #endif /* INCLUDE_BESTHEA_DISTRIBUTED_SPACETIME_CLUSTER_TREE_H_ */

@@ -53,8 +53,8 @@ int main( int argc, char * argv[] ) {
 
   // Choose the number of MPI processes used for computation and the id of the
   // cluster which is responsible for the output.
-  lo n_processes = 7;
-  lo output_id = 2;
+  lo n_processes = 4;
+  lo output_id = 3;
 
   MPI_Init(&argc,&argv);
   MPI_Comm communicator = MPI_COMM_WORLD;

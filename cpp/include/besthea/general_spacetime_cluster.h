@@ -428,6 +428,28 @@ class besthea::mesh::general_spacetime_cluster {
     _time_half_size = half_size;
   }
 
+  /**
+   * Prints info of the object.
+   */
+  void print( ) {
+    std::cout << "level: " << _level;
+    std::cout << ", spatial center: (" << _space_center[ 0 ] << ", "
+              << _space_center[ 1 ] << ", " << _space_center[ 2 ] << ")";
+    std::cout << ", temporal center: " << _time_center;
+    std::cout << ", spatial half size: (" << _space_half_size[ 0 ] << ", "
+              << _space_half_size[ 1 ] << ", " << _space_half_size[ 2 ] << ")";
+    std::cout << ", temporal half size: " << _time_half_size;     
+    std::cout << std::endl;
+    if ( _children == nullptr ) {
+      std::cout << "elements are: " << std::endl;
+      for ( lou i = 0; i < _elements.size( ); ++i ) {
+        // output global index of all elements
+        std::cout << _elements[i] << ", ";
+      }
+      std::cout << std::endl;
+    }
+  }
+
  private:
   lo _n_elements;             //!< number of spacetime elements in the cluster
   sc _time_center;            //!< temporal center of the cluster

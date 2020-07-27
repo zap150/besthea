@@ -400,6 +400,14 @@ class besthea::mesh::scheduling_time_cluster {
     return _ready_interaction_list;
   }
 
+  void set_essential_status( const char status ) {
+    _essential_status = status;
+  }
+
+  char get_essential_status( ) const {
+    return _essential_status;
+  }
+
   /**
    * Sets a flag which indicates if the cluster is active in the upward path of 
    * the FMM.
@@ -710,7 +718,16 @@ class besthea::mesh::scheduling_time_cluster {
     * _interaction_list;  //!< Interaction list of the cluster.
   std::vector< scheduling_time_cluster * >
     * _send_list;   //!< Contains all clusters in whose interaction list the 
-                    //!< cluster is contained. 
+                    //!< cluster is contained.
+  char _essential_status; //!< Indicates the status of a cluster in a 
+                          //!< distributed tree. Possible status are:
+                          //!< - 0: not essential
+                          //!< - 1: essential for time cluster only
+                          //!< - 2: essential for time and space-time cluster
+                          //!< - 3: local, i.e. directly essential
+                          //!< The status is assigned when the tree containing
+                          //!< the cluster is reduced to the locally essential
+                          //!< tree.
   bool _active_upward_path; //!< Indicates if the cluster is active in the
                             //!< upward path of the FMM.
   bool _active_downward_path; //!< Indicates if the cluster is active in the

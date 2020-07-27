@@ -409,49 +409,43 @@ class besthea::mesh::tree_structure {
    * root and another essential cluster). In addition, @p _levels is reset. The 
    * method is based on a tree traversal.
    * @param[in] root  Current cluster in the tree traversal.
-   * @param[in,out] status_map  Status of the clusters in the tree, indicating
-   *                            if a cluster is essential or not. The status of 
-   *                            a cluster is obtained by using its global index  
-   *                            as key. This is updated. 
    * @note This method is solely used by @ref reduce_2_essential .
    */
-  void prepare_essential_reduction( scheduling_time_cluster & root, 
-    std::unordered_map< lo, char > & status_map );
+  void prepare_essential_reduction( scheduling_time_cluster & root );
 
   /**
-   * Deletes clusters form the tree structure which are not locally essential.
-   * The method is based on a tree traversal.
+   * Deletes clusters form the tree structure which are not locally essential
+   * (in the time cluster tree). The method is based on a tree traversal.
    * @param[in] root  Current cluster in the tree traversal.
-   * @param[in] status_map  Status of the clusters in the tree, indicating if 
-   *                        a cluster is essential or not. The status of a
-   *                        cluster is obtained by using its global index as 
-   *                        key.
    */
-  void execute_essential_reduction( scheduling_time_cluster & root, 
-    const std::unordered_map< lo, char > & status_map ); 
+  void execute_essential_reduction( scheduling_time_cluster & root ); 
 
   /**
    * Determines the clusters which are essential for the current process by
    * traversing the tree recursively.
-   * A cluster is essential if it meets one of the following requirements:
-   * -  It is assigned to the process.
-   * -  It is in the interaction list of a cluster which is assigned to the 
-   *    process.
-   * -  It contains a cluster in its interaction list which is assigned to the
-   *    process.
-   * -  It is a child of a cluster which is assigned to the process.
-   * -  It is in the nearfield of a leaf cluster which is assigned to the 
-   *    process.
-   * -  It is a leaf cluster and one of the clusters in its nearfield is 
-   *    assigned to the process. (Such a cluster is strictly speaking not
-   *    essential, but we keep it to make expansions simpler)
+   * A cluster is essential in the temporal tree structure if it meets one of 
+   * the following requirements:
+   * -#  It is assigned to the process.
+   * -#  It is in the interaction list of a cluster which is assigned to the 
+   *     process.
+   * -#  It is in the nearfield of a leaf cluster which is assigned to the 
+   *     process.
+   * -#  It contains a cluster in its interaction list which is assigned to the
+   *     process.
+   * -#  It is a child of a cluster which is assigned to the process.
+   * -#  It is a leaf cluster and one of the clusters in its nearfield is 
+   *     assigned to the process. (Such a cluster is strictly speaking not
+   *     essential, but we keep it to make expansions simpler)
+   * 
+   * If a cluster satisfies one of the first three conditions the associated
+   * space-time clusters in a space-time cluster tree are also locally 
+   * essential. 
+   * 
+   * The member @p essential_status of the clusters is set by this 
+   * function. (see @ref scheduling_time_cluster::_essential_status for a list
+   * of possible status )
    * @param[in] my_process_id Id of the current process.
    * @param[in] root  Current cluster in the tree traversal.
-   * @param[in,out] status_map  Contains the status of the clusters using their 
-   *                            global indices as keys. Tree status are used: 
-   *                            - 0 (not essential), 
-   *                            - 1 (assigned to the process), 
-   *                            - 2 (other essential).
    * @note The locally essential tree should also contain clusters which are 
    * contained in a path from the root of the tree structure to a cluster which
    * meets one of the above requirements. Such clusters are not detected here, 
@@ -459,8 +453,7 @@ class besthea::mesh::tree_structure {
    * @note This method is solely used by @ref reduce_2_essential .
    */
   void determine_essential_clusters( const lo my_process_id, 
-    const scheduling_time_cluster & root, 
-    std::unordered_map< lo, char > & status_map ) const;
+    scheduling_time_cluster & root ) const;
 
   /**
    * Aux for printing

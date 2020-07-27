@@ -40,8 +40,10 @@
 
 using besthea::mesh::distributed_spacetime_tensor_mesh;
 using besthea::mesh::spacetime_mesh_generator;
+using besthea::mesh::tree_structure;
 
 int main( int argc, char * argv[] ) {
+  slou output_id = 0; 
   using b_t_mesh = besthea::mesh::temporal_mesh;
   using time_cluster_tree = besthea::mesh::time_cluster_tree;
 
@@ -60,6 +62,7 @@ int main( int argc, char * argv[] ) {
     = "./job_scheduler/process_assignment.bin";
 
   if ( myRank == 0 ) {
+    std::cout << "### start mesh generation ###" << std::endl;
     std::string space_file = "./mesh_files/cube_12.txt";  // spatial mesh
     std::string time_file = "./testfile.txt";  // file defining temporal slices
     lo time_refinement = 2;                    // defining mesh within slices
@@ -86,6 +89,7 @@ int main( int argc, char * argv[] ) {
       space_file, time_file, time_refinement, space_refinement );
 
     generator.generate( "", "test_mesh", "txt" );
+    std::cout << "### end mesh generation ###" << std::endl;
   }
   MPI_Barrier( MPI_COMM_WORLD );
 
@@ -96,6 +100,27 @@ int main( int argc, char * argv[] ) {
 
   besthea::mesh::distributed_spacetime_cluster_tree tree(
     mesh, 6, 10, 1.0, 1, &comm );
+  
+  if ( myRank == output_id ) {
+    std::cout << "myRank is " << myRank << std::endl;
+    tree_structure time_structure( 
+      tree_vector_file, mesh.get_start( ), mesh.get_end( ) );
+    time_structure.load_process_assignments( process_assignment_file );
+    
+    // help variables to print the process ids in human readable format
+    // lo digits = ( lo ) ( ceil( log10( n_processes + 1 ) ) + 1 );
+    // bool print_process_ids = true;
+    lo digits = 3;
+
+    std::cout << "process ids:" << std::endl;
+    time_structure.print_tree_human_readable( digits, true );
+
+    std::cout << "global number of elements is " << mesh.get_n_elements( ) 
+              << std::endl;
+    std::cout << "printing local part of distributed cluster tree: " 
+              << std::endl;
+    tree.print( );
+  }
 
   MPI_Finalize( );
 }

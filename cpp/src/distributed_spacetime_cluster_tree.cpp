@@ -124,6 +124,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
 
     build_subtree( *it, it->get_level( ) % 2 );
   }
+  update_temporal_cluster_bounds( *_root );
 
   // exchange necessary data
   MPI_Allreduce( MPI_IN_PLACE, &_real_max_levels, 1,
@@ -188,7 +189,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   const std::vector< sc > & slices = _spacetime_mesh.get_slices( );
   std::vector< sc > starts(
     timesteps.size( ) - 1, std::numeric_limits< sc >::infinity( ) );
-  std::vector< sc > ends( timesteps.size( ) - 1, -1.0 );
+  std::vector< sc > ends( 
+    timesteps.size( ) - 1, -std::numeric_limits< sc >::infinity( ) );
   sc center;
 
   for ( lo i = 0; i < static_cast< lo >( timesteps.size( ) ) - 1; ++i ) {
@@ -551,7 +553,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
   sc cluster_start = time_center - time_half_size;
   sc cluster_end = time_center + time_half_size;
   sc start_time = std::numeric_limits< sc >::infinity( );
-  sc end_time = -1.0;
+  sc end_time = -std::numeric_limits< sc >::infinity( );
   sc slice_center;
   for ( lo j = 0; j < static_cast< lo >( slices.size( ) ) - 1; ++j ) {
     slice_center = ( slices[ j ] + slices[ j + 1 ] ) / 2.0;
@@ -938,4 +940,34 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
     build_subtree( *right_child, !split_space );
   }
   root.shrink_children( );
+}
+
+void besthea::mesh::distributed_spacetime_cluster_tree::
+  update_temporal_cluster_bounds( general_spacetime_cluster & root ) {
+  if ( root.get_children( ) > 0 ) {
+    std::vector< general_spacetime_cluster* > * children
+      = root.get_children( );
+    for ( auto it : *children ) {
+      update_temporal_cluster_bounds( *it );
+    }
+    // update the cluster bounds using the bounds of the children. by 
+    // construction the child at the front corresponds to a left child in time
+    // (if existent) and the child at the back to a right child.
+    general_spacetime_cluster* child_1 = children->front( );
+    general_spacetime_cluster* child_2 = children->back( );
+    vector_type dummy_space_vec;
+    dummy_space_vec.resize( 3 );
+    sc time_center, time_half_size;
+    child_1->get_center( dummy_space_vec, time_center );
+    child_1->get_half_size( dummy_space_vec, time_half_size );
+    sc start_time = time_center - time_half_size;
+    child_2->get_center( dummy_space_vec, time_center );
+    child_2->get_half_size( dummy_space_vec, time_half_size );
+    sc end_time = time_center + time_half_size;
+
+    sc new_center = ( start_time + end_time ) / 2.0;
+    sc new_half_size = ( end_time - start_time ) / 2.0;
+    root.set_time_center( new_center );
+    root.set_time_half_size( new_half_size );
+  }
 }
