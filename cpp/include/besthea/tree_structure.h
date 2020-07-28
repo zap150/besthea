@@ -70,6 +70,17 @@ class besthea::mesh::tree_structure {
     const sc end_time );
 
   /**
+   * Constructs a tree structure by reading it from files
+   * @param[in] structure_file Name of the binary input file containing the tree 
+   *                          structure.
+   * @param[in] cluster_bounds_file   Name of the binary input file containing
+   *                                  the bounds of all the clusters in the 
+   *                                  tree structure.
+   */
+  tree_structure( const std::string & structure_file, 
+    const std::string & cluster_bounds_file );
+
+  /**
    * Destructor.
    */
   virtual ~tree_structure( ) {
@@ -247,6 +258,20 @@ class besthea::mesh::tree_structure {
    */
   void vector_2_tree( const std::vector<char> & tree_vector, 
     scheduling_time_cluster & root, lou & position );
+
+  /**
+   * Recursively constructs the tree structure from a given structure vector
+   * and a given vector of cluster bounds.
+   * @param[in] tree_vector Contains the tree structure data.
+   * @param[in] cluster_bounds  Contains the data of the clusters' bounds.
+   * @param[in,out] root  Current cluster, to which the next clusters are added.
+   * @param[in,out] position  Auxiliary variable to keep track of the current
+   *                          position in the vectors. 
+   * @note  This method is supposed to be called by the constructor.
+   */
+  void create_tree_from_vectors( const std::vector< char > & tree_vector, 
+    const std::vector< sc > & cluster_bounds, scheduling_time_cluster & root, 
+    lou & position );
 
   /** Assigns to each cluster in the tree structure its respective process 
    * given in the vector @p process_assignments by traversing the tree.

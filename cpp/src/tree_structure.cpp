@@ -41,7 +41,7 @@ besthea::mesh::tree_structure::tree_structure( const std::string & filename,
     sc center = 0.5 * ( start_time + end_time );
     sc half_size = 0.5 * ( end_time - start_time );
     _root = new scheduling_time_cluster( center, half_size, nullptr, 0 );
-      _levels = 1;
+    _levels = 1;
     if ( tree_vector[ 0 ] == 1 ) {
       lou position = 1;
       vector_2_tree( tree_vector, *_root, position );
@@ -58,6 +58,40 @@ besthea::mesh::tree_structure::tree_structure( const std::string & filename,
   collect_leaves( *_root );
   lo next_id = 0;
   set_leaf_ids( *_root, next_id );
+}
+
+besthea::mesh::tree_structure::tree_structure( 
+  const std::string & structure_file, const std::string & cluster_bounds_file )
+  : _levels( 0 ), _my_process_id( -1 ) {
+  // load tree structure from file
+  std::vector< char > tree_vector = read_vector_from_bin_file< char >( 
+    structure_file );
+  // load cluster bounds from file
+  std::vector< sc > cluster_bounds = read_vector_from_bin_file< sc >( 
+    cluster_bounds_file );
+  // create tree structure from vector 
+  if ( ( tree_vector.size( ) > 0 ) && ( tree_vector[ 0 ] != 0 ) ) {
+    sc center = 0.5 * ( cluster_bounds[ 0 ] + cluster_bounds[ 1 ] );
+    sc half_size = 0.5 * ( cluster_bounds[ 1 ] - cluster_bounds[ 0 ] );
+    _root = new scheduling_time_cluster( center, half_size, nullptr, 0 );
+    _levels = 1;
+    if ( tree_vector[ 0 ] == 1 ) {
+      lou position = 1;
+      create_tree_from_vectors( tree_vector, cluster_bounds, *_root, position );
+    }
+  } else {
+    _root = nullptr;
+  }
+  // set the global indices of all the clusters in the structure
+  _root->set_index( 0 );
+  set_indices( *_root );
+  set_nearfield_interaction_and_send_list( *_root );
+  // determine activity of clusters in upward and downward path of FMM
+  determine_cluster_activity( *_root );
+  collect_leaves( *_root );
+  lo next_id = 0;
+  set_leaf_ids( *_root, next_id );
+  
 }
 
 void besthea::mesh::tree_structure::load_process_assignments( 
@@ -337,6 +371,67 @@ void besthea::mesh::tree_structure::vector_2_tree(
   }
   if ( right_child_status == 1 ) {
     vector_2_tree( tree_vector, *right_cluster, position );
+  } else {
+    if ( level + 2 > _levels ) {
+      _levels = level + 2;
+    }
+  }
+}
+
+
+void besthea::mesh::tree_structure::create_tree_from_vectors( 
+  const std::vector< char > & tree_vector, 
+  const std::vector< sc > & cluster_bounds, scheduling_time_cluster & root, 
+  lou & position ) {
+  // get the cluster data of root
+  lo level = root.get_level( );
+  // determine status of the children of root and create them accordingly
+  char left_child_status = tree_vector[ position ];
+  sc left_child_left_bound = cluster_bounds[ 2 * position ];
+  sc left_child_right_bound = cluster_bounds[ 2 * position + 1 ];
+  position ++;
+  char right_child_status = tree_vector[ position ];
+  sc right_child_left_bound = cluster_bounds[ 2 * position ];
+  sc right_child_right_bound = cluster_bounds[ 2 * position + 1 ];
+  position ++;
+  lo child_counter = 0;
+  scheduling_time_cluster * left_cluster = nullptr;
+  scheduling_time_cluster * right_cluster = nullptr;
+  if ( left_child_status > 0 ) {
+    child_counter++;
+    sc center = ( left_child_right_bound + left_child_left_bound ) * 0.5;
+    sc half_size = ( left_child_right_bound - left_child_left_bound ) * 0.5;
+    left_cluster = new scheduling_time_cluster( 
+      center, half_size, &root, level + 1 );
+  }
+  if ( right_child_status > 0 ) {
+    child_counter++;
+    sc center = ( right_child_right_bound + right_child_left_bound ) * 0.5;
+    sc half_size = ( right_child_right_bound - right_child_left_bound ) * 0.5;
+    right_cluster = new scheduling_time_cluster(
+      center, half_size, &root, level + 1 );
+  }
+  // add the newly created clusters to the root
+  root.set_n_children( child_counter );
+  if ( left_cluster != nullptr ) {
+    root.add_child( left_cluster );
+  }
+  if ( right_cluster != nullptr ) {
+    root.add_child( right_cluster );
+  }
+  // call the routine recursively for non-leaf children or update the depth of
+  // the cluster tree if a leaf is encountered
+  if ( left_child_status == 1 ) {
+    create_tree_from_vectors( 
+      tree_vector, cluster_bounds, *left_cluster, position );
+  } else {
+    if ( level + 2 > _levels ) {
+      _levels = level + 2;
+    }
+  }
+  if ( right_child_status == 1 ) {
+    create_tree_from_vectors( 
+      tree_vector, cluster_bounds, *right_cluster, position );
   } else {
     if ( level + 2 > _levels ) {
       _levels = level + 2;

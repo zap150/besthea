@@ -356,8 +356,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::split_cluster(
   for ( auto it : my_clusters_on_level ) {
     if ( ( std::abs( new_time_center - it->get_center( ) )
            < it->get_half_size( ) )
-      && ( _spacetime_mesh.get_my_mesh( )->get_temporal_mesh( )->get_end( )
-        >= it->get_center( ) - it->get_half_size( ) ) ) {
+      && ( it->get_essential_status( ) > 1 ) ) {
       is_my_cluster = true;
       owner = it->get_process_id( );
     }
@@ -424,8 +423,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::split_cluster(
   for ( auto it : my_clusters_on_level ) {
     if ( ( std::abs( new_time_center - it->get_center( ) )
            < it->get_half_size( ) )
-      && ( _spacetime_mesh.get_my_mesh( )->get_temporal_mesh( )->get_end( )
-        >= it->get_center( ) - it->get_half_size( ) ) ) {
+      && ( it->get_essential_status( ) > 1 ) ) {
       is_my_cluster = true;
       owner = it->get_process_id( );
     }

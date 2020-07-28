@@ -76,8 +76,14 @@ template void write_vector_to_bin_file< char >(
 template void write_vector_to_bin_file< lo >( 
   const std::vector< lo > & print_vector, const std::string & filename );
 
+template void write_vector_to_bin_file< sc >( 
+  const std::vector< sc > & print_vector, const std::string & filename );
+
 template std::vector< char > read_vector_from_bin_file< char >( 
   const std::string & filename );
 
 template std::vector< lo > read_vector_from_bin_file< lo >( 
+  const std::string & filename );
+
+template std::vector< sc > read_vector_from_bin_file< sc >( 
   const std::string & filename );

@@ -43,7 +43,7 @@ using besthea::mesh::spacetime_mesh_generator;
 using besthea::mesh::tree_structure;
 
 int main( int argc, char * argv[] ) {
-  slou output_id = 0; 
+  slou output_id = 2; 
   using b_t_mesh = besthea::mesh::temporal_mesh;
   using time_cluster_tree = besthea::mesh::time_cluster_tree;
 
@@ -60,6 +60,8 @@ int main( int argc, char * argv[] ) {
   std::string tree_vector_file = "./job_scheduler/tree_structure.bin";
   std::string process_assignment_file
     = "./job_scheduler/process_assignment.bin";
+  std::string cluster_bounds_file 
+    = "./job_scheduler/cluster_bounds.bin";
 
   if ( myRank == 0 ) {
     std::cout << "### start mesh generation ###" << std::endl;
@@ -77,7 +79,23 @@ int main( int argc, char * argv[] ) {
     // write tree structure to file
     time_tree.print_tree_structure( tree_vector_file );
 
+    // write cluster bounds to file
+    time_tree.print_cluster_bounds( cluster_bounds_file );
+
+    std::vector< sc > cluster_bounds 
+      = read_vector_from_bin_file< sc >( cluster_bounds_file );
+
+    for ( lou i = 0; i < cluster_bounds.size( ); i += 2 ) {
+      std::cout << "[" << cluster_bounds[ i ] << ", " 
+                << cluster_bounds[ i + 1 ] << "]" << std::endl;
+    }
+    
+    tree_structure temp_struct( tree_vector_file, cluster_bounds_file );
+
+    temp_struct.print( );
+
     // compute process assignment and write it to file
+
     lo strategy = 1;
     std::cout << "n_processes: " << n_processes << ", strategy: " << strategy
               << std::endl;
