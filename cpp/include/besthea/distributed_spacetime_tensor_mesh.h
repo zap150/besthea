@@ -63,13 +63,15 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
    * processes.
    * @param[in] decomposition_file Path to the file describing the input mesh.
    * @param[in] tree_file Path to the file describing the initial temporal
-   * cluster tree
+   * cluster tree.
+   * @param[in] cluster_bounds_file Path to the file containing the cluster 
+   * bounds of the clusters in the initial temporal cluster tree.
    * @param[in] comm Pointer to the MPI communicator associated with
    * decomposition.
    */
   distributed_spacetime_tensor_mesh( const std::string & decomposition_file,
-    const std::string & tree_file, const std::string & distribution_file,
-    MPI_Comm * comm );
+    const std::string & tree_file, const std::string & cluster_bounds_file,
+    const std::string & distribution_file, MPI_Comm * comm );
 
   /**
    * Destructor.
@@ -159,22 +161,26 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
    * @param[in] decomposition_file Path to the file describing the input mesh.
    * @param[in] tree_file Path to the file describing the initial temporal
    * cluster tree
+   * @param[in] cluster_bounds_file Path to the file containing the cluster 
+   * bounds of the clusters in the initial temporal cluster tree
    * @param[in] distribution_file Path to the file describing the time-slices
    * distribution among MPI processes.
    */
   bool load( const std::string & decomposition_file,
-    const std::string & tree_file, const std::string & distribution_file );
+    const std::string & tree_file, 
+    const std::string & cluster_bounds_file,
+    const std::string & distribution_file );
 
   /**
    * Goes through the temporal tree and finds leaf clusters with the same owner
    * @param[in] root Root cluster of the tree.
-   * @param[in] center Center of the current cluster.
-   * @param[in] half_size Half size of the current cluster.
    * @param[in,out] slices_indices Indices of the slices owned by the process.
    * @param[in] start Start index of curren cluster.
    * @param[in] end End index of current clusters.
+   * @todo replace by a loop over all leaves (now the cluster bounds are 
+   * initialized properly)
    */
-  void find_my_slices( scheduling_time_cluster * root, sc center, sc half_size,
+  void find_my_slices( scheduling_time_cluster * root,
     std::vector< lo > & slices_indices, lo start, lo end );
 
   MPI_Comm * _comm;  //!< MPI communicator associated with the distributed mesh

@@ -33,8 +33,8 @@
 
 besthea::mesh::distributed_spacetime_tensor_mesh::
   distributed_spacetime_tensor_mesh( const std::string & decomposition_file,
-    const std::string & tree_file, const std::string & distribution_file,
-    MPI_Comm * comm )
+    const std::string & tree_file, const std::string & cluster_bounds_file,
+    const std::string & distribution_file, MPI_Comm * comm )
   : _comm( comm ),
     _my_mesh( nullptr ),
     _space_mesh( nullptr ),
@@ -43,7 +43,7 @@ besthea::mesh::distributed_spacetime_tensor_mesh::
   MPI_Comm_rank( *_comm, &_my_rank );
   MPI_Comm_size( *_comm, &_n_processes );
 
-  load( decomposition_file, tree_file, distribution_file );
+  load( decomposition_file, tree_file, cluster_bounds_file, distribution_file );
 
   // get global data
   MPI_Barrier( *_comm );
@@ -70,21 +70,20 @@ besthea::mesh::distributed_spacetime_tensor_mesh::
 }
 
 void besthea::mesh::distributed_spacetime_tensor_mesh::find_my_slices(
-  scheduling_time_cluster * root, sc center, sc half_size,
-  std::vector< lo > & slice_indices, lo start, lo end ) {
+  scheduling_time_cluster * root, std::vector< lo > & slice_indices, 
+  lo start, lo end ) {
   if ( root->get_n_children( ) > 0 ) {
     std::vector< scheduling_time_cluster * > * children = root->get_children( );
     lo split_index = 0;
+    sc center = root->get_center( );
 
     for ( lo i = start; i < end; ++i ) {
       if ( ( _slices[ i + 1 ] + _slices[ i ] ) / 2.0 <= center ) {
         split_index = i + 1;
       }
     }
-    find_my_slices( children->at( 0 ), center - half_size / 2, half_size / 2,
-      slice_indices, start, split_index );
-    find_my_slices( children->at( 1 ), center + half_size / 2, half_size / 2,
-      slice_indices, split_index, end );
+    find_my_slices( children->at( 0 ), slice_indices, start, split_index );
+    find_my_slices( children->at( 1 ), slice_indices, split_index, end );
   } else {
     lo cluster_owner = root->get_process_id( );
     if ( cluster_owner == _my_rank ) {
@@ -97,6 +96,7 @@ void besthea::mesh::distributed_spacetime_tensor_mesh::find_my_slices(
 
 bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
   const std::string & decomposition_file, const std::string & tree_file,
+  const std::string & cluster_bounds_file, 
   const std::string & distribution_file ) {
   // load the file with basic description of the decomposed mesh
   std::ifstream filestream( decomposition_file.c_str( ) );
@@ -123,16 +123,13 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
   }
 
   // read and reconstruct temporal tree and distribution of clusters
-  _dist_tree = new tree_structure( tree_file, _t_start, _t_end );
+  _dist_tree = new tree_structure( tree_file, cluster_bounds_file );
   _dist_tree->load_process_assignments( distribution_file );
   // std::vector< scheduling_time_cluster * > leaves = _dist_tree->get_leaves(
   // );
 
   std::vector< lo > slice_indices;
-  find_my_slices( _dist_tree->get_root( ),
-    ( _slices[ _n_meshes ] + _slices[ 0 ] ) / 2.0,
-    ( _slices[ _n_meshes ] - _slices[ 0 ] ) / 2.0, slice_indices, 0,
-    _n_meshes );
+  find_my_slices( _dist_tree->get_root( ), slice_indices, 0, _n_meshes );
 
   _n_meshes_per_rank = slice_indices.size( );
 

@@ -438,16 +438,17 @@ class besthea::mesh::general_spacetime_cluster {
     std::cout << ", temporal center: " << _time_center;
     std::cout << ", spatial half size: (" << _space_half_size[ 0 ] << ", "
               << _space_half_size[ 1 ] << ", " << _space_half_size[ 2 ] << ")";
-    std::cout << ", temporal half size: " << _time_half_size;     
+    std::cout << ", temporal half size: " << _time_half_size;
+    std::cout << ", n_elements: " << _n_elements;      
     std::cout << std::endl;
-    if ( _children == nullptr ) {
-      std::cout << "elements are: " << std::endl;
-      for ( lou i = 0; i < _elements.size( ); ++i ) {
-        // output global index of all elements
-        std::cout << _elements[i] << ", ";
-      }
-      std::cout << std::endl;
-    }
+    // if ( _children == nullptr ) {
+    //   std::cout << "elements are: " << std::endl;
+    //   for ( lou i = 0; i < _elements.size( ); ++i ) {
+    //     // output global index of all elements
+    //     std::cout << _elements[i] << ", ";
+    //   }
+    //   std::cout << std::endl;
+    // }
   }
 
  private:
@@ -466,7 +467,7 @@ class besthea::mesh::general_spacetime_cluster {
     _mesh;        //!< distributed spacetime mesh associated with the cluster
   lo _level;      //!< level within the cluster tree
   short _octant;  //!< octant of the parent cluster
-  short _left_right;  //!< left (0), or right (0) child of the parent
+  short _left_right;  //!< left (0), or right (1) child of the parent
   sc _padding;        //!< padding of the cluster
   std::vector< slou >
     _box_coordinate;  //!< coordinates of the box within boxes on given level

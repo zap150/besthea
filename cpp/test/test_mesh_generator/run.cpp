@@ -43,7 +43,7 @@ using besthea::mesh::spacetime_mesh_generator;
 using besthea::mesh::tree_structure;
 
 int main( int argc, char * argv[] ) {
-  slou output_id = 2; 
+  slou output_id = 1; 
   using b_t_mesh = besthea::mesh::temporal_mesh;
   using time_cluster_tree = besthea::mesh::time_cluster_tree;
 
@@ -82,17 +82,17 @@ int main( int argc, char * argv[] ) {
     // write cluster bounds to file
     time_tree.print_cluster_bounds( cluster_bounds_file );
 
-    std::vector< sc > cluster_bounds 
-      = read_vector_from_bin_file< sc >( cluster_bounds_file );
+    // std::vector< sc > cluster_bounds 
+    //   = read_vector_from_bin_file< sc >( cluster_bounds_file );
 
-    for ( lou i = 0; i < cluster_bounds.size( ); i += 2 ) {
-      std::cout << "[" << cluster_bounds[ i ] << ", " 
-                << cluster_bounds[ i + 1 ] << "]" << std::endl;
-    }
+    // for ( lou i = 0; i < cluster_bounds.size( ); i += 2 ) {
+    //   std::cout << "[" << cluster_bounds[ i ] << ", " 
+    //             << cluster_bounds[ i + 1 ] << "]" << std::endl;
+    // }
     
-    tree_structure temp_struct( tree_vector_file, cluster_bounds_file );
+    // tree_structure temp_struct( tree_vector_file, cluster_bounds_file );
 
-    temp_struct.print( );
+    // temp_struct.print( );
 
     // compute process assignment and write it to file
 
@@ -112,7 +112,8 @@ int main( int argc, char * argv[] ) {
   MPI_Barrier( MPI_COMM_WORLD );
 
   distributed_spacetime_tensor_mesh mesh(
-    "test_mesh_d.txt", tree_vector_file, process_assignment_file, &comm );
+    "test_mesh_d.txt", tree_vector_file, cluster_bounds_file, 
+    process_assignment_file, &comm );
 
   // std::cout << mesh.get_n_elements( ) << std::endl;
 
