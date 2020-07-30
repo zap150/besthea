@@ -322,7 +322,7 @@ class besthea::mesh::general_spacetime_cluster {
 
     // determine the appropriate mesh and start index (distinguish whether 
     // cluster is local or in the nearfield)
-    spacetime_tensor_mesh * clusters_mesh; 
+    const spacetime_tensor_mesh * clusters_mesh; 
     lo start_idx; 
     if ( _mesh.get_rank( ) == _process_id ) { // local cluster
       clusters_mesh = _mesh.get_local_mesh( );

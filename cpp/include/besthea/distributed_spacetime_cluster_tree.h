@@ -70,7 +70,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @param[in] comm MPI communicator associated with the tree.
    */
   distributed_spacetime_cluster_tree(
-    const distributed_spacetime_tensor_mesh & spacetime_mesh, lo max_levels,
+    distributed_spacetime_tensor_mesh & spacetime_mesh, lo max_levels,
     lo n_min_elems, sc st_coeff, lo spatial_nearfield_limit, MPI_Comm * comm );
 
   /**
@@ -81,6 +81,13 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
       delete _root;
     if ( _time_root )
       delete _time_root;
+  }
+
+  /**
+   * Returns the root of the tree.
+   */
+  general_spacetime_cluster * get_root( ) {
+    return _root;
   }
 
   /**
@@ -97,8 +104,12 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   lo _max_levels;       //!< number of levels in the tree
   lo _real_max_levels;  //!< auxiliary value to determine number of real tree
                         //!< levels (depending on _n_min_elems)
-  const distributed_spacetime_tensor_mesh &
+  distributed_spacetime_tensor_mesh &
     _spacetime_mesh;                  //!< underlying distributed spacetime mesh
+                                      //!< @todo discuss: why reference and not
+                                      //!< pointer? why was it const originally?
+                                      //!< problem: distribution tree is 
+                                      //!< modified!
   general_spacetime_cluster * _root;  //!< root of the cluster tree
   lo _start_spatial_level;   //!< auxiliary variable determining the appropriate
                              //!< starting level in the space cluster tree
@@ -125,6 +136,37 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    *
    */
   void build_tree( general_spacetime_cluster * root );
+
+  /**
+   * Expands the distribution tree included in @p _spacetime_mesh by adding 
+   * relevant time clusters which appear as components of spacetime clusters in 
+   * the current tree but are not in the distribution tree.
+   * @note The clusters which are refined are determined using the routine 
+   *       @ref tree_structure::determine_clusters_to_refine and the refinement 
+   *       is executed by @ref expand_distribution_tree_recursively.
+   * @note The nearfields, interaction lists and send lists of the distribution
+   *       tree are cleared using the routine 
+   *       @ref tree_structure::clear_cluster_lists and filled anew.
+   */
+  void expand_distribution_tree_essentially( );
+
+  /**
+   * Expands the temporal tree structure by recursively traversing the current 
+   * distributed spacetime cluster tree and the distribution tree given in
+   * @p _spacetime_mesh. It uses @p refine_map and the spacetime cluster tree 
+   * to determine if clusters should be added to the temporal tree structure.
+   * @param[in] distribution_tree Distribution tree which is modified and in 
+   *                              which @p root has to lie.
+   * @param[in] spacetime_root Current cluster in the spacetime cluster tree.
+   * @param[in] root  Current cluster in the tree structure.
+   * @param[in,out] refine_map  Map which indicates if the tree should be 
+   *                            expanded at a leaf cluster or not. This is
+   *                            updated if new clusters are added.
+   */
+  void expand_tree_structure_recursively( tree_structure* distribution_tree, 
+    general_spacetime_cluster* spacetime_root, 
+    scheduling_time_cluster* time_root, 
+    std::unordered_map< lo, bool > & refine_map );
 
   /**
    * Computes the bounding box of the underlying mesh.

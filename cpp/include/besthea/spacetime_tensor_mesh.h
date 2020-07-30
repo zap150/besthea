@@ -404,7 +404,8 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
     centroid[ 2 ] = ( x1[ 2 ] + x2[ 2 ] + x3[ 2 ] ) / 3.0;
   }
 
-  void get_centroid( lo i_elem, linear_algebra::coordinates< 4 > & centroid ) {
+  void get_centroid( 
+    lo i_elem, linear_algebra::coordinates< 4 > & centroid ) const {
     lo space_elem_idx;
     lo time_elem_idx;
     map_index( i_elem, space_elem_idx, time_elem_idx );

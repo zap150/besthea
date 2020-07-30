@@ -138,21 +138,28 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
   /**
    * Returns the mesh associated with current MPI process.
    */
-  spacetime_tensor_mesh * const get_local_mesh( ) const {
+  spacetime_tensor_mesh const *  get_local_mesh( ) const {
     return _my_mesh;
   }
 
   /**
    * Returns the nearfield mesh of the current MPI process.
    */
-  spacetime_tensor_mesh * const get_nearfield_mesh( ) const {
+  spacetime_tensor_mesh const * get_nearfield_mesh( ) const {
     return _nearfield_mesh;
   }
 
   /**
-   * Returns the tree composed of scheduling_time_clusters.
+   * Returns the tree composed of scheduling_time_clusters (unmodifiable).
    */
-  tree_structure * const get_distribution_tree( ) const {
+  tree_structure const *  get_distribution_tree( ) const {
+    return _dist_tree;
+  }
+
+  /**
+   * Returns the tree composed of scheduling_time_clusters (modifiable).
+   */
+  tree_structure* get_distribution_tree( ) {
     return _dist_tree;
   }
 

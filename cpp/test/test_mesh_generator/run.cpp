@@ -43,7 +43,7 @@ using besthea::mesh::spacetime_mesh_generator;
 using besthea::mesh::tree_structure;
 
 int main( int argc, char * argv[] ) {
-  slou output_id = 1; 
+  slou output_id = 2; 
   using b_t_mesh = besthea::mesh::temporal_mesh;
   using time_cluster_tree = besthea::mesh::time_cluster_tree;
 
@@ -131,8 +131,13 @@ int main( int argc, char * argv[] ) {
     // bool print_process_ids = true;
     lo digits = 3;
 
-    std::cout << "process ids:" << std::endl;
+    std::cout << "process ids in initial global distribution tree:" 
+              << std::endl;
     time_structure.print_tree_human_readable( digits, true );
+
+    std::cout << "process ids in locally essential distribution tree:"
+              << std::endl;
+    mesh.get_distribution_tree( )->print_tree_human_readable( digits, true);
 
     std::cout << "global number of elements is " << mesh.get_n_elements( ) 
               << std::endl;

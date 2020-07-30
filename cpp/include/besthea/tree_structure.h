@@ -38,7 +38,6 @@
 #include "besthea/settings.h"
 #include "besthea/spacetime_cluster.h"
 #include "besthea/spacetime_cluster_tree.h"
-#include "besthea/time_cluster.h"
 
 #include <iostream>
 #include <list>
@@ -49,6 +48,12 @@
 namespace besthea {
   namespace mesh {
     class tree_structure;
+  }
+}
+
+namespace besthea {
+  namespace mesh {
+    class distributed_spacetime_cluster_tree;
   }
 }
 
@@ -110,6 +115,13 @@ class besthea::mesh::tree_structure {
   }
 
   /**
+   * Returns the root of the tree.
+   */
+  const scheduling_time_cluster * get_root( ) const {
+    return _root;
+  }
+
+  /**
    * Returns clusters without descendants.
    */
   std::vector< scheduling_time_cluster * > & get_leaves( ) {
@@ -166,6 +178,8 @@ class besthea::mesh::tree_structure {
    *       @ref expand_tree_structure_recursively.
    * @note The nearfields, interaction lists and send lists are cleared using 
    *       the routine clear_cluster_lists and filled anew.
+   * @todo Delete?! (obsolete, since a similar method exists in 
+   * @ref distributed_spacetime_cluster_tree )
    */
   void expand_tree_structure_essentially( 
     spacetime_cluster_tree * spacetime_tree );
@@ -257,6 +271,16 @@ class besthea::mesh::tree_structure {
     _leaves;  //!< vector of all clusters without descendants 
   lo _my_process_id;  //!< id of the process executing the operations
                       //!< @todo Exchange by an MPI query later?
+
+  friend class besthea::mesh::distributed_spacetime_cluster_tree;
+
+  /**
+   * Set number of levels in the tree to a new value
+   * @param[in] levels New number of levels in the tree.
+   */
+  void set_levels( lo levels ) {
+    _levels = levels;
+  }
 
   /**
    * Recursively constructs the structural vector of a tree structure.
@@ -373,7 +397,7 @@ class besthea::mesh::tree_structure {
   void find_associated_space_time_non_leaves( 
     spacetime_cluster* spacetime_root, scheduling_time_cluster* root );
 
-  /**
+    /**
    * Determines all clusters which should be refined during an expansion of the
    * tree structure. Therefore, an entry is added to @p refine_map for every 
    * leaf cluster in the tree structure, with the global cluster index as key
@@ -411,6 +435,8 @@ class besthea::mesh::tree_structure {
    * @param[in,out] refine_map  Map which indicates if the tree should be 
    *                            expanded at a leaf cluster or not. This is
    *                            updated if new clusters are added.
+   * @todo Delete?! (obsolete, since a similar method exists in 
+   * @ref distributed_spacetime_cluster_tree )
    */
   void expand_tree_structure_recursively(
     spacetime_cluster* spacetime_root, scheduling_time_cluster* root,
