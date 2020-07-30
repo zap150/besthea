@@ -82,8 +82,10 @@ bool besthea::mesh::spacetime_mesh_generator::generate(
     slices << _time_mesh->get_node( i ) << " ";
   }
   slices << "\n";
-
+  
+  // execute the refinement in time and space according to the parameters.
   _time_mesh->refine( _refinement );
+  _space_mesh->refine( _space_refinement );
 
   lo n_timesteps_per_mesh = _time_mesh->get_n_elements( ) / n_meshes;
   lo n_remaining_timesteps = _time_mesh->get_n_elements( ) % n_meshes;
@@ -109,10 +111,8 @@ bool besthea::mesh::spacetime_mesh_generator::generate(
     lo n_local_timesteps = n_timesteps_per_mesh + add_one;
     lo n_local_nodes = n_local_timesteps + 1;
 
-    linear_algebra::indices< 2 > start_element, end_element, element;
+    linear_algebra::indices< 2 > start_element, element;
     _time_mesh->get_element( curr_start_timestep, start_element );
-    _time_mesh->get_element(
-      curr_start_timestep + n_local_timesteps, end_element );
 
     std::string file_path
       = directory + file_name + "_t_" + std::to_string( i ) + "." + suffix;
@@ -151,7 +151,6 @@ bool besthea::mesh::spacetime_mesh_generator::generate(
 
     // for completeness, save also spatial mesh (although it is the same for all
     // temporal meshes)
-    _space_mesh->refine( _space_refinement );
     std::string space_file = file_name + "_s_" + std::to_string( i );
     _space_mesh->save( directory, space_file, suffix );
 

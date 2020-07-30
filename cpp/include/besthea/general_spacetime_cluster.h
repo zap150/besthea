@@ -320,6 +320,17 @@ class besthea::mesh::general_spacetime_cluster {
     std::vector< linear_algebra::coordinates< 4 > > node_vector;
     node_vector.resize( 6 );
 
+    // determine the appropriate mesh and start index (distinguish whether 
+    // cluster is local or in the nearfield)
+    spacetime_tensor_mesh * clusters_mesh; 
+    lo start_idx; 
+    if ( _mesh.get_rank( ) == _process_id ) { // local cluster
+      clusters_mesh = _mesh.get_local_mesh( );
+      start_idx = _mesh.get_local_start_idx( );
+    } else {
+      clusters_mesh = _mesh.get_nearfield_mesh( );
+      start_idx = _mesh.get_nearfield_start_idx( );
+    }
     sc * curr_node;
 
     space_padding = 0.0;
@@ -327,8 +338,8 @@ class besthea::mesh::general_spacetime_cluster {
 
     // loop over elements in cluster
     for ( lo i = 0; i < _n_elements; ++i ) {
-      _mesh.get_my_mesh( )->get_nodes(
-        _mesh.global_2_local( _elements[ i ] ), node_vector );
+      clusters_mesh->get_nodes(
+        _mesh.global_2_local( start_idx, _elements[ i ] ), node_vector );
       // loop over element's nodes
       for ( lo j = 0; j < static_cast< lo >( node_vector.size( ) ); ++j ) {
         curr_node = node_vector.at( j ).data( );

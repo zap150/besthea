@@ -42,6 +42,7 @@
 #include "besthea/triangular_surface_mesh.h"
 
 #include <mpi.h>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -80,44 +81,72 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
 
   /**
    * Mapping from local temporal element index to global temporal element
-   * index.
+   * index using a given start index.
+   * @param[in] start_idx Start index of local time mesh.
    * @param[in] local_idx Local time index.
+   * @note Use @ref _my_nearfield_start_idx as @p start_idx to map from temporal
+   * nearfield to global indices.
+   * @note Use @ref _local_start_idx as @p start_idx to map from local to global 
+   * indices.
    */
-  lo local_2_global_time( lo local_idx ) const {
-    return _my_start_idx + local_idx;
+  lo local_2_global_time( lo start_idx, lo local_idx ) const {
+    return start_idx + local_idx;  
   }
 
   /**
    * Mapping from local spacetime element index to global spacetime element
-   * index.
+   * index using a given start index.
+   * @param[in] start_idx Start index of local time mesh. (NOT spacetime)
    * @param[in] local_idx Local spacetime index.
+   * @note Use @ref _my_nearfield_start_idx as @p start_idx to map from temporal
+   * nearfield to global indices.
+   * @note Use @ref _local_start_idx as @p start_idx to map from local to global 
+   * indices.
    */
-  lo local_2_global( lo local_idx ) const {
-    return _my_start_idx * _space_mesh->get_n_elements( ) + local_idx;
+  lo local_2_global( lo start_idx, lo local_idx ) const {
+    return start_idx * _space_mesh->get_n_elements( ) + local_idx;
   }
 
   /**
-   * Mapping from global temporal element index to local temporal element index.
+   * Mapping from global temporal element index to local temporal element index
+   * using a given start index.
+   * @param[in] start_idx Start index of local time mesh.
    * @param[in] global_idx Global temporal element index.
+   * @note Use @ref _my_nearfield_start_idx as @p start_idx to map from global 
+   * to temporal nearfield indices.
+   * @note Use @ref _local_start_idx as @p start_idx to map from global to local
+   * indices.
    */
-  lo global_2_local_time( lo global_idx ) const {
-    return global_idx - _my_start_idx;
+  lo global_2_local_time( lo start_idx, lo global_idx ) const {
+    return global_idx - start_idx;
   }
 
   /**
    * Mapping from global spacetime element index to local spacetime element
-   * index.
+   * index using a given start index.
+   * @param[in] start_idx Start index of local time mesh. (NOT spacetime)
    * @param[in] global_idx Global spacetime element index.
+   * @note Use @ref _my_nearfield_start_idx as @p start_idx to map from global 
+   * to temporal nearfield indices.
+   * @note Use @ref _local_start_idx as @p start_idx to map from global to local
+   * indices.
    */
-  lo global_2_local( lo global_idx ) const {
-    return global_idx - _my_start_idx * _space_mesh->get_n_elements( );
+  lo global_2_local( lo start_idx, lo global_idx ) const {
+    return global_idx - start_idx * _space_mesh->get_n_elements( );
   }
 
   /**
    * Returns the mesh associated with current MPI process.
    */
-  spacetime_tensor_mesh * const get_my_mesh( ) const {
+  spacetime_tensor_mesh * const get_local_mesh( ) const {
     return _my_mesh;
+  }
+
+  /**
+   * Returns the nearfield mesh of the current MPI process.
+   */
+  spacetime_tensor_mesh * const get_nearfield_mesh( ) const {
+    return _nearfield_mesh;
   }
 
   /**
@@ -146,6 +175,27 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
    */
   lo get_n_elements( ) const {
     return _n_global_elements;
+  }
+
+  /**
+   * Returns the start index of the local mesh.
+   */
+  lo get_local_start_idx( ) const {
+    return _local_start_idx;
+  }
+
+  /**
+   * Returns the start index of the nearfield mesh.
+   */
+  lo get_nearfield_start_idx( ) const {
+    return _my_nearfield_start_idx;
+  }
+
+  /**
+   * Returns the rank of the current cluster.
+   */
+  int get_rank( ) const {
+    return _my_rank;
   }
 
   /**
@@ -183,6 +233,23 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
   void find_my_slices( scheduling_time_cluster * root,
     std::vector< lo > & slices_indices, lo start, lo end );
 
+  /**
+   * Goes through the leaves of the temporal tree and adds time slice indices
+   * whose meshes have to be loaded to the appropriate sets.
+   * @param[in, out] nearfield_slice_indices  Set of all slice indices 
+   *                                          corresponding to slices contained
+   *                                          in the nearfield of local 
+   *                                          clusters.
+   * @param[in, out] local_slice_indices  Set of all slice indices corresponding
+   *                                      to slices contained in local leaf 
+   *                                      clusters.
+   * @note (Sorted) sets are used instead of vectors to avoid repeated entries
+   * (in particular relevant for nearfield_slices in case of general
+   * admissibility criteria).
+   */
+  void find_slices_to_load( std::set< lo > & nearfield_slice_indices,
+    std::set< lo > & local_slice_indices ) const ;
+
   MPI_Comm * _comm;  //!< MPI communicator associated with the distributed mesh
   int _my_rank;      //!< MPI rank of current processor
   int _n_processes;  //!< total number of MPI processes in the communicator
@@ -197,10 +264,13 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
   temporal_mesh *
     _time_mesh;  //!< temporal mesh the spacetime mesh is composed of
   temporal_mesh *
-    _nearfield_time_mesh;  //!< nearfiel temporal mesh the nearfield spacetime
+    _nearfield_time_mesh;  //!< nearfield temporal mesh the nearfield spacetime
                            //!< mesh is composed of
-  lo _my_start_idx;  //!< initial timestep on this MPI rank (used for loc/glob
+  lo _local_start_idx;  //!< initial timestep on this MPI rank (used for loc/glob
                      //!< mapping)
+  lo _my_nearfield_start_idx; //!< initial timestep of the nearfield meshes on
+                              //!< this MPI rank (used for nearfield/glob 
+                              //!< mapping)
   tree_structure * _dist_tree;  //!< temporal tree with distribution of clusters
                                 //!< among MPI processes (reduced to essential)
   sc _t_start;                  //!< start of the global time interval

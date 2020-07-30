@@ -103,6 +103,30 @@ void besthea::mesh::tree_structure::load_process_assignments(
   set_process_assignments( process_assignments, *_root, position );
 }
 
+void besthea::mesh::tree_structure::assign_slices_to_clusters( 
+  const std::vector< sc > & slice_nodes ) {
+  lou i_start = 0, i_end;
+  for ( auto leaf_cluster : _leaves ) {
+    i_end = i_start;
+    sc right_cluster_bound 
+      = leaf_cluster->get_center( ) + leaf_cluster->get_half_size( ); 
+    while ( ( i_end < slice_nodes.size( ) -1 ) && 
+            ( ( slice_nodes[ i_end ] + slice_nodes[ i_end + 1 ] ) * 0.5
+              < right_cluster_bound ) ) {
+      ++i_end;
+    }
+    leaf_cluster->set_n_time_slices( i_end - i_start );
+    for ( lou i = i_start; i < i_end; ++i ) {
+      // todo: use vector< lou > for time slices?
+      // (otherwise conversion from lou to lo here, which should be not critical
+      // in our application)
+      leaf_cluster->add_time_slice( i );
+    }
+    // set starting index for next cluster
+    i_start = i_end;
+  }
+}
+
 void besthea::mesh::tree_structure::
   reduce_2_essential( const lo my_process_id ) {
   _my_process_id = my_process_id;
@@ -128,7 +152,8 @@ void besthea::mesh::tree_structure::
   _levels = 0;
   prepare_essential_reduction( *_root );
   execute_essential_reduction( *_root );
-  // reset leaves of tree structure appropriately
+  // reset leaves of tree structure appropriately. the global leaf status is 
+  // not changed.
   _leaves.clear( );
   collect_leaves( *_root );
 }
@@ -364,14 +389,18 @@ void besthea::mesh::tree_structure::vector_2_tree(
   // the cluster tree if a leaf is encountered
   if ( left_child_status == 1 ) {
     vector_2_tree( tree_vector, *left_cluster, position );
-  } else {
+  } 
+  else if ( left_child_status == 2 ) {
+    left_cluster->set_global_leaf_status( true );
     if ( level + 2 > _levels ) {
       _levels = level + 2;
     }
   }
   if ( right_child_status == 1 ) {
     vector_2_tree( tree_vector, *right_cluster, position );
-  } else {
+  } 
+  else if ( right_child_status == 2 ) {
+    right_cluster->set_global_leaf_status( true );
     if ( level + 2 > _levels ) {
       _levels = level + 2;
     }
@@ -424,7 +453,9 @@ void besthea::mesh::tree_structure::create_tree_from_vectors(
   if ( left_child_status == 1 ) {
     create_tree_from_vectors( 
       tree_vector, cluster_bounds, *left_cluster, position );
-  } else {
+  } 
+  else if ( left_child_status == 2 ) {
+    left_cluster->set_global_leaf_status( true );
     if ( level + 2 > _levels ) {
       _levels = level + 2;
     }
@@ -432,7 +463,9 @@ void besthea::mesh::tree_structure::create_tree_from_vectors(
   if ( right_child_status == 1 ) {
     create_tree_from_vectors( 
       tree_vector, cluster_bounds, *right_cluster, position );
-  } else {
+  } 
+  else if ( right_child_status == 2 ) {
+    right_cluster->set_global_leaf_status( true );
     if ( level + 2 > _levels ) {
       _levels = level + 2;
     }

@@ -67,8 +67,8 @@ int main( int argc, char * argv[] ) {
     std::cout << "### start mesh generation ###" << std::endl;
     std::string space_file = "./mesh_files/cube_12.txt";  // spatial mesh
     std::string time_file = "./testfile.txt";  // file defining temporal slices
-    lo time_refinement = 2;                    // defining mesh within slices
-    lo space_refinement = 0;
+    lo time_refinement = 3;                    // defining mesh within slices
+    lo space_refinement = 1;
 
     // load time mesh defining slices and create temporal tree
     b_t_mesh time_mesh( time_file );

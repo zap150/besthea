@@ -55,6 +55,12 @@ namespace besthea {
 /**
  * Class representing the structure of a tree of temporal clusters.
  * It is meant to be used for the scheduling of jobs in a parallel FMM.
+ * @todo Discuss: Should we change the constructor such that it incorporates the 
+ * time slices and the process assignments only. (Currently we load the
+ * structure from file, but still rebuild the other information 
+ * (slices, cluster bounds). If the time slices are already assigned to clusters
+ * we could also use them to build the tree instead of the tree structure 
+ * vector)
  */
 class besthea::mesh::tree_structure {
  public:
@@ -116,6 +122,16 @@ class besthea::mesh::tree_structure {
    * @param[in] filename File containing a vector of process assignments.
    */
   void load_process_assignments( const std::string & filename );
+
+  /**
+   * Assigns slices to the leaf clusters in the tree structure.
+   * @param[in] slice_nodes Nodes of the slices in ascending order. The index
+   *                        of the slice consisiting of the nodes i and i+1 is
+   *                        assumed to have the index i.
+   * @warning This routine should only be called for the time slices for which
+   * the tree structure was originally constructed.
+   */
+  void assign_slices_to_clusters( const std::vector< sc > & slice_nodes );
 
   /**
    * Reduces the tree structure by deleting all clusters which are not contained
@@ -211,6 +227,11 @@ class besthea::mesh::tree_structure {
    */
   void print( ) {
     std::cout << "number of levels: " << _levels << std::endl;
+    std::cout << "leaves are: " << std::endl;
+    for ( auto it : _leaves ) {
+      std::cout << it->get_global_index( ) << " ";
+    }
+    std::cout << std::endl;
     // print cluster information recursively
     print_internal( _root );
   }
@@ -234,7 +255,6 @@ class besthea::mesh::tree_structure {
   lo _levels;                       //!< number of levels in the tree
   std::vector< scheduling_time_cluster * >
     _leaves;  //!< vector of all clusters without descendants 
-              //!< @todo Do we need this?
   lo _my_process_id;  //!< id of the process executing the operations
                       //!< @todo Exchange by an MPI query later?
 

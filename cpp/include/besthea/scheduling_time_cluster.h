@@ -70,11 +70,15 @@ class besthea::mesh::scheduling_time_cluster {
       _parent( parent ),
       _children( nullptr ),
       _level( level ),
-      _global_index ( -1 ),
+      _global_index( -1 ),
       _process_id( process_id ),
+      _time_slices( nullptr ),
+      _global_leaf_status( false ),
+      _mesh_available( false ),
       _nearfield( nullptr ),
       _interaction_list( nullptr ),
       _send_list( nullptr ),
+      _essential_status( -1 ),
       _active_upward_path( false ),
       _active_downward_path( false ),
       _upward_path_counter( -1 ),
@@ -104,6 +108,8 @@ class besthea::mesh::scheduling_time_cluster {
       }
       delete _children;
     }
+    if ( _time_slices != nullptr )
+      delete _time_slices;
     if ( _nearfield != nullptr )
       delete _nearfield;
     if ( _interaction_list != nullptr )
@@ -275,6 +281,74 @@ class besthea::mesh::scheduling_time_cluster {
    */
   void set_index( lo index ) {
     _global_index = index;
+  }
+
+  /**
+   * Sets the number of time slices and allocates the vector of indices of time
+   * slices.
+   * @param[in] n_slices Number of cluster's time slices.
+   */
+  void set_n_time_slices( lou n_slices ) {
+    if ( n_slices > 0 ) {
+      _time_slices = new std::vector< lo >( );
+      _time_slices->reserve( n_slices );
+    }
+  }
+
+  /**
+   * Returns the number of time slices in the current cluster.
+   */
+  lo get_n_time_slices( ) const {
+    if ( _time_slices != nullptr ) {
+      return _time_slices->size( );
+    } else {
+      return 0;
+    }
+  }
+
+  /**
+   * Adds the index of a time slice to the vector of time slices.
+   * @param[in] idx Global index of the time slices which is added.
+   */
+  void add_time_slice( lo idx ) {
+    _time_slices->push_back( idx );
+  }
+
+  /**
+   * Returns a pointer to the time slices (unmodifiable).
+   */
+  const std::vector< lo >* get_time_slices( ) const {
+    return _time_slices;
+  }
+
+  /**
+   * Sets global leaf status to a new value.
+   * @param[in] new_status  New global leaf status.
+   */
+  void set_global_leaf_status( bool new_status ) {
+    _global_leaf_status = new_status;
+  }
+
+  /**
+   * Returns the global leaf status of the cluster.
+   */
+  bool get_global_leaf_status( ) const {
+    return _global_leaf_status;
+  }
+
+  /**
+   * Sets status of mesh availability.
+   * @param[in] new_status New mesh availability status.
+   */
+  void set_mesh_availability( bool new_status ) {
+    _mesh_available = new_status;
+  }
+
+  /**
+   * Indicates whether a mesh  is available for the current cluster or not.
+   */
+  bool mesh_is_available( ) const {
+    return _mesh_available;
   }
 
   /**
@@ -666,6 +740,12 @@ class besthea::mesh::scheduling_time_cluster {
               << ", center: " << _center << ", half size: " << _half_size
               << ", global_index: " << _global_index 
               << ", proc_id: " << _process_id;
+    if ( _time_slices != nullptr ) {
+      std::cout << ", time slices: ";
+      for ( auto idx : *_time_slices ) {
+        std::cout << idx << ", ";
+      }
+    }
     // if ( _nearfield != nullptr ) {
     //   std::cout << ", nearfield: ";
     //   for ( lou i = 0; i < _nearfield->size( ); ++i ) {
@@ -712,6 +792,18 @@ class besthea::mesh::scheduling_time_cluster {
   lo _global_index; //!< Global index of the cluster according to an enumeration
                     //!< according to a recursive tree traversal.
   lo _process_id;   //!< Id of the process to which the cluster is assigned.
+  std::vector< lo > *
+    _time_slices; //!< global indices of the cluster's time slices (only set for
+                  //!< leaf clusters)
+  bool _global_leaf_status; //!< indicates whether the cluster is a leaf (1) or
+                            //!< non-leaf in a global tree structure
+  bool _mesh_available; //!< Indicates whether the process who owns the cluster
+                        //!< has access to the corresponding mesh. Only relevant 
+                        //!< in a distribution tree in a distributed spacetime 
+                        //!< tensor mesh. It is set to true for leaf clusters
+                        //!< which are either local or in the nearfield of local
+                        //!< clusters. It is set in
+                        //!< @ref distributed_spacetime_tensor_mesh::find_slices_to_load.
   std::vector< scheduling_time_cluster * >
     * _nearfield;   //!< Nearfield of the cluster.
   std::vector< scheduling_time_cluster * >
@@ -727,7 +819,8 @@ class besthea::mesh::scheduling_time_cluster {
                           //!< - 3: local, i.e. directly essential
                           //!< The status is assigned when the tree containing
                           //!< the cluster is reduced to the locally essential
-                          //!< tree.
+                          //!< tree, see 
+                          //!< @ref tree_structure::reduce_2_essential . 
   bool _active_upward_path; //!< Indicates if the cluster is active in the
                             //!< upward path of the FMM.
   bool _active_downward_path; //!< Indicates if the cluster is active in the

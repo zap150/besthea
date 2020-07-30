@@ -74,6 +74,16 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     lo n_min_elems, sc st_coeff, lo spatial_nearfield_limit, MPI_Comm * comm );
 
   /**
+   * Destructor.
+   */
+  ~distributed_spacetime_cluster_tree( ) {
+    if ( _root )
+      delete _root;
+    if ( _time_root )
+      delete _time_root;
+  }
+
+  /**
    * Prints levels of the tree.
    */
   void print( ) {
@@ -84,10 +94,6 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   }
 
  private:
-  /**
-   *
-   */
-  void build_tree( general_spacetime_cluster * root );
   lo _max_levels;       //!< number of levels in the tree
   lo _real_max_levels;  //!< auxiliary value to determine number of real tree
                         //!< levels (depending on _n_min_elems)
@@ -114,6 +120,11 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   const MPI_Comm * _comm;  //!< MPI communicator associated with the tree
   int _my_rank;            //!< MPI rank of current processor
   int _n_processes;  //!< total number of MPI processes in the communicator
+
+  /**
+   *
+   */
+  void build_tree( general_spacetime_cluster * root );
 
   /**
    * Computes the bounding box of the underlying mesh.
@@ -237,6 +248,21 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @param[inout] leaves Vector of pointers to the leaf clusters.
    */
   void collect_my_leaves( general_spacetime_cluster & root,
+    std::vector< general_spacetime_cluster * > & leaves );
+
+  /**
+   * Collects space-time leaf clusters in the local part of the distributed tree
+   * which are leaves in the global tree (i.e. real leaves). The leaves include
+   * non-local leaves, which are in the nearfield of local leaf clusters.
+   * 
+   * The routine is based on a traversal of the local part of the spacetime 
+   * cluster tree and the temporal tree structure.
+   * @param[in] st_root Current cluster in the local spacetime tree.
+   * @param[in] t_root  Current cluster in the temporal tree structure.
+   * @param[in,out] leaves  Vector containing all the leaves.
+   */
+  void collect_real_leaves( general_spacetime_cluster & st_root, 
+    scheduling_time_cluster & t_root,
     std::vector< general_spacetime_cluster * > & leaves );
 
   /**

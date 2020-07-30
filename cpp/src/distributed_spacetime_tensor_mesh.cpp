@@ -30,6 +30,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <set>
 
 besthea::mesh::distributed_spacetime_tensor_mesh::
   distributed_spacetime_tensor_mesh( const std::string & decomposition_file,
@@ -94,6 +95,43 @@ void besthea::mesh::distributed_spacetime_tensor_mesh::find_my_slices(
   }
 }
 
+void besthea::mesh::distributed_spacetime_tensor_mesh::find_slices_to_load( 
+  std::set< lo > & nearfield_slice_indices,
+  std::set< lo > & local_slice_indices ) const {
+  for ( auto leaf_cluster : _dist_tree->get_leaves( ) ) {
+    lo cluster_owner = leaf_cluster->get_process_id( );
+    if ( cluster_owner == _my_rank ) {
+      // add all the indices of slices in the local cluster to the corresponding 
+      // set
+      const std::vector< lo > * slices = leaf_cluster->get_time_slices( );
+      if ( slices != nullptr ) {
+        for ( auto idx : *slices ) {
+          local_slice_indices.insert( idx );
+        }
+      }
+      // remember that this cluster's mesh is available
+      leaf_cluster->set_mesh_availability( true );
+      
+      // if a cluster in the nearfield is not local, add its slices to the 
+      // corresponding set
+      std::vector< scheduling_time_cluster* >* nearfield
+        = leaf_cluster->get_nearfield( );
+      for ( auto nearfield_cluster : *nearfield ) {
+        lo nearfield_cluster_owner = nearfield_cluster->get_process_id( );
+        if ( nearfield_cluster_owner != _my_rank ) {
+          const std::vector< lo > * nearfield_slices
+            = nearfield_cluster->get_time_slices( );
+          for ( auto idx : *nearfield_slices ) {
+            nearfield_slice_indices.insert( idx );
+          }
+          // remember that this cluster's mesh is available
+          nearfield_cluster->set_mesh_availability( true );
+        }
+      } 
+    }
+  }
+}
+
 bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
   const std::string & decomposition_file, const std::string & tree_file,
   const std::string & cluster_bounds_file, 
@@ -125,84 +163,105 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
   // read and reconstruct temporal tree and distribution of clusters
   _dist_tree = new tree_structure( tree_file, cluster_bounds_file );
   _dist_tree->load_process_assignments( distribution_file );
-  // std::vector< scheduling_time_cluster * > leaves = _dist_tree->get_leaves(
-  // );
+  _dist_tree->assign_slices_to_clusters( _slices );
 
-  std::vector< lo > slice_indices;
-  find_my_slices( _dist_tree->get_root( ), slice_indices, 0, _n_meshes );
+  std::set< lo > local_slice_indices;
+  std::set< lo > nearfield_slice_indices;
+  find_slices_to_load( nearfield_slice_indices, local_slice_indices );
 
-  _n_meshes_per_rank = slice_indices.size( );
+  _n_meshes_per_rank = local_slice_indices.size( );
 
-  lo my_start_mesh = slice_indices.front( );
-  //  if ( slice_indices.front( ) > 0 ) {
-  //    // let's load also the temporal nearfield slice
-  //    my_start_mesh -= 1;
-  //  }
-  lo my_end_mesh = slice_indices.back( );
-
+  lo local_start_mesh = *local_slice_indices.begin( );
+  lo nearfield_start_mesh = *nearfield_slice_indices.begin( );
   std::vector< sc > my_time_nodes;
   std::vector< sc > my_nearfield_time_nodes;
 
-  lo my_start_idx;
+  lo current_idx;
   std::string t_file_path;
   std::string s_file_path;
 
-  for ( lo i = 0; i < _n_meshes; ++i ) {
-    filestream >> my_start_idx;
+  std::set< lo >::iterator next_slice_to_load 
+    = nearfield_slice_indices.begin( );
+  bool is_local_mesh = false;
+  // check whether there are nearfield slices to load
+  if ( next_slice_to_load == nearfield_slice_indices.end( ) ) {
+    _my_nearfield_start_idx = 0;
+    next_slice_to_load = local_slice_indices.begin( );
+    is_local_mesh = true;
+  }
+
+  lo mesh_idx = 0;
+  while ( ( mesh_idx < _n_meshes ) 
+          && ( next_slice_to_load != local_slice_indices.end( ) ) ) {
+    filestream >> current_idx;
     filestream >> t_file_path;
     filestream >> s_file_path;
 
-    if ( ( i == my_start_mesh - 1 ) ) {
-      std::ifstream temp_file( t_file_path.c_str( ) );
-      if ( !temp_file.is_open( ) ) {
-        std::cout << "File " << t_file_path << " could not be opened!"
-                  << std::endl;
-        return false;
-      }
-      lo dummy;
-
-      temp_file >> dummy;  // dimension (1)
-      temp_file >> dummy;  // nodes per element (2)
-
-      lo n_nodes;
-      sc node;
-      temp_file >> n_nodes;
-      for ( lo i_node = 0; i_node < n_nodes; ++i_node ) {
-        temp_file >> node;
-        my_nearfield_time_nodes.push_back( node );
-      }
-
-      temp_file.close( );
-    }
-
-    if ( i >= my_start_mesh && i <= my_end_mesh ) {
-      if ( i == my_start_mesh ) {
-        _my_start_idx = my_start_idx;
-      }
-
-      std::ifstream temp_file( t_file_path.c_str( ) );
-      if ( !temp_file.is_open( ) ) {
-        std::cout << "File " << t_file_path << " could not be opened!"
-                  << std::endl;
-        return false;
-      }
-      lo dummy;
-
-      temp_file >> dummy;  // dimension (1)
-      temp_file >> dummy;  // nodes per element (2)
-
-      lo n_nodes;
-      sc node;
-      temp_file >> n_nodes;
-      for ( lo i_node = 0; i_node < n_nodes; ++i_node ) {
-        temp_file >> node;
-        if ( i_node != 0 || i == my_start_mesh ) {
-          my_time_nodes.push_back( node );
+    if ( mesh_idx == *next_slice_to_load ) {
+      // check whether the mesh is a nearfield mesh or a local one
+      if ( !is_local_mesh ) { // nearfield mesh 
+        if ( mesh_idx == nearfield_start_mesh ) {
+          _my_nearfield_start_idx = current_idx;
         }
-      }
+        std::ifstream temp_file( t_file_path.c_str( ) );
+        if ( !temp_file.is_open( ) ) {
+          std::cout << "File " << t_file_path << " could not be opened!"
+                    << std::endl;
+          return false;
+        }
+        lo dummy;
 
-      temp_file.close( );
+        temp_file >> dummy;  // dimension (1)
+        temp_file >> dummy;  // nodes per element (2)
+
+        lo n_nodes;
+        sc node;
+        temp_file >> n_nodes;
+        for ( lo i_node = 0; i_node < n_nodes; ++i_node ) {
+          temp_file >> node;
+          // avoid double entries in nearfield time nodes vector by adding the 
+          // first node of a mesh only if the mesh is the first mesh.
+          if ( i_node != 0 || mesh_idx == nearfield_start_mesh ) {
+            my_nearfield_time_nodes.push_back( node );
+          }
+        }
+        temp_file.close( );
+      } 
+      else { // local mesh
+        if ( mesh_idx == local_start_mesh ) {
+          _local_start_idx = current_idx;
+        }
+        std::ifstream temp_file( t_file_path.c_str( ) );
+        if ( !temp_file.is_open( ) ) {
+          std::cout << "File " << t_file_path << " could not be opened!"
+                    << std::endl;
+          return false;
+        }
+        lo dummy;
+
+        temp_file >> dummy;  // dimension (1)
+        temp_file >> dummy;  // nodes per element (2)
+
+        lo n_nodes;
+        sc node;
+        temp_file >> n_nodes;
+        for ( lo i_node = 0; i_node < n_nodes; ++i_node ) {
+          temp_file >> node;
+          // again, avoid double entries
+          if ( i_node != 0 || mesh_idx == local_start_mesh ) {
+            my_time_nodes.push_back( node );
+          }
+        }
+
+        temp_file.close( );
+      } 
+      ++next_slice_to_load;
+      if ( next_slice_to_load == nearfield_slice_indices.end( ) ) {
+        next_slice_to_load = local_slice_indices.begin( );
+        is_local_mesh = true;
+      }
     }
+    ++mesh_idx;
   }
 
   _time_mesh = new temporal_mesh( my_time_nodes );
