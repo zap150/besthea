@@ -703,6 +703,70 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
+   * Determines the tree structure of the subtree whose root is the current 
+   * cluster.
+   * @return  A vector of the tree structure in the usual tree format
+   *          (see @ref time_cluster_tree::compute_tree_structure )
+   */
+  std::vector< char > determine_subtree_structure( ) const {
+    std::vector< char > tree_vector;
+    if ( _children == nullptr ) {
+      tree_vector.push_back( 2 );
+    } else {
+      tree_vector.push_back( 1 );
+      append_tree_structure_vector_recursively( tree_vector );
+    }
+    return tree_vector;
+  }
+
+  /**
+   * Adds the status of the two children of the current cluster to the end
+   * of the tree structure vector.
+   * 
+   * The status is:
+   * - 0: if the child does not exist.
+   * - 1: if the child is a non-leaf cluster.
+   * - 2: if the child is a leaf cluster.
+   * 
+   * The routine is called recursively for the children (first left child, then
+   * right child)
+   * @param[in,out] tree_vector Vector to which the status of the children is 
+   *                            added.
+   * @warning This routine has to be called for a non-leaf cluster only,
+   *          otherwise a segmentation fault occurs.
+   */
+  void append_tree_structure_vector_recursively( 
+    std::vector< char > & tree_vector ) const {
+    char left_child_status = 0;
+    char right_child_status = 0;
+    scheduling_time_cluster* left_child = nullptr;
+    scheduling_time_cluster* right_child = nullptr;
+    for ( auto child : *_children ) {
+      char* status_pointer;
+      if ( child->get_center( ) < _center ) {
+        left_child = child;
+        status_pointer = &left_child_status;
+      } else {
+        right_child = child;
+        status_pointer = &right_child_status;
+      }
+      if ( child->get_n_children( ) > 0 ) {
+        *status_pointer = 1;
+      } else {
+        *status_pointer = 2;
+      }
+    }
+    tree_vector.push_back( left_child_status );
+    tree_vector.push_back( right_child_status );
+    if ( left_child_status == 1 ) {
+      left_child->append_tree_structure_vector_recursively( tree_vector );
+    }
+    if ( right_child_status == 1 ) {
+      right_child->append_tree_structure_vector_recursively( tree_vector );
+    }
+  }
+
+  /**
    * Returns a pointer to left neighbour.
    */
   scheduling_time_cluster * get_left_neighbour( ) {

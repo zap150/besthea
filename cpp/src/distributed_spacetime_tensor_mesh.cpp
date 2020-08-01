@@ -161,7 +161,7 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
   }
 
   // read and reconstruct temporal tree and distribution of clusters
-  _dist_tree = new tree_structure( tree_file, cluster_bounds_file );
+  _dist_tree = new tree_structure( tree_file, cluster_bounds_file, _my_rank );
   _dist_tree->load_process_assignments( distribution_file );
   _dist_tree->assign_slices_to_clusters( _slices );
 
@@ -279,7 +279,7 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
 
   filestream.close( );
 
-  _dist_tree->reduce_2_essential( _my_rank );
+  _dist_tree->reduce_2_essential( );
 
   return true;
 }

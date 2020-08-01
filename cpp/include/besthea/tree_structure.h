@@ -41,6 +41,7 @@
 
 #include <iostream>
 #include <list>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -74,11 +75,13 @@ class besthea::mesh::tree_structure {
    * @param[in] filename Name of the input file containing the tree structure.
    * @param[in] start_time  Start time of the time mesh.
    * @param[in] end_time  End time of the time mesh.
+   * @param[in] process_id  Id of the process which calls the method. Default 
+   *                        value is -1.
    * @note The start and end point of the mesh are used to generate the 
    * geometrical data of the clusters.
    */
   tree_structure( const std::string & filename, const sc start_time, 
-    const sc end_time );
+    const sc end_time, lo process_id = -1  );
 
   /**
    * Constructs a tree structure by reading it from files
@@ -87,9 +90,12 @@ class besthea::mesh::tree_structure {
    * @param[in] cluster_bounds_file   Name of the binary input file containing
    *                                  the bounds of all the clusters in the 
    *                                  tree structure.
+   * @param[in] process_id  Id of the process which calls the method. Default 
+   *                        value is -1.
    */
   tree_structure( const std::string & structure_file, 
-    const std::string & cluster_bounds_file );
+    const std::string & cluster_bounds_file,
+    lo process_id = -1 );
 
   /**
    * Destructor.
@@ -147,8 +153,8 @@ class besthea::mesh::tree_structure {
 
   /**
    * Reduces the tree structure by deleting all clusters which are not contained
-   * in the locally essential tree of the current process.
-   * @param[in] my_process_id Id of the current process.
+   * in the locally essential tree of the current process (which has the id
+   * @p _my_process_id ).
    * @note @p _leaves and @p _levels are reset.
    * @note The original global_indices of the clusters are not modified. This 
    * allows to identify clusters between different processes.
@@ -156,7 +162,7 @@ class besthea::mesh::tree_structure {
    * essential tree: If a non-local leaf cluster has a local cluster in its 
    * nearfield it is also kept.
    */
-  void reduce_2_essential( const lo my_process_id );
+  void reduce_2_essential( );
 
   /**
    * Finds the associated spacetime clusters for each scheduling time cluster in
@@ -288,20 +294,22 @@ class besthea::mesh::tree_structure {
    *                 the next characters in the structural vector.
    * @param[in,out] tree_vector Vector to store the tree structure.
    * @note This method is supposed to be called by @ref compute_tree_structure
+   * @todo: delete? Probably obsolete due to 
+   * @ref scheduling_time_cluster::append_tree_structure_vector_recursively
    */
   void tree_2_vector( const scheduling_time_cluster & root,
     std::vector< char > & tree_vector ) const;
 
   /**
-   * Recursively constructs the tree structure from a given vector.
-   * @param[in] tree_vector Contains the data needed for tree construction.
+   * Recursively constructs the tree structure from a given array.
+   * @param[in] tree_array Contains the data needed for tree construction.
    * @param[in,out] root  Current cluster, to which the next clusters are added.
    * @param[in,out] position  Auxiliary variable to keep track of the current
    *                          position in the tree_vector.
-   * @note  This method is supposed to be called by the constructor.
+   * @note This method is supposed to be called by the constructor.
    */
-  void vector_2_tree( const std::vector<char> & tree_vector, 
-    scheduling_time_cluster & root, lou & position );
+  void array_2_tree( const char * tree_array, scheduling_time_cluster & root, 
+    lou & position );
 
   /**
    * Recursively constructs the tree structure from a given structure vector
@@ -441,6 +449,33 @@ class besthea::mesh::tree_structure {
   void expand_tree_structure_recursively(
     spacetime_cluster* spacetime_root, scheduling_time_cluster* root,
     std::unordered_map< lo, bool > & refine_map );
+
+
+  /**
+   * Determines those clusters in the tree structure for which data has to be 
+   * exchanged when the tree structure is refined based on a locally essential
+   * space-time cluster tree (see 
+   * @ref distributed_spacetime_cluster_tree::expand_distribution_tree_locally ).
+   * 
+   * The output vectors @p cluster_send_list and @p cluster_receive_list
+   * contain pairs of process ids and global cluster indices:
+   * - For a pair (p, idx) in @p cluster_send_list the subtree starting at 
+   *   cluster idx has to be sent to process p after refinement. 
+   * - For a pair (p, idx) in @p cluster_receive_list the subtree starting at 
+   *   cluster idx has to be received from process p after refinement.
+   * 
+   * The routine is based on a tree traversal.
+   * @param[in] root  Current cluster in the tree traversal.
+   * @param[in,out] cluster_send_list Vector storing the clusters and process
+   *                                  ids for which data has to be sent.
+   * @param[in,out] cluster_receive_list Vector storing the clusters and process
+   *                                     ids for which data has to be received.
+   */
+  void determine_refinement_communication_lists(
+    scheduling_time_cluster* root,
+    std::set< std::pair< lo, scheduling_time_cluster* > > & cluster_send_list,
+    std::set< std::pair< lo, scheduling_time_cluster* > > 
+      & cluster_receive_list ) const;
 
   /**
    * Clears the nearfield, interaction and send list of all clusters in the 

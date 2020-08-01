@@ -138,7 +138,7 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
   /**
    * Returns the mesh associated with current MPI process.
    */
-  spacetime_tensor_mesh const *  get_local_mesh( ) const {
+  spacetime_tensor_mesh const * get_local_mesh( ) const {
     return _my_mesh;
   }
 
@@ -152,7 +152,7 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
   /**
    * Returns the tree composed of scheduling_time_clusters (unmodifiable).
    */
-  tree_structure const *  get_distribution_tree( ) const {
+  tree_structure const * get_distribution_tree( ) const {
     return _dist_tree;
   }
 

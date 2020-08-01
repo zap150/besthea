@@ -105,7 +105,8 @@ int main( int argc, char * argv[] ) {
       std::string tree_vector_file = "./job_scheduler/tree_structure.bin";
       std::string process_assignment_file = 
         "./job_scheduler/process_assignment.bin";
-      tree_structure time_structure( tree_vector_file, mesh_start, mesh_end );
+      tree_structure time_structure( 
+        tree_vector_file, mesh_start, mesh_end, process_id );
       time_structure.load_process_assignments( process_assignment_file );
       
       // help variables to print the process ids in human readable format
@@ -125,7 +126,7 @@ int main( int argc, char * argv[] ) {
 
       // reduce to locally essential tree
       
-      time_structure.reduce_2_essential( process_id );
+      time_structure.reduce_2_essential( );
 
       if ( process_id == output_id ) {
         std::cout << "original number of leaves is " << n_leaves << std::endl;

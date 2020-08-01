@@ -105,7 +105,7 @@ int main( int argc, char * argv[] ) {
   //############################################################################
 
   tree_structure time_structure( 
-    tree_vector_file, time_mesh.get_start( ), time_mesh.get_end( ) );
+    tree_vector_file, time_mesh.get_start( ), time_mesh.get_end( ), proc_id );
   time_structure.load_process_assignments( process_assignment_file );
 
   // print process ids at cluster positions
@@ -122,7 +122,7 @@ int main( int argc, char * argv[] ) {
 
   // print locally essential tree structure
   std::cout << "printing reduced tree structure:" << std::endl;
-  time_structure.reduce_2_essential( proc_id );
+  time_structure.reduce_2_essential( );
   time_structure.print_tree_human_readable( digits, print_process_ids );
 
   //############################################################################
@@ -151,7 +151,7 @@ int main( int argc, char * argv[] ) {
   st_tree_refined.get_time_cluster_tree( )->print_tree_structure(
     refined_tree_vector_file );
   tree_structure refined_time_structure( 
-    refined_tree_vector_file, 0.0, 1.0 );
+    refined_tree_vector_file, 0.0, 1.0, proc_id );
   std::cout << "complete refined tree structure for comparison " 
             << std::endl;
   refined_time_structure.print_tree_human_readable( 4, false );

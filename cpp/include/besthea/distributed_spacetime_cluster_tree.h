@@ -61,7 +61,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   /**
    * Constructor
    * @param[in] spacetime_mesh Distributed spacetime mesh.
-   * @param[in] levels Number of levels in the tree.
+   * @param[in] max_levels Bound on the number of levels in the tree.
    * @param[in] n_min_elems Minimum number of spacetime elements in cluster.
    * @param[in] st_coeff Coefficient to determine the coupling of the spatial
    * and temporal levels.
@@ -95,7 +95,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    */
   void print( ) {
     // print general tree information
-    std::cout << "number of levels of spacetime tree " << _max_levels << std::endl;
+    std::cout << "number of levels of spacetime tree " << _real_max_levels << std::endl;
     // print cluster information recursively
     print_internal( *_root );
   }
@@ -147,8 +147,32 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @note The nearfields, interaction lists and send lists of the distribution
    *       tree are cleared using the routine 
    *       @ref tree_structure::clear_cluster_lists and filled anew.
+   * @note After execution the distribution tree is possibly not locally 
+   *       essential anymore. Call the routine 
+   *       @ref tree_structure::reduce_2_essential on the distribution tree to
+   *       make it locally essential again.
    */
-  void expand_distribution_tree_essentially( );
+  void expand_distribution_tree_locally( );
+
+  /**
+   * Expands the distribution tree included in @p _spacetime_mesh by 
+   * exchanging information with other processes (such that the distribution
+   * tree includes the locally essential subtree of the global distribution 
+   * tree after refinement).
+   * @param[in] cluster_send_list Contains pairs of process ids and clusters.
+   *                              For a pair (p, idx) the subtree with root idx
+   *                              is send to process p.
+   * @param[in] cluster_receive_list  Contains pairs of process ids and 
+   *                                  clusters. For a pair (p, idx) the subtree
+   *                                  with root idx is received from process p.
+   * @note The input sets can be determined using 
+   * @ref tree_structure::determine_refinement_communication_lists.
+   */
+  void expand_distribution_tree_communicatively( 
+    const std::set< std::pair< lo, scheduling_time_cluster* > > 
+      cluster_send_list,
+    const std::set< std::pair< lo, scheduling_time_cluster* > > 
+      cluster_receive_list );
 
   /**
    * Expands the temporal tree structure by recursively traversing the current 

@@ -75,7 +75,37 @@ besthea::mesh::distributed_spacetime_cluster_tree::
 
   build_tree( _root );
 
-  expand_distribution_tree_essentially( );
+  // extend the locally essential distribution tree:
+  // first determine clusters in the distribution tree for which the extension
+  // cannot be done locally
+  std::set< std::pair< lo, scheduling_time_cluster* > > cluster_send_list;
+  std::set< std::pair< lo, scheduling_time_cluster* > > cluster_receive_list;
+  tree_structure* distribution_tree = _spacetime_mesh.get_distribution_tree( );
+  distribution_tree->determine_refinement_communication_lists(
+    distribution_tree->get_root( ), cluster_send_list, cluster_receive_list );
+  if ( _my_rank == 1 ) {
+    std::cout << "receive list is " << std::endl;
+    for ( auto it : cluster_receive_list ) {
+      std::cout << it.second->get_global_index( ) << " ";
+    }
+    std::cout << std::endl;
+  }
+  MPI_Barrier( *_comm );
+  if ( _my_rank == 2 ) {
+    std::cout << "send list is " << std::endl;
+    for ( auto it : cluster_send_list ) {
+      std::cout << it.second->get_global_index( ) << " ";
+    }
+    std::cout << std::endl;
+  }
+  MPI_Barrier( *_comm );
+  // secondly, expand the distribution tree locally
+  expand_distribution_tree_locally( );
+  // finally, expand the distribution tree communicatively and reduce it again
+  // to a locally essential tree
+  expand_distribution_tree_communicatively( 
+    cluster_send_list, cluster_receive_list );
+  distribution_tree->reduce_2_essential( );
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
@@ -115,7 +145,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
   std::vector< general_spacetime_cluster * > leaves;
   collect_real_leaves( *_root, *temporal_root, leaves );
   for ( auto it : leaves ) {
-    // \todo Discuss: Inefficient way of filling in the elements! For each leaf
+    // \todo Discuss: Inefficient way of filling in the elements? For each leaf
     // cluster the whole mesh is traversed once. If the depth of the tree is 
     // reasonably high this takes a while!
     fill_elements( *it );
@@ -130,7 +160,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
 
 
 void besthea::mesh::distributed_spacetime_cluster_tree::
-  expand_distribution_tree_essentially( ) {
+  expand_distribution_tree_locally( ) {
   //\todo use the various spacetime roots at level 0 instead of a single 
   //spacetime root at level -1, when this is implemented for the distributed
   //spacetime cluster tree
@@ -149,10 +179,205 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     // determine activity of clusters in upward and downward path of FMM anew
     distribution_tree->determine_cluster_activity( *time_root );
     // reduce the tree to make it essential again
-    distribution_tree->reduce_2_essential( _my_rank );
   } else {
     std::cout << "Error: Corrupted spacetime tree" << std::endl;
   }
+}
+
+void besthea::mesh::distributed_spacetime_cluster_tree::
+  expand_distribution_tree_communicatively( 
+  const std::set< std::pair< lo, scheduling_time_cluster* > > 
+    cluster_send_list,
+  const std::set< std::pair< lo, scheduling_time_cluster* > > 
+    cluster_receive_list ) {
+  tree_structure* distribution_tree = _spacetime_mesh.get_distribution_tree( );
+  // first communicate the maximal depth of the distribution tree.
+  lo global_tree_levels = distribution_tree->get_levels( );
+  MPI_Allreduce( MPI_IN_PLACE, &global_tree_levels, 1,
+    get_index_type< lo >::MPI_LO( ), MPI_MAX, *_comm );
+  // the sets are sorted by default lexicographically, i.e. first in ascending 
+  // order with respect to the process ids. the code relies on that.
+  lo max_offset = 0;
+  if ( cluster_send_list.size( ) > 0 ) {
+    max_offset = _my_rank - cluster_send_list.begin( )->first;
+  }
+  if ( cluster_receive_list.size( ) > 0 ) {
+    max_offset 
+      = std::max( max_offset, 
+                  cluster_receive_list.rbegin( )->first - _my_rank );
+  }
+  // execute the send and receive operations offsetwise
+  auto send_list_it = cluster_send_list.rbegin( );
+  auto receive_list_it = cluster_receive_list.begin( );
+  for ( lo offset = 1; offset <= max_offset; ++ offset ) {
+    // depending on the rank decide whether to send or receive first
+    if ( ( _my_rank / offset ) % 2 == 1 ) {
+      // send first, receive later
+      std::vector< scheduling_time_cluster* > current_send_clusters;
+      while ( ( send_list_it != cluster_send_list.rend( ) ) &&
+              ( _my_rank - send_list_it->first == offset ) ) {
+        current_send_clusters.push_back( send_list_it->second );
+        ++send_list_it;
+      }
+      if ( current_send_clusters.size( ) > 0 ) {
+        // prepare the array, which is sent, by determining first its size
+        lou send_array_size = 0;
+        for ( lou i = 0; i < current_send_clusters.size( ); ++i ) {
+          lo send_cluster_level = current_send_clusters[ i ]->get_level( );
+          lo send_cluster_vec_size 
+            = ( 1 << ( global_tree_levels - send_cluster_level) ) - 1;
+          send_array_size += send_cluster_vec_size; 
+        }
+        char send_array[ send_array_size ];
+        for ( lou i = 0; i < send_array_size; ++i ) {
+          send_array[ i ] = 0;
+        }
+        lou send_array_pos = 0;
+        for ( lou i = 0; i < current_send_clusters.size( ); ++i ) {
+          // compute the tree structure of the subtree and copy it to send_array
+          std::vector< char > subtree_structure_vector = 
+            current_send_clusters[ i ]->determine_subtree_structure( );
+          for ( lou j = 0; j < subtree_structure_vector.size( ); ++j ) {
+            send_array[ send_array_pos + j ] = subtree_structure_vector[ j ];
+          }
+          // jump to the position of the next subtree in the send_array
+          lo send_cluster_level = current_send_clusters[ i ]->get_level( );
+          lo send_cluster_vec_size 
+            = ( 1 << ( global_tree_levels - send_cluster_level) ) - 1;
+          send_array_pos += send_cluster_vec_size;
+        }
+        MPI_Send( send_array, send_array_size, MPI_CHAR, _my_rank - offset,
+                  offset, *_comm);
+      }
+      // now receive
+      std::vector< scheduling_time_cluster* > current_receive_clusters;
+      while ( ( receive_list_it != cluster_receive_list.end( ) ) &&
+              ( receive_list_it->first - _my_rank == offset ) ) {
+        current_receive_clusters.push_back( receive_list_it->second );
+        ++receive_list_it;
+      }
+      if ( current_receive_clusters.size( ) > 0 ) {
+        lou receive_array_size = 0;
+        for ( lou i = 0; i < current_receive_clusters.size( ); ++i ) {
+          lo receive_cluster_level 
+            = current_receive_clusters[ i ]->get_level( );
+          lo receive_cluster_vec_size 
+            = ( 1 << ( global_tree_levels - receive_cluster_level) ) - 1;
+          receive_array_size += receive_cluster_vec_size; 
+        }
+        char receive_array[ receive_array_size ];
+        MPI_Status status;
+        MPI_Recv( receive_array, receive_array_size, MPI_CHAR, 
+          _my_rank + offset, offset, *_comm, &status);
+        lou receive_array_pos = 0;
+        for ( lou i = 0; i < current_receive_clusters.size( ); ++i ) {
+          lou local_pos = receive_array_pos;
+          // check whether the cluster is a non-leaf in the local tree of the
+          // sending process
+          if ( receive_array[ local_pos ] == 1 ) {
+            local_pos += 1;
+            // refine the tree structure uniformly at the given cluster.
+            distribution_tree->array_2_tree( 
+              receive_array, *current_receive_clusters[ i ], local_pos );
+          }
+          // find the starting position of the entries corresponding to the 
+          // subtree of the next cluster
+          lo receive_cluster_level 
+            = current_receive_clusters[ i ]->get_level( );
+          lo receive_cluster_vec_size 
+            = ( 1 << ( global_tree_levels - receive_cluster_level) ) - 1;
+          receive_array_pos += receive_cluster_vec_size;
+        }
+      }
+    } else {
+      //receive first, send later
+      std::vector< scheduling_time_cluster* > current_receive_clusters;
+      while ( ( receive_list_it != cluster_receive_list.end( ) ) &&
+              ( receive_list_it->first - _my_rank == offset ) ) {
+        current_receive_clusters.push_back( receive_list_it->second );
+        ++receive_list_it;
+      }
+      if ( current_receive_clusters.size( ) > 0 ) {
+        lou receive_array_size = 0;
+        for ( lou i = 0; i < current_receive_clusters.size( ); ++i ) {
+          lo receive_cluster_level 
+            = current_receive_clusters[ i ]->get_level( );
+          lo receive_cluster_vec_size 
+            = ( 1 << ( global_tree_levels - receive_cluster_level) ) - 1;
+          receive_array_size += receive_cluster_vec_size; 
+        }
+        char receive_array[ receive_array_size ];
+        MPI_Status status;
+        MPI_Recv( receive_array, receive_array_size, MPI_CHAR, 
+          _my_rank + offset, offset, *_comm, &status);
+        lou receive_array_pos = 0;
+        for ( lou i = 0; i < current_receive_clusters.size( ); ++i ) {
+          lou local_pos = receive_array_pos;
+          // check whether the cluster is a non-leaf in the local tree of the
+          // sending process
+          if ( receive_array[ local_pos ] == 1 ) {
+            local_pos += 1;
+            // refine the tree structure uniformly at the given cluster.
+            distribution_tree->array_2_tree( 
+              receive_array, *current_receive_clusters[ i ], local_pos );
+          }
+          // find the starting position of the entries corresponding to the 
+          // subtree of the next cluster
+          lo receive_cluster_level 
+            = current_receive_clusters[ i ]->get_level( );
+          lo receive_cluster_vec_size 
+            = ( 1 << ( global_tree_levels - receive_cluster_level) ) - 1;
+          receive_array_pos += receive_cluster_vec_size;
+        }
+      }
+      // now send
+      std::vector< scheduling_time_cluster* > current_send_clusters;
+      while ( ( send_list_it != cluster_send_list.rend( ) ) &&
+              ( _my_rank - send_list_it->first == offset ) ) {
+        current_send_clusters.push_back( send_list_it->second );
+        ++send_list_it;
+      }
+      if ( current_send_clusters.size( ) > 0 ) {
+        // prepare the array, which is sent, by determining first its size
+        lou send_array_size = 0;
+        for ( lou i = 0; i < current_send_clusters.size( ); ++i ) {
+          lo send_cluster_level = current_send_clusters[ i ]->get_level( );
+          lo send_cluster_vec_size 
+            = ( 1 << ( global_tree_levels - send_cluster_level) ) - 1;
+          send_array_size += send_cluster_vec_size; 
+        }
+        char send_array[ send_array_size ];
+        for ( lou i = 0; i < send_array_size; ++i ) {
+          send_array[ i ] = 0;
+        }
+        lou send_array_pos = 0;
+        for ( lou i = 0; i < current_send_clusters.size( ); ++i ) {
+          // compute the tree structure of the subtree and copy it to send_array
+          std::vector< char > subtree_structure_vector = 
+            current_send_clusters[ i ]->determine_subtree_structure( );
+          for ( lou j = 0; j < subtree_structure_vector.size( ); ++j ) {
+            send_array[ send_array_pos + j ] = subtree_structure_vector[ j ];
+          }
+          // jump to the position of the next subtree in the send_array
+          lo send_cluster_level = current_send_clusters[ i ]->get_level( );
+          lo send_cluster_vec_size 
+            = ( 1 << ( global_tree_levels - send_cluster_level) ) - 1;
+          send_array_pos += send_cluster_vec_size;
+        }
+        MPI_Send( send_array, send_array_size, MPI_CHAR, _my_rank - offset,
+                  offset, *_comm);
+      }
+    }
+  }
+  // clear the nearfield, interaction and send list of each cluster and fill
+  // them anew, to guarantee correctness.
+  distribution_tree->clear_cluster_lists( distribution_tree->get_root( ) );
+  distribution_tree->set_nearfield_interaction_and_send_list( 
+    *distribution_tree->get_root( ) );
+  // determine activity of clusters in upward and downward path of FMM anew
+  distribution_tree->determine_cluster_activity( 
+    *distribution_tree->get_root( ) );
+  // reduce the tree to make it essential again
 }
 
 

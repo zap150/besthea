@@ -43,7 +43,6 @@ using besthea::mesh::spacetime_mesh_generator;
 using besthea::mesh::tree_structure;
 
 int main( int argc, char * argv[] ) {
-  slou output_id = 2; 
   using b_t_mesh = besthea::mesh::temporal_mesh;
   using time_cluster_tree = besthea::mesh::time_cluster_tree;
 
@@ -68,7 +67,7 @@ int main( int argc, char * argv[] ) {
     std::string space_file = "./mesh_files/cube_12.txt";  // spatial mesh
     std::string time_file = "./testfile.txt";  // file defining temporal slices
     lo time_refinement = 3;                    // defining mesh within slices
-    lo space_refinement = 1;
+    lo space_refinement = 2;
 
     // load time mesh defining slices and create temporal tree
     b_t_mesh time_mesh( time_file );
@@ -118,33 +117,30 @@ int main( int argc, char * argv[] ) {
   // std::cout << mesh.get_n_elements( ) << std::endl;
 
   besthea::mesh::distributed_spacetime_cluster_tree tree(
-    mesh, 6, 10, 1.0, 1, &comm );
+    mesh, 20, 10, 1.0, 1, &comm );
   
-  if ( myRank == output_id ) {
-    std::cout << "myRank is " << myRank << std::endl;
-    tree_structure time_structure( 
-      tree_vector_file, mesh.get_start( ), mesh.get_end( ) );
-    time_structure.load_process_assignments( process_assignment_file );
-    
-    // help variables to print the process ids in human readable format
-    // lo digits = ( lo ) ( ceil( log10( n_processes + 1 ) ) + 1 );
-    // bool print_process_ids = true;
+  for ( int output_id = 0; output_id < n_processes; ++output_id ) {
     lo digits = 3;
-
-    std::cout << "process ids in initial global distribution tree:" 
-              << std::endl;
-    time_structure.print_tree_human_readable( digits, true );
-
-    std::cout << "process ids in locally essential distribution tree:"
-              << std::endl;
-    mesh.get_distribution_tree( )->print_tree_human_readable( digits, true);
-
-    std::cout << "global number of elements is " << mesh.get_n_elements( ) 
-              << std::endl;
-    std::cout << "printing local part of distributed cluster tree: " 
-              << std::endl;
-    tree.print( );
+    if ( output_id == 0 && myRank == 0 ) {
+      std::cout << "myRank is " << myRank << std::endl;
+      tree_structure time_structure( 
+        tree_vector_file, mesh.get_start( ), mesh.get_end( ), myRank );
+      time_structure.load_process_assignments( process_assignment_file );
+      std::cout << "process ids in initial global distribution tree:" 
+                << std::endl;
+      time_structure.print_tree_human_readable( digits, true );
+      std::cout << "global number of elements is " << mesh.get_n_elements( ) 
+                << std::endl;
+      std::cout << "printing local part of distributed cluster tree: " 
+                << std::endl;
+      tree.print( );
+    }
+    if ( output_id == myRank ) {
+      std::cout << "process ids in " << myRank << "'s locally essential "
+                << "distribution tree:" << std::endl;
+      mesh.get_distribution_tree( )->print_tree_human_readable( digits, true );
+    }
+    MPI_Barrier( comm );
   }
-
   MPI_Finalize( );
 }
