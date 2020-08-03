@@ -280,18 +280,6 @@ class besthea::mesh::tree_structure {
   }
 
   /**
-   * Recursively constructs the structural vector of a tree structure.
-   * @param[in] root Current cluster, whose children are considered to determine
-   *                 the next characters in the structural vector.
-   * @param[in,out] tree_vector Vector to store the tree structure.
-   * @note This method is supposed to be called by @ref compute_tree_structure
-   * @todo: delete? Probably obsolete due to 
-   * @ref scheduling_time_cluster::append_tree_structure_vector_recursively
-   */
-  void tree_2_vector( const scheduling_time_cluster & root,
-    std::vector< char > & tree_vector ) const;
-
-  /**
    * Recursively constructs the tree structure from a given array.
    * @param[in] tree_array Contains the data needed for tree construction.
    * @param[in,out] root  Current cluster, to which the next clusters are added.
@@ -331,7 +319,6 @@ class besthea::mesh::tree_structure {
    * Collects all clusters without descendants and stores them in the internal
    * @p _leaves vector. The routine is based on a tree traversal.
    * @param[in] root  Current cluster in the tree traversal.
-   * @todo Do we need this?
    */
   void collect_leaves( scheduling_time_cluster & root );
 

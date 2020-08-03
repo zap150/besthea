@@ -197,7 +197,7 @@ class besthea::bem::fast_spacetime_be_assembler {
    * Assembles temporal nearfield matrices.
    * @param[out] global_matrix Partially assembled pFMM matrix.
    * @todo If the number of levels in the spacetime cluster tree is less than
-   * the number of levels in the time tree than not enough nearfield matrices
+   * the number of levels in the time tree, then not enough nearfield matrices
    * are computed. Change is necessary!
    */
   void assemble_nearfield( pfmm_matrix_type & global_matrix ) const;
@@ -508,7 +508,8 @@ class besthea::bem::fast_spacetime_be_assembler {
     space_cluster_type * cluster ) const;
 
   /**
-   * @todo do documentation
+   * Initializes data storage for moment and local contributions for all 
+   * clusters in the test and trial space spacetime cluster tree.
    */
   void initialize_moment_and_local_contributions( ) const;
 

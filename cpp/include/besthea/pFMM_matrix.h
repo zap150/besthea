@@ -388,8 +388,8 @@ class besthea::linear_algebra::pFMM_matrix
    *                  all its descendants.
    * @param[in] buffer_matrices Vector of 8 matrices of size >=
    *    ( _temp_order + 1 ) * ( ( _spat_order + 3 ) choose 3 ).
-   * @todo Currently some unnecessary m2m operations are executed (for clusters
-   * without direct interactions or parental interactions).
+   * @note Some unnecessary m2m operations are executed (for clusters without 
+   * direct interactions or parental interactions).
    */
   void call_m2m_operations( spacetime_cluster * root,
     std::vector< full_matrix_type > & buffer_matrices ) const;
@@ -444,7 +444,7 @@ class besthea::linear_algebra::pFMM_matrix
    *                  all its descendants.
    * @param[in] buffer_matrices Vector of 8 matrices of size >=
    *    ( _temp_order + 1 ) * ( ( _spat_order + 3 ) choose 3 ).
-   * @todo Currently some unnecessary l2l operations are executed (for clusters
+   * @note Some unnecessary l2l operations are executed (for clusters
    * without direct interactions or parental interactions).
    */
   void call_l2l_operations( spacetime_cluster * root,
@@ -648,14 +648,14 @@ class besthea::linear_algebra::pFMM_matrix
 
   mutable bem::chebyshev_evaluator
     _chebyshev;  //!< Evaluator of the Chebyshev polynomials.
-                 //!< @todo TODO check if necessary in the final code
+                 //!< @todo check if necessary in the final code
 
   sc _alpha;  //!< Heat conductivity.
 
   bool _source_space_is_p0;  //!< True if spatial source space is p0.
-                             //!< @todo TODO: control more elegantly.
+                             //!< @todo control more elegantly.
   bool _target_space_is_p0;  //!< True if spatial target space is p0.
-                             //!< @todo TODO: control more elegantly.
+                             //!< @todo control more elegantly.
 
   //   besthea::bem::spacetime_heat_kernel
   //     _heat_kernel; //!< Evaluator of the Heat Kernel
