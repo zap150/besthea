@@ -344,6 +344,52 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    */
   void build_subtree( general_spacetime_cluster & root, bool split_space );
 
+
+  /**
+   * Finds the associated spacetime clusters for each scheduling time cluster in 
+   * the distribution tree.
+   * @note The routines 
+   * @ref associate_scheduling_clusters_and_space_time_leaves and 
+   * @ref associate_scheduling_clusters_and_space_time_non_leaves are executed
+   * to find the leaves.
+   * @warning: Space-time leaves and space-time non-leaves are distinguished. 
+   * This distinction is reasonable only for local clusters in the 
+   * distribution tree, i.e. clusters with process id @p _my_rank. Only for such
+   * clusters this distinction is required in the FMM.
+   */
+  void associate_scheduling_clusters_and_space_time_clusters( );
+
+  /**
+   * Recursively finds the associated spacetime leaf clusters for each 
+   * scheduling time cluster in the distribution tree. For this purpose the 
+   * distribution tree and the distributed spacetime cluster tree are traversed 
+   * simultaneously in a recursvie manner.
+   * @param[in] t_root  Current cluster in the distribution tree.
+   * @param[in] st_root  Current cluster in the distributed spacetime cluster 
+   *                     tree.
+   * @warning If the global leaf status of a cluster in the distribution tree
+   * is not correct anymore (after a local extension of the distribution tree
+   * this is possible), "false" leaves are detected by this method. However,
+   * for such scheduling time clusters a distinction of leaves and non-leaves
+   * is not necessary.
+   */
+  void associate_scheduling_clusters_and_space_time_leaves( 
+    scheduling_time_cluster* t_root, general_spacetime_cluster * st_root );
+
+  /**
+   * Recursively finds the associated spacetime non-leaf clusters for each 
+   * scheduling time cluster in the distribution tree. For this purpose the 
+   * distribution tree and the distributed spacetime cluster tree are traversed 
+   * simultaneously in a recursvie manner.
+   * @param[in] t_root  Current cluster in the distribution tree.
+   * @param[in] st_root  Current cluster in the distributed spacetime cluster 
+   *                     tree.
+   * @warning Some non-leaves might be missing, see 
+   * @ref associate_scheduling_clusters_and_space_time_leaves for more details.
+   */
+  void associate_scheduling_clusters_and_space_time_non_leaves( 
+    scheduling_time_cluster* t_root, general_spacetime_cluster * st_root );
+
   /**
    * Aux for printing
    */

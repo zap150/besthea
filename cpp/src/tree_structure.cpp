@@ -157,27 +157,6 @@ void besthea::mesh::tree_structure::
   collect_leaves( *_root );
 }
 
-void besthea::mesh::tree_structure::find_associated_space_time_clusters( 
-    spacetime_cluster_tree * spacetime_tree ) {
-  // Traverse the two trees twice to determine all associated clusters, first
-  // the leaves and then the non-leaves. This ensures that first the spacetime 
-  // leaves are added to the lists.
-  std::vector< spacetime_cluster* > * spacetime_roots 
-    = spacetime_tree->get_root( )->get_children( );
-  if ( spacetime_roots != nullptr ) {
-    for ( auto it = spacetime_roots->begin( ); it != spacetime_roots->end( );
-          ++it ) {
-      find_associated_space_time_leaves( *it, _root );
-    }
-    for ( auto it = spacetime_roots->begin( ); it != spacetime_roots->end( );
-          ++it ) {
-      find_associated_space_time_non_leaves( *it, _root );
-    } 
-  } else {
-    std::cout << "Error: Corrupted spacetime tree" << std::endl;
-  }
-}
-
 void besthea::mesh::tree_structure::expand_tree_structure_essentially( 
   spacetime_cluster_tree * spacetime_tree ) {
   std::vector< spacetime_cluster* > * spacetime_roots 
@@ -373,12 +352,14 @@ void besthea::mesh::tree_structure::array_2_tree(
     left_cluster 
       = new scheduling_time_cluster( center - half_size / 2.0, half_size / 2.0, 
                                      &root, level + 1, root.get_process_id( ) );
+    left_cluster->set_index( 2 * root.get_global_index( ) + 1 );                                    
   }
   if ( right_child_status > 0 ) {
     child_counter++;
     right_cluster 
       = new scheduling_time_cluster( center + half_size / 2.0, half_size / 2.0, 
                                      &root, level + 1, root.get_process_id( ) );
+    right_cluster->set_index( 2 * root.get_global_index( ) + 2 );                                     
   }
   // add the newly created clusters to the root
   root.set_n_children( child_counter );
@@ -598,68 +579,6 @@ void besthea::mesh::tree_structure::add_leaves_to_nearfield(
       = current_cluster.get_children( );
     for ( auto it = children->begin( ); it != children->end( ); ++it ) {
       add_leaves_to_nearfield( **it, target_cluster );
-    }
-  }
-}
-
-void besthea::mesh::tree_structure::find_associated_space_time_leaves( 
-  spacetime_cluster* spacetime_root, scheduling_time_cluster* root ) {
-  if ( spacetime_root->get_n_children( ) == 0 ) {
-    // add spacetime leaf to the list of associated clusters.
-    root->add_associated_spacetime_cluster( spacetime_root );
-    root->increase_n_associated_leaves( );
-  } else {
-    // if root is not a leaf traverse the two trees further to find the 
-    // associated spacetime leaf clusters of the descendants.
-    if ( root->get_n_children( ) > 0 ) {
-      std::vector< scheduling_time_cluster* > * time_children = 
-        root->get_children( );
-      std::vector< spacetime_cluster* > * spacetime_children =
-        spacetime_root->get_children( );
-      for ( auto it_time = time_children->begin( ); 
-            it_time != time_children->end( ); ++it_time ) {
-        sc temporal_center = ( *it_time )->get_center( );
-        sc half_size = ( *it_time )->get_half_size( );
-        for ( auto it_st = spacetime_children->begin( );
-              it_st != spacetime_children->end( ); ++it_st ) {
-          sc st_temporal_center = ( *it_st )->get_time_cluster( ).get_center( );
-          // check if the temporal component of the spacetime child is the same 
-          // as the current temporal child and call routine recursively if yes
-          if ( std::abs( st_temporal_center - temporal_center ) < half_size ) {
-            find_associated_space_time_leaves( *it_st, *it_time );
-          } 
-        }
-      }
-    }
-  }
-}
-
-void besthea::mesh::tree_structure::find_associated_space_time_non_leaves( 
-  spacetime_cluster* spacetime_root, scheduling_time_cluster* root ) {
-  if ( spacetime_root->get_n_children( ) > 0 ) {
-    // add spacetime non-leaf to the list of associated clusters.
-    root->add_associated_spacetime_cluster( spacetime_root );
-    // if root is not a leaf traverse the two trees further to find the 
-    // associated spacetime non-leaf clusters of the descendants.
-    if ( root->get_n_children( ) > 0 ) {
-      std::vector< scheduling_time_cluster* > * time_children = 
-        root->get_children( );
-      std::vector< spacetime_cluster* > * spacetime_children =
-        spacetime_root->get_children( );
-      for ( auto it_time = time_children->begin( ); 
-            it_time != time_children->end( ); ++it_time ) {
-        sc temporal_center = ( *it_time )->get_center( );
-        sc half_size = ( *it_time )->get_half_size( );
-        for ( auto it_st = spacetime_children->begin( );
-              it_st != spacetime_children->end( ); ++it_st ) {
-          sc st_temporal_center = ( *it_st )->get_time_cluster( ).get_center( );
-          // check if the temporal component of the spacetime child is the same 
-          // as the current temporal child and call routine recursively if yes
-          if ( std::abs( st_temporal_center - temporal_center ) < half_size ) {
-            find_associated_space_time_non_leaves( *it_st, *it_time );
-          } 
-        }
-      }
     }
   }
 }

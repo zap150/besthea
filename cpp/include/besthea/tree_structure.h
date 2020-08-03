@@ -165,15 +165,6 @@ class besthea::mesh::tree_structure {
   void reduce_2_essential( );
 
   /**
-   * Finds the associated spacetime clusters for each scheduling time cluster in
-   * the tree structure.
-   * @param[in] spacetime_tree  Spacetime cluster tree in which the associated 
-   *                            clusters are searched.
-   */
-  void find_associated_space_time_clusters( 
-    spacetime_cluster_tree * spacetime_tree );
-
-  /**
    * Expands the tree structure by adding relevant time clusters which appear as
    * components of spacetime clusters in the given spacetime cluster tree but
    * are not in the tree structure.
@@ -381,30 +372,6 @@ class besthea::mesh::tree_structure {
   void add_leaves_to_nearfield( scheduling_time_cluster & current_cluster, 
     scheduling_time_cluster & target_cluster );
 
-  /**
-   * Recursively finds the associated spacetime leaf clusters for each 
-   * scheduling time cluster in the tree structure. For this purpose the 
-   * tree structure and a spacetime cluster tree are traversed simultaneously.
-   * @param[in] spacetime_root  Current cluster in the spacetime cluster tree.
-   * @param[in] root  Current cluster in the tree structure.
-   * @todo If instead of the full space-time cluster tree only a locally
-   * essential part of it is given, "real" space-time leaf clusters need
-   * to be marked to distinguish them from leaves created by the truncation. In
-   * particular, the code needs to be modified.
-   */
-  void find_associated_space_time_leaves( 
-    spacetime_cluster* spacetime_root, scheduling_time_cluster* root );
-
-  /**
-   * Recursively finds the associated spacetime (non-leaf) clusters for each 
-   * scheduling time cluster in the tree structure. For this purpose the 
-   * tree structure and a spacetime cluster tree are traversed simultaneously.
-   * @param[in] spacetime_root  Current cluster in the spacetime cluster tree.
-   * @param[in] root  Current cluster in the tree structure.
-   */
-  void find_associated_space_time_non_leaves( 
-    spacetime_cluster* spacetime_root, scheduling_time_cluster* root );
-
     /**
    * Determines all clusters which should be refined during an expansion of the
    * tree structure. Therefore, an entry is added to @p refine_map for every 
@@ -566,7 +533,7 @@ class besthea::mesh::tree_structure {
    */
   void print_internal( scheduling_time_cluster * root ) {
     if ( root != nullptr ) {
-      root->print( );
+      root->print( _my_process_id );
       std::vector< scheduling_time_cluster * > * children 
         = root->get_children( );
       if ( children != nullptr )

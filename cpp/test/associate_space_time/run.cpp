@@ -156,7 +156,9 @@ int main( int argc, char * argv[] ) {
             << std::endl;
   refined_time_structure.print_tree_human_readable( 4, false );
   
-  std::cout << "find associated space time clusters" << std::endl;
-  time_structure.find_associated_space_time_clusters( &st_tree_refined );
-  time_structure.print( );
+  // @todo: associating "standard" space time clusters is not supported anymore
+  // remove the test example or adapt it
+  // std::cout << "find associated space time clusters" << std::endl;
+  // time_structure.find_associated_space_time_clusters( &st_tree_refined );
+  // time_structure.print( );
 }

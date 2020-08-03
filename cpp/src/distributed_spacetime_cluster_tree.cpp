@@ -106,6 +106,10 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   expand_distribution_tree_communicatively( 
     cluster_send_list, cluster_receive_list );
   distribution_tree->reduce_2_essential( );
+
+  // associate the space time clusters in the distributed tree with the 
+  // appropriate scheduling time clusters
+  associate_scheduling_clusters_and_space_time_clusters( );
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
@@ -277,6 +281,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
           if ( receive_array[ local_pos ] == 1 ) {
             local_pos += 1;
             // refine the tree structure uniformly at the given cluster.
+            current_receive_clusters[ i ]->set_global_leaf_status( false );
             distribution_tree->array_2_tree( 
               receive_array, *current_receive_clusters[ i ], local_pos );
           }
@@ -318,6 +323,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
           if ( receive_array[ local_pos ] == 1 ) {
             local_pos += 1;
             // refine the tree structure uniformly at the given cluster.
+            current_receive_clusters[ i ]->set_global_leaf_status( false );
             distribution_tree->array_2_tree( 
               receive_array, *current_receive_clusters[ i ], local_pos );
           }
@@ -1466,4 +1472,104 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
     build_subtree( *right_child, !split_space );
   }
   root.shrink_children( );
+}
+
+void besthea::mesh::distributed_spacetime_cluster_tree::
+  associate_scheduling_clusters_and_space_time_clusters( ) {
+  // Traverse the two trees twice to determine all associated clusters, first
+  // the leaves and then the non-leaves. This ensures that first the spacetime 
+  // leaves are added to the lists.
+  // @todo Currently there is only one root in the tree with level 0. When the
+  // code is changed to include several roots this code here has to be adapted
+  // (add loop over spacetime roots)
+  if ( _root != nullptr ) {
+    scheduling_time_cluster* time_root 
+      = _spacetime_mesh.get_distribution_tree( )->get_root( );
+    associate_scheduling_clusters_and_space_time_leaves( time_root, _root );
+    associate_scheduling_clusters_and_space_time_non_leaves( time_root, _root );
+  } else {
+    std::cout << "Error: Corrupted spacetime tree; _root is nullptr" 
+              << std::endl;
+  }
+}
+
+void besthea::mesh::distributed_spacetime_cluster_tree::
+  associate_scheduling_clusters_and_space_time_leaves( 
+  scheduling_time_cluster* t_root, general_spacetime_cluster * st_root ) {
+  if ( st_root->get_n_children( ) == 0 ) {
+    // check if st_root is a leaf in the global space time cluster tree
+    if ( t_root->get_global_leaf_status( ) || 
+         st_root->get_n_elements( ) < _n_min_elems ) {
+      // add spacetime leaf to the list of associated clusters.
+      t_root->add_associated_spacetime_cluster( st_root );
+      t_root->increase_n_associated_leaves( );
+    }
+  } else {
+    // if t_root is not a leaf traverse the two trees further to find the 
+    // associated spacetime leaf clusters of the descendants.
+    if ( t_root->get_n_children( ) > 0 ) {
+      std::vector< scheduling_time_cluster* > * time_children = 
+        t_root->get_children( );
+      std::vector< general_spacetime_cluster* > * spacetime_children =
+        st_root->get_children( );
+      for ( auto it_t = time_children->begin( ); it_t != time_children->end( ); 
+            ++it_t ) {
+        sc temporal_center = ( *it_t )->get_center( );
+        sc half_size = ( *it_t )->get_half_size( );
+        for ( auto it_st = spacetime_children->begin( );
+              it_st != spacetime_children->end( ); ++it_st ) {
+          sc st_temporal_center;
+          besthea::linear_algebra::vector dummy_vector;
+          dummy_vector.resize( 3 );
+          ( *it_st )->get_center( dummy_vector, st_temporal_center );
+          // check if the temporal component of the spacetime child is the same 
+          // as the current temporal child and call routine recursively if yes
+          if ( std::abs( st_temporal_center - temporal_center ) < half_size ) {
+            associate_scheduling_clusters_and_space_time_leaves( 
+              *it_t, *it_st );
+          } 
+        }
+      }
+    }
+  }
+}
+
+void besthea::mesh::distributed_spacetime_cluster_tree::
+  associate_scheduling_clusters_and_space_time_non_leaves( 
+  scheduling_time_cluster* t_root, general_spacetime_cluster * st_root ) {
+  if ( st_root->get_n_children( ) > 0 ) {
+    // add spacetime non-leaf to the list of associated clusters.
+    t_root->add_associated_spacetime_cluster( st_root );
+    // if root is not a leaf traverse the two trees further to find the 
+    // associated spacetime non-leaf clusters of the descendants.
+    if ( t_root->get_n_children( ) > 0 ) {
+      std::vector< scheduling_time_cluster* > * time_children = 
+        t_root->get_children( );
+      std::vector< general_spacetime_cluster* > * spacetime_children =
+        st_root->get_children( );
+      for ( auto it_t = time_children->begin( ); it_t != time_children->end( ); 
+            ++it_t ) {
+        sc temporal_center = ( *it_t )->get_center( );
+        sc half_size = ( *it_t )->get_half_size( );
+        for ( auto it_st = spacetime_children->begin( );
+              it_st != spacetime_children->end( ); ++it_st ) {
+          sc st_temporal_center;
+          besthea::linear_algebra::vector dummy_vector;
+          dummy_vector.resize( 3 );
+          ( *it_st )->get_center( dummy_vector, st_temporal_center );
+          // check if the temporal component of the spacetime child is the same 
+          // as the current temporal child and call routine recursively if yes
+          if ( std::abs( st_temporal_center - temporal_center ) < half_size ) {
+            associate_scheduling_clusters_and_space_time_non_leaves(
+              *it_t, *it_st );
+          } 
+        }
+      }
+    }
+  }
+  else if ( ( !t_root->get_global_leaf_status( ) ) &&
+            ( st_root->get_n_elements( ) >= _n_min_elems ) ) {
+      // spacetime leaf is a non-leaf in the global space-time cluster tree.
+      t_root->add_associated_spacetime_cluster( st_root );
+    }
 }

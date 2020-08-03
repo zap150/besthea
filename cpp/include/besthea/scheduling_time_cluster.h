@@ -41,6 +41,15 @@
 #include <map>
 #include <vector>
 
+// forward declaration of general spacetime clusters
+
+namespace besthea {
+  namespace mesh {
+    class general_spacetime_cluster;
+  }
+}
+
+
 namespace besthea {
   namespace mesh {
     class scheduling_time_cluster;
@@ -571,9 +580,10 @@ class besthea::mesh::scheduling_time_cluster {
    * @note If @p _associated_spacetime_clusters is not allocated this is done 
    * here.
    */
-  void add_associated_spacetime_cluster( spacetime_cluster* cluster ) {
+  void add_associated_spacetime_cluster( general_spacetime_cluster* cluster ) {
     if ( _associated_spacetime_clusters == nullptr ) {
-      _associated_spacetime_clusters = new std::vector< spacetime_cluster* >( );
+      _associated_spacetime_clusters 
+        = new std::vector< general_spacetime_cluster* >( );
     }
     _associated_spacetime_clusters->push_back( cluster );
   }
@@ -581,7 +591,7 @@ class besthea::mesh::scheduling_time_cluster {
   /**
    * Returns a pointer to the const list of associated spacetime clusters.
    */
-  const std::vector< spacetime_cluster* >* 
+  const std::vector< general_spacetime_cluster* >* 
     get_associated_spacetime_clusters( ) const {
     return _associated_spacetime_clusters;
   }
@@ -589,7 +599,8 @@ class besthea::mesh::scheduling_time_cluster {
   /**
    * Returns a pointer to the list of associated spacetime clusters.
    */
-  std::vector< spacetime_cluster* >* get_associated_spacetime_clusters( ) {
+  std::vector< general_spacetime_cluster* >* 
+    get_associated_spacetime_clusters( ) {
     return _associated_spacetime_clusters;
   }
 
@@ -799,16 +810,13 @@ class besthea::mesh::scheduling_time_cluster {
   /**
    * Prints info of the object.
    */
-  void print( ) {
+  void print( lo executing_process_id = -1 ) {
     std::cout << "level: " << _level 
               << ", center: " << _center << ", half size: " << _half_size
               << ", global_index: " << _global_index 
               << ", proc_id: " << _process_id;
-    if ( _time_slices != nullptr ) {
-      std::cout << ", time slices: ";
-      for ( auto idx : *_time_slices ) {
-        std::cout << idx << ", ";
-      }
+    if ( _global_leaf_status ) {
+      std::cout << ", is global leaf";
     }
     // if ( _nearfield != nullptr ) {
     //   std::cout << ", nearfield: ";
@@ -838,10 +846,22 @@ class besthea::mesh::scheduling_time_cluster {
     // std::cout << ", m2l counter: " << _m2l_counter;
 
     if ( _associated_spacetime_clusters != nullptr ) {
-      std::cout << ", number of associated leaves: " << _n_associated_leaves
+      if ( _process_id == executing_process_id ) {
+        std::cout << ", number of associated leaves: " << _n_associated_leaves
                 << ", number of associated non-leaves: "
                 <<  _associated_spacetime_clusters->size( ) 
                     - _n_associated_leaves;
+      }
+      else {
+        std::cout << ", number of associated clusters: "
+                  << _associated_spacetime_clusters->size( );
+      }
+    }
+    if ( _time_slices != nullptr ) {
+      std::cout << ", time slices: ";
+      for ( auto idx : *_time_slices ) {
+        std::cout << idx << ", ";
+      }
     }
     std::cout << std::endl;
   }
@@ -904,7 +924,7 @@ class besthea::mesh::scheduling_time_cluster {
                               //!< - 1: L2L executed, local contributions not 
                               //!<      ready,
                               //!< - 2: local contributions ready.
-  std::vector< spacetime_cluster* >
+  std::vector< general_spacetime_cluster* >
     * _associated_spacetime_clusters; //!< List of space-time clusters 
                                       //!< associated to the scheduling time 
                                       //!< cluster.
