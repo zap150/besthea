@@ -203,7 +203,7 @@ void apply_fmm( const MPI_Comm communicator,
       case 4: {
         // std::cout << "applying n-list operation" << std::endl;
         std::vector< scheduling_time_cluster* > * nearfield 
-          = ( *it_current_cluster )->get_nearfield( );
+          = ( *it_current_cluster )->get_nearfield_list( );
         for ( auto it = nearfield->begin( ); it != nearfield->end( ); ++it ) {
           call_nearfield_operations(
             input_vector, *it, *it_current_cluster, output_vector, verbose,

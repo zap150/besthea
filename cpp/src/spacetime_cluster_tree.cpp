@@ -35,7 +35,7 @@
 besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
   const spacetime_tensor_mesh & spacetime_mesh, lo time_levels,
   lo n_min_time_elems, lo n_min_space_elems, sc st_coeff,
-  lo spatial_nearfield_limit )
+  slou spatial_nearfield_limit )
   : _levels( 0 ),
     _spacetime_mesh( spacetime_mesh ),
     _space_mesh( *( spacetime_mesh.get_spatial_surface_mesh( ) ) ),

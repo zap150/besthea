@@ -70,7 +70,7 @@ class besthea::mesh::spacetime_cluster_tree {
    */
   spacetime_cluster_tree( const spacetime_tensor_mesh & spacetime_mesh,
     lo time_levels, lo n_min_time_elems, lo n_min_space_elems, sc st_coeff,
-    lo spatial_nearfield_limit = 3 );
+    slou spatial_nearfield_limit = 3 );
 
   /**
    * Destructor.
@@ -334,7 +334,7 @@ class besthea::mesh::spacetime_cluster_tree {
                              //!< (meaningful only if _start_spatial_level = 0)
   sc _s_t_coeff;  //!< coefficient to determine the coupling of the spatial
                   //!< and temporal levels
-  lo _spatial_nearfield_limit;  //!< number of the clusters in the vicinity to
+  slou _spatial_nearfield_limit;  //!< number of the clusters in the vicinity to
   //!< be considered as nearfield
 
   std::vector< spacetime_cluster * >

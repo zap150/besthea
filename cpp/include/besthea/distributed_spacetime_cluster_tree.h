@@ -34,7 +34,6 @@
 #define INCLUDE_BESTHEA_DISTRIBUTED_SPACETIME_CLUSTER_TREE_H_
 
 #include "besthea/block_vector.h"
-#include "besthea/distributed_spacetime_tensor_mesh.h"
 #include "besthea/full_matrix.h"
 #include "besthea/general_spacetime_cluster.h"
 #include "besthea/space_cluster_tree.h"
@@ -49,6 +48,7 @@
 namespace besthea {
   namespace mesh {
     class distributed_spacetime_cluster_tree;
+    class distributed_spacetime_tensor_mesh;
   }
 }
 
@@ -71,7 +71,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    */
   distributed_spacetime_cluster_tree(
     distributed_spacetime_tensor_mesh & spacetime_mesh, lo max_levels,
-    lo n_min_elems, sc st_coeff, lo spatial_nearfield_limit, MPI_Comm * comm );
+    lo n_min_elems, sc st_coeff, slou spatial_nearfield_limit, MPI_Comm * comm );
 
   /**
    * Destructor.
@@ -79,8 +79,6 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   ~distributed_spacetime_cluster_tree( ) {
     if ( _root )
       delete _root;
-    if ( _time_root )
-      delete _time_root;
   }
 
   /**
@@ -91,11 +89,28 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   }
 
   /**
+   * Returns the associated distributed spacetime tensor mesh.
+   * @todo Return reference instead? (spacetime_cluster_tree returns a 
+   * reference, not a pointer)
+   */
+  distributed_spacetime_tensor_mesh * get_mesh( ) {
+    return &_spacetime_mesh;
+  }
+
+  /**
+   * Returns the distribution tree corresponding to the spacetime cluster tree
+   */
+  tree_structure * get_distribution_tree( ) {
+    return _spacetime_mesh.get_distribution_tree( );
+  }
+
+  /**
    * Prints levels of the tree.
    */
   void print( ) {
     // print general tree information
-    std::cout << "number of levels of spacetime tree " << _real_max_levels << std::endl;
+    std::cout << "number of levels of spacetime tree " << _real_max_levels 
+              << std::endl;
     // print cluster information recursively
     print_internal( *_root );
   }
@@ -119,15 +134,13 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   sc _s_t_coeff;    //!< coefficient to determine the coupling of the spatial
                     //!< and temporal levels
   lo _n_min_elems;  //!< minimum number of elements so that cluster can be split
-  lo _spatial_nearfield_limit;  //!< number of the clusters in the vicinity to
+  slou _spatial_nearfield_limit;  //!< number of the clusters in the vicinity to
                                 //!< be considered as nearfield
   const std::vector< std::vector< lo > > _idx_2_coord = { { 1, 1, 1 },
     { 0, 1, 1 }, { 0, 0, 1 }, { 1, 0, 1 }, { 1, 1, 0 }, { 0, 1, 0 },
     { 0, 0, 0 },
     { 1, 0, 0 } };  //!< auxiliary mapping from octant indexing to coordinates
   std::vector< sc > _bounding_box_size;  //!< size of the mesh bounding box;
-  time_cluster *
-    _time_root;            //!< temporal part of the spacetime tree root cluster
   const MPI_Comm * _comm;  //!< MPI communicator associated with the tree
   int _my_rank;            //!< MPI rank of current processor
   int _n_processes;  //!< total number of MPI processes in the communicator
@@ -389,6 +402,26 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    */
   void associate_scheduling_clusters_and_space_time_non_leaves( 
     scheduling_time_cluster* t_root, general_spacetime_cluster * st_root );
+
+  /**
+   * Computes and sets the nearfield list and interaction list for every 
+   * cluster in the distributed spacetime cluster tree by recursively traversing 
+   * the tree.
+   * @param[in] root  Current cluster in the tree traversal.
+   */
+  void fill_nearfield_and_interaction_lists( general_spacetime_cluster & root );
+
+/**
+   * Used for the construction of nearfields of leaf clusters by 
+   * @ref fill_nearfield_and_interaction_lists. It recursively traverses the
+   * tree starting from the initial @p current_cluster, and adds all descendant
+   * leaves to the nearfield of the leaf @p target_cluster.
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   * @param[in] target_cluster  Cluster to whose nearfield the leaves are added.
+   */
+  void add_leaves_to_nearfield_list( 
+    general_spacetime_cluster & current_cluster, 
+    general_spacetime_cluster & target_cluster );
 
   /**
    * Aux for printing

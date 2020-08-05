@@ -102,7 +102,11 @@ class besthea::mesh::general_spacetime_cluster {
       _box_coordinate( coordinate ),
       _process_id( process_id ),
       _n_space_div( n_space_div ),
-      _n_time_div( n_time_div ) {
+      _n_time_div( n_time_div ),
+      _nearfield_list( nullptr ),
+      _interaction_list( nullptr ),
+      _moment( nullptr ),
+      _local_contribution( nullptr ) {
     if ( reserve_elements ) {
       _elements.reserve( _n_elements );
     }
@@ -122,6 +126,10 @@ class besthea::mesh::general_spacetime_cluster {
       }
       delete _children;
     }
+    if ( _nearfield_list != nullptr )
+      delete _nearfield_list;
+    if ( _interaction_list != nullptr )
+      delete _interaction_list;
   }
 
   /**
@@ -163,6 +171,84 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
+   * Returns the parent of the current cluster.
+   */
+  general_spacetime_cluster * get_parent( ) const {
+    return _parent;
+  }
+
+  /**
+   * Adds cluster to the nearfield list.
+   * @param[in] cluster Cluster to be added.
+   */
+  void add_to_nearfield_list( general_spacetime_cluster * cluster ) {
+    if ( _nearfield_list == nullptr ) {
+      _nearfield_list = new std::vector< general_spacetime_cluster * >( );
+    }
+    _nearfield_list->push_back( cluster );
+  }
+
+  /**
+   * Adds cluster to the interaction list.
+   * @param[in] cluster Cluster to be added.
+   */
+  void add_to_interaction_list( general_spacetime_cluster * cluster ) {
+    if ( _interaction_list == nullptr ) {
+      _interaction_list = new std::vector< general_spacetime_cluster * >( );
+    }
+    _interaction_list->push_back( cluster );
+  }
+
+  /**
+   * Returns cluster's interaction list.
+   */
+  std::vector< general_spacetime_cluster * > * get_interaction_list( ) {
+    return _interaction_list;
+  }
+
+  /**
+   * Returns cluster's nearfield list.
+   */
+  std::vector< general_spacetime_cluster * > * get_nearfield_list( ) {
+    return _nearfield_list;
+  }
+
+  /**
+   * Determines temporal admissibility for a given general_spacetime_cluster 
+   * based on the "neighborhood criterion" (as in Messner's work).
+   * @param[in] src_cluster Source cluster whose admissibility is checked.
+   * @warning This check of admissibility is only reasonable for clusters at the
+   * same level of a tree.
+   */
+  bool determine_temporal_admissibility( 
+    general_spacetime_cluster * src_cluster ) const {
+    bool admissibility = false;
+    sc src_center = src_cluster->get_time_center( );
+    sc src_half_size = src_cluster->get_time_half_size( );
+    if ( src_center < _time_center - _time_half_size - 2 * src_half_size ) {
+      admissibility = true;
+    } 
+    return admissibility;
+  }
+
+  bool is_in_spatial_vicinity( general_spacetime_cluster * src_cluster,
+    slou spatial_nearfield_limit ) const {
+    std::vector< slou > src_box_coordinate = src_cluster->get_box_coordinate( );
+    slou x_diff = ( _box_coordinate[ 1 ] > src_box_coordinate[ 1 ] )
+      ? _box_coordinate[ 1 ] - src_box_coordinate[ 1 ] :
+        src_box_coordinate[ 1 ] - _box_coordinate[ 1 ];
+    slou y_diff = ( _box_coordinate[ 2 ] > src_box_coordinate[ 2 ] )
+      ? _box_coordinate[ 2 ] - src_box_coordinate[ 2 ] :
+        src_box_coordinate[ 2 ] - _box_coordinate[ 2 ];
+    slou z_diff = ( _box_coordinate[ 3 ] > src_box_coordinate[ 3 ] )
+      ? _box_coordinate[ 3 ] - src_box_coordinate[ 3 ] :
+        src_box_coordinate[ 3 ] - _box_coordinate[ 3 ];
+    return ( x_diff <= spatial_nearfield_limit && 
+              y_diff <= spatial_nearfield_limit &&
+              z_diff <= spatial_nearfield_limit );
+  }
+
+  /**
    * Returns center of the cluster.
    * @param[out] space_center Coordinates of the cluster's spatial centroid.
    * @param[out] time_center Coordinate of the cluster's temporal center.
@@ -172,6 +258,13 @@ class besthea::mesh::general_spacetime_cluster {
     space_center[ 1 ] = _space_center[ 1 ];
     space_center[ 2 ] = _space_center[ 2 ];
     time_center = _time_center;
+  }
+
+  /**
+   * Returns the temporal center of the cluster.
+   */
+  sc get_time_center( ) const {
+    return _time_center;
   }
 
   /**
@@ -185,6 +278,13 @@ class besthea::mesh::general_spacetime_cluster {
     space_half_size[ 1 ] = _space_half_size[ 1 ];
     space_half_size[ 2 ] = _space_half_size[ 2 ];
     time_half_size = _time_half_size;
+  }
+
+  /**
+   * Returns the temporal half size of the cluster.
+   */
+  sc get_time_half_size( ) const {
+    return _time_half_size;
   }
 
   /**
@@ -440,6 +540,25 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
+   * Sets the pointer to the moment.
+   * @param[in] moment_address Address of the moment (in the array stored in the
+   *                           associated scheduling_time_cluster)
+   */
+  void set_pointer_to_moment( sc* moment_address ) {
+    _moment = moment_address;
+  }
+
+  /**
+   * Sets the pointer to the local_contribution.
+   * @param[in] local_contribution_address  Address of the local contribution  
+   *                                        (in the array stored in the 
+   *                                        associated scheduling_time_cluster)
+   */
+  void set_pointer_to_local_contribution( sc* local_contribution_address ) {
+    _local_contribution = local_contribution_address;
+  }
+
+  /**
    * Prints info of the object.
    */
   void print( ) {
@@ -487,6 +606,16 @@ class besthea::mesh::general_spacetime_cluster {
   lo _process_id;   //!< rank of an MPI process owning the cluster
   lo _n_space_div;  //!< number of splittings in space dimensions
   lo _n_time_div;   //!< number of splittings in temporal dimension
+  
+  std::vector< general_spacetime_cluster * > *
+    _nearfield_list;  //!< nearfield list of the cluster
+  std::vector< general_spacetime_cluster * > * 
+    _interaction_list;  //!< interaction list of the cluster
+  sc * _moment; //!< pointer to the moment of the cluster, which is stored in 
+                //!< the associated scheduling_time_cluster 
+  sc * _local_contribution; //!< pointer to the local contribution of the 
+                            //!< cluster, which is stored in the associated 
+                            //!< scheduling_time_cluster
 };
 
 #endif /* INCLUDE_BESTHEA_GENERAL_SPACETIME_CLUSTER_H_ */

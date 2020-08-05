@@ -27,6 +27,8 @@
  */
 
 #include "besthea/distributed_spacetime_tensor_mesh.h"
+#include "besthea/scheduling_time_cluster.h"
+#include "besthea/tree_structure.h"
 
 #include <cmath>
 #include <iostream>
@@ -68,6 +70,17 @@ besthea::mesh::distributed_spacetime_tensor_mesh::
   if ( _dist_tree != nullptr ) {
     delete _dist_tree;
   }
+}
+
+besthea::mesh::tree_structure const * 
+  besthea::mesh::distributed_spacetime_tensor_mesh::
+  get_distribution_tree( ) const {
+  return _dist_tree;
+}
+
+besthea::mesh::tree_structure* 
+  besthea::mesh::distributed_spacetime_tensor_mesh::get_distribution_tree( ) {
+  return _dist_tree;
 }
 
 void besthea::mesh::distributed_spacetime_tensor_mesh::find_my_slices(
@@ -115,7 +128,7 @@ void besthea::mesh::distributed_spacetime_tensor_mesh::find_slices_to_load(
       // if a cluster in the nearfield is not local, add its slices to the 
       // corresponding set
       std::vector< scheduling_time_cluster* >* nearfield
-        = leaf_cluster->get_nearfield( );
+        = leaf_cluster->get_nearfield_list( );
       for ( auto nearfield_cluster : *nearfield ) {
         lo nearfield_cluster_owner = nearfield_cluster->get_process_id( );
         if ( nearfield_cluster_owner != _my_rank ) {

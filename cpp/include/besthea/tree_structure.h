@@ -163,23 +163,6 @@ class besthea::mesh::tree_structure {
    * nearfield it is also kept.
    */
   void reduce_2_essential( );
-
-  /**
-   * Expands the tree structure by adding relevant time clusters which appear as
-   * components of spacetime clusters in the given spacetime cluster tree but
-   * are not in the tree structure.
-   * @param[in] spacetime_tree  Spacetime tree which is traversed to find
-   *                            clusters to add to the temporal tree structure.
-   * @note The clusters which are refined are determined using the routine 
-   *       @ref determine_clusters_to_refine and the refinement is executed by
-   *       @ref expand_tree_structure_recursively.
-   * @note The nearfields, interaction lists and send lists are cleared using 
-   *       the routine clear_cluster_lists and filled anew.
-   * @todo Delete?! (obsolete, since a similar method exists in 
-   * @ref distributed_spacetime_cluster_tree )
-   */
-  void expand_tree_structure_essentially( 
-    spacetime_cluster_tree * spacetime_tree );
     
   /**
    * Fills the 4 lists used for scheduling the FMM operations by adding pointers
@@ -216,6 +199,27 @@ class besthea::mesh::tree_structure {
     std::list< scheduling_time_cluster* > & n_list,
     std::vector< std::pair< scheduling_time_cluster*, lo > > & receive_vector,
     lou & n_moments_upward, lou & n_moments_m2l ) const;
+
+  /**
+   * Traverses the tree structure recursively and allocates and initializes the 
+   * moments for all clusters which are active in the upward path of the FMM.
+   * @param[in] root  Current cluster in the tree traversal.
+   * @param[in] contribution_size Size of the contribution of a single spacetime
+   *                              cluster.
+   */
+  void initialize_moment_contributions( 
+    scheduling_time_cluster& root, lou contribution_size );
+
+  /**
+   * Traverses the tree structure recursively and allocates and initializes the 
+   * local contributions for all clusters which are active in the downward path
+   * of the FMM.
+   * @param[in] root  Current cluster in the tree traversal.
+   * @param[in] contribution_size Size of the contribution of a single spacetime
+   *                              cluster.
+   */
+  void initialize_local_contributions( 
+    scheduling_time_cluster& root, lou contribution_size );
 
   /**
    * Returns the structure of the tree represented as a vector of chars.
@@ -356,7 +360,7 @@ class besthea::mesh::tree_structure {
    * @param[in] current_cluster Current cluster in the tree traversal.
    * @param[in] target_cluster  Cluster to whose nearfield the leaves are added.
    */
-  void add_leaves_to_nearfield( scheduling_time_cluster & current_cluster, 
+  void add_leaves_to_nearfield_list( scheduling_time_cluster & current_cluster, 
     scheduling_time_cluster & target_cluster );
 
     /**

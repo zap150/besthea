@@ -35,10 +35,8 @@
 #define INCLUDE_BESTHEA_DISTRIBUTED_SPACETIME_TENSOR_MESH_H_
 
 #include "besthea/io_routines.h"
-#include "besthea/scheduling_time_cluster.h"
 #include "besthea/spacetime_tensor_mesh.h"
 #include "besthea/temporal_mesh.h"
-#include "besthea/tree_structure.h"
 #include "besthea/triangular_surface_mesh.h"
 
 #include <mpi.h>
@@ -49,6 +47,8 @@
 namespace besthea {
   namespace mesh {
     class distributed_spacetime_tensor_mesh;
+    class scheduling_time_cluster;
+    class tree_structure;
   }
 }
 
@@ -56,7 +56,8 @@ namespace besthea {
  * Class serving as a container holding spacetime tensor product meshes
  * distributed among MPI processes.
  */
-class besthea::mesh::distributed_spacetime_tensor_mesh {
+class besthea::mesh::distributed_spacetime_tensor_mesh : 
+      public besthea::mesh::mesh{
  public:
   /**
    * Constructor taking decomposition file and MPI communicator. Based on the
@@ -136,6 +137,40 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
   }
 
   /**
+   * Returns a pointer to the internally stored spatial mesh.
+   * @todo adapt this.
+   */
+  virtual triangular_surface_mesh * get_spatial_surface_mesh( ) override {
+    // return _my_mesh->get_spatial_surface_mesh( );
+    return nullptr;
+  }
+
+  /**
+   * Returns a pointer to the internally stored spatial mesh.
+   * @todo adapt this.
+   */
+  virtual const triangular_surface_mesh * get_spatial_surface_mesh( )
+    const override {
+    // return _my_mesh;
+    return nullptr;
+  }
+
+  /**
+   * Returns the volume mesh.
+   */
+  virtual tetrahedral_volume_mesh * get_spatial_volume_mesh( ) override {
+    return nullptr;
+  }
+
+  /**
+   * Returns the volume mesh.
+   */
+  virtual const tetrahedral_volume_mesh * get_spatial_volume_mesh( )
+    const override {
+    return nullptr;
+  }
+
+  /**
    * Returns the mesh associated with current MPI process.
    */
   spacetime_tensor_mesh const * get_local_mesh( ) const {
@@ -152,16 +187,12 @@ class besthea::mesh::distributed_spacetime_tensor_mesh {
   /**
    * Returns the tree composed of scheduling_time_clusters (unmodifiable).
    */
-  tree_structure const * get_distribution_tree( ) const {
-    return _dist_tree;
-  }
+  tree_structure const * get_distribution_tree( ) const;
 
   /**
    * Returns the tree composed of scheduling_time_clusters (modifiable).
    */
-  tree_structure* get_distribution_tree( ) {
-    return _dist_tree;
-  }
+  tree_structure* get_distribution_tree( );
 
   /**
    * Returns start of the global time interval

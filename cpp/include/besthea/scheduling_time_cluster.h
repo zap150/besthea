@@ -33,8 +33,8 @@
 #ifndef INCLUDE_BESTHEA_SCHEDULING_TIME_CLUSTER_H_
 #define INCLUDE_BESTHEA_SCHEDULING_TIME_CLUSTER_H_
 
+#include "besthea/general_spacetime_cluster.h"
 #include "besthea/settings.h"
-#include "besthea/spacetime_cluster.h"
 #include "besthea/vector.h"
 
 #include <iostream>
@@ -42,13 +42,11 @@
 #include <vector>
 
 // forward declaration of general spacetime clusters
-
 namespace besthea {
   namespace mesh {
     class general_spacetime_cluster;
   }
 }
-
 
 namespace besthea {
   namespace mesh {
@@ -84,7 +82,7 @@ class besthea::mesh::scheduling_time_cluster {
       _time_slices( nullptr ),
       _global_leaf_status( false ),
       _mesh_available( false ),
-      _nearfield( nullptr ),
+      _nearfield_list( nullptr ),
       _interaction_list( nullptr ),
       _send_list( nullptr ),
       _essential_status( -1 ),
@@ -96,11 +94,14 @@ class besthea::mesh::scheduling_time_cluster {
       _downward_path_status( 0 ),
       _associated_spacetime_clusters( nullptr ),
       _n_associated_leaves( 0 ),
-      _leaf_index( -1 ),
+      _associated_moments( nullptr ),
+      _associated_local_contributions( nullptr ),
+      _contribution_size( 0 ),
       _moment( 0.0 ),
       _local_contribution( 0.0 ),
       _receive_moments( nullptr ),
-      _map_to_moment_positions( nullptr ) {
+      _map_to_moment_positions( nullptr ),
+      _leaf_index( -1 ) {
   }
 
   scheduling_time_cluster( const scheduling_time_cluster & that ) = delete;
@@ -119,8 +120,8 @@ class besthea::mesh::scheduling_time_cluster {
     }
     if ( _time_slices != nullptr )
       delete _time_slices;
-    if ( _nearfield != nullptr )
-      delete _nearfield;
+    if ( _nearfield_list != nullptr )
+      delete _nearfield_list;
     if ( _interaction_list != nullptr )
       delete _interaction_list;
     if ( _send_list != nullptr )
@@ -129,6 +130,10 @@ class besthea::mesh::scheduling_time_cluster {
       delete _ready_interaction_list;
     if ( _associated_spacetime_clusters != nullptr )
       delete _associated_spacetime_clusters;
+    if ( _associated_moments != nullptr ) 
+      delete [] _associated_moments;
+    if ( _associated_local_contributions != nullptr )
+      delete [] _associated_local_contributions;
     if ( _receive_moments != nullptr ) 
       delete _receive_moments;
     if ( _map_to_moment_positions != nullptr )
@@ -139,8 +144,8 @@ class besthea::mesh::scheduling_time_cluster {
    * Deletes the nearfield 
    */
   void delete_nearfield( ) {
-    delete _nearfield;
-    _nearfield = nullptr;
+    delete _nearfield_list;
+    _nearfield_list = nullptr;
   }
 
   /**
@@ -361,29 +366,29 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Adds a cluster to @p _nearfield.
+   * Adds a cluster to @p _nearfield_list.
    * @param[in] src_cluster Pointer to a nearfield cluster.
-   * @note If @p _nearfield is not allocated this is done here.
+   * @note If @p _nearfield_list is not allocated this is done here.
    */
-  void add_to_nearfield( scheduling_time_cluster * src_cluster ) {
-    if ( _nearfield == nullptr ) {
-      _nearfield = new std::vector< scheduling_time_cluster * >( );
+  void add_to_nearfield_list( scheduling_time_cluster * src_cluster ) {
+    if ( _nearfield_list == nullptr ) {
+      _nearfield_list = new std::vector< scheduling_time_cluster * >( );
     }
-    _nearfield->push_back( src_cluster );
+    _nearfield_list->push_back( src_cluster );
   }
 
   /**
    * Returns a pointer to the const nearfield.
    */
-  const std::vector< scheduling_time_cluster * > * get_nearfield( ) const {
-    return _nearfield;
+  const std::vector< scheduling_time_cluster * > * get_nearfield_list( ) const {
+    return _nearfield_list;
   }
 
   /**
    * Returns a pointer to the nearfield.
    */
-  std::vector< scheduling_time_cluster * > * get_nearfield( ) {
-    return _nearfield;
+  std::vector< scheduling_time_cluster * > * get_nearfield_list( ) {
+    return _nearfield_list;
   }
 
    /**
@@ -422,10 +427,11 @@ class besthea::mesh::scheduling_time_cluster {
    */
   bool determine_admissibility( scheduling_time_cluster * src_cluster ) {
     bool admissibility = false;
-    if ( src_cluster != this && src_cluster->get_center( ) < _center 
-                             && src_cluster != get_left_neighbour( ) ) {
+    sc src_center = src_cluster->get_center( );
+    sc src_half_size = src_cluster->get_half_size( );
+    if ( src_center < _center - _half_size - 2 * src_half_size ) {
       admissibility = true;
-    } 
+    }
     return admissibility;
   }
 
@@ -494,32 +500,34 @@ class besthea::mesh::scheduling_time_cluster {
   /**
    * Sets a flag which indicates if the cluster is active in the upward path of 
    * the FMM.
-   * \param[in] active_upward_path  Value to set.
+   * \param[in] new_status  Value to set.
    */
-  void set_active_upward_path( const bool active_upward_path ) {
-    _active_upward_path = active_upward_path;
+  void set_active_upward_path_status( const bool new_status ) {
+    _active_upward_path = new_status;
   }
 
   /**
-   * Returns the value of @p _active_upward_path.
+   * Indicates if the cluster is active in the upward path, i.e. moments of 
+   * associated spacetime clusters have to be computed.
    */
-  bool get_active_upward_path( ) const {
+  bool is_active_in_upward_path( ) const {
     return _active_upward_path;
   }
 
   /**
    * Sets a flag which indicates if the cluster is active in the downward path 
    * of the FMM.
-   * \param[in] active_downward_path  Value to set.
+   * \param[in] new_status  Value to set.
    */
-  void set_active_downward_path( const bool active_downward_path ) {
-    _active_downward_path = active_downward_path;
+  void set_active_downward_path_status( const bool new_status ) {
+    _active_downward_path = new_status;
   }
 
   /**
-   * Returns the value of @p _active_downard_path.
+   * Indicates if the cluster is active in the downward path, i.e. local
+   * contributions of associated spacetime clusters have to be computed.
    */
-  bool get_active_downward_path( ) const {
+  bool is_active_in_downward_path( ) const {
     return _active_downward_path;
   }
 
@@ -808,6 +816,80 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
+   * Allocates an array containing all the moments of the associated 
+   * spacetime clusters. In addition, for each associated spacetime cluster it 
+   * sets the pointer to the appropriate moment.
+   * @param[in] moment_size Size of the moment of a single space-time cluster.
+   * @note Before calling this routine the spacetime clusters have to be 
+   * associated with this cluster.
+   */
+  void allocate_associated_moments( const lou moment_size ) {
+    if ( _associated_moments == nullptr ) {
+      _contribution_size = moment_size;
+      _associated_moments 
+        = new sc [ moment_size * _associated_spacetime_clusters->size( ) ];
+      for ( lou i = 0; i < _associated_spacetime_clusters->size( ); ++i ) {
+        general_spacetime_cluster * current_spacetime_cluster 
+          = ( *_associated_spacetime_clusters )[ i ];
+        current_spacetime_cluster->set_pointer_to_moment( 
+          & _associated_moments[ i * moment_size ] );
+      }
+    } else {
+      std::cout << "warning: associated moments allocated already!"
+                << std::endl;
+    }
+  }
+
+  /**
+   * Sets all associated moments to 0.
+   */
+  void clear_associated_moments( ) {
+    for ( lou i = 0; 
+          i < _contribution_size * _associated_spacetime_clusters->size( ); 
+          ++i  ) {
+      _associated_moments[ i ] = 0.0;
+    }
+  }
+
+  /**
+   * Allocates an array containing all the local contributions of the associated 
+   * spacetime clusters. In addition, for each associated spacetime cluster it 
+   * sets the pointer to the appropriate local contribution.
+   * @param[in] contribution_size Size of the local contribution of a single 
+   *                              space-time cluster.
+   * @note Before calling this routine the spacetime clusters have to be 
+   * associated with this cluster.
+   */
+  void allocate_associated_local_contributions( const lou contribution_size ) {
+    if ( _associated_local_contributions == nullptr ) {
+      _contribution_size = contribution_size;
+      _associated_local_contributions
+        = new sc [ contribution_size 
+                  * _associated_spacetime_clusters->size( ) ];
+      for ( lou i = 0; i < _associated_spacetime_clusters->size( ); ++i ) {
+        general_spacetime_cluster * current_spacetime_cluster 
+          = ( *_associated_spacetime_clusters )[ i ];
+        current_spacetime_cluster->set_pointer_to_local_contribution( 
+          & _associated_local_contributions[ i * contribution_size ] );
+      }
+    } else {
+      std::cout << "warning: associated local contributions allocated already!"
+                << std::endl;
+    }
+  }
+
+  /**
+   * Sets all associated local contributions to 0.
+   */
+  void clear_associated_local_contributions( ) {
+    for ( lou i = 0; 
+          i < _contribution_size * _associated_spacetime_clusters->size( ); 
+          ++i  ) {
+      _associated_local_contributions[ i ] = 0.0;
+    }
+  }
+
+  /**
    * Prints info of the object.
    */
   void print( lo executing_process_id = -1 ) {
@@ -818,11 +900,11 @@ class besthea::mesh::scheduling_time_cluster {
     if ( _global_leaf_status ) {
       std::cout << ", is global leaf";
     }
-    // if ( _nearfield != nullptr ) {
+    // if ( _nearfield_list != nullptr ) {
     //   std::cout << ", nearfield: ";
-    //   for ( lou i = 0; i < _nearfield->size( ); ++i ) {
-    //     std::cout << "(" << ( *_nearfield )[ i ]->get_level( ) << ", "  
-    //               << ( *_nearfield )[ i ]->get_global_index( ) << "), ";
+    //   for ( lou i = 0; i < _nearfield_list->size( ); ++i ) {
+    //     std::cout << "(" << ( *_nearfield_list )[ i ]->get_level( ) << ", "  
+    //               << ( *_nearfield_list )[ i ]->get_global_index( ) << "), ";
     //   }
     // }
     // if ( _interaction_list != nullptr ) {
@@ -889,7 +971,7 @@ class besthea::mesh::scheduling_time_cluster {
                         //!< clusters. It is set in
                         //!< @ref distributed_spacetime_tensor_mesh::find_slices_to_load.
   std::vector< scheduling_time_cluster * >
-    * _nearfield;   //!< Nearfield of the cluster.
+    * _nearfield_list;   //!< Nearfield of the cluster.
   std::vector< scheduling_time_cluster * >
     * _interaction_list;  //!< Interaction list of the cluster.
   std::vector< scheduling_time_cluster * >
@@ -931,9 +1013,14 @@ class besthea::mesh::scheduling_time_cluster {
   lou _n_associated_leaves;  //!< Number of associated space-time leaf clusters.
                              //!< These are first in the list of associated 
                              //!< space-time clusters.
-
-  lo _leaf_index; //!< Index which is assigned consecutively to all leaves. For
-                  //!< non-leaf clusters it is -1 TEMPORARY
+  sc * _associated_moments; //!< Array containing all the moments of the
+                            //!< associated general spacetime clusters.
+  sc * _associated_local_contributions; //!< Array containing all the local
+                                        //!< contributions of the associated
+                                        //!< general spacetime clusters.  
+  lou _contribution_size; //!< Size of a single contribution (moments or local 
+                          //!< contribution) in the array of associated 
+                          //!< contributions     
   sc _moment; //!< Stores a moment in FMM TEMPORARY
   sc _local_contribution; //!< Stores a local contribution in FMM TEMPORARY
   std::vector< sc > 
@@ -943,6 +1030,8 @@ class besthea::mesh::scheduling_time_cluster {
     * _map_to_moment_positions; //!< Map to access the correct position in 
                                 //!< @p _receive_moments for extraneous children
                                 //!< TEMPORARY
+  lo _leaf_index; //!< Index which is assigned consecutively to all leaves. For
+                  //!< non-leaf clusters it is -1 TEMPORARY
 };
 
 #endif /* INCLUDE_BESTHEA_SCHEDULING_TIME_CLUSTER_H_ */

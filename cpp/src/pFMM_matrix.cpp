@@ -560,7 +560,7 @@ void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
           + ( h_child_no_pad[ 2 ] + padding_child ) * nodes[ j ] );
     }
     // compute m2m coefficients at current level along all dimensions
-    // for i1 < i0 the coefficients are knwon to be zero
+    // for i1 > i0 the coefficients are known to be zero
     _chebyshev.evaluate( nodes_l_child_dim_0, all_values_cheb_trf_intrvl );
     for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
       for ( lo i1 = 0; i1 <= i0; ++i1 ) {
@@ -732,7 +732,7 @@ void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
       m2m_coeffs_s_dim_1 = &( _m2m_coeffs_s_dim_1_left[ level ] );
       m2m_coeffs_s_dim_2 = &( _m2m_coeffs_s_dim_2_left[ level ] );
       break;
-    default:  // default case should never be used, programm will crash!
+    default:  // default case should never be used, program will crash!
       m2m_coeffs_s_dim_0 = nullptr;
       m2m_coeffs_s_dim_1 = nullptr;
       m2m_coeffs_s_dim_2 = nullptr;
@@ -760,7 +760,7 @@ void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
           }
           ++child_index;
         }
-        // correction needed for skipt entries of child_moment
+        // correction needed for skipped entries of child_moment
         child_index += _spat_order + 1 - alpha0 - alpha1 - alpha2;
       }
       // correction for current index; necessary since alpha1 does not run until
@@ -872,7 +872,7 @@ void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
       m2m_coeffs_s_dim_1 = &( _m2m_coeffs_s_dim_1_left[ level ] );
       m2m_coeffs_s_dim_2 = &( _m2m_coeffs_s_dim_2_left[ level ] );
       break;
-    default:  // default case should never be used, programm will crash!
+    default:  // default case should never be used, program will crash!
       m2m_coeffs_s_dim_0 = nullptr;
       m2m_coeffs_s_dim_1 = nullptr;
       m2m_coeffs_s_dim_2 = nullptr;
@@ -889,7 +889,7 @@ void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
     lou parent_index = 0;
     for ( lo alpha0 = 0; alpha0 <= _spat_order - beta2; ++alpha0 ) {
       for ( lo alpha1 = 0; alpha1 <= _spat_order - beta2 - alpha0; ++alpha1 ) {
-        // correction for skipt entries of parent_local due to starting point
+        // correction for skipped entries of parent_local due to starting point
         // alpha2 = beta2 in the next loop
         parent_index += beta2;
         for ( lo alpha2 = beta2; alpha2 <= _spat_order - alpha0 - alpha1;
