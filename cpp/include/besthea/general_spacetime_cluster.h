@@ -219,13 +219,19 @@ class besthea::mesh::general_spacetime_cluster {
    * @param[in] src_cluster Source cluster whose admissibility is checked.
    * @warning This check of admissibility is only reasonable for clusters at the
    * same level of a tree.
+   * @note The current criterion guarantees that the distance in time of two 
+   * admissible clusters is greater than the minimum of the temporal half sizes
+   * of the two clusters. 
    */
   bool determine_temporal_admissibility( 
     general_spacetime_cluster * src_cluster ) const {
     bool admissibility = false;
     sc src_center = src_cluster->get_time_center( );
     sc src_half_size = src_cluster->get_time_half_size( );
-    if ( src_center < _time_center - _time_half_size - 2 * src_half_size ) {
+    sc min_half_size = ( src_half_size < _time_half_size ) 
+      ? src_half_size : _time_half_size;
+    if ( src_center 
+          < _time_center - _time_half_size - src_half_size - min_half_size ) {
       admissibility = true;
     } 
     return admissibility;
@@ -563,13 +569,30 @@ class besthea::mesh::general_spacetime_cluster {
    */
   void print( ) {
     std::cout << "level: " << _level;
-    std::cout << ", spatial center: (" << _space_center[ 0 ] << ", "
-              << _space_center[ 1 ] << ", " << _space_center[ 2 ] << ")";
     std::cout << ", temporal center: " << _time_center;
-    std::cout << ", spatial half size: (" << _space_half_size[ 0 ] << ", "
-              << _space_half_size[ 1 ] << ", " << _space_half_size[ 2 ] << ")";
     std::cout << ", temporal half size: " << _time_half_size;
-    std::cout << ", n_elements: " << _n_elements;      
+    std::cout << ", n_elements: " << _n_elements;
+    std::cout << ", box coordinates: (" << _box_coordinate[ 0 ] << ", "
+              << _box_coordinate[ 1 ] << ", " << _box_coordinate[ 2 ] << ", "
+              << _box_coordinate[ 3 ] << ", " << _box_coordinate[ 4 ] << ")";
+    std::cout << ", nearfield: ";
+    for ( auto nf_cluster : *_nearfield_list ) {
+      std::vector< slou > nf_box_coordinate = nf_cluster->get_box_coordinate( );
+      std::cout << "(" << nf_box_coordinate[ 0 ] << ", " 
+                << nf_box_coordinate[ 1 ] << ", " << nf_box_coordinate[ 2 ] 
+                << ", " << nf_box_coordinate[ 3 ] << ", " 
+                << nf_box_coordinate[ 4 ] << "), ";
+    }
+    if ( _interaction_list != nullptr ) {
+      std::cout << ", interaction list: ";
+      for ( auto ff_cluster : *_interaction_list ) {
+      std::vector< slou > ff_box_coordinate = ff_cluster->get_box_coordinate( );
+      std::cout << "(" << ff_box_coordinate[ 0 ] << ", " 
+                << ff_box_coordinate[ 1 ] << ", " << ff_box_coordinate[ 2 ] 
+                << ", " << ff_box_coordinate[ 3 ] << ", " 
+                << ff_box_coordinate[ 4 ] << "), ";
+      }  
+    }
     std::cout << std::endl;
     // if ( _children == nullptr ) {
     //   std::cout << "elements are: " << std::endl;

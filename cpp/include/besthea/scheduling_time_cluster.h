@@ -424,12 +424,17 @@ class besthea::mesh::scheduling_time_cluster {
    * @param[in] src_cluster Source cluster whose admissibility is checked.
    * @warning This check of admissibility is only reasonable for clusters at the
    * same level of a tree.
+   * @note The current criterion guarantees that the distance in time of two 
+   * admissible clusters is greater than the minimum of the half sizes of the 
+   * two clusters. 
    */
   bool determine_admissibility( scheduling_time_cluster * src_cluster ) {
     bool admissibility = false;
     sc src_center = src_cluster->get_center( );
     sc src_half_size = src_cluster->get_half_size( );
-    if ( src_center < _center - _half_size - 2 * src_half_size ) {
+    sc min_half_size 
+      = ( src_half_size < _half_size ) ? src_half_size : _half_size;
+    if ( src_center < _center - _half_size - src_half_size - min_half_size ) {
       admissibility = true;
     }
     return admissibility;

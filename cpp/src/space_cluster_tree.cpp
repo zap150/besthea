@@ -281,7 +281,7 @@ sc besthea::mesh::space_cluster_tree::compute_padding( space_cluster & root ) {
 }
 
 void besthea::mesh::space_cluster_tree::find_neighbors( space_cluster & cluster,
-  lo limit, std::vector< space_cluster * > & neighbors ) const {
+  slou limit, std::vector< space_cluster * > & neighbors ) const {
   const std::vector< slou > coordinates = cluster.get_box_coordinate( );
 
   slou cluster_level = static_cast< slou >( cluster.get_level( ) );

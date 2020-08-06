@@ -67,7 +67,7 @@ int main( int argc, char * argv[] ) {
     std::string space_file = "./mesh_files/cube_12.txt";  // spatial mesh
     std::string time_file = "./testfile.txt";  // file defining temporal slices
     lo time_refinement = 2;                    // defining mesh within slices
-    lo space_refinement = 1;
+    lo space_refinement = 0;
 
     // load time mesh defining slices and create temporal tree
     b_t_mesh time_mesh( time_file );
@@ -117,7 +117,7 @@ int main( int argc, char * argv[] ) {
   // std::cout << mesh.get_n_elements( ) << std::endl;
 
   besthea::mesh::distributed_spacetime_cluster_tree tree(
-    mesh, 20, 10, 1.0, 1, &comm );
+    mesh, 20, 10, 1.0, 0, &comm );
   
   for ( int output_id = 0; output_id < n_processes; ++output_id ) {
     lo digits = 3;
@@ -129,11 +129,11 @@ int main( int argc, char * argv[] ) {
       std::cout << "process ids in initial global distribution tree:" 
                 << std::endl;
       time_structure.print_tree_human_readable( digits, true );
-      // std::cout << "global number of elements is " << mesh.get_n_elements( ) 
-      //           << std::endl;
-      // std::cout << "printing local part of distributed cluster tree: " 
-      //           << std::endl;
-      // tree.print( );
+      std::cout << "global number of elements is " << mesh.get_n_elements( ) 
+                << std::endl;
+      std::cout << "printing local part of distributed cluster tree: " 
+                << std::endl;
+      tree.print( );
     }
     if ( output_id == myRank ) {
       std::cout << "process ids in " << myRank << "'s locally essential "

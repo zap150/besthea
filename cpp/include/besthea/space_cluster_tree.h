@@ -81,7 +81,7 @@ class besthea::mesh::space_cluster_tree {
    * @param[in,out] neighbors Reference to the std::vector in which the pointers
    * to the neighbors should be included.
    */
-  void find_neighbors( space_cluster & cluster, lo limit,
+  void find_neighbors( space_cluster & cluster, slou limit,
     std::vector< space_cluster * > & neighbors ) const;
 
   /**

@@ -82,21 +82,6 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   tree_structure* distribution_tree = get_distribution_tree( );
   distribution_tree->determine_refinement_communication_lists(
     distribution_tree->get_root( ), cluster_send_list, cluster_receive_list );
-  if ( _my_rank == 1 ) {
-    std::cout << "receive list is " << std::endl;
-    for ( auto it : cluster_receive_list ) {
-      std::cout << it.second->get_global_index( ) << " ";
-    }
-    std::cout << std::endl;
-  }
-  MPI_Barrier( *_comm );
-  if ( _my_rank == 2 ) {
-    std::cout << "send list is " << std::endl;
-    for ( auto it : cluster_send_list ) {
-      std::cout << it.second->get_global_index( ) << " ";
-    }
-    std::cout << std::endl;
-  }
   MPI_Barrier( *_comm );
   // secondly, expand the distribution tree locally
   expand_distribution_tree_locally( );
@@ -909,7 +894,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
               slou coord_z = 2 * st_cluster->get_box_coordinate( )[ 3 ] 
                             + _idx_2_coord[ i ][ 2 ];
               std::vector< slou > coordinates 
-                = { static_cast< slou >( st_cluster->get_level( ) ), 
+                = { static_cast< slou >( st_cluster->get_level( ) + 1 ), 
                     coord_x, coord_y, coord_z, coord_t };
 
               lou pos = coord_t * n_space_clusters * n_space_clusters 
@@ -933,7 +918,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
             slou coord_y = parent_coord[ 2 ];
             slou coord_z = parent_coord[ 3 ];
             std::vector< slou > coordinates
-              = { static_cast< slou >( st_cluster->get_level( ) ), coord_x, 
+              = { static_cast< slou >( st_cluster->get_level( ) + 1 ), coord_x, 
                   coord_y, coord_z, coord_t };
             lou pos = coord_t * n_space_clusters * n_space_clusters 
               * n_space_clusters
