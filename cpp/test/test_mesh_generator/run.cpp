@@ -129,11 +129,11 @@ int main( int argc, char * argv[] ) {
       std::cout << "process ids in initial global distribution tree:" 
                 << std::endl;
       time_structure.print_tree_human_readable( digits, true );
-      std::cout << "global number of elements is " << mesh.get_n_elements( ) 
-                << std::endl;
-      std::cout << "printing local part of distributed cluster tree: " 
-                << std::endl;
-      tree.print( );
+      // std::cout << "global number of elements is " << mesh.get_n_elements( ) 
+      //           << std::endl;
+      // std::cout << "printing local part of distributed cluster tree: " 
+      //           << std::endl;
+      // tree.print( );
     }
     if ( output_id == myRank ) {
       std::cout << "process ids in " << myRank << "'s locally essential "

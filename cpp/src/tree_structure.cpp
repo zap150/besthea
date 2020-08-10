@@ -267,6 +267,58 @@ void besthea::mesh::tree_structure::initialize_local_contributions(
   }
 }
 
+void besthea::mesh::tree_structure::init_fmm_lists_and_dependency_data( 
+  scheduling_time_cluster & root, 
+  std::list< scheduling_time_cluster* > & m_list,
+  std::list< scheduling_time_cluster* > & m2l_list,
+  std::list< scheduling_time_cluster* > & l_list,
+  std::list< scheduling_time_cluster* > & n_list ) const {
+  // if the cluster is local and active in the upward path add it to the 
+  // m-list and initialize the appropriate dependency data
+  if ( root.get_process_id( ) == _my_process_id &&
+       root.is_active_in_upward_path( ) ) {
+    m_list.push_back( &root );
+    root.set_upward_path_counter( root.get_n_children( ) );
+  }
+  // if the current cluster is local and its parent is active in the downward 
+  // path add the current cluster to the l-list
+  if ( root.get_process_id( ) == _my_process_id &&
+       root.get_parent( )->is_active_in_downward_path( ) ) {
+    l_list.push_back( &root );
+  }
+
+  // if the current cluster is local, active in the downward path and its parent
+  // is inactive in the downward path change the downward path status of the 
+  // current cluster (to signal that no l2l operation has to be done anymore)
+  if ( root.is_active_in_downward_path( ) && 
+        !( root.get_parent( )->is_active_in_downward_path( ) ) ) {
+    root.set_downward_path_status( 1 );
+  }
+
+  // add the cluster to the m2l-list, if it is local and has a non-empty
+  // interaction list
+  if ( root.get_process_id( ) == _my_process_id && 
+       root.get_interaction_list( ) != nullptr ) {
+    m2l_list.push_back( &root );
+  }
+
+  // add the cluster to the n-list, if it is a leaf
+  if ( root.get_process_id( ) == _my_process_id && 
+       root.get_n_associated_leaves( ) > 0 ) {
+    n_list.push_back( &root );
+  }
+
+  // recursive call for all children
+  if ( root.get_n_children( ) > 0 ) {
+    const std::vector< scheduling_time_cluster* >* children 
+      = root.get_children( );
+    for ( auto it = children->begin( ); it != children->end( ); ++it ) {
+      init_fmm_lists_and_dependency_data( 
+        **it, m_list, m2l_list, l_list, n_list );
+    }
+  }
+}
+
 std::vector< char > besthea::mesh::tree_structure::
   compute_tree_structure( ) const {
   std::vector< char > tree_vector;
@@ -727,60 +779,6 @@ void besthea::mesh::tree_structure::determine_cluster_activity(
     for ( auto it = root.get_children( )->begin( );
           it != root.get_children( )->end( ); ++it ) {
       determine_cluster_activity( **it );
-    }
-  }
-}
-
-void besthea::mesh::tree_structure::init_fmm_lists_and_dependency_data( 
-  scheduling_time_cluster & root, 
-  std::list< scheduling_time_cluster* > & m_list,
-  std::list< scheduling_time_cluster* > & m2l_list,
-  std::list< scheduling_time_cluster* > & l_list,
-  std::list< scheduling_time_cluster* > & n_list ) const {
-  // if the cluster is local and active in the upward path add it to the 
-  // m-list and initialize the appropriate dependency data
-  if ( root.get_process_id( ) == _my_process_id &&
-       root.is_active_in_upward_path( ) ) {
-    m_list.push_back( &root );
-    root.set_upward_path_counter( root.get_n_children( ) );
-  }
-  // if the current cluster is local and its parent is active in the downward 
-  // path add the current cluster to the l-list
-  if ( root.get_process_id( ) == _my_process_id &&
-       root.get_parent( )->is_active_in_downward_path( ) ) {
-    l_list.push_back( &root );
-  }
-
-  // if the current cluster is local, active in the downward path and its parent
-  // is inactive in the downward path change the downward path status of the 
-  // current cluster (to signal that no l2l operation has to be done anymore)
-  if ( root.is_active_in_downward_path( ) && 
-        !( root.get_parent( )->is_active_in_downward_path( ) ) ) {
-    root.set_downward_path_status( 1 );
-  }
-
-  // add the cluster to the m2l-list, if it is local and has a non-empty
-  // interaction list
-  if ( root.get_process_id( ) == _my_process_id && 
-       root.get_interaction_list( ) != nullptr ) {
-    m2l_list.push_back( &root );
-  }
-
-  // add the cluster to the n-list, if it is a leaf
-  // TODO: change this later: A cluster is in the n-list if there is a
-  // space-time leaf cluster associated to it.
-  if ( root.get_process_id( ) == _my_process_id && 
-       root.get_n_children( ) == 0 ){
-    n_list.push_back( &root );
-  }
-
-  // recursive call for all children
-  if ( root.get_n_children( ) > 0 ) {
-    const std::vector< scheduling_time_cluster* >* children 
-      = root.get_children( );
-    for ( auto it = children->begin( ); it != children->end( ); ++it ) {
-      init_fmm_lists_and_dependency_data( 
-        **it, m_list, m2l_list, l_list, n_list );
     }
   }
 }

@@ -216,6 +216,14 @@ class besthea::mesh::distributed_spacetime_tensor_mesh :
   }
 
   /**
+   * @todo global number of temporal elements is currently not available 
+   * (or is it?)
+   */
+  // lo get_global_n_temporal_elements( ) const {
+  //   return;
+  // }
+
+  /**
    * Returns the start index of the local mesh.
    */
   lo get_local_start_idx( ) const {
@@ -288,8 +296,6 @@ class besthea::mesh::distributed_spacetime_tensor_mesh :
   void find_slices_to_load( std::set< lo > & nearfield_slice_indices,
     std::set< lo > & local_slice_indices ) const ;
 
-  MPI_Comm * _comm;  //!< MPI communicator associated with the distributed mesh
-  int _my_rank;      //!< MPI rank of current processor
   int _n_processes;  //!< total number of MPI processes in the communicator
   lo _n_meshes;      //!< total number of input meshes
   lo _n_meshes_per_rank;             //!< number of meshes owned by this process
@@ -314,6 +320,9 @@ class besthea::mesh::distributed_spacetime_tensor_mesh :
   sc _t_start;                  //!< start of the global time interval
   sc _t_end;                    //!< end of the global time interval
   lo _n_global_elements;  //!< total number of elements in the distributed mesh
+  const MPI_Comm * _comm; //!< MPI communicator associated with the distributed 
+                          //!< mesh
+  int _my_rank;           //!< MPI rank of the current process
 };
 
 #endif /* INCLUDE_BESTHEA_DISTRIBUTED_SPACETIME_TENSOR_MESH_H_ */

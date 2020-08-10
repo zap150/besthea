@@ -48,7 +48,7 @@ namespace besthea {
 namespace besthea {
   namespace bem {
     template< class basis_type >
-    class fast_spacetime_be_space;
+    class distributed_fast_spacetime_be_space;
     class basis_tri_p1;
     class basis_tri_p0;
   }
@@ -88,6 +88,8 @@ class besthea::mesh::general_spacetime_cluster {
     lo n_time_div, const distributed_spacetime_tensor_mesh & mesh,
     lo process_id, bool reserve_elements = false )
     : _n_elements( n_elements ),
+      _n_time_elements( -1 ),     
+      _n_space_elements( -1 ),     
       _time_center( time_center ),
       _space_center( space_center ),
       _time_half_size( time_half_size ),
@@ -139,6 +141,30 @@ class besthea::mesh::general_spacetime_cluster {
    */
   void add_element( lo idx ) {
     _elements.push_back( idx );
+  }
+
+  /**
+   * Sets the number of different time steps in the cluster. Furthermore it 
+   * sets the number of different spatial elements accordingly.
+   * @param[in] n_time_elements Number of time steps in the cluster.
+   */
+  void set_n_time_elements( lo n_time_elements ) {
+    _n_time_elements = n_time_elements;
+    _n_space_elements = _n_elements / _n_time_elements;
+  }
+
+  /**
+   * Returns the number of different time steps in the cluster.
+   */
+  lo get_n_time_elements( ) const {
+    return _n_time_elements;
+  }
+
+  /**
+   * Returns the number of different spatial elements in the cluster.
+   */
+  lo get_n_space_elements( ) const {
+    return _n_space_elements;
   }
 
   /**
@@ -565,6 +591,38 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
+   * Returns the number of degrees of freedom in the cluster (depending on the
+   * underlying space)
+   */
+  template< class space_type >
+  lo get_n_dofs( ) const;
+
+  /**
+   * Returns the number of degrees of freedom in the cluster with respect to
+   * space (depending on the underlying space) 
+   */
+  template< class space_type >
+  lo get_n_space_dofs( ) const;
+
+  /**
+   * Provides local indices for the degrees of freedom in space for a given, 
+   * possibly transformed, spatial element.
+   * In case of p0 elements only the element index is returned
+   * In case of p1 elements the local vertex indices are returned
+   * @param[in] i_loc_elem  Local spatial element index.
+   * @param[in] n_shared_vertices Number of shared vertices in current elements
+   *                              (regularized quadrature).
+   * @param[in] rotation  Virtual element rotation (regularized quadrature).
+   * @param[in] swap  Virtual element inversion (regularized quadrature).
+   * @param[out] indices  Local indices for the current (transformed) element.
+   * @todo Is this suitable for p1 basis functions?!
+   */
+  template< class space_type >
+  void local_elem_to_local_space_dofs( 
+    lo i_loc_elem, int n_shared_vertices, int rotation, bool swap, 
+    std::vector< lo > & indices ) const;
+
+  /**
    * Prints info of the object.
    */
   void print( ) {
@@ -605,7 +663,11 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
  private:
-  lo _n_elements;             //!< number of spacetime elements in the cluster
+  lo _n_elements;             //!< number of spacetime elements in the cluster.
+  lo _n_time_elements;        //!< number of different time steps in the 
+                              //!< cluster (components of spacetime elements).
+  lo _n_space_elements;       //!< number of different spatial elements in the
+                              //!< cluster (components of spacetime elements).
   sc _time_center;            //!< temporal center of the cluster
   vector_type _space_center;  //!< spatial center of the cluster
   sc _time_half_size;         //!< temporal half size of the cluster
@@ -640,5 +702,43 @@ class besthea::mesh::general_spacetime_cluster {
                             //!< cluster, which is stored in the associated 
                             //!< scheduling_time_cluster
 };
+
+/** specialization for p0 basis functions */
+template<>
+inline lo besthea::mesh::general_spacetime_cluster::get_n_dofs<
+  besthea::bem::distributed_fast_spacetime_be_space< 
+    besthea::bem::basis_tri_p0 > >( ) const {
+  return _n_elements;
+}
+
+/** specialization for p0 basis functions */
+template<>
+inline lo besthea::mesh::general_spacetime_cluster::get_n_space_dofs<
+  besthea::bem::distributed_fast_spacetime_be_space< 
+    besthea::bem::basis_tri_p0 > >( ) const {
+  return _n_space_elements;
+}
+
+/** specialization for p0 basis functions */
+template<> inline
+void besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs< 
+  besthea::bem::distributed_fast_spacetime_be_space< 
+    besthea::bem::basis_tri_p0 > >( lo i_loc_elem, int n_shared_vertices, 
+    int rotation, bool swap, std::vector< lo > & indices ) const {
+  indices[ 0 ] = i_loc_elem;
+}
+
+/** specialization for p1 basis functions 
+ * @todo add support for p1 basis functions (information about nodes in cluster,
+ * time elements in cluster is necessary) 
+ */
+// template<>
+// inline lo besthea::mesh::spacetime_cluster::get_n_dofs<
+//   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >( )
+//   const {
+//   return _temporal_cluster.get_n_elements( )
+//     * _spatial_cluster.get_n_dofs<
+//       besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >( );
+// }
 
 #endif /* INCLUDE_BESTHEA_GENERAL_SPACETIME_CLUSTER_H_ */

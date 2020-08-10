@@ -180,6 +180,7 @@ class besthea::linear_algebra::pFMM_matrix
   void set_uniform( bool uniform ) {
     _uniform = uniform;
   }
+  
   /*!
    * Sets the dimension of the matrix.
    * @param[in] block_dim Block dimension.

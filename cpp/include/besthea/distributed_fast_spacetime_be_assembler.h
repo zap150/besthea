@@ -45,6 +45,7 @@
 #include "besthea/tree_structure.h"
 #include "besthea/vector.h"
 
+#include <mpi.h>
 #include <omp.h>
 #include <set>
 #include <vector>
@@ -68,10 +69,6 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
   using pfmm_matrix_type = besthea::linear_algebra::
     distributed_pFMM_matrix< kernel_type, 
     test_space_type, trial_space_type >;  //!< shortcut for the pFMM matrix type
-  using spacetime_cluster_type
-    = besthea::mesh::general_spacetime_cluster;  //!< time cluster type
-  using tree_structure_type
-    = besthea::mesh::tree_structure; //!< tree structure type
   using vector_type = besthea::linear_algebra::vector;  //!< vector type
 
   /**
@@ -142,6 +139,7 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
    * @param[in] kernel Spacetime kernel antiderivative object.
    * @param[in] test_space Test boundary element space.
    * @param[in] trial_space Trial boundary element space.
+   * @param[in] comm  MPI communicator associated with the assembler.
    * @param[in] order_singular Line quadrature order for regularized quadrature.
    * @param[in] order_regular Triangle quadrature order for regular quadrature.
    * @param[in] temp_order Degree of Lagrange interpolation polynomials in time
@@ -152,8 +150,8 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
    */
   distributed_fast_spacetime_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
-    int order_singular = 4, int order_regular = 4, int temp_order = 5,
-    int spat_order = 5, sc alpha = 1.0);
+    MPI_Comm * comm, int order_singular = 4, int order_regular = 4, 
+    int temp_order = 5, int spat_order = 5, sc alpha = 1.0);
 
   distributed_fast_spacetime_be_assembler( 
     const distributed_fast_spacetime_be_assembler & that ) = delete;
@@ -166,6 +164,8 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
   /**
    * Assembles the fast spacetime matrix.
    * @param[out] global_matrix Assembled pFMM matrix.
+   * @warning Currently there are some restrictions on the test 
+   * and trial spaces (same meshes and trees)
    */
   void assemble( pfmm_matrix_type & global_matrix ) const;
 
@@ -197,21 +197,23 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
    * assembled.
    */  
   void assemble_nearfield_matrix( 
-    spacetime_cluster_type * target_cluster, 
-    spacetime_cluster_type * source_cluster, 
+    mesh::general_spacetime_cluster * target_cluster, 
+    mesh::general_spacetime_cluster * source_cluster, 
     full_matrix_type & nearfield_matrix ) const;
 
   /**
-   * Determines the configuration of two triangular elements.
-   * @param[in] i_test Index of the test element.
-   * @param[in] i_trial Index of the trial element.
+   * Determines the configuration of two spatial, triangular elements.
+   * @param[in] i_test_space Index of the spatial test element.
+   * @param[in] i_trial_space Index of the spatial trial element.
    * @param[out] type_int Type of the configuration (number of vertices shared).
    * @param[out] rot_test Virtual rotation of the test element.
    * @param[out] rot_trial Virtual rotation of the trial element.
-   * @todo adapt this
+   * @warning The routine relies on the fact, that the spatial mesh is the same
+   * for the nearfield mesh and the local mesh of a distributed spacetime mesh.
+   * If this is not the case the result is meaningless.
    */
-  void get_type( lo i_test, lo i_trial, int & type_int, int & rot_test,
-    int & rot_trial ) const;
+  void get_type( lo i_test_space, lo i_trial_space, int & type_int, 
+    int & rot_test, int & rot_trial ) const;
 
   /**
    * Maps quadratures nodes from hypercube to triangles
@@ -489,6 +491,8 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
   static constexpr std::array< int, 4 > n_simplices{ 1, 2, 5,
     6 };  //!< Number of simplices for all configurations (disjoint, shared
           // vertex, shared edge, identical).
+  int _my_rank;           //!< MPI rank of the current process.
+  const MPI_Comm * _comm; //!< MPI communicator associated with the pFMM matrix.
 };
 
 #endif /* INCLUDE_BESTHEA_DISTRIBUTED_FAST_SPACETIME_BE_ASSEMBLER_H_ */

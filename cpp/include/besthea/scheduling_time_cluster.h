@@ -97,10 +97,9 @@ class besthea::mesh::scheduling_time_cluster {
       _associated_moments( nullptr ),
       _associated_local_contributions( nullptr ),
       _contribution_size( 0 ),
+      _map_to_moment_receive_buffers( nullptr ),
       _moment( 0.0 ),
       _local_contribution( 0.0 ),
-      _receive_moments( nullptr ),
-      _map_to_moment_positions( nullptr ),
       _leaf_index( -1 ) {
   }
 
@@ -134,10 +133,11 @@ class besthea::mesh::scheduling_time_cluster {
       delete [] _associated_moments;
     if ( _associated_local_contributions != nullptr )
       delete [] _associated_local_contributions;
-    if ( _receive_moments != nullptr ) 
-      delete _receive_moments;
-    if ( _map_to_moment_positions != nullptr )
-      delete _map_to_moment_positions;
+    for ( auto moment_buffer : _associated_moments_receive_buffers ) {
+      delete [] moment_buffer;
+    }
+    if ( _map_to_moment_receive_buffers != nullptr )
+      delete _map_to_moment_receive_buffers;
   }
 
   /**
@@ -701,29 +701,28 @@ class besthea::mesh::scheduling_time_cluster {
   /**
    * Adds an entry to the map from process ids to moments.
    * @param[in] proc_id Key value of the element to be added
-   * @note @p _map_to_moment_positions and @p _receive_moments are allocated if
-   * they do not exist allready.
+   * @note @p _map_to_moment_receive_buffers is allocated if it does not exist 
+   * allready.
    */
   void add_receive_buffer( const lo proc_id ) {
-    if ( _map_to_moment_positions == nullptr ) {
-      _map_to_moment_positions = new std::map< lo, lou >( );
+    if ( _map_to_moment_receive_buffers == nullptr ) {
+      _map_to_moment_receive_buffers = new std::map< lo, lou >( );
     }
-    if ( _receive_moments == nullptr ) {
-      _receive_moments = new std::vector< sc >( );
-    }
-    _receive_moments->push_back( 0.0 );
-    _map_to_moment_positions->insert( 
-      std::pair< lo, lou >( proc_id, _receive_moments->size( ) - 1 ) );
+    sc * moment_buffer 
+      = new sc [ _contribution_size * _associated_spacetime_clusters->size( ) ];
+    _associated_moments_receive_buffers.push_back( moment_buffer );
+    _map_to_moment_receive_buffers->insert( 
+      { proc_id, _associated_moments_receive_buffers.size( ) - 1 } );
   }
 
   /**
    * Returns a pointer to the position where the moments of an extraneous 
    * process are stored.
-   * @param[in] proc_id Id of the extraneous process
+   * @param[in] proc_id Id of the extraneous process.
    */
   sc* get_extraneous_moment_pointer( lo proc_id ) {
-    return & ( ( *_receive_moments )[ 
-              ( *_map_to_moment_positions )[ proc_id ] ] );
+    return _associated_moments_receive_buffers[ 
+      _map_to_moment_receive_buffers->at( proc_id ) ];
   }
 
   /**
@@ -1025,16 +1024,18 @@ class besthea::mesh::scheduling_time_cluster {
                                         //!< general spacetime clusters.  
   lou _contribution_size; //!< Size of a single contribution (moments or local 
                           //!< contribution) in the array of associated 
-                          //!< contributions     
+                          //!< contributions
+  std::vector< sc * > 
+    _associated_moments_receive_buffers;  //!< In case that moments have to be 
+                                          //!< received from other processes 
+                                          //!< they are written into these 
+                                          //!< buffers.
+  std::map< lo, lou > 
+    * _map_to_moment_receive_buffers; //!< Map to access the correct position in 
+                                //!< @p _associated_moments_receive_buffers for 
+                                //!< extraneous children.
   sc _moment; //!< Stores a moment in FMM TEMPORARY
   sc _local_contribution; //!< Stores a local contribution in FMM TEMPORARY
-  std::vector< sc > 
-    * _receive_moments; //!< Storage position for moments which are received
-                        //!< from other processes TEMPORARY
-  std::map< lo, lou > 
-    * _map_to_moment_positions; //!< Map to access the correct position in 
-                                //!< @p _receive_moments for extraneous children
-                                //!< TEMPORARY
   lo _leaf_index; //!< Index which is assigned consecutively to all leaves. For
                   //!< non-leaf clusters it is -1 TEMPORARY
 };

@@ -163,6 +163,24 @@ class besthea::mesh::tree_structure {
    * nearfield it is also kept.
    */
   void reduce_2_essential( );
+
+  /**
+   * Traverses the tree recursively and adds all relevant clusters assigned to 
+   * the process @p _my_process_id to the 4 lists for scheduling operations in 
+   * the FMM.
+   * @param[in] root Current cluster in the tree traversal.
+   * @param[in,out] m_list  List for scheduling upward path operations.
+   * @param[in,out] m2l_list  List for scheduling interactions and downward pass
+   *                          operations.
+   * @param[in,out] l_list  List for scheduling downward path operations.
+   * @param[in,out] n_list  List for scheduling nearfield operations.
+   * @note The routine is solely called by @ref prepare_fmm.
+   */
+  void init_fmm_lists_and_dependency_data( scheduling_time_cluster & root,
+    std::list< scheduling_time_cluster* > & m_list,
+    std::list< scheduling_time_cluster* > & m2l_list,
+    std::list< scheduling_time_cluster* > & l_list,
+    std::list< scheduling_time_cluster* > & n_list ) const;
     
   /**
    * Fills the 4 lists used for scheduling the FMM operations by adding pointers
@@ -192,6 +210,8 @@ class besthea::mesh::tree_structure {
    *       @ref compare_clusters_top_down_right_2_left .
    * @todo Determine n_list differently, when coupling with space-time cluster
    *       tree is done.
+   * @todo Delete this later. The routine was transferred to 
+   * @ref besthea::linear_algebra::distributed_pFMM_matrix.
    */
   void prepare_fmm( std::list< scheduling_time_cluster* > & m_list,
     std::list< scheduling_time_cluster* > & m2l_list,
@@ -230,6 +250,28 @@ class besthea::mesh::tree_structure {
    * (0: not existent, 1: non-leaf, 2: leaf)
    */
   std::vector< char > compute_tree_structure( ) const;
+
+  /**
+   * Comparison operator for two clusters.
+   * @param[in] first Pointer to the first cluster.
+   * @param[in] second Pointer to the second cluster.
+   * @return True if first's level is greater than second's level, or, in case 
+   *         of equality of the levels, if first's global index is greater than
+   *         second's global index
+   */
+  static bool compare_clusters_bottom_up_right_2_left( 
+    scheduling_time_cluster* first, scheduling_time_cluster* second );
+
+  /**
+   * Comparison operator for two clusters.
+   * @param[in] first Pointer to the first cluster.
+   * @param[in] second Pointer to the second cluster.
+   * @return True if first's level is less than second's level, or, in case 
+   *         of equality of the levels, if first's global index is greater than
+   *         second's global index
+   */
+  static bool compare_clusters_top_down_right_2_left( 
+    scheduling_time_cluster* first, scheduling_time_cluster* second );
 
   /**
    * Computes the tree structure and prints it to a binary file
@@ -449,24 +491,6 @@ class besthea::mesh::tree_structure {
   void determine_cluster_activity( scheduling_time_cluster & root );
 
   /**
-   * Traverses the tree recursively and adds all relevant clusters assigned to 
-   * the process @p _my_process_id to the 4 lists for scheduling operations in 
-   * the FMM.
-   * @param[in] root Current cluster in the tree traversal.
-   * @param[in,out] m_list  List for scheduling upward path operations.
-   * @param[in,out] m2l_list  List for scheduling interactions and downward pass
-   *                          operations.
-   * @param[in,out] l_list  List for scheduling downward path operations.
-   * @param[in,out] n_list  List for scheduling nearfield operations.
-   * @note The routine is solely called by @ref prepare_fmm.
-   */
-  void init_fmm_lists_and_dependency_data( scheduling_time_cluster & root,
-    std::list< scheduling_time_cluster* > & m_list,
-    std::list< scheduling_time_cluster* > & m2l_list,
-    std::list< scheduling_time_cluster* > & l_list,
-    std::list< scheduling_time_cluster* > & n_list ) const;
-
-  /**
    * Prepares the reduction of the tree structure to the locally essential part,
    * by updating nearfields, interaction lists and send lists and detecting
    * the remaining essential clusters (those which lie on a path between the
@@ -551,28 +575,6 @@ class besthea::mesh::tree_structure {
   void determine_levelwise_output_string( const lo digits, 
   bool print_process_ids, scheduling_time_cluster * root, 
   std::vector< std::string > & levelwise_output_strings ) const;
-
-  /**
-   * Comparison operator for two clusters.
-   * @param[in] first Pointer to the first cluster.
-   * @param[in] second Pointer to the second cluster.
-   * @return True if first's level is greater than second's level, or, in case 
-   *         of equality of the levels, if first's global index is greater than
-   *         second's global index
-   */
-  static bool compare_clusters_bottom_up_right_2_left( 
-    scheduling_time_cluster* first, scheduling_time_cluster* second );
-
-  /**
-   * Comparison operator for two clusters.
-   * @param[in] first Pointer to the first cluster.
-   * @param[in] second Pointer to the second cluster.
-   * @return True if first's level is less than second's level, or, in case 
-   *         of equality of the levels, if first's global index is greater than
-   *         second's global index
-   */
-  static bool compare_clusters_top_down_right_2_left( 
-    scheduling_time_cluster* first, scheduling_time_cluster* second );
 };
 
 #endif /* INCLUDE_BESTHEA_TREE_STRUCTURE_H_ */

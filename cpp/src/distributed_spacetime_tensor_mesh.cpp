@@ -38,11 +38,11 @@ besthea::mesh::distributed_spacetime_tensor_mesh::
   distributed_spacetime_tensor_mesh( const std::string & decomposition_file,
     const std::string & tree_file, const std::string & cluster_bounds_file,
     const std::string & distribution_file, MPI_Comm * comm )
-  : _comm( comm ),
-    _my_mesh( nullptr ),
+  : _my_mesh( nullptr ),
     _space_mesh( nullptr ),
     _time_mesh( nullptr ),
-    _dist_tree( nullptr ) {
+    _dist_tree( nullptr ),
+    _comm( comm ) {
   MPI_Comm_rank( *_comm, &_my_rank );
   MPI_Comm_size( *_comm, &_n_processes );
 

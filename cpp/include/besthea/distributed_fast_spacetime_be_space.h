@@ -85,8 +85,6 @@ class besthea::bem::distributed_fast_spacetime_be_space
       _t;  //!< Coordinates of quadrature nodes in the temporal element
   };
 
-  using st_mesh_type
-    = besthea::mesh::spacetime_tensor_mesh;  //!< Spacetime mesh type.
   using s_mesh_type
     = besthea::mesh::triangular_surface_mesh;        //!< Spatial mesh type.
   using t_mesh_type = besthea::mesh::temporal_mesh;  //!< Temporal mesh type.

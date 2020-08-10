@@ -155,7 +155,6 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
     node[ 0 ] = sp_node[ 0 ];
     node[ 1 ] = sp_node[ 1 ];
     node[ 2 ] = sp_node[ 2 ];
-
     node[ 3 ] = _time_mesh->get_node( t_idx );
   }
 
@@ -519,6 +518,24 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    */
   virtual const temporal_mesh * get_temporal_mesh( ) const {
     return _time_mesh;
+  }
+
+  /**
+   * Returns the index of the time element corresponding to the given
+   * spacetime element
+   * @param[in] i_element Index of the spacetime element.
+   */
+  lo get_time_element( lo i_element ) const {
+    return i_element / get_n_spatial_elements( );
+  }
+
+  /**
+   * Returns the index of the space element corresponding to the given
+   * spacetime element
+   * @param[in] i_element Index of the spacetime element.
+   */
+  lo get_space_element( lo i_element ) const {
+    return i_element % get_n_spatial_elements( );
   }
 
  protected:

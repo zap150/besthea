@@ -979,17 +979,15 @@ void besthea::mesh::distributed_spacetime_cluster_tree::compute_bounding_box(
   }
 }
 
-void besthea::mesh::distributed_spacetime_cluster_tree::collect_my_leaves(
-  general_spacetime_cluster & root,
-  std::vector< general_spacetime_cluster * > & leaves ) {
+void besthea::mesh::distributed_spacetime_cluster_tree::collect_local_leaves(
+  general_spacetime_cluster & root ) {
   std::vector< general_spacetime_cluster * > * children = root.get_children( );
-
   if ( children != nullptr ) {
     for ( auto it : *children ) {
-      collect_my_leaves( *it, leaves );
+      collect_local_leaves( *it );
     }
   } else if ( _my_rank == root.get_process_id( ) ) {
-    leaves.push_back( &root );
+    _local_leaves.push_back( &root );
   }
 }
 
@@ -1090,16 +1088,29 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
   }
   linear_algebra::coordinates< 4 > centroid;
 
+  // while adding elements to the cluster count the number of different 
+  // time elements
+  lo n_time_elements = 0;
+  sc last_timestep = beginning - time_half_size;
+
   for ( lo i = 0; i < current_mesh->get_n_elements( ); ++i ) {
     current_mesh->get_centroid( i, centroid );
-
     if ( ( centroid[ 0 ] >= left ) && ( centroid[ 0 ] < right )
       && ( centroid[ 1 ] >= front ) && ( centroid[ 1 ] < back )
       && ( centroid[ 2 ] >= bottom ) && ( centroid[ 2 ] < top )
       && ( centroid[ 3 ] > beginning ) && ( centroid[ 3 ] <= end ) ) {
       cluster.add_element( _spacetime_mesh.local_2_global( start_idx, i ) );
+      // check if the temporal component of the element is a new timestep
+      // (the check with > is safe, due to the computation of the centroid in
+      // get_centroid. since the elements are sorted with respect to time the
+      // right number of time elements is determined.)
+      if ( centroid[3] > last_timestep ) {
+        last_timestep = centroid[ 3 ];
+        n_time_elements++;
+      }
     }
   }
+  cluster.set_n_time_elements( n_time_elements );
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(

@@ -71,7 +71,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    */
   distributed_spacetime_cluster_tree(
     distributed_spacetime_tensor_mesh & spacetime_mesh, lo max_levels,
-    lo n_min_elems, sc st_coeff, slou spatial_nearfield_limit, MPI_Comm * comm );
+    lo n_min_elems, sc st_coeff, slou spatial_nearfield_limit, 
+    MPI_Comm * comm );
 
   /**
    * Destructor.
@@ -105,6 +106,13 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   }
 
   /**
+   * Returns the vector of local leaves.
+   */
+  const std::vector< general_spacetime_cluster* > & get_local_leaves( ) {
+    return _local_leaves;
+  }
+
+  /**
    * Prints levels of the tree.
    */
   void print( ) {
@@ -126,6 +134,12 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
                                       //!< problem: distribution tree is 
                                       //!< modified!
   general_spacetime_cluster * _root;  //!< root of the cluster tree
+
+  std::vector< general_spacetime_cluster* > 
+    _local_leaves;  //!< Vector containing the leaves of the distributed 
+                    //!< space-time cluster tree which are local, i.e. 
+                    //!< assigned to the process with rank @p _my_rank.
+
   lo _start_spatial_level;   //!< auxiliary variable determining the appropriate
                              //!< starting level in the space cluster tree
   lo _start_temporal_level;  //!< auxiliary variable to determine in which level
@@ -321,13 +335,11 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
       scheduling_time_cluster * > > & cluster_pairs );
 
   /**
-   * Collect leaves of the cluster tree which are owned by the current MPI
-   * process.
-   * @param[in] root Root of the cluster tree.
-   * @param[inout] leaves Vector of pointers to the leaf clusters.
+   * Collect the leaves of the cluster tree which are owned by the current MPI
+   * process, i.e. local. The routine is based on a tree traversal.
+   * @param[in] root Current cluster in the tree traversal.
    */
-  void collect_my_leaves( general_spacetime_cluster & root,
-    std::vector< general_spacetime_cluster * > & leaves );
+  void collect_local_leaves( general_spacetime_cluster & root );
 
   /**
    * Collects space-time leaf clusters in the local part of the distributed tree
@@ -408,6 +420,9 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * cluster in the distributed spacetime cluster tree by recursively traversing 
    * the tree.
    * @param[in] root  Current cluster in the tree traversal.
+   * @warning The construction is based only on the local part of the cluster
+   * tree. Only for local clusters the nearfield and interaction lists are the
+   * same as in the global tree. 
    */
   void fill_nearfield_and_interaction_lists( general_spacetime_cluster & root );
 
