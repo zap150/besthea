@@ -135,6 +135,13 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
+   * Returns the distributed spacetime mesh associated with the cluster.
+   */
+  const distributed_spacetime_tensor_mesh* get_mesh( ) {
+    return &_mesh;
+  }
+
+  /**
    * Adds spacetime element to the cluster.
    * @param[in] idx Global index of the spacetime element in the underlying
    * distributed mesh.
@@ -581,6 +588,13 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
+   * Returns a pointer to the moment of the current cluster.
+   */
+  sc* get_pointer_to_moment( ) {
+    return _moment;
+  }
+
+  /**
    * Sets the pointer to the local_contribution.
    * @param[in] local_contribution_address  Address of the local contribution  
    *                                        (in the array stored in the 
@@ -588,6 +602,13 @@ class besthea::mesh::general_spacetime_cluster {
    */
   void set_pointer_to_local_contribution( sc* local_contribution_address ) {
     _local_contribution = local_contribution_address;
+  }
+
+  /**
+   * Returns a pointer to the local contribution of the current cluster.
+   */
+  sc* get_pointer_to_local_contribution( ) {
+    return _local_contribution;
   }
 
   /**

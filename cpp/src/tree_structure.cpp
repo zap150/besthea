@@ -255,6 +255,16 @@ void besthea::mesh::tree_structure::initialize_moment_contributions(
   }
 }
 
+void besthea::mesh::tree_structure::clear_moment_contributions( 
+  scheduling_time_cluster& root ) {
+  root.clear_associated_moments( );
+  if ( root.get_n_children( ) > 0 ) {
+    for ( auto child : *root.get_children( ) ) {
+      clear_moment_contributions( *child );
+    }
+  }
+}
+
 void besthea::mesh::tree_structure::initialize_local_contributions( 
   scheduling_time_cluster& root, lou contribution_size ) {
   if ( root.is_active_in_downward_path( ) ) {
@@ -263,6 +273,16 @@ void besthea::mesh::tree_structure::initialize_local_contributions(
   if ( root.get_n_children( ) > 0 ) {
     for ( auto child : *root.get_children( ) ) {
       initialize_local_contributions( *child, contribution_size );
+    }
+  }
+}
+
+void besthea::mesh::tree_structure::clear_local_contributions( 
+  scheduling_time_cluster& root ) {
+  root.clear_associated_local_contributions( );
+  if ( root.get_n_children( ) > 0 ) {
+    for ( auto child : *root.get_children( ) ) {
+      clear_local_contributions( *child );
     }
   }
 }

@@ -87,7 +87,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 
   global_matrix.set_MPI_communicator( _comm );
   global_matrix.set_trees( _test_space->get_tree( ) );
-  global_matrix.set_order( _spat_order, _temp_order );
+  global_matrix.set_order( _spat_order, _temp_order, _order_regular );
   global_matrix.set_alpha( _alpha );
   global_matrix.set_m2l_integration_order( _m2l_integration_order );
   global_matrix.set_MPI_communicator( _comm );
@@ -124,12 +124,15 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 //   global_matrix.compute_spatial_m2m_coeffs( );
 //   global_matrix.compute_temporal_m2m_matrices( );
 
+
   initialize_moment_and_local_contributions( );
 
   // fill the m-list, m2l-list, n-list and l2l-list of the distributed pFMM 
   // matrix and determine the receive information data.
+  global_matrix.prepare_fmm( );
   
-  // assemble_nearfield( global_matrix );
+  // assemble the nearfield matrices of the pFMM matrix
+  assemble_nearfield( global_matrix );
 }
 
 

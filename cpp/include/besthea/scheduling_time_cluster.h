@@ -848,11 +848,20 @@ class besthea::mesh::scheduling_time_cluster {
    * Sets all associated moments to 0.
    */
   void clear_associated_moments( ) {
-    for ( lou i = 0; 
-          i < _contribution_size * _associated_spacetime_clusters->size( ); 
-          ++i  ) {
-      _associated_moments[ i ] = 0.0;
+    if ( _associated_moments != nullptr ) {
+      for ( lou i = 0; 
+            i < _contribution_size * _associated_spacetime_clusters->size( ); 
+            ++i  ) {
+        _associated_moments[ i ] = 0.0;
+      }
     }
+  }
+
+  /**
+   * Returns a pointer to the associated moments.
+   */
+  sc* get_associated_moments( ) {
+    return _associated_moments;
   }
 
   /**
@@ -886,11 +895,20 @@ class besthea::mesh::scheduling_time_cluster {
    * Sets all associated local contributions to 0.
    */
   void clear_associated_local_contributions( ) {
-    for ( lou i = 0; 
-          i < _contribution_size * _associated_spacetime_clusters->size( ); 
-          ++i  ) {
-      _associated_local_contributions[ i ] = 0.0;
+    if ( _associated_local_contributions != nullptr ) {
+      for ( lou i = 0; 
+           i < _contribution_size * _associated_spacetime_clusters->size( ); 
+           ++i  ) {
+        _associated_local_contributions[ i ] = 0.0;
+      }
     }
+  }
+
+  /**
+   * Returns a pointer to the associated local contributions.
+   */
+  sc* get_associated_local_contributions( ) {
+    return _associated_local_contributions;
   }
 
   /**

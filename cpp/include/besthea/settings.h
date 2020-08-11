@@ -80,7 +80,7 @@ using slou = besthea::short_index_unsigned;  //!< Short unsigned indexing type.
 /**
  * Returns scalar MPI datatype based on the template C++ type.
  */
-template< class scala_type >
+template< class scalar_type >
 struct get_scalar_type {};
 
 /**

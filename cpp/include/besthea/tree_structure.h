@@ -231,6 +231,13 @@ class besthea::mesh::tree_structure {
     scheduling_time_cluster& root, lou contribution_size );
 
   /**
+   * Fills the associated moments of all clusters in the tree with zeros.
+   * The tree is traversed recursively by the routine.
+   * @param[in] root  Current cluster in the tree traversal.
+   */
+  void clear_moment_contributions( scheduling_time_cluster& root );
+
+  /**
    * Traverses the tree structure recursively and allocates and initializes the 
    * local contributions for all clusters which are active in the downward path
    * of the FMM.
@@ -240,6 +247,13 @@ class besthea::mesh::tree_structure {
    */
   void initialize_local_contributions( 
     scheduling_time_cluster& root, lou contribution_size );
+
+  /**
+   * Fills the associated local contributions of all clusters in the tree with 
+   * zeros. The tree is traversed recursively by the routine.
+   * @param[in] root  Current cluster in the tree traversal.
+   */
+  void clear_local_contributions( scheduling_time_cluster& root );
 
   /**
    * Returns the structure of the tree represented as a vector of chars.
