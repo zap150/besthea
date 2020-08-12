@@ -1010,7 +1010,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
         // check whether the temporal component of the st_child is the t_child
         // and if not update the t_child
         short st_child_configuration = st_child->get_temporal_configuration( );
-        if ( t_child_configuration == st_child_configuration ) {
+        if ( t_child_configuration != st_child_configuration ) {
           ++t_idx;
           t_child = ( *t_children )[ t_idx ];
           t_child_configuration = t_child->get_configuration( );
