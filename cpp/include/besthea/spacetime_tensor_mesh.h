@@ -359,9 +359,9 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
     ( nodes[ 1 ] )[ 2 ] = x2[ 2 ];
     ( nodes[ 1 ] )[ 3 ] = t1[ 0 ];
 
-    ( nodes[ 2 ] )[ 0 ] = x2[ 0 ];
-    ( nodes[ 2 ] )[ 1 ] = x2[ 1 ];
-    ( nodes[ 2 ] )[ 2 ] = x2[ 2 ];
+    ( nodes[ 2 ] )[ 0 ] = x3[ 0 ];
+    ( nodes[ 2 ] )[ 1 ] = x3[ 1 ];
+    ( nodes[ 2 ] )[ 2 ] = x3[ 2 ];
     ( nodes[ 2 ] )[ 3 ] = t1[ 0 ];
 
     ( nodes[ 3 ] )[ 0 ] = x1[ 0 ];
@@ -374,9 +374,9 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
     ( nodes[ 4 ] )[ 2 ] = x2[ 2 ];
     ( nodes[ 4 ] )[ 3 ] = t2[ 0 ];
 
-    ( nodes[ 5 ] )[ 0 ] = x2[ 0 ];
-    ( nodes[ 5 ] )[ 1 ] = x2[ 1 ];
-    ( nodes[ 5 ] )[ 2 ] = x2[ 2 ];
+    ( nodes[ 5 ] )[ 0 ] = x3[ 0 ];
+    ( nodes[ 5 ] )[ 1 ] = x3[ 1 ];
+    ( nodes[ 5 ] )[ 2 ] = x3[ 2 ];
     ( nodes[ 5 ] )[ 3 ] = t2[ 0 ];
   }
 
@@ -403,7 +403,7 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
     centroid[ 2 ] = ( x1[ 2 ] + x2[ 2 ] + x3[ 2 ] ) / 3.0;
   }
 
-  void get_centroid( 
+  void get_centroid(
     lo i_elem, linear_algebra::coordinates< 4 > & centroid ) const {
     lo space_elem_idx;
     lo time_elem_idx;
