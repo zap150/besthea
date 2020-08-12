@@ -40,7 +40,7 @@ besthea::mesh::tree_structure::tree_structure( const std::string & filename,
   if ( ( tree_vector.size( ) > 0 ) && ( tree_vector[ 0 ] != 0 ) ) {
     sc center = 0.5 * ( start_time + end_time );
     sc half_size = 0.5 * ( end_time - start_time );
-    _root = new scheduling_time_cluster( center, half_size, nullptr, 0 );
+    _root = new scheduling_time_cluster( center, half_size, nullptr, -1, 0 );
     _levels = 1;
     if ( tree_vector[ 0 ] == 1 ) {
       lou position = 1;
@@ -74,7 +74,7 @@ besthea::mesh::tree_structure::tree_structure(
   if ( ( tree_vector.size( ) > 0 ) && ( tree_vector[ 0 ] != 0 ) ) {
     sc center = 0.5 * ( cluster_bounds[ 0 ] + cluster_bounds[ 1 ] );
     sc half_size = 0.5 * ( cluster_bounds[ 1 ] - cluster_bounds[ 0 ] );
-    _root = new scheduling_time_cluster( center, half_size, nullptr, 0 );
+    _root = new scheduling_time_cluster( center, half_size, nullptr, -1, 0 );
     _levels = 1;
     if ( tree_vector[ 0 ] == 1 ) {
       lou position = 1;
@@ -397,14 +397,16 @@ void besthea::mesh::tree_structure::array_2_tree(
     child_counter++;
     left_cluster 
       = new scheduling_time_cluster( center - half_size / 2.0, half_size / 2.0, 
-                                     &root, level + 1, root.get_process_id( ) );
+                                     &root, 0, level + 1, 
+                                     root.get_process_id( ) );
     left_cluster->set_index( 2 * root.get_global_index( ) + 1 );                                    
   }
   if ( right_child_status > 0 ) {
     child_counter++;
     right_cluster 
       = new scheduling_time_cluster( center + half_size / 2.0, half_size / 2.0, 
-                                     &root, level + 1, root.get_process_id( ) );
+                                     &root, 1, level + 1, 
+                                     root.get_process_id( ) );
     right_cluster->set_index( 2 * root.get_global_index( ) + 2 );                                     
   }
   // add the newly created clusters to the root
@@ -461,14 +463,14 @@ void besthea::mesh::tree_structure::create_tree_from_vectors(
     sc center = ( left_child_right_bound + left_child_left_bound ) * 0.5;
     sc half_size = ( left_child_right_bound - left_child_left_bound ) * 0.5;
     left_cluster = new scheduling_time_cluster( 
-      center, half_size, &root, level + 1 );
+      center, half_size, &root, 0, level + 1 );
   }
   if ( right_child_status > 0 ) {
     child_counter++;
     sc center = ( right_child_right_bound + right_child_left_bound ) * 0.5;
     sc half_size = ( right_child_right_bound - right_child_left_bound ) * 0.5;
     right_cluster = new scheduling_time_cluster(
-      center, half_size, &root, level + 1 );
+      center, half_size, &root, 1, level + 1 );
   }
   // add the newly created clusters to the root
   root.set_n_children( child_counter );
@@ -535,7 +537,6 @@ void besthea::mesh::tree_structure::set_leaf_ids(
   scheduling_time_cluster & root, lo & next_id ) {
   if ( root.get_n_children( ) == 0 ) {
     root.set_leaf_index( next_id );
-    // std::cout << "setting id to " << root.get_leaf_index( next_id ) << std::endl;
     next_id++;
   } else {
     for ( auto it = root.get_children( )->begin( );
@@ -548,12 +549,11 @@ void besthea::mesh::tree_structure::set_leaf_ids(
 void besthea::mesh::tree_structure::set_indices( 
   scheduling_time_cluster & root ) {
   if ( root.get_n_children( ) > 0 ) {
-    std::vector< scheduling_time_cluster* >* children = root.get_children( );
-    sc parent_center = root.get_center( );
     lo parent_index = root.get_global_index( );
+    std::vector< scheduling_time_cluster* >* children = root.get_children( );
     for ( auto it = children->begin( ); it != children->end( ); ++it ) {
-      sc child_center = ( *it )->get_center( );
-      if ( child_center < parent_center ) {
+      short child_configuration = ( *it )->get_configuration( );
+      if ( child_configuration == 0 ) {
         ( *it )->set_index( 2 * parent_index + 1 );
       } else {
         ( *it )->set_index( 2 * parent_index + 2 );
@@ -967,7 +967,7 @@ void besthea::mesh::tree_structure::determine_essential_clusters(
     }
     // if root is a leaf and the status of a cluster in the nearfield is 3 set
     // status to 1.
-    // TODO: Check later, whether this has to be changed! According to the 
+    // @todo: Check later, whether this has to be changed! According to the 
     // current assignment of processes to clusters all descendants of the 
     // neighbors of root would be assigned to the same process as the neighbor
     // itself. If this changes, one has to traverse the nearfield starting from
@@ -1029,10 +1029,9 @@ void besthea::mesh::tree_structure::
       // call the routine for the existing child and add / and whitespaces for
       // the non-existing child
       auto child = ( * root->get_children( ) )[ 0 ];
-      sc parent_center = root->get_center( );
-      sc child_center = child->get_center( );
+      short child_configuration = child->get_configuration( );
       std::vector< bool > child_exists( 2, false );
-      if ( child_center < parent_center ) {
+      if ( child_configuration == 0 ) {
         child_exists[ 0 ] = true;
       } else {
         child_exists[ 1 ] = true;

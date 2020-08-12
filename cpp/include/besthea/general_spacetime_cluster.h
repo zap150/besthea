@@ -394,6 +394,14 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
+   * Returns the temporal configuration of the cluster with respect to its 
+   * parent, i.e. the value of _left_right
+   */
+  short get_temporal_configuration( ) const {
+    return _left_right;
+  }
+
+  /**
    * Returns parent's octant of the cluster.
    *
    * For parent cluster with center at (0, 0, 0) the following octant ordering

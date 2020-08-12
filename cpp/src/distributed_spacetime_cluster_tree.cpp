@@ -41,6 +41,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   : _max_levels( levels ),
     _real_max_levels( 0 ),
     _spacetime_mesh( spacetime_mesh ),
+    _local_max_space_level ( 0 ),
     _s_t_coeff( st_coeff ),
     _n_min_elems( n_min_elems ),
     _spatial_nearfield_limit( spatial_nearfield_limit ),
@@ -91,7 +92,8 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     cluster_send_list, cluster_receive_list );
   distribution_tree->reduce_2_essential( );
 
-
+  // todo: do we need the local leaves?
+  // collect_local_leaves( *_root );
   associate_scheduling_clusters_and_space_time_clusters( );
   fill_nearfield_and_interaction_lists( *_root );
 }
@@ -127,8 +129,12 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
       n_elems_per_subdivisioning, cluster_pairs );
 
     n_time_div++;
-    if ( level % 2 == 0 ) {
+    // increase n_space_div every second level, but only if the next level is 
+    // still considered in the loop 
+    if ( level % 2 == 0 && level < dist_tree_depth_coll - 2 ) {
       n_space_div++;
+      // increase _local_max_space_level accordingly
+      _local_max_space_level++;
     }
   }
   std::vector< general_spacetime_cluster * > leaves;
@@ -385,7 +391,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
         && spacetime_root->get_n_children( ) > 0 ) {
     std::vector< general_spacetime_cluster* > * spacetime_children =
         spacetime_root->get_children( );
-    sc center_t_parent = time_root->get_center( );
     sc level_parent = time_root->get_level( );
     // determine whether the left and right children have to be added
     scheduling_time_cluster * left_cluster = nullptr;
@@ -395,23 +400,24 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     // consider the temporal components of all space-time children and
     // create a new scheduling time cluster if a new one is encountered.
     while ( child_count < 2 && st_it != spacetime_children->end( ) ) {
+      short child_configuration = ( *st_it )->get_temporal_configuration( );
       sc center_t_child = ( *st_it )->get_time_center( );
-      if ( center_t_child < center_t_parent && left_cluster == nullptr ) {
+      if ( child_configuration == 0 && left_cluster == nullptr ) {
         // construct left cluster and set its process id and global index
         sc half_size_child = ( *st_it )->get_time_half_size( );
         left_cluster = new scheduling_time_cluster(
-          center_t_child, half_size_child, time_root, level_parent + 1 );
-        left_cluster->set_process_id( time_root->get_process_id( ) );
+          center_t_child, half_size_child, time_root, 0, level_parent + 1,
+          time_root->get_process_id( ) );
         left_cluster->set_index( 2 * time_root->get_global_index( ) + 1 );
         refine_map[ 2 * time_root->get_global_index( ) + 1 ] = true;
         child_count += 1;
       }
-      else if ( center_t_child > center_t_parent && right_cluster == nullptr ) {
+      else if ( child_configuration == 1 && right_cluster == nullptr ) {
         // construct right cluster and set its process id and global index
         sc half_size_child = ( *st_it )->get_time_half_size( );
         right_cluster = new scheduling_time_cluster(
-          center_t_child, half_size_child, time_root, level_parent + 1 );
-        right_cluster->set_process_id( time_root->get_process_id( ) );
+          center_t_child, half_size_child, time_root, 1, level_parent + 1,
+          time_root->get_process_id( ) );
         right_cluster->set_index( 2 * time_root->get_global_index( ) + 2 );
         refine_map[ 2 * time_root->get_global_index( ) + 2 ] = true;
         child_count += 1;
@@ -431,7 +437,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
       right_cluster->set_global_leaf_status( true );
       right_cluster->set_mesh_availability( true );
     }
-    // since time_root is no leaf anymore reset its global leaf status and
+    // since time_root isn't a leaf anymore reset its global leaf status and
     // mesh availability to false (both is false for non-leaves).
     time_root->set_global_leaf_status( false );
     time_root->set_mesh_availability( false );
@@ -450,18 +456,16 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
         time_root->get_children( );
       std::vector< general_spacetime_cluster* > * spacetime_children =
         spacetime_root->get_children( );
-      for ( auto it_time = time_children->begin( ); 
-            it_time != time_children->end( ); ++it_time ) { 
-        sc temporal_center = ( *it_time )->get_center( );
-        sc half_size = ( *it_time )->get_half_size( );
-        for ( auto it_st = spacetime_children->begin( ); 
-                it_st != spacetime_children->end( ); ++it_st ) {
-          sc st_temporal_center = ( *it_st )->get_time_center( );
+      for ( auto time_child : *time_children ) {
+        short time_child_configuration = time_child->get_configuration( );
+        for ( auto spacetime_child : *spacetime_children ) {
+          short spacetime_child_configuration 
+            = spacetime_child->get_temporal_configuration( );
           // check if the temporal component of the spacetime child is the same 
           // as the current temporal child and call routine recursively if yes
-          if ( std::abs( st_temporal_center - temporal_center ) < half_size ) {
+          if ( time_child_configuration == spacetime_child_configuration ) {
             expand_tree_structure_recursively( 
-              distribution_tree, *it_st, *it_time, refine_map );
+              distribution_tree, spacetime_child, time_child, refine_map );
           } 
         }
       }
@@ -651,7 +655,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     clusters.push_back( &root );
     return;
   }
-
   std::vector< scheduling_time_cluster * > * children = root.get_children( );
   if ( children != nullptr ) {
     for ( auto it : *children ) {
@@ -865,17 +868,15 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
         // check if temporal child is locally essential with respect to the 
         // space-time cluster tree.
         if ( t_child->get_essential_status( ) > 1 ) {
+          lo owner = t_child->get_process_id( );
           // set coord_t and left_right appropriately distinguishing the left 
           // and right children.
-          lo owner = t_child->get_process_id( );
+          short left_right = t_child->get_configuration( );
           slou coord_t;
-          short left_right;
-          if ( t_child->get_center( ) < t_cluster->get_center( ) ) {
+          if ( left_right == 0 ) {
             coord_t = 2 * parent_coord[ 4 ]; // left child
-            left_right = 0;
           } else {
             coord_t = 2 * parent_coord[ 4 ] + 1; // right child
-            left_right = 1;
           }
 
           sc new_time_center = t_child->get_center( );
@@ -937,7 +938,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
                   space_center, new_time_center, space_half_size, 
                   new_time_half_size, elems_in_clusters[ pos ], st_cluster, 
                   st_cluster->get_level( ) + 1, 
-                  st_cluster->get_spatial_octant( ), coordinates, 1, 
+                  st_cluster->get_spatial_octant( ), coordinates, left_right, 
                   n_space_div, n_time_div, _spacetime_mesh, owner, false );
               st_cluster->add_child( new_child );
               new_cluster_pairs.push_back( { new_child, t_child } );
@@ -1003,17 +1004,16 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     if ( st_children != nullptr ) {
       lou t_idx = 0;
       scheduling_time_cluster* t_child = ( *t_children )[ t_idx ];
+      short t_child_configuration = t_child->get_configuration( );
       for ( lou st_idx = 0; st_idx < st_children->size( ); ++st_idx ) {
         general_spacetime_cluster* st_child = ( *st_children )[ st_idx ];
         // check whether the temporal component of the st_child is the t_child
         // and if not update the t_child
-        sc st_child_time_center = st_child->get_time_center( );
-        sc t_child_time_center = t_child->get_center( );
-        sc time_half_size = t_child->get_half_size( );
-        if ( std::abs( st_child_time_center - t_child_time_center ) 
-              > time_half_size ) {
+        short st_child_configuration = st_child->get_temporal_configuration( );
+        if ( t_child_configuration == st_child_configuration ) {
           ++t_idx;
           t_child = ( *t_children )[ t_idx ];
+          t_child_configuration = t_child->get_configuration( );
         }
         // call the routine recursively for the appropriate pair of spacetime
         // cluster and scheduling time cluster
@@ -1382,6 +1382,11 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
 
     root.set_n_children( n_clusters );
 
+    // update _local_max_space_level when necessary
+    if ( n_clusters > 0 && n_space_div + 1 >  _local_max_space_level ) {
+      _local_max_space_level = n_space_div + 1;
+    }
+
     for ( lo i = 0; i < 16; ++i ) {
       if ( clusters[ i ] != nullptr ) {
         root.add_child( clusters[ i ] );
@@ -1497,18 +1502,16 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
         t_root->get_children( );
       std::vector< general_spacetime_cluster* > * spacetime_children =
         st_root->get_children( );
-      for ( auto it_t = time_children->begin( ); it_t != time_children->end( ); 
-            ++it_t ) {
-        sc temporal_center = ( *it_t )->get_center( );
-        sc half_size = ( *it_t )->get_half_size( );
-        for ( auto it_st = spacetime_children->begin( );
-              it_st != spacetime_children->end( ); ++it_st ) {
-          sc st_temporal_center = ( *it_st )->get_time_center( );
+      for ( auto time_child : *time_children ) {
+        short time_child_configuration = time_child->get_configuration( );
+        for ( auto spacetime_child : *spacetime_children ) {
+          short spacetime_child_configuration 
+            = spacetime_child->get_temporal_configuration( );
           // check if the temporal component of the spacetime child is the same 
           // as the current temporal child and call routine recursively if yes
-          if ( std::abs( st_temporal_center - temporal_center ) < half_size ) {
+          if ( time_child_configuration == spacetime_child_configuration ) {
             associate_scheduling_clusters_and_space_time_leaves( 
-              *it_t, *it_st );
+              time_child, spacetime_child );
           } 
         }
       }
@@ -1529,18 +1532,16 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
         t_root->get_children( );
       std::vector< general_spacetime_cluster* > * spacetime_children =
         st_root->get_children( );
-      for ( auto it_t = time_children->begin( ); it_t != time_children->end( ); 
-            ++it_t ) {
-        sc temporal_center = ( *it_t )->get_center( );
-        sc half_size = ( *it_t )->get_half_size( );
-        for ( auto it_st = spacetime_children->begin( );
-              it_st != spacetime_children->end( ); ++it_st ) {
-          sc st_temporal_center = ( *it_st )->get_time_center( );
+      for ( auto time_child : *time_children ) {
+        short time_child_configuration = time_child->get_configuration( );
+        for ( auto spacetime_child : *spacetime_children ) {
+          short spacetime_child_configuration 
+            = spacetime_child->get_temporal_configuration( );
           // check if the temporal component of the spacetime child is the same 
           // as the current temporal child and call routine recursively if yes
-          if ( std::abs( st_temporal_center - temporal_center ) < half_size ) {
-            associate_scheduling_clusters_and_space_time_non_leaves(
-              *it_t, *it_st );
+          if ( time_child_configuration == spacetime_child_configuration ) {
+            associate_scheduling_clusters_and_space_time_non_leaves( 
+              time_child, spacetime_child );
           } 
         }
       }

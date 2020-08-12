@@ -104,26 +104,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   // lo n_columns = trial_basis.dimension_global( );
   // global_matrix.resize( n_timesteps, n_rows, n_columns );
   // ###########################################################################
-
-  // std::vector< general_spacetime_cluster * > spacetime_leaves
-  //   = _test_space->get_tree( )->get_leaves( );
-  // find all space cluster and time clusters which are part of a spacetime
-  // leaf cluster and store them ( each only once ) in sets
-  // std::set< time_cluster_type * > time_clusters_spacetime_leaves;
-  // std::set< space_cluster_type * > space_clusters_spacetime_leaves;
-  // for ( auto it = spacetime_leaves.begin( ); it != spacetime_leaves.end( );
-  //       ++it ) {
-  //   time_clusters_spacetime_leaves.insert( &( ( *it )->get_time_cluster( ) ) );
-  //   space_clusters_spacetime_leaves.insert(
-  //     &( ( *it )->get_space_cluster( ) ) );
-  // }
-
-//   compute_required_data(
-//     time_clusters_spacetime_leaves, space_clusters_spacetime_leaves );
-
-//   global_matrix.compute_spatial_m2m_coeffs( );
-//   global_matrix.compute_temporal_m2m_matrices( );
-
+  global_matrix.compute_spatial_m2m_coeffs( );
 
   initialize_moment_and_local_contributions( );
 

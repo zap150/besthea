@@ -193,9 +193,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           x, *it_current_cluster, verbose, verbose_file );
         // update dependencies of targets in send list if they are local or send
         // data for interactions 
-        // provide_moments_for_m2l( communicator, *it_current_cluster );
+        provide_moments_for_m2l( *it_current_cluster );
         // apply M2M operations 
-        // call_m2m_operations( *it_current_cluster, verbose, verbose_file );       
+        call_m2m_operations( *it_current_cluster, verbose, verbose_file );       
         // update dependencies of parent if it is handled by the same process or
         // send data to other process if not
         // provide_moments_to_parents( communicator, *it_current_cluster );
@@ -396,6 +396,201 @@ besthea::linear_algebra::full_matrix *
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, 
+  target_space, source_space >::compute_spatial_m2m_coeffs( ) {
+  lo n_space_levels = _distributed_spacetime_tree->get_local_max_space_level( );
+  // Declare the structures containing coefficients of appropriate size.
+  // NOTE: The M2M coefficients are computed for all levels except the last one,
+  //       even in case they are not needed for the first few levels.
+  _m2m_coeffs_s_dim_0_left.resize( n_space_levels );
+  _m2m_coeffs_s_dim_0_right.resize( n_space_levels );
+  _m2m_coeffs_s_dim_1_left.resize( n_space_levels );
+  _m2m_coeffs_s_dim_1_right.resize( n_space_levels );
+  _m2m_coeffs_s_dim_2_left.resize( n_space_levels );
+  _m2m_coeffs_s_dim_2_right.resize( n_space_levels );
+  auto it1 = _m2m_coeffs_s_dim_0_left.begin( );
+  auto it2 = _m2m_coeffs_s_dim_0_right.begin( );
+  auto it3 = _m2m_coeffs_s_dim_1_left.begin( );
+  auto it4 = _m2m_coeffs_s_dim_1_right.begin( );
+  auto it5 = _m2m_coeffs_s_dim_2_left.begin( );
+  auto it6 = _m2m_coeffs_s_dim_2_right.begin( );
+
+  for ( ; it1 != _m2m_coeffs_s_dim_0_left.end( );
+        ++it1, ++it2, ++it3, ++it4, ++it5, ++it6 ) {
+    ( *it1 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    ( *it2 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    ( *it3 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    ( *it4 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    ( *it5 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    ( *it6 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+  }
+
+  // @todo exchange this with the correct padding in space
+  const std::vector< sc > paddings_space ( n_space_levels, 0.0 );
+
+  // declare half box side lengths of parent and child cluster + initialize
+  vector_type h_par_no_pad( 3, false ), h_child_no_pad( 3, false );
+  sc dummy_val;
+  _distributed_spacetime_tree->get_root( )->get_half_size( 
+    h_par_no_pad, dummy_val );
+  
+  vector_type nodes( _spat_order + 1, false );
+  for ( lo i = 0; i <= _spat_order; ++i )
+    nodes[ i ] = cos( ( M_PI * ( 2 * i + 1 ) ) / ( 2 * ( _spat_order + 1 ) ) );
+  // evaluate Chebyshev polynomials at the nodes (needed for coefficients)
+  vector_type all_values_cheb_std_intrvl(
+    ( _spat_order + 1 ) * ( _spat_order + 1 ), false );
+  _chebyshev.evaluate( nodes, all_values_cheb_std_intrvl );
+  // vector to store values of Chebyshev polynomials for transformed intervals
+  vector_type all_values_cheb_trf_intrvl(
+    ( _spat_order + 1 ) * ( _spat_order + 1 ), false );
+  // initialize vectors to store transformed nodes
+  vector_type nodes_l_child_dim_0( _spat_order + 1, false );
+  vector_type nodes_r_child_dim_0( _spat_order + 1, false );
+  vector_type nodes_l_child_dim_1( _spat_order + 1, false );
+  vector_type nodes_r_child_dim_1( _spat_order + 1, false );
+  vector_type nodes_l_child_dim_2( _spat_order + 1, false );
+  vector_type nodes_r_child_dim_2( _spat_order + 1, false );
+
+  for ( lo curr_level = 0; curr_level < n_space_levels - 1; ++curr_level ) {
+    h_child_no_pad[ 0 ] = h_par_no_pad[ 0 ] / 2.0;
+    h_child_no_pad[ 1 ] = h_par_no_pad[ 1 ] / 2.0;
+    h_child_no_pad[ 2 ] = h_par_no_pad[ 2 ] / 2.0;
+    sc padding_par = paddings_space[ curr_level ];
+    sc padding_child = paddings_space[ curr_level + 1 ];
+    // transform the nodes from [-1, 1] to the child interval and then back to
+    // [-1, 1] with the transformation of the parent interval:
+    for ( lo j = 0; j <= _spat_order; ++j ) {
+      nodes_l_child_dim_0[ j ] = 1.0 / ( h_par_no_pad[ 0 ] + padding_par )
+        * ( -h_child_no_pad[ 0 ]
+          + ( h_child_no_pad[ 0 ] + padding_child ) * nodes[ j ] );
+      nodes_r_child_dim_0[ j ] = 1.0 / ( h_par_no_pad[ 0 ] + padding_par )
+        * ( h_child_no_pad[ 0 ]
+          + ( h_child_no_pad[ 0 ] + padding_child ) * nodes[ j ] );
+      nodes_l_child_dim_1[ j ] = 1.0 / ( h_par_no_pad[ 1 ] + padding_par )
+        * ( -h_child_no_pad[ 1 ]
+          + ( h_child_no_pad[ 1 ] + padding_child ) * nodes[ j ] );
+      nodes_r_child_dim_1[ j ] = 1.0 / ( h_par_no_pad[ 1 ] + padding_par )
+        * ( h_child_no_pad[ 1 ]
+          + ( h_child_no_pad[ 1 ] + padding_child ) * nodes[ j ] );
+      nodes_l_child_dim_2[ j ] = 1.0 / ( h_par_no_pad[ 2 ] + padding_par )
+        * ( -h_child_no_pad[ 2 ]
+          + ( h_child_no_pad[ 2 ] + padding_child ) * nodes[ j ] );
+      nodes_r_child_dim_2[ j ] = 1.0 / ( h_par_no_pad[ 2 ] + padding_par )
+        * ( h_child_no_pad[ 2 ]
+          + ( h_child_no_pad[ 2 ] + padding_child ) * nodes[ j ] );
+    }
+    // compute m2m coefficients at current level along all dimensions
+    // for i1 > i0 the coefficients are known to be zero
+    _chebyshev.evaluate( nodes_l_child_dim_0, all_values_cheb_trf_intrvl );
+    for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
+      for ( lo i1 = 0; i1 <= i0; ++i1 ) {
+        sc coeff = 0;
+        for ( lo n = 0; n <= _spat_order; ++n ) {
+          coeff += all_values_cheb_std_intrvl[ i1 * ( _spat_order + 1 ) + n ]
+            * all_values_cheb_trf_intrvl[ i0 * ( _spat_order + 1 ) + n ];
+        }
+        coeff *= 2.0 / ( _spat_order + 1.0 );
+        if ( i1 == 0 ) {
+          coeff /= 2.0;
+        }
+        _m2m_coeffs_s_dim_0_left[ curr_level ][ ( _spat_order + 1 ) * i0 + i1 ]
+          = coeff;
+      }
+    }
+
+    _chebyshev.evaluate( nodes_r_child_dim_0, all_values_cheb_trf_intrvl );
+    for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
+      for ( lo i1 = 0; i1 <= i0; ++i1 ) {
+        sc coeff = 0;
+        for ( lo n = 0; n <= _spat_order; ++n ) {
+          coeff += all_values_cheb_std_intrvl[ i1 * ( _spat_order + 1 ) + n ]
+            * all_values_cheb_trf_intrvl[ i0 * ( _spat_order + 1 ) + n ];
+        }
+        coeff *= 2.0 / ( _spat_order + 1 );
+        if ( i1 == 0 ) {
+          coeff /= 2.0;
+        }
+        _m2m_coeffs_s_dim_0_right[ curr_level ][ ( _spat_order + 1 ) * i0 + i1 ]
+          = coeff;
+      }
+    }
+
+    _chebyshev.evaluate( nodes_l_child_dim_1, all_values_cheb_trf_intrvl );
+    for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
+      for ( lo i1 = 0; i1 <= i0; ++i1 ) {
+        sc coeff = 0;
+        for ( lo n = 0; n <= _spat_order; ++n ) {
+          coeff += all_values_cheb_std_intrvl[ i1 * ( _spat_order + 1 ) + n ]
+            * all_values_cheb_trf_intrvl[ i0 * ( _spat_order + 1 ) + n ];
+        }
+        coeff *= 2.0 / ( _spat_order + 1 );
+        if ( i1 == 0 ) {
+          coeff /= 2.0;
+        }
+        _m2m_coeffs_s_dim_1_left[ curr_level ][ ( _spat_order + 1 ) * i0 + i1 ]
+          = coeff;
+      }
+    }
+
+    _chebyshev.evaluate( nodes_r_child_dim_1, all_values_cheb_trf_intrvl );
+    for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
+      for ( lo i1 = 0; i1 <= i0; ++i1 ) {
+        sc coeff = 0;
+        for ( lo n = 0; n <= _spat_order; ++n ) {
+          coeff += all_values_cheb_std_intrvl[ i1 * ( _spat_order + 1 ) + n ]
+            * all_values_cheb_trf_intrvl[ i0 * ( _spat_order + 1 ) + n ];
+        }
+        coeff *= 2.0 / ( _spat_order + 1 );
+        if ( i1 == 0 ) {
+          coeff /= 2.0;
+        }
+        _m2m_coeffs_s_dim_1_right[ curr_level ][ ( _spat_order + 1 ) * i0 + i1 ]
+          = coeff;
+      }
+    }
+
+    _chebyshev.evaluate( nodes_l_child_dim_2, all_values_cheb_trf_intrvl );
+    for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
+      for ( lo i1 = 0; i1 <= i0; ++i1 ) {
+        sc coeff = 0;
+        for ( lo n = 0; n <= _spat_order; ++n ) {
+          coeff += all_values_cheb_std_intrvl[ i1 * ( _spat_order + 1 ) + n ]
+            * all_values_cheb_trf_intrvl[ i0 * ( _spat_order + 1 ) + n ];
+        }
+        coeff *= 2.0 / ( _spat_order + 1 );
+        if ( i1 == 0 ) {
+          coeff /= 2.0;
+        }
+        _m2m_coeffs_s_dim_2_left[ curr_level ][ ( _spat_order + 1 ) * i0 + i1 ]
+          = coeff;
+      }
+    }
+
+    _chebyshev.evaluate( nodes_r_child_dim_2, all_values_cheb_trf_intrvl );
+    for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
+      for ( lo i1 = 0; i1 <= i0; ++i1 ) {
+        sc coeff = 0;
+        for ( lo n = 0; n <= _spat_order; ++n ) {
+          coeff += all_values_cheb_std_intrvl[ i1 * ( _spat_order + 1 ) + n ]
+            * all_values_cheb_trf_intrvl[ i0 * ( _spat_order + 1 ) + n ];
+        }
+        coeff *= 2.0 / ( _spat_order + 1 );
+        if ( i1 == 0 ) {
+          coeff /= 2.0;
+        }
+        _m2m_coeffs_s_dim_2_right[ curr_level ][ ( _spat_order + 1 ) * i0 + i1 ]
+          = coeff;
+      }
+    }
+    // update for next iteration
+    h_par_no_pad[ 0 ] = h_child_no_pad[ 0 ];
+    h_par_no_pad[ 1 ] = h_child_no_pad[ 1 ];
+    h_par_no_pad[ 2 ] = h_child_no_pad[ 2 ];
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, 
   target_space, source_space >::call_s2m_operations( 
     const block_vector & sources, 
     besthea::mesh::scheduling_time_cluster* time_cluster, bool verbose, 
@@ -479,36 +674,257 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     aux_matrix.data( ), ldb, 0.0, moment, n_rows_lagrange );
 }
 
-// void call_m2m_operations( scheduling_time_cluster* time_cluster, bool verbose, 
-//   std::string verbose_file ) {
-//   // add child moment to parent moment
-//   sc parent_moment = time_cluster->get_parent( )->get_moment( );
-//   time_cluster->get_parent( )->set_moment( 
-//     parent_moment + time_cluster->get_moment( ) );
-//   // artificial wait to simulate real operation
-//   lo level = time_cluster->get_level( );
-//   lou wait;
-//   if ( level % 2 ) {
-//     wait = ( lou ) N_CLUSTERS_SPACE_INIT 
-//             * std::pow( N_CLUSTERS_SPACE_REF, level / 2 ) * DEG_TIME_P1
-//             * DEG_TIME_P1 * SPACE_COEFFS * EST_TIME_MUL;
-//   } else {
-//     wait = ( lou ) N_CLUSTERS_SPACE_INIT 
-//             * std::pow( N_CLUSTERS_SPACE_REF, level / 2 ) * EST_TIME_MUL 
-//             * ( DEG_TIME_P1 * DEG_TIME_P1 * SPACE_COEFFS 
-//               + 3 * N_CLUSTERS_SPACE_REF * DEG_TIME_P1 * SPACE_COEFFS
-//                 * DEG_SPACE / 4 );
-//   }
-//   if ( verbose ) {
-//     std::ofstream outfile ( verbose_file.c_str( ), std::ios::app );
-//     if ( outfile.is_open( ) ) {
-//       outfile << "call M2M: waiting " << wait * 1e-9 << " seconds"
-//               << std::endl; 
-//       outfile.close( );
-//     }
-//   }
-//   std::this_thread::sleep_for(std::chrono::nanoseconds( wait ));
-// }
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, 
+  target_space, source_space >::call_m2m_operations( 
+    scheduling_time_cluster* time_cluster, bool verbose, 
+    std::string verbose_file ) const {
+  scheduling_time_cluster* parent_cluster = time_cluster->get_parent( );
+  // m2m operations are only executed if the parent is active in the upward path
+  if ( parent_cluster->is_active_in_upward_path( ) ) {
+    if ( verbose ) {
+      std::ofstream outfile ( verbose_file.c_str( ), std::ios::app );
+      if ( outfile.is_open( ) ) {
+        outfile << "call M2M for cluster " << time_cluster->get_global_index( )
+                << std::endl; 
+        outfile.close( );
+      }
+    }
+    short configuration = time_cluster->get_configuration( );
+    std::vector< general_spacetime_cluster* >* associated_spacetime_clusters
+      = parent_cluster->get_associated_spacetime_clusters( );
+    lou n_associated_leaves = parent_cluster->get_n_associated_leaves( );
+    for ( lou i = n_associated_leaves; 
+          i < associated_spacetime_clusters->size( ); ++i ) {
+      apply_grouped_m2m_operation( 
+        (* associated_spacetime_clusters )[ i ], configuration );
+    }
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, 
+  target_space, source_space >::apply_grouped_m2m_operation( 
+    mesh::general_spacetime_cluster* parent_cluster, 
+    short child_configuration ) const {
+  sc * parent_moment = parent_cluster->get_pointer_to_moment( );
+  std::vector< general_spacetime_cluster * > * children 
+    = parent_cluster->get_children( ); 
+  // ###############################################
+  // ### compute the matrix for the temporal m2m ###
+  full_matrix temporal_m2m_matrix( _temp_order + 1, _temp_order + 1 );
+  lo child_idx = 0;
+  // find a child with the right temporal configuration. Note: such a child
+  // exists, otherwise the routine is not executed
+  while( ( *children )[ child_idx ]->get_temporal_configuration( ) !=
+          child_configuration ) {
+    ++child_idx;
+  }
+  // get the temporal data of the parent and child cluster.
+  sc parent_time_center = parent_cluster->get_time_center( );
+  sc parent_time_half_size = parent_cluster->get_time_half_size( );
+  sc child_time_center = ( *children )[ child_idx ]->get_time_center( );
+  sc child_time_half_size = ( *children )[ child_idx ]->get_time_half_size( );
+
+  const vector_type & nodes = _lagrange.get_nodes( );
+  vector_type nodes_child( _temp_order + 1, false );
+  vector_type values_lagrange( _temp_order + 1, false );
+  // transform the nodes from [-1, 1] to the child interval and then back to
+  // [-1, 1] with the transformation of the parent interval:
+  for ( lo j = 0; j <= _temp_order; ++j ) {
+    nodes_child[ j ] 
+      = ( child_time_center + ( child_time_half_size ) * nodes[ j ]
+          - parent_time_center ) / parent_time_half_size;
+  }
+  // compute entries of the m2m matrix (by evaluating lagrange polynomials)
+  for ( lo j = 0; j <= _temp_order; ++j ) {
+    _lagrange.evaluate( j, nodes_child, values_lagrange );
+    for ( lo k = 0; k <= _temp_order; ++k )
+      temporal_m2m_matrix.set( j, k, values_lagrange[ k ] );
+  }
+  // ###############################################
+  // determine whether a space-time m2m operation is necessary or only a 
+  // temporal m2m operation
+  lo n_space_div_parent, n_space_div_children, dummy;
+  parent_cluster->get_n_divs( n_space_div_parent, dummy );
+  ( *children )[ 0 ]->get_n_divs( n_space_div_children, dummy );
+  bool temporal_only = ( n_space_div_parent == n_space_div_children );
+  if ( temporal_only ) {
+    // execute only temporal m2m operation
+    for ( auto child : *children ) {
+      if ( child->get_temporal_configuration( ) == child_configuration ) {
+        sc *child_moment = child->get_pointer_to_moment( );
+        apply_temporal_m2m_operation( 
+          child_moment, temporal_m2m_matrix, parent_moment );
+      }
+    }
+  } else {
+    // apply the spatial m2m operation to all child moments and store the 
+    // results in a buffer
+    // @todo use buffer as imput argument to avoid reallocation.
+    sc buffer_array [ ( _temp_order + 1 ) * _spat_contribution_size ]; 
+    for ( int  i = 0; i < ( _temp_order + 1 ) * _spat_contribution_size; ++i ) {
+      buffer_array[ i ] = 0.0;
+    }
+    for ( auto child : *children ) {
+      short child_octant, child_configuration;
+      child->get_position( child_octant, child_configuration );
+      if ( child->get_temporal_configuration( ) == child_configuration ) {
+        sc* child_moment = child->get_pointer_to_moment( );
+        // @todo: continue here: implement the spatial m2m
+        apply_spatial_m2m_operation(
+          child_moment, n_space_div_parent, child_octant, buffer_array );
+      }
+    }
+    // apply the temporal m2m operation to the buffer and add the result to
+    // the parent moment
+    apply_temporal_m2m_operation( 
+      buffer_array, temporal_m2m_matrix, parent_moment );
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, 
+  target_space, source_space >::apply_temporal_m2m_operation( 
+    const sc* child_moment, const full_matrix & temporal_m2m_matrix, 
+    sc *parent_moment ) const {
+  // call the appropriate cblas routine for matrix matrix multiplication.
+  lo n_rows_m2m_matrix = temporal_m2m_matrix.get_n_rows( );
+  lo n_cols_moment = _spat_contribution_size;
+  lo n_cols_m2m_matrix = n_rows_m2m_matrix;
+  lo lda = n_rows_m2m_matrix;
+  lo ldb = n_cols_m2m_matrix;
+  sc alpha = 1.0;
+  sc beta = 1.0;
+  cblas_dgemm( CblasColMajor, CblasNoTrans, CblasNoTrans, n_rows_m2m_matrix,
+    n_cols_moment, n_cols_m2m_matrix, alpha, temporal_m2m_matrix.data( ), lda, 
+    child_moment, ldb, beta, parent_moment, n_rows_m2m_matrix );
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, 
+  target_space, source_space >::apply_spatial_m2m_operation( 
+    const sc* child_moment, const lo n_space_div_parent, const slou octant, 
+    sc* output_array ) const {
+  const vector_type * m2m_coeffs_s_dim_0;
+  const vector_type * m2m_coeffs_s_dim_1;
+  const vector_type * m2m_coeffs_s_dim_2;
+  switch ( octant ) {
+    case 0:
+      m2m_coeffs_s_dim_0 = &( _m2m_coeffs_s_dim_0_right[ n_space_div_parent ] );
+      m2m_coeffs_s_dim_1 = &( _m2m_coeffs_s_dim_1_right[ n_space_div_parent ] );
+      m2m_coeffs_s_dim_2 = &( _m2m_coeffs_s_dim_2_right[ n_space_div_parent ] );
+      break;
+    case 1:
+      m2m_coeffs_s_dim_0 = &( _m2m_coeffs_s_dim_0_left[ n_space_div_parent ] );
+      m2m_coeffs_s_dim_1 = &( _m2m_coeffs_s_dim_1_right[ n_space_div_parent ] );
+      m2m_coeffs_s_dim_2 = &( _m2m_coeffs_s_dim_2_right[ n_space_div_parent ] );
+      break;
+    case 2:
+      m2m_coeffs_s_dim_0 = &( _m2m_coeffs_s_dim_0_left[ n_space_div_parent ] );
+      m2m_coeffs_s_dim_1 = &( _m2m_coeffs_s_dim_1_left[ n_space_div_parent ] );
+      m2m_coeffs_s_dim_2 = &( _m2m_coeffs_s_dim_2_right[ n_space_div_parent ] );
+      break;
+    case 3:
+      m2m_coeffs_s_dim_0 = &( _m2m_coeffs_s_dim_0_right[ n_space_div_parent ] );
+      m2m_coeffs_s_dim_1 = &( _m2m_coeffs_s_dim_1_left[ n_space_div_parent ] );
+      m2m_coeffs_s_dim_2 = &( _m2m_coeffs_s_dim_2_right[ n_space_div_parent ] );
+      break;
+    case 4:
+      m2m_coeffs_s_dim_0 = &( _m2m_coeffs_s_dim_0_right[ n_space_div_parent ] );
+      m2m_coeffs_s_dim_1 = &( _m2m_coeffs_s_dim_1_right[ n_space_div_parent ] );
+      m2m_coeffs_s_dim_2 = &( _m2m_coeffs_s_dim_2_left[ n_space_div_parent ] );
+      break;
+    case 5:
+      m2m_coeffs_s_dim_0 = &( _m2m_coeffs_s_dim_0_left[ n_space_div_parent ] );
+      m2m_coeffs_s_dim_1 = &( _m2m_coeffs_s_dim_1_right[ n_space_div_parent ] );
+      m2m_coeffs_s_dim_2 = &( _m2m_coeffs_s_dim_2_left[ n_space_div_parent ] );
+      break;
+    case 6:
+      m2m_coeffs_s_dim_0 = &( _m2m_coeffs_s_dim_0_left[ n_space_div_parent ] );
+      m2m_coeffs_s_dim_1 = &( _m2m_coeffs_s_dim_1_left[ n_space_div_parent ] );
+      m2m_coeffs_s_dim_2 = &( _m2m_coeffs_s_dim_2_left[ n_space_div_parent ] );
+      break;
+    case 7:
+      m2m_coeffs_s_dim_0 = &( _m2m_coeffs_s_dim_0_right[ n_space_div_parent ] );
+      m2m_coeffs_s_dim_1 = &( _m2m_coeffs_s_dim_1_left[ n_space_div_parent ] );
+      m2m_coeffs_s_dim_2 = &( _m2m_coeffs_s_dim_2_left[ n_space_div_parent ] );
+      break;
+    default:  // default case should never be used, program will crash!
+      m2m_coeffs_s_dim_0 = nullptr;
+      m2m_coeffs_s_dim_1 = nullptr;
+      m2m_coeffs_s_dim_2 = nullptr;
+  }
+
+  lo n_coeffs_s
+    = ( _spat_order + 1 ) * ( _spat_order + 1 ) * ( _spat_order + 1 );
+  // initialize auxiliary matrices lambda_1/2 for intermediate results with 0
+  // @todo use buffers to avoid allocations
+  full_matrix lambda_1( _temp_order + 1, n_coeffs_s, true );
+  full_matrix lambda_2( _temp_order + 1, n_coeffs_s, true );
+
+  for ( lo beta2 = 0; beta2 <= _spat_order; ++beta2 ) {
+    lo child_index = 0;
+    for ( lo alpha0 = 0; alpha0 <= _spat_order - beta2; ++alpha0 ) {
+      for ( lo alpha1 = 0; alpha1 <= _spat_order - beta2 - alpha0; ++alpha1 ) {
+        lo alpha2;
+        for ( alpha2 = 0; alpha2 <= beta2; ++alpha2 ) {
+          for ( lo b = 0; b <= _temp_order; ++b ) {
+            lambda_1( b,
+              ( _spat_order + 1 ) * ( _spat_order + 1 ) * beta2
+                + ( _spat_order + 1 ) * alpha0 + alpha1 )
+              += ( *m2m_coeffs_s_dim_2 )[ beta2 * ( _spat_order + 1 ) + alpha2 ]
+              * child_moment[ b + child_index * ( _temp_order + 1 ) ];
+          }
+          ++child_index;
+        }
+        // correction needed for skipped entries of child_moment
+        child_index += _spat_order + 1 - alpha0 - alpha1 - alpha2;
+      }
+      // correction for current index; necessary since alpha1 does not run until
+      // _spat_order - alpha0 as it does in stored child_moment
+      child_index += ( ( beta2 + 1 ) * beta2 ) / 2;
+    }
+  }
+
+  // compute intermediate result lambda_1 ignoring zero entries for the sake of
+  // better readability
+  for ( lo beta1 = 0; beta1 <= _spat_order; ++beta1 ) {
+    for ( lo beta2 = 0; beta2 <= _spat_order - beta1; ++beta2 ) {
+      for ( lo alpha0 = 0; alpha0 <= _spat_order - beta1 - beta2; ++alpha0 ) {
+        for ( lo alpha1 = 0; alpha1 <= beta1; ++alpha1 ) {
+          for ( lo b = 0; b <= _temp_order; ++b ) {
+            lambda_2( b,
+              ( _spat_order + 1 ) * ( _spat_order + 1 ) * beta1
+                + ( _spat_order + 1 ) * beta2 + alpha0 )
+              += ( *m2m_coeffs_s_dim_1 )[ beta1 * ( _spat_order + 1 ) + alpha1 ]
+              * lambda_1( b,
+                ( _spat_order + 1 ) * ( _spat_order + 1 ) * beta2
+                  + ( _spat_order + 1 ) * alpha0 + alpha1 );
+          }
+        }
+      }
+    }
+  }
+
+  lo output_array_index = 0;
+  for ( lo beta0 = 0; beta0 <= _spat_order; ++beta0 ) {
+    for ( lo beta1 = 0; beta1 <= _spat_order - beta0; ++beta1 ) {
+      for ( lo beta2 = 0; beta2 <= _spat_order - beta0 - beta1; ++beta2 ) {
+        for ( lo alpha0 = 0; alpha0 <= _spat_order - beta1 - beta2; ++alpha0 ) {
+          for ( lo b = 0; b <= _temp_order; ++b ) {
+            output_array[ b + output_array_index * ( _temp_order + 1 ) ]
+              += ( *m2m_coeffs_s_dim_0 )[ beta0 * ( _spat_order + 1 ) + alpha0 ]
+              * lambda_2( b,
+                ( _spat_order + 1 ) * ( _spat_order + 1 ) * beta1
+                  + ( _spat_order + 1 ) * beta2 + alpha0 );
+          }
+        }
+        ++output_array_index;
+      }
+    }
+  }
+}
 
 // void call_m2l_operations( scheduling_time_cluster* src_cluster,
 //   scheduling_time_cluster* tar_cluster, bool verbose, 
@@ -728,28 +1144,31 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   }
 }
 
-// void provide_moments_for_m2l( MPI_Comm communicator, 
-//   scheduling_time_cluster* src_cluster ) {
-//   int my_process_id;
-//   MPI_Comm_rank( communicator, &my_process_id );
-//   std::vector< scheduling_time_cluster* > * send_list 
-//     = src_cluster->get_send_list( );
-//   if ( send_list != nullptr ) {
-//     for ( auto it = send_list->begin( ); it != send_list->end( ); ++it ) {
-//       lo tar_process_id = ( *it )->get_process_id( );
-//       if ( tar_process_id == my_process_id ) {
-//         ( *it )->add_to_ready_interaction_list( src_cluster );
-//       } else {
-//         lo tag = 2 * src_cluster->get_global_index( );
-//         sc* moment_buffer = src_cluster->get_moment_pointer( );
-//         MPI_Request req;
-//         MPI_Isend( moment_buffer, 1, MPI_DOUBLE, tar_process_id, tag, 
-//           communicator, &req );
-//         MPI_Request_free( &req ); 
-//       } 
-//     } 
-//   }
-// }
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, 
+  target_space, source_space >::provide_moments_for_m2l( 
+    scheduling_time_cluster* src_cluster ) const {
+  std::vector< scheduling_time_cluster* > * send_list 
+    = src_cluster->get_send_list( );
+  if ( send_list != nullptr ) {
+    for ( auto it = send_list->begin( ); it != send_list->end( ); ++it ) {
+      lo tar_process_id = ( *it )->get_process_id( );
+      if ( tar_process_id == _my_rank ) {
+        ( *it )->add_to_ready_interaction_list( src_cluster );
+      } else {
+        lo tag = 2 * src_cluster->get_global_index( );
+        sc* moment_buffer = src_cluster->get_associated_moments( );
+        int buffer_size 
+          = src_cluster->get_associated_spacetime_clusters( )->size( )
+          * _contribution_size;
+        MPI_Request req;
+        MPI_Isend( moment_buffer, buffer_size, get_scalar_type< sc >::MPI_SC( ), 
+          tar_process_id, tag, *_comm, &req );
+        MPI_Request_free( &req ); 
+      } 
+    } 
+  }
+}
 
 // void provide_moments_to_parents( const MPI_Comm communicator, 
 //   scheduling_time_cluster* child_cluster ) {

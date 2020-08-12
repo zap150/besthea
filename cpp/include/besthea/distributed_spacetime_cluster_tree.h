@@ -113,6 +113,14 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   }
 
   /**
+   * Returns the bound for the maximal number of refinements in space of the 
+   * clusters in the local part of the distributed tree. 
+   */
+  lo get_local_max_space_level( ) const {
+    return _local_max_space_level;
+  }
+
+  /**
    * Prints levels of the tree.
    */
   void print( ) {
@@ -140,11 +148,15 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
                     //!< space-time cluster tree which are local, i.e. 
                     //!< assigned to the process with rank @p _my_rank.
 
-  lo _start_spatial_level;   //!< auxiliary variable determining the appropriate
-                             //!< starting level in the space cluster tree
-  lo _start_temporal_level;  //!< auxiliary variable to determine in which level
-                             //!< the spatial refinement starts
-                             //!< (meaningful only if _start_spatial_level = 0)
+  lo _start_spatial_level;  //!< auxiliary variable determining the appropriate
+                            //!< starting level in the space cluster tree
+  lo _start_temporal_level; //!< auxiliary variable to determine in which level
+                            //!< the spatial refinement starts
+                            //!< (meaningful only if _start_spatial_level = 0)
+  lo _local_max_space_level;  //!< bound for the maximal number of spatial 
+                              //!< refinements in the local part of the 
+                              //!< distributed tree. 
+  
   sc _s_t_coeff;    //!< coefficient to determine the coupling of the spatial
                     //!< and temporal levels
   lo _n_min_elems;  //!< minimum number of elements so that cluster can be split

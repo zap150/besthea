@@ -345,6 +345,8 @@ class besthea::mesh::tree_structure {
    * @param[in,out] root  Current cluster, to which the next clusters are added.
    * @param[in,out] position  Auxiliary variable to keep track of the current
    *                          position in the tree_vector.
+   * @note  The child of a cluster inherits the process id from its parent in 
+   *        this routine.
    * @note This method is supposed to be called by the constructor.
    */
   void array_2_tree( const char * tree_array, scheduling_time_cluster & root, 

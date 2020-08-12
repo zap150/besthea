@@ -148,6 +148,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
       _temp_order( 5 ),
       _spat_order( 5 ),
       _m2l_integration_order( _spat_order ),
+      _spat_contribution_size( ( ( _spat_order + 3 ) * ( _spat_order + 2 ) 
+                                * ( _spat_order + 1 ) ) / 6 ),
+      _contribution_size( ( _temp_order + 1 ) * _spat_contribution_size ),
       _chebyshev( _spat_order ),
       _lagrange( _temp_order ),
       _alpha( 1.0 ) {
@@ -247,8 +250,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     _spat_order = spat_order;
     _temp_order = temp_order;
     _order_regular = order_regular;
-    _contribution_size = ( _temp_order + 1 ) 
-      * ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6;
+    _spat_contribution_size 
+      = ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6;
+    _contribution_size = ( _temp_order + 1 ) * _spat_contribution_size; 
     _chebyshev.set_order( spat_order );
     _lagrange.set_order( temp_order );
   }
@@ -284,6 +288,12 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                          of the target cluster.  
    */
   full_matrix * create_nearfield_matrix( lou leaf_index, lou source_index );
+
+  /**
+   * Compute the spatial m2m coefficients for all local spatial levels.
+   * @todo Add correct padding in space!
+   */
+  void compute_spatial_m2m_coeffs( );
 
  private:
   const MPI_Comm * _comm; //!< MPI communicator associated with the pFMM matrix.
@@ -356,6 +366,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   int _m2l_integration_order;  //!< _m2l_integration_order + 1 quadrature
                                //!< points are used for the approximation of
                                //!< the m2l coefficients.
+  int _spat_contribution_size;  //!< Spatial size of a contribution. It is
+                                //!< _spat_order + 3 choose 3 
   int _contribution_size; //!< Size of a contribution (moment or local 
                           //!< contribution) of a single spacetime cluster.
   mutable bem::chebyshev_evaluator
@@ -397,11 +409,48 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] time_cluster  Considered scheduling time cluster.
    * @param[in] verbose If true, the required time is written to file.
    * @param[in] verbose_file  If @p verbose is true, this is used as output file.
-   * @todo Currently dummy routine. 
    */
   void call_m2m_operations( 
     mesh::scheduling_time_cluster* time_cluster, bool verbose, 
-    std::string verbose_file );
+    std::string verbose_file ) const;
+
+  /**
+   * Applies the M2M operations for the given parent cluster and all its
+   * children for a given temporal configuration.
+   * @param[in] parent_cluster  Considered spacetime parent cluster.
+   * @param[in] child_configuration Indicates for which children the m2m  
+   *                                operations are executed:
+   *                                - 0: left children w.r.t. to time.
+   *                                - 1: right chilren w.r.t. to time.
+   */
+  void apply_grouped_m2m_operation( 
+    mesh::general_spacetime_cluster* parent_cluster, 
+    short child_configuration ) const;
+
+  /**
+   * Applies the temporal m2m operation to a child_moment and adds the result
+   * to the parent moment.
+   * @param[in] child_moment  Array containing the moments of the child cluster.
+   * @param[in] temporal_m2m_matrix Matrix used for the temporal m2m operation.
+   * @param[in,out] parent_moment Array to which the result is added.
+   */
+  void apply_temporal_m2m_operation( const sc* child_moment, 
+    const full_matrix & temporal_m2m_matrix, sc *parent_moment ) const ;
+
+  /**
+   * Applies the spatial m2m operation to a child_moment and adds the result
+   * to a given array.
+   * @param[in] child_moment  Array containing the moments of the child cluster.
+   * @param[in] n_space_div_parent  Number of refinements in space executed for
+   *                                the parent cluster. 
+   * @param[in] octant  Configuration of the child cluster with respect to its
+   *                    parent in space.
+   * @param[in,out] output_array  Array to which the result is added. 
+   * @note  @p n_space_div_parent and @p octant are used to determine the 
+   *        appropriate m2m coefficients for the operation.
+   */
+  void apply_spatial_m2m_operation( const sc* child_moment, 
+    const lo n_space_div_parent, const slou octant, sc* output_array ) const;
 
   /**
    * Calls all M2L operations associated with a given pair of scheduling time 
@@ -414,7 +463,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   void call_m2l_operations( mesh::scheduling_time_cluster* src_cluster,
     mesh::scheduling_time_cluster* tar_cluster, bool verbose, 
-    std::string verbose_file );
+    std::string verbose_file ) const;
+
   /**
    * Calls all L2L operations associated with a given scheduling time cluster.
    * @param[in] time_cluster  Considered scheduling time cluster.
@@ -424,7 +474,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   void call_l2l_operations( 
     mesh::scheduling_time_cluster* time_cluster, bool verbose, 
-    std::string verbose_file );
+    std::string verbose_file ) const;
+
   /**
    * Calls all L2T operations associated with a given scheduling time cluster.
    * @param[in] time_cluster  Considered scheduling time cluster.
@@ -434,7 +485,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @todo Currently dummy routine. 
    */
   void call_l2t_operations( mesh::scheduling_time_cluster* time_cluster, 
-    std::vector< sc > & output_vector, bool verbose, std::string verbose_file );
+    std::vector< sc > & output_vector, bool verbose, 
+    std::string verbose_file ) const;
+
   /**
    * Calls all nearfield operations associated with a given pair of scheduling 
    * time clusters.
@@ -452,7 +505,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   void call_nearfield_operations( const std::vector< sc > & sources,
     mesh::scheduling_time_cluster* src_cluster, 
     mesh::scheduling_time_cluster* tar_cluster, 
-    std::vector< sc > & output_vector, bool verbose, std::string verbose_file );
+    std::vector< sc > & output_vector, bool verbose, 
+    std::string verbose_file ) const;
 
   /**
    * Calls MPI_Testsome for an array of Requests to check for received data.
@@ -525,14 +579,12 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   /**
    * Updates dependency flags or sends moments for M2L operations.
-   * @param[in] communicator  Communicator used for sending.
    * @param[in] src_cluster Considered scheduling time cluster. If a cluster in 
    *                        its send list is handled by a different process, the
    *                        moments are send to this process.
-   * @todo Currently dummy routine. Sended data needs to be exchanged.
    */
-  void provide_moments_for_m2l( const MPI_Comm communicator, 
-    mesh::scheduling_time_cluster* src_cluster );
+  void provide_moments_for_m2l( 
+    mesh::scheduling_time_cluster* src_cluster ) const;
 
   /**
    * Updates dependency flags or sends moments for upward path.
@@ -544,7 +596,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @todo Currently dummy routine. Sended data needs to be exchanged.
    */
   void provide_moments_to_parents( const MPI_Comm communicator, 
-    mesh::scheduling_time_cluster* child_cluster );
+    mesh::scheduling_time_cluster* child_cluster ) const;
 
   /**
    * Sends local contributions for downward path if necessary.
@@ -555,7 +607,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @todo Currently dummy routine. Sended data needs to be exchanged.
    */
   void provide_local_contributions_to_children( const MPI_Comm communicator, 
-    mesh::scheduling_time_cluster* parent_cluster );
+    mesh::scheduling_time_cluster* parent_cluster ) const;
 
   /**
    * Starts all receive operations given by a vector of pairs of clusters and 

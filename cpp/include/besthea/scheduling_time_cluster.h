@@ -71,10 +71,12 @@ class besthea::mesh::scheduling_time_cluster {
    *                        is -1.
    */
   scheduling_time_cluster( sc center, sc half_size, 
-    scheduling_time_cluster * parent, lo level, lo process_id = -1 )
+    scheduling_time_cluster * parent, short left_right, lo level, 
+    lo process_id = -1 )
     : _center( center ),
       _half_size ( half_size ),
       _parent( parent ),
+      _left_right( left_right ),
       _children( nullptr ),
       _level( level ),
       _global_index( -1 ),
@@ -251,11 +253,19 @@ class besthea::mesh::scheduling_time_cluster {
     return _children;
   }
   
-    /**
+  /**
    * Returns a pointer to the parent.
    */
   scheduling_time_cluster * get_parent( ) {
     return _parent;
+  }
+
+  /**
+   * Returns the configuration of the cluster with respect to its parent, i.e.
+   * the value of _left_right
+   */
+  short get_configuration( ) const {
+    return _left_right;
   }
 
   /**
@@ -974,6 +984,8 @@ class besthea::mesh::scheduling_time_cluster {
   sc _center;       //!< Center of the cluster.
   sc _half_size;    //!< Half size of the cluster.
   scheduling_time_cluster * _parent;  //!< Parent of the cluster.
+  short _left_right;  //!< Indicates if the child is the left (0), or right (1) 
+                      //!< child of its parent.
   std::vector< scheduling_time_cluster * > 
     * _children;    //!< Children of the cluster.
   lo _level;        //!< Level within the cluster tree.
