@@ -248,22 +248,22 @@ int main( int argc, char * argv[] ) {
 //     uniform_spacetime_tensor_mesh grid_spacetime_mesh(
 //       grid_space_mesh, end_time, spacetime_mesh.get_n_temporal_elements( ) );
 //     grid_spacetime_mesh.print_info( );
-// 
+//
 //     block_vector slp;
 //     // spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
 //     uniform_spacetime_be_evaluator evaluator_v( kernel_v, space_p0, order_reg );
 //     t.reset( "SLP" );
 //     evaluator_v.evaluate( grid_space_mesh.get_nodes( ), neu_proj, slp );
 //     t.measure( );
-// 
+//
 //     block_vector dlp;
 //     uniform_spacetime_be_evaluator evaluator_k( kernel_k, space_p1, order_reg );
 //     t.reset( "DLP" );
 //     evaluator_k.evaluate( grid_space_mesh.get_nodes( ), dir, dlp );
 //     t.measure( );
-// 
+//
 //     slp.add( dlp, -1.0 );
-// 
+//
 //     if ( cauchy_data::_shift > 0.0 ) {
 //       block_vector initp;
 //       spacetime_heat_kernel kernel( cauchy_data::_alpha );
@@ -274,17 +274,17 @@ int main( int argc, char * argv[] ) {
 //       t.reset( "INITP" );
 //       evaluator_init.evaluate( grid_space_mesh.get_nodes( ), init_proj, initp );
 //       t.measure( );
-// 
+//
 //       slp.add( initp );
 //     }
-// 
+//
 //     block_vector sol_interp;
 //     uniform_spacetime_be_space< basis_tri_p1 > grid_space_p1(
 //       grid_spacetime_mesh );
 //     grid_space_p1.interpolation( cauchy_data::dirichlet, sol_interp );
 //     std::cout << "Solution l2 relative error: "
 //               << space_p1.l2_relative_error( sol_interp, slp ) << std::endl;
-// 
+//
 //     ///*
 //     t.reset( "Printing Ensight grid" );
 //     std::vector< std::string > grid_node_labels{ "Temperature_interpolation",
@@ -300,7 +300,7 @@ int main( int argc, char * argv[] ) {
 //     t.measure( );
 //     //*/
 //   }
-// 
+//
 //   ///*
 //   t.reset( "Printing Ensight surface" );
 //   std::vector< std::string > node_labels{ "Dirichlet_projection",

@@ -211,7 +211,7 @@ int main( int argc, char * argv[] ) {
     //   tree.print( );
 
     fast_spacetime_be_assembler fast_assembler_k_adj( kernel_ak,
-      space_p1_pFMM, space_p0_pFMM, order_sing, order_reg, temp_order, 
+      space_p1_pFMM, space_p0_pFMM, order_sing, order_reg, temp_order,
       spat_order, cauchy_data::_alpha, 1.5, false );
     t.reset( "K_adj_pFMM" );
     fast_assembler_k_adj.assemble( *K_adj_pFMM );
@@ -255,7 +255,7 @@ int main( int argc, char * argv[] ) {
     //   tree.print( );
 
     fast_spacetime_be_assembler fast_assembler_k_adj( kernel_ak,
-      space_p1_pFMM, space_p0_pFMM, order_sing, order_reg, temp_order, 
+      space_p1_pFMM, space_p0_pFMM, order_sing, order_reg, temp_order,
       spat_order, cauchy_data::_alpha, 1.5, false );
     t.reset( "K_adj_pFMM" );
     fast_assembler_k_adj.assemble( *K_adj_pFMM );

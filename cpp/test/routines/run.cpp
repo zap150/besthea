@@ -65,7 +65,7 @@ int main( int argc, char * argv[] ) {
   std::cout << "values of chebyshev polynomials (order <= " << order;
   std::cout << " are: " << std::endl;
   for ( lo i = 0; i <= order; ++i ) {
-    for ( lo j = 0; j < n_eval_points; ++j ) 
+    for ( lo j = 0; j < n_eval_points; ++j )
       printf("%.4f ", all_cheb_values[ n_eval_points * i + j ]);
     std::cout << std::endl;
   }
@@ -73,7 +73,7 @@ int main( int argc, char * argv[] ) {
   std::cout << "values of derived chebyshev polynomials (order <= " << order;
   std::cout << " are: " << std::endl;
   for ( lo i = 0; i <= order; ++i ) {
-    for ( lo j = 0; j < n_eval_points; ++j ) 
+    for ( lo j = 0; j < n_eval_points; ++j )
       printf("%.4f ", all_cheb_values[ n_eval_points * i + j ]);
     std::cout << std::endl;
   }

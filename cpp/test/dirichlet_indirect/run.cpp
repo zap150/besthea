@@ -129,7 +129,7 @@ uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
   lo temp_order = 6;
   lo spat_order = 6;
   spacetime_cluster_tree tree( spacetime_mesh, 5, 2, 10, st_coeff );
-  
+
   // tree.print( );
 #ifdef USE_P0_BASIS
   fast_spacetime_be_space< basis_tri_p0 > space_p0_pFMM( tree );
@@ -138,7 +138,7 @@ uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
     space_p0_pFMM, order_sing, order_reg, temp_order, spat_order,
     cauchy_data::_alpha, 1.5, false );
 #else
-  fast_spacetime_be_space< basis_tri_p1 > space_p1_pFMM( tree ); 
+  fast_spacetime_be_space< basis_tri_p1 > space_p1_pFMM( tree );
   pFMM_matrix_heat_sl_p1p1 * V_pFMM = new pFMM_matrix_heat_sl_p1p1;
   fast_spacetime_be_assembler fast_assembler_v( kernel_v, space_p1_pFMM,
     space_p1_pFMM, order_sing, order_reg, temp_order, spat_order,
@@ -237,7 +237,7 @@ uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
         kernel_v, space_p1 );
     #endif
       // besthea::bem::uniform_spacetime_be_evaluator evaluator_v(
-      //   kernel_v, space_p1 ); 
+      //   kernel_v, space_p1 );
       evaluator_v.evaluate( grid_space_mesh.get_nodes( ), dens, repr );
       evaluator_v.evaluate(
         grid_space_mesh.get_nodes( ), dens_pFMM, repr_pFMM );

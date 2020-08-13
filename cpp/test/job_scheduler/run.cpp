@@ -88,14 +88,14 @@ int main( int argc, char * argv[] ) {
 
       // compute process assignment and write it to file
       lo strategy = 1;
-      std::cout << "Generating assignment for n_processes: " << n_processes 
+      std::cout << "Generating assignment for n_processes: " << n_processes
                 << ", strategy: " << strategy << std::endl;
-      std::string process_assignment_file = 
+      std::string process_assignment_file =
         "./job_scheduler/process_assignment.bin";
-      time_tree.print_process_assignments( n_processes, strategy, 
+      time_tree.print_process_assignments( n_processes, strategy,
         process_assignment_file );
     }
-  } 
+  }
   MPI_Barrier( communicator );
   if ( execute_pseudo_fmm ) {
     if ( n_mpi_processes == n_processes ) {
@@ -103,12 +103,12 @@ int main( int argc, char * argv[] ) {
       sc mesh_start = 0.0;
       sc mesh_end = 1.0;
       std::string tree_vector_file = "./job_scheduler/tree_structure.bin";
-      std::string process_assignment_file = 
+      std::string process_assignment_file =
         "./job_scheduler/process_assignment.bin";
-      tree_structure time_structure( 
+      tree_structure time_structure(
         tree_vector_file, mesh_start, mesh_end, process_id );
       time_structure.load_process_assignments( process_assignment_file );
-      
+
       // help variables to print the process ids in human readable format
       // lo digits = ( lo ) ( ceil( log10( n_processes + 1 ) ) + 1 );
       // bool print_process_ids = true;
@@ -125,7 +125,7 @@ int main( int argc, char * argv[] ) {
       lou n_leaves = time_structure.get_leaves( ).size( );
 
       // reduce to locally essential tree
-      
+
       time_structure.reduce_2_essential( );
 
       if ( process_id == output_id ) {
@@ -144,8 +144,8 @@ int main( int argc, char * argv[] ) {
       std::vector< std::pair< scheduling_time_cluster*, lo > > receive_vector;
       lou n_moments_upward;
       lou n_moments_m2l;
-      time_structure.prepare_fmm( m_list, m2l_list, l_list, n_list, 
-                                  receive_vector, n_moments_upward, 
+      time_structure.prepare_fmm( m_list, m2l_list, l_list, n_list,
+                                  receive_vector, n_moments_upward,
                                   n_moments_m2l );
       std::vector< sc > input_vector( n_leaves, 1.0 );
       std::vector< sc > output_vector( input_vector );
@@ -153,28 +153,28 @@ int main( int argc, char * argv[] ) {
       apply_fmm( communicator, receive_vector, n_moments_upward, n_moments_m2l,
         m_list, m2l_list, l_list, n_list, input_vector, output_vector, verbose,
         verbose_dir );
-      
+
       // collect the results using a reduce operation and output result.
       if ( process_id == output_id ) {
         sc reduced_output_vector[ output_vector.size( ) ];
         for ( lou i = 0; i < output_vector.size( ); ++i ) {
           reduced_output_vector[ i ] = 0.0;
         }
-        MPI_Reduce( output_vector.data( ), reduced_output_vector, 
+        MPI_Reduce( output_vector.data( ), reduced_output_vector,
           output_vector.size( ), MPI_DOUBLE, MPI_MIN, output_id, communicator );
         std::cout << "output vector is: " << std::endl;
         for ( lou i = 0; i < output_vector.size( ); ++i ) {
           std::cout << reduced_output_vector[ i ] << std::endl;
         }
       } else {
-        MPI_Reduce( output_vector.data( ), nullptr, 
+        MPI_Reduce( output_vector.data( ), nullptr,
           output_vector.size( ), MPI_DOUBLE, MPI_MIN, output_id, communicator );
       }
     }
-    // the number of mpi processes has to match the number of processes for 
+    // the number of mpi processes has to match the number of processes for
     // which the assignment to clusters is created!
     else if ( process_id == 0 ) {
-      std::cout << "n_mpi_processes = " << n_mpi_processes 
+      std::cout << "n_mpi_processes = " << n_mpi_processes
                 << ", should be " << n_processes << std::endl;
     }
   }

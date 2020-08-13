@@ -137,6 +137,10 @@ const std::vector< sc > & get_spatial_paddings( ) const {
     // print general tree information
     std::cout << "number of levels of spacetime tree " << _real_max_levels
               << std::endl;
+    std::cout << "spatial padding: " << std::endl;
+    for ( lou i = 0; i < _spatial_paddings.size( ); ++i ) {
+      std::cout << "level " << i << ": " << _spatial_paddings[ i ] << std::endl;
+    }
     // print cluster information recursively
     print_internal( *_root );
   }
@@ -472,6 +476,10 @@ const std::vector< sc > & get_spatial_paddings( ) const {
   lo _n_min_elems;  //!< minimum number of elements so that cluster can be split
   std::vector< sc >
     _spatial_paddings;            //!< vector of spatial paddings on each level
+                                  //!< @note: for each space-time level a value
+                                  //!< is stored for simpler access (not only
+                                  //!< each spatial level, which is harder to
+                                  //!< access)
   slou _spatial_nearfield_limit;  //!< number of the clusters in the vicinity to
                                 //!< be considered as nearfield
   const std::vector< std::vector< lo > > _idx_2_coord = { { 1, 1, 1 },
