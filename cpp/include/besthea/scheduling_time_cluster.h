@@ -989,8 +989,8 @@ class besthea::mesh::scheduling_time_cluster {
   std::vector< scheduling_time_cluster * > 
     * _children;    //!< Children of the cluster.
   lo _level;        //!< Level within the cluster tree.
-  lo _global_index; //!< Global index of the cluster according to an enumeration
-                    //!< according to a recursive tree traversal.
+  lo _global_index; //!< Global index of the cluster. The children of a cluster
+                    //!< with index k have the indices 2k+1 and 2k+2.
   lo _process_id;   //!< Id of the process to which the cluster is assigned.
   std::vector< lo > *
     _time_slices; //!< global indices of the cluster's time slices (only set for

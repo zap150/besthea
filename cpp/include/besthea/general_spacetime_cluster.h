@@ -84,9 +84,10 @@ class besthea::mesh::general_spacetime_cluster {
   general_spacetime_cluster( const vector_type & space_center, sc time_center,
     const vector_type & space_half_size, sc time_half_size, lo n_elements,
     general_spacetime_cluster * parent, lo level, short octant,
-    std::vector< slou > & coordinate, short left_right, lo n_space_div,
-    lo n_time_div, const distributed_spacetime_tensor_mesh & mesh,
-    lo process_id, bool reserve_elements = false )
+    std::vector< slou > & coordinate, short left_right, lo global_time_index,
+    lo n_space_div, lo n_time_div, 
+    const distributed_spacetime_tensor_mesh & mesh, lo process_id, 
+    bool reserve_elements = false )
     : _n_elements( n_elements ),
       _n_time_elements( -1 ),     
       _n_space_elements( -1 ),     
@@ -102,6 +103,7 @@ class besthea::mesh::general_spacetime_cluster {
       _left_right( left_right ),
       _padding( 0.0 ),
       _box_coordinate( coordinate ),
+      _global_time_index( global_time_index ),
       _process_id( process_id ),
       _n_space_div( n_space_div ),
       _n_time_div( n_time_div ),
@@ -137,7 +139,7 @@ class besthea::mesh::general_spacetime_cluster {
   /**
    * Returns the distributed spacetime mesh associated with the cluster.
    */
-  const distributed_spacetime_tensor_mesh* get_mesh( ) {
+  const distributed_spacetime_tensor_mesh* get_mesh( ) const {
     return &_mesh;
   }
 
@@ -208,6 +210,13 @@ class besthea::mesh::general_spacetime_cluster {
    */
   general_spacetime_cluster * get_parent( ) const {
     return _parent;
+  }
+
+  /**
+   * Returns the global time index of the current cluster.
+   */
+  lo get_global_time_index( ) const {
+    return _global_time_index;
   }
 
   /**
@@ -603,6 +612,13 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
+   * Returns a pointer to the const moment of the current cluster.
+   */
+  const sc* get_pointer_to_moment( ) const {
+    return _moment;
+  }
+
+  /**
    * Sets the pointer to the local_contribution.
    * @param[in] local_contribution_address  Address of the local contribution  
    *                                        (in the array stored in the 
@@ -616,6 +632,13 @@ class besthea::mesh::general_spacetime_cluster {
    * Returns a pointer to the local contribution of the current cluster.
    */
   sc* get_pointer_to_local_contribution( ) {
+    return _local_contribution;
+  }
+
+  /**
+   * Returns a pointer to the const local contribution of the current cluster.
+   */
+  const sc* get_pointer_to_local_contribution( ) const {
     return _local_contribution;
   }
 
@@ -715,6 +738,11 @@ class besthea::mesh::general_spacetime_cluster {
   sc _padding;        //!< padding of the cluster
   std::vector< slou >
     _box_coordinate;  //!< coordinates of the box within boxes on given level
+  lo _global_time_index;  //!< Global index of the temporal component of the 
+                          //!< cluster. The children of a cluster with index k
+                          //!< have the indices 2k+1 and 2k+2.
+                          //!< @todo Include this index into 
+                          //!< @ref _box_coordinate instead of the 5th entry? 
   std::vector< std::vector< lo > >
     _idx_2_coord;   //!< auxiliary mapping from octant indexing to coordinates
   lo _process_id;   //!< rank of an MPI process owning the cluster

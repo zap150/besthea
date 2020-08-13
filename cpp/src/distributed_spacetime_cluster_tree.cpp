@@ -69,7 +69,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   std::vector< slou > coordinates = { 0, 0, 0, 0, 0 };
   _root = new general_spacetime_cluster( space_center, time_center,
     space_half_sizes, time_half_size, spacetime_mesh.get_n_elements( ), nullptr,
-    0, 0, coordinates, 0, 0, 0, _spacetime_mesh, -1, false );
+    0, 0, coordinates, 0, 0, 0, 0, _spacetime_mesh, -1, false );
 
   std::vector< lo > elems_in_clusters;
 
@@ -92,8 +92,8 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     cluster_send_list, cluster_receive_list );
   distribution_tree->reduce_2_essential( );
 
-  // todo: do we need the local leaves?
-  // collect_local_leaves( *_root );
+  collect_local_leaves( *_root );
+  
   associate_scheduling_clusters_and_space_time_clusters( );
   fill_nearfield_and_interaction_lists( *_root );
 }
@@ -732,7 +732,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::split_cluster(
             = new general_spacetime_cluster( new_spat_center, new_time_center,
               new_spat_half_size, new_time_half_size, elems_in_clusters[ pos ],
               &cluster, cluster.get_level( ) + 1, i, coordinates, 0,
-              n_space_div, n_time_div, _spacetime_mesh, owner, false );
+              2 * cluster.get_global_time_index( ) + 1, n_space_div, n_time_div,
+              _spacetime_mesh, owner, false );
           cluster.add_child( left_child );
         }
       }
@@ -752,8 +753,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::split_cluster(
         general_spacetime_cluster * left_child = new general_spacetime_cluster(
           space_center, new_time_center, space_half_size, new_time_half_size,
           elems_in_clusters[ pos ], &cluster, cluster.get_level( ) + 1,
-          cluster.get_spatial_octant( ), coordinates, 1, n_space_div,
-          n_time_div, _spacetime_mesh, owner, false );
+          cluster.get_spatial_octant( ), coordinates, 1,
+          2 * cluster.get_global_time_index( ) + 1, n_space_div, n_time_div, 
+          _spacetime_mesh, owner, false );
         cluster.add_child( left_child );
       }
     }
@@ -800,7 +802,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::split_cluster(
             = new general_spacetime_cluster( new_spat_center, new_time_center,
               new_spat_half_size, new_time_half_size, elems_in_clusters[ pos ],
               &cluster, cluster.get_level( ) + 1, i, coordinates, 1,
-              n_space_div, n_time_div, _spacetime_mesh, owner, false );
+              2 * cluster.get_global_time_index( ) + 2, n_space_div, n_time_div,
+              _spacetime_mesh, owner, false );
           cluster.add_child( right_child );
         }
       }
@@ -821,7 +824,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::split_cluster(
         general_spacetime_cluster * right_child = new general_spacetime_cluster(
           space_center, new_time_center, space_half_size, new_time_half_size,
           elems_in_clusters[ pos ], &cluster, cluster.get_level( ) + 1,
-          cluster.get_spatial_octant( ), coordinates, 0, n_space_div,
+          cluster.get_spatial_octant( ), coordinates, 0,
+          2 * cluster.get_global_time_index( ) + 2, n_space_div,
           n_time_div, _spacetime_mesh, owner, false );
         cluster.add_child( right_child );
       }
@@ -872,11 +876,14 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
           // set coord_t and left_right appropriately distinguishing the left 
           // and right children.
           short left_right = t_child->get_configuration( );
+          lo global_time_index;
           slou coord_t;
           if ( left_right == 0 ) {
             coord_t = 2 * parent_coord[ 4 ]; // left child
+            global_time_index = 2 * st_cluster->get_global_time_index( ) + 1;
           } else {
             coord_t = 2 * parent_coord[ 4 ] + 1; // right child
+            global_time_index = 2 * st_cluster->get_global_time_index( ) + 2;
           }
 
           sc new_time_center = t_child->get_center( );
@@ -909,7 +916,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
                     new_time_center, new_spat_half_size, new_time_half_size, 
                     elems_in_clusters[ pos ], st_cluster, 
                     st_cluster->get_level( ) + 1, i, coordinates, left_right,
-                    n_space_div, n_time_div, _spacetime_mesh, owner, false );
+                    global_time_index, n_space_div, n_time_div, _spacetime_mesh,
+                    owner, false );
                 st_cluster->add_child( new_child );
                 new_cluster_pairs.push_back( { new_child, t_child } );
               }
@@ -938,8 +946,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
                   space_center, new_time_center, space_half_size, 
                   new_time_half_size, elems_in_clusters[ pos ], st_cluster, 
                   st_cluster->get_level( ) + 1, 
-                  st_cluster->get_spatial_octant( ), coordinates, left_right, 
-                  n_space_div, n_time_div, _spacetime_mesh, owner, false );
+                  st_cluster->get_spatial_octant( ), coordinates, left_right,
+                  global_time_index, n_space_div, n_time_div, _spacetime_mesh, 
+                  owner, false );
               st_cluster->add_child( new_child );
               new_cluster_pairs.push_back( { new_child, t_child } );
             }
@@ -1271,7 +1280,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
         clusters[ i ]
           = new general_spacetime_cluster( new_space_center, new_time_center,
             new_space_half_size, new_time_half_size, oct_sizes[ i ], &root,
-            root.get_level( ) + 1, i, coordinates, 0, n_space_div + 1,
+            root.get_level( ) + 1, i, coordinates, 0,
+            2 * root.get_global_time_index( ) + 1, n_space_div + 1,
             n_time_div + 1, _spacetime_mesh, root.get_process_id( ), true );
       } else {
         clusters[ i ] = nullptr;
@@ -1284,7 +1294,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
         clusters[ i + 8 ]
           = new general_spacetime_cluster( new_space_center, new_time_center,
             new_space_half_size, new_time_half_size, oct_sizes[ i ], &root,
-            root.get_level( ) + 1, i, coordinates, 1, n_space_div + 1,
+            root.get_level( ) + 1, i, coordinates, 1,
+            2 * root.get_global_time_index( ) + 2, n_space_div + 1,
             n_time_div + 1, _spacetime_mesh, root.get_process_id( ), true );
       } else {
         clusters[ i + 8 ] = nullptr;
@@ -1426,8 +1437,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
       left_child = new general_spacetime_cluster( space_center, new_time_center,
         space_half_size, new_time_half_size, oct_sizes[ 0 ], &root,
         root.get_level( ) + 1, root.get_spatial_octant( ), coordinates, 0,
-        n_space_div, n_time_div + 1, _spacetime_mesh, root.get_process_id( ),
-        true );
+        2 * root.get_global_time_index( ) + 1, n_space_div, n_time_div + 1, 
+        _spacetime_mesh, root.get_process_id( ), true );
     }
 
     // right temporal cluster
@@ -1439,8 +1450,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
       right_child = new general_spacetime_cluster( space_center,
         new_time_center, space_half_size, new_time_half_size, oct_sizes[ 1 ],
         &root, root.get_level( ) + 1, root.get_spatial_octant( ), coordinates,
-        1, n_space_div, n_time_div + 1, _spacetime_mesh, root.get_process_id( ),
-        true );
+        1, 2 * root.get_global_time_index( ) + 2, n_space_div, n_time_div + 1, 
+        _spacetime_mesh, root.get_process_id( ), true );
     }
 
     for ( lo i = 0; i < root.get_n_elements( ); ++i ) {
@@ -1579,8 +1590,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
             root.add_to_nearfield_list( current_cluster );
           } else {
             sc current_temporal_center = current_cluster->get_time_center( );
-            std::vector< slou > current_box_coordinate 
-              = current_cluster->get_box_coordinate( );
             // check if current cluster is in the spatial vicinity of root and
             // if it is not in the future 
             // (if one of these conditions is violated the current cluster is 

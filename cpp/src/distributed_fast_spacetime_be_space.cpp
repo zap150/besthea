@@ -37,7 +37,7 @@ template< class basis_type >
 besthea::bem::distributed_fast_spacetime_be_space< basis_type >::
   distributed_fast_spacetime_be_space( 
   mesh::distributed_spacetime_cluster_tree & tree )
-  : spacetime_be_space< basis_type >( *tree.get_mesh( ) ), _tree( &tree ) {
+  : spacetime_be_space< basis_type >( tree.get_mesh( ) ), _tree( &tree ) {
 }
 
 template< class basis_type >

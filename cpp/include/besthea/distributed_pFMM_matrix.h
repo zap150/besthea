@@ -56,6 +56,7 @@
 
 #include <list>
 #include <mpi.h>
+#include <unordered_map>
 
 namespace besthea {
   namespace linear_algebra {
@@ -162,8 +163,11 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * Destructor
    */
   virtual ~distributed_pFMM_matrix( ) { 
-    for ( auto nf_matrix_vector : _clusterwise_nearfield_matrices ) {
-      for ( auto matrix : nf_matrix_vector ) {
+    for ( auto it = _clusterwise_nearfield_matrices.begin( ); 
+          it != _clusterwise_nearfield_matrices.end( ); ++it ) {
+      // loop over all nearfield matrices associated with a given spacetime 
+      // cluster and delete them.
+      for ( auto matrix : it->second ) {
         delete matrix;
       }
     }
@@ -296,89 +300,6 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   void compute_spatial_m2m_coeffs( );
 
  private:
-  const MPI_Comm * _comm; //!< MPI communicator associated with the pFMM matrix.
-  int _my_rank; //!< MPI rank of current process.
-  mesh::distributed_spacetime_cluster_tree * 
-    _distributed_spacetime_tree;  //!< part of a distributed tree hierarchically 
-                                  //!< decomposing the space-time domain. 
-  mesh::tree_structure *
-    _scheduling_tree_structure; //!< Temporal tree structure used for scheduling
-                                //!< the FMM operations
-
-  std::vector< std::vector< full_matrix * > > 
-    _clusterwise_nearfield_matrices;  //!< nearfield matrices for all the space-
-                                      //!< time leaf clusters and their
-                                      //!< nearfield clusters.
-  
-  std::list< mesh::scheduling_time_cluster* > 
-    _m_list;  //!< M-list for the execution of the FMM.
-  std::list< mesh::scheduling_time_cluster* >
-    _m2l_list; //!< M2L-list for the execution of the FMM.
-  std::list< mesh::scheduling_time_cluster* >
-    _l_list;  //!< L2L-list for the execution of the FMM.
-  std::list< mesh::scheduling_time_cluster* >
-    _n_list;  //!< N-list for the execution of the FMM.
-  std::vector< std::pair< mesh::scheduling_time_cluster*, lo > >  
-    _receive_data_information;  //!< Contains for each data which has to be
-                                //!< received the corresponding scheduling time
-                                //!< cluster to which the data belongs and the
-                                //!< id of the process which sends it. The data
-                                //!< is either the moments or the local 
-                                //!< contributions of the associated cluster.
-                                //!< The first @p _n_moments_to_receive_upward 
-                                //!< entries belong to moments which have to be
-                                //!< received in the upward path of the FMM, the
-                                //!< next @p _n_moments_to_receive_m2l entries   
-                                //!< to moments which have to be received for 
-                                //!< M2L operations and the remaining entries to 
-                                //!< local contributions which have to be 
-                                //!< received in the downward path.
-  lou _n_moments_to_receive_upward; //!< Number of grouped moments which have to
-                                    //!< be received in the upward path of the
-                                    //!< FMM.
-  lou _n_moments_to_receive_m2l;  //!< Number of grouped moments which have to 
-                                  //!< be received for M2L operations.
-
-  std::vector< vector_type >
-    _m2m_coeffs_s_dim_0_left;  //!< left spatial m2m matrices along dimension 0 
-                               //!< stored levelwise.
-  std::vector< vector_type >
-    _m2m_coeffs_s_dim_0_right;  //!< right spatial m2m matrices along 
-                                //!< dimension 0 stored levelwise.
-  std::vector< vector_type >
-    _m2m_coeffs_s_dim_1_left;  //!< left spatial m2m matrices along dimension 1
-                               //!< stored levelwise.
-  std::vector< vector_type >
-    _m2m_coeffs_s_dim_1_right;  //!< right spatial m2m matrices along
-                                //!< dimension 1 stored levelwise.
-  std::vector< vector_type >
-    _m2m_coeffs_s_dim_2_left;  //!< left spatial m2m matrices along dimension 2
-                               //!<  stored levelwise.
-  std::vector< vector_type >
-    _m2m_coeffs_s_dim_2_right;  //!< right spatial m2m matrices along
-                                //!< dimension 2 stored levelwise.
-
-  int _temp_order;  //!< degree of interpolation polynomials in time for pFMM.
-  int _spat_order;  //!< degree of Chebyshev polynomials for expansion in
-                    //!< space in pFMM.
-  int _order_regular; //!< Triangle quadrature order for the regular integrals.
-                      //!< Used for computation of quadratures in S2M steps.
-  int _m2l_integration_order;  //!< _m2l_integration_order + 1 quadrature
-                               //!< points are used for the approximation of
-                               //!< the m2l coefficients.
-  int _spat_contribution_size;  //!< Spatial size of a contribution. It is
-                                //!< _spat_order + 3 choose 3 
-  int _contribution_size; //!< Size of a contribution (moment or local 
-                          //!< contribution) of a single spacetime cluster.
-  mutable bem::chebyshev_evaluator
-    _chebyshev;  //!< Evaluator of the Chebyshev polynomials.
-                 //!< @todo check if necessary in the final code
-
-  mutable bem::lagrange_interpolant
-    _lagrange;  //!< Evaluator of the Lagrange polynomials.
-
-  sc _alpha;  //!< Heat conductivity.
-
   /**
    * Calls all S2M operations associated with a given scheduling time cluster.
    * @param[in] sources Global sources containing the once used for the S2M
@@ -425,7 +346,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   void apply_grouped_m2m_operation( 
     mesh::general_spacetime_cluster* parent_cluster, 
-    short child_configuration ) const;
+    slou child_configuration ) const;
 
   /**
    * Applies the temporal m2m operation to a child_moment and adds the result
@@ -435,7 +356,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in,out] parent_moment Array to which the result is added.
    */
   void apply_temporal_m2m_operation( const sc* child_moment, 
-    const full_matrix & temporal_m2m_matrix, sc *parent_moment ) const ;
+    const full_matrix & temporal_m2m_matrix, sc *parent_moment ) const;
 
   /**
    * Applies the spatial m2m operation to a child_moment and adds the result
@@ -459,11 +380,20 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] tar_cluster Scheduling time cluster which acts as target in M2L.
    * @param[in] verbose If true, the required time is written to file.
    * @param[in] verbose_file  If @p verbose is true, this is used as output file.
-   * @todo Currently dummy routine. 
    */
   void call_m2l_operations( mesh::scheduling_time_cluster* src_cluster,
     mesh::scheduling_time_cluster* tar_cluster, bool verbose, 
     std::string verbose_file ) const;
+
+  /**
+   * Applies the M2L operation for given source and target clusters.
+   * @param[in] src_cluster Spacetime source cluster for the M2L operation.
+   * @param[in,out] tar_cluster Spacetime target cluster for the M2L operation.
+   * @todo add buffers instead of reallocation? 
+   * @todo adapt padding when ready.
+   */
+  void apply_m2l_operation( const mesh::general_spacetime_cluster* src_cluster, 
+    mesh::general_spacetime_cluster* tar_cluster ) const;
 
   /**
    * Calls all L2L operations associated with a given scheduling time cluster.
@@ -477,36 +407,92 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     std::string verbose_file ) const;
 
   /**
+   * Applies the L2L operations for the given parent cluster and all its
+   * children for a given temporal configuration.
+   * @param[in] parent_cluster  Considered spacetime parent cluster.
+   * @param[in] child_configuration Indicates for which children the l2l  
+   *                                operations are executed:
+   *                                - 0: left children w.r.t. to time.
+   *                                - 1: right chilren w.r.t. to time.
+   */
+  void apply_grouped_l2l_operation( 
+    mesh::general_spacetime_cluster* parent_cluster, 
+    slou child_configuration ) const;
+
+  /**
+   * Applies the temporal l2l operation to a child_moment and adds the result
+   * to the parent moment.
+   * @param[in] parent_local_contribution Array containing the moments of the 
+   *                                      child cluster.
+   * @param[in] temporal_l2l_matrix Matrix used for the temporal l2l operation.
+   * @param[in,out] child_local_contribution  Array to which the result is 
+   *                                          added.
+   */
+  void apply_temporal_l2l_operation( const sc* parent_local_contribution, 
+    const full_matrix & temporal_l2l_matrix, 
+    sc* child_local_contribution ) const;
+
+  /**
+   * Applies the spatial l2l operation to a child_moment and adds the result
+   * to a given array.
+   * @param[in] parent_local Array containing the local 
+   *                                      contributions of the parent cluster.
+   * @param[in] n_space_div_parent  Number of refinements in space executed for
+   *                                the parent cluster. 
+   * @param[in] octant  Configuration of the child cluster with respect to its
+   *                    parent in space.
+   * @param[in,out] child_local  Array to which the result is 
+   *                                          added. 
+   * @note  @p n_space_div_parent and @p octant are used to determine the 
+   *        appropriate l2l coefficients for the operation.
+   */
+  void apply_spatial_l2l_operation( const sc* parent_local, 
+    const lo n_space_div_parent, const slou octant, 
+    sc* child_local ) const;
+
+  /**
    * Calls all L2T operations associated with a given scheduling time cluster.
    * @param[in] time_cluster  Considered scheduling time cluster.
-   * @param[in,out] output_vector Vector to which the results are added.
+   * @param[in,out] output_vector Block vector to which the results are added.
    * @param[in] verbose If true, the required time is written to file.
    * @param[in] verbose_file  If @p verbose is true, this is used as output file.
-   * @todo Currently dummy routine. 
    */
   void call_l2t_operations( mesh::scheduling_time_cluster* time_cluster, 
-    std::vector< sc > & output_vector, bool verbose, 
+    block_vector & output_vector, bool verbose, 
     std::string verbose_file ) const;
 
   /**
-   * Calls all nearfield operations associated with a given pair of scheduling 
-   * time clusters.
-   * @param[in] sources Global sources containing the once used for the nearfield 
-   *                    operation.
-   * @param[in] src_cluster Scheduling time cluster which acts as source for the
-   *                        nearfield operations.
-   * @param[in] tar_cluster Scheduling time cluster which acts as target for the
-   *                        nearfield operations.
+   * Applies the L2T operation for the given source cluster and writes the 
+   * result to the appropriate part of the output vector.
+   * @param[in] cluster  Considered spacetime cluster.
+   * @param[in] output_vector Global result vector to which the result of the
+   *                          operation is added.
+   * @todo Use buffers instead of reallocating targets and aux buffer in every
+   * function call?
+   * @todo Store the quadratures of Chebyshev polynomials in space and Lagrange
+   * polynomials in time again?
+   */
+  void apply_l2t_operation( const mesh::general_spacetime_cluster* cluster, 
+    block_vector & output_vector ) const;
+
+  /**
+   * Executes all nearfield operations associated with a given scheduling time 
+   * cluster.
+   * @param[in] cluster Time cluster whose associated nearfield operations 
+   *                    are executed.
+   * @param[in] sources Global sources containing the once used for the 
+   *                    nearfield operation.
+   * @param[in] trans If true, the transposed nearfield matrices are applied
+   *                  otherwise the standard nearfield matrices.
    * @param[in,out] output_vector Vector to which the results are added.
    * @param[in] verbose If true, the required time is written to file.
-   * @param[in] verbose_file  If @p verbose is true, this is used as output file.
-   * @todo Currently dummy routine. 
+   * @param[in] verbose_file  If @p verbose is true, this is used as output 
+   *                          file.
    */
-  void call_nearfield_operations( const std::vector< sc > & sources,
-    mesh::scheduling_time_cluster* src_cluster, 
-    mesh::scheduling_time_cluster* tar_cluster, 
-    std::vector< sc > & output_vector, bool verbose, 
-    std::string verbose_file ) const;
+  void apply_nearfield_operations(  
+    const mesh::scheduling_time_cluster* cluster, 
+    const block_vector & sources, bool trans, block_vector & output_vector, 
+    bool verbose, std::string verbose_file ) const;
 
   /**
    * Calls MPI_Testsome for an array of Requests to check for received data.
@@ -588,25 +574,21 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   /**
    * Updates dependency flags or sends moments for upward path.
-   * @param[in] communicator  Communicator used for sending.
    * @param[in] child_cluster Considered scheduling time cluster. If its parent
    *                          is handled by a different process, the processed
    *                          moments are send from the local copy of the parent
    *                          cluster to this process. 
-   * @todo Currently dummy routine. Sended data needs to be exchanged.
    */
-  void provide_moments_to_parents( const MPI_Comm communicator, 
+  void provide_moments_to_parents( 
     mesh::scheduling_time_cluster* child_cluster ) const;
 
   /**
    * Sends local contributions for downward path if necessary.
-   * @param[in] communicator  Communicator used for sending.
    * @param[in] parent_cluster Considered scheduling time cluster. If a child
-   *                           of it is handled by a different process, the local
-   *                           contributions are send to this process.
-   * @todo Currently dummy routine. Sended data needs to be exchanged.
+   *                           of it is handled by a different process, the 
+   *                           local contributions are send to this process.
    */
-  void provide_local_contributions_to_children( const MPI_Comm communicator, 
+  void provide_local_contributions_to_children( 
     mesh::scheduling_time_cluster* parent_cluster ) const;
 
   /**
@@ -630,12 +612,42 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @todo Include padding appropriately.
    */
   void compute_chebyshev_quadrature_p0( 
-    mesh::general_spacetime_cluster* source_cluster,
+    const mesh::general_spacetime_cluster* source_cluster,
     full_matrix & T ) const;
 
   void compute_lagrange_quadrature(
-    mesh::general_spacetime_cluster* source_cluster, 
+    const mesh::general_spacetime_cluster* source_cluster, 
     full_matrix & L ) const;
+
+  /*!
+   * Computes coupling coefficients for the spacetime m2l operation for one of 
+   * the three space dimensions implicitly given.
+   * @param[in] src_time_nodes  Interpolation nodes in time for the source
+   *                            cluster.
+   * @param[in] tar_time_nodes  Interpolation nodes in time for the target
+   *                            cluster.
+   * @param[in] cheb_nodes  Chebyshev nodes of degree ( _spat_order + 1 )
+   * @param[in] evaluated_chebyshev Vector of evaluated Chebyshev polynomials
+   *                                with degree <= _spat_order at \p cheb_nodes 
+   *                                as given by
+   *                           @ref besthea::bem::chebyshev_evaluator::evaluate.
+   * @param[in] half_size Half size in space of the current clusters along the
+   *                      dimension for which the coefficients are computed.
+   * @param[in] center_diff The appropriate component of the difference vector
+   *                        (target_center - source_center).
+   * @param[in] buffer_for_gaussians  Vector with size >= ( _spat_order + 1 )^2
+   *                                  * ( _temp_order + 1 )^2 to store 
+   *                                  intermediate results in the computation
+   *                                  of the m2l coefficients.
+   * @param[in,out] coupling_coeffs Vector with size >= ( _spat_order + 1 )^2
+   *                                * ( _temp_order + 1 )^2 to store m2l 
+   *                                coefficients.
+   */
+  void compute_coupling_coeffs( const vector_type & src_time_nodes,
+    const vector_type & tar_time_nodes, const vector_type & cheb_nodes,
+    const vector_type & evaluated_chebyshev, const sc half_size,
+    const sc center_diff, vector_type & buffer_for_gaussians,
+    vector_type & coupling_coeffs ) const;
 
   /**
    * Initializes quadrature structures.
@@ -680,6 +692,89 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   void cluster_to_polynomials( quadrature_wrapper & my_quadrature, sc x_start,
     sc x_end, sc y_start, sc y_end, sc z_start, sc z_end ) const;
 
+  const MPI_Comm * _comm; //!< MPI communicator associated with the pFMM matrix.
+  int _my_rank; //!< MPI rank of current process.
+  mesh::distributed_spacetime_cluster_tree * 
+    _distributed_spacetime_tree;  //!< part of a distributed tree hierarchically 
+                                  //!< decomposing the space-time domain. 
+  mesh::tree_structure *
+    _scheduling_tree_structure; //!< Temporal tree structure used for scheduling
+                                //!< the FMM operations
+
+  std::unordered_map< mesh::general_spacetime_cluster *, 
+                      std::vector< full_matrix* > >
+    _clusterwise_nearfield_matrices;  //!< nearfield matrices for all the space-
+                                      //!< time leaf clusters and their
+                                      //!< nearfield clusters.
+  
+  std::list< mesh::scheduling_time_cluster* > 
+    _m_list;  //!< M-list for the execution of the FMM.
+  std::list< mesh::scheduling_time_cluster* >
+    _m2l_list; //!< M2L-list for the execution of the FMM.
+  std::list< mesh::scheduling_time_cluster* >
+    _l_list;  //!< L2L-list for the execution of the FMM.
+  std::list< mesh::scheduling_time_cluster* >
+    _n_list;  //!< N-list for the execution of the FMM.
+  std::vector< std::pair< mesh::scheduling_time_cluster*, lo > >  
+    _receive_data_information;  //!< Contains for each data which has to be
+                                //!< received the corresponding scheduling time
+                                //!< cluster to which the data belongs and the
+                                //!< id of the process which sends it. The data
+                                //!< is either the moments or the local 
+                                //!< contributions of the associated cluster.
+                                //!< The first @p _n_moments_to_receive_upward 
+                                //!< entries belong to moments which have to be
+                                //!< received in the upward path of the FMM, the
+                                //!< next @p _n_moments_to_receive_m2l entries   
+                                //!< to moments which have to be received for 
+                                //!< M2L operations and the remaining entries to 
+                                //!< local contributions which have to be 
+                                //!< received in the downward path.
+  lou _n_moments_to_receive_upward; //!< Number of grouped moments which have to
+                                    //!< be received in the upward path of the
+                                    //!< FMM.
+  lou _n_moments_to_receive_m2l;  //!< Number of grouped moments which have to 
+                                  //!< be received for M2L operations.
+
+  std::vector< vector_type >
+    _m2m_coeffs_s_dim_0_left;  //!< left spatial m2m matrices along dimension 0 
+                               //!< stored levelwise.
+  std::vector< vector_type >
+    _m2m_coeffs_s_dim_0_right;  //!< right spatial m2m matrices along 
+                                //!< dimension 0 stored levelwise.
+  std::vector< vector_type >
+    _m2m_coeffs_s_dim_1_left;  //!< left spatial m2m matrices along dimension 1
+                               //!< stored levelwise.
+  std::vector< vector_type >
+    _m2m_coeffs_s_dim_1_right;  //!< right spatial m2m matrices along
+                                //!< dimension 1 stored levelwise.
+  std::vector< vector_type >
+    _m2m_coeffs_s_dim_2_left;  //!< left spatial m2m matrices along dimension 2
+                               //!<  stored levelwise.
+  std::vector< vector_type >
+    _m2m_coeffs_s_dim_2_right;  //!< right spatial m2m matrices along
+                                //!< dimension 2 stored levelwise.
+
+  int _temp_order;  //!< degree of interpolation polynomials in time for pFMM.
+  int _spat_order;  //!< degree of Chebyshev polynomials for expansion in
+                    //!< space in pFMM.
+  int _order_regular; //!< Triangle quadrature order for the regular integrals.
+                      //!< Used for computation of quadratures in S2M steps.
+  int _m2l_integration_order;  //!< _m2l_integration_order + 1 quadrature
+                               //!< points are used for the approximation of
+                               //!< the m2l coefficients.
+  int _spat_contribution_size;  //!< Spatial size of a contribution. It is
+                                //!< _spat_order + 3 choose 3 
+  int _contribution_size; //!< Size of a contribution (moment or local 
+                          //!< contribution) of a single spacetime cluster.
+  mutable bem::chebyshev_evaluator
+    _chebyshev;  //!< Evaluator of the Chebyshev polynomials.
+                 //!< @todo check if necessary in the final code
+
+  mutable bem::lagrange_interpolant
+    _lagrange;  //!< Evaluator of the Lagrange polynomials.
+
+  sc _alpha;  //!< Heat conductivity.
 };
 
 #endif /* INCLUDE_BESTHEA_DISTRIBUTED_PFMM_MATRIX_H_ */

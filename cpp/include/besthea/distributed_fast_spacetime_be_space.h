@@ -129,7 +129,7 @@ class besthea::bem::distributed_fast_spacetime_be_space
   /**
    * Returns the spacetime mesh.
    */
-  const mesh::distributed_spacetime_tensor_mesh * get_mesh( ) const {
+  const mesh::distributed_spacetime_tensor_mesh & get_mesh( ) const {
     return _tree->get_mesh( );
   }
 

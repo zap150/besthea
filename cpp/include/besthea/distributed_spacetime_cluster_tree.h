@@ -91,11 +91,9 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
 
   /**
    * Returns the associated distributed spacetime tensor mesh.
-   * @todo Return reference instead? (spacetime_cluster_tree returns a 
-   * reference, not a pointer)
    */
-  distributed_spacetime_tensor_mesh * get_mesh( ) {
-    return &_spacetime_mesh;
+  const distributed_spacetime_tensor_mesh & get_mesh( ) {
+    return _spacetime_mesh;
   }
 
   /**
@@ -132,45 +130,6 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   }
 
  private:
-  lo _max_levels;       //!< number of levels in the tree
-  lo _real_max_levels;  //!< auxiliary value to determine number of real tree
-                        //!< levels (depending on _n_min_elems)
-  distributed_spacetime_tensor_mesh &
-    _spacetime_mesh;                  //!< underlying distributed spacetime mesh
-                                      //!< @todo discuss: why reference and not
-                                      //!< pointer? why was it const originally?
-                                      //!< problem: distribution tree is 
-                                      //!< modified!
-  general_spacetime_cluster * _root;  //!< root of the cluster tree
-
-  std::vector< general_spacetime_cluster* > 
-    _local_leaves;  //!< Vector containing the leaves of the distributed 
-                    //!< space-time cluster tree which are local, i.e. 
-                    //!< assigned to the process with rank @p _my_rank.
-
-  lo _start_spatial_level;  //!< auxiliary variable determining the appropriate
-                            //!< starting level in the space cluster tree
-  lo _start_temporal_level; //!< auxiliary variable to determine in which level
-                            //!< the spatial refinement starts
-                            //!< (meaningful only if _start_spatial_level = 0)
-  lo _local_max_space_level;  //!< bound for the maximal number of spatial 
-                              //!< refinements in the local part of the 
-                              //!< distributed tree. 
-  
-  sc _s_t_coeff;    //!< coefficient to determine the coupling of the spatial
-                    //!< and temporal levels
-  lo _n_min_elems;  //!< minimum number of elements so that cluster can be split
-  slou _spatial_nearfield_limit;  //!< number of the clusters in the vicinity to
-                                //!< be considered as nearfield
-  const std::vector< std::vector< lo > > _idx_2_coord = { { 1, 1, 1 },
-    { 0, 1, 1 }, { 0, 0, 1 }, { 1, 0, 1 }, { 1, 1, 0 }, { 0, 1, 0 },
-    { 0, 0, 0 },
-    { 1, 0, 0 } };  //!< auxiliary mapping from octant indexing to coordinates
-  std::vector< sc > _bounding_box_size;  //!< size of the mesh bounding box;
-  const MPI_Comm * _comm;  //!< MPI communicator associated with the tree
-  int _my_rank;            //!< MPI rank of current processor
-  int _n_processes;  //!< total number of MPI processes in the communicator
-
   /**
    *
    */
@@ -464,6 +423,45 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
         print_internal( **it );
       }
   }
+
+  lo _max_levels;       //!< number of levels in the tree
+  lo _real_max_levels;  //!< auxiliary value to determine number of real tree
+                        //!< levels (depending on _n_min_elems)
+  distributed_spacetime_tensor_mesh &
+    _spacetime_mesh;                  //!< underlying distributed spacetime mesh
+                                      //!< @todo discuss: why reference and not
+                                      //!< pointer? why was it const originally?
+                                      //!< problem: distribution tree is 
+                                      //!< modified!
+  general_spacetime_cluster * _root;  //!< root of the cluster tree
+
+  std::vector< general_spacetime_cluster* > 
+    _local_leaves;  //!< Vector containing the leaves of the distributed 
+                    //!< space-time cluster tree which are local, i.e. 
+                    //!< assigned to the process with rank @p _my_rank.
+
+  lo _start_spatial_level;  //!< auxiliary variable determining the appropriate
+                            //!< starting level in the space cluster tree
+  lo _start_temporal_level; //!< auxiliary variable to determine in which level
+                            //!< the spatial refinement starts
+                            //!< (meaningful only if _start_spatial_level = 0)
+  lo _local_max_space_level;  //!< bound for the maximal number of spatial 
+                              //!< refinements in the local part of the 
+                              //!< distributed tree. 
+  
+  sc _s_t_coeff;    //!< coefficient to determine the coupling of the spatial
+                    //!< and temporal levels
+  lo _n_min_elems;  //!< minimum number of elements so that cluster can be split
+  slou _spatial_nearfield_limit;  //!< number of the clusters in the vicinity to
+                                //!< be considered as nearfield
+  const std::vector< std::vector< lo > > _idx_2_coord = { { 1, 1, 1 },
+    { 0, 1, 1 }, { 0, 0, 1 }, { 1, 0, 1 }, { 1, 1, 0 }, { 0, 1, 0 },
+    { 0, 0, 0 },
+    { 1, 0, 0 } };  //!< auxiliary mapping from octant indexing to coordinates
+  std::vector< sc > _bounding_box_size;  //!< size of the mesh bounding box;
+  const MPI_Comm * _comm;  //!< MPI communicator associated with the tree
+  int _my_rank;            //!< MPI rank of current processor
+  int _n_processes;  //!< total number of MPI processes in the communicator
 };
 
 #endif /* INCLUDE_BESTHEA_DISTRIBUTED_SPACETIME_CLUSTER_TREE_H_ */
