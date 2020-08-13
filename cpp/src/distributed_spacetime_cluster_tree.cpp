@@ -954,20 +954,12 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
             if ( elems_in_clusters[ pos ] > 0 ) {
               general_spacetime_cluster * new_child
                 = new general_spacetime_cluster(
-<<<<<<< HEAD
                   space_center, new_time_center, space_half_size, 
                   new_time_half_size, elems_in_clusters[ pos ], st_cluster, 
                   st_cluster->get_level( ) + 1, 
                   st_cluster->get_spatial_octant( ), coordinates, left_right,
                   global_time_index, n_space_div, n_time_div, _spacetime_mesh, 
                   owner, false );
-=======
-                  space_center, new_time_center, space_half_size,
-                  new_time_half_size, elems_in_clusters[ pos ], st_cluster,
-                  st_cluster->get_level( ) + 1,
-                  st_cluster->get_spatial_octant( ), coordinates, left_right,
-                  n_space_div, n_time_div, _spacetime_mesh, owner, false );
->>>>>>> 5ed7c0037fc4e259749f40c6a3bb24a2a81e7b99
               st_cluster->add_child( new_child );
               new_cluster_pairs.push_back( { new_child, t_child } );
             }
@@ -1609,11 +1601,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
             root.add_to_nearfield_list( current_cluster );
           } else {
             sc current_temporal_center = current_cluster->get_time_center( );
-<<<<<<< HEAD
-=======
-            std::vector< slou > current_box_coordinate
-              = current_cluster->get_box_coordinate( );
->>>>>>> 5ed7c0037fc4e259749f40c6a3bb24a2a81e7b99
             // check if current cluster is in the spatial vicinity of root and
             // if it is not in the future
             // (if one of these conditions is violated the current cluster is
