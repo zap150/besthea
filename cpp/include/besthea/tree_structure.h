@@ -353,17 +353,17 @@ class besthea::mesh::tree_structure {
     lou & position );
 
   /**
-   * Recursively constructs the tree structure from a given structure vector
-   * and a given vector of cluster bounds.
-   * @param[in] tree_vector Contains the tree structure data.
+   * Recursively constructs the tree structure from a given structure array
+   * and a given array of cluster bounds.
+   * @param[in] tree_array Contains the tree structure data.
    * @param[in] cluster_bounds  Contains the data of the clusters' bounds.
    * @param[in,out] root  Current cluster, to which the next clusters are added.
    * @param[in,out] position  Auxiliary variable to keep track of the current
    *                          position in the vectors.
    * @note  This method is supposed to be called by the constructor.
    */
-  void create_tree_from_vectors( const std::vector< char > & tree_vector,
-    const std::vector< sc > & cluster_bounds, scheduling_time_cluster & root,
+  void create_tree_from_arrays( const char * tree_array,
+    const sc * cluster_bounds, scheduling_time_cluster & root,
     lou & position );
 
   /** Assigns to each cluster in the tree structure its respective process

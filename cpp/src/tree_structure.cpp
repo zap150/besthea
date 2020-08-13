@@ -78,7 +78,8 @@ besthea::mesh::tree_structure::tree_structure(
     _levels = 1;
     if ( tree_vector[ 0 ] == 1 ) {
       lou position = 1;
-      create_tree_from_vectors( tree_vector, cluster_bounds, *_root, position );
+      create_tree_from_arrays(
+        tree_vector.data( ), cluster_bounds.data( ), *_root, position );
     }
   } else {
     _root = nullptr;
@@ -440,18 +441,17 @@ void besthea::mesh::tree_structure::array_2_tree(
 }
 
 
-void besthea::mesh::tree_structure::create_tree_from_vectors(
-  const std::vector< char > & tree_vector,
-  const std::vector< sc > & cluster_bounds, scheduling_time_cluster & root,
-  lou & position ) {
+void besthea::mesh::tree_structure::create_tree_from_arrays(
+  const char * tree_array, const sc * cluster_bounds,
+  scheduling_time_cluster & root, lou & position ) {
   // get the cluster data of root
   lo level = root.get_level( );
   // determine status of the children of root and create them accordingly
-  char left_child_status = tree_vector[ position ];
+  char left_child_status = tree_array[ position ];
   sc left_child_left_bound = cluster_bounds[ 2 * position ];
   sc left_child_right_bound = cluster_bounds[ 2 * position + 1 ];
   position ++;
-  char right_child_status = tree_vector[ position ];
+  char right_child_status = tree_array[ position ];
   sc right_child_left_bound = cluster_bounds[ 2 * position ];
   sc right_child_right_bound = cluster_bounds[ 2 * position + 1 ];
   position ++;
@@ -463,14 +463,14 @@ void besthea::mesh::tree_structure::create_tree_from_vectors(
     sc center = ( left_child_right_bound + left_child_left_bound ) * 0.5;
     sc half_size = ( left_child_right_bound - left_child_left_bound ) * 0.5;
     left_cluster = new scheduling_time_cluster(
-      center, half_size, &root, 0, level + 1 );
+      center, half_size, &root, 0, level + 1, root.get_process_id( ) );
   }
   if ( right_child_status > 0 ) {
     child_counter++;
     sc center = ( right_child_right_bound + right_child_left_bound ) * 0.5;
     sc half_size = ( right_child_right_bound - right_child_left_bound ) * 0.5;
     right_cluster = new scheduling_time_cluster(
-      center, half_size, &root, 1, level + 1 );
+      center, half_size, &root, 1, level + 1, root.get_process_id( ) );
   }
   // add the newly created clusters to the root
   root.set_n_children( child_counter );
@@ -483,8 +483,8 @@ void besthea::mesh::tree_structure::create_tree_from_vectors(
   // call the routine recursively for non-leaf children or update the depth of
   // the cluster tree if a leaf is encountered
   if ( left_child_status == 1 ) {
-    create_tree_from_vectors(
-      tree_vector, cluster_bounds, *left_cluster, position );
+    create_tree_from_arrays(
+      tree_array, cluster_bounds, *left_cluster, position );
   }
   else if ( left_child_status == 2 ) {
     left_cluster->set_global_leaf_status( true );
@@ -493,8 +493,8 @@ void besthea::mesh::tree_structure::create_tree_from_vectors(
     }
   }
   if ( right_child_status == 1 ) {
-    create_tree_from_vectors(
-      tree_vector, cluster_bounds, *right_cluster, position );
+    create_tree_from_arrays(
+      tree_array, cluster_bounds, *right_cluster, position );
   }
   else if ( right_child_status == 2 ) {
     right_cluster->set_global_leaf_status( true );

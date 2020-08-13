@@ -739,7 +739,7 @@ class besthea::mesh::scheduling_time_cluster {
    * Determines the tree structure of the subtree whose root is the current
    * cluster.
    * @return  A vector of the tree structure in the usual tree format
-   *          (see @ref time_cluster_tree::compute_tree_structure )
+   *          (see @ref time_cluster_tree::compute_tree_structure ).
    */
   std::vector< char > determine_subtree_structure( ) const {
     std::vector< char > tree_vector;
@@ -750,6 +750,22 @@ class besthea::mesh::scheduling_time_cluster {
       append_tree_structure_vector_recursively( tree_vector );
     }
     return tree_vector;
+  }
+
+  /**
+   * Determines the cluster bounds of the clusters in the subtree whose
+   * root is the current cluster.
+   * @return  A vector of the cluster bounds of the subtree in the usual tree
+   *          format (see @ref time_cluster_tree::compute_tree_structure ).
+   */
+  std::vector< sc > determine_subtree_cluster_bounds( ) const {
+    std::vector< sc > cluster_bounds_vector;
+    cluster_bounds_vector.push_back( _center - _half_size );
+    cluster_bounds_vector.push_back( _center + _half_size );
+    if ( _children != nullptr ) {
+      append_cluster_bound_vector_recursively( cluster_bounds_vector );
+    }
+    return cluster_bounds_vector;
   }
 
   /**
@@ -776,7 +792,7 @@ class besthea::mesh::scheduling_time_cluster {
     scheduling_time_cluster* right_child = nullptr;
     for ( auto child : *_children ) {
       char* status_pointer;
-      if ( child->get_center( ) < _center ) {
+      if ( child->get_configuration( ) == 0 ) {
         left_child = child;
         status_pointer = &left_child_status;
       } else {
@@ -796,6 +812,53 @@ class besthea::mesh::scheduling_time_cluster {
     }
     if ( right_child_status == 1 ) {
       right_child->append_tree_structure_vector_recursively( tree_vector );
+    }
+  }
+
+  void append_cluster_bound_vector_recursively(
+    std::vector< sc > & cluster_bounds_vector ) const {
+    char left_child_status = 0;
+    char right_child_status = 0;
+    sc left_child_lower_bound( 0.0 ), left_child_upper_bound( 0.0 );
+    sc right_child_lower_bound( 0.0 ), right_child_upper_bound( 0.0 );
+    scheduling_time_cluster* left_child = nullptr;
+    scheduling_time_cluster* right_child = nullptr;
+    for ( auto child : *_children ) {
+      // determine which child it is and remember its bounds and status.
+      char* status_pointer;
+      if ( child->get_configuration( ) == 0 ) {
+        left_child = child;
+        status_pointer = &left_child_status;
+        left_child_lower_bound
+          = child->get_center( ) - child->get_half_size( );
+        left_child_upper_bound
+          = child->get_center( ) + child->get_half_size( );
+      } else {
+        right_child = child;
+        status_pointer = &right_child_status;
+        right_child_lower_bound
+          = child->get_center( ) - child->get_half_size( );
+        right_child_upper_bound
+          = child->get_center( ) + child->get_half_size( );
+      }
+      if ( child->get_n_children( ) > 0 ) {
+        *status_pointer = 1;
+      } else {
+        *status_pointer = 2;
+      }
+    }
+    // add the cluster bounds appropriately to the vector
+    cluster_bounds_vector.push_back( left_child_lower_bound );
+    cluster_bounds_vector.push_back( left_child_upper_bound );
+    cluster_bounds_vector.push_back( right_child_lower_bound );
+    cluster_bounds_vector.push_back( right_child_upper_bound );
+    if ( left_child_status == 1 ) {
+      left_child->append_cluster_bound_vector_recursively(
+        cluster_bounds_vector );
+    }
+    if ( right_child_status == 1 ) {
+      right_child->append_cluster_bound_vector_recursively(
+        cluster_bounds_vector );
     }
   }
 

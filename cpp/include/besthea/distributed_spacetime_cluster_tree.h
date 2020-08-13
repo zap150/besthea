@@ -91,11 +91,6 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
 
   /**
    * Returns the associated distributed spacetime tensor mesh.
-<<<<<<< HEAD
-=======
-   * @todo Return reference instead? (spacetime_cluster_tree returns a
-   * reference, not a pointer)
->>>>>>> 5ed7c0037fc4e259749f40c6a3bb24a2a81e7b99
    */
   const distributed_spacetime_tensor_mesh & get_mesh( ) {
     return _spacetime_mesh;
@@ -183,9 +178,9 @@ const std::vector< sc > & get_spatial_paddings( ) const {
    * @ref tree_structure::determine_refinement_communication_lists.
    */
   void expand_distribution_tree_communicatively(
-    const std::set< std::pair< lo, scheduling_time_cluster* > >
+    const std::set< std::pair< lo, scheduling_time_cluster* > > &
       cluster_send_list,
-    const std::set< std::pair< lo, scheduling_time_cluster* > >
+    const std::set< std::pair< lo, scheduling_time_cluster* > > &
       cluster_receive_list );
 
   /**
@@ -353,6 +348,8 @@ const std::vector< sc > & get_spatial_paddings( ) const {
    * Builds subtree starting from a given root cluster.
    * @param[in] root Root to the subtree.
    * @param[in] split_space Indicate space split.
+   * @todo check correctness of determination of temporal cluster data when more
+   * general meshes are used.
    */
   void build_subtree( general_spacetime_cluster & root, bool split_space );
 
@@ -413,7 +410,7 @@ const std::vector< sc > & get_spatial_paddings( ) const {
    */
   void fill_nearfield_and_interaction_lists( general_spacetime_cluster & root );
 
-/**
+  /**
    * Used for the construction of nearfields of leaf clusters by
    * @ref fill_nearfield_and_interaction_lists. It recursively traverses the
    * tree starting from the initial @p current_cluster, and adds all descendant
@@ -425,11 +422,44 @@ const std::vector< sc > & get_spatial_paddings( ) const {
     general_spacetime_cluster & current_cluster,
     general_spacetime_cluster & target_cluster );
 
-    /**
-     * Recursively computes padding of clusters in the tree
-     * @param[in] root Node to stem from
-     */
-    sc compute_local_spatial_padding( general_spacetime_cluster & root );
+  /**
+   * Recursively computes padding of clusters in the tree
+   * @param[in] root Node to stem from
+   */
+  sc compute_local_spatial_padding( general_spacetime_cluster & root );
+
+  /**
+   * Computes the subtree structure and cluster bounds of all clusters in a
+   * given vector and sends them to the process which needs them for its locally
+   * essential distribution tree.
+   * @param[in] send_cluster_vector Vector containing the clusters whose
+   *                                subtrees are considered.
+   * @param[in] global_tree_levels  Number of levels in the global distribution
+   *                                tree.
+   * @param[in] communication_offset  The data is send to the process whose id
+   *                                  is @p _my_rank minus this offset.
+   * @note  This routine is solely called by
+   *        @ref expand_distribution_tree_communicatively.
+   */
+  void send_subtree_data_of_distribution_tree(
+    const std::vector< scheduling_time_cluster* > & send_cluster_vector,
+    const lo global_tree_levels, const lo communication_offset ) const;
+
+  /**
+   * Receives the subtree structure and cluster bounds of all clusters in a
+   * given vector and appends the distribution tree according to this data.
+   * @param[in] send_cluster_vector Vector containing the clusters whose
+   *                                subtrees are received
+   * @param[in] global_tree_levels  Number of levels in the global distribution
+   *                                tree.
+   * @param[in] communication_offset  The data is received from the process
+   *                                  whose id is @p _my_rank plus this offset.
+   * @note  This routine is solely called by
+   *        @ref expand_distribution_tree_communicatively.
+   */
+  void receive_subtree_data_of_distribution_tree(
+    const std::vector< scheduling_time_cluster* > & receive_clusters_vector,
+    const lo global_tree_levels, const lo communication_offset );
 
   /**
    * Aux for printing
