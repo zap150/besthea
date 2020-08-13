@@ -45,7 +45,7 @@
 /**
  * Applies the distributed FMM based on a scheduling of jobs via time clusters.
  * @param[in] communicator  MPI Communicator used for communication operations.
- * @param[in] receive_vector  Vector of pairs used to manage the receive 
+ * @param[in] receive_vector  Vector of pairs used to manage the receive
  *                            operations.
  * @param[in] n_moments_upward  Number of moments received in the upward path.
  * @param[in] n_moments_m2l Number of moments received for M2L.
@@ -53,16 +53,16 @@
  * @param[in] m2l_list  List for scheduling interactions and downward pass
  *                      operations.
  * @param[in] l_list  List for scheduling downward path operations.
- * @param[in] n_list  List for scheduling nearfield operations.  
+ * @param[in] n_list  List for scheduling nearfield operations.
  * @param[in] input_vector  Vector containing the sources for FMM.
  * @param[in,out] output_vector Vector to store the results of the FMM.
  * @param[in] verbose If true, each process creates a verbose output file where
  *                    it documents its actions.
  * @param[in] verbose_dir If @p verbose is true, the output file of each process
  *                        is stored in this directory.
- * @note The receive vector and the 4 lists should be constructed using 
+ * @note The receive vector and the 4 lists should be constructed using
  *       the method @ref besthea::mesh::tree_structure::prepare_fmm .
- * @note The directory @p verbose_dir needs to be created manually before 
+ * @note The directory @p verbose_dir needs to be created manually before
  *       execution.
  */
 void apply_fmm( const MPI_Comm communicator,
@@ -77,15 +77,15 @@ void apply_fmm( const MPI_Comm communicator,
 
 /**
  * Calls all S2M operations associated with a given scheduling time cluster.
- * @param[in] sources Global sources containing the once used for the M2L 
+ * @param[in] sources Global sources containing the once used for the M2L
  *                    operation.
  * @param[in] time_cluster  Considered scheduling time cluster.
  * @param[in] verbose If true, the required time is written to file.
  * @param[in] verbose_file  If @p verbose is true, this is used as output file.
- * @todo Currently dummy routine. 
+ * @todo Currently dummy routine.
  */
 void call_s2m_operations( const std::vector< sc > & sources,
-  besthea::mesh::scheduling_time_cluster* time_cluster, bool verbose, 
+  besthea::mesh::scheduling_time_cluster* time_cluster, bool verbose,
   std::string verbose_file );
 
 /**
@@ -93,33 +93,33 @@ void call_s2m_operations( const std::vector< sc > & sources,
  * @param[in] time_cluster  Considered scheduling time cluster.
  * @param[in] verbose If true, the required time is written to file.
  * @param[in] verbose_file  If @p verbose is true, this is used as output file.
- * @todo Currently dummy routine. 
+ * @todo Currently dummy routine.
  */
-void call_m2m_operations( 
-  besthea::mesh::scheduling_time_cluster* time_cluster, bool verbose, 
+void call_m2m_operations(
+  besthea::mesh::scheduling_time_cluster* time_cluster, bool verbose,
   std::string verbose_file );
 
 /**
- * Calls all M2L operations associated with a given pair of scheduling time 
+ * Calls all M2L operations associated with a given pair of scheduling time
  * clusters.
  * @param[in] src_cluster Scheduling time cluster which acts as source in M2L.
  * @param[in] tar_cluster Scheduling time cluster which acts as target in M2L.
  * @param[in] verbose If true, the required time is written to file.
  * @param[in] verbose_file  If @p verbose is true, this is used as output file.
- * @todo Currently dummy routine. 
+ * @todo Currently dummy routine.
  */
 void call_m2l_operations( besthea::mesh::scheduling_time_cluster* src_cluster,
-  besthea::mesh::scheduling_time_cluster* tar_cluster, bool verbose, 
+  besthea::mesh::scheduling_time_cluster* tar_cluster, bool verbose,
   std::string verbose_file );
 /**
  * Calls all L2L operations associated with a given scheduling time cluster.
  * @param[in] time_cluster  Considered scheduling time cluster.
  * @param[in] verbose If true, the required time is written to file.
  * @param[in] verbose_file  If @p verbose is true, this is used as output file.
- * @todo Currently dummy routine. 
+ * @todo Currently dummy routine.
  */
-void call_l2l_operations( 
-  besthea::mesh::scheduling_time_cluster* time_cluster, bool verbose, 
+void call_l2l_operations(
+  besthea::mesh::scheduling_time_cluster* time_cluster, bool verbose,
   std::string verbose_file );
 /**
  * Calls all L2T operations associated with a given scheduling time cluster.
@@ -127,14 +127,14 @@ void call_l2l_operations(
  * @param[in,out] output_vector Vector to which the results are added.
  * @param[in] verbose If true, the required time is written to file.
  * @param[in] verbose_file  If @p verbose is true, this is used as output file.
- * @todo Currently dummy routine. 
+ * @todo Currently dummy routine.
  */
-void call_l2t_operations( besthea::mesh::scheduling_time_cluster* time_cluster, 
+void call_l2t_operations( besthea::mesh::scheduling_time_cluster* time_cluster,
   std::vector< sc > & output_vector, bool verbose, std::string verbose_file );
 /**
- * Calls all nearfield operations associated with a given pair of scheduling 
+ * Calls all nearfield operations associated with a given pair of scheduling
  * time clusters.
- * @param[in] sources Global sources containing the once used for the nearfield 
+ * @param[in] sources Global sources containing the once used for the nearfield
  *                    operation.
  * @param[in] src_cluster Scheduling time cluster which acts as source for the
  *                        nearfield operations.
@@ -143,99 +143,99 @@ void call_l2t_operations( besthea::mesh::scheduling_time_cluster* time_cluster,
  * @param[in,out] output_vector Vector to which the results are added.
  * @param[in] verbose If true, the required time is written to file.
  * @param[in] verbose_file  If @p verbose is true, this is used as output file.
- * @todo Currently dummy routine. 
+ * @todo Currently dummy routine.
  */
 void call_nearfield_operations( const std::vector< sc > & sources,
-  besthea::mesh::scheduling_time_cluster* src_cluster, 
-  besthea::mesh::scheduling_time_cluster* tar_cluster, 
+  besthea::mesh::scheduling_time_cluster* src_cluster,
+  besthea::mesh::scheduling_time_cluster* tar_cluster,
   std::vector< sc > & output_vector, bool verbose, std::string verbose_file );
 
 /**
  * Calls MPI_Testsome for an array of Requests to check for received data.
  * @param[in] communicator  MPI communicator used for MPI_Testsome.
- * @param[in] receive_vector  Vector of pairs used to manage the receive 
- *                            operations. Constructed by 
+ * @param[in] receive_vector  Vector of pairs used to manage the receive
+ *                            operations. Constructed by
  *                            @ref besthea::mesh::tree_structure::prepare_fmm.
  * @param[in] n_moments_upward  Number of moments received in the upward path.
  * @param[in] n_moments_m2l Number of moments received for M2L.
- * @param[in,out] array_of_requests Array containing the MPI requests which are 
+ * @param[in,out] array_of_requests Array containing the MPI requests which are
  *                                  checked.
  * @param[in,out] array_of_indices  Array in which the indices of the completed
- *                                  requests are stored. This is used as an 
+ *                                  requests are stored. This is used as an
  *                                  input variable to avoid reallocation in each
  *                                  function call.
  * @param[in,out] outcount  Stores the number of Requests which are completed.
- * @param[in] verbose If true, the process lists all the received data, and 
- *                    reports about the time needed to process it (in case 
+ * @param[in] verbose If true, the process lists all the received data, and
+ *                    reports about the time needed to process it (in case
  *                    moments in the upward path were received)
  * @param[in] verbose_file  If @p verbose is true, this is used as output file.
  */
 void check_for_received_data( const MPI_Comm communicator,
-  const std::vector< std::pair< besthea::mesh::scheduling_time_cluster*, lo > > 
-    & receive_vector, const lou n_moments_upward, const lou n_moments_m2l, 
-  MPI_Request * array_of_requests, int array_of_indices[ ], int & outcount, 
+  const std::vector< std::pair< besthea::mesh::scheduling_time_cluster*, lo > >
+    & receive_vector, const lou n_moments_upward, const lou n_moments_m2l,
+  MPI_Request * array_of_requests, int array_of_indices[ ], int & outcount,
   bool verbose, std::string verbose_file );
 
 /**
- * Returns an iterator pointing to the next cluster in the l-list whose 
+ * Returns an iterator pointing to the next cluster in the l-list whose
  * dependencies are satisfied. In case a cluster is found the status is updated.
  * If no cluster is found the iterator points to the end of the list and the
  * status is not modified.
  * @param[in] l_list  The appropriate l-list constructed using the routine
  * @ref besthea::mesh::tree_structure::prepare_fmm.
- * @param[out] it_next_cluster  If a cluster is found in the list this iterator 
+ * @param[out] it_next_cluster  If a cluster is found in the list this iterator
  *                              points to it. Else it points to the end of the
- *                              list. 
+ *                              list.
  * @param[out] status Set to 2 if a cluster is found.
  */
-void find_cluster_in_l_list( 
+void find_cluster_in_l_list(
   std::list< besthea::mesh::scheduling_time_cluster* > & l_list,
-  std::list< besthea::mesh::scheduling_time_cluster* >::iterator & 
+  std::list< besthea::mesh::scheduling_time_cluster* >::iterator &
     it_next_cluster, char & status );
 
 /**
- * Returns an iterator pointing to the next cluster in the m-list whose 
+ * Returns an iterator pointing to the next cluster in the m-list whose
  * dependencies are satisfied. In case a cluster is found the status is updated.
  * If no cluster is found the iterator points to the end of the list and the
  * status is not modified.
  * @param[in] m_list  The appropriate m-list constructed using the routine
  * @ref besthea::mesh::tree_structure::prepare_fmm.
- * @param[out] it_next_cluster  If a cluster is found in the list this iterator 
+ * @param[out] it_next_cluster  If a cluster is found in the list this iterator
  *                              points to it. Else it points to the end of the
- *                              list. 
+ *                              list.
  * @param[out] status Set to 1 if a cluster is found.
  */
-void find_cluster_in_m_list( 
+void find_cluster_in_m_list(
   std::list< besthea::mesh::scheduling_time_cluster* > & m_list,
-  std::list< besthea::mesh::scheduling_time_cluster* >::iterator & 
+  std::list< besthea::mesh::scheduling_time_cluster* >::iterator &
     it_next_cluster, char & status );
 
 /**
- * Returns an iterator pointing to the next cluster in the m2l-list whose 
+ * Returns an iterator pointing to the next cluster in the m2l-list whose
  * dependencies are satisfied. In case a cluster is found the status is updated.
  * If no cluster is found the iterator points to the end of the list and the
  * status is not modified.
  * @param[in] m2l_list  The appropriate m2l-list constructed using the routine
  * @ref besthea::mesh::tree_structure::prepare_fmm.
- * @param[out] it_next_cluster  If a cluster is found in the list this iterator 
+ * @param[out] it_next_cluster  If a cluster is found in the list this iterator
  *                              points to it. Else it points to the end of the
- *                              list. 
+ *                              list.
  * @param[out] status Set to 3 if a cluster is found.
  */
-void find_cluster_in_m2l_list( 
+void find_cluster_in_m2l_list(
   std::list< besthea::mesh::scheduling_time_cluster* > & m2l_list,
-  std::list< besthea::mesh::scheduling_time_cluster* >::iterator & 
+  std::list< besthea::mesh::scheduling_time_cluster* >::iterator &
     it_next_cluster, char & status );
 
 /**
  * Updates dependency flags or sends moments for M2L operations.
  * @param[in] communicator  Communicator used for sending.
- * @param[in] src_cluster Considered scheduling time cluster. If a cluster in 
+ * @param[in] src_cluster Considered scheduling time cluster. If a cluster in
  *                        its send list is handled by a different process, the
  *                        moments are send to this process.
  * @todo Currently dummy routine. Sended data needs to be exchanged.
  */
-void provide_moments_for_m2l( const MPI_Comm communicator, 
+void provide_moments_for_m2l( const MPI_Comm communicator,
   besthea::mesh::scheduling_time_cluster* src_cluster );
 
 /**
@@ -244,10 +244,10 @@ void provide_moments_for_m2l( const MPI_Comm communicator,
  * @param[in] child_cluster Considered scheduling time cluster. If its parent
  *                          is handled by a different process, the processed
  *                          moments are send from the local copy of the parent
- *                          cluster to this process. 
+ *                          cluster to this process.
  * @todo Currently dummy routine. Sended data needs to be exchanged.
  */
-void provide_moments_to_parents( const MPI_Comm communicator, 
+void provide_moments_to_parents( const MPI_Comm communicator,
   besthea::mesh::scheduling_time_cluster* child_cluster );
 
 /**
@@ -258,31 +258,31 @@ void provide_moments_to_parents( const MPI_Comm communicator,
  *                           contributions are send to this process.
  * @todo Currently dummy routine. Sended data needs to be exchanged.
  */
-void provide_local_contributions_to_children( const MPI_Comm communicator, 
+void provide_local_contributions_to_children( const MPI_Comm communicator,
   besthea::mesh::scheduling_time_cluster* parent_cluster );
 
 /**
- * Starts all receive operations given by a vector of pairs of clusters and 
+ * Starts all receive operations given by a vector of pairs of clusters and
  * process ids.
  * @param[in] receive_vector  List of pairs of clusters and process ids
  * @param[in] n_moments_upward  This is the number of entries in the receive
  *                              vector, which corresponds to receive operations
  *                              in the upward path. These entries come first in
  *                              the vector.
- * @param[in] n_moments_m2l  This is the number of entries in the receive 
+ * @param[in] n_moments_m2l  This is the number of entries in the receive
  *                           vector, which corresponds to receive operations
  *                           for M2L. These entries come second in the vector,
- *                           and are followed by the entries for the receive 
+ *                           and are followed by the entries for the receive
  *                           operations in the downward path.
  * @param[in,out] array_of_requests The MPI_Requests of the non-blocking receive
- *                                  operations are stored in this array. It is 
- *                                  expected to have at least the size of 
+ *                                  operations are stored in this array. It is
+ *                                  expected to have at least the size of
  *                                  @p receive_vector .
- * @todo Currently the receives are dummy routines. Received data has to be 
+ * @todo Currently the receives are dummy routines. Received data has to be
  *       exchanged.
  */
-void start_receive_operations( 
-  const std::vector< std::pair< besthea::mesh::scheduling_time_cluster*, lo > > 
+void start_receive_operations(
+  const std::vector< std::pair< besthea::mesh::scheduling_time_cluster*, lo > >
   & receive_vector, const lou n_moments_upward, const lou n_moments_m2l,
   MPI_Request array_of_requests[] );
 

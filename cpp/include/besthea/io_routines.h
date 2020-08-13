@@ -44,7 +44,7 @@
  * @param[in] filename Name of the output file
  */
 template < class T >
-void write_vector_to_bin_file( const std::vector< T > & print_vector, 
+void write_vector_to_bin_file( const std::vector< T > & print_vector,
   const std::string & filename );
 
 /**

@@ -77,7 +77,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   /**
    * Wraps the mapped quadrature point so that they can be private for OpenMP
    * threads
-   * @note This is needed to compute the quadratures of Chebyshev polynomials 
+   * @note This is needed to compute the quadratures of Chebyshev polynomials
    * in space (since these are no longer stored and hence not assembled by
    * the corresponding assembler)
    */
@@ -149,7 +149,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
       _temp_order( 5 ),
       _spat_order( 5 ),
       _m2l_integration_order( _spat_order ),
-      _spat_contribution_size( ( ( _spat_order + 3 ) * ( _spat_order + 2 ) 
+      _spat_contribution_size( ( ( _spat_order + 3 ) * ( _spat_order + 2 )
                                 * ( _spat_order + 1 ) ) / 6 ),
       _contribution_size( ( _temp_order + 1 ) * _spat_contribution_size ),
       _chebyshev( _spat_order ),
@@ -162,10 +162,10 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   /**
    * Destructor
    */
-  virtual ~distributed_pFMM_matrix( ) { 
-    for ( auto it = _clusterwise_nearfield_matrices.begin( ); 
+  virtual ~distributed_pFMM_matrix( ) {
+    for ( auto it = _clusterwise_nearfield_matrices.begin( );
           it != _clusterwise_nearfield_matrices.end( ); ++it ) {
-      // loop over all nearfield matrices associated with a given spacetime 
+      // loop over all nearfield matrices associated with a given spacetime
       // cluster and delete them.
       for ( auto matrix : it->second ) {
         delete matrix;
@@ -215,9 +215,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] distributed_spacetime_tree  The distributed spacetime tree. Its
    *                                        distribution tree is used as the
    *                                        scheduling tree structure.
-   *                                       
    */
-  void set_trees( 
+  void set_trees(
     mesh::distributed_spacetime_cluster_tree * distributed_spacetime_tree );
 
   /**
@@ -234,7 +233,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] dim_domain Number of columns in a block.
    * @param[in] dim_range Number of rows in a block.
    * @note the member variables which are set are inherited from
-   *       @ref block_linear_operator.  
+   *       @ref block_linear_operator.
    * @todo Are these member variables ever used?
    */
   void resize( lo block_dim, lo dim_domain, lo dim_range ) {
@@ -254,9 +253,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     _spat_order = spat_order;
     _temp_order = temp_order;
     _order_regular = order_regular;
-    _spat_contribution_size 
+    _spat_contribution_size
       = ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6;
-    _contribution_size = ( _temp_order + 1 ) * _spat_contribution_size; 
+    _contribution_size = ( _temp_order + 1 ) * _spat_contribution_size;
     _chebyshev.set_order( spat_order );
     _lagrange.set_order( temp_order );
   }
@@ -272,7 +271,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   /**
    * Fills the 4 lists used for scheduling the FMM operations by adding pointers
    * to clusters assigned to the process with id @p _my_process_id . In addition
-   * it determines all pairs of clusters and process ids from which data is 
+   * it determines all pairs of clusters and process ids from which data is
    * received, and initializes the data in the scheduling time clusters which is
    * used to check the dependencies.
    * @note All lists are constructed anew, existing values are overwritten.
@@ -288,8 +287,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * Creates a nearfield matrix for two clusters
    * @param[in] local_leaf_index  Index of the local leaf cluster, which acts
    *                              as the target.
-   * @param[in] source_index  Index of the source cluster in the nearfield list 
-   *                          of the target cluster.  
+   * @param[in] source_index  Index of the source cluster in the nearfield list
+   *                          of the target cluster.
    */
   full_matrix * create_nearfield_matrix( lou leaf_index, lou source_index );
 
@@ -306,10 +305,11 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                    operation.
    * @param[in] time_cluster  Considered scheduling time cluster.
    * @param[in] verbose If true, the required time is written to file.
-   * @param[in] verbose_file  If @p verbose is true, this is used as output file.
+   * @param[in] verbose_file  If @p verbose is true, this is used as output
+   *                          file.
    */
   void call_s2m_operations( const block_vector & sources,
-    mesh::scheduling_time_cluster* time_cluster, bool verbose, 
+    mesh::scheduling_time_cluster* time_cluster, bool verbose,
     std::string verbose_file ) const;
 
   /**
@@ -322,30 +322,31 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @todo Store the quadratures of Chebyshev polynomials in space and Lagrange
    * polynomials in time again?
    */
-  void apply_s2m_operation( const block_vector & source_vector, 
+  void apply_s2m_operation( const block_vector & source_vector,
     mesh::general_spacetime_cluster* source_cluster ) const;
 
   /**
    * Calls all M2M operations associated with a given scheduling time cluster.
    * @param[in] time_cluster  Considered scheduling time cluster.
    * @param[in] verbose If true, the required time is written to file.
-   * @param[in] verbose_file  If @p verbose is true, this is used as output file.
+   * @param[in] verbose_file  If @p verbose is true, this is used as output
+   *                          file.
    */
-  void call_m2m_operations( 
-    mesh::scheduling_time_cluster* time_cluster, bool verbose, 
+  void call_m2m_operations(
+    mesh::scheduling_time_cluster* time_cluster, bool verbose,
     std::string verbose_file ) const;
 
   /**
    * Applies the M2M operations for the given parent cluster and all its
    * children for a given temporal configuration.
    * @param[in] parent_cluster  Considered spacetime parent cluster.
-   * @param[in] child_configuration Indicates for which children the m2m  
+   * @param[in] child_configuration Indicates for which children the m2m
    *                                operations are executed:
    *                                - 0: left children w.r.t. to time.
    *                                - 1: right chilren w.r.t. to time.
    */
-  void apply_grouped_m2m_operation( 
-    mesh::general_spacetime_cluster* parent_cluster, 
+  void apply_grouped_m2m_operation(
+    mesh::general_spacetime_cluster* parent_cluster,
     slou child_configuration ) const;
 
   /**
@@ -355,7 +356,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] temporal_m2m_matrix Matrix used for the temporal m2m operation.
    * @param[in,out] parent_moment Array to which the result is added.
    */
-  void apply_temporal_m2m_operation( const sc* child_moment, 
+  void apply_temporal_m2m_operation( const sc* child_moment,
     const full_matrix & temporal_m2m_matrix, sc *parent_moment ) const;
 
   /**
@@ -363,91 +364,92 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * to a given array.
    * @param[in] child_moment  Array containing the moments of the child cluster.
    * @param[in] n_space_div_parent  Number of refinements in space executed for
-   *                                the parent cluster. 
+   *                                the parent cluster.
    * @param[in] octant  Configuration of the child cluster with respect to its
    *                    parent in space.
-   * @param[in,out] output_array  Array to which the result is added. 
-   * @note  @p n_space_div_parent and @p octant are used to determine the 
+   * @param[in,out] output_array  Array to which the result is added.
+   * @note  @p n_space_div_parent and @p octant are used to determine the
    *        appropriate m2m coefficients for the operation.
    */
-  void apply_spatial_m2m_operation( const sc* child_moment, 
+  void apply_spatial_m2m_operation( const sc* child_moment,
     const lo n_space_div_parent, const slou octant, sc* output_array ) const;
 
   /**
-   * Calls all M2L operations associated with a given pair of scheduling time 
+   * Calls all M2L operations associated with a given pair of scheduling time
    * clusters.
    * @param[in] src_cluster Scheduling time cluster which acts as source in M2L.
    * @param[in] tar_cluster Scheduling time cluster which acts as target in M2L.
    * @param[in] verbose If true, the required time is written to file.
-   * @param[in] verbose_file  If @p verbose is true, this is used as output file.
+   * @param[in] verbose_file  If @p verbose is true, this is used as output
+   *                          file.
    */
   void call_m2l_operations( mesh::scheduling_time_cluster* src_cluster,
-    mesh::scheduling_time_cluster* tar_cluster, bool verbose, 
+    mesh::scheduling_time_cluster* tar_cluster, bool verbose,
     std::string verbose_file ) const;
 
   /**
    * Applies the M2L operation for given source and target clusters.
    * @param[in] src_cluster Spacetime source cluster for the M2L operation.
    * @param[in,out] tar_cluster Spacetime target cluster for the M2L operation.
-   * @todo add buffers instead of reallocation? 
+   * @todo add buffers instead of reallocation?
    * @todo adapt padding when ready.
    */
-  void apply_m2l_operation( const mesh::general_spacetime_cluster* src_cluster, 
+  void apply_m2l_operation( const mesh::general_spacetime_cluster* src_cluster,
     mesh::general_spacetime_cluster* tar_cluster ) const;
 
   /**
    * Calls all L2L operations associated with a given scheduling time cluster.
    * @param[in] time_cluster  Considered scheduling time cluster.
    * @param[in] verbose If true, the required time is written to file.
-   * @param[in] verbose_file  If @p verbose is true, this is used as output file.
-   * @todo Currently dummy routine. 
+   * @param[in] verbose_file  If @p verbose is true, this is used as output
+   *                          file.
    */
-  void call_l2l_operations( 
-    mesh::scheduling_time_cluster* time_cluster, bool verbose, 
+  void call_l2l_operations(
+    mesh::scheduling_time_cluster* time_cluster, bool verbose,
     std::string verbose_file ) const;
 
   /**
    * Applies the L2L operations for the given parent cluster and all its
    * children for a given temporal configuration.
    * @param[in] parent_cluster  Considered spacetime parent cluster.
-   * @param[in] child_configuration Indicates for which children the l2l  
+   * @param[in] child_configuration Indicates for which children the l2l
    *                                operations are executed:
    *                                - 0: left children w.r.t. to time.
    *                                - 1: right chilren w.r.t. to time.
    */
-  void apply_grouped_l2l_operation( 
-    mesh::general_spacetime_cluster* parent_cluster, 
+  void apply_grouped_l2l_operation(
+    mesh::general_spacetime_cluster* parent_cluster,
     slou child_configuration ) const;
 
   /**
    * Applies the temporal l2l operation to a child_moment and adds the result
    * to the parent moment.
-   * @param[in] parent_local_contribution Array containing the moments of the 
+   * @param[in] parent_local_contribution Array containing the moments of the
    *                                      child cluster.
    * @param[in] temporal_l2l_matrix Matrix used for the temporal l2l operation.
-   * @param[in,out] child_local_contribution  Array to which the result is 
+   * @param[in,out] child_local_contribution  Array to which the result is
    *                                          added.
    */
-  void apply_temporal_l2l_operation( const sc* parent_local_contribution, 
-    const full_matrix & temporal_l2l_matrix, 
+  void apply_temporal_l2l_operation( const sc* parent_local_contribution,
+    const full_matrix & temporal_l2l_matrix,
     sc* child_local_contribution ) const;
 
   /**
    * Applies the spatial l2l operation to a child_moment and adds the result
    * to a given array.
-   * @param[in] parent_local Array containing the local 
+   * @param[in] parent_local Array containing the local
    *                                      contributions of the parent cluster.
    * @param[in] n_space_div_parent  Number of refinements in space executed for
-   *                                the parent cluster. 
+   *                                the parent cluster.
    * @param[in] octant  Configuration of the child cluster with respect to its
    *                    parent in space.
-   * @param[in,out] child_local  Array to which the result is 
-   *                                          added. 
-   * @note  @p n_space_div_parent and @p octant are used to determine the 
+   * @param[in,out] child_local  Array to which the result is
+   *                                          added.
+   * @note  @p n_space_div_parent and @p octant are used to determine the
    *        appropriate l2l coefficients for the operation.
    */
-  void apply_spatial_l2l_operation( const sc* parent_local, 
-    const lo n_space_div_parent, const slou octant, 
+  void apply_spatial_l2l_operation( const sc* parent_local,
+    const lo n_space_div_parent, const slou octant,
     sc* child_local ) const;
 
   /**
@@ -455,14 +457,15 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] time_cluster  Considered scheduling time cluster.
    * @param[in,out] output_vector Block vector to which the results are added.
    * @param[in] verbose If true, the required time is written to file.
-   * @param[in] verbose_file  If @p verbose is true, this is used as output file.
+   * @param[in] verbose_file  If @p verbose is true, this is used as output
+   *                          file.
    */
-  void call_l2t_operations( mesh::scheduling_time_cluster* time_cluster, 
-    block_vector & output_vector, bool verbose, 
+  void call_l2t_operations( mesh::scheduling_time_cluster* time_cluster,
+    block_vector & output_vector, bool verbose,
     std::string verbose_file ) const;
 
   /**
-   * Applies the L2T operation for the given source cluster and writes the 
+   * Applies the L2T operation for the given source cluster and writes the
    * result to the appropriate part of the output vector.
    * @param[in] cluster  Considered spacetime cluster.
    * @param[in] output_vector Global result vector to which the result of the
@@ -472,104 +475,105 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @todo Store the quadratures of Chebyshev polynomials in space and Lagrange
    * polynomials in time again?
    */
-  void apply_l2t_operation( const mesh::general_spacetime_cluster* cluster, 
+  void apply_l2t_operation( const mesh::general_spacetime_cluster* cluster,
     block_vector & output_vector ) const;
 
   /**
-   * Executes all nearfield operations associated with a given scheduling time 
+   * Executes all nearfield operations associated with a given scheduling time
    * cluster.
-   * @param[in] cluster Time cluster whose associated nearfield operations 
+   * @param[in] cluster Time cluster whose associated nearfield operations
    *                    are executed.
-   * @param[in] sources Global sources containing the once used for the 
+   * @param[in] sources Global sources containing the once used for the
    *                    nearfield operation.
    * @param[in] trans If true, the transposed nearfield matrices are applied
    *                  otherwise the standard nearfield matrices.
    * @param[in,out] output_vector Vector to which the results are added.
    * @param[in] verbose If true, the required time is written to file.
-   * @param[in] verbose_file  If @p verbose is true, this is used as output 
+   * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
    */
-  void apply_nearfield_operations(  
-    const mesh::scheduling_time_cluster* cluster, 
-    const block_vector & sources, bool trans, block_vector & output_vector, 
+  void apply_nearfield_operations(
+    const mesh::scheduling_time_cluster* cluster,
+    const block_vector & sources, bool trans, block_vector & output_vector,
     bool verbose, std::string verbose_file ) const;
 
   /**
    * Calls MPI_Testsome for an array of Requests to check for received data.
-   * @param[in,out] array_of_requests Array containing the MPI requests which are 
-   *                                  checked.
-   * @param[in,out] array_of_indices  Array in which the indices of the completed
-   *                                  requests are stored. This is used as an 
-   *                                  input variable to avoid reallocation in each
-   *                                  function call.
+   * @param[in,out] array_of_requests Array containing the MPI requests which
+   *                                  are checked.
+   * @param[in,out] array_of_indices  Array in which the indices of the
+   *                                  completed requests are stored. This is
+   *                                  used as an input variable to avoid
+   *                                  reallocation in each function call.
    * @param[in,out] outcount  Stores the number of Requests which are completed.
-   * @param[in] verbose If true, the process lists all the received data, and 
-   *                    reports about the time needed to process it (in case 
+   * @param[in] verbose If true, the process lists all the received data, and
+   *                    reports about the time needed to process it (in case
    *                    moments in the upward path were received)
-   * @param[in] verbose_file  If @p verbose is true, this is used as output file.
+   * @param[in] verbose_file  If @p verbose is true, this is used as output
+   *                          file.
    */
-  void check_for_received_data( MPI_Request * array_of_requests, 
-    int array_of_indices[ ], int & outcount, bool verbose, 
+  void check_for_received_data( MPI_Request * array_of_requests,
+    int array_of_indices[ ], int & outcount, bool verbose,
     std::string verbose_file ) const;
 
   /**
-   * Returns an iterator pointing to the next cluster in the l-list whose 
-   * dependencies are satisfied. In case a cluster is found the status is updated.
-   * If no cluster is found the iterator points to the end of the list and the
-   * status is not modified.
-   * @param[in] l_list  A list containing the clusters of @ref _l_list whose 
+   * Returns an iterator pointing to the next cluster in the l-list whose
+   * dependencies are satisfied. In case a cluster is found the status is
+   * updated. If no cluster is found the iterator points to the end of the list
+   * and the status is not modified.
+   * @param[in] l_list  A list containing the clusters of @ref _l_list whose
    *                    operations have not been executed yet.
-   * @param[out] it_next_cluster  If a cluster is found in the list this iterator 
-   *                              points to it. Else it points to the end of the
-   *                              list. 
+   * @param[out] it_next_cluster  If a cluster is found in the list this
+   *                              iterator points to it. Else it points to the
+   *                              end of the list.
    * @param[out] status Set to 2 if a cluster is found.
    */
-  void find_cluster_in_l_list( 
+  void find_cluster_in_l_list(
     std::list< mesh::scheduling_time_cluster* > & l_list,
-    std::list< mesh::scheduling_time_cluster* >::iterator & 
+    std::list< mesh::scheduling_time_cluster* >::iterator &
       it_next_cluster, char & status ) const;
 
   /**
-   * Returns an iterator pointing to the next cluster in the m-list whose 
-   * dependencies are satisfied. In case a cluster is found the status is updated.
-   * If no cluster is found the iterator points to the end of the list and the
-   * status is not modified.
-   * @param[in] m_list  A list containing the clusters of @ref _m_list whose 
+   * Returns an iterator pointing to the next cluster in the m-list whose
+   * dependencies are satisfied. In case a cluster is found the status is
+   * updated. If no cluster is found the iterator points to the end of the list
+   * and the status is not modified.
+   * @param[in] m_list  A list containing the clusters of @ref _m_list whose
    *                    operations have not been executed yet.
-   * @param[out] it_next_cluster  If a cluster is found in the list this iterator 
-   *                              points to it. Else it points to the end of the
-   *                              list. 
+   * @param[out] it_next_cluster  If a cluster is found in the list this
+   *                              iterator points to it. Else it points to the
+   *                              end of the list.
    * @param[out] status Set to 1 if a cluster is found.
    */
-  void find_cluster_in_m_list( 
+  void find_cluster_in_m_list(
     std::list< mesh::scheduling_time_cluster* > & m_list,
-    std::list< mesh::scheduling_time_cluster* >::iterator & 
+    std::list< mesh::scheduling_time_cluster* >::iterator &
       it_next_cluster, char & status ) const;
 
   /**
-   * Returns an iterator pointing to the next cluster in the m2l-list whose 
-   * dependencies are satisfied. In case a cluster is found the status is updated.
-   * If no cluster is found the iterator points to the end of the list and the
-   * status is not modified.
-   * @param[in] m2l_list  A list containing the clusters of @ref _m2l_list whose 
+   * Returns an iterator pointing to the next cluster in the m2l-list whose
+   * dependencies are satisfied. In case a cluster is found the status is
+   * updated. If no cluster is found the iterator points to the end of the list
+   * and the status is not modified.
+   * @param[in] m2l_list  A list containing the clusters of @ref _m2l_list whose
    *                      operations have not been executed yet.
-   * @param[out] it_next_cluster  If a cluster is found in the list this iterator 
-   *                              points to it. Else it points to the end of the
-   *                              list. 
+   * @param[out] it_next_cluster  If a cluster is found in the list this
+   *                              iterator points to it. Else it points to the
+   *                              end of the list.
    * @param[out] status Set to 3 if a cluster is found.
    */
-  void find_cluster_in_m2l_list( 
+  void find_cluster_in_m2l_list(
     std::list< mesh::scheduling_time_cluster* > & m2l_list,
-    std::list< mesh::scheduling_time_cluster* >::iterator & 
+    std::list< mesh::scheduling_time_cluster* >::iterator &
       it_next_cluster, char & status ) const;
 
   /**
    * Updates dependency flags or sends moments for M2L operations.
-   * @param[in] src_cluster Considered scheduling time cluster. If a cluster in 
+   * @param[in] src_cluster Considered scheduling time cluster. If a cluster in
    *                        its send list is handled by a different process, the
    *                        moments are send to this process.
    */
-  void provide_moments_for_m2l( 
+  void provide_moments_for_m2l(
     mesh::scheduling_time_cluster* src_cluster ) const;
 
   /**
@@ -577,50 +581,50 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] child_cluster Considered scheduling time cluster. If its parent
    *                          is handled by a different process, the processed
    *                          moments are send from the local copy of the parent
-   *                          cluster to this process. 
+   *                          cluster to this process.
    */
-  void provide_moments_to_parents( 
+  void provide_moments_to_parents(
     mesh::scheduling_time_cluster* child_cluster ) const;
 
   /**
    * Sends local contributions for downward path if necessary.
    * @param[in] parent_cluster Considered scheduling time cluster. If a child
-   *                           of it is handled by a different process, the 
+   *                           of it is handled by a different process, the
    *                           local contributions are send to this process.
    */
-  void provide_local_contributions_to_children( 
+  void provide_local_contributions_to_children(
     mesh::scheduling_time_cluster* parent_cluster ) const;
 
   /**
-   * Starts all receive operations given by a vector of pairs of clusters and 
+   * Starts all receive operations given by a vector of pairs of clusters and
    * process ids.
-   * @param[in,out] array_of_requests The MPI_Requests of the non-blocking receive
-   *                                  operations are stored in this array. It is 
-   *                                  expected to have at least the size of 
-   *                                  @p receive_vector .
+   * @param[in,out] array_of_requests The MPI_Requests of the non-blocking
+   *                                  receive operations are stored in this
+   *                                  array. It is expected to have at least
+   *                                  the size of @p receive_vector .
    */
   void start_receive_operations( MPI_Request array_of_requests[ ] ) const ;
 
   /**
    * Compute quadrature of the Chebyshev polynomials and p0 basis functions for
    * the spatial part of a spacetime cluster
-   * @param[in] source_cluster  Cluster for whose spatial component the 
+   * @param[in] source_cluster  Cluster for whose spatial component the
    *                            quadratures are computed
-   * @param[out]  T Full matrix where the quadratures are stored. The elements of 
-   *                the cluster vary along the rows, the order of the polynomial
-   *                along the columns of the matrix.
+   * @param[out]  T Full matrix where the quadratures are stored. The elements
+   *                of the cluster vary along the rows, the order of the
+   *                polynomial along the columns of the matrix.
    * @todo Include padding appropriately.
    */
-  void compute_chebyshev_quadrature_p0( 
+  void compute_chebyshev_quadrature_p0(
     const mesh::general_spacetime_cluster* source_cluster,
     full_matrix & T ) const;
 
   void compute_lagrange_quadrature(
-    const mesh::general_spacetime_cluster* source_cluster, 
+    const mesh::general_spacetime_cluster* source_cluster,
     full_matrix & L ) const;
 
   /*!
-   * Computes coupling coefficients for the spacetime m2l operation for one of 
+   * Computes coupling coefficients for the spacetime m2l operation for one of
    * the three space dimensions implicitly given.
    * @param[in] src_time_nodes  Interpolation nodes in time for the source
    *                            cluster.
@@ -628,7 +632,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                            cluster.
    * @param[in] cheb_nodes  Chebyshev nodes of degree ( _spat_order + 1 )
    * @param[in] evaluated_chebyshev Vector of evaluated Chebyshev polynomials
-   *                                with degree <= _spat_order at \p cheb_nodes 
+   *                                with degree <= _spat_order at \p cheb_nodes
    *                                as given by
    *                           @ref besthea::bem::chebyshev_evaluator::evaluate.
    * @param[in] half_size Half size in space of the current clusters along the
@@ -636,11 +640,11 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] center_diff The appropriate component of the difference vector
    *                        (target_center - source_center).
    * @param[in] buffer_for_gaussians  Vector with size >= ( _spat_order + 1 )^2
-   *                                  * ( _temp_order + 1 )^2 to store 
+   *                                  * ( _temp_order + 1 )^2 to store
    *                                  intermediate results in the computation
    *                                  of the m2l coefficients.
    * @param[in,out] coupling_coeffs Vector with size >= ( _spat_order + 1 )^2
-   *                                * ( _temp_order + 1 )^2 to store m2l 
+   *                                * ( _temp_order + 1 )^2 to store m2l
    *                                coefficients.
    */
   void compute_coupling_coeffs( const vector_type & src_time_nodes,
@@ -694,20 +698,20 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   const MPI_Comm * _comm; //!< MPI communicator associated with the pFMM matrix.
   int _my_rank; //!< MPI rank of current process.
-  mesh::distributed_spacetime_cluster_tree * 
-    _distributed_spacetime_tree;  //!< part of a distributed tree hierarchically 
-                                  //!< decomposing the space-time domain. 
+  mesh::distributed_spacetime_cluster_tree *
+    _distributed_spacetime_tree;  //!< part of a distributed tree hierarchically
+                                  //!< decomposing the space-time domain.
   mesh::tree_structure *
     _scheduling_tree_structure; //!< Temporal tree structure used for scheduling
                                 //!< the FMM operations
 
-  std::unordered_map< mesh::general_spacetime_cluster *, 
+  std::unordered_map< mesh::general_spacetime_cluster *,
                       std::vector< full_matrix* > >
     _clusterwise_nearfield_matrices;  //!< nearfield matrices for all the space-
                                       //!< time leaf clusters and their
                                       //!< nearfield clusters.
-  
-  std::list< mesh::scheduling_time_cluster* > 
+
+  std::list< mesh::scheduling_time_cluster* >
     _m_list;  //!< M-list for the execution of the FMM.
   std::list< mesh::scheduling_time_cluster* >
     _m2l_list; //!< M2L-list for the execution of the FMM.
@@ -715,32 +719,32 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     _l_list;  //!< L2L-list for the execution of the FMM.
   std::list< mesh::scheduling_time_cluster* >
     _n_list;  //!< N-list for the execution of the FMM.
-  std::vector< std::pair< mesh::scheduling_time_cluster*, lo > >  
+  std::vector< std::pair< mesh::scheduling_time_cluster*, lo > >
     _receive_data_information;  //!< Contains for each data which has to be
                                 //!< received the corresponding scheduling time
                                 //!< cluster to which the data belongs and the
                                 //!< id of the process which sends it. The data
-                                //!< is either the moments or the local 
+                                //!< is either the moments or the local
                                 //!< contributions of the associated cluster.
-                                //!< The first @p _n_moments_to_receive_upward 
+                                //!< The first @p _n_moments_to_receive_upward
                                 //!< entries belong to moments which have to be
                                 //!< received in the upward path of the FMM, the
-                                //!< next @p _n_moments_to_receive_m2l entries   
-                                //!< to moments which have to be received for 
-                                //!< M2L operations and the remaining entries to 
-                                //!< local contributions which have to be 
+                                //!< next @p _n_moments_to_receive_m2l entries
+                                //!< to moments which have to be received for
+                                //!< M2L operations and the remaining entries to
+                                //!< local contributions which have to be
                                 //!< received in the downward path.
   lou _n_moments_to_receive_upward; //!< Number of grouped moments which have to
                                     //!< be received in the upward path of the
                                     //!< FMM.
-  lou _n_moments_to_receive_m2l;  //!< Number of grouped moments which have to 
+  lou _n_moments_to_receive_m2l;  //!< Number of grouped moments which have to
                                   //!< be received for M2L operations.
 
   std::vector< vector_type >
-    _m2m_coeffs_s_dim_0_left;  //!< left spatial m2m matrices along dimension 0 
+    _m2m_coeffs_s_dim_0_left;  //!< left spatial m2m matrices along dimension 0
                                //!< stored levelwise.
   std::vector< vector_type >
-    _m2m_coeffs_s_dim_0_right;  //!< right spatial m2m matrices along 
+    _m2m_coeffs_s_dim_0_right;  //!< right spatial m2m matrices along
                                 //!< dimension 0 stored levelwise.
   std::vector< vector_type >
     _m2m_coeffs_s_dim_1_left;  //!< left spatial m2m matrices along dimension 1
@@ -764,8 +768,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
                                //!< points are used for the approximation of
                                //!< the m2l coefficients.
   int _spat_contribution_size;  //!< Spatial size of a contribution. It is
-                                //!< _spat_order + 3 choose 3 
-  int _contribution_size; //!< Size of a contribution (moment or local 
+                                //!< _spat_order + 3 choose 3
+  int _contribution_size; //!< Size of a contribution (moment or local
                           //!< contribution) of a single spacetime cluster.
   mutable bem::chebyshev_evaluator
     _chebyshev;  //!< Evaluator of the Chebyshev polynomials.

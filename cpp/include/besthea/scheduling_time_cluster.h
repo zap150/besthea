@@ -63,15 +63,15 @@ class besthea::mesh::scheduling_time_cluster {
   /**
    * Constructor.
    * @param[in] center  Center of the cluster.
-   * @param[in] half_size Half size of the cluster. 
+   * @param[in] half_size Half size of the cluster.
    * @param[in] parent Pointer to the cluster's parent.
    * @param[in] level Level within the cluster tree structure.
-   * @param[in] process_id  Id of the process which is responsible for the 
+   * @param[in] process_id  Id of the process which is responsible for the
    *                        cluster in an MPI parallelized FMM. Default value
    *                        is -1.
    */
-  scheduling_time_cluster( sc center, sc half_size, 
-    scheduling_time_cluster * parent, short left_right, lo level, 
+  scheduling_time_cluster( sc center, sc half_size,
+    scheduling_time_cluster * parent, short left_right, lo level,
     lo process_id = -1 )
     : _center( center ),
       _half_size ( half_size ),
@@ -131,7 +131,7 @@ class besthea::mesh::scheduling_time_cluster {
       delete _ready_interaction_list;
     if ( _associated_spacetime_clusters != nullptr )
       delete _associated_spacetime_clusters;
-    if ( _associated_moments != nullptr ) 
+    if ( _associated_moments != nullptr )
       delete [] _associated_moments;
     if ( _associated_local_contributions != nullptr )
       delete [] _associated_local_contributions;
@@ -143,7 +143,7 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Deletes the nearfield 
+   * Deletes the nearfield
    */
   void delete_nearfield( ) {
     delete _nearfield_list;
@@ -252,7 +252,7 @@ class besthea::mesh::scheduling_time_cluster {
   const std::vector< scheduling_time_cluster * > * get_children( ) const {
     return _children;
   }
-  
+
   /**
    * Returns a pointer to the parent.
    */
@@ -293,7 +293,7 @@ class besthea::mesh::scheduling_time_cluster {
   /**
    * Returns the levelwise index of the cluster in the cluster tree.
    * @note The clusters are enumerated according to a tree traversal, see
-   * @ref besthea::mesh::tree_structure::set_indices for more details. 
+   * @ref besthea::mesh::tree_structure::set_indices for more details.
    */
   lo get_global_index( ) const {
     return _global_index;
@@ -404,7 +404,7 @@ class besthea::mesh::scheduling_time_cluster {
    /**
    * Returns a pointer to the const interaction list.
    */
-  const std::vector< scheduling_time_cluster * > * 
+  const std::vector< scheduling_time_cluster * > *
     get_interaction_list( ) const {
     return _interaction_list;
   }
@@ -429,20 +429,20 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Determines admissibility based on the "neighborhood criterion" (as in 
+   * Determines admissibility based on the "neighborhood criterion" (as in
    * Messner's work).
    * @param[in] src_cluster Source cluster whose admissibility is checked.
    * @warning This check of admissibility is only reasonable for clusters at the
    * same level of a tree.
-   * @note The current criterion guarantees that the distance in time of two 
-   * admissible clusters is greater than the minimum of the half sizes of the 
-   * two clusters. 
+   * @note The current criterion guarantees that the distance in time of two
+   * admissible clusters is greater than the minimum of the half sizes of the
+   * two clusters.
    */
   bool determine_admissibility( scheduling_time_cluster * src_cluster ) {
     bool admissibility = false;
     sc src_center = src_cluster->get_center( );
     sc src_half_size = src_cluster->get_half_size( );
-    sc min_half_size 
+    sc min_half_size
       = ( src_half_size < _half_size ) ? src_half_size : _half_size;
     if ( src_center < _center - _half_size - src_half_size - min_half_size ) {
       admissibility = true;
@@ -496,10 +496,10 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Returns a pointer to the (const!) list of clusters which are ready for 
+   * Returns a pointer to the (const!) list of clusters which are ready for
    * interactions.
    */
-  const std::vector< scheduling_time_cluster * > * 
+  const std::vector< scheduling_time_cluster * > *
     get_ready_interaction_list( ) const {
     return _ready_interaction_list;
   }
@@ -513,7 +513,7 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Sets a flag which indicates if the cluster is active in the upward path of 
+   * Sets a flag which indicates if the cluster is active in the upward path of
    * the FMM.
    * \param[in] new_status  Value to set.
    */
@@ -522,7 +522,7 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Indicates if the cluster is active in the upward path, i.e. moments of 
+   * Indicates if the cluster is active in the upward path, i.e. moments of
    * associated spacetime clusters have to be computed.
    */
   bool is_active_in_upward_path( ) const {
@@ -530,7 +530,7 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Sets a flag which indicates if the cluster is active in the downward path 
+   * Sets a flag which indicates if the cluster is active in the downward path
    * of the FMM.
    * \param[in] new_status  Value to set.
    */
@@ -600,12 +600,12 @@ class besthea::mesh::scheduling_time_cluster {
   /**
    * Adds a space-time cluster to @p _associated_spacetime_clusters.
    * @param[in] cluster Cluster which is added to the list.
-   * @note If @p _associated_spacetime_clusters is not allocated this is done 
+   * @note If @p _associated_spacetime_clusters is not allocated this is done
    * here.
    */
   void add_associated_spacetime_cluster( general_spacetime_cluster* cluster ) {
     if ( _associated_spacetime_clusters == nullptr ) {
-      _associated_spacetime_clusters 
+      _associated_spacetime_clusters
         = new std::vector< general_spacetime_cluster* >( );
     }
     _associated_spacetime_clusters->push_back( cluster );
@@ -614,7 +614,7 @@ class besthea::mesh::scheduling_time_cluster {
   /**
    * Returns a pointer to the const list of associated spacetime clusters.
    */
-  const std::vector< general_spacetime_cluster* >* 
+  const std::vector< general_spacetime_cluster* >*
     get_associated_spacetime_clusters( ) const {
     return _associated_spacetime_clusters;
   }
@@ -622,7 +622,7 @@ class besthea::mesh::scheduling_time_cluster {
   /**
    * Returns a pointer to the list of associated spacetime clusters.
    */
-  std::vector< general_spacetime_cluster* >* 
+  std::vector< general_spacetime_cluster* >*
     get_associated_spacetime_clusters( ) {
     return _associated_spacetime_clusters;
   }
@@ -711,32 +711,32 @@ class besthea::mesh::scheduling_time_cluster {
   /**
    * Adds an entry to the map from process ids to moments.
    * @param[in] proc_id Key value of the element to be added
-   * @note @p _map_to_moment_receive_buffers is allocated if it does not exist 
+   * @note @p _map_to_moment_receive_buffers is allocated if it does not exist
    * allready.
    */
   void add_receive_buffer( const lo proc_id ) {
     if ( _map_to_moment_receive_buffers == nullptr ) {
       _map_to_moment_receive_buffers = new std::map< lo, lou >( );
     }
-    sc * moment_buffer 
+    sc * moment_buffer
       = new sc [ _contribution_size * _associated_spacetime_clusters->size( ) ];
     _associated_moments_receive_buffers.push_back( moment_buffer );
-    _map_to_moment_receive_buffers->insert( 
+    _map_to_moment_receive_buffers->insert(
       { proc_id, _associated_moments_receive_buffers.size( ) - 1 } );
   }
 
   /**
-   * Returns a pointer to the position where the moments of an extraneous 
+   * Returns a pointer to the position where the moments of an extraneous
    * process are stored.
    * @param[in] proc_id Id of the extraneous process.
    */
   sc* get_extraneous_moment_pointer( lo proc_id ) {
-    return _associated_moments_receive_buffers[ 
+    return _associated_moments_receive_buffers[
       _map_to_moment_receive_buffers->at( proc_id ) ];
   }
 
   /**
-   * Determines the tree structure of the subtree whose root is the current 
+   * Determines the tree structure of the subtree whose root is the current
    * cluster.
    * @return  A vector of the tree structure in the usual tree format
    *          (see @ref time_cluster_tree::compute_tree_structure )
@@ -755,20 +755,20 @@ class besthea::mesh::scheduling_time_cluster {
   /**
    * Adds the status of the two children of the current cluster to the end
    * of the tree structure vector.
-   * 
+   *
    * The status is:
    * - 0: if the child does not exist.
    * - 1: if the child is a non-leaf cluster.
    * - 2: if the child is a leaf cluster.
-   * 
+   *
    * The routine is called recursively for the children (first left child, then
    * right child)
-   * @param[in,out] tree_vector Vector to which the status of the children is 
+   * @param[in,out] tree_vector Vector to which the status of the children is
    *                            added.
    * @warning This routine has to be called for a non-leaf cluster only,
    *          otherwise a segmentation fault occurs.
    */
-  void append_tree_structure_vector_recursively( 
+  void append_tree_structure_vector_recursively(
     std::vector< char > & tree_vector ) const {
     char left_child_status = 0;
     char right_child_status = 0;
@@ -817,7 +817,7 @@ class besthea::mesh::scheduling_time_cluster {
       return nullptr;
     }
   }
-  
+
   /**
    * Determines whether the current cluster is the left child of its parent.
    * @note If the current cluster is the root of the tree \p false is returned.
@@ -825,27 +825,27 @@ class besthea::mesh::scheduling_time_cluster {
   bool is_left_child( ) const {
     if ( _parent == nullptr )
       return false;
-    else 
+    else
       return ( this == _parent->_children->front( ) );
   }
 
   /**
-   * Allocates an array containing all the moments of the associated 
-   * spacetime clusters. In addition, for each associated spacetime cluster it 
+   * Allocates an array containing all the moments of the associated
+   * spacetime clusters. In addition, for each associated spacetime cluster it
    * sets the pointer to the appropriate moment.
    * @param[in] moment_size Size of the moment of a single space-time cluster.
-   * @note Before calling this routine the spacetime clusters have to be 
+   * @note Before calling this routine the spacetime clusters have to be
    * associated with this cluster.
    */
   void allocate_associated_moments( const lou moment_size ) {
     if ( _associated_moments == nullptr ) {
       _contribution_size = moment_size;
-      _associated_moments 
+      _associated_moments
         = new sc [ moment_size * _associated_spacetime_clusters->size( ) ];
       for ( lou i = 0; i < _associated_spacetime_clusters->size( ); ++i ) {
-        general_spacetime_cluster * current_spacetime_cluster 
+        general_spacetime_cluster * current_spacetime_cluster
           = ( *_associated_spacetime_clusters )[ i ];
-        current_spacetime_cluster->set_pointer_to_moment( 
+        current_spacetime_cluster->set_pointer_to_moment(
           & _associated_moments[ i * moment_size ] );
       }
     } else {
@@ -859,8 +859,8 @@ class besthea::mesh::scheduling_time_cluster {
    */
   void clear_associated_moments( ) {
     if ( _associated_moments != nullptr ) {
-      for ( lou i = 0; 
-            i < _contribution_size * _associated_spacetime_clusters->size( ); 
+      for ( lou i = 0;
+            i < _contribution_size * _associated_spacetime_clusters->size( );
             ++i  ) {
         _associated_moments[ i ] = 0.0;
       }
@@ -875,24 +875,24 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Allocates an array containing all the local contributions of the associated 
-   * spacetime clusters. In addition, for each associated spacetime cluster it 
+   * Allocates an array containing all the local contributions of the associated
+   * spacetime clusters. In addition, for each associated spacetime cluster it
    * sets the pointer to the appropriate local contribution.
-   * @param[in] contribution_size Size of the local contribution of a single 
+   * @param[in] contribution_size Size of the local contribution of a single
    *                              space-time cluster.
-   * @note Before calling this routine the spacetime clusters have to be 
+   * @note Before calling this routine the spacetime clusters have to be
    * associated with this cluster.
    */
   void allocate_associated_local_contributions( const lou contribution_size ) {
     if ( _associated_local_contributions == nullptr ) {
       _contribution_size = contribution_size;
       _associated_local_contributions
-        = new sc [ contribution_size 
+        = new sc [ contribution_size
                   * _associated_spacetime_clusters->size( ) ];
       for ( lou i = 0; i < _associated_spacetime_clusters->size( ); ++i ) {
-        general_spacetime_cluster * current_spacetime_cluster 
+        general_spacetime_cluster * current_spacetime_cluster
           = ( *_associated_spacetime_clusters )[ i ];
-        current_spacetime_cluster->set_pointer_to_local_contribution( 
+        current_spacetime_cluster->set_pointer_to_local_contribution(
           & _associated_local_contributions[ i * contribution_size ] );
       }
     } else {
@@ -906,8 +906,8 @@ class besthea::mesh::scheduling_time_cluster {
    */
   void clear_associated_local_contributions( ) {
     if ( _associated_local_contributions != nullptr ) {
-      for ( lou i = 0; 
-           i < _contribution_size * _associated_spacetime_clusters->size( ); 
+      for ( lou i = 0;
+           i < _contribution_size * _associated_spacetime_clusters->size( );
            ++i  ) {
         _associated_local_contributions[ i ] = 0.0;
       }
@@ -925,9 +925,9 @@ class besthea::mesh::scheduling_time_cluster {
    * Prints info of the object.
    */
   void print( lo executing_process_id = -1 ) {
-    std::cout << "level: " << _level 
+    std::cout << "level: " << _level
               << ", center: " << _center << ", half size: " << _half_size
-              << ", global_index: " << _global_index 
+              << ", global_index: " << _global_index
               << ", proc_id: " << _process_id;
     if ( _global_leaf_status ) {
       std::cout << ", is global leaf";
@@ -935,23 +935,23 @@ class besthea::mesh::scheduling_time_cluster {
     // if ( _nearfield_list != nullptr ) {
     //   std::cout << ", nearfield: ";
     //   for ( lou i = 0; i < _nearfield_list->size( ); ++i ) {
-    //     std::cout << "(" << ( *_nearfield_list )[ i ]->get_level( ) << ", "  
+    //     std::cout << "(" << ( *_nearfield_list )[ i ]->get_level( ) << ", "
     //               << ( *_nearfield_list )[ i ]->get_global_index( ) << "), ";
     //   }
     // }
     // if ( _interaction_list != nullptr ) {
     //   std::cout << "interaction_list: ";
     //   for ( lou i = 0; i < _interaction_list->size( ); ++i ) {
-    //     std::cout << "(" << ( *_interaction_list )[ i ]->get_level( ) << ", "  
-    //               << ( *_interaction_list )[ i ]->get_global_index( ) 
+    //     std::cout << "(" << ( *_interaction_list )[ i ]->get_level( ) << ", "
+    //               << ( *_interaction_list )[ i ]->get_global_index( )
     //               << "), ";
     //   }
     // }
     // if ( _send_list != nullptr ) {
     //   std::cout << "send_list: ";
     //   for ( lou i = 0; i < _send_list->size( ); ++i ) {
-    //     std::cout << "(" << ( *_send_list )[ i ]->get_level( ) << ", "  
-    //               << ( *_send_list )[ i ]->get_global_index( ) 
+    //     std::cout << "(" << ( *_send_list )[ i ]->get_level( ) << ", "
+    //               << ( *_send_list )[ i ]->get_global_index( )
     //               << "), ";
     //   }
     // }
@@ -963,7 +963,7 @@ class besthea::mesh::scheduling_time_cluster {
       if ( _process_id == executing_process_id ) {
         std::cout << ", number of associated leaves: " << _n_associated_leaves
                 << ", number of associated non-leaves: "
-                <<  _associated_spacetime_clusters->size( ) 
+                <<  _associated_spacetime_clusters->size( )
                     - _n_associated_leaves;
       }
       else {
@@ -984,9 +984,9 @@ class besthea::mesh::scheduling_time_cluster {
   sc _center;       //!< Center of the cluster.
   sc _half_size;    //!< Half size of the cluster.
   scheduling_time_cluster * _parent;  //!< Parent of the cluster.
-  short _left_right;  //!< Indicates if the child is the left (0), or right (1) 
+  short _left_right;  //!< Indicates if the child is the left (0), or right (1)
                       //!< child of its parent.
-  std::vector< scheduling_time_cluster * > 
+  std::vector< scheduling_time_cluster * >
     * _children;    //!< Children of the cluster.
   lo _level;        //!< Level within the cluster tree.
   lo _global_index; //!< Global index of the cluster. The children of a cluster
@@ -998,8 +998,8 @@ class besthea::mesh::scheduling_time_cluster {
   bool _global_leaf_status; //!< indicates whether the cluster is a leaf (1) or
                             //!< non-leaf in a global tree structure
   bool _mesh_available; //!< Indicates whether the process who owns the cluster
-                        //!< has access to the corresponding mesh. Only relevant 
-                        //!< in a distribution tree in a distributed spacetime 
+                        //!< has access to the corresponding mesh. Only relevant
+                        //!< in a distribution tree in a distributed spacetime
                         //!< tensor mesh. It is set to true for leaf clusters
                         //!< which are either local or in the nearfield of local
                         //!< clusters. It is set in
@@ -1009,9 +1009,9 @@ class besthea::mesh::scheduling_time_cluster {
   std::vector< scheduling_time_cluster * >
     * _interaction_list;  //!< Interaction list of the cluster.
   std::vector< scheduling_time_cluster * >
-    * _send_list;   //!< Contains all clusters in whose interaction list the 
+    * _send_list;   //!< Contains all clusters in whose interaction list the
                     //!< cluster is contained.
-  char _essential_status; //!< Indicates the status of a cluster in a 
+  char _essential_status; //!< Indicates the status of a cluster in a
                           //!< distributed tree. Possible status are:
                           //!< - 0: not essential
                           //!< - 1: essential for time cluster only
@@ -1019,50 +1019,50 @@ class besthea::mesh::scheduling_time_cluster {
                           //!< - 3: local, i.e. directly essential
                           //!< The status is assigned when the tree containing
                           //!< the cluster is reduced to the locally essential
-                          //!< tree, see 
-                          //!< @ref tree_structure::reduce_2_essential . 
+                          //!< tree, see
+                          //!< @ref tree_structure::reduce_2_essential .
   bool _active_upward_path; //!< Indicates if the cluster is active in the
                             //!< upward path of the FMM.
   bool _active_downward_path; //!< Indicates if the cluster is active in the
                               //!< downward path of the FMM.
-  lo _upward_path_counter; //!< Used to keep track of the dependencies in the 
+  lo _upward_path_counter; //!< Used to keep track of the dependencies in the
                            //!< upward path. If it is 0, the dependencies are
                            //!< fulfilled.
-  std::vector< scheduling_time_cluster * > 
+  std::vector< scheduling_time_cluster * >
     * _ready_interaction_list; //!< Clusters from the interaction list are added
                                //!< to this list, when their moments are ready.
                                //!< It is used to manage the execution of M2L
                                //!< operations in the distributed FMM.
   lou _m2l_counter;  //!< Used to keep track of the completed m2l operations.
-  char _downward_path_status; //!< Used to keep track of the status in the 
+  char _downward_path_status; //!< Used to keep track of the status in the
                               //!< downward path. Three status are distinguished
                               //!< - 0: L2L not executed,
-                              //!< - 1: L2L executed, local contributions not 
+                              //!< - 1: L2L executed, local contributions not
                               //!<      ready,
                               //!< - 2: local contributions ready.
   std::vector< general_spacetime_cluster* >
-    * _associated_spacetime_clusters; //!< List of space-time clusters 
-                                      //!< associated to the scheduling time 
+    * _associated_spacetime_clusters; //!< List of space-time clusters
+                                      //!< associated to the scheduling time
                                       //!< cluster.
   lou _n_associated_leaves;  //!< Number of associated space-time leaf clusters.
-                             //!< These are first in the list of associated 
+                             //!< These are first in the list of associated
                              //!< space-time clusters.
   sc * _associated_moments; //!< Array containing all the moments of the
                             //!< associated general spacetime clusters.
   sc * _associated_local_contributions; //!< Array containing all the local
                                         //!< contributions of the associated
-                                        //!< general spacetime clusters.  
-  lou _contribution_size; //!< Size of a single contribution (moments or local 
-                          //!< contribution) in the array of associated 
+                                        //!< general spacetime clusters.
+  lou _contribution_size; //!< Size of a single contribution (moments or local
+                          //!< contribution) in the array of associated
                           //!< contributions
-  std::vector< sc * > 
-    _associated_moments_receive_buffers;  //!< In case that moments have to be 
-                                          //!< received from other processes 
-                                          //!< they are written into these 
+  std::vector< sc * >
+    _associated_moments_receive_buffers;  //!< In case that moments have to be
+                                          //!< received from other processes
+                                          //!< they are written into these
                                           //!< buffers.
-  std::map< lo, lou > 
-    * _map_to_moment_receive_buffers; //!< Map to access the correct position in 
-                                //!< @p _associated_moments_receive_buffers for 
+  std::map< lo, lou >
+    * _map_to_moment_receive_buffers; //!< Map to access the correct position in
+                                //!< @p _associated_moments_receive_buffers for
                                 //!< extraneous children.
   sc _moment; //!< Stores a moment in FMM TEMPORARY
   sc _local_contribution; //!< Stores a local contribution in FMM TEMPORARY

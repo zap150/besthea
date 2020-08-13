@@ -73,11 +73,11 @@ std::vector< char > besthea::mesh::time_cluster_tree::compute_tree_structure( )
   return tree_vector;
 }
 
-void besthea::mesh::time_cluster_tree::compute_cluster_bounds( 
-  time_cluster & root, 
-  std::unordered_map< time_cluster*, std::pair< sc, sc > > & cluster_bounds ) 
+void besthea::mesh::time_cluster_tree::compute_cluster_bounds(
+  time_cluster & root,
+  std::unordered_map< time_cluster*, std::pair< sc, sc > > & cluster_bounds )
   const {
-  sc left_bound, right_bound; 
+  sc left_bound, right_bound;
   if ( root.get_n_children( ) > 0 ) {
     const std::vector< time_cluster* > * children = root.get_children( );
     for ( auto it : *children ) {
@@ -102,11 +102,11 @@ void besthea::mesh::time_cluster_tree::compute_cluster_bounds(
       }
     }
   }
-  cluster_bounds.emplace( 
+  cluster_bounds.emplace(
     &root, std::pair< sc, sc >( left_bound, right_bound ) );
 }
 
-void besthea::mesh::time_cluster_tree::print_cluster_bounds( 
+void besthea::mesh::time_cluster_tree::print_cluster_bounds(
   const std::string filename ) const {
   std::unordered_map< time_cluster*, std::pair< sc, sc > > cluster_bounds;
   compute_cluster_bounds( *_root, cluster_bounds );
@@ -118,7 +118,7 @@ void besthea::mesh::time_cluster_tree::print_cluster_bounds(
     // if root is not a leaf add the bounds of the clusters in the tree to the
     // vector according to the tree format.
     if ( _root->get_n_children( ) > 0 ) {
-      convert_cluster_bounds_map_2_tree_format( 
+      convert_cluster_bounds_map_2_tree_format(
         *_root, cluster_bounds, cluster_bounds_vector );
     }
     write_vector_to_bin_file( cluster_bounds_vector, filename );
@@ -127,7 +127,7 @@ void besthea::mesh::time_cluster_tree::print_cluster_bounds(
     std::cout << "Error: Corrupted temporeal tree! _root is nullptr."
               << std::endl;
   }
-  
+
 }
 
 std::vector< lo > besthea::mesh::time_cluster_tree::compute_process_assignments(
@@ -565,7 +565,7 @@ void besthea::mesh::time_cluster_tree::convert_assignment_vector_2_tree_format(
   }
 }
 
-void besthea::mesh::time_cluster_tree::convert_cluster_bounds_map_2_tree_format( 
+void besthea::mesh::time_cluster_tree::convert_cluster_bounds_map_2_tree_format(
   const time_cluster & root,
   const std::unordered_map< time_cluster*, std::pair< sc, sc > > & bounds_map,
   std::vector< sc > & bounds_vector ) const {
@@ -577,7 +577,7 @@ void besthea::mesh::time_cluster_tree::convert_cluster_bounds_map_2_tree_format(
     bounds_vector.push_back( bounds_map.at( it ).second );
   }
   if ( ( *children )[ 0 ]->get_n_children( ) > 0 ) {
-    convert_cluster_bounds_map_2_tree_format( 
+    convert_cluster_bounds_map_2_tree_format(
       *( *children )[ 0 ], bounds_map, bounds_vector );
   }
   if ( ( *children )[ 1 ]->get_n_children( ) > 0 ) {

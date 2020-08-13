@@ -35,7 +35,7 @@
 
 template< class basis_type >
 besthea::bem::distributed_fast_spacetime_be_space< basis_type >::
-  distributed_fast_spacetime_be_space( 
+  distributed_fast_spacetime_be_space(
   mesh::distributed_spacetime_cluster_tree & tree )
   : spacetime_be_space< basis_type >( tree.get_mesh( ) ), _tree( &tree ) {
 }
@@ -52,7 +52,7 @@ besthea::bem::distributed_fast_spacetime_be_space<
  * @todo adapt this
  */
 // template<>
-// void besthea::bem::distributed_fast_spacetime_be_space< 
+// void besthea::bem::distributed_fast_spacetime_be_space<
 //   besthea::bem::basis_tri_p0 >::interpolation(
 //     sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
 //     block_vector_type & interpolation ) const {

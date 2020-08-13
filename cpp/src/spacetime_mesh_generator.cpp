@@ -82,7 +82,7 @@ bool besthea::mesh::spacetime_mesh_generator::generate(
     slices << _time_mesh->get_node( i ) << " ";
   }
   slices << "\n";
-  
+
   // execute the refinement in time and space according to the parameters.
   _time_mesh->refine( _refinement );
   _space_mesh->refine( _space_refinement );

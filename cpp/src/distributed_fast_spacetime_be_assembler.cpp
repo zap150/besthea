@@ -50,11 +50,11 @@ using besthea::mesh::spacetime_tensor_mesh;
 using besthea::mesh::tree_structure;
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type, 
+besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   test_space_type, trial_space_type >::
   distributed_fast_spacetime_be_assembler( kernel_type & kernel,
   test_space_type & test_space, trial_space_type & trial_space,
-  MPI_Comm * comm, int order_singular, int order_regular, int temp_order, 
+  MPI_Comm * comm, int order_singular, int order_regular, int temp_order,
   int spat_order, sc alpha )
   : _kernel( &kernel ),
     _test_space( &test_space ),
@@ -72,14 +72,14 @@ besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type, 
+besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   test_space_type, trial_space_type >::
   ~distributed_fast_spacetime_be_assembler( ) {
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type, 
-  test_space_type, trial_space_type >::assemble( 
+void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
+  test_space_type, trial_space_type >::assemble(
   pfmm_matrix_type & global_matrix ) const {
 
   global_matrix.set_MPI_communicator( _comm );
@@ -91,7 +91,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 
   // ###########################################################################
   // @todo the matrix is currently not resized appropriately, since the global
-  // number of temporal elements is (not yet) available. Change this if 
+  // number of temporal elements is (not yet) available. Change this if
   // necessary:
   // number of timesteps have to be the same for test and
   // trial meshes
@@ -106,18 +106,18 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 
   initialize_moment_and_local_contributions( );
 
-  // fill the m-list, m2l-list, n-list and l2l-list of the distributed pFMM 
+  // fill the m-list, m2l-list, n-list and l2l-list of the distributed pFMM
   // matrix and determine the receive information data.
   global_matrix.prepare_fmm( );
-  
+
   // assemble the nearfield matrices of the pFMM matrix
   assemble_nearfield( global_matrix );
 }
 
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type, 
-  test_space_type, trial_space_type >::assemble_nearfield( 
+void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
+  test_space_type, trial_space_type >::assemble_nearfield(
     pfmm_matrix_type & global_matrix ) const {
   const std::vector< general_spacetime_cluster * > & local_leaves
     = _test_space->get_tree( )->get_local_leaves( );
@@ -145,7 +145,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type, 
+void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   test_space_type, trial_space_type >::
   assemble_nearfield_matrix(
     general_spacetime_cluster * target_cluster,
@@ -157,7 +157,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   auto & test_basis = _test_space->get_basis( );
   auto & trial_basis = _trial_space->get_basis( );
 
-  const distributed_spacetime_tensor_mesh & distributed_test_mesh 
+  const distributed_spacetime_tensor_mesh & distributed_test_mesh
     = _test_space->get_mesh( );
   const distributed_spacetime_tensor_mesh & distributed_trial_mesh
     = _trial_space->get_mesh( );
@@ -180,13 +180,13 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   }
 
   lo n_test_time_elem = target_cluster->get_n_time_elements( );
-  lo n_test_space_dofs 
+  lo n_test_space_dofs
     = target_cluster->get_n_space_dofs< test_space_type >( );
   lo n_test_space_elem = target_cluster->get_n_space_elements( );
   std::vector< lo > test_elems = target_cluster->get_all_elements( );
 
   lo n_trial_time_elem = source_cluster->get_n_time_elements( );
-  lo n_trial_space_dofs 
+  lo n_trial_space_dofs
     = source_cluster->get_n_space_dofs< trial_space_type >( );
   lo n_trial_space_elem = source_cluster->get_n_space_elements( );
   std::vector< lo > trial_elems = source_cluster->get_all_elements( );
@@ -195,7 +195,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   lo n_loc_columns = trial_basis.dimension_local( );
 
   bool same_time_cluster
-    = ( std::abs( target_cluster->get_time_center( ) 
+    = ( std::abs( target_cluster->get_time_center( )
           - source_cluster->get_time_center( ) )
         < target_cluster->get_time_half_size( ) );
 // #pragma omp parallel
@@ -246,18 +246,18 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 // #pragma omp for schedule( dynamic, 1 )
         for ( lo i_test_space = 0; i_test_space < n_test_space_elem;
               ++i_test_space ) {
-          // get the index of the current spacetime test element and transform 
-          // it to the local indices in the appropriate mesh (nearfield or 
+          // get the index of the current spacetime test element and transform
+          // it to the local indices in the appropriate mesh (nearfield or
           // local)
-          test_element_spacetime 
-            = distributed_test_mesh.global_2_local( test_mesh_start_idx, 
+          test_element_spacetime
+            = distributed_test_mesh.global_2_local( test_mesh_start_idx,
               test_elems[ i_test_time * n_test_space_elem + i_test_space ] );
-          // get the indices of the time element and space element of which 
+          // get the indices of the time element and space element of which
           // the spacetime element consists and get some data.
-          test_elem_time 
+          test_elem_time
             = test_mesh->get_time_element( test_element_spacetime );
           test_mesh->get_temporal_nodes( test_elem_time, &t0, &t1 );
-          gl_test_elem_space 
+          gl_test_elem_space
             = test_mesh->get_space_element( test_element_spacetime );
           test_mesh->get_spatial_nodes( gl_test_elem_space, x1, x2, x3 );
           test_mesh->get_spatial_normal( gl_test_elem_space, nx );
@@ -266,11 +266,11 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
                 ++i_trial_space ) {
             // get the appropriate indices of the spacetime trial element, its
             // spatial and temporal parts and some necessary data
-            trial_element_spacetime 
-              = distributed_trial_mesh.global_2_local( trial_mesh_start_idx, 
-                trial_elems[ i_trial_time * n_trial_space_elem 
+            trial_element_spacetime
+              = distributed_trial_mesh.global_2_local( trial_mesh_start_idx,
+                trial_elems[ i_trial_time * n_trial_space_elem
                               + i_trial_space ] );
-            gl_trial_elem_time 
+            gl_trial_elem_time
               = trial_mesh->get_time_element( trial_element_spacetime );
             trial_mesh->get_temporal_nodes( gl_trial_elem_time, &tau0, &tau1 );
             gl_trial_elem_space
@@ -343,9 +343,9 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 //       aligned( x1_ref, x2_ref, y1_ref, y2_ref, kernel_data : DATA_ALIGN ) \
 //       private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
                 for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-                  // @todo: discuss since p0 and p1 basis functions only use at 
-                  // most i_loc_test, x1_ref and x2_ref and ignore the others 
-                  // the execution should be fine 
+                  // @todo: discuss since p0 and p1 basis functions only use at
+                  // most i_loc_test, x1_ref and x2_ref and ignore the others
+                  // the execution should be fine
                   test = test_basis.evaluate( gl_test_elem_space, i_loc_test,
                     x1_ref[ i_quad ], x2_ref[ i_quad ], nx_data,
                     n_shared_vertices, rot_test, false );
@@ -670,9 +670,9 @@ void besthea::bem::distributed_fast_spacetime_be_assembler<
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type, 
-  test_space_type, trial_space_type >::get_type( lo i_test_space, 
-  lo i_trial_space, int & n_shared_vertices, int & rot_test, 
+void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
+  test_space_type, trial_space_type >::get_type( lo i_test_space,
+  lo i_trial_space, int & n_shared_vertices, int & rot_test,
   int & rot_trial ) const {
   // check for identical
   if ( i_test_space == i_trial_space ) {
@@ -687,7 +687,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 
   // assuming that the spatial meshes of the nearfield mesh and the local mesh
   // coincide, we can simply consider the local meshes.
-  _test_space->get_mesh( ).get_local_mesh( )->get_spatial_element( 
+  _test_space->get_mesh( ).get_local_mesh( )->get_spatial_element(
       i_test_space, test_elem );
   _trial_space->get_mesh( ).get_local_mesh( )->get_spatial_element(
       i_trial_space, trial_elem );
@@ -726,8 +726,8 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type, 
-  test_space_type, trial_space_type >::init_quadrature( 
+void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
+  test_space_type, trial_space_type >::init_quadrature(
   quadrature_wrapper & my_quadrature ) const {
   // Use triangle rules for disjoint elements
   const std::vector< sc, besthea::allocator_type< sc > > & tri_x1
@@ -820,8 +820,8 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type, 
-  test_space_type, trial_space_type >::init_quadrature_polynomials( 
+void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
+  test_space_type, trial_space_type >::init_quadrature_polynomials(
   quadrature_wrapper & my_quadrature ) const {
   // calling copy constructor of std::vector
   my_quadrature._y1_ref_cheb = quadrature::triangle_x1( _order_regular );
@@ -839,8 +839,8 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type, 
-  test_space_type, trial_space_type >::hypercube_to_triangles_vertex( sc ksi, 
+void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
+  test_space_type, trial_space_type >::hypercube_to_triangles_vertex( sc ksi,
   sc eta1, sc eta2, sc eta3, int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref,
   sc & y2_ref, sc & jacobian ) const {
   jacobian = ksi * ksi * ksi * eta2;
@@ -862,8 +862,8 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type, 
-  test_space_type, trial_space_type >::triangle_to_geometry( 
+void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
+  test_space_type, trial_space_type >::triangle_to_geometry(
     const linear_algebra::coordinates< 3 > & x1,
     const linear_algebra::coordinates< 3 > & x2,
     const linear_algebra::coordinates< 3 > & x3,
@@ -891,8 +891,8 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type, 
-  test_space_type, trial_space_type >::hypercube_to_triangles_edge( sc ksi, 
+void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
+  test_space_type, trial_space_type >::hypercube_to_triangles_edge( sc ksi,
   sc eta1, sc eta2, sc eta3, int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref,
   sc & y2_ref, sc & jacobian ) const {
   jacobian = ksi * ksi * ksi * eta1 * eta1;
@@ -936,7 +936,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type, 
+void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   test_space_type, trial_space_type >::
   triangles_to_geometry( const linear_algebra::coordinates< 3 > & x1,
     const linear_algebra::coordinates< 3 > & x2,
@@ -1048,7 +1048,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type, 
+void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   test_space_type, trial_space_type >::hypercube_to_triangles_identical( sc ksi,
   sc eta1, sc eta2, sc eta3, int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref,
   sc & y2_ref, sc & jacobian ) const {
@@ -1095,9 +1095,9 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type, 
-  test_space_type, trial_space_type >::cluster_to_polynomials( 
-  quadrature_wrapper & my_quadrature, sc start_0, sc end_0, sc start_1, 
+void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
+  test_space_type, trial_space_type >::cluster_to_polynomials(
+  quadrature_wrapper & my_quadrature, sc start_0, sc end_0, sc start_1,
   sc end_1, sc start_2, sc end_2 ) const {
   for ( lo i = 0; i < my_quadrature._y1_polynomial.size( ); ++i ) {
     my_quadrature._y1_polynomial[ i ]
@@ -1110,14 +1110,14 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type, 
+void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   test_space_type, trial_space_type >::
   initialize_moment_and_local_contributions( ) const {
-  lou contribution_size = ( _temp_order + 1 ) 
+  lou contribution_size = ( _temp_order + 1 )
     * ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6;
-  tree_structure * trial_distribution_tree 
+  tree_structure * trial_distribution_tree
     = _trial_space->get_tree( )->get_distribution_tree( );
-  trial_distribution_tree->initialize_moment_contributions( 
+  trial_distribution_tree->initialize_moment_contributions(
     *trial_distribution_tree->get_root( ), contribution_size );
   tree_structure * test_distribution_tree
     = _test_space->get_tree( )->get_distribution_tree( );
@@ -1127,31 +1127,31 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 
 template class besthea::bem::distributed_fast_spacetime_be_assembler<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::distributed_fast_spacetime_be_space< 
+  besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 >,
-  besthea::bem::distributed_fast_spacetime_be_space< 
+  besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 > >;
 // template class besthea::bem::distributed_fast_spacetime_be_assembler<
 //   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-//   besthea::bem::distributed_fast_spacetime_be_space< 
+//   besthea::bem::distributed_fast_spacetime_be_space<
 //     besthea::bem::basis_tri_p1 >,
-//   besthea::bem::distributed_fast_spacetime_be_space< 
+//   besthea::bem::distributed_fast_spacetime_be_space<
 //     besthea::bem::basis_tri_p1 > >;
 // template class besthea::bem::distributed_fast_spacetime_be_assembler<
 //   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-//   besthea::bem::distributed_fast_spacetime_be_space< 
+//   besthea::bem::distributed_fast_spacetime_be_space<
 //     besthea::bem::basis_tri_p0 >,
-//   besthea::bem::distributed_fast_spacetime_be_space< 
+//   besthea::bem::distributed_fast_spacetime_be_space<
 //     besthea::bem::basis_tri_p1 > >;
 // template class besthea::bem::distributed_fast_spacetime_be_assembler<
 //   besthea::bem::spacetime_heat_adl_kernel_antiderivative,
-//   besthea::bem::distributed_fast_spacetime_be_space< 
+//   besthea::bem::distributed_fast_spacetime_be_space<
 //     besthea::bem::basis_tri_p1 >,
-//   besthea::bem::distributed_fast_spacetime_be_space< 
+//   besthea::bem::distributed_fast_spacetime_be_space<
 //     besthea::bem::basis_tri_p0 > >;
 // template class besthea::bem::distributed_fast_spacetime_be_assembler<
 //   besthea::bem::spacetime_heat_hs_kernel_antiderivative,
-//   besthea::bem::distributed_fast_spacetime_be_space< 
+//   besthea::bem::distributed_fast_spacetime_be_space<
 //     besthea::bem::basis_tri_p1 >,
-//   besthea::bem::distributed_fast_spacetime_be_space< 
+//   besthea::bem::distributed_fast_spacetime_be_space<
 //     besthea::bem::basis_tri_p1 > >;

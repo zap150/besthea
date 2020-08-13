@@ -426,7 +426,7 @@ const std::vector< sc > & get_spatial_paddings( ) const {
      * @param[in] root Node to stem from
      */
     sc compute_local_spatial_padding( general_spacetime_cluster & root );
-    
+
   /**
    * Aux for printing
    */
@@ -449,13 +449,13 @@ const std::vector< sc > & get_spatial_paddings( ) const {
     _spacetime_mesh;                  //!< underlying distributed spacetime mesh
                                       //!< @todo discuss: why reference and not
                                       //!< pointer? why was it const originally?
-                                      //!< problem: distribution tree is 
+                                      //!< problem: distribution tree is
                                       //!< modified!
   general_spacetime_cluster * _root;  //!< root of the cluster tree
 
-  std::vector< general_spacetime_cluster* > 
-    _local_leaves;  //!< Vector containing the leaves of the distributed 
-                    //!< space-time cluster tree which are local, i.e. 
+  std::vector< general_spacetime_cluster* >
+    _local_leaves;  //!< Vector containing the leaves of the distributed
+                    //!< space-time cluster tree which are local, i.e.
                     //!< assigned to the process with rank @p _my_rank.
 
   lo _start_spatial_level;  //!< auxiliary variable determining the appropriate
@@ -463,10 +463,10 @@ const std::vector< sc > & get_spatial_paddings( ) const {
   lo _start_temporal_level; //!< auxiliary variable to determine in which level
                             //!< the spatial refinement starts
                             //!< (meaningful only if _start_spatial_level = 0)
-  lo _local_max_space_level;  //!< bound for the maximal number of spatial 
-                              //!< refinements in the local part of the 
-                              //!< distributed tree. 
-  
+  lo _local_max_space_level;  //!< bound for the maximal number of spatial
+                              //!< refinements in the local part of the
+                              //!< distributed tree.
+
   sc _s_t_coeff;    //!< coefficient to determine the coupling of the spatial
                     //!< and temporal levels
   lo _n_min_elems;  //!< minimum number of elements so that cluster can be split

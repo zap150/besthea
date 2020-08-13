@@ -32,14 +32,14 @@
 #include <fstream> //for ofstream and ifstream
 
 template < class T >
-void write_vector_to_bin_file( const std::vector< T > & print_vector, 
+void write_vector_to_bin_file( const std::vector< T > & print_vector,
   const std::string & filename ) {
   std::ofstream file_out( filename.c_str( ), std::ios::binary );
   if ( file_out.is_open( ) )
   {
     lou n_chars = print_vector.size( ) * sizeof( T );
     const T * print_vector_data = print_vector.data( );
-    file_out.write( reinterpret_cast< const char* >( print_vector_data ), 
+    file_out.write( reinterpret_cast< const char* >( print_vector_data ),
       n_chars );
     file_out.close();
   } else {
@@ -70,20 +70,20 @@ std::vector< T > read_vector_from_bin_file( const std::string & filename ) {
 }
 
 // explicitly instantiate required template functions
-template void write_vector_to_bin_file< char >( 
+template void write_vector_to_bin_file< char >(
   const std::vector< char > & print_vector, const std::string & filename );
 
-template void write_vector_to_bin_file< lo >( 
+template void write_vector_to_bin_file< lo >(
   const std::vector< lo > & print_vector, const std::string & filename );
 
-template void write_vector_to_bin_file< sc >( 
+template void write_vector_to_bin_file< sc >(
   const std::vector< sc > & print_vector, const std::string & filename );
 
-template std::vector< char > read_vector_from_bin_file< char >( 
+template std::vector< char > read_vector_from_bin_file< char >(
   const std::string & filename );
 
-template std::vector< lo > read_vector_from_bin_file< lo >( 
+template std::vector< lo > read_vector_from_bin_file< lo >(
   const std::string & filename );
 
-template std::vector< sc > read_vector_from_bin_file< sc >( 
+template std::vector< sc > read_vector_from_bin_file< sc >(
   const std::string & filename );

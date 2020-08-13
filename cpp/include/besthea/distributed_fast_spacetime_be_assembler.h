@@ -67,7 +67,7 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
     = besthea::linear_algebra::full_matrix;  //!< shortcut for the full matrix
                                              //!< type
   using pfmm_matrix_type = besthea::linear_algebra::
-    distributed_pFMM_matrix< kernel_type, 
+    distributed_pFMM_matrix< kernel_type,
     test_space_type, trial_space_type >;  //!< shortcut for the pFMM matrix type
   using vector_type = besthea::linear_algebra::vector;  //!< vector type
 
@@ -150,10 +150,10 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
    */
   distributed_fast_spacetime_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
-    MPI_Comm * comm, int order_singular = 4, int order_regular = 4, 
+    MPI_Comm * comm, int order_singular = 4, int order_regular = 4,
     int temp_order = 5, int spat_order = 5, sc alpha = 1.0);
 
-  distributed_fast_spacetime_be_assembler( 
+  distributed_fast_spacetime_be_assembler(
     const distributed_fast_spacetime_be_assembler & that ) = delete;
 
   /**
@@ -164,7 +164,7 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
   /**
    * Assembles the fast spacetime matrix.
    * @param[out] global_matrix Assembled pFMM matrix.
-   * @warning Currently there are some restrictions on the test 
+   * @warning Currently there are some restrictions on the test
    * and trial spaces (same meshes and trees)
    */
   void assemble( pfmm_matrix_type & global_matrix ) const;
@@ -191,14 +191,14 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
   /**
    * Assembles clusterwise nearfield matrix
    * @param[in] target_cluster  Target for which the matrix is assembled.
-   * @param[in] source_cluster  Source in the nearfield of the target for which 
+   * @param[in] source_cluster  Source in the nearfield of the target for which
    *                            the matrix is assembled.
    * @param[in,out] nearfield_matrix Reference to the matrix which should be
    * assembled.
-   */  
-  void assemble_nearfield_matrix( 
-    mesh::general_spacetime_cluster * target_cluster, 
-    mesh::general_spacetime_cluster * source_cluster, 
+   */
+  void assemble_nearfield_matrix(
+    mesh::general_spacetime_cluster * target_cluster,
+    mesh::general_spacetime_cluster * source_cluster,
     full_matrix_type & nearfield_matrix ) const;
 
   /**
@@ -212,7 +212,7 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
    * for the nearfield mesh and the local mesh of a distributed spacetime mesh.
    * If this is not the case the result is meaningless.
    */
-  void get_type( lo i_test_space, lo i_trial_space, int & type_int, 
+  void get_type( lo i_test_space, lo i_trial_space, int & type_int,
     int & rot_test, int & rot_trial ) const;
 
   /**
@@ -375,7 +375,7 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
     sc x_end, sc y_start, sc y_end, sc z_start, sc z_end ) const;
 
   /**
-   * Initializes data storage for moment and local contributions for all 
+   * Initializes data storage for moment and local contributions for all
    * clusters in the test and trial space spacetime cluster tree.
    */
   void initialize_moment_and_local_contributions( ) const;

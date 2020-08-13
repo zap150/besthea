@@ -97,7 +97,7 @@ class besthea::bem::distributed_fast_spacetime_be_space
    */
   typedef basis_type type;
 
-  distributed_fast_spacetime_be_space( 
+  distributed_fast_spacetime_be_space(
     const distributed_fast_spacetime_be_space & that ) = delete;
 
   /**
@@ -109,7 +109,7 @@ class besthea::bem::distributed_fast_spacetime_be_space
    * Constructing space from a spacetime tree
    * @param[in] tree Distributed spacetime cluster tree.
    */
-  distributed_fast_spacetime_be_space( 
+  distributed_fast_spacetime_be_space(
     mesh::distributed_spacetime_cluster_tree & tree );
 
   /**
@@ -179,7 +179,7 @@ class besthea::bem::distributed_fast_spacetime_be_space
  private:
   mesh::distributed_spacetime_cluster_tree *
     _tree;  //!< distributed tree storing a hierarchical subdivision
-            //!< of the local space-time domain 
+            //!< of the local space-time domain
 };
 
 #endif /* INCLUDE_BESTHEA_DISTRIBUTED_FAST_SPACETIME_BE_SPACE_H_ */

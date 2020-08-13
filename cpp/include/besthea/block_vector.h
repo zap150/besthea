@@ -300,7 +300,7 @@ class besthea::linear_algebra::block_vector {
    *                     basis functions. It determines the dofs.
    * @note  The entries in the local vector are ordered according to the
    *        ordering of the time elements and spatial dofs in the spacetime
-   *        cluster (time step after time step).   
+   *        cluster (time step after time step).
    */
   template< class space_type >
   void add_local_part( besthea::mesh::general_spacetime_cluster * cluster,

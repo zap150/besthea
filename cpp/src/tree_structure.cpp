@@ -30,13 +30,13 @@
 
 #include <algorithm>
 
-besthea::mesh::tree_structure::tree_structure( const std::string & filename, 
+besthea::mesh::tree_structure::tree_structure( const std::string & filename,
   const sc start_time, const sc end_time, const lo process_id )
   : _levels( 0 ), _my_process_id( process_id ) {
   // load tree structure from file
-  std::vector< char > tree_vector = read_vector_from_bin_file< char >( 
+  std::vector< char > tree_vector = read_vector_from_bin_file< char >(
     filename );
-  // create tree structure from vector 
+  // create tree structure from vector
   if ( ( tree_vector.size( ) > 0 ) && ( tree_vector[ 0 ] != 0 ) ) {
     sc center = 0.5 * ( start_time + end_time );
     sc half_size = 0.5 * ( end_time - start_time );
@@ -60,17 +60,17 @@ besthea::mesh::tree_structure::tree_structure( const std::string & filename,
   set_leaf_ids( *_root, next_id );
 }
 
-besthea::mesh::tree_structure::tree_structure( 
+besthea::mesh::tree_structure::tree_structure(
   const std::string & structure_file, const std::string & cluster_bounds_file,
   const lo process_id )
   : _levels( 0 ), _my_process_id( process_id ) {
   // load tree structure from file
-  std::vector< char > tree_vector = read_vector_from_bin_file< char >( 
+  std::vector< char > tree_vector = read_vector_from_bin_file< char >(
     structure_file );
   // load cluster bounds from file
-  std::vector< sc > cluster_bounds = read_vector_from_bin_file< sc >( 
+  std::vector< sc > cluster_bounds = read_vector_from_bin_file< sc >(
     cluster_bounds_file );
-  // create tree structure from vector 
+  // create tree structure from vector
   if ( ( tree_vector.size( ) > 0 ) && ( tree_vector[ 0 ] != 0 ) ) {
     sc center = 0.5 * ( cluster_bounds[ 0 ] + cluster_bounds[ 1 ] );
     sc half_size = 0.5 * ( cluster_bounds[ 1 ] - cluster_bounds[ 0 ] );
@@ -94,23 +94,23 @@ besthea::mesh::tree_structure::tree_structure(
   set_leaf_ids( *_root, next_id );
 }
 
-void besthea::mesh::tree_structure::load_process_assignments( 
+void besthea::mesh::tree_structure::load_process_assignments(
   const std::string & filename ) {
-  std::vector< lo > process_assignments = 
+  std::vector< lo > process_assignments =
     read_vector_from_bin_file< lo >( filename );
   _root->set_process_id( process_assignments[ 0 ] );
   lou position = 1;
   set_process_assignments( process_assignments, *_root, position );
 }
 
-void besthea::mesh::tree_structure::assign_slices_to_clusters( 
+void besthea::mesh::tree_structure::assign_slices_to_clusters(
   const std::vector< sc > & slice_nodes ) {
   lou i_start = 0, i_end;
   for ( auto leaf_cluster : _leaves ) {
     i_end = i_start;
-    sc right_cluster_bound 
-      = leaf_cluster->get_center( ) + leaf_cluster->get_half_size( ); 
-    while ( ( i_end < slice_nodes.size( ) -1 ) && 
+    sc right_cluster_bound
+      = leaf_cluster->get_center( ) + leaf_cluster->get_half_size( );
+    while ( ( i_end < slice_nodes.size( ) -1 ) &&
             ( ( slice_nodes[ i_end ] + slice_nodes[ i_end + 1 ] ) * 0.5
               < right_cluster_bound ) ) {
       ++i_end;
@@ -145,13 +145,13 @@ void besthea::mesh::tree_structure::
   // _leaves = std::move( new_leaves );
   // ###########################################################################
 
-  // traverse the tree structure and reduce it by eliminating all 
-  // non-essential clusters. In addition, correct the nearfield, interaction 
+  // traverse the tree structure and reduce it by eliminating all
+  // non-essential clusters. In addition, correct the nearfield, interaction
   // lists and children of all clusters and reset _levels and _leaves.
   _levels = 0;
   prepare_essential_reduction( *_root );
   execute_essential_reduction( *_root );
-  // reset leaves of tree structure appropriately. the global leaf status is 
+  // reset leaves of tree structure appropriately. the global leaf status is
   // not changed.
   _leaves.clear( );
   collect_leaves( *_root );
@@ -161,16 +161,16 @@ void besthea::mesh::tree_structure::
   prepare_fmm( std::list< scheduling_time_cluster* > & m_list,
   std::list< scheduling_time_cluster* > & m2l_list,
   std::list< scheduling_time_cluster* > & l_list,
-  std::list< scheduling_time_cluster* > & n_list, 
+  std::list< scheduling_time_cluster* > & n_list,
   std::vector< std::pair< scheduling_time_cluster*, lo > > & receive_vector,
   lou & n_moments_upward, lou & n_moments_m2l ) const {
-    
+
   m_list.clear( );
-  init_fmm_lists_and_dependency_data( 
+  init_fmm_lists_and_dependency_data(
     *_root, m_list, m2l_list, l_list, n_list );
   // sort the m_list from bottom up, right to left
   m_list.sort( compare_clusters_bottom_up_right_2_left );
-  // sort the m2l_list and l_list from top down, right to left and create 
+  // sort the m2l_list and l_list from top down, right to left and create
   // n_list as copy of l_list
   m2l_list.sort( compare_clusters_top_down_right_2_left );
   l_list.sort( compare_clusters_top_down_right_2_left );
@@ -183,36 +183,36 @@ void besthea::mesh::tree_structure::
     if ( children != nullptr ) {
       for ( auto it_child = children->begin( ); it_child != children->end( );
             ++it_child ) {
-        // if the current cluster has a child which is handled by a different 
-        // process p the current process has to receive the processed moments 
+        // if the current cluster has a child which is handled by a different
+        // process p the current process has to receive the processed moments
         // from p.
         if ( ( *it_child )->get_process_id( ) != _my_process_id ) {
-          receive_vector.push_back( std::pair< scheduling_time_cluster*, lo >( 
+          receive_vector.push_back( std::pair< scheduling_time_cluster*, lo >(
                                       *it, ( *it_child )->get_process_id( ) ) );
           ( *it )->add_receive_buffer( ( *it_child )->get_process_id( ) );
         }
       }
-    } 
+    }
   }
   n_moments_upward = receive_vector.size( );
   // check for receive operations in the interaction phase
-  for ( auto it = m2l_list.begin( ); it != m2l_list.end( ); 
+  for ( auto it = m2l_list.begin( ); it != m2l_list.end( );
         ++it ) {
-    std::vector< scheduling_time_cluster* > * interaction_list 
+    std::vector< scheduling_time_cluster* > * interaction_list
       = ( *it )->get_interaction_list( );
     // interaction list is never empty for clusters in the m2l_list, so it is
     // not checked, whether the pointer is null
-    for ( auto it_src = interaction_list->begin( ); 
+    for ( auto it_src = interaction_list->begin( );
           it_src != interaction_list->end( ); ++it_src ) {
       // if the source cluster is handled by a different process p the current
       // process has to receive its moments from p.
       if ( ( *it_src )->get_process_id( ) != _my_process_id ) {
         receive_vector.push_back( std::pair< scheduling_time_cluster*, lo >(
-                                    *it_src, ( *it_src )->get_process_id( ) ) ); 
+                                    *it_src, ( *it_src )->get_process_id( ) ) );
       }
     }
   }
-  // if two clusters have the same source cluster in their interaction list 
+  // if two clusters have the same source cluster in their interaction list
   // its moments have to be received only once -> find and eliminate double
   // entries in the second part of the receive vector
   std::sort( receive_vector.begin( ) + n_moments_upward, receive_vector.end( ),
@@ -221,8 +221,8 @@ void besthea::mesh::tree_structure::
           return compare_clusters_top_down_right_2_left(
             pair_one.first, pair_two.first );
         } );
-  auto new_end 
-    = std::unique( receive_vector.begin( ) + n_moments_upward, 
+  auto new_end
+    = std::unique( receive_vector.begin( ) + n_moments_upward,
       receive_vector.end( ),
       []( const std::pair< scheduling_time_cluster*, lo > pair_one,
           const std::pair< scheduling_time_cluster*, lo > pair_two ) {
@@ -233,17 +233,17 @@ void besthea::mesh::tree_structure::
   // check for receive operations in the downward path
   for ( auto it = l_list.begin( ); it != l_list.end( ); ++it ) {
     scheduling_time_cluster * parent = ( *it )->get_parent( );
-    // if the parent cluster is handled by a different process p the current 
+    // if the parent cluster is handled by a different process p the current
     // process has to receive its local contributions from p.
-    if ( parent->get_process_id( ) != _my_process_id && 
+    if ( parent->get_process_id( ) != _my_process_id &&
          parent->get_process_id( ) != -1 ) {
-      receive_vector.push_back( std::pair< scheduling_time_cluster*, lo >( 
+      receive_vector.push_back( std::pair< scheduling_time_cluster*, lo >(
                                   parent, parent->get_process_id( ) ) );
     }
   }
 }
 
-void besthea::mesh::tree_structure::initialize_moment_contributions( 
+void besthea::mesh::tree_structure::initialize_moment_contributions(
   scheduling_time_cluster& root, lou contribution_size ) {
   if ( root.is_active_in_upward_path( ) ) {
     root.allocate_associated_moments( contribution_size );
@@ -255,7 +255,7 @@ void besthea::mesh::tree_structure::initialize_moment_contributions(
   }
 }
 
-void besthea::mesh::tree_structure::clear_moment_contributions( 
+void besthea::mesh::tree_structure::clear_moment_contributions(
   scheduling_time_cluster& root ) {
   root.clear_associated_moments( );
   if ( root.get_n_children( ) > 0 ) {
@@ -265,7 +265,7 @@ void besthea::mesh::tree_structure::clear_moment_contributions(
   }
 }
 
-void besthea::mesh::tree_structure::initialize_local_contributions( 
+void besthea::mesh::tree_structure::initialize_local_contributions(
   scheduling_time_cluster& root, lou contribution_size ) {
   if ( root.is_active_in_downward_path( ) ) {
     root.allocate_associated_local_contributions( contribution_size );
@@ -277,7 +277,7 @@ void besthea::mesh::tree_structure::initialize_local_contributions(
   }
 }
 
-void besthea::mesh::tree_structure::clear_local_contributions( 
+void besthea::mesh::tree_structure::clear_local_contributions(
   scheduling_time_cluster& root ) {
   root.clear_associated_local_contributions( );
   if ( root.get_n_children( ) > 0 ) {
@@ -287,20 +287,20 @@ void besthea::mesh::tree_structure::clear_local_contributions(
   }
 }
 
-void besthea::mesh::tree_structure::init_fmm_lists_and_dependency_data( 
-  scheduling_time_cluster & root, 
+void besthea::mesh::tree_structure::init_fmm_lists_and_dependency_data(
+  scheduling_time_cluster & root,
   std::list< scheduling_time_cluster* > & m_list,
   std::list< scheduling_time_cluster* > & m2l_list,
   std::list< scheduling_time_cluster* > & l_list,
   std::list< scheduling_time_cluster* > & n_list ) const {
-  // if the cluster is local and active in the upward path add it to the 
+  // if the cluster is local and active in the upward path add it to the
   // m-list and initialize the appropriate dependency data
   if ( root.get_process_id( ) == _my_process_id &&
        root.is_active_in_upward_path( ) ) {
     m_list.push_back( &root );
     root.set_upward_path_counter( root.get_n_children( ) );
   }
-  // if the current cluster is local and its parent is active in the downward 
+  // if the current cluster is local and its parent is active in the downward
   // path add the current cluster to the l-list
   if ( root.get_process_id( ) == _my_process_id &&
        root.get_parent( )->is_active_in_downward_path( ) ) {
@@ -308,32 +308,32 @@ void besthea::mesh::tree_structure::init_fmm_lists_and_dependency_data(
   }
 
   // if the current cluster is local, active in the downward path and its parent
-  // is inactive in the downward path change the downward path status of the 
+  // is inactive in the downward path change the downward path status of the
   // current cluster (to signal that no l2l operation has to be done anymore)
-  if ( root.is_active_in_downward_path( ) && 
+  if ( root.is_active_in_downward_path( ) &&
         !( root.get_parent( )->is_active_in_downward_path( ) ) ) {
     root.set_downward_path_status( 1 );
   }
 
   // add the cluster to the m2l-list, if it is local and has a non-empty
   // interaction list
-  if ( root.get_process_id( ) == _my_process_id && 
+  if ( root.get_process_id( ) == _my_process_id &&
        root.get_interaction_list( ) != nullptr ) {
     m2l_list.push_back( &root );
   }
 
   // add the cluster to the n-list, if it is a leaf
-  if ( root.get_process_id( ) == _my_process_id && 
+  if ( root.get_process_id( ) == _my_process_id &&
        root.get_n_associated_leaves( ) > 0 ) {
     n_list.push_back( &root );
   }
 
   // recursive call for all children
   if ( root.get_n_children( ) > 0 ) {
-    const std::vector< scheduling_time_cluster* >* children 
+    const std::vector< scheduling_time_cluster* >* children
       = root.get_children( );
     for ( auto it = children->begin( ); it != children->end( ); ++it ) {
-      init_fmm_lists_and_dependency_data( 
+      init_fmm_lists_and_dependency_data(
         **it, m_list, m2l_list, l_list, n_list );
     }
   }
@@ -360,7 +360,7 @@ void besthea::mesh::tree_structure::
   write_vector_to_bin_file( compute_tree_structure( ), filename );
 }
 
-void besthea::mesh::tree_structure::print_tree_human_readable( 
+void besthea::mesh::tree_structure::print_tree_human_readable(
   const lo digits, const bool print_process_ids ) const {
   if ( _levels > 0 ) {
     std::vector< std::string > print_strings;
@@ -370,7 +370,7 @@ void besthea::mesh::tree_structure::print_tree_human_readable(
       print_strings.push_back( std::to_string( i ) + ": " );
     }
     // determine the strings for the levelwise output
-    determine_levelwise_output_string( 
+    determine_levelwise_output_string(
       digits, print_process_ids, _root, print_strings );
     for ( lou i = 0; i < print_strings.size( ); ++i ) {
       std::cout << print_strings[ i ] << std::endl;
@@ -378,10 +378,10 @@ void besthea::mesh::tree_structure::print_tree_human_readable(
   } else {
     std::cout << "number of levels is " << _levels << std::endl;
   }
-} 
+}
 
-void besthea::mesh::tree_structure::array_2_tree( 
-  const char * tree_array, scheduling_time_cluster & root, 
+void besthea::mesh::tree_structure::array_2_tree(
+  const char * tree_array, scheduling_time_cluster & root,
   lou & position ) {
   // get the cluster data of root
   lo level = root.get_level( );
@@ -395,19 +395,19 @@ void besthea::mesh::tree_structure::array_2_tree(
   scheduling_time_cluster * right_cluster = nullptr;
   if ( left_child_status > 0 ) {
     child_counter++;
-    left_cluster 
-      = new scheduling_time_cluster( center - half_size / 2.0, half_size / 2.0, 
-                                     &root, 0, level + 1, 
+    left_cluster
+      = new scheduling_time_cluster( center - half_size / 2.0, half_size / 2.0,
+                                     &root, 0, level + 1,
                                      root.get_process_id( ) );
-    left_cluster->set_index( 2 * root.get_global_index( ) + 1 );                                    
+    left_cluster->set_index( 2 * root.get_global_index( ) + 1 );
   }
   if ( right_child_status > 0 ) {
     child_counter++;
-    right_cluster 
-      = new scheduling_time_cluster( center + half_size / 2.0, half_size / 2.0, 
-                                     &root, 1, level + 1, 
+    right_cluster
+      = new scheduling_time_cluster( center + half_size / 2.0, half_size / 2.0,
+                                     &root, 1, level + 1,
                                      root.get_process_id( ) );
-    right_cluster->set_index( 2 * root.get_global_index( ) + 2 );                                     
+    right_cluster->set_index( 2 * root.get_global_index( ) + 2 );
   }
   // add the newly created clusters to the root
   root.set_n_children( child_counter );
@@ -421,7 +421,7 @@ void besthea::mesh::tree_structure::array_2_tree(
   // the cluster tree if a leaf is encountered
   if ( left_child_status == 1 ) {
     array_2_tree( tree_array, *left_cluster, position );
-  } 
+  }
   else if ( left_child_status == 2 ) {
     left_cluster->set_global_leaf_status( true );
     if ( level + 2 > _levels ) {
@@ -430,7 +430,7 @@ void besthea::mesh::tree_structure::array_2_tree(
   }
   if ( right_child_status == 1 ) {
     array_2_tree( tree_array, *right_cluster, position );
-  } 
+  }
   else if ( right_child_status == 2 ) {
     right_cluster->set_global_leaf_status( true );
     if ( level + 2 > _levels ) {
@@ -440,9 +440,9 @@ void besthea::mesh::tree_structure::array_2_tree(
 }
 
 
-void besthea::mesh::tree_structure::create_tree_from_vectors( 
-  const std::vector< char > & tree_vector, 
-  const std::vector< sc > & cluster_bounds, scheduling_time_cluster & root, 
+void besthea::mesh::tree_structure::create_tree_from_vectors(
+  const std::vector< char > & tree_vector,
+  const std::vector< sc > & cluster_bounds, scheduling_time_cluster & root,
   lou & position ) {
   // get the cluster data of root
   lo level = root.get_level( );
@@ -462,7 +462,7 @@ void besthea::mesh::tree_structure::create_tree_from_vectors(
     child_counter++;
     sc center = ( left_child_right_bound + left_child_left_bound ) * 0.5;
     sc half_size = ( left_child_right_bound - left_child_left_bound ) * 0.5;
-    left_cluster = new scheduling_time_cluster( 
+    left_cluster = new scheduling_time_cluster(
       center, half_size, &root, 0, level + 1 );
   }
   if ( right_child_status > 0 ) {
@@ -483,9 +483,9 @@ void besthea::mesh::tree_structure::create_tree_from_vectors(
   // call the routine recursively for non-leaf children or update the depth of
   // the cluster tree if a leaf is encountered
   if ( left_child_status == 1 ) {
-    create_tree_from_vectors( 
+    create_tree_from_vectors(
       tree_vector, cluster_bounds, *left_cluster, position );
-  } 
+  }
   else if ( left_child_status == 2 ) {
     left_cluster->set_global_leaf_status( true );
     if ( level + 2 > _levels ) {
@@ -493,9 +493,9 @@ void besthea::mesh::tree_structure::create_tree_from_vectors(
     }
   }
   if ( right_child_status == 1 ) {
-    create_tree_from_vectors( 
+    create_tree_from_vectors(
       tree_vector, cluster_bounds, *right_cluster, position );
-  } 
+  }
   else if ( right_child_status == 2 ) {
     right_cluster->set_global_leaf_status( true );
     if ( level + 2 > _levels ) {
@@ -504,8 +504,8 @@ void besthea::mesh::tree_structure::create_tree_from_vectors(
   }
 }
 
-void besthea::mesh::tree_structure::set_process_assignments( 
-  const std::vector< lo > process_assignments, scheduling_time_cluster & root, 
+void besthea::mesh::tree_structure::set_process_assignments(
+  const std::vector< lo > process_assignments, scheduling_time_cluster & root,
   lou & position ) {
   lo left_child_process_id = process_assignments[ position++ ];
   lo right_child_process_id = process_assignments[ position++ ];
@@ -521,7 +521,7 @@ void besthea::mesh::tree_structure::set_process_assignments(
   }
 }
 
-void besthea::mesh::tree_structure::collect_leaves( 
+void besthea::mesh::tree_structure::collect_leaves(
   scheduling_time_cluster & root ) {
   if ( root.get_n_children( ) == 0 ) {
     _leaves.push_back( &root );
@@ -533,7 +533,7 @@ void besthea::mesh::tree_structure::collect_leaves(
   }
 }
 
-void besthea::mesh::tree_structure::set_leaf_ids( 
+void besthea::mesh::tree_structure::set_leaf_ids(
   scheduling_time_cluster & root, lo & next_id ) {
   if ( root.get_n_children( ) == 0 ) {
     root.set_leaf_index( next_id );
@@ -546,7 +546,7 @@ void besthea::mesh::tree_structure::set_leaf_ids(
   }
 }
 
-void besthea::mesh::tree_structure::set_indices( 
+void besthea::mesh::tree_structure::set_indices(
   scheduling_time_cluster & root ) {
   if ( root.get_n_children( ) > 0 ) {
     lo parent_index = root.get_global_index( );
@@ -563,14 +563,14 @@ void besthea::mesh::tree_structure::set_indices(
   }
 }
 
-void besthea::mesh::tree_structure::set_nearfield_interaction_and_send_list( 
+void besthea::mesh::tree_structure::set_nearfield_interaction_and_send_list(
   scheduling_time_cluster & root ) {
   if ( root.get_parent( ) == nullptr ) {
     root.add_to_nearfield_list( &root );
   } else {
     // traverse parents nearfield to determine nearfield and interaction list
     sc current_center = root.get_center( );
-    std::vector< scheduling_time_cluster* >* parent_nearfield 
+    std::vector< scheduling_time_cluster* >* parent_nearfield
       = root.get_parent( )->get_nearfield_list( );
     for ( lou i = 0; i < parent_nearfield->size( ); ++i ) {
       // check if neighbor of parent is a leaf cluster
@@ -605,15 +605,15 @@ void besthea::mesh::tree_structure::set_nearfield_interaction_and_send_list(
     }
   }
   if ( root.get_n_children( ) > 0 ) {
-    std::vector< scheduling_time_cluster* >* children = root.get_children( ); 
+    std::vector< scheduling_time_cluster* >* children = root.get_children( );
     for ( lou i = 0; i < children->size( ); ++i ){
       set_nearfield_interaction_and_send_list( *( *children )[ i ] );
     }
   }
 }
 
-void besthea::mesh::tree_structure::add_leaves_to_nearfield_list( 
-  scheduling_time_cluster & current_cluster, 
+void besthea::mesh::tree_structure::add_leaves_to_nearfield_list(
+  scheduling_time_cluster & current_cluster,
   scheduling_time_cluster & target_cluster ) {
   if ( current_cluster.get_n_children( ) == 0 ) {
     target_cluster.add_to_nearfield_list( &current_cluster );
@@ -621,7 +621,7 @@ void besthea::mesh::tree_structure::add_leaves_to_nearfield_list(
     // target_cluster.print( );
     // current_cluster.print( );
   } else {
-    std::vector< scheduling_time_cluster* > * children 
+    std::vector< scheduling_time_cluster* > * children
       = current_cluster.get_children( );
     for ( auto it = children->begin( ); it != children->end( ); ++it ) {
       add_leaves_to_nearfield_list( **it, target_cluster );
@@ -629,14 +629,14 @@ void besthea::mesh::tree_structure::add_leaves_to_nearfield_list(
   }
 }
 
-void besthea::mesh::tree_structure::determine_clusters_to_refine( 
-  scheduling_time_cluster* root, 
+void besthea::mesh::tree_structure::determine_clusters_to_refine(
+  scheduling_time_cluster* root,
   std::unordered_map< lo, bool > & refine_map ) const {
   if ( root->get_n_children( ) > 0 ) {
     // if root is handled by process _my_process_id go through its nearfield
     // and mark leaf clusters as clusters which have to be refined.
     if ( root->get_process_id( ) == _my_process_id ) {
-      std::vector< scheduling_time_cluster* >* nearfield 
+      std::vector< scheduling_time_cluster* >* nearfield
         = root->get_nearfield_list( );
       for ( auto it = nearfield->begin( ); it != nearfield->end( ); ++it ) {
         if ( ( *it )->get_n_children( ) == 0 ) {
@@ -654,34 +654,34 @@ void besthea::mesh::tree_structure::determine_clusters_to_refine(
       // mark root and all leaf clusters in its nearfield as clusters which have
       // to be refined. note: by construction all clusters in the nearfield are
       // leaves, and root itself is contained in its own nearfield.
-      std::vector< scheduling_time_cluster* >* nearfield 
+      std::vector< scheduling_time_cluster* >* nearfield
         = root->get_nearfield_list( );
       for ( auto it = nearfield->begin( ); it != nearfield->end( ); ++it ) {
-        // updates the value of the cluster in the refine_map, 
+        // updates the value of the cluster in the refine_map,
         // or creates a new entry
         refine_map[ ( *it )->get_global_index( ) ] = true;
       }
     } else {
-      // if clusters in the nearfield of root at root's level or their 
+      // if clusters in the nearfield of root at root's level or their
       // descendants are local, mark root as cluster which has to be refined.
       std::vector< scheduling_time_cluster* > nearfield;
-      // determine the nearfield on the level of root (or lower levels) by 
+      // determine the nearfield on the level of root (or lower levels) by
       // considering the children of the clusters in the nearfield of its parent
-      std::vector< scheduling_time_cluster* >* parent_nearfield 
+      std::vector< scheduling_time_cluster* >* parent_nearfield
         = root->get_parent( )->get_nearfield_list( );
-      for ( auto it_nf_par = parent_nearfield->begin( ); 
+      for ( auto it_nf_par = parent_nearfield->begin( );
             it_nf_par != parent_nearfield->end( ); ++it_nf_par ) {
         if ( ( *it_nf_par )->get_n_children( ) == 0 ) {
           nearfield.push_back( *it_nf_par );
         } else {
           std::vector< scheduling_time_cluster* >* relevant_clusters
             = ( *it_nf_par )->get_children( );
-          for ( auto it_rel = relevant_clusters->begin( ); 
+          for ( auto it_rel = relevant_clusters->begin( );
                 it_rel != relevant_clusters->end( ); ++ it_rel ) {
             if ( ( *it_rel )->get_center( ) < root->get_center( )
                 && ( !root->determine_admissibility( *it_rel ) ) ) {
               nearfield.push_back( *it_rel );
-            } 
+            }
           }
         }
       }
@@ -696,11 +696,11 @@ void besthea::mesh::tree_structure::determine_clusters_to_refine(
       } else {
         refine_map[ root->get_global_index( ) ] = false;
       }
-    }  
+    }
   }
 }
 
-bool besthea::mesh::tree_structure::subtree_contains_local_cluster( 
+bool besthea::mesh::tree_structure::subtree_contains_local_cluster(
   const scheduling_time_cluster* root ) const {
   bool is_local = ( root->get_process_id( ) == _my_process_id );
   if ( !is_local && root->get_n_children( ) > 0 ) {
@@ -718,11 +718,11 @@ bool besthea::mesh::tree_structure::subtree_contains_local_cluster(
 void besthea::mesh::tree_structure::determine_refinement_communication_lists(
   scheduling_time_cluster* root,
   std::set< std::pair< lo, scheduling_time_cluster* > > & cluster_send_list,
-  std::set< std::pair< lo, scheduling_time_cluster* > > 
+  std::set< std::pair< lo, scheduling_time_cluster* > >
     & cluster_receive_list ) const {
   if ( root->get_n_children( ) > 0 ) {
     for ( auto it_child : *( root->get_children( ) ) ) {
-      determine_refinement_communication_lists( 
+      determine_refinement_communication_lists(
         it_child, cluster_send_list, cluster_receive_list);
     }
   }
@@ -731,7 +731,7 @@ void besthea::mesh::tree_structure::determine_refinement_communication_lists(
   if ( root->get_global_leaf_status( ) ) {
     if ( root->get_process_id( ) == _my_process_id ) {
       // go through the nearfield of the cluster. If it contains a non-local
-      // cluster add roots global index together with the process id of the 
+      // cluster add roots global index together with the process id of the
       // non-local cluster to the send list.
       for ( auto it_nf : *( root->get_nearfield_list( ) ) ){
         lo nf_process_id = it_nf->get_process_id( );
@@ -743,7 +743,7 @@ void besthea::mesh::tree_structure::determine_refinement_communication_lists(
       lo root_process_id = root->get_process_id( );
       // go through the nearfield of the cluster. If it contains a local
       // cluster add root together with its owning process to the receive list
-      std::vector< scheduling_time_cluster* >* nearfield 
+      std::vector< scheduling_time_cluster* >* nearfield
         = root->get_nearfield_list( );
       if ( nearfield != nullptr ) {
         bool added_cluster = false;
@@ -761,10 +761,10 @@ void besthea::mesh::tree_structure::determine_refinement_communication_lists(
   }
 }
 
-void besthea::mesh::tree_structure::clear_cluster_lists( 
+void besthea::mesh::tree_structure::clear_cluster_lists(
   scheduling_time_cluster* root ) {
   // call the routine recursively for non-leaf clusters which were in the tree
-  // before the expansion 
+  // before the expansion
   if ( root->get_nearfield_list( ) != nullptr )
     root->get_nearfield_list( )->clear( );
   if ( root->get_interaction_list( ) != nullptr )
@@ -778,13 +778,13 @@ void besthea::mesh::tree_structure::clear_cluster_lists(
       clear_cluster_lists( *it );
     }
   }
-} 
+}
 
-void besthea::mesh::tree_structure::determine_cluster_activity( 
+void besthea::mesh::tree_structure::determine_cluster_activity(
   scheduling_time_cluster & root ) {
   // check if cluster is active in upward path
-  if ( ( root.get_send_list( ) != nullptr ) || 
-       ( root.get_parent( ) != nullptr && 
+  if ( ( root.get_send_list( ) != nullptr ) ||
+       ( root.get_parent( ) != nullptr &&
          root.get_parent( )->is_active_in_upward_path( ) ) ) {
     root.set_active_upward_path_status( true );
   }
@@ -803,12 +803,12 @@ void besthea::mesh::tree_structure::determine_cluster_activity(
   }
 }
 
-void besthea::mesh::tree_structure::prepare_essential_reduction( 
+void besthea::mesh::tree_structure::prepare_essential_reduction(
   scheduling_time_cluster & root ) {
   // call routine recursively
   if ( root.get_n_children( ) > 0 ) {
     char max_child_status = 0;
-    const std::vector< scheduling_time_cluster* >* children = 
+    const std::vector< scheduling_time_cluster* >* children =
       root.get_children( );
     for ( auto it : *children ) {
       prepare_essential_reduction( *it );
@@ -825,7 +825,7 @@ void besthea::mesh::tree_structure::prepare_essential_reduction(
       if ( root.get_essential_status( ) < max_child_status ) {
         char new_status = ( max_child_status == 3 ) ? 2 : max_child_status;
         root.set_essential_status( new_status );
-      } 
+      }
     }
   }
   if ( root.get_essential_status( ) > 0 ) {
@@ -834,10 +834,10 @@ void besthea::mesh::tree_structure::prepare_essential_reduction(
     if ( current_level + 1 > _levels ) {
       _levels = current_level + 1;
     }
-    // check if the nearfield contains clusters which are not essential and 
+    // check if the nearfield contains clusters which are not essential and
     // remove them in case. If the resulting nearfield is empty delete the
     // container
-    std::vector< scheduling_time_cluster * > * nearfield 
+    std::vector< scheduling_time_cluster * > * nearfield
       = root.get_nearfield_list( );
     auto it = nearfield->begin( );
     while ( it != nearfield->end( ) ) {
@@ -851,7 +851,7 @@ void besthea::mesh::tree_structure::prepare_essential_reduction(
       root.delete_nearfield( );
     }
     // same for the send list
-    std::vector< scheduling_time_cluster * > * send_list 
+    std::vector< scheduling_time_cluster * > * send_list
       = root.get_send_list( );
     if ( send_list != nullptr ) {
       it = send_list->begin( );
@@ -867,7 +867,7 @@ void besthea::mesh::tree_structure::prepare_essential_reduction(
       }
     }
 
-    // same for the interaction list 
+    // same for the interaction list
     std::vector< scheduling_time_cluster * > * interaction_list
       = root.get_interaction_list( );
     if ( interaction_list != nullptr ) {
@@ -886,11 +886,11 @@ void besthea::mesh::tree_structure::prepare_essential_reduction(
   }
 }
 
-void besthea::mesh::tree_structure::execute_essential_reduction( 
+void besthea::mesh::tree_structure::execute_essential_reduction(
   scheduling_time_cluster & root ) {
   // Recursively traverse the tree structure and delete non-essential clusters
   if ( root.get_n_children( ) > 0 ) {
-    std::vector< scheduling_time_cluster * > * children 
+    std::vector< scheduling_time_cluster * > * children
       = root.get_children( );
     auto it = children->begin( );
     while ( it != children->end( ) ) {
@@ -905,15 +905,15 @@ void besthea::mesh::tree_structure::execute_essential_reduction(
     if ( children->size( ) == 0 ) {
       root.delete_children( );
     }
-  }  
+  }
 }
 
-void besthea::mesh::tree_structure::determine_essential_clusters( 
+void besthea::mesh::tree_structure::determine_essential_clusters(
   const lo my_process_id, scheduling_time_cluster & root ) const {
   // traverse the tree and add the status of each cluster to the map, using
   // the clusters global id as key.
   if ( root.get_n_children( ) > 0 ) {
-    std::vector< scheduling_time_cluster* >* children = 
+    std::vector< scheduling_time_cluster* >* children =
       root.get_children( );
     for ( lou i = 0; i < children->size( ); ++i ) {
       determine_essential_clusters( my_process_id, *( *children )[ i ] );
@@ -924,7 +924,7 @@ void besthea::mesh::tree_structure::determine_essential_clusters(
   if ( root_status == 3 ) {
     //set status of each child to 1 if it is 0 (child is essential in time tree)
     if ( root.get_n_children( ) > 0 ) {
-      const std::vector< scheduling_time_cluster* >* children 
+      const std::vector< scheduling_time_cluster* >* children
         = root.get_children( );
       for ( auto it : *children ) {
         if ( it->get_essential_status( ) == 0 ) {
@@ -935,7 +935,7 @@ void besthea::mesh::tree_structure::determine_essential_clusters(
     // set status of each cluster in the interaction list to 2 if it is 0
     // (cluster in interaction list is essential in time and space-time trees)
     if ( root.get_interaction_list( ) != nullptr) {
-      const std::vector< scheduling_time_cluster* >* interaction_list 
+      const std::vector< scheduling_time_cluster* >* interaction_list
         = root.get_interaction_list( );
       for ( auto it : *interaction_list ) {
         if ( it->get_essential_status( ) == 0 ) {
@@ -946,7 +946,7 @@ void besthea::mesh::tree_structure::determine_essential_clusters(
     // if root is a leaf set status of all clusters in the nearfield from 0 to 2
     // (nearfield clusters are essential in time and space-time tree)
     if ( root.get_n_children( ) == 0 ) {
-      const std::vector< scheduling_time_cluster* >* nearfield 
+      const std::vector< scheduling_time_cluster* >* nearfield
         = root.get_nearfield_list( );
       for ( auto it : *nearfield ) {
         if ( it->get_essential_status( ) == 0 ) {
@@ -957,7 +957,7 @@ void besthea::mesh::tree_structure::determine_essential_clusters(
   } else {
     // if the status of a cluster in the interaction list is 3 set status to 1
     if ( root.get_interaction_list( ) != nullptr) {
-      const std::vector< scheduling_time_cluster* >* interaction_list 
+      const std::vector< scheduling_time_cluster* >* interaction_list
         = root.get_interaction_list( );
       for ( auto it : *interaction_list ) {
         if ( it->get_essential_status( ) == 3 ) {
@@ -967,8 +967,8 @@ void besthea::mesh::tree_structure::determine_essential_clusters(
     }
     // if root is a leaf and the status of a cluster in the nearfield is 3 set
     // status to 1.
-    // @todo: Check later, whether this has to be changed! According to the 
-    // current assignment of processes to clusters all descendants of the 
+    // @todo: Check later, whether this has to be changed! According to the
+    // current assignment of processes to clusters all descendants of the
     // neighbors of root would be assigned to the same process as the neighbor
     // itself. If this changes, one has to traverse the nearfield starting from
     // the neighboring clusters to see whether it contains a local cluster.
@@ -987,12 +987,12 @@ void besthea::mesh::tree_structure::determine_essential_clusters(
     }
   }
   // set the status of root to the determined status
-  root.set_essential_status( root_status ); 
+  root.set_essential_status( root_status );
 }
 
 void besthea::mesh::tree_structure::
-  determine_levelwise_output_string( const lo digits, 
-  bool print_process_ids, scheduling_time_cluster * root, 
+  determine_levelwise_output_string( const lo digits,
+  bool print_process_ids, scheduling_time_cluster * root,
   std::vector< std::string > & levelwise_output_strings ) const {
   if ( root != nullptr ) {
     lo current_level = root->get_level( );
@@ -1021,7 +1021,7 @@ void besthea::mesh::tree_structure::
       // call the routine for each child
       auto children = root->get_children( );
       for ( auto child : *children ) {
-        determine_levelwise_output_string( digits, print_process_ids, child, 
+        determine_levelwise_output_string( digits, print_process_ids, child,
           levelwise_output_strings );
       }
     }
@@ -1038,7 +1038,7 @@ void besthea::mesh::tree_structure::
       }
       for ( lou i = 0; i < 2; ++i ) {
         if ( child_exists[ i ] == true ) {
-          determine_levelwise_output_string( digits, print_process_ids, child, 
+          determine_levelwise_output_string( digits, print_process_ids, child,
             levelwise_output_strings );
         } else {
           // add / and whitespaces for non-existing clusters starting from
@@ -1047,10 +1047,10 @@ void besthea::mesh::tree_structure::
           lo n_digits_level_mod = n_digits_level;
           for ( lo level = current_level + 1; level < _levels; ++level ) {
             n_digits_level_mod /= 2;
-            std::string child_string 
+            std::string child_string
               = '/' + std::string(n_digits_level_mod - 1, ' ');
             for ( lo child = 0; child < n_children; ++child ) {
-              levelwise_output_strings[ level ] += child_string; 
+              levelwise_output_strings[ level ] += child_string;
             }
             n_children *= 2;
           }
@@ -1065,19 +1065,19 @@ void besthea::mesh::tree_structure::
         n_digits_level /= 2;
         std::string child_string = '/' + std::string(n_digits_level - 1, ' ');
         for ( lo child = 0; child < n_children; ++child ) {
-          levelwise_output_strings[ level ] += child_string; 
+          levelwise_output_strings[ level ] += child_string;
         }
       }
     }
   }
 }
 
-bool besthea::mesh::tree_structure::compare_clusters_bottom_up_right_2_left( 
+bool besthea::mesh::tree_structure::compare_clusters_bottom_up_right_2_left(
   scheduling_time_cluster* first, scheduling_time_cluster* second ) {
   bool ret_val = false;
   if ( first->get_level( ) > second->get_level( ) ) {
     ret_val = true;
-  } 
+  }
   else if ( first->get_level( ) == second->get_level( ) &&
             first->get_global_index( ) > second->get_global_index( ) ) {
     ret_val = true;
@@ -1085,12 +1085,12 @@ bool besthea::mesh::tree_structure::compare_clusters_bottom_up_right_2_left(
   return ret_val;
 }
 
-bool besthea::mesh::tree_structure::compare_clusters_top_down_right_2_left( 
+bool besthea::mesh::tree_structure::compare_clusters_top_down_right_2_left(
   scheduling_time_cluster* first, scheduling_time_cluster* second ) {
   bool ret_val = false;
   if ( first->get_level( ) < second->get_level( ) ) {
     ret_val = true;
-  } 
+  }
   else if ( first->get_level( ) == second->get_level( ) &&
             first->get_global_index( ) > second->get_global_index( ) ) {
     ret_val = true;

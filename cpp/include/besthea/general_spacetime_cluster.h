@@ -85,12 +85,12 @@ class besthea::mesh::general_spacetime_cluster {
     const vector_type & space_half_size, sc time_half_size, lo n_elements,
     general_spacetime_cluster * parent, lo level, short octant,
     std::vector< slou > & coordinate, short left_right, lo global_time_index,
-    lo n_space_div, lo n_time_div, 
-    const distributed_spacetime_tensor_mesh & mesh, lo process_id, 
+    lo n_space_div, lo n_time_div,
+    const distributed_spacetime_tensor_mesh & mesh, lo process_id,
     bool reserve_elements = false )
     : _n_elements( n_elements ),
-      _n_time_elements( -1 ),     
-      _n_space_elements( -1 ),     
+      _n_time_elements( -1 ),
+      _n_space_elements( -1 ),
       _time_center( time_center ),
       _space_center( space_center ),
       _time_half_size( time_half_size ),
@@ -153,7 +153,7 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
-   * Sets the number of different time steps in the cluster. Furthermore it 
+   * Sets the number of different time steps in the cluster. Furthermore it
    * sets the number of different spatial elements accordingly.
    * @param[in] n_time_elements Number of time steps in the cluster.
    */
@@ -256,26 +256,26 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
-   * Determines temporal admissibility for a given general_spacetime_cluster 
+   * Determines temporal admissibility for a given general_spacetime_cluster
    * based on the "neighborhood criterion" (as in Messner's work).
    * @param[in] src_cluster Source cluster whose admissibility is checked.
    * @warning This check of admissibility is only reasonable for clusters at the
    * same level of a tree.
-   * @note The current criterion guarantees that the distance in time of two 
+   * @note The current criterion guarantees that the distance in time of two
    * admissible clusters is greater than the minimum of the temporal half sizes
-   * of the two clusters. 
+   * of the two clusters.
    */
-  bool determine_temporal_admissibility( 
+  bool determine_temporal_admissibility(
     general_spacetime_cluster * src_cluster ) const {
     bool admissibility = false;
     sc src_center = src_cluster->get_time_center( );
     sc src_half_size = src_cluster->get_time_half_size( );
-    sc min_half_size = ( src_half_size < _time_half_size ) 
+    sc min_half_size = ( src_half_size < _time_half_size )
       ? src_half_size : _time_half_size;
-    if ( src_center 
+    if ( src_center
           < _time_center - _time_half_size - src_half_size - min_half_size ) {
       admissibility = true;
-    } 
+    }
     return admissibility;
   }
 
@@ -291,7 +291,7 @@ class besthea::mesh::general_spacetime_cluster {
     slou z_diff = ( _box_coordinate[ 3 ] > src_box_coordinate[ 3 ] )
       ? _box_coordinate[ 3 ] - src_box_coordinate[ 3 ] :
         src_box_coordinate[ 3 ] - _box_coordinate[ 3 ];
-    return ( x_diff <= spatial_nearfield_limit && 
+    return ( x_diff <= spatial_nearfield_limit &&
               y_diff <= spatial_nearfield_limit &&
               z_diff <= spatial_nearfield_limit );
   }
@@ -403,7 +403,7 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
-   * Returns the temporal configuration of the cluster with respect to its 
+   * Returns the temporal configuration of the cluster with respect to its
    * parent, i.e. the value of _left_right
    */
   short get_temporal_configuration( ) const {
@@ -476,10 +476,10 @@ class besthea::mesh::general_spacetime_cluster {
     std::vector< linear_algebra::coordinates< 4 > > node_vector;
     node_vector.resize( 6 );
 
-    // determine the appropriate mesh and start index (distinguish whether 
+    // determine the appropriate mesh and start index (distinguish whether
     // cluster is local or in the nearfield)
-    const spacetime_tensor_mesh * clusters_mesh; 
-    lo start_idx; 
+    const spacetime_tensor_mesh * clusters_mesh;
+    lo start_idx;
     if ( _mesh.get_rank( ) == _process_id ) { // local cluster
       clusters_mesh = _mesh.get_local_mesh( );
       start_idx = _mesh.get_local_start_idx( );
@@ -620,8 +620,8 @@ class besthea::mesh::general_spacetime_cluster {
 
   /**
    * Sets the pointer to the local_contribution.
-   * @param[in] local_contribution_address  Address of the local contribution  
-   *                                        (in the array stored in the 
+   * @param[in] local_contribution_address  Address of the local contribution
+   *                                        (in the array stored in the
    *                                        associated scheduling_time_cluster)
    */
   void set_pointer_to_local_contribution( sc* local_contribution_address ) {
@@ -651,13 +651,13 @@ class besthea::mesh::general_spacetime_cluster {
 
   /**
    * Returns the number of degrees of freedom in the cluster with respect to
-   * space (depending on the underlying space) 
+   * space (depending on the underlying space)
    */
   template< class space_type >
   lo get_n_space_dofs( ) const;
 
   /**
-   * Provides local indices for the degrees of freedom in space for a given, 
+   * Provides local indices for the degrees of freedom in space for a given,
    * possibly transformed, spatial element.
    * In case of p0 elements only the element index is returned
    * In case of p1 elements the local vertex indices are returned
@@ -670,8 +670,8 @@ class besthea::mesh::general_spacetime_cluster {
    * @todo Is this suitable for p1 basis functions?!
    */
   template< class space_type >
-  void local_elem_to_local_space_dofs( 
-    lo i_loc_elem, int n_shared_vertices, int rotation, bool swap, 
+  void local_elem_to_local_space_dofs(
+    lo i_loc_elem, int n_shared_vertices, int rotation, bool swap,
     std::vector< lo > & indices ) const;
 
   /**
@@ -688,20 +688,20 @@ class besthea::mesh::general_spacetime_cluster {
     std::cout << ", nearfield: ";
     for ( auto nf_cluster : *_nearfield_list ) {
       std::vector< slou > nf_box_coordinate = nf_cluster->get_box_coordinate( );
-      std::cout << "(" << nf_box_coordinate[ 0 ] << ", " 
-                << nf_box_coordinate[ 1 ] << ", " << nf_box_coordinate[ 2 ] 
-                << ", " << nf_box_coordinate[ 3 ] << ", " 
+      std::cout << "(" << nf_box_coordinate[ 0 ] << ", "
+                << nf_box_coordinate[ 1 ] << ", " << nf_box_coordinate[ 2 ]
+                << ", " << nf_box_coordinate[ 3 ] << ", "
                 << nf_box_coordinate[ 4 ] << "), ";
     }
     if ( _interaction_list != nullptr ) {
       std::cout << ", interaction list: ";
       for ( auto ff_cluster : *_interaction_list ) {
       std::vector< slou > ff_box_coordinate = ff_cluster->get_box_coordinate( );
-      std::cout << "(" << ff_box_coordinate[ 0 ] << ", " 
-                << ff_box_coordinate[ 1 ] << ", " << ff_box_coordinate[ 2 ] 
-                << ", " << ff_box_coordinate[ 3 ] << ", " 
+      std::cout << "(" << ff_box_coordinate[ 0 ] << ", "
+                << ff_box_coordinate[ 1 ] << ", " << ff_box_coordinate[ 2 ]
+                << ", " << ff_box_coordinate[ 3 ] << ", "
                 << ff_box_coordinate[ 4 ] << "), ";
-      }  
+      }
     }
     std::cout << std::endl;
     // if ( _children == nullptr ) {
@@ -716,7 +716,7 @@ class besthea::mesh::general_spacetime_cluster {
 
  private:
   lo _n_elements;             //!< number of spacetime elements in the cluster.
-  lo _n_time_elements;        //!< number of different time steps in the 
+  lo _n_time_elements;        //!< number of different time steps in the
                               //!< cluster (components of spacetime elements).
   lo _n_space_elements;       //!< number of different spatial elements in the
                               //!< cluster (components of spacetime elements).
@@ -738,32 +738,32 @@ class besthea::mesh::general_spacetime_cluster {
   sc _padding;        //!< padding of the cluster
   std::vector< slou >
     _box_coordinate;  //!< coordinates of the box within boxes on given level
-  lo _global_time_index;  //!< Global index of the temporal component of the 
+  lo _global_time_index;  //!< Global index of the temporal component of the
                           //!< cluster. The children of a cluster with index k
                           //!< have the indices 2k+1 and 2k+2.
-                          //!< @todo Include this index into 
-                          //!< @ref _box_coordinate instead of the 5th entry? 
+                          //!< @todo Include this index into
+                          //!< @ref _box_coordinate instead of the 5th entry?
   std::vector< std::vector< lo > >
     _idx_2_coord;   //!< auxiliary mapping from octant indexing to coordinates
   lo _process_id;   //!< rank of an MPI process owning the cluster
   lo _n_space_div;  //!< number of splittings in space dimensions
   lo _n_time_div;   //!< number of splittings in temporal dimension
-  
+
   std::vector< general_spacetime_cluster * > *
     _nearfield_list;  //!< nearfield list of the cluster
-  std::vector< general_spacetime_cluster * > * 
+  std::vector< general_spacetime_cluster * > *
     _interaction_list;  //!< interaction list of the cluster
-  sc * _moment; //!< pointer to the moment of the cluster, which is stored in 
-                //!< the associated scheduling_time_cluster 
-  sc * _local_contribution; //!< pointer to the local contribution of the 
-                            //!< cluster, which is stored in the associated 
+  sc * _moment; //!< pointer to the moment of the cluster, which is stored in
+                //!< the associated scheduling_time_cluster
+  sc * _local_contribution; //!< pointer to the local contribution of the
+                            //!< cluster, which is stored in the associated
                             //!< scheduling_time_cluster
 };
 
 /** specialization for p0 basis functions */
 template<>
 inline lo besthea::mesh::general_spacetime_cluster::get_n_dofs<
-  besthea::bem::distributed_fast_spacetime_be_space< 
+  besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 > >( ) const {
   return _n_elements;
 }
@@ -771,23 +771,23 @@ inline lo besthea::mesh::general_spacetime_cluster::get_n_dofs<
 /** specialization for p0 basis functions */
 template<>
 inline lo besthea::mesh::general_spacetime_cluster::get_n_space_dofs<
-  besthea::bem::distributed_fast_spacetime_be_space< 
+  besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 > >( ) const {
   return _n_space_elements;
 }
 
 /** specialization for p0 basis functions */
 template<> inline
-void besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs< 
-  besthea::bem::distributed_fast_spacetime_be_space< 
-    besthea::bem::basis_tri_p0 > >( lo i_loc_elem, int n_shared_vertices, 
+void besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs<
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 > >( lo i_loc_elem, int n_shared_vertices,
     int rotation, bool swap, std::vector< lo > & indices ) const {
   indices[ 0 ] = i_loc_elem;
 }
 
-/** specialization for p1 basis functions 
+/** specialization for p1 basis functions
  * @todo add support for p1 basis functions (information about nodes in cluster,
- * time elements in cluster is necessary) 
+ * time elements in cluster is necessary)
  */
 // template<>
 // inline lo besthea::mesh::spacetime_cluster::get_n_dofs<

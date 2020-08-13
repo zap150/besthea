@@ -131,22 +131,22 @@ class besthea::mesh::time_cluster_tree {
   /**
    * Computes the bounds of all the clusters in the tree, i.e. for each cluster
    * the interval [t0,t1] which is the union of all elements in it.
-   * 
-   * The bounds are stored in an unordered map with the pointer to the cluster 
+   *
+   * The bounds are stored in an unordered map with the pointer to the cluster
    * as key. They are created by traversing the tree recursively.
    * @param[in] root  Current cluster in the tree traversal.
    * @param[in, out] cluster_bounds   Map in which the bounds are stored.
    */
-  void compute_cluster_bounds( time_cluster & root, 
-    std::unordered_map< time_cluster*, std::pair< sc, sc > > & cluster_bounds ) 
+  void compute_cluster_bounds( time_cluster & root,
+    std::unordered_map< time_cluster*, std::pair< sc, sc > > & cluster_bounds )
     const;
 
   /**
    * Creates a vector of cluster bounds sorted according to the tree format and
    * writes it to file. For each cluster two successive floating point numbers
    * are contained in the vector.
-   * @param[in] filename  Name of the (binary!) file in which the bounds are 
-   *                      stored. 
+   * @param[in] filename  Name of the (binary!) file in which the bounds are
+   *                      stored.
    */
   void print_cluster_bounds( const std::string filename ) const;
 
@@ -287,15 +287,15 @@ class besthea::mesh::time_cluster_tree {
    * unordered map to a vector sorted according to the tree format.
    * @param[in] root  Current non-leaf cluster in the tree traversal.
    * @param[in] bounds_map  Unordered map containing the bounds of all clusters.
-   *                        The bounds of a cluster are given as pair of 
-   *                        floating point values and are accessed by the 
+   *                        The bounds of a cluster are given as pair of
+   *                        floating point values and are accessed by the
    *                        pointer to the cluster.
-   * @param[in,out] bounds_vector Vector to which the bounds are written 
+   * @param[in,out] bounds_vector Vector to which the bounds are written
    *                              according to the order of the tree format.
    * @note This function is only called by @ref print_cluster_bounds.
    * @warning It is assumed, that the cluster tree is a full binary tree, i.e.
-   * no cluster has just one child. This is currently guaranteed by the 
-   * construction of the tree. 
+   * no cluster has just one child. This is currently guaranteed by the
+   * construction of the tree.
    */
   void convert_cluster_bounds_map_2_tree_format( const time_cluster & root,
     const std::unordered_map< time_cluster*, std::pair< sc, sc > > & bounds_map,

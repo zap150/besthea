@@ -51,7 +51,7 @@ namespace besthea {
 }
 
 /*!
-  * Gets local part of a block vector corresponding to dofs in a spacetime 
+  * Gets local part of a block vector corresponding to dofs in a spacetime
   * cluster.
   * @param[in] cluster  Cluster determining the local dofs.
   * @param[in] block_vector Input vector in block format.
@@ -63,7 +63,7 @@ namespace besthea {
   *       vector.
   */
 template< class space_type >
-void get_local_part_of_block_vector( 
+void get_local_part_of_block_vector(
   besthea::mesh::spacetime_cluster* cluster,
   const besthea::linear_algebra::block_vector & block_vector,
   besthea::linear_algebra::vector & local_vector );
@@ -82,9 +82,9 @@ void get_local_part_of_block_vector(
   *       step after time step).
   */
 template< class space_type >
-void add_local_part_to_block_vector( 
+void add_local_part_to_block_vector(
   besthea::mesh::spacetime_cluster* cluster,
-  const besthea::linear_algebra::vector & local_vector, 
+  const besthea::linear_algebra::vector & local_vector,
   besthea::linear_algebra::block_vector & block_vector);
 
 #endif /* INCLUDE_BESTHEA_LOCAL_VECTOR_ROUTINES_H_ */

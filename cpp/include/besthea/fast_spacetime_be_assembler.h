@@ -235,14 +235,14 @@ class besthea::bem::fast_spacetime_be_assembler {
   /**
    * Assembles clusterwise nearfield matrix
    * @param[in] target_cluster  Target for which the matrix is assembled.
-   * @param[in] source_cluster  Source in the nearfield of the target for which 
+   * @param[in] source_cluster  Source in the nearfield of the target for which
    *                            the matrix is assembled.
    * @param[in,out] nearfield_matrix Reference to the matrix which should be
    * assembled.
-   */  
-  void assemble_clusterwise_nearfield_matrix( 
-    spacetime_cluster_type * target_cluster, 
-    spacetime_cluster_type * source_cluster, 
+   */
+  void assemble_clusterwise_nearfield_matrix(
+    spacetime_cluster_type * target_cluster,
+    spacetime_cluster_type * source_cluster,
     full_matrix_type & nearfield_matrix ) const;
 
   /**
@@ -508,7 +508,7 @@ class besthea::bem::fast_spacetime_be_assembler {
     space_cluster_type * cluster ) const;
 
   /**
-   * Initializes data storage for moment and local contributions for all 
+   * Initializes data storage for moment and local contributions for all
    * clusters in the test and trial space spacetime cluster tree.
    */
   void initialize_moment_and_local_contributions( ) const;

@@ -104,7 +104,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   distribution_tree->reduce_2_essential( );
 
   collect_local_leaves( *_root );
-  
+
   associate_scheduling_clusters_and_space_time_clusters( );
   fill_nearfield_and_interaction_lists( *_root );
 }
@@ -765,7 +765,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::split_cluster(
           space_center, new_time_center, space_half_size, new_time_half_size,
           elems_in_clusters[ pos ], &cluster, cluster.get_level( ) + 1,
           cluster.get_spatial_octant( ), coordinates, 1,
-          2 * cluster.get_global_time_index( ) + 1, n_space_div, n_time_div, 
+          2 * cluster.get_global_time_index( ) + 1, n_space_div, n_time_div,
           _spacetime_mesh, owner, false );
         cluster.add_child( left_child );
       }
@@ -954,11 +954,11 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
             if ( elems_in_clusters[ pos ] > 0 ) {
               general_spacetime_cluster * new_child
                 = new general_spacetime_cluster(
-                  space_center, new_time_center, space_half_size, 
-                  new_time_half_size, elems_in_clusters[ pos ], st_cluster, 
-                  st_cluster->get_level( ) + 1, 
+                  space_center, new_time_center, space_half_size,
+                  new_time_half_size, elems_in_clusters[ pos ], st_cluster,
+                  st_cluster->get_level( ) + 1,
                   st_cluster->get_spatial_octant( ), coordinates, left_right,
-                  global_time_index, n_space_div, n_time_div, _spacetime_mesh, 
+                  global_time_index, n_space_div, n_time_div, _spacetime_mesh,
                   owner, false );
               st_cluster->add_child( new_child );
               new_cluster_pairs.push_back( { new_child, t_child } );
@@ -1448,7 +1448,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
       left_child = new general_spacetime_cluster( space_center, new_time_center,
         space_half_size, new_time_half_size, oct_sizes[ 0 ], &root,
         root.get_level( ) + 1, root.get_spatial_octant( ), coordinates, 0,
-        2 * root.get_global_time_index( ) + 1, n_space_div, n_time_div + 1, 
+        2 * root.get_global_time_index( ) + 1, n_space_div, n_time_div + 1,
         _spacetime_mesh, root.get_process_id( ), true );
     }
 
@@ -1461,7 +1461,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
       right_child = new general_spacetime_cluster( space_center,
         new_time_center, space_half_size, new_time_half_size, oct_sizes[ 1 ],
         &root, root.get_level( ) + 1, root.get_spatial_octant( ), coordinates,
-        1, 2 * root.get_global_time_index( ) + 2, n_space_div, n_time_div + 1, 
+        1, 2 * root.get_global_time_index( ) + 2, n_space_div, n_time_div + 1,
         _spacetime_mesh, root.get_process_id( ), true );
     }
 

@@ -34,7 +34,7 @@
 #define INCLUDE_BESTHEA_SPACE_CLUSTER_H_
 
 // TODO: is the include list ok (fast be spaces are not included directly, but
-// via forward declaration) 
+// via forward declaration)
 // #include "besthea/fast_spacetime_be_space.h"
 #include "besthea/full_matrix.h"
 #include "besthea/settings.h"
@@ -467,8 +467,8 @@ class besthea::mesh::space_cluster {
    * @param[out] indices Local indices for the current (transformed) element.
    */
   template< class space_type >
-  void local_elem_to_local_dofs( 
-    lo i_loc_elem, int n_shared_vertices, int rotation, bool swap, 
+  void local_elem_to_local_dofs(
+    lo i_loc_elem, int n_shared_vertices, int rotation, bool swap,
     std::vector< lo > & indices ) const;
 
   /**
@@ -525,9 +525,9 @@ class besthea::mesh::space_cluster {
    */
   void print( ) {
     std::cout << "level: " << _level;
-    std::cout << ", center: (" 
-              << _center[ 0 ] << ", " << _center[ 1 ] << ", " << _center[ 2 ] 
-              << "), half size: (" 
+    std::cout << ", center: ("
+              << _center[ 0 ] << ", " << _center[ 1 ] << ", " << _center[ 2 ]
+              << "), half size: ("
               << _half_size[ 0 ] << ", " << _half_size[ 1 ] << ", "
               << _half_size[ 1 ]
               << "), elements: " << _n_elements << std::endl;
@@ -551,12 +551,12 @@ class besthea::mesh::space_cluster {
   std::vector< slou >
     _box_coordinate;  //!< coordinates of the box within boxes on given level
   full_matrix_type
-    _cheb_T_p0;   //!< matrix storing quadrature of the Chebyshev polynomials 
+    _cheb_T_p0;   //!< matrix storing quadrature of the Chebyshev polynomials
                   //!< times p0 basis functions
                   //!< (rows element of the cluster,
                   //!< columns - order of the polynomial)
-  full_matrix_type 
-    _cheb_T_p1;   //!< matrix storing quadrature of the Chebyshev polynomials 
+  full_matrix_type
+    _cheb_T_p1;   //!< matrix storing quadrature of the Chebyshev polynomials
                   //!< times p1 basis functions
                   //!< (rows element of the cluster,
                   //!< columns - order of the polynomial)
@@ -610,9 +610,9 @@ class besthea::mesh::space_cluster {
 
 /** specialization for p0 basis functions */
 template<> inline
-void besthea::mesh::space_cluster::local_elem_to_local_dofs< 
+void besthea::mesh::space_cluster::local_elem_to_local_dofs<
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >(
-  lo i_loc_elem, int n_shared_vertices, int rotation, bool swap, 
+  lo i_loc_elem, int n_shared_vertices, int rotation, bool swap,
   std::vector< lo > & indices ) const {
   indices[ 0 ] = i_loc_elem;
 }
@@ -622,12 +622,12 @@ void besthea::mesh::space_cluster::local_elem_to_local_dofs<
  * possible without wasting too much storage.
  */
 template<> inline
-void besthea::mesh::space_cluster::local_elem_to_local_dofs< 
+void besthea::mesh::space_cluster::local_elem_to_local_dofs<
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >(
-  lo i_loc_elem, int n_shared_vertices, int rotation, bool swap, 
+  lo i_loc_elem, int n_shared_vertices, int rotation, bool swap,
   std::vector< lo > & indices ) const {
   std::vector< lo > local_indices = { _elems_2_local_nodes[ 3* i_loc_elem ],
-    _elems_2_local_nodes[ 3* i_loc_elem + 1 ], 
+    _elems_2_local_nodes[ 3* i_loc_elem + 1 ],
     _elems_2_local_nodes[ 3* i_loc_elem + 2 ] };
 
   switch ( rotation ) {
