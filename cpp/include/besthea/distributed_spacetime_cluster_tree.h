@@ -71,7 +71,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    */
   distributed_spacetime_cluster_tree(
     distributed_spacetime_tensor_mesh & spacetime_mesh, lo max_levels,
-    lo n_min_elems, sc st_coeff, slou spatial_nearfield_limit, 
+    lo n_min_elems, sc st_coeff, slou spatial_nearfield_limit,
     MPI_Comm * comm );
 
   /**
@@ -91,6 +91,11 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
 
   /**
    * Returns the associated distributed spacetime tensor mesh.
+<<<<<<< HEAD
+=======
+   * @todo Return reference instead? (spacetime_cluster_tree returns a
+   * reference, not a pointer)
+>>>>>>> 5ed7c0037fc4e259749f40c6a3bb24a2a81e7b99
    */
   const distributed_spacetime_tensor_mesh & get_mesh( ) {
     return _spacetime_mesh;
@@ -111,8 +116,15 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   }
 
   /**
-   * Returns the bound for the maximal number of refinements in space of the 
-   * clusters in the local part of the distributed tree. 
+ * Returns the vector of levelwise spatial paddings.
+ */
+const std::vector< sc > & get_spatial_paddings( ) const {
+  return _spatial_paddings;
+}
+
+  /**
+   * Returns the bound for the maximal number of refinements in space of the
+   * clusters in the local part of the distributed tree.
    */
   lo get_local_max_space_level( ) const {
     return _local_max_space_level;
@@ -123,7 +135,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    */
   void print( ) {
     // print general tree information
-    std::cout << "number of levels of spacetime tree " << _real_max_levels 
+    std::cout << "number of levels of spacetime tree " << _real_max_levels
               << std::endl;
     // print cluster information recursively
     print_internal( *_root );
@@ -136,58 +148,58 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   void build_tree( general_spacetime_cluster * root );
 
   /**
-   * Expands the distribution tree included in @p _spacetime_mesh by adding 
-   * relevant time clusters which appear as components of spacetime clusters in 
+   * Expands the distribution tree included in @p _spacetime_mesh by adding
+   * relevant time clusters which appear as components of spacetime clusters in
    * the current tree but are not in the distribution tree.
-   * @note The clusters which are refined are determined using the routine 
-   *       @ref tree_structure::determine_clusters_to_refine and the refinement 
+   * @note The clusters which are refined are determined using the routine
+   *       @ref tree_structure::determine_clusters_to_refine and the refinement
    *       is executed by @ref expand_distribution_tree_recursively.
    * @note The nearfields, interaction lists and send lists of the distribution
-   *       tree are cleared using the routine 
+   *       tree are cleared using the routine
    *       @ref tree_structure::clear_cluster_lists and filled anew.
-   * @note After execution the distribution tree is possibly not locally 
-   *       essential anymore. Call the routine 
+   * @note After execution the distribution tree is possibly not locally
+   *       essential anymore. Call the routine
    *       @ref tree_structure::reduce_2_essential on the distribution tree to
    *       make it locally essential again.
    */
   void expand_distribution_tree_locally( );
 
   /**
-   * Expands the distribution tree included in @p _spacetime_mesh by 
+   * Expands the distribution tree included in @p _spacetime_mesh by
    * exchanging information with other processes (such that the distribution
-   * tree includes the locally essential subtree of the global distribution 
+   * tree includes the locally essential subtree of the global distribution
    * tree after refinement).
    * @param[in] cluster_send_list Contains pairs of process ids and clusters.
    *                              For a pair (p, idx) the subtree with root idx
    *                              is send to process p.
-   * @param[in] cluster_receive_list  Contains pairs of process ids and 
+   * @param[in] cluster_receive_list  Contains pairs of process ids and
    *                                  clusters. For a pair (p, idx) the subtree
    *                                  with root idx is received from process p.
-   * @note The input sets can be determined using 
+   * @note The input sets can be determined using
    * @ref tree_structure::determine_refinement_communication_lists.
    */
-  void expand_distribution_tree_communicatively( 
-    const std::set< std::pair< lo, scheduling_time_cluster* > > 
+  void expand_distribution_tree_communicatively(
+    const std::set< std::pair< lo, scheduling_time_cluster* > >
       cluster_send_list,
-    const std::set< std::pair< lo, scheduling_time_cluster* > > 
+    const std::set< std::pair< lo, scheduling_time_cluster* > >
       cluster_receive_list );
 
   /**
-   * Expands the temporal tree structure by recursively traversing the current 
+   * Expands the temporal tree structure by recursively traversing the current
    * distributed spacetime cluster tree and the distribution tree given in
-   * @p _spacetime_mesh. It uses @p refine_map and the spacetime cluster tree 
+   * @p _spacetime_mesh. It uses @p refine_map and the spacetime cluster tree
    * to determine if clusters should be added to the temporal tree structure.
-   * @param[in] distribution_tree Distribution tree which is modified and in 
+   * @param[in] distribution_tree Distribution tree which is modified and in
    *                              which @p root has to lie.
    * @param[in] spacetime_root Current cluster in the spacetime cluster tree.
    * @param[in] root  Current cluster in the tree structure.
-   * @param[in,out] refine_map  Map which indicates if the tree should be 
+   * @param[in,out] refine_map  Map which indicates if the tree should be
    *                            expanded at a leaf cluster or not. This is
    *                            updated if new clusters are added.
    */
-  void expand_tree_structure_recursively( tree_structure* distribution_tree, 
-    general_spacetime_cluster* spacetime_root, 
-    scheduling_time_cluster* time_root, 
+  void expand_tree_structure_recursively( tree_structure* distribution_tree,
+    general_spacetime_cluster* spacetime_root,
+    scheduling_time_cluster* time_root,
     std::unordered_map< lo, bool > & refine_map );
 
   /**
@@ -281,28 +293,28 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     std::vector< lo > & elems_in_clusters );
 
   /**
-   * Splits all suitably large clusters at an implicitly given level into 
+   * Splits all suitably large clusters at an implicitly given level into
    * subclusters
    * @param[in] split_space Whether to split space as well.
    * @param[in] n_space_div Number of previous space subdivisions.
    * @param[in] n_time_div Number of previous time subdivisions.
    * @param[in] elems_in_clusters Vector of numbers of elements in the
-   *                              subdivisioned bounding box (generated by the 
+   *                              subdivisioned bounding box (generated by the
    *                              method @ref get_n_elements_in_subdivisioning).
-   * @param[in, out] cluster_pairs  Vector of pairs of spacetime clusters and 
-   *                                scheduling time clusters on the current 
+   * @param[in, out] cluster_pairs  Vector of pairs of spacetime clusters and
+   *                                scheduling time clusters on the current
    *                                level. A spacetime cluster in the vector is
    *                                refined, if it contains enough elements and
-   *                                if the corresponding time cluster is an 
-   *                                essential non-leaf cluster. The vector is 
-   *                                overwritten by the vector of pairs of 
+   *                                if the corresponding time cluster is an
+   *                                essential non-leaf cluster. The vector is
+   *                                overwritten by the vector of pairs of
    *                                children.
    * @todo What to do with early space-time leaf clusters?
    */
-  void split_clusters_levelwise( 
-    bool split_space, lo n_space_div, lo n_time_div, 
+  void split_clusters_levelwise(
+    bool split_space, lo n_space_div, lo n_time_div,
     std::vector< lo > & elems_in_clusters,
-    std::vector< std::pair< general_spacetime_cluster*, 
+    std::vector< std::pair< general_spacetime_cluster*,
       scheduling_time_cluster * > > & cluster_pairs );
 
   /**
@@ -316,14 +328,14 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * Collects space-time leaf clusters in the local part of the distributed tree
    * which are leaves in the global tree (i.e. real leaves). The leaves include
    * non-local leaves, which are in the nearfield of local leaf clusters.
-   * 
-   * The routine is based on a traversal of the local part of the spacetime 
+   *
+   * The routine is based on a traversal of the local part of the spacetime
    * cluster tree and the temporal tree structure.
    * @param[in] st_root Current cluster in the local spacetime tree.
    * @param[in] t_root  Current cluster in the temporal tree structure.
    * @param[in,out] leaves  Vector containing all the leaves.
    */
-  void collect_real_leaves( general_spacetime_cluster & st_root, 
+  void collect_real_leaves( general_spacetime_cluster & st_root,
     scheduling_time_cluster & t_root,
     std::vector< general_spacetime_cluster * > & leaves );
 
@@ -342,26 +354,26 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
 
 
   /**
-   * Finds the associated spacetime clusters for each scheduling time cluster in 
+   * Finds the associated spacetime clusters for each scheduling time cluster in
    * the distribution tree.
-   * @note The routines 
-   * @ref associate_scheduling_clusters_and_space_time_leaves and 
+   * @note The routines
+   * @ref associate_scheduling_clusters_and_space_time_leaves and
    * @ref associate_scheduling_clusters_and_space_time_non_leaves are executed
    * to find the leaves.
-   * @warning: Space-time leaves and space-time non-leaves are distinguished. 
-   * This distinction is reasonable only for local clusters in the 
+   * @warning: Space-time leaves and space-time non-leaves are distinguished.
+   * This distinction is reasonable only for local clusters in the
    * distribution tree, i.e. clusters with process id @p _my_rank. Only for such
    * clusters this distinction is required in the FMM.
    */
   void associate_scheduling_clusters_and_space_time_clusters( );
 
   /**
-   * Recursively finds the associated spacetime leaf clusters for each 
-   * scheduling time cluster in the distribution tree. For this purpose the 
-   * distribution tree and the distributed spacetime cluster tree are traversed 
+   * Recursively finds the associated spacetime leaf clusters for each
+   * scheduling time cluster in the distribution tree. For this purpose the
+   * distribution tree and the distributed spacetime cluster tree are traversed
    * simultaneously in a recursvie manner.
    * @param[in] t_root  Current cluster in the distribution tree.
-   * @param[in] st_root  Current cluster in the distributed spacetime cluster 
+   * @param[in] st_root  Current cluster in the distributed spacetime cluster
    *                     tree.
    * @warning If the global leaf status of a cluster in the distribution tree
    * is not correct anymore (after a local extension of the distribution tree
@@ -369,52 +381,58 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * for such scheduling time clusters a distinction of leaves and non-leaves
    * is not necessary.
    */
-  void associate_scheduling_clusters_and_space_time_leaves( 
+  void associate_scheduling_clusters_and_space_time_leaves(
     scheduling_time_cluster* t_root, general_spacetime_cluster * st_root );
 
   /**
-   * Recursively finds the associated spacetime non-leaf clusters for each 
-   * scheduling time cluster in the distribution tree. For this purpose the 
-   * distribution tree and the distributed spacetime cluster tree are traversed 
+   * Recursively finds the associated spacetime non-leaf clusters for each
+   * scheduling time cluster in the distribution tree. For this purpose the
+   * distribution tree and the distributed spacetime cluster tree are traversed
    * simultaneously in a recursvie manner.
    * @param[in] t_root  Current cluster in the distribution tree.
-   * @param[in] st_root  Current cluster in the distributed spacetime cluster 
+   * @param[in] st_root  Current cluster in the distributed spacetime cluster
    *                     tree.
-   * @warning Some non-leaves might be missing, see 
+   * @warning Some non-leaves might be missing, see
    * @ref associate_scheduling_clusters_and_space_time_leaves for more details.
    */
-  void associate_scheduling_clusters_and_space_time_non_leaves( 
+  void associate_scheduling_clusters_and_space_time_non_leaves(
     scheduling_time_cluster* t_root, general_spacetime_cluster * st_root );
 
   /**
-   * Computes and sets the nearfield list and interaction list for every 
-   * cluster in the distributed spacetime cluster tree by recursively traversing 
+   * Computes and sets the nearfield list and interaction list for every
+   * cluster in the distributed spacetime cluster tree by recursively traversing
    * the tree.
    * @param[in] root  Current cluster in the tree traversal.
    * @warning The construction is based only on the local part of the cluster
    * tree. Only for local clusters the nearfield and interaction lists are the
-   * same as in the global tree. 
+   * same as in the global tree.
    */
   void fill_nearfield_and_interaction_lists( general_spacetime_cluster & root );
 
 /**
-   * Used for the construction of nearfields of leaf clusters by 
+   * Used for the construction of nearfields of leaf clusters by
    * @ref fill_nearfield_and_interaction_lists. It recursively traverses the
    * tree starting from the initial @p current_cluster, and adds all descendant
    * leaves to the nearfield of the leaf @p target_cluster.
    * @param[in] current_cluster Current cluster in the tree traversal.
    * @param[in] target_cluster  Cluster to whose nearfield the leaves are added.
    */
-  void add_leaves_to_nearfield_list( 
-    general_spacetime_cluster & current_cluster, 
+  void add_leaves_to_nearfield_list(
+    general_spacetime_cluster & current_cluster,
     general_spacetime_cluster & target_cluster );
 
+    /**
+     * Recursively computes padding of clusters in the tree
+     * @param[in] root Node to stem from
+     */
+    sc compute_local_spatial_padding( general_spacetime_cluster & root );
+    
   /**
    * Aux for printing
    */
   void print_internal( general_spacetime_cluster & root ) {
     root.print( );
-    std::vector< general_spacetime_cluster * > * children 
+    std::vector< general_spacetime_cluster * > * children
       = root.get_children( );
     // std::cout << children->size( ) << std::endl;
     if ( children != nullptr )
@@ -452,6 +470,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   sc _s_t_coeff;    //!< coefficient to determine the coupling of the spatial
                     //!< and temporal levels
   lo _n_min_elems;  //!< minimum number of elements so that cluster can be split
+  std::vector< sc >
+    _spatial_paddings;            //!< vector of spatial paddings on each level
   slou _spatial_nearfield_limit;  //!< number of the clusters in the vicinity to
                                 //!< be considered as nearfield
   const std::vector< std::vector< lo > > _idx_2_coord = { { 1, 1, 1 },
