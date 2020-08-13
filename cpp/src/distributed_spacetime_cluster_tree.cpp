@@ -83,8 +83,8 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   compute_local_spatial_padding( *_root );
   // reduce padding data among processes
   MPI_Allreduce( MPI_IN_PLACE, _spatial_paddings.data( ),
-  _spatial_paddings.size( ), get_index_type< lo >::MPI_LO( ), MPI_MAX,
-  *_comm );
+    _spatial_paddings.size( ), get_scalar_type< sc >::MPI_SC( ), MPI_MAX,
+    *_comm );
 
   // extend the locally essential distribution tree:
   // first determine clusters in the distribution tree for which the extension
