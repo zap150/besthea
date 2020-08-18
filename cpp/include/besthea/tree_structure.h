@@ -385,15 +385,6 @@ class besthea::mesh::tree_structure {
   void collect_leaves( scheduling_time_cluster & root );
 
   /**
-   * Assigns consecutive indices to all leaf clusters. The routine is based on a
-   * tree traversal.
-   * @param[in] root  Current cluster in the tree traversal.
-   * @param[in,out] next_id Next id which is set.
-   * @todo Delete this later, if not needed (used originally for dummy test)
-   */
-  void set_leaf_ids( scheduling_time_cluster & root, lo & next_id );
-
-  /**
    * Sets the global indices of all clusters in the tree structure by traversing
    * it recursively. The parent cluster with id k sets the indices of its
    * children: the left gets the index 2k+1, the right the index 2k+2.
