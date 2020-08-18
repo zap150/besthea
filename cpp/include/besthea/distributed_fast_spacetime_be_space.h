@@ -145,10 +145,10 @@ class besthea::bem::distributed_fast_spacetime_be_space
    * the right-hand side.
    * @todo adapt this
    */
-  // virtual void L2_projection(
-  //   sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-  //   block_vector_type & projection, int order_matrix = 2,
-  //   int order_rhs_spatial = 5, int order_rhs_temporal = 4 ) const override;
+  virtual void L2_projection(
+    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
+    block_vector_type & projection, int order_matrix = 2,
+    int order_rhs_spatial = 5, int order_rhs_temporal = 4 ) const override;
 
   /**
    * Returns the L2 relative error |f-approximation|/|f|.
@@ -160,10 +160,10 @@ class besthea::bem::distributed_fast_spacetime_be_space
    * the right-hand side.
    * @todo adapt this
    */
-  // virtual sc L2_relative_error(
-  //   sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-  //   const block_vector_type & approximation, int order_rhs_spatial = 5,
-  //   int order_rhs_temporal = 4 ) const override;
+  virtual sc L2_relative_error(
+    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
+    const block_vector_type & approximation, int order_rhs_spatial = 5,
+    int order_rhs_temporal = 4 ) const override;
 
   /**
    * Projects a function to the boundary element space. ONLY USE SPECIALIZED

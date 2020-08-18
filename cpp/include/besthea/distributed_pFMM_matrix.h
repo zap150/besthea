@@ -310,7 +310,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   void call_s2m_operations( const block_vector & sources,
     mesh::scheduling_time_cluster* time_cluster, bool verbose,
-    std::string verbose_file ) const;
+    const std::string & verbose_file ) const;
 
   /**
    * Applies the S2M operation for the given source cluster and sources.
@@ -334,7 +334,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   void call_m2m_operations(
     mesh::scheduling_time_cluster* time_cluster, bool verbose,
-    std::string verbose_file ) const;
+    const std::string & verbose_file ) const;
 
   /**
    * Applies the M2M operations for the given parent cluster and all its
@@ -385,7 +385,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   void call_m2l_operations( mesh::scheduling_time_cluster* src_cluster,
     mesh::scheduling_time_cluster* tar_cluster, bool verbose,
-    std::string verbose_file ) const;
+    const std::string & verbose_file ) const;
 
   /**
    * Applies the M2L operation for given source and target clusters.
@@ -406,7 +406,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   void call_l2l_operations(
     mesh::scheduling_time_cluster* time_cluster, bool verbose,
-    std::string verbose_file ) const;
+    const std::string & verbose_file ) const;
 
   /**
    * Applies the L2L operations for the given parent cluster and all its
@@ -462,7 +462,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   void call_l2t_operations( mesh::scheduling_time_cluster* time_cluster,
     block_vector & output_vector, bool verbose,
-    std::string verbose_file ) const;
+    const std::string & verbose_file ) const;
 
   /**
    * Applies the L2T operation for the given source cluster and writes the
@@ -495,7 +495,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   void apply_nearfield_operations(
     const mesh::scheduling_time_cluster* cluster,
     const block_vector & sources, bool trans, block_vector & output_vector,
-    bool verbose, std::string verbose_file ) const;
+    bool verbose, const std::string & verbose_file ) const;
 
   /**
    * Calls MPI_Testsome for an array of Requests to check for received data.
@@ -514,7 +514,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   void check_for_received_data( MPI_Request * array_of_requests,
     int array_of_indices[ ], int & outcount, bool verbose,
-    std::string verbose_file ) const;
+    const std::string & verbose_file ) const;
 
   /**
    * Returns an iterator pointing to the next cluster in the l-list whose
@@ -572,9 +572,15 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] src_cluster Considered scheduling time cluster. If a cluster in
    *                        its send list is handled by a different process, the
    *                        moments are send to this process.
+   * @param[in] verbose If true, the process reports about all initiated send 
+   *                    operations. (Updates of dependency flags are not 
+   *                    reported)
+   * @param[in] verbose_file  If @p verbose is true, this is used as output
+   *                          file.
    */
   void provide_moments_for_m2l(
-    mesh::scheduling_time_cluster* src_cluster ) const;
+    mesh::scheduling_time_cluster* src_cluster, 
+    bool verbose, const std::string & verbose_file ) const;
 
   /**
    * Updates dependency flags or sends moments for upward path.
@@ -582,18 +588,30 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                          is handled by a different process, the processed
    *                          moments are send from the local copy of the parent
    *                          cluster to this process.
+   * @param[in] verbose If true, the process reports about all initiated send 
+   *                    operations. (Updates of dependency flags are not 
+   *                    reported)
+   * @param[in] verbose_file  If @p verbose is true, this is used as output
+   *                          file.
    */
   void provide_moments_to_parents(
-    mesh::scheduling_time_cluster* child_cluster ) const;
+    mesh::scheduling_time_cluster* child_cluster,
+    bool verbose, const std::string & verbose_file ) const;
 
   /**
    * Sends local contributions for downward path if necessary.
    * @param[in] parent_cluster Considered scheduling time cluster. If a child
    *                           of it is handled by a different process, the
    *                           local contributions are send to this process.
+   * @param[in] verbose If true, the process reports about all initiated send 
+   *                    operations. (Updates of dependency flags are not 
+   *                    reported)
+   * @param[in] verbose_file  If @p verbose is true, this is used as output
+   *                          file.
    */
   void provide_local_contributions_to_children(
-    mesh::scheduling_time_cluster* parent_cluster ) const;
+    mesh::scheduling_time_cluster* parent_cluster,
+    bool verbose, const std::string & verbose_file ) const;
 
   /**
    * Starts all receive operations given by a vector of pairs of clusters and
@@ -652,6 +670,21 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     const vector_type & evaluated_chebyshev, const sc half_size,
     const sc center_diff, vector_type & buffer_for_gaussians,
     vector_type & coupling_coeffs ) const;
+
+  /**
+   * Traverses the m_list, l_list and m2l_list of the pFMM matrix and resets the
+   * dependency data (i.e. the data used to determine if the operations of a
+   * cluster are ready for execution).
+   */
+  void reset_scheduling_clusters_dependency_data( ) const;
+
+  /**
+   * Traverses the distribution tree recursively and resets the downward path
+   * status of the clusters appropriately.
+   * @param[in] root  Current cluster in the tree traversal.
+   */
+  void reset_downward_path_status_recursively(
+    mesh::scheduling_time_cluster * root ) const;
 
   /**
    * Initializes quadrature structures.
@@ -780,5 +813,14 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   sc _alpha;  //!< Heat conductivity.
 };
+
+/** Typedef for the single layer p0-p0 PFMM matrix */
+typedef besthea::linear_algebra::distributed_pFMM_matrix<
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 > >
+  distributed_pFMM_matrix_heat_sl_p0p0;
 
 #endif /* INCLUDE_BESTHEA_DISTRIBUTED_PFMM_MATRIX_H_ */

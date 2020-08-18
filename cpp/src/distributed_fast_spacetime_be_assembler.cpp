@@ -89,17 +89,14 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   global_matrix.set_m2l_integration_order( _m2l_integration_order );
   global_matrix.set_MPI_communicator( _comm );
 
-  // ###########################################################################
-  // @todo the matrix is currently not resized appropriately, since the global
-  // number of temporal elements is (not yet) available. Change this if
-  // necessary:
-  // number of timesteps have to be the same for test and
-  // trial meshes
-  // lo n_timesteps = test_mesh->get_n_global_temporal_elements( );
+  // number of timesteps have to be the same for test and trial meshes
+  lo n_timesteps = _test_space->get_mesh( ).get_n_temporal_elements( );
   // // size of individual blocks
-  // lo n_rows = test_basis.dimension_global( );
-  // lo n_columns = trial_basis.dimension_global( );
-  // global_matrix.resize( n_timesteps, n_rows, n_columns );
+  auto & test_basis = _test_space->get_basis( );
+  auto & trial_basis = _trial_space->get_basis( );
+  lo n_rows = test_basis.dimension_global( );
+  lo n_columns = trial_basis.dimension_global( );
+  global_matrix.resize( n_timesteps, n_rows, n_columns );
   // ###########################################################################
 
   global_matrix.compute_spatial_m2m_coeffs( );
@@ -198,7 +195,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
     = ( std::abs( target_cluster->get_time_center( )
           - source_cluster->get_time_center( ) )
         < target_cluster->get_time_half_size( ) );
-// #pragma omp parallel
+#pragma omp parallel
   {
     std::vector< lo > test_loc_access( n_loc_rows );
     std::vector< lo > trial_loc_access( n_loc_columns );
@@ -243,7 +240,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
         i_trial_max = i_test_time;
       }
       for ( lo i_trial_time = 0; i_trial_time <= i_trial_max; ++i_trial_time ) {
-// #pragma omp for schedule( dynamic, 1 )
+#pragma omp for schedule( dynamic, 1 )
         for ( lo i_test_space = 0; i_test_space < n_test_space_elem;
               ++i_test_space ) {
           // get the index of the current spacetime test element and transform
@@ -308,9 +305,9 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
             size = my_quadrature._w[ n_shared_vertices ].size( );
 
             if ( shared_t_element ) {
-// #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
-//                           y2_mapped, y3_mapped, kernel_data, w        \
-//                           : DATA_ALIGN ) simdlen( DATA_WIDTH )
+#pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
+                          y2_mapped, y3_mapped, kernel_data, w        \
+                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
               for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
                 kernel_data[ i_quad ]
                   = _kernel->definite_integral_over_same_interval(
@@ -321,9 +318,9 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
                   * w[ i_quad ];
               }
             } else {
-// #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
-//                           y2_mapped, y3_mapped, kernel_data, w        \
-//                           : DATA_ALIGN ) simdlen( DATA_WIDTH )
+#pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
+                          y2_mapped, y3_mapped, kernel_data, w        \
+                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
               for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
                 kernel_data[ i_quad ]
                   = _kernel->definite_integral_over_different_intervals(
@@ -339,9 +336,9 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
               for ( lo i_loc_trial = 0; i_loc_trial < n_loc_columns;
                     ++i_loc_trial ) {
                 value = 0.0;
-// #pragma omp simd \
-//       aligned( x1_ref, x2_ref, y1_ref, y2_ref, kernel_data : DATA_ALIGN ) \
-//       private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
+#pragma omp simd \
+      aligned( x1_ref, x2_ref, y1_ref, y2_ref, kernel_data : DATA_ALIGN ) \
+      private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
                 for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
                   // @todo: discuss since p0 and p1 basis functions only use at
                   // most i_loc_test, x1_ref and x2_ref and ignore the others

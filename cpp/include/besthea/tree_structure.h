@@ -176,7 +176,7 @@ class besthea::mesh::tree_structure {
    * @param[in,out] n_list  List for scheduling nearfield operations.
    * @note The routine is solely called by @ref prepare_fmm.
    */
-  void init_fmm_lists_and_dependency_data( scheduling_time_cluster & root,
+  void init_fmm_lists( scheduling_time_cluster & root,
     std::list< scheduling_time_cluster* > & m_list,
     std::list< scheduling_time_cluster* > & m2l_list,
     std::list< scheduling_time_cluster* > & l_list,

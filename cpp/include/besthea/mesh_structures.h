@@ -33,11 +33,15 @@
 #ifndef INCLUDE_BESTHEA_MESH_STRUCTURES_H_
 #define INCLUDE_BESTHEA_MESH_STRUCTURES_H_
 
+#include "besthea/distributed_spacetime_cluster_tree.h"
+#include "besthea/distributed_spacetime_tensor_mesh.h"
+#include "besthea/general_spacetime_cluster.h"
 #include "besthea/scheduling_time_cluster.h"
 #include "besthea/space_cluster.h"
 #include "besthea/space_cluster_tree.h"
 #include "besthea/spacetime_cluster.h"
 #include "besthea/spacetime_cluster_tree.h"
+#include "besthea/spacetime_mesh_generator.h"
 #include "besthea/spacetime_slice.h"
 #include "besthea/spacetime_tensor_mesh.h"
 #include "besthea/temporal_mesh.h"

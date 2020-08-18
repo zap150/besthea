@@ -35,6 +35,7 @@ using besthea::linear_algebra::full_matrix;
 using besthea::mesh::general_spacetime_cluster;
 using besthea::mesh::scheduling_time_cluster;
 
+#include <set>
 #include <sstream>
 
 template< class kernel_type, class target_space, class source_space >
@@ -49,8 +50,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 template<>
 void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 > >::
   apply( const block_vector & x, block_vector & y, bool trans,
     sc alpha, sc beta ) const {
   apply_sl_dl( x, y, trans, alpha, beta );
@@ -83,6 +86,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   _scheduling_tree_structure->clear_local_contributions(
     *_scheduling_tree_structure->get_root( ) );
 
+  // reset the dependency data of all the clusters in the 4 lists.
+  reset_scheduling_clusters_dependency_data( );
+
   // @todo allocate buffers which are reused in computations to avoid
   // reallocation
   // std::vector< full_matrix > buffer_matrices;
@@ -114,7 +120,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   std::list< mesh::scheduling_time_cluster* > n_list = _n_list;
 
   // @todo: add appropriate verbose mode if desired
-  bool verbose = false;
+  bool verbose = true;
   // std::string verbose_file = verbose_dir + "/process_";
   std::string verbose_file = "verbose/process_";
   verbose_file += std::to_string( _my_rank );
@@ -194,9 +200,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       case 1: {
         call_s2m_operations(
           x, *it_current_cluster, verbose, verbose_file );
-        provide_moments_for_m2l( *it_current_cluster );
+        provide_moments_for_m2l( *it_current_cluster, verbose, verbose_file );
         call_m2m_operations( *it_current_cluster, verbose, verbose_file );
-        provide_moments_to_parents( *it_current_cluster );
+        provide_moments_to_parents( 
+          *it_current_cluster, verbose, verbose_file );
         m_list.erase( it_current_cluster );
         break;
       }
@@ -210,7 +217,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           ( *it_current_cluster )->set_downward_path_status( 2 );
           call_l2t_operations(
             *it_current_cluster, y_pFMM, verbose, verbose_file );
-          provide_local_contributions_to_children( *it_current_cluster );
+          provide_local_contributions_to_children( 
+            *it_current_cluster, verbose, verbose_file );
         } else {
           ( *it_current_cluster )->set_downward_path_status( 1 );
         }
@@ -220,12 +228,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       case 3: {
         std::vector< scheduling_time_cluster* > * ready_interaction_list
           = ( *it_current_cluster )->get_ready_interaction_list( );
-        for ( lou i = ( *it_current_cluster )->get_m2l_counter( );
+        for ( slou i = ( *it_current_cluster )->get_m2l_counter( );
               i < ready_interaction_list->size( ); ++i ) {
           call_m2l_operations( (
             *ready_interaction_list )[ i ], *it_current_cluster, verbose,
             verbose_file );
-          ( *it_current_cluster )->increase_m2l_counter( );
+          ( *it_current_cluster )->set_m2l_counter( i + 1 );
         }
         // check if all the m2l operations have been executed yet
         if ( ( *it_current_cluster )->get_m2l_counter( ) ==
@@ -235,7 +243,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             ( *it_current_cluster )->set_downward_path_status( 2 );
             call_l2t_operations(
               *it_current_cluster, y_pFMM, verbose, verbose_file );
-            provide_local_contributions_to_children( *it_current_cluster );
+            provide_local_contributions_to_children( 
+              *it_current_cluster, verbose, verbose_file );
           }
           m2l_list.erase( it_current_cluster );
         }
@@ -268,6 +277,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   }
   // Scale the global update y_pFMM by alpha and add it to the global vector y.
   y.add( y_pFMM, alpha );
+  if ( _my_rank == 0 ) {
+    std::cout << "application executed" << std::endl;
+  }
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -290,7 +302,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::prepare_fmm(  ) {
-  _scheduling_tree_structure->init_fmm_lists_and_dependency_data(
+  _scheduling_tree_structure->init_fmm_lists(
     *_scheduling_tree_structure->get_root( ),
     _m_list, _m2l_list, _l_list, _n_list );
   // sort the m_list from bottom up, right to left
@@ -591,7 +603,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::call_s2m_operations(
     const block_vector & sources,
     besthea::mesh::scheduling_time_cluster* time_cluster, bool verbose,
-    std::string verbose_file ) const {
+    const std::string & verbose_file ) const {
   // execute only for associated spacetime leaves
   if ( time_cluster->get_n_associated_leaves( ) > 0 ) {
     if ( verbose ) {
@@ -675,7 +687,7 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::call_m2m_operations(
     scheduling_time_cluster* time_cluster, bool verbose,
-    std::string verbose_file ) const {
+    const std::string & verbose_file ) const {
   scheduling_time_cluster* parent_cluster = time_cluster->get_parent( );
   // m2m operations are only executed if the parent is active in the upward path
   if ( parent_cluster->is_active_in_upward_path( ) ) {
@@ -928,12 +940,13 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::call_m2l_operations(
     scheduling_time_cluster* src_cluster, scheduling_time_cluster* tar_cluster,
-    bool verbose, std::string verbose_file ) const {
+    bool verbose, const std::string & verbose_file ) const {
   if ( verbose ) {
     std::ofstream outfile ( verbose_file.c_str( ), std::ios::app );
     if ( outfile.is_open( ) ) {
       outfile << "call M2L for source " << src_cluster->get_global_index( )
-              << "and target " << tar_cluster->get_global_index( );
+              << " and target " << tar_cluster->get_global_index( )
+              << std::endl;
       outfile.close( );
     }
   }
@@ -1123,7 +1136,7 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::call_l2l_operations(
     scheduling_time_cluster* time_cluster, bool verbose,
-    std::string verbose_file ) const {
+    const std::string & verbose_file ) const {
   scheduling_time_cluster* parent_cluster = time_cluster->get_parent( );
   // m2m operations are only executed if the parent is active in the upward path
   if ( verbose ) {
@@ -1377,7 +1390,7 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::call_l2t_operations(
     mesh::scheduling_time_cluster* time_cluster, block_vector & output_vector,
-    bool verbose, std::string verbose_file ) const {
+    bool verbose, const std::string & verbose_file ) const {
   // execute only for associated spacetime leaves
   if ( time_cluster->get_n_associated_leaves( ) > 0 ) {
     if ( verbose ) {
@@ -1426,7 +1439,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   sc beta = 0.0;
   cblas_dgemm( CblasColMajor, CblasTrans, CblasNoTrans, n_cols_lagrange,
     n_cols_local, n_rows_lagrange, alpha, L.data( ), lda,
-    local_contribution, ldb, beta, aux_matrix.data( ), n_cols_local );
+    local_contribution, ldb, beta, aux_matrix.data( ), n_cols_lagrange );
   // compute Y = D * trans(T)
   targets.multiply( aux_matrix, T, false, true );
 
@@ -1463,7 +1476,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::apply_nearfield_operations(
     const mesh::scheduling_time_cluster* cluster,
     const block_vector & sources, bool trans, block_vector & output_vector,
-    bool verbose, std::string verbose_file ) const {
+    bool verbose, const std::string & verbose_file ) const {
   if ( verbose ) {
     std::ofstream outfile ( verbose_file.c_str( ), std::ios::app );
     if ( outfile.is_open( ) ) {
@@ -1489,10 +1502,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           ++src_index ) {
       general_spacetime_cluster* current_spacetime_source
         = ( *spacetime_nearfield_list )[ src_index ];
-      local_sources.resize( current_spacetime_source->get_n_dofs< source_space >( ) );
+      local_sources.resize(
+        current_spacetime_source->get_n_dofs< source_space >( ) );
       // get the sources corresponding to the current spacetime source cluster
+      bool source_is_local
+        = ( current_spacetime_source->get_process_id( ) == _my_rank );
       sources.get_local_part< source_space >(
-        current_spacetime_source, local_sources );
+        current_spacetime_source, source_is_local, local_sources );
+
       full_matrix* current_block
         = _clusterwise_nearfield_matrices.at( current_spacetime_target )
                                             [ src_index ];
@@ -1509,7 +1526,7 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::check_for_received_data(
     MPI_Request * array_of_requests, int array_of_indices[ ], int & outcount,
-    bool verbose, std::string verbose_file ) const {
+    bool verbose, const std::string & verbose_file ) const {
   MPI_Testsome( _receive_data_information.size( ), array_of_requests, &outcount,
     array_of_indices, MPI_STATUSES_IGNORE );
   if ( outcount != MPI_UNDEFINED && outcount > 0 ) {
@@ -1535,9 +1552,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         sc* current_moments = current_cluster->get_associated_moments( );
         sc* received_moments
           = current_cluster->get_extraneous_moment_pointer( source_id );
-        lou buffer_size
+        lou n_associated_spacetime_clusters
           = current_cluster->get_associated_spacetime_clusters( )->size( );
-        for ( lou i = 0; i < buffer_size; ++ i ) {
+        for ( lou i = 0;
+              i < n_associated_spacetime_clusters * _contribution_size; ++ i ) {
           current_moments[ i ] += received_moments[ i ];
         }
         current_cluster->reduce_upward_path_counter( );
@@ -1619,15 +1637,27 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::provide_moments_for_m2l(
-    scheduling_time_cluster* src_cluster ) const {
+    scheduling_time_cluster* src_cluster,
+    bool verbose, const std::string & verbose_file ) const {
   std::vector< scheduling_time_cluster* > * send_list
     = src_cluster->get_send_list( );
+  std::set< lo > process_send_list;
   if ( send_list != nullptr ) {
     for ( auto it = send_list->begin( ); it != send_list->end( ); ++it ) {
       lo tar_process_id = ( *it )->get_process_id( );
       if ( tar_process_id == _my_rank ) {
         ( *it )->add_to_ready_interaction_list( src_cluster );
-      } else {
+      }
+      else if ( process_send_list.count( tar_process_id ) == 0 ) {
+        if ( verbose ) {
+          std::ofstream outfile ( verbose_file.c_str( ), std::ios::app );
+          if ( outfile.is_open( ) ) {
+            outfile << "send for m2l: data from source " 
+                    << src_cluster->get_global_index( ) << " to process "
+                    << tar_process_id  << std::endl;
+            outfile.close( );
+          }
+        }
         lo tag = 2 * src_cluster->get_global_index( );
         sc* moment_buffer = src_cluster->get_associated_moments( );
         int buffer_size
@@ -1637,6 +1667,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         MPI_Isend( moment_buffer, buffer_size, get_scalar_type< sc >::MPI_SC( ),
           tar_process_id, tag, *_comm, &req );
         MPI_Request_free( &req );
+        process_send_list.insert( tar_process_id );
       }
     }
   }
@@ -1645,35 +1676,59 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::provide_moments_to_parents(
-    scheduling_time_cluster* child_cluster ) const {
+    scheduling_time_cluster* child_cluster,
+    bool verbose, const std::string & verbose_file ) const {
   scheduling_time_cluster* parent_cluster = child_cluster->get_parent( );
-  lo parent_process_id = parent_cluster->get_process_id( );
-  if ( parent_process_id == _my_rank ) {
-    parent_cluster->reduce_upward_path_counter( );
-  }
-  else if ( parent_process_id != -1 )  {
-    lo tag = 2 * parent_cluster->get_global_index( );
-    sc* moment_buffer = parent_cluster->get_associated_moments( );
-    int buffer_size
-      = parent_cluster->get_associated_spacetime_clusters( )->size( )
-      * _contribution_size;
-    MPI_Request req;
-    MPI_Isend( moment_buffer, buffer_size, get_scalar_type< sc >::MPI_SC( ),
-      parent_process_id, tag, *_comm, &req );
-    MPI_Request_free( &req );
+  // moments have to be provided only if the parent is active in the upward path
+  if ( parent_cluster->is_active_in_upward_path( ) ) {
+    lo parent_process_id = parent_cluster->get_process_id( );
+    if ( parent_process_id == _my_rank ) {
+      // update local dependency counter
+      parent_cluster->reduce_upward_path_counter( );
+    }
+    else if ( parent_process_id != -1 )  {
+      if ( verbose ) {
+        std::ofstream outfile ( verbose_file.c_str( ), std::ios::app );
+        if ( outfile.is_open( ) ) {
+          outfile << "send upward: from source " 
+                  << child_cluster->get_global_index( ) << " to process "
+                  << parent_process_id << std::endl;
+          outfile.close( );
+        }
+      }
+      lo tag = 2 * parent_cluster->get_global_index( );
+      sc* moment_buffer = parent_cluster->get_associated_moments( );
+      int buffer_size
+        = parent_cluster->get_associated_spacetime_clusters( )->size( )
+        * _contribution_size;
+      MPI_Request req;
+      MPI_Isend( moment_buffer, buffer_size, get_scalar_type< sc >::MPI_SC( ),
+        parent_process_id, tag, *_comm, &req );
+      MPI_Request_free( &req );
+    }
   }
 }
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::provide_local_contributions_to_children(
-    scheduling_time_cluster* parent_cluster ) const {
+    scheduling_time_cluster* parent_cluster,
+    bool verbose, const std::string & verbose_file ) const {
   std::vector< scheduling_time_cluster* > * children
     = parent_cluster->get_children( );
   if ( children != nullptr ) {
     for ( auto child : *children ) {
       lo child_process_id = child->get_process_id( );
       if ( child_process_id != _my_rank ) {
+        if ( verbose ) {
+          std::ofstream outfile ( verbose_file.c_str( ), std::ios::app );
+          if ( outfile.is_open( ) ) {
+            outfile << "send downward: from source " 
+                    << parent_cluster->get_global_index( ) << " to process "
+                    << child_process_id << std::endl;
+            outfile.close( );
+          }
+        }
         lo tag = 2 * parent_cluster->get_global_index( ) + 1;
         sc* local_contribution_buffer
           = parent_cluster->get_associated_local_contributions( );
@@ -1973,6 +2028,49 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   //       }
   //     }
   //   }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::
+  reset_scheduling_clusters_dependency_data( ) const {
+  // reset the upward path counters of the clusters in the _m_list.
+  for ( scheduling_time_cluster * cluster : _m_list ) {
+    cluster->set_upward_path_counter( cluster->get_n_children( ) );
+  }
+
+  // reset the downward path status of cluster recursively
+  reset_downward_path_status_recursively(
+    _distributed_spacetime_tree->get_distribution_tree( )->get_root( ) );
+
+  // reset the m2l counter and clear the ready interaction list of the clusters
+  // in the _m2l_list.
+  for ( scheduling_time_cluster * cluster : _m2l_list ) {
+    cluster->set_m2l_counter( 0 );
+    cluster->clear_ready_interaction_list( );
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::reset_downward_path_status_recursively(
+    scheduling_time_cluster * root ) const {
+  // consider all local clusters which are active in the downward path
+  if ( root->is_active_in_downward_path( ) ) {
+    if ( root->get_parent( )->is_active_in_downward_path( ) ) {
+      // the cluster has to execute l2l operations -> status 0
+      root->set_downward_path_status( 0 );
+    } else {
+      // no l2l operations necessary -> status 1
+      root->set_downward_path_status( 1 );
+    }
+  }
+  // recursive call for all children
+  if ( root->get_n_children( ) > 0 ) {
+    for ( auto child : *root->get_children( ) ) {
+      reset_downward_path_status_recursively( child );
+    }
+  }
 }
 
 

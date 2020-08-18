@@ -56,8 +56,6 @@ besthea::mesh::tree_structure::tree_structure( const std::string & filename,
   // determine activity of clusters in upward and downward path of FMM
   determine_cluster_activity( *_root );
   collect_leaves( *_root );
-  lo next_id = 0;
-  set_leaf_ids( *_root, next_id );
 }
 
 besthea::mesh::tree_structure::tree_structure(
@@ -91,8 +89,6 @@ besthea::mesh::tree_structure::tree_structure(
   // determine activity of clusters in upward and downward path of FMM
   determine_cluster_activity( *_root );
   collect_leaves( *_root );
-  lo next_id = 0;
-  set_leaf_ids( *_root, next_id );
 }
 
 void besthea::mesh::tree_structure::load_process_assignments(
@@ -167,8 +163,7 @@ void besthea::mesh::tree_structure::
   lou & n_moments_upward, lou & n_moments_m2l ) const {
 
   m_list.clear( );
-  init_fmm_lists_and_dependency_data(
-    *_root, m_list, m2l_list, l_list, n_list );
+  init_fmm_lists( *_root, m_list, m2l_list, l_list, n_list );
   // sort the m_list from bottom up, right to left
   m_list.sort( compare_clusters_bottom_up_right_2_left );
   // sort the m2l_list and l_list from top down, right to left and create
@@ -288,7 +283,7 @@ void besthea::mesh::tree_structure::clear_local_contributions(
   }
 }
 
-void besthea::mesh::tree_structure::init_fmm_lists_and_dependency_data(
+void besthea::mesh::tree_structure::init_fmm_lists(
   scheduling_time_cluster & root,
   std::list< scheduling_time_cluster* > & m_list,
   std::list< scheduling_time_cluster* > & m2l_list,
@@ -299,21 +294,12 @@ void besthea::mesh::tree_structure::init_fmm_lists_and_dependency_data(
   if ( root.get_process_id( ) == _my_process_id &&
        root.is_active_in_upward_path( ) ) {
     m_list.push_back( &root );
-    root.set_upward_path_counter( root.get_n_children( ) );
   }
   // if the current cluster is local and its parent is active in the downward
   // path add the current cluster to the l-list
   if ( root.get_process_id( ) == _my_process_id &&
        root.get_parent( )->is_active_in_downward_path( ) ) {
     l_list.push_back( &root );
-  }
-
-  // if the current cluster is local, active in the downward path and its parent
-  // is inactive in the downward path change the downward path status of the
-  // current cluster (to signal that no l2l operation has to be done anymore)
-  if ( root.is_active_in_downward_path( ) &&
-        !( root.get_parent( )->is_active_in_downward_path( ) ) ) {
-    root.set_downward_path_status( 1 );
   }
 
   // add the cluster to the m2l-list, if it is local and has a non-empty
@@ -334,8 +320,7 @@ void besthea::mesh::tree_structure::init_fmm_lists_and_dependency_data(
     const std::vector< scheduling_time_cluster* >* children
       = root.get_children( );
     for ( auto it = children->begin( ); it != children->end( ); ++it ) {
-      init_fmm_lists_and_dependency_data(
-        **it, m_list, m2l_list, l_list, n_list );
+      init_fmm_lists( **it, m_list, m2l_list, l_list, n_list );
     }
   }
 }
@@ -529,19 +514,6 @@ void besthea::mesh::tree_structure::collect_leaves(
     for ( auto it = root.get_children( )->begin( );
           it != root.get_children( )->end( ); ++it ) {
       collect_leaves( **it );
-    }
-  }
-}
-
-void besthea::mesh::tree_structure::set_leaf_ids(
-  scheduling_time_cluster & root, lo & next_id ) {
-  if ( root.get_n_children( ) == 0 ) {
-    root.set_leaf_index( next_id );
-    next_id++;
-  } else {
-    for ( auto it = root.get_children( )->begin( );
-          it != root.get_children( )->end( ); ++it ) {
-      set_leaf_ids( **it, next_id );
     }
   }
 }

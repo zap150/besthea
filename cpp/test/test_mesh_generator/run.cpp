@@ -56,11 +56,11 @@ int main( int argc, char * argv[] ) {
 
   // output/input files for temporal tree and distribution of clusters among
   // processes
-  std::string tree_vector_file = "./job_scheduler/tree_structure.bin";
+  std::string tree_vector_file = "./test_mesh_generator/tree_structure.bin";
   std::string process_assignment_file
-    = "./job_scheduler/process_assignment.bin";
+    = "./test_mesh_generator/process_assignment.bin";
   std::string cluster_bounds_file
-    = "./job_scheduler/cluster_bounds.bin";
+    = "./test_mesh_generator/cluster_bounds.bin";
 
   if ( myRank == 0 ) {
     std::cout << "### start mesh generation ###" << std::endl;

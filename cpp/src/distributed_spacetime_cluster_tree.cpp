@@ -158,6 +158,11 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
     build_subtree( *it, it->get_level( ) % 2 );
   }
 
+  if ( _real_max_levels < get_distribution_tree( )->get_levels( ) ) {
+    std::cout << "Warning: Depth of local spacetime tree is less than depth of"
+              << " local distribution tree!" << std::endl;
+  }
+
   // exchange necessary data
   MPI_Allreduce( MPI_IN_PLACE, &_real_max_levels, 1,
     get_index_type< lo >::MPI_LO( ), MPI_MAX, *_comm );
@@ -1059,7 +1064,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
   vector_type new_space_half_size( 3 );
 
   slou coord_x, coord_y, coord_z, coord_t = 0;
-  sc temporal_splitting_point;
+  sc temporal_splitting_point = - std::numeric_limits< sc >::infinity( );
   bool set_temporal_splitting_point = false;
 
   if ( split_space ) {
@@ -1369,7 +1374,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
     sc time_half_size_left
       = ( temporal_splitting_point - ( time_center - time_half_size ) ) * 0.5;
     sc time_center_left = temporal_splitting_point - time_half_size_left;
-    general_spacetime_cluster *left_child, *right_child;
+    general_spacetime_cluster *left_child = nullptr;
+    general_spacetime_cluster *right_child = nullptr;
 
     // left temporal cluster
     if ( oct_sizes[ 0 ] > 0 ) {
@@ -1407,10 +1413,14 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
     }
     root.set_n_children( n_clusters );
 
-    root.add_child( left_child );
-    build_subtree( *left_child, !split_space );
-    root.add_child( right_child );
-    build_subtree( *right_child, !split_space );
+    if ( left_child != nullptr ) {
+      root.add_child( left_child );
+      build_subtree( *left_child, !split_space );
+    }
+    if ( right_child != nullptr ) {
+      root.add_child( right_child );
+      build_subtree( *right_child, !split_space );
+    }
   }
   root.shrink_children( );
 }

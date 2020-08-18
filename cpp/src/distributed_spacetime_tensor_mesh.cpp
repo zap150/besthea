@@ -50,10 +50,13 @@ besthea::mesh::distributed_spacetime_tensor_mesh::
 
   // get global data
   MPI_Barrier( *_comm );
-  lo local_n_elems = _my_mesh->get_n_elements( );
-
-  MPI_Allreduce( &local_n_elems, &_n_global_elements, 1,
+  lo n_elems_array[ 2 ];
+  n_elems_array[ 0 ] = _my_mesh->get_n_elements( );
+  n_elems_array[ 1 ] = _my_mesh->get_n_temporal_elements( );
+  MPI_Allreduce( MPI_IN_PLACE , n_elems_array, 2,
     get_index_type< lo >::MPI_LO( ), MPI_SUM, *_comm );
+  _n_global_elements = n_elems_array[ 0 ];
+  _n_global_time_elements = n_elems_array[ 1 ];
 }
 
 besthea::mesh::distributed_spacetime_tensor_mesh::

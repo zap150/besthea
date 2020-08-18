@@ -227,6 +227,8 @@ class besthea::mesh::time_cluster_tree {
                         //!< levels (depending on _n_min_elems)
   lo _n_min_elems;  //!< minimum number of elements so that cluster can be split
                     //!< in halves
+                    //!< @todo: can we rename this? the name is somehow
+                    //!< counterintuitive
   lo _n_max_elems_leaf;  //!< maximal number of elements in a leaf cluster after
                          //!< construction.
   std::vector< sc > _paddings;  //!< vector of paddings on each level

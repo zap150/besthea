@@ -138,21 +138,21 @@ class besthea::mesh::distributed_spacetime_tensor_mesh :
 
   /**
    * Returns a pointer to the internally stored spatial mesh.
-   * @todo adapt this.
+   * @note Since the spatial mesh is the same for each local mesh, it suffices
+   * to return the spatial mesh of the local mesh.
    */
   virtual triangular_surface_mesh * get_spatial_surface_mesh( ) override {
-    // return _my_mesh->get_spatial_surface_mesh( );
-    return nullptr;
+    return _my_mesh->get_spatial_surface_mesh( );
   }
 
   /**
    * Returns a pointer to the internally stored spatial mesh.
-   * @todo adapt this.
+   * @note Since the spatial mesh is the same for each local mesh, it suffices
+   * to return the spatial mesh of the local mesh.
    */
   virtual const triangular_surface_mesh * get_spatial_surface_mesh( )
     const override {
-    // return _my_mesh;
-    return nullptr;
+    return _my_mesh->get_spatial_surface_mesh( );
   }
 
   /**
@@ -202,26 +202,25 @@ class besthea::mesh::distributed_spacetime_tensor_mesh :
   }
 
   /**
-   * Returns end of the global time interval
+   * Returns end of the global time interval.
    */
   sc get_end( ) const {
     return _t_end;
   }
 
   /**
-   * Returns total number of elements in the distributed mesh
+   * Returns total number of elements in the distributed mesh.
    */
   lo get_n_elements( ) const {
     return _n_global_elements;
   }
 
   /**
-   * @todo global number of temporal elements is currently not available
-   * (or is it?)
+   * Returns total number of temporal elements in the distributed mesh.
    */
-  // lo get_global_n_temporal_elements( ) const {
-  //   return;
-  // }
+  lo get_n_temporal_elements( ) const {
+    return _n_global_time_elements;
+  }
 
   /**
    * Returns the start index of the local mesh.
@@ -320,6 +319,7 @@ class besthea::mesh::distributed_spacetime_tensor_mesh :
   sc _t_start;                  //!< start of the global time interval
   sc _t_end;                    //!< end of the global time interval
   lo _n_global_elements;  //!< total number of elements in the distributed mesh
+  lo _n_global_time_elements;
   const MPI_Comm * _comm; //!< MPI communicator associated with the distributed
                           //!< mesh
   int _my_rank;           //!< MPI rank of the current process

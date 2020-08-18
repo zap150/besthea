@@ -106,11 +106,14 @@ besthea::bem::distributed_fast_spacetime_be_space<
 //   }
 // }
 
-// template< class basis_type >
-// void besthea::bem::distributed_fast_spacetime_be_space< basis_type >::L2_projection(
-//   sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-//   block_vector_type & projection, int order_matrix, int order_rhs_spatial,
-//   int order_rhs_temporal ) const {
+template< class basis_type >
+void besthea::bem::distributed_fast_spacetime_be_space< basis_type >::
+  L2_projection(
+    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
+    block_vector_type & projection, int order_matrix, int order_rhs_spatial,
+    int order_rhs_temporal ) const {
+  std::cout << "distributed_fast_spacetime_be_space: "
+            << "L2 projection not implemented yet! "<< std::endl;
 //   besthea::linear_algebra::sparse_matrix M;
 //   besthea::bem::spacetime_be_identity identity( *this, *this, order_matrix );
 //   identity.assemble( M );
@@ -176,13 +179,16 @@ besthea::bem::distributed_fast_spacetime_be_space<
 //     M.eigen_cg_solve( rhs, projection.get_block( d ), cg_eps, n_iter );
 //     rhs.fill( 0.0 );
 //   }
-// }
+}
 
-// template< class basis_type >
-// sc besthea::bem::distributed_fast_spacetime_be_space< basis_type >::L2_relative_error(
-//   sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-//   const block_vector_type & approximation, int order_rhs_spatial,
-//   int order_rhs_temporal ) const {
+template< class basis_type >
+sc besthea::bem::distributed_fast_spacetime_be_space< basis_type >::
+  L2_relative_error(
+    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
+    const block_vector_type & approximation, int order_rhs_spatial,
+    int order_rhs_temporal ) const {
+  std::cout << "distributed_fast_spacetime_be_space: "
+            << "L2 relative error not implemented yet! "<< std::endl;
 //   lo n_timesteps = get_mesh( )->get_n_temporal_elements( );
 //   lo n_elements = get_mesh( )->get_n_spatial_elements( );
 
@@ -241,7 +247,8 @@ besthea::bem::distributed_fast_spacetime_be_space<
 //   }
 //   sc result = std::sqrt( l2_err / l2_norm );
 //   return result;
-// }
+  return std::numeric_limits< sc >::infinity( );
+}
 
 template class besthea::bem::distributed_fast_spacetime_be_space<
   besthea::bem::basis_tri_p0 >;

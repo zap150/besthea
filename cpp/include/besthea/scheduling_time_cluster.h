@@ -99,10 +99,7 @@ class besthea::mesh::scheduling_time_cluster {
       _associated_moments( nullptr ),
       _associated_local_contributions( nullptr ),
       _contribution_size( 0 ),
-      _map_to_moment_receive_buffers( nullptr ),
-      _moment( 0.0 ),
-      _local_contribution( 0.0 ),
-      _leaf_index( -1 ) {
+      _map_to_moment_receive_buffers( nullptr ) {
   }
 
   scheduling_time_cluster( const scheduling_time_cluster & that ) = delete;
@@ -489,6 +486,16 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
+   * Clears the ready interaction list.
+   * @note: The ready interaction list is only cleared, not deleted!
+   */
+  void clear_ready_interaction_list( ) {
+    if ( _ready_interaction_list != nullptr ) {
+      _ready_interaction_list->clear( );
+    }
+  }
+
+  /**
    * Returns a pointer to the list of clusters which are ready for interactions.
    */
   std::vector< scheduling_time_cluster * > * get_ready_interaction_list( ) {
@@ -569,17 +576,18 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Increases the m2l counter by 1.
-   */
-  void increase_m2l_counter( ) {
-    _m2l_counter += 1;
-  }
-
-  /**
    * Returns the value of @p _m2l_counter .
    */
   lou get_m2l_counter( ) const {
     return _m2l_counter;
+  }
+
+  /**
+   * Sets the m2l counter to a new given value.
+   * @param[in] new_value Value to which the counter is set.
+   */
+  void set_m2l_counter( const slou new_value ) {
+    _m2l_counter = new_value;
   }
 
   /**
@@ -639,73 +647,6 @@ class besthea::mesh::scheduling_time_cluster {
    */
   void increase_n_associated_leaves( ) {
     _n_associated_leaves ++;
-  }
-
-  /**
-   * Returns the cluster's moment
-   * @note TEMPORARY
-   */
-  sc get_moment( ) const {
-    return _moment;
-  }
-
-  /**
-   * Returns a pointer to the cluster's moment
-   * @note TEMPORARY
-   */
-  sc * get_moment_pointer( ) {
-    return &_moment;
-  }
-
-  /**
-   * Sets the cluster's moment to a given value.
-   * @param[in] moment Value to be set.
-   * @note TEMPORARY
-   */
-  void set_moment( const sc moment ) {
-    _moment = moment;
-  }
-
-  /**
-   * Returns the cluster's local contribution
-   * @note TEMPORARY
-   */
-  sc get_local_contribution( ) const {
-    return _local_contribution;
-  }
-
-  /**
-   * Returns a pointer to the cluster's local contribution
-   * @note TEMPORARY
-   */
-  sc * get_local_contribution_pointer( ) {
-    return &_local_contribution;
-  }
-
-  /**
-   * Sets the cluster's local contribution to a given value.
-   * @param[in] local_contribution Value to be set.
-   * @note TEMPORARY
-   */
-  void set_local_contribution( const sc local_contribution ) {
-    _local_contribution = local_contribution;
-  }
-
-  /**
-   * Returns the leaf index of the cluster.
-   * @note TEMPORARY
-   */
-  lo get_leaf_index( ) const {
-    return _leaf_index;
-  }
-
-  /**
-   * Sets the leaf index of the cluster to the given value.
-   * @param[in] leaf_index Value to set.
-   * @note TEMPORARY
-   */
-  void set_leaf_index( lo leaf_index ) {
-    _leaf_index = leaf_index;
   }
 
   /**
@@ -901,19 +842,21 @@ class besthea::mesh::scheduling_time_cluster {
    * associated with this cluster.
    */
   void allocate_associated_moments( const lou moment_size ) {
-    if ( _associated_moments == nullptr ) {
-      _contribution_size = moment_size;
-      _associated_moments
-        = new sc [ moment_size * _associated_spacetime_clusters->size( ) ];
-      for ( lou i = 0; i < _associated_spacetime_clusters->size( ); ++i ) {
-        general_spacetime_cluster * current_spacetime_cluster
-          = ( *_associated_spacetime_clusters )[ i ];
-        current_spacetime_cluster->set_pointer_to_moment(
-          & _associated_moments[ i * moment_size ] );
+    if ( _associated_spacetime_clusters != nullptr ) {
+      if ( _associated_moments == nullptr ) {
+        _contribution_size = moment_size;
+        _associated_moments
+          = new sc [ moment_size * _associated_spacetime_clusters->size( ) ];
+        for ( lou i = 0; i < _associated_spacetime_clusters->size( ); ++i ) {
+          general_spacetime_cluster * current_spacetime_cluster
+            = ( *_associated_spacetime_clusters )[ i ];
+          current_spacetime_cluster->set_pointer_to_moment(
+            & _associated_moments[ i * moment_size ] );
+        }
+      } else {
+        std::cout << "warning: associated moments allocated already!"
+                  << std::endl;
       }
-    } else {
-      std::cout << "warning: associated moments allocated already!"
-                << std::endl;
     }
   }
 
@@ -947,20 +890,22 @@ class besthea::mesh::scheduling_time_cluster {
    * associated with this cluster.
    */
   void allocate_associated_local_contributions( const lou contribution_size ) {
-    if ( _associated_local_contributions == nullptr ) {
-      _contribution_size = contribution_size;
-      _associated_local_contributions
-        = new sc [ contribution_size
-                  * _associated_spacetime_clusters->size( ) ];
-      for ( lou i = 0; i < _associated_spacetime_clusters->size( ); ++i ) {
-        general_spacetime_cluster * current_spacetime_cluster
-          = ( *_associated_spacetime_clusters )[ i ];
-        current_spacetime_cluster->set_pointer_to_local_contribution(
-          & _associated_local_contributions[ i * contribution_size ] );
+    if ( _associated_spacetime_clusters != nullptr ) {
+      if ( _associated_local_contributions == nullptr ) {
+        _contribution_size = contribution_size;
+        _associated_local_contributions
+          = new sc [ contribution_size
+                    * _associated_spacetime_clusters->size( ) ];
+        for ( lou i = 0; i < _associated_spacetime_clusters->size( ); ++i ) {
+          general_spacetime_cluster * current_spacetime_cluster
+            = ( *_associated_spacetime_clusters )[ i ];
+          current_spacetime_cluster->set_pointer_to_local_contribution(
+            & _associated_local_contributions[ i * contribution_size ] );
+        }
+      } else {
+        std::cout << "warning: associated local contributions allocated already!"
+                  << std::endl;
       }
-    } else {
-      std::cout << "warning: associated local contributions allocated already!"
-                << std::endl;
     }
   }
 
@@ -1096,7 +1041,7 @@ class besthea::mesh::scheduling_time_cluster {
                                //!< to this list, when their moments are ready.
                                //!< It is used to manage the execution of M2L
                                //!< operations in the distributed FMM.
-  lou _m2l_counter;  //!< Used to keep track of the completed m2l operations.
+  slou _m2l_counter;  //!< Used to keep track of the completed m2l operations.
   char _downward_path_status; //!< Used to keep track of the status in the
                               //!< downward path. Three status are distinguished
                               //!< - 0: L2L not executed,
@@ -1118,6 +1063,9 @@ class besthea::mesh::scheduling_time_cluster {
   lou _contribution_size; //!< Size of a single contribution (moments or local
                           //!< contribution) in the array of associated
                           //!< contributions
+                          //!< @todo Is there a better way to make this value
+                          //!< accessible for all clusters without storing it
+                          //!< in each instance separately?
   std::vector< sc * >
     _associated_moments_receive_buffers;  //!< In case that moments have to be
                                           //!< received from other processes
@@ -1127,10 +1075,6 @@ class besthea::mesh::scheduling_time_cluster {
     * _map_to_moment_receive_buffers; //!< Map to access the correct position in
                                 //!< @p _associated_moments_receive_buffers for
                                 //!< extraneous children.
-  sc _moment; //!< Stores a moment in FMM TEMPORARY
-  sc _local_contribution; //!< Stores a local contribution in FMM TEMPORARY
-  lo _leaf_index; //!< Index which is assigned consecutively to all leaves. For
-                  //!< non-leaf clusters it is -1 TEMPORARY
 };
 
 #endif /* INCLUDE_BESTHEA_SCHEDULING_TIME_CLUSTER_H_ */

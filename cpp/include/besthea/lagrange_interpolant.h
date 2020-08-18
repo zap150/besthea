@@ -70,6 +70,10 @@ class besthea::bem::lagrange_interpolant {
    */
   void set_order( const lo order ) {
     _order = order;
+    // recompute the nodes.
+    _nodes = vector_type( order + 1, false );
+    for ( lo i = 0; i <= _order; ++i )
+      _nodes[ i ] = cos( ( _pi * ( 2 * i + 1 ) ) / ( 2 * ( _order + 1 ) ) );
   }
 
   /**
