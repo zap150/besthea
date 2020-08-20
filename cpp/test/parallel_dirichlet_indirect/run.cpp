@@ -64,16 +64,16 @@ int main( int argc, char * argv[] ) {
 
   // declaration of required parameters.
   lo order_sing, order_reg, temp_order, spat_order;
-  // sc st_coeff;
+  sc st_coeff;
   lo n_blocks, size_of_block;
 
-  // st_coeff = 0.8;
+  st_coeff = 4.0;
   temp_order = 6;
   spat_order = 6;
   order_sing = 4;
   order_reg = 4;
 
-  lo test_case = 3;
+  lo test_case = 2;
 
   // mesh data to construct equivalent standard spacetime mesh and distributed
   // spacetime mesh for the test.
@@ -93,10 +93,9 @@ int main( int argc, char * argv[] ) {
   // kernel for the single layer operator
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
 
-  // // V approximated by pFMM
-  // // sc st_coeff = 4.0;
+  // V approximated by pFMM
   // spacetime_cluster_tree tree( spacetime_mesh, 5, 2, 10, st_coeff );
-  // // tree.print( );
+  // tree.print( );
 
   // fast_spacetime_be_space< basis_tri_p0 > space_p0_pFMM( tree );
   // pFMM_matrix_heat_sl_p0p0 * V_pFMM = new pFMM_matrix_heat_sl_p0p0;
@@ -123,7 +122,7 @@ int main( int argc, char * argv[] ) {
 
     // load time mesh defining slices and create temporal tree
     temporal_mesh time_mesh( time_file );
-    lo time_levels = 20;
+    lo time_levels = 6;
     lo n_min_time_elems = 2;
     time_cluster_tree time_tree( time_mesh, time_levels, n_min_time_elems );
 
@@ -164,9 +163,13 @@ int main( int argc, char * argv[] ) {
   size_of_block = distributed_mesh.get_n_elements( ) / n_blocks;
 
   distributed_spacetime_cluster_tree distributed_st_tree(
-    distributed_mesh, 20, 40, 1.0, 3, &comm );
-
-  // distributed_st_tree.print( );
+    distributed_mesh, 6, 40, st_coeff, 3, &comm );
+  MPI_Barrier( comm );
+  if ( myRank == 0 ) {
+    distributed_st_tree.print( );
+    std::cout << std::endl << std::endl << std::endl;
+    // distributed_st_tree.get_distribution_tree( )->print( );
+  }
 
   distributed_fast_spacetime_be_space< basis_tri_p0 > distributed_space_p0(
     distributed_st_tree );
@@ -178,6 +181,11 @@ int main( int argc, char * argv[] ) {
     temp_order, spat_order, cauchy_data::_alpha);
 
   distributed_assembler_v.assemble( *V_dist_pFMM );
+
+  MPI_Barrier( comm );
+  if ( myRank == 0 ) {
+    std::cout << "finished assembling distributed pFMM matrix" << std::endl;
+  }
 
   if ( myRank == 0 ) {
     distributed_mesh.get_distribution_tree( )->print_tree_human_readable( 2, true );
@@ -196,7 +204,7 @@ int main( int argc, char * argv[] ) {
     //##########################################################################
     // lo block_id = n_blocks - 1 - 2;
     lo block_id = 0;
-    lo block_evaluation_id = 8;
+    lo block_evaluation_id = 16;
     lo toeplitz_id = block_evaluation_id - block_id;
     //   lo block_evaluation_id = n_blocks - 1;
 
@@ -206,6 +214,11 @@ int main( int argc, char * argv[] ) {
     // x_loc_0( 9 ) = 1.0;
     x_loc_0.fill( 1.0 );
     vector y_loc( size_of_block );
+
+    block_vector full_block_vector( n_blocks, size_of_block, true );
+    full_block_vector.get_block( block_id ) = x_loc_0;
+    block_vector applied_pFMM( n_blocks, size_of_block, true );
+
     if ( myRank == 0 ) {
       // construct matrix V directly
       triangular_surface_mesh space_mesh( spatial_mesh_file );
@@ -221,21 +234,28 @@ int main( int argc, char * argv[] ) {
         kernel_v, space_p0, space_p0, order_sing, order_reg );
       assembler_v.assemble( *V );
 
+      // spacetime_cluster_tree tree( spacetime_mesh, 5, 5, 10, st_coeff );
+      // tree.print( );
+      // fast_spacetime_be_space< basis_tri_p0 > space_p0_pFMM( tree );
+      // pFMM_matrix_heat_sl_p0p0 * V_pFMM = new pFMM_matrix_heat_sl_p0p0;
+      // fast_spacetime_be_assembler fast_assembler_v( kernel_v, space_p0_pFMM,
+      //   space_p0_pFMM, order_sing, order_reg, temp_order, spat_order,
+      //   cauchy_data::_alpha, 1.5, false );
+      // fast_assembler_v.assemble( *V_pFMM );
+
       std::cout << "applying V" << std::endl;
       std::cout << "block_id = " << block_id << ", block_evaluation_id "
                 << block_evaluation_id << std::endl;
       full_matrix & V_block_loc = V->get_block( toeplitz_id );
       V_block_loc.apply( x_loc_0, y_loc );
+      // V_pFMM->apply( full_block_vector, applied_pFMM );
     }
-
-
     // compute the corresponding result with the distributed matrix V_dist_pFMM
     if ( myRank == 0 ) {
       std::cout << "applying distributed pFMM matrix" << std::endl;
     }
+
     MPI_Barrier( comm );
-    block_vector full_block_vector( n_blocks, size_of_block, true );
-    full_block_vector.get_block( block_id ) = x_loc_0;
     block_vector applied_dist_pFMM( n_blocks, size_of_block, true );
 
     V_dist_pFMM->apply( full_block_vector, applied_dist_pFMM );
@@ -302,15 +322,9 @@ int main( int argc, char * argv[] ) {
       std::cout << "applying V" << std::endl;
 
       block_vector temp_vec( n_blocks, size_of_block, true );
-      V->apply( rand_vec, temp_vec );
-      V->apply( temp_vec, applied_std );
+      V->apply( rand_vec, applied_std );
       // V->apply( rand_vec, applied_std );
     }
-    // broadcast the result vector to all processes (FOR DEBUGGING ONLY)
-    // for ( lo i = 0; i < n_blocks; ++i ) {
-    //   MPI_Bcast( applied_std.get_block( i ).data( ), size_of_block,
-    //   get_scalar_type< sc >::MPI_SC( ), 0, comm );
-    // }
 
     // compute the result with the distributed matrix V_dist_pFMM
     if ( myRank == 0 ) {
@@ -319,8 +333,7 @@ int main( int argc, char * argv[] ) {
     MPI_Barrier( comm );
     block_vector temp_vec( n_blocks, size_of_block, true );
     block_vector applied_dist_pFMM( n_blocks, size_of_block, true );
-    V_dist_pFMM->apply( rand_vec, temp_vec );
-    V_dist_pFMM->apply( temp_vec, applied_dist_pFMM );
+    V_dist_pFMM->apply( rand_vec, applied_dist_pFMM );
 
     if ( myRank == 0 ) {
       std::cout << "error timewise distributed pFMM" << std::endl;

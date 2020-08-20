@@ -170,10 +170,10 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
 
   // read the slices definition
   _slices.resize( _n_meshes + 1 );
-  sc node;
+  sc slice_node;
   for ( lo i = 0; i < _n_meshes + 1; ++i ) {
-    filestream >> node;
-    _slices[ i ] = node;
+    filestream >> slice_node;
+    _slices[ i ] = slice_node;
   }
 
   // read and reconstruct temporal tree and distribution of clusters

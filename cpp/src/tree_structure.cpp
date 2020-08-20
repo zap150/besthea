@@ -1021,7 +1021,7 @@ void besthea::mesh::tree_structure::
             n_digits_level_mod /= 2;
             std::string child_string
               = '/' + std::string(n_digits_level_mod - 1, ' ');
-            for ( lo child = 0; child < n_children; ++child ) {
+            for ( lo child_idx = 0; child_idx < n_children; ++child_idx ) {
               levelwise_output_strings[ level ] += child_string;
             }
             n_children *= 2;

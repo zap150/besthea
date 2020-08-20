@@ -494,6 +494,8 @@ class besthea::mesh::general_spacetime_cluster {
 
     // loop over elements in cluster
     for ( lo i = 0; i < _n_elements; ++i ) {
+      // clusters_mesh->get_nodes(
+      //   _mesh.global_2_local( start_idx, _elements[ i ] ), node_vector );
       clusters_mesh->get_nodes(
         _mesh.global_2_local( start_idx, _elements[ i ] ), node_vector );
       // loop over element's nodes
@@ -545,7 +547,7 @@ class besthea::mesh::general_spacetime_cluster {
   /**
    * Returns level of the cluster in the cluster tree.
    */
-  lo get_level( ) {
+  lo get_level( ) const {
     return _level;
   }
 
@@ -682,27 +684,28 @@ class besthea::mesh::general_spacetime_cluster {
     std::cout << ", temporal center: " << _time_center;
     std::cout << ", temporal half size: " << _time_half_size;
     std::cout << ", n_elements: " << _n_elements;
+    std::cout << ", n_time_elements: " << _n_time_elements;
     std::cout << ", box coordinates: (" << _box_coordinate[ 0 ] << ", "
               << _box_coordinate[ 1 ] << ", " << _box_coordinate[ 2 ] << ", "
               << _box_coordinate[ 3 ] << ", " << _box_coordinate[ 4 ] << ")";
-    std::cout << ", nearfield: ";
-    for ( auto nf_cluster : *_nearfield_list ) {
-      std::vector< slou > nf_box_coordinate = nf_cluster->get_box_coordinate( );
-      std::cout << "(" << nf_box_coordinate[ 0 ] << ", "
-                << nf_box_coordinate[ 1 ] << ", " << nf_box_coordinate[ 2 ]
-                << ", " << nf_box_coordinate[ 3 ] << ", "
-                << nf_box_coordinate[ 4 ] << "), ";
-    }
-    if ( _interaction_list != nullptr ) {
-      std::cout << ", interaction list: ";
-      for ( auto ff_cluster : *_interaction_list ) {
-      std::vector< slou > ff_box_coordinate = ff_cluster->get_box_coordinate( );
-      std::cout << "(" << ff_box_coordinate[ 0 ] << ", "
-                << ff_box_coordinate[ 1 ] << ", " << ff_box_coordinate[ 2 ]
-                << ", " << ff_box_coordinate[ 3 ] << ", "
-                << ff_box_coordinate[ 4 ] << "), ";
-      }
-    }
+    // std::cout << ", nearfield: ";
+    // for ( auto nf_cluster : *_nearfield_list ) {
+    //   std::vector< slou > nf_box_coordinate = nf_cluster->get_box_coordinate( );
+    //   std::cout << "(" << nf_box_coordinate[ 0 ] << ", "
+    //             << nf_box_coordinate[ 1 ] << ", " << nf_box_coordinate[ 2 ]
+    //             << ", " << nf_box_coordinate[ 3 ] << ", "
+    //             << nf_box_coordinate[ 4 ] << "), ";
+    // }
+    // if ( _interaction_list != nullptr ) {
+    //   std::cout << ", interaction list: ";
+    //   for ( auto ff_cluster : *_interaction_list ) {
+    //   std::vector< slou > ff_box_coordinate = ff_cluster->get_box_coordinate( );
+    //   std::cout << "(" << ff_box_coordinate[ 0 ] << ", "
+    //             << ff_box_coordinate[ 1 ] << ", " << ff_box_coordinate[ 2 ]
+    //             << ", " << ff_box_coordinate[ 3 ] << ", "
+    //             << ff_box_coordinate[ 4 ] << "), ";
+    //   }
+    // }
     std::cout << std::endl;
     // if ( _children == nullptr ) {
     //   std::cout << "elements are: " << std::endl;
@@ -718,6 +721,8 @@ class besthea::mesh::general_spacetime_cluster {
   lo _n_elements;             //!< number of spacetime elements in the cluster.
   lo _n_time_elements;        //!< number of different time steps in the
                               //!< cluster (components of spacetime elements).
+                              //!< This is only set for those clusters, to which
+                              //!< elements are assigned.
   lo _n_space_elements;       //!< number of different spatial elements in the
                               //!< cluster (components of spacetime elements).
   sc _time_center;            //!< temporal center of the cluster

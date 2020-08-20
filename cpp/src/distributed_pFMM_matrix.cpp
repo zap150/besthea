@@ -202,7 +202,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           x, *it_current_cluster, verbose, verbose_file );
         provide_moments_for_m2l( *it_current_cluster, verbose, verbose_file );
         call_m2m_operations( *it_current_cluster, verbose, verbose_file );
-        provide_moments_to_parents( 
+        provide_moments_to_parents(
           *it_current_cluster, verbose, verbose_file );
         m_list.erase( it_current_cluster );
         break;
@@ -217,7 +217,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           ( *it_current_cluster )->set_downward_path_status( 2 );
           call_l2t_operations(
             *it_current_cluster, y_pFMM, verbose, verbose_file );
-          provide_local_contributions_to_children( 
+          provide_local_contributions_to_children(
             *it_current_cluster, verbose, verbose_file );
         } else {
           ( *it_current_cluster )->set_downward_path_status( 1 );
@@ -243,7 +243,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             ( *it_current_cluster )->set_downward_path_status( 2 );
             call_l2t_operations(
               *it_current_cluster, y_pFMM, verbose, verbose_file );
-            provide_local_contributions_to_children( 
+            provide_local_contributions_to_children(
               *it_current_cluster, verbose, verbose_file );
           }
           m2l_list.erase( it_current_cluster );
@@ -406,16 +406,17 @@ besthea::linear_algebra::full_matrix *
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::compute_spatial_m2m_coeffs( ) {
-  lo n_space_levels = _distributed_spacetime_tree->get_local_max_space_level( );
+  lo max_space_level
+    = _distributed_spacetime_tree->get_local_max_space_level( );
   // Declare the structures containing coefficients of appropriate size.
   // NOTE: The M2M coefficients are computed for all levels except the last one,
   //       even in case they are not needed for the first few levels.
-  _m2m_coeffs_s_dim_0_left.resize( n_space_levels );
-  _m2m_coeffs_s_dim_0_right.resize( n_space_levels );
-  _m2m_coeffs_s_dim_1_left.resize( n_space_levels );
-  _m2m_coeffs_s_dim_1_right.resize( n_space_levels );
-  _m2m_coeffs_s_dim_2_left.resize( n_space_levels );
-  _m2m_coeffs_s_dim_2_right.resize( n_space_levels );
+  _m2m_coeffs_s_dim_0_left.resize( max_space_level );
+  _m2m_coeffs_s_dim_0_right.resize( max_space_level );
+  _m2m_coeffs_s_dim_1_left.resize( max_space_level );
+  _m2m_coeffs_s_dim_1_right.resize( max_space_level );
+  _m2m_coeffs_s_dim_2_left.resize( max_space_level );
+  _m2m_coeffs_s_dim_2_right.resize( max_space_level );
   auto it1 = _m2m_coeffs_s_dim_0_left.begin( );
   auto it2 = _m2m_coeffs_s_dim_0_right.begin( );
   auto it3 = _m2m_coeffs_s_dim_1_left.begin( );
@@ -433,8 +434,38 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     ( *it6 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
   }
 
-  // @todo exchange this with the correct padding in space
-  const std::vector< sc > paddings_space ( n_space_levels, 0.0 );
+  std::vector< sc > paddings_refinementwise ( max_space_level + 1, 0.0 );
+  const std::vector< sc > & paddings_levelwise
+    = _distributed_spacetime_tree->get_spatial_paddings( );
+  // paddings_levelwise contains the padding levelwise with respect to the
+  // clusters levels. we need the padding with respect to the number of
+  // refinements in space.
+  lo initial_space_refinement
+    = _distributed_spacetime_tree->get_initial_space_refinement( );
+  if ( initial_space_refinement > 0 ) {
+    // padding is only computed starting from the spatial refinement level
+    // initial_space_refinement. set it to this value for all lower levels
+    for ( lo i = 0; i < initial_space_refinement; ++i ) {
+      paddings_refinementwise[ i ] = paddings_levelwise[ 0 ];
+    }
+    // get the correct padding from paddings_levelwise (spatial refinement every
+    // second step)
+    lo current_idx = 0;
+    for ( lo i = initial_space_refinement; i <= max_space_level; ++i ) {
+      // note: by construction current_idx should never be out of bound for
+      // paddings_levelwise
+      paddings_refinementwise[ i ] = paddings_levelwise.at( current_idx );
+      current_idx += 2;
+    }
+  } else {
+    paddings_refinementwise[ 0 ] = paddings_levelwise[ 0 ];
+    // the level of the first spatial refinement is known
+    lo current_idx = _distributed_spacetime_tree->get_start_space_refinement( );
+    for ( lo i = 1; i <= max_space_level; ++i ) {
+      paddings_refinementwise[ i ] = paddings_levelwise.at( current_idx );
+      current_idx += 2;
+    }
+  }
 
   // declare half box side lengths of parent and child cluster + initialize
   vector_type h_par_no_pad( 3, false ), h_child_no_pad( 3, false );
@@ -460,12 +491,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   vector_type nodes_l_child_dim_2( _spat_order + 1, false );
   vector_type nodes_r_child_dim_2( _spat_order + 1, false );
 
-  for ( lo curr_level = 0; curr_level < n_space_levels - 1; ++curr_level ) {
+  for ( lo curr_level = 0; curr_level < max_space_level; ++curr_level ) {
     h_child_no_pad[ 0 ] = h_par_no_pad[ 0 ] / 2.0;
     h_child_no_pad[ 1 ] = h_par_no_pad[ 1 ] / 2.0;
     h_child_no_pad[ 2 ] = h_par_no_pad[ 2 ] / 2.0;
-    sc padding_par = paddings_space[ curr_level ];
-    sc padding_child = paddings_space[ curr_level + 1 ];
+    sc padding_par = paddings_refinementwise[ curr_level ];
+    sc padding_child = paddings_refinementwise[ curr_level + 1 ];
     // transform the nodes from [-1, 1] to the child interval and then back to
     // [-1, 1] with the transformation of the parent interval:
     for ( lo j = 0; j <= _spat_order; ++j ) {
@@ -758,13 +789,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // temporal m2m operation
   lo n_space_div_parent, n_space_div_children, dummy;
   parent_cluster->get_n_divs( n_space_div_parent, dummy );
-  ( *children )[ 0 ]->get_n_divs( n_space_div_children, dummy );
+  ( *children )[ child_idx ]->get_n_divs( n_space_div_children, dummy );
   bool temporal_only = ( n_space_div_parent == n_space_div_children );
   if ( temporal_only ) {
-    // execute only temporal m2m operation
+    // execute only temporal m2m operation for children with correct
+    // configuration
     for ( auto child : *children ) {
       if ( child->get_temporal_configuration( ) == child_configuration ) {
-        sc *child_moment = child->get_pointer_to_moment( );
+        const sc *child_moment = child->get_pointer_to_moment( );
         apply_temporal_m2m_operation(
           child_moment, temporal_m2m_matrix, parent_moment );
       }
@@ -778,10 +810,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       buffer_array[ i ] = 0.0;
     }
     for ( auto child : *children ) {
-      short child_octant, child_configuration;
-      child->get_position( child_octant, child_configuration );
-      if ( child->get_temporal_configuration( ) == child_configuration ) {
-        sc* child_moment = child->get_pointer_to_moment( );
+      short child_octant, current_configuration;
+      child->get_position( child_octant, current_configuration );
+      if ( current_configuration == child_configuration ) {
+        const sc* child_moment = child->get_pointer_to_moment( );
         apply_spatial_m2m_operation(
           child_moment, n_space_div_parent, child_octant, buffer_array );
       }
@@ -1025,8 +1057,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   for ( lo i = 0; i < 3; ++i ) {
     center_diff_space[ i ] -= src_center_space[ i ];
   }
-  // @todo insert real padding when ready.
-  sc padding_space = 0.0;
+
+  sc padding_space = _distributed_spacetime_tree->
+    get_spatial_paddings( )[ src_cluster->get_level( ) ];
   for ( lo i = 0; i < 3; ++i ) {
     half_size_space[ i ] += padding_space;
   }
@@ -1230,9 +1263,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       parent_local_contribution, temporal_l2l_matrix, buffer_array );
 
     for ( auto child : *children ) {
-      short child_octant, child_configuration;
-      child->get_position( child_octant, child_configuration );
-      if ( child->get_temporal_configuration( ) == child_configuration ) {
+      short child_octant, current_configuration;
+      child->get_position( child_octant, current_configuration );
+      if ( current_configuration == child_configuration ) {
         sc* child_local_contribution
           = child->get_pointer_to_local_contribution( );
         apply_spatial_l2l_operation( buffer_array, n_space_div_parent,
@@ -1554,9 +1587,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           = current_cluster->get_extraneous_moment_pointer( source_id );
         lou n_associated_spacetime_clusters
           = current_cluster->get_associated_spacetime_clusters( )->size( );
-        for ( lou i = 0;
-              i < n_associated_spacetime_clusters * _contribution_size; ++ i ) {
-          current_moments[ i ] += received_moments[ i ];
+        for ( lou j = 0;
+              j < n_associated_spacetime_clusters * _contribution_size; ++ j ) {
+          current_moments[ j ] += received_moments[ j ];
         }
         current_cluster->reduce_upward_path_counter( );
       }
@@ -1652,7 +1685,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         if ( verbose ) {
           std::ofstream outfile ( verbose_file.c_str( ), std::ios::app );
           if ( outfile.is_open( ) ) {
-            outfile << "send for m2l: data from source " 
+            outfile << "send for m2l: data from source "
                     << src_cluster->get_global_index( ) << " to process "
                     << tar_process_id  << std::endl;
             outfile.close( );
@@ -1690,7 +1723,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       if ( verbose ) {
         std::ofstream outfile ( verbose_file.c_str( ), std::ios::app );
         if ( outfile.is_open( ) ) {
-          outfile << "send upward: from source " 
+          outfile << "send upward: from source "
                   << child_cluster->get_global_index( ) << " to process "
                   << parent_process_id << std::endl;
           outfile.close( );
@@ -1723,7 +1756,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         if ( verbose ) {
           std::ofstream outfile ( verbose_file.c_str( ), std::ios::app );
           if ( outfile.is_open( ) ) {
-            outfile << "send downward: from source " 
+            outfile << "send downward: from source "
                     << parent_cluster->get_global_index( ) << " to process "
                     << child_process_id << std::endl;
             outfile.close( );
@@ -1818,7 +1851,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   sc dummy;
   source_cluster->get_center( cluster_center_space, dummy );
   source_cluster->get_half_size( cluster_half_space, dummy );
-  sc padding = 0;
+  sc padding = _distributed_spacetime_tree->
+    get_spatial_paddings( )[ source_cluster->get_level( ) ];
   sc start_0 = cluster_center_space[ 0 ] - cluster_half_space[ 0 ] - padding;
   sc end_0 = cluster_center_space[ 0 ] + cluster_half_space[ 0 ] + padding;
   sc start_1 = cluster_center_space[ 1 ] - cluster_half_space[ 1 ] - padding;

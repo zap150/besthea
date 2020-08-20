@@ -87,7 +87,6 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   global_matrix.set_order( _spat_order, _temp_order, _order_regular );
   global_matrix.set_alpha( _alpha );
   global_matrix.set_m2l_integration_order( _m2l_integration_order );
-  global_matrix.set_MPI_communicator( _comm );
 
   // number of timesteps have to be the same for test and trial meshes
   lo n_timesteps = _test_space->get_mesh( ).get_n_temporal_elements( );

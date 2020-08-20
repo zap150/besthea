@@ -132,15 +132,15 @@ bool besthea::mesh::spacetime_mesh_generator::generate(
     _time_mesh->get_element( curr_start_timestep, element );
     file << _time_mesh->get_node( element[ 0 ] ) << "\n";
 
-    for ( lo i = 1; i < n_local_timesteps; ++i ) {
-      _time_mesh->get_element( curr_start_timestep + i, element );
+    for ( lo j = 1; j < n_local_timesteps; ++j ) {
+      _time_mesh->get_element( curr_start_timestep + j, element );
       file << _time_mesh->get_node( element[ 0 ] ) << "\n";
     }
     file << _time_mesh->get_node( element[ 1 ] ) << "\n\n"
          << n_local_timesteps << "\n";
 
-    for ( lo i = 0; i < n_local_timesteps; ++i ) {
-      _time_mesh->get_element( curr_start_timestep + i, element );
+    for ( lo j = 0; j < n_local_timesteps; ++j ) {
+      _time_mesh->get_element( curr_start_timestep + j, element );
       file << element[ 0 ] - curr_start_timestep << " "
            << element[ 1 ] - curr_start_timestep << "\n";
     }

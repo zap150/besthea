@@ -57,24 +57,24 @@ besthea::mesh::triangular_surface_mesh::triangular_surface_mesh(
 }
 
 besthea::mesh::triangular_surface_mesh::triangular_surface_mesh(
-  const tetrahedral_volume_mesh & mesh ) {
-  from_tetrahedral( mesh );
+  const tetrahedral_volume_mesh & tet_mesh ) {
+  from_tetrahedral( tet_mesh );
 }
 
 void besthea::mesh::triangular_surface_mesh::from_tetrahedral(
-  const tetrahedral_volume_mesh & mesh ) {
-  _orientation = mesh.get_surface_orientation( );
-  _n_nodes = mesh.get_n_surface_nodes( );
-  _n_elements = mesh.get_n_surface_elements( );
+  const tetrahedral_volume_mesh & tet_mesh ) {
+  _orientation = tet_mesh.get_surface_orientation( );
+  _n_nodes = tet_mesh.get_n_surface_nodes( );
+  _n_elements = tet_mesh.get_n_surface_elements( );
 
   _nodes.reserve( 3 * _n_nodes );
-  lo n_nodes_volume = mesh.get_n_nodes( );
+  lo n_nodes_volume = tet_mesh.get_n_nodes( );
   linear_algebra::coordinates< 3 > x;
   std::vector< lo > volume_to_surface( n_nodes_volume, 0 );
   lo counter = 0;
   for ( lo i_node = 0; i_node < n_nodes_volume; ++i_node ) {
-    if ( mesh.is_surface_node( i_node ) ) {
-      mesh.get_node( i_node, x );
+    if ( tet_mesh.is_surface_node( i_node ) ) {
+      tet_mesh.get_node( i_node, x );
       _nodes.push_back( x[ 0 ] );
       _nodes.push_back( x[ 1 ] );
       _nodes.push_back( x[ 2 ] );
@@ -85,7 +85,7 @@ void besthea::mesh::triangular_surface_mesh::from_tetrahedral(
   _elements.resize( 3 * _n_elements );
   linear_algebra::indices< 3 > element;
   for ( lo i_element = 0; i_element < _n_elements; ++i_element ) {
-    mesh.get_surface_element( i_element, element );
+    tet_mesh.get_surface_element( i_element, element );
     _elements[ 3 * i_element ] = volume_to_surface[ element[ 0 ] ];
     _elements[ 3 * i_element + 1 ] = volume_to_surface[ element[ 1 ] ];
     _elements[ 3 * i_element + 2 ] = volume_to_surface[ element[ 2 ] ];

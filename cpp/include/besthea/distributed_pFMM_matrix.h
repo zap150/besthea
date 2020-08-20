@@ -45,7 +45,6 @@
 #include "besthea/general_spacetime_cluster.h"
 #include "besthea/lagrange_interpolant.h"
 #include "besthea/local_vector_routines.h"
-// #include "besthea/matrix.h"
 #include "besthea/settings.h"
 #include "besthea/spacetime_heat_adl_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
@@ -294,7 +293,6 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   /**
    * Compute the spatial m2m coefficients for all local spatial levels.
-   * @todo Add correct padding in space!
    */
   void compute_spatial_m2m_coeffs( );
 
@@ -392,7 +390,6 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] src_cluster Spacetime source cluster for the M2L operation.
    * @param[in,out] tar_cluster Spacetime target cluster for the M2L operation.
    * @todo add buffers instead of reallocation?
-   * @todo adapt padding when ready.
    */
   void apply_m2l_operation( const mesh::general_spacetime_cluster* src_cluster,
     mesh::general_spacetime_cluster* tar_cluster ) const;
@@ -572,14 +569,14 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] src_cluster Considered scheduling time cluster. If a cluster in
    *                        its send list is handled by a different process, the
    *                        moments are send to this process.
-   * @param[in] verbose If true, the process reports about all initiated send 
-   *                    operations. (Updates of dependency flags are not 
+   * @param[in] verbose If true, the process reports about all initiated send
+   *                    operations. (Updates of dependency flags are not
    *                    reported)
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
    */
   void provide_moments_for_m2l(
-    mesh::scheduling_time_cluster* src_cluster, 
+    mesh::scheduling_time_cluster* src_cluster,
     bool verbose, const std::string & verbose_file ) const;
 
   /**
@@ -588,8 +585,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                          is handled by a different process, the processed
    *                          moments are send from the local copy of the parent
    *                          cluster to this process.
-   * @param[in] verbose If true, the process reports about all initiated send 
-   *                    operations. (Updates of dependency flags are not 
+   * @param[in] verbose If true, the process reports about all initiated send
+   *                    operations. (Updates of dependency flags are not
    *                    reported)
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
@@ -603,8 +600,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] parent_cluster Considered scheduling time cluster. If a child
    *                           of it is handled by a different process, the
    *                           local contributions are send to this process.
-   * @param[in] verbose If true, the process reports about all initiated send 
-   *                    operations. (Updates of dependency flags are not 
+   * @param[in] verbose If true, the process reports about all initiated send
+   *                    operations. (Updates of dependency flags are not
    *                    reported)
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
@@ -631,7 +628,6 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[out]  T Full matrix where the quadratures are stored. The elements
    *                of the cluster vary along the rows, the order of the
    *                polynomial along the columns of the matrix.
-   * @todo Include padding appropriately.
    */
   void compute_chebyshev_quadrature_p0(
     const mesh::general_spacetime_cluster* source_cluster,
