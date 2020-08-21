@@ -931,9 +931,11 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
   if ( cluster.get_process_id( ) == _my_rank ) {
     current_mesh = _spacetime_mesh.get_local_mesh( );
     start_idx = _spacetime_mesh.get_local_start_idx( );
+    cluster.set_elements_are_local( true );
   } else {
     current_mesh = _spacetime_mesh.get_nearfield_mesh( );
     start_idx = _spacetime_mesh.get_nearfield_start_idx( );
+    // elements are local is set to false by default -> not set here
   }
   linear_algebra::coordinates< 4 > centroid;
 
@@ -960,6 +962,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
     }
   }
   cluster.set_n_time_elements( n_time_elements );
+  cluster.compute_node_mapping( );
+  cluster.set_n_space_nodes( );
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
@@ -977,9 +981,11 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
 
   const spacetime_tensor_mesh * current_mesh;
   lo start_idx;
+  bool elements_are_local = root.get_elements_are_local( );
   if ( root.get_process_id( ) == _my_rank ) {
     current_mesh = _spacetime_mesh.get_local_mesh( );
     start_idx = _spacetime_mesh.get_local_start_idx( );
+    elements_are_local = true;
   } else {
     current_mesh = _spacetime_mesh.get_nearfield_mesh( );
     start_idx = _spacetime_mesh.get_nearfield_start_idx( );
@@ -1176,6 +1182,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
             2 * root.get_global_time_index( ) + 1, n_space_div + 1,
             n_time_div + 1, _spacetime_mesh, root.get_process_id( ), true );
         clusters[ i ]->set_n_time_elements( n_time_elements_left );
+        clusters[ i ]->set_elements_are_local( elements_are_local );
       } else {
         clusters[ i ] = nullptr;
       }
@@ -1189,6 +1196,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
             2 * root.get_global_time_index( ) + 2, n_space_div + 1,
             n_time_div + 1, _spacetime_mesh, root.get_process_id( ), true );
         clusters[ i + 8 ]->set_n_time_elements( n_time_elements_right );
+        clusters[ i + 8 ]->set_elements_are_local( elements_are_local );
       } else {
         clusters[ i + 8 ] = nullptr;
       }
@@ -1293,7 +1301,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
     for ( lo i = 0; i < 16; ++i ) {
       if ( clusters[ i ] != nullptr ) {
         root.add_child( clusters[ i ] );
-
+        clusters[ i ]->compute_node_mapping( );
+        clusters[ i ]->set_n_space_nodes( );
         build_subtree( *clusters[ i ], split_space_descendant );
       }
     }
@@ -1358,6 +1367,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
         0, 2 * root.get_global_time_index( ) + 1, n_space_div, n_time_div + 1,
         _spacetime_mesh, root.get_process_id( ), true );
       left_child->set_n_time_elements( n_time_elements_left );
+      left_child->set_elements_are_local( elements_are_local );
     }
 
     // right temporal cluster
@@ -1372,6 +1382,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
         2 * root.get_global_time_index( ) + 2, n_space_div, n_time_div + 1,
         _spacetime_mesh, root.get_process_id( ), true );
       right_child->set_n_time_elements( n_time_elements_right );
+      right_child->set_elements_are_local( elements_are_local );
     }
 
     for ( lo i = 0; i < root.get_n_elements( ); ++i ) {
@@ -1389,10 +1400,14 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
 
     if ( left_child != nullptr ) {
       root.add_child( left_child );
+      left_child->compute_node_mapping( );
+      left_child->set_n_space_nodes( );
       build_subtree( *left_child, split_space_descendant );
     }
     if ( right_child != nullptr ) {
       root.add_child( right_child );
+      right_child->compute_node_mapping( );
+      right_child->set_n_space_nodes( );
       build_subtree( *right_child, split_space_descendant );
     }
   }

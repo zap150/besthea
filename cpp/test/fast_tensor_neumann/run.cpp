@@ -204,7 +204,6 @@ int main( int argc, char * argv[] ) {
     grid_spacetime_mesh.print_info( );
 
     block_vector slp;
-    spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha);
     uniform_spacetime_be_evaluator evaluator_v( kernel_v, space_p0, order_reg );
     t.reset( "SLP" );
     evaluator_v.evaluate(grid_space_mesh.get_nodes( ), neu_proj, slp );

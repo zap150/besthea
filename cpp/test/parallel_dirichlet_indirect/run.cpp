@@ -73,7 +73,7 @@ int main( int argc, char * argv[] ) {
   order_sing = 4;
   order_reg = 4;
 
-  lo test_case = 2;
+  lo test_case = 3;
 
   // mesh data to construct equivalent standard spacetime mesh and distributed
   // spacetime mesh for the test.
@@ -188,15 +188,18 @@ int main( int argc, char * argv[] ) {
   }
 
   if ( myRank == 0 ) {
-    distributed_mesh.get_distribution_tree( )->print_tree_human_readable( 2, true );
+    distributed_mesh.get_distribution_tree( )->
+      print_tree_human_readable( 2, true );
   }
   MPI_Barrier( comm );
   if ( myRank == 1 ) {
-    distributed_mesh.get_distribution_tree( )->print_tree_human_readable( 2, true );
+    distributed_mesh.get_distribution_tree( )->
+      print_tree_human_readable( 2, true );
   }
   MPI_Barrier( comm );
   if ( myRank == 2 ) {
-    distributed_mesh.get_distribution_tree( )->print_tree_human_readable( 2, true );
+    distributed_mesh.get_distribution_tree( )->
+      print_tree_human_readable( 2, true );
   }
 
   if ( test_case == 1 ) {
@@ -249,6 +252,7 @@ int main( int argc, char * argv[] ) {
       full_matrix & V_block_loc = V->get_block( toeplitz_id );
       V_block_loc.apply( x_loc_0, y_loc );
       // V_pFMM->apply( full_block_vector, applied_pFMM );
+      delete V;
     }
     // compute the corresponding result with the distributed matrix V_dist_pFMM
     if ( myRank == 0 ) {
@@ -324,6 +328,7 @@ int main( int argc, char * argv[] ) {
       block_vector temp_vec( n_blocks, size_of_block, true );
       V->apply( rand_vec, applied_std );
       // V->apply( rand_vec, applied_std );
+      delete V;
     }
 
     // compute the result with the distributed matrix V_dist_pFMM
@@ -383,6 +388,7 @@ int main( int argc, char * argv[] ) {
       V->mkl_fgmres_solve(
         M_dir_proj, direct_density, gmres_prec, gmres_iter, gmres_iter );
       std::cout << "iterations standard: " << gmres_iter << std::endl;
+      delete V;
     }
     // broadcast M_dir_proj to all processes
     for ( lo i = 0; i < n_blocks; ++i ) {
@@ -410,7 +416,6 @@ int main( int argc, char * argv[] ) {
       }
     }
   }
-
+  delete V_dist_pFMM;
   MPI_Finalize( );
-
 }

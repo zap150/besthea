@@ -1133,18 +1133,18 @@ template class besthea::bem::distributed_fast_spacetime_be_assembler<
 //     besthea::bem::basis_tri_p1 >,
 //   besthea::bem::distributed_fast_spacetime_be_space<
 //     besthea::bem::basis_tri_p1 > >;
-// template class besthea::bem::distributed_fast_spacetime_be_assembler<
-//   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-//   besthea::bem::distributed_fast_spacetime_be_space<
-//     besthea::bem::basis_tri_p0 >,
-//   besthea::bem::distributed_fast_spacetime_be_space<
-//     besthea::bem::basis_tri_p1 > >;
-// template class besthea::bem::distributed_fast_spacetime_be_assembler<
-//   besthea::bem::spacetime_heat_adl_kernel_antiderivative,
-//   besthea::bem::distributed_fast_spacetime_be_space<
-//     besthea::bem::basis_tri_p1 >,
-//   besthea::bem::distributed_fast_spacetime_be_space<
-//     besthea::bem::basis_tri_p0 > >;
+template class besthea::bem::distributed_fast_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >;
+template class besthea::bem::distributed_fast_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_adl_kernel_antiderivative,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 > >;
 // template class besthea::bem::distributed_fast_spacetime_be_assembler<
 //   besthea::bem::spacetime_heat_hs_kernel_antiderivative,
 //   besthea::bem::distributed_fast_spacetime_be_space<

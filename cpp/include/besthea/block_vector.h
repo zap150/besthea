@@ -261,9 +261,6 @@ class besthea::linear_algebra::block_vector {
    * Gets local part of a block vector corresponding to dofs in a spacetime
    * cluster.
    * @param[in] cluster  Cluster determining the local dofs.
-   * @param[in] is_local  Indicates if the elements in the cluster are in the
-   *                      local mesh or the nearfield mesh of the distributed
-   *                      spacetime mesh.
    * @param[in,out] local_vector Local part of block vector.
    * @tparam space_type  fast_spacetime_be_space representing either p0 or p1
    *                     basis functions. It determines the dofs.
@@ -273,7 +270,7 @@ class besthea::linear_algebra::block_vector {
    */
   template< class space_type >
   void get_local_part( besthea::mesh::general_spacetime_cluster * cluster,
-    const bool is_local, besthea::linear_algebra::vector & local_vector ) const;
+    besthea::linear_algebra::vector & local_vector ) const;
 
   /*!
    * Adds local vector to appropriate positions of a block vector. The positions
