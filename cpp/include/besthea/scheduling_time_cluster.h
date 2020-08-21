@@ -853,9 +853,6 @@ class besthea::mesh::scheduling_time_cluster {
           current_spacetime_cluster->set_pointer_to_moment(
             & _associated_moments[ i * moment_size ] );
         }
-      } else {
-        std::cout << "warning: associated moments allocated already!"
-                  << std::endl;
       }
     }
   }
@@ -902,9 +899,6 @@ class besthea::mesh::scheduling_time_cluster {
           current_spacetime_cluster->set_pointer_to_local_contribution(
             & _associated_local_contributions[ i * contribution_size ] );
         }
-      } else {
-        std::cout << "warning: associated local contributions allocated already!"
-                  << std::endl;
       }
     }
   }

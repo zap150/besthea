@@ -151,11 +151,12 @@ bool besthea::mesh::spacetime_mesh_generator::generate(
 
     // for completeness, save also spatial mesh (although it is the same for all
     // temporal meshes)
-    std::string space_file = file_name + "_s_" + std::to_string( i );
+    std::string space_file
+      = file_name + "_s_" + std::to_string( i );
     _space_mesh->save( directory, space_file, suffix );
 
     d_file << file_path << "\n";
-    d_file << space_file + "." + suffix << "\n";
+    d_file << directory + space_file + "." + suffix << "\n";
   }
 
   d_file.close( );

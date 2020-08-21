@@ -147,7 +147,7 @@ int main( int argc, char * argv[] ) {
                         "test_mesh", "txt" );
     std::cout << "### end mesh generation ###" << std::endl;
   }
-  MPI_Barrier( MPI_COMM_WORLD );
+  MPI_Barrier( comm );
 
   if ( myRank == 0 ) {
     std::cout << "assembling distributed pFMM matrix" << std::endl;
