@@ -65,6 +65,8 @@ class besthea::mesh::scheduling_time_cluster {
    * @param[in] center  Center of the cluster.
    * @param[in] half_size Half size of the cluster.
    * @param[in] parent Pointer to the cluster's parent.
+   * @param[in] left_right  Indicates if the cluster is the left (0) or
+   *                        right (1) child of its parent.
    * @param[in] level Level within the cluster tree structure.
    * @param[in] process_id  Id of the process which is responsible for the
    *                        cluster in an MPI parallelized FMM. Default value
@@ -511,10 +513,19 @@ class besthea::mesh::scheduling_time_cluster {
     return _ready_interaction_list;
   }
 
+  /**
+   * Sets the essential status of the current cluster (in the setting of a
+   * distributed tree) to a given value.
+   * @param[in] status  Value to be set.
+   */
   void set_essential_status( const char status ) {
     _essential_status = status;
   }
 
+  /**
+   * Returns the essential status of the current cluster (in the setting of a
+   * distributed tree).
+   */
   char get_essential_status( ) const {
     return _essential_status;
   }
@@ -756,6 +767,13 @@ class besthea::mesh::scheduling_time_cluster {
     }
   }
 
+  /**
+   * Recursively traverses the implicitly given tree structure and constructs
+   * a vector which contains the cluster bounds in the tree in the usual tree
+   * format.
+   * @param[out] cluster_bounds_vector  Vector in which the cluster bounds are
+   *                                    stored.
+   */
   void append_cluster_bound_vector_recursively(
     std::vector< sc > & cluster_bounds_vector ) const {
     char left_child_status = 0;

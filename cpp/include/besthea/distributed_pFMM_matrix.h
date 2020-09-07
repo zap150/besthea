@@ -233,7 +233,6 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] dim_range Number of rows in a block.
    * @note the member variables which are set are inherited from
    *       @ref block_linear_operator.
-   * @todo Are these member variables ever used?
    */
   void resize( lo block_dim, lo dim_domain, lo dim_range ) {
     _block_dim = block_dim;
@@ -275,17 +274,16 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * used to check the dependencies.
    * @note All lists are constructed anew, existing values are overwritten.
    * @note The clusters in the m_list are sorted using the comparison operator
-   *       @ref compare_clusters_bottom_up_right_2_left, the others using
-   *       @ref compare_clusters_top_down_right_2_left .
-   * @todo Determine n_list differently, when coupling with space-time cluster
-   *       tree is done.
+   *       @ref mesh::tree_structure::compare_clusters_bottom_up_right_2_left,
+   *       the others using
+   *       @ref mesh::tree_structure::compare_clusters_top_down_right_2_left.
    */
   void prepare_fmm( );
 
   /**
    * Creates a nearfield matrix for two clusters
-   * @param[in] local_leaf_index  Index of the local leaf cluster, which acts
-   *                              as the target.
+   * @param[in] leaf_index  Index of the local leaf cluster, which acts as the
+   *                        target.
    * @param[in] source_index  Index of the source cluster in the nearfield list
    *                          of the target cluster.
    */
@@ -313,8 +311,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   /**
    * Applies the appropriate S2M operation for the given source cluster and
    * sources depending on the boundary integral operator.
-   * @param[in] sources Global sources containing the once used for the S2M
-   *                    operation.
+   * @param[in] source_vector Global sources containing the once used for the
+   *                          S2M operation.
    * @param[in] source_cluster  Considered spacetime cluster.
    */
   void apply_s2m_operation( const block_vector & source_vector,
@@ -323,8 +321,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   /**
    * Applies the S2M operation for the given source cluster and sources for
    * p0 basis functions (for single layer and adjoint double layer operators)
-   * @param[in] sources Global sources containing the once used for the S2M
-   *                    operation.
+   * @param[in] source_vector Global sources containing the once used for the
+   *                          S2M operation.
    * @param[in] source_cluster  Considered spacetime cluster.
    * @todo Use buffers instead of reallocating sources and aux buffer in every
    * function call?
@@ -338,8 +336,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * Applies the S2M operation for the given source cluster and sources for
    * p1 basis functions and normal derivatives of spatial polynomials (for
    * double layer operator and hypersingular operator)
-   * @param[in] sources Global sources containing the once used for the S2M
-   *                    operation.
+   * @param[in] source_vector Global sources containing the once used for the
+   *                          S2M operation.
    * @param[in] source_cluster  Considered spacetime cluster.
    * @todo Use buffers instead of reallocating sources and aux buffer in every
    * function call?
@@ -683,8 +681,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * Compute quadrature of the Chebyshev polynomials and p0 basis functions for
    * the spatial part of a spacetime cluster
    * @param[in] source_cluster  Cluster for whose spatial component the
-   *                            quadratures are computed
-   * @param[out]  T Full matrix where the quadratures are stored. The elements
+   *                            quadratures are computed.
+   * @param[out] T  Full matrix where the quadratures are stored. The elements
    *                of the cluster vary along the rows, the order of the
    *                polynomial along the columns of the matrix.
    */
@@ -696,7 +694,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * Compute quadrature of the normal derivatives of the Chebyshev polynomials
    * times p1 basis functions for the spatial part of a spacetime cluster.
    * @param[in] source_cluster  Cluster for whose spatial component the
-   *                            quadratures are computed
+   *                            quadratures are computed.
    * @param[out] T_drv  Full matrix where the quadratures are stored. The nodes
    *                    of the cluster vary along the rows, the order of the
    *                    polynomial along the columns of the matrix.
@@ -705,6 +703,15 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     const mesh::general_spacetime_cluster* source_cluster,
     full_matrix & T_drv ) const;
 
+  /**
+   * Compute quadrature of the Lagrange polynomials and p0 basis functions for
+   * the temporal part of a spacetime cluster
+   * @param[in] source_cluster  Cluster for whose temporal component the
+   *                            quadratures are computed.
+   * @param[out] L  Full matrix where the quadratures are stored. The temporal
+   *                elements of the cluster vary along the columns, the order
+   *                of the polynomial along the rows of the matrix.
+   */
   void compute_lagrange_quadrature(
     const mesh::general_spacetime_cluster* source_cluster,
     full_matrix & L ) const;
@@ -874,7 +881,6 @@ class besthea::linear_algebra::distributed_pFMM_matrix
                           //!< contribution) of a single spacetime cluster.
   mutable bem::chebyshev_evaluator
     _chebyshev;  //!< Evaluator of the Chebyshev polynomials.
-                 //!< @todo check if necessary in the final code
 
   mutable bem::lagrange_interpolant
     _lagrange;  //!< Evaluator of the Lagrange polynomials.

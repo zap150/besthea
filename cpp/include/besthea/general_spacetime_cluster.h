@@ -73,8 +73,12 @@ class besthea::mesh::general_spacetime_cluster {
    * @param[in] parent Pointer to the cluster's parent
    * @param[in] level Level within the cluster tree
    * @param[in] octant Index of the spatial octant within the parent cluster
+   * @param[in] coordinate  Coordinates of the box within boxes on given level
    * @param[in] left_right 0 - left temp. child, 1 - right temp. child
-   * @param[in] coordinate Coordinates of the box within boxes on given level
+   * @param[in] global_time_index Global time index of the temporal component
+   *                              of the current general space-time cluster.
+   * @param[in] n_space_div Number of splittings in space dimensions.
+   * @param[in] n_time_div  Number of splittings in temporal dimension.
    * @param[in] mesh Reference to the underlying distributed spacetime tensor
    * mesh.
    * @param[in] process_id Rank of an MPI process owning the cluster.
@@ -295,6 +299,16 @@ class besthea::mesh::general_spacetime_cluster {
     return admissibility;
   }
 
+  /**
+   * Determines if a given source cluster is in the spatial vicinity of the
+   * current cluster. This is determined by considering the regular grid in
+   * space: A cluster is not in the spatial vicinity if it is more than
+   * @p spatial_nearfield_limit steps away from the current cluster along any
+   * of the tree spatial directions.
+   * @param[in] src_cluster Source cluster which is considered.
+   * @param[in] spatial_nearfield_limit Parameter used to define the spatial
+   *                                    vicinity.
+   */
   bool is_in_spatial_vicinity( general_spacetime_cluster * src_cluster,
     slou spatial_nearfield_limit ) const {
     std::vector< slou > src_box_coordinate = src_cluster->get_box_coordinate( );
@@ -488,6 +502,16 @@ class besthea::mesh::general_spacetime_cluster {
     }
   }
 
+  /**
+   * Computes the padding of a cluster which is necessary to ensure that all
+   * elements are included in it. Clusters are padded uniformly in space (the
+   * lower and upper bound is modified by the same amount along all dimensions)
+   * and uniformly in time.
+   * @param[out] space_padding  Padding in space.
+   * @param[out] time_padding   Padding in time.
+   * @note  Padding in time is not planned to be used and could probably be
+   *        removed.
+   */
   void compute_padding( sc & space_padding, sc & time_padding ) const {
     std::vector< linear_algebra::coordinates< 4 > > node_vector;
     node_vector.resize( 6 );
@@ -591,8 +615,8 @@ class besthea::mesh::general_spacetime_cluster {
 
   /**
    * Return numbers of spatial and temporal subdivisioning of the bounding box.
-   * @param[in] n_space_div Number of spatial subdivisioning.
-   * @param[in]
+   * @param[out] n_space_div Number of spatial subdivisioning.
+   * @param[out] n_time_div  Number of temporal subdivisioning.
    */
   void get_n_divs( lo & n_space_div, lo & n_time_div ) {
     n_space_div = _n_space_div;
@@ -684,6 +708,13 @@ class besthea::mesh::general_spacetime_cluster {
     }
   }
 
+  /**
+   * Returns the local space node index corresponding to a given local spacetime
+   * node index.
+   * @param[in] local_spacetime_node_idx  Local spacetime node index whose
+   *                                      corresponding local space node index
+   *                                      is computed.
+   */
   lo local_spacetime_node_idx_2_local_space_node_idx(
     lo local_spacetime_node_idx ) const {
     return local_spacetime_node_idx % _n_space_nodes;
@@ -791,7 +822,6 @@ class besthea::mesh::general_spacetime_cluster {
    * @param[in] rotation  Virtual element rotation (regularized quadrature).
    * @param[in] swap  Virtual element inversion (regularized quadrature).
    * @param[out] indices  Local indices for the current (transformed) element.
-   * @todo Is this suitable for p1 basis functions?!
    */
   template< class space_type >
   void local_elem_to_local_space_dofs(
@@ -942,6 +972,7 @@ void besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs<
   indices[ 0 ] = i_loc_elem;
 }
 
+/** specialization for p1 basis functions */
 template<> inline
 void besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs<
   besthea::bem::distributed_fast_spacetime_be_space<

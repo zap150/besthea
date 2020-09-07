@@ -33,8 +33,6 @@
 #ifndef INCLUDE_BESTHEA_SPACE_CLUSTER_H_
 #define INCLUDE_BESTHEA_SPACE_CLUSTER_H_
 
-// TODO: is the include list ok (fast be spaces are not included directly, but
-// via forward declaration)
 // #include "besthea/fast_spacetime_be_space.h"
 #include "besthea/full_matrix.h"
 #include "besthea/settings.h"

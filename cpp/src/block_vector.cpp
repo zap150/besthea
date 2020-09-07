@@ -190,7 +190,6 @@ void besthea::linear_algebra::block_vector::get_local_part<
   }
 }
 
-// @todo implement this for p1 basis functions
 template<>
 void besthea::linear_algebra::block_vector::get_local_part<
   besthea::bem::distributed_fast_spacetime_be_space<

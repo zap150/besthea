@@ -68,6 +68,8 @@ class besthea::mesh::distributed_spacetime_tensor_mesh :
    * cluster tree.
    * @param[in] cluster_bounds_file Path to the file containing the cluster
    * bounds of the clusters in the initial temporal cluster tree.
+   * @param[in] distribution_file Path to the file containing the process
+   * assignments for the clusters in the initial temporal cluster tree.
    * @param[in] comm Pointer to the MPI communicator associated with
    * decomposition.
    */
@@ -319,7 +321,8 @@ class besthea::mesh::distributed_spacetime_tensor_mesh :
   sc _t_start;                  //!< start of the global time interval
   sc _t_end;                    //!< end of the global time interval
   lo _n_global_elements;  //!< total number of elements in the distributed mesh
-  lo _n_global_time_elements;
+  lo _n_global_time_elements; //!< total number of time elements in the
+                              //!< distributed mesh
   const MPI_Comm * _comm; //!< MPI communicator associated with the distributed
                           //!< mesh
   int _my_rank;           //!< MPI rank of the current process

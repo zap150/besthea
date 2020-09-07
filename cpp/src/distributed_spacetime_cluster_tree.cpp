@@ -142,7 +142,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
 
 
 void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
-  general_spacetime_cluster * root ) {
+  general_spacetime_cluster * pseudo_root ) {
   tree_structure * dist_tree = get_distribution_tree( );
   lo dist_tree_depth = dist_tree->get_levels( );
   lo dist_tree_depth_coll;

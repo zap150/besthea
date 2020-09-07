@@ -195,7 +195,6 @@ class besthea::mesh::spacetime_cluster {
    * @param[in] n_columns_contribution Number of columns.
    * @note If the contributions are set already, then they are resized and
    * reset to zero.
-   * @todo Is resizing of a full matrix allocated with new safe?
    */
   void set_local_contribution(
     lo n_rows_contribution, lo n_columns_contribution ) {
@@ -203,7 +202,6 @@ class besthea::mesh::spacetime_cluster {
       _local_contribution
         = new full_matrix_type( n_rows_contribution, n_columns_contribution );
     } else {
-      //   TODO: see comment above
       _local_contribution->resize(
         n_rows_contribution, n_columns_contribution );
       _local_contribution->fill( 0.0 );
@@ -225,7 +223,6 @@ class besthea::mesh::spacetime_cluster {
    * @param[in] n_columns_contribution Number of columns.
    * @note If the contributions are set already, then they are resized and
    * reset to zero.
-   * @todo Is resizing of a full matrix allocated with new safe?
    */
   void set_moment_contribution(
     lo n_rows_contribution, lo n_columns_contribution ) {
@@ -233,7 +230,6 @@ class besthea::mesh::spacetime_cluster {
       _moment_contribution
         = new full_matrix_type( n_rows_contribution, n_columns_contribution );
     } else {
-      // TODO: see comment above
       _moment_contribution->resize(
         n_rows_contribution, n_columns_contribution );
       _moment_contribution->fill( 0.0 );

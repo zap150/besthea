@@ -174,51 +174,14 @@ class besthea::mesh::tree_structure {
    *                          operations.
    * @param[in,out] l_list  List for scheduling downward path operations.
    * @param[in,out] n_list  List for scheduling nearfield operations.
-   * @note The routine is solely called by @ref prepare_fmm.
+   * @note The routine is solely called by
+   * @ref linear_algebra::distributed_pFMM_matrix::prepare_fmm.
    */
   void init_fmm_lists( scheduling_time_cluster & root,
     std::list< scheduling_time_cluster* > & m_list,
     std::list< scheduling_time_cluster* > & m2l_list,
     std::list< scheduling_time_cluster* > & l_list,
     std::list< scheduling_time_cluster* > & n_list ) const;
-
-  /**
-   * Fills the 4 lists used for scheduling the FMM operations by adding pointers
-   * to clusters assigned to the process with id @p _my_process_id . In addition
-   * it determines all pairs of clusters and process ids from which data is
-   * received, and initializes the data in the scheduling time clusters which is
-   * used to check the dependencies.
-   * @param[in,out] m_list  List for scheduling upward path operations.
-   * @param[in,out] m2l_list  List for scheduling interaction and downward pass
-   *                          operations.
-   * @param[in,out] l_list  List for scheduling downward path operations.
-   * @param[in,out] n_list  List for scheduling nearfield operations.
-   * @param[in,out] receive_vector  Is filled with the pairs of clusters and
-   *                                process ids from which data is received.
-   * @param[out] n_moments_upward  Used to store the number of entries in the
-   *                               receive vector, which corresponds to receive
-   *                               operations in the upward path. These entries
-   *                               come first in the vector.
-   * @param[out] n_moments_m2l  Used to store the number of entries in the
-   *                            receive vector, which corresponds to receive
-   *                            operations for M2L. These entries come second in
-   *                            the vector, and are followed by the entries for
-   *                            the receive operations in the downward path.
-   * @note All lists are constructed anew, existing values are overwritten.
-   * @note The clusters in the m_list are sorted using the comparison operator
-   *       @ref compare_clusters_bottom_up_right_2_left, the others using
-   *       @ref compare_clusters_top_down_right_2_left .
-   * @todo Determine n_list differently, when coupling with space-time cluster
-   *       tree is done.
-   * @todo Delete this later. The routine was transferred to
-   * @ref besthea::linear_algebra::distributed_pFMM_matrix.
-   */
-  void prepare_fmm( std::list< scheduling_time_cluster* > & m_list,
-    std::list< scheduling_time_cluster* > & m2l_list,
-    std::list< scheduling_time_cluster* > & l_list,
-    std::list< scheduling_time_cluster* > & n_list,
-    std::vector< std::pair< scheduling_time_cluster*, lo > > & receive_vector,
-    lou & n_moments_upward, lou & n_moments_m2l ) const;
 
   /**
    * Traverses the tree structure recursively and allocates and initializes the
@@ -439,24 +402,6 @@ class besthea::mesh::tree_structure {
    */
   bool subtree_contains_local_cluster(
     const scheduling_time_cluster* root ) const;
-
-  /**
-   * Expands the temporal tree structure by recursively traversing the current
-   * tree structure and the given spacetime cluster tree. It uses @p refine_map
-   * and the spacetime cluster tree to determine if clusters should be added to
-   * the temporal tree structure.
-   * @param[in] spacetime_root Current cluster in the spacetime cluster tree.
-   * @param[in] root  Current cluster in the tree structure.
-   * @param[in,out] refine_map  Map which indicates if the tree should be
-   *                            expanded at a leaf cluster or not. This is
-   *                            updated if new clusters are added.
-   * @todo Delete?! (obsolete, since a similar method exists in
-   * @ref distributed_spacetime_cluster_tree )
-   */
-  void expand_tree_structure_recursively(
-    spacetime_cluster* spacetime_root, scheduling_time_cluster* root,
-    std::unordered_map< lo, bool > & refine_map );
-
 
   /**
    * Determines those clusters in the tree structure for which data has to be

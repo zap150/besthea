@@ -45,12 +45,6 @@ besthea::bem::distributed_fast_spacetime_be_space<
   basis_type >::~distributed_fast_spacetime_be_space( ) {
 }
 
-/**
- * Projects a function to the piecewise constant boundary element space.
- * @param[in] f Function to be projected.
- * @param[out] interpolation Interpolation vector.
- * @todo adapt this
- */
 // template<>
 // void besthea::bem::distributed_fast_spacetime_be_space<
 //   besthea::bem::basis_tri_p0 >::interpolation(
@@ -76,12 +70,6 @@ besthea::bem::distributed_fast_spacetime_be_space<
 //   }
 // }
 
-/**
- * Projects a function to the piecewise linear boundary element space.
- * @param[in] f Function to be projected.
- * @param[out] interpolation Interpolation vector.
- * @todo adapt this
- */
 // template<>
 // void besthea::bem::distributed_fast_spacetime_be_space< besthea::bem::basis_tri_p1 >::
 //   interpolation(

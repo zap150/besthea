@@ -157,10 +157,15 @@ const std::vector< sc > & get_spatial_paddings( ) const {
   }
 
  private:
+
   /**
-   *
+   * Builts the spacetime cluster tree in a communicative way in the upper part
+   * (where clusters can contain elements located in meshes of two or more
+   * processes) and in a non-communicative way in the lower part.
+   * @param[in] pseudo_root Cluster at level -1 which acts as pseudo-root for
+   *                        the distributed space-time cluster tree.
    */
-  void build_tree( general_spacetime_cluster * root );
+  void build_tree( general_spacetime_cluster * pseudo_root );
 
   /**
    * Expands the distribution tree included in @p _spacetime_mesh by adding
@@ -168,7 +173,7 @@ const std::vector< sc > & get_spatial_paddings( ) const {
    * the current tree but are not in the distribution tree.
    * @note The clusters which are refined are determined using the routine
    *       @ref tree_structure::determine_clusters_to_refine and the refinement
-   *       is executed by @ref expand_distribution_tree_recursively.
+   *       is executed by @ref expand_tree_structure_recursively.
    * @note The nearfields, interaction lists and send lists of the distribution
    *       tree are cleared using the routine
    *       @ref tree_structure::clear_cluster_lists and filled anew.
@@ -205,9 +210,9 @@ const std::vector< sc > & get_spatial_paddings( ) const {
    * @p _spacetime_mesh. It uses @p refine_map and the spacetime cluster tree
    * to determine if clusters should be added to the temporal tree structure.
    * @param[in] distribution_tree Distribution tree which is modified and in
-   *                              which @p root has to lie.
+   *                              which @p time_root has to lie.
    * @param[in] spacetime_root Current cluster in the spacetime cluster tree.
-   * @param[in] root  Current cluster in the tree structure.
+   * @param[in] time_root  Current cluster in the tree structure.
    * @param[in,out] refine_map  Map which indicates if the tree should be
    *                            expanded at a leaf cluster or not. This is
    *                            updated if new clusters are added.
@@ -230,17 +235,6 @@ const std::vector< sc > & get_spatial_paddings( ) const {
    */
   void compute_bounding_box(
     sc & xmin, sc & xmax, sc & ymin, sc & ymax, sc & zmin, sc & zmax );
-
-  //  /**
-  //   * Collectively computes number of elements in subdivisioning of 1Dx3D
-  //   * bounding box
-  //   * @param[in] space_order How many times is space divided.
-  //   * @param[in] time_order How many times is time divided.
-  //   * @param[inout] n_el_per_part Vector for storing number of spacetime
-  //   * elements.
-  //   */
-  //  void get_n_elements_in_subdivisioning( general_spacetime_cluster * root,
-  //    bool split_space, std::vector< lo > & n_elems_per_subd );
 
   /**
    * Collectively computes number of elements in subdivisioning (given by
@@ -266,6 +260,10 @@ const std::vector< sc > & get_spatial_paddings( ) const {
    * @param[in] left_bound Left boundary of the interval to be split.
    * @param[in] n_ref Number of recursive refinement.
    * @param[in] curr_level Current level of refinement.
+   * @param[out] steps  Vector in which the bounds of the subintervals are
+   *                    stored.
+   * @warning The right bound of the largest subinterval is not added to
+   *          @p steps.
    */
   void decompose_line( sc center, sc half_size, sc left_bound, lo n_ref,
     lo curr_level, std::vector< sc > & steps );
@@ -353,7 +351,6 @@ const std::vector< sc > & get_spatial_paddings( ) const {
    * general meshes are used.
    */
   void build_subtree( general_spacetime_cluster & root, bool split_space );
-
 
   /**
    * Finds the associated spacetime clusters for each scheduling time cluster in
@@ -453,8 +450,8 @@ const std::vector< sc > & get_spatial_paddings( ) const {
   /**
    * Receives the subtree structure and cluster bounds of all clusters in a
    * given vector and appends the distribution tree according to this data.
-   * @param[in] send_cluster_vector Vector containing the clusters whose
-   *                                subtrees are received
+   * @param[in] receive_clusters_vector Vector containing the clusters whose
+   *                                    subtrees are received.
    * @param[in] global_tree_levels  Number of levels in the global distribution
    *                                tree.
    * @param[in] communication_offset  The data is received from the process

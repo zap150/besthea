@@ -339,9 +339,9 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
       aligned( x1_ref, x2_ref, y1_ref, y2_ref, kernel_data : DATA_ALIGN ) \
       private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
                 for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-                  // @todo: discuss since p0 and p1 basis functions only use at
-                  // most i_loc_test, x1_ref and x2_ref and ignore the others
-                  // the execution should be fine
+                  // for p0 and p1 basis functions only the values of
+                  // i_loc_test, x1_ref and x2_ref are used, the other variables
+                  // are ignored. -> execution should be fine
                   test = test_basis.evaluate( gl_test_elem_space, i_loc_test,
                     x1_ref[ i_quad ], x2_ref[ i_quad ], nx_data,
                     n_shared_vertices, rot_test, false );
