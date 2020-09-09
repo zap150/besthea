@@ -39,10 +39,12 @@
 #include "besthea/space_cluster_tree.h"
 #include "besthea/spacetime_cluster.h"
 #include "besthea/time_cluster_tree.h"
+#include "besthea/timer.h"
 #include "besthea/vector.h"
 
 #include <map>
 #include <mpi.h>
+#include <omp.h>
 #include <vector>
 
 namespace besthea {
@@ -106,16 +108,16 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   /**
    * Returns the vector of local leaves.
    */
-  const std::vector< general_spacetime_cluster* > & get_local_leaves( ) {
+  const std::vector< general_spacetime_cluster * > & get_local_leaves( ) {
     return _local_leaves;
   }
 
   /**
- * Returns the vector of levelwise spatial paddings.
- */
-const std::vector< sc > & get_spatial_paddings( ) const {
-  return _spatial_paddings;
-}
+   * Returns the vector of levelwise spatial paddings.
+   */
+  const std::vector< sc > & get_spatial_paddings( ) const {
+    return _spatial_paddings;
+  }
 
   /**
    * Returns the bound for the maximal number of refinements in space of the
@@ -194,9 +196,9 @@ const std::vector< sc > & get_spatial_paddings( ) const {
    * @ref tree_structure::determine_refinement_communication_lists.
    */
   void expand_distribution_tree_communicatively(
-    const std::set< std::pair< lo, scheduling_time_cluster* > > &
+    const std::set< std::pair< lo, scheduling_time_cluster * > > &
       cluster_send_list,
-    const std::set< std::pair< lo, scheduling_time_cluster* > > &
+    const std::set< std::pair< lo, scheduling_time_cluster * > > &
       cluster_receive_list );
 
   /**
@@ -214,9 +216,9 @@ const std::vector< sc > & get_spatial_paddings( ) const {
    * @note  Call this routine for the spacetime roots at level 0, not the
    *        spacetime root at level -1.
    */
-  void expand_tree_structure_recursively( tree_structure* distribution_tree,
-    general_spacetime_cluster* spacetime_root,
-    scheduling_time_cluster* time_root,
+  void expand_tree_structure_recursively( tree_structure * distribution_tree,
+    general_spacetime_cluster * spacetime_root,
+    scheduling_time_cluster * time_root,
     std::unordered_map< lo, bool > & refine_map );
 
   /**
@@ -286,8 +288,8 @@ const std::vector< sc > & get_spatial_paddings( ) const {
    *                                  construction.
    */
   void create_spacetime_roots( std::vector< lo > & elems_in_clusters,
-    std::vector< std::pair< general_spacetime_cluster*,
-      scheduling_time_cluster* > > & spacetime_root_pairs );
+    std::vector< std::pair< general_spacetime_cluster *,
+      scheduling_time_cluster * > > & spacetime_root_pairs );
 
   /**
    * Splits all suitably large clusters at an implicitly given level into
@@ -308,10 +310,9 @@ const std::vector< sc > & get_spatial_paddings( ) const {
    *                                children.
    * @todo What to do with early space-time leaf clusters?
    */
-  void split_clusters_levelwise(
-    bool split_space, lo n_space_div, lo n_time_div,
-    std::vector< lo > & elems_in_clusters,
-    std::vector< std::pair< general_spacetime_cluster*,
+  void split_clusters_levelwise( bool split_space, lo n_space_div,
+    lo n_time_div, std::vector< lo > & elems_in_clusters,
+    std::vector< std::pair< general_spacetime_cluster *,
       scheduling_time_cluster * > > & cluster_pairs );
 
   /**
@@ -344,6 +345,14 @@ const std::vector< sc > & get_spatial_paddings( ) const {
    */
   void fill_elements( general_spacetime_cluster & cluster );
 
+  // void fill_elements2( std::vector< general_spacetime_cluster * > & leaves,
+  //  spacetime_tensor_mesh const * current_mesh );
+
+  // void insert_local_element( lo elem_idx, general_spacetime_cluster & root,
+  //  vector_type & space_center, vector_type & half_size,
+  //  linear_algebra::coordinates< 4 > & centroid, std::vector< sc > & boundary
+  //  );
+
   /**
    * Builds subtree starting from a given root cluster.
    * @param[in] root Root to the subtree.
@@ -353,7 +362,6 @@ const std::vector< sc > & get_spatial_paddings( ) const {
    * general meshes are used.
    */
   void build_subtree( general_spacetime_cluster & root, bool split_space );
-
 
   /**
    * Finds the associated spacetime clusters for each scheduling time cluster in
@@ -386,7 +394,7 @@ const std::vector< sc > & get_spatial_paddings( ) const {
    *        spacetime root at level -1.
    */
   void associate_scheduling_clusters_and_space_time_leaves(
-    scheduling_time_cluster* t_root, general_spacetime_cluster * st_root );
+    scheduling_time_cluster * t_root, general_spacetime_cluster * st_root );
 
   /**
    * Recursively finds the associated spacetime non-leaf clusters for each
@@ -402,7 +410,7 @@ const std::vector< sc > & get_spatial_paddings( ) const {
    *        spacetime root at level -1.
    */
   void associate_scheduling_clusters_and_space_time_non_leaves(
-    scheduling_time_cluster* t_root, general_spacetime_cluster * st_root );
+    scheduling_time_cluster * t_root, general_spacetime_cluster * st_root );
 
   /**
    * Computes and sets the nearfield list and interaction list for every
@@ -447,7 +455,7 @@ const std::vector< sc > & get_spatial_paddings( ) const {
    *        @ref expand_distribution_tree_communicatively.
    */
   void send_subtree_data_of_distribution_tree(
-    const std::vector< scheduling_time_cluster* > & send_cluster_vector,
+    const std::vector< scheduling_time_cluster * > & send_cluster_vector,
     const lo global_tree_levels, const lo communication_offset ) const;
 
   /**
@@ -463,7 +471,7 @@ const std::vector< sc > & get_spatial_paddings( ) const {
    *        @ref expand_distribution_tree_communicatively.
    */
   void receive_subtree_data_of_distribution_tree(
-    const std::vector< scheduling_time_cluster* > & receive_clusters_vector,
+    const std::vector< scheduling_time_cluster * > & receive_clusters_vector,
     const lo global_tree_levels, const lo communication_offset );
 
   /**
@@ -492,17 +500,17 @@ const std::vector< sc > & get_spatial_paddings( ) const {
                                       //!< modified!
   general_spacetime_cluster * _root;  //!< root of the cluster tree
 
-  std::vector< general_spacetime_cluster* >
+  std::vector< general_spacetime_cluster * >
     _local_leaves;  //!< Vector containing the leaves of the distributed
                     //!< space-time cluster tree which are local, i.e.
                     //!< assigned to the process with rank @p _my_rank.
 
-  lo _initial_space_refinement; //!< auxiliary variable determining the
-                                //!< number of spatial refinements executed to
-                                //!< get clusters at level 0
-  lo _start_space_refinement; //!< auxiliary variable to determine in which
-                              //!< level the spatial refinement starts
-                              //!< (relevant if _initial_space_refinement == 0)
+  lo _initial_space_refinement;  //!< auxiliary variable determining the
+                                 //!< number of spatial refinements executed to
+                                 //!< get clusters at level 0
+  lo _start_space_refinement;    //!< auxiliary variable to determine in which
+                                 //!< level the spatial refinement starts
+  //!< (relevant if _initial_space_refinement == 0)
   lo _local_max_space_level;  //!< bound for the maximal number of spatial
                               //!< refinements in the local part of the
                               //!< distributed tree.
@@ -517,7 +525,7 @@ const std::vector< sc > & get_spatial_paddings( ) const {
                                   //!< each spatial level, which is harder to
                                   //!< access)
   slou _spatial_nearfield_limit;  //!< number of the clusters in the vicinity to
-                                //!< be considered as nearfield
+                                  //!< be considered as nearfield
   const std::vector< std::vector< lo > > _idx_2_coord = { { 1, 1, 1 },
     { 0, 1, 1 }, { 0, 0, 1 }, { 1, 0, 1 }, { 1, 1, 0 }, { 0, 1, 0 },
     { 0, 0, 0 },
