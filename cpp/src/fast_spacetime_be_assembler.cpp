@@ -2037,7 +2037,8 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   vector_type cluster_half( 3 );
   space_cluster->get_center( cluster_center );
   space_cluster->get_half_size( cluster_half );
-  sc padding = space_cluster->get_padding( );
+  sc padding = _test_space->get_tree( )->get_space_tree( )
+                           ->get_paddings( )[ space_cluster->get_level( ) ];
   sc start_0 = cluster_center[ 0 ] - cluster_half[ 0 ] - padding;
   sc end_0 = cluster_center[ 0 ] + cluster_half[ 0 ] + padding;
   sc start_1 = cluster_center[ 1 ] - cluster_half[ 1 ] - padding;
@@ -2109,7 +2110,8 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   vector_type cluster_half( 3 );
   space_cluster->get_center( cluster_center );
   space_cluster->get_half_size( cluster_half );
-  sc padding = space_cluster->get_padding( );
+  sc padding = _test_space->get_tree( )->get_space_tree( )
+                           ->get_paddings( )[ space_cluster->get_level( ) ];
   sc start_0 = cluster_center[ 0 ] - cluster_half[ 0 ] - padding;
   sc end_0 = cluster_center[ 0 ] + cluster_half[ 0 ] + padding;
   sc start_1 = cluster_center[ 1 ] - cluster_half[ 1 ] - padding;
@@ -2204,7 +2206,8 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   vector_type cluster_half( 3 );
   space_cluster->get_center( cluster_center );
   space_cluster->get_half_size( cluster_half );
-  sc padding = space_cluster->get_padding( );
+  sc padding = _test_space->get_tree( )->get_space_tree( )
+                           ->get_paddings( )[ space_cluster->get_level( ) ];
   sc start_0 = cluster_center[ 0 ] - cluster_half[ 0 ] - padding;
   sc end_0 = cluster_center[ 0 ] + cluster_half[ 0 ] + padding;
   sc start_1 = cluster_center[ 1 ] - cluster_half[ 1 ] - padding;
@@ -2327,7 +2330,8 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   vector_type cluster_half( 3 );
   space_cluster->get_center( cluster_center );
   space_cluster->get_half_size( cluster_half );
-  sc padding = space_cluster->get_padding( );
+  sc padding = _test_space->get_tree( )->get_space_tree( )
+                           ->get_paddings( )[ space_cluster->get_level( ) ];
   sc start_0 = cluster_center[ 0 ] - cluster_half[ 0 ] - padding;
   sc end_0 = cluster_center[ 0 ] + cluster_half[ 0 ] + padding;
   sc start_1 = cluster_center[ 1 ] - cluster_half[ 1 ] - padding;

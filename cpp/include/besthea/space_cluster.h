@@ -89,7 +89,6 @@ class besthea::mesh::space_cluster {
       _mesh( mesh ),
       _level( level ),
       _octant( octant ),
-      _padding( 0.0 ),
       _box_coordinate( coordinate ),
       _cheb_T_p0( 1, 1 ),
       _cheb_T_p1( 1, 1 ),
@@ -342,21 +341,6 @@ class besthea::mesh::space_cluster {
   }
 
   /**
-   * Sets padding of the cluster.
-   * @param[in] padding Padding of the cluster.
-   */
-  void set_padding( sc padding ) {
-    _padding = padding;
-  }
-
-  /**
-   * Returns padding of the cluster.
-   */
-  sc get_padding( ) const {
-    return _padding;
-  }
-
-  /**
    * Returns level of the cluster in the cluster tree.
    */
   lo get_level( ) const {
@@ -545,7 +529,6 @@ class besthea::mesh::space_cluster {
     _mesh;        //!< spatial mesh associated with the cluster
   lo _level;      //!< level within the cluster tree
   short _octant;  //!< octant of the parent cluster
-  sc _padding;    //!< padding of the cluster
   std::vector< slou >
     _box_coordinate;  //!< coordinates of the box within boxes on given level
   full_matrix_type

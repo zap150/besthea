@@ -190,10 +190,22 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   lo n_loc_rows = test_basis.dimension_local( );
   lo n_loc_columns = trial_basis.dimension_local( );
 
-  bool same_time_cluster
-    = ( std::abs( target_cluster->get_time_center( )
-          - source_cluster->get_time_center( ) )
-        < target_cluster->get_time_half_size( ) );
+  char time_configuration = 0;
+  if ( source_cluster->get_level( ) >= target_cluster->get_level( ) ) {
+    if ( std::abs( target_cluster->get_time_center( )
+            - source_cluster->get_time_center( ) )
+          < target_cluster->get_time_half_size( ) ) {
+      // source cluster's temporal component is contained in target cluster's
+      time_configuration = 1;
+    }
+  } else {
+    if ( std::abs( source_cluster->get_time_center( )
+            - target_cluster->get_time_center( ) )
+          < source_cluster->get_time_half_size( ) ) {
+      // target cluster's temporal component is contained in source cluster's
+      time_configuration = 2;
+    }
+  }
 #pragma omp parallel
   {
     std::vector< lo > test_loc_access( n_loc_rows );
@@ -233,10 +245,30 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 
     lo test_element_spacetime, trial_element_spacetime;
 
-    for ( lo i_test_time = 0; i_test_time < n_test_time_elem; ++i_test_time ) {
+    // determine the bounds for the loops over the temporal elements
+    lo i_test_min = 0;
+    lo trial_offset = 0;
+    if ( time_configuration == 1 ) {
+      // source cluster' s temporal component is contained in target cluster' s
+      lo glob_i_trial_min = trial_mesh->get_time_element( trial_elems[ 0 ] );
+      lo glob_i_test_min = test_mesh->get_time_element( test_elems[ 0 ] );
+      i_test_min = glob_i_trial_min - glob_i_test_min;
+    }
+    else if ( time_configuration == 2 ) {
+      // target cluster' s temporal component is contained in source cluster' s
+      lo glob_i_trial_min = trial_mesh->get_time_element( trial_elems[ 0 ] );
+      lo glob_i_test_min = test_mesh->get_time_element( test_elems[ 0 ] );
+      trial_offset = glob_i_test_min - glob_i_trial_min;
+    }
+
+    for ( lo i_test_time = i_test_min; i_test_time < n_test_time_elem;
+        ++i_test_time ) {
       lo i_trial_max = n_trial_time_elem - 1;
-      if ( same_time_cluster ) {
-        i_trial_max = i_test_time;
+      if ( time_configuration == 1 ) {
+        i_trial_max = std::min( i_test_time, i_trial_max );
+      }
+      else if ( time_configuration == 2 ) {
+        i_trial_max = trial_offset + i_test_time;
       }
       for ( lo i_trial_time = 0; i_trial_time <= i_trial_max; ++i_trial_time ) {
 #pragma omp for schedule( dynamic, 1 )

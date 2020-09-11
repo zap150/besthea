@@ -355,7 +355,7 @@ class besthea::mesh::scheduling_time_cluster {
   /**
    * Returns the global leaf status of the cluster.
    */
-  bool get_global_leaf_status( ) const {
+  bool is_global_leaf( ) const {
     return _global_leaf_status;
   }
 
@@ -654,10 +654,11 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Increases the number of associated spacetime leaf clusters by one.
+   * Sets the number of associated spacetime leaf clusters to the given value.
+   * @param[in] n_associated_leaves Value to be set.
    */
-  void increase_n_associated_leaves( ) {
-    _n_associated_leaves ++;
+  void set_n_associated_leaves( lou n_associated_leaves ) {
+    _n_associated_leaves = n_associated_leaves;
   }
 
   /**

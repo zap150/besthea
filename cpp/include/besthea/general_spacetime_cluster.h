@@ -102,6 +102,7 @@ class besthea::mesh::general_spacetime_cluster {
       _n_space_nodes( 0 ),
       _parent( parent ),
       _children( nullptr ),
+      _global_leaf_status( false ),
       _mesh( mesh ),
       _elements_are_local( false ),
       _level( level ),
@@ -223,6 +224,21 @@ class besthea::mesh::general_spacetime_cluster {
     } else {
       return 0;
     }
+  }
+
+  /**
+   * Returns the global leaf status of the current cluster.
+   */
+  bool is_global_leaf( ) {
+    return _global_leaf_status;
+  }
+
+  /**
+   * Sets the global leaf status of the current cluster to a given value
+   * @param[in] status  Value to be set
+   */
+  void set_global_leaf_status( bool status ) {
+    _global_leaf_status = status;
   }
 
   /**
@@ -841,6 +857,14 @@ class besthea::mesh::general_spacetime_cluster {
     std::cout << ", box coordinates: (" << _box_coordinate[ 0 ] << ", "
               << _box_coordinate[ 1 ] << ", " << _box_coordinate[ 2 ] << ", "
               << _box_coordinate[ 3 ] << ", " << _box_coordinate[ 4 ] << ")";
+    std::cout << ", space_center: (" << _space_center[ 0 ] << ", "
+              << _space_center[ 1 ] << ", " << _space_center[ 2 ] << ")";
+    std::cout << ", octant " << _octant;
+    std::cout << ", global_leaf_status: " << _global_leaf_status;
+    // std::cout << ", elements: ";
+    // for ( lou i = 0; i < _elements.size( ); ++i ) {
+    //   std::cout << _elements[ i ] << " ";
+    // }
     // std::cout << ", nearfield: ";
     // for ( auto nf_cluster : *_nearfield_list ) {
     //   std::vector< slou > nf_box_coordinate = nf_cluster->get_box_coordinate( );
@@ -895,6 +919,8 @@ class besthea::mesh::general_spacetime_cluster {
   general_spacetime_cluster * _parent;  //!< parent of the cluster
   std::vector< general_spacetime_cluster * > *
     _children;  //!< children of the current cluster
+  bool _global_leaf_status; //!< indicates whether the cluster is a leaf in the
+                        //!< global tree (true) or not (false).
   const distributed_spacetime_tensor_mesh &
     _mesh;        //!< distributed spacetime mesh associated with the cluster
   bool _elements_are_local; //!< Indicates if the elements contained in the

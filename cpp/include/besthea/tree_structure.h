@@ -405,29 +405,49 @@ class besthea::mesh::tree_structure {
 
   /**
    * Determines those clusters in the tree structure for which data has to be
-   * exchanged when the tree structure is refined based on a locally essential
-   * space-time cluster tree (see
-   * @ref distributed_spacetime_cluster_tree::expand_distribution_tree_locally ).
+   * exchanged.
    *
-   * The output vectors @p cluster_send_list and @p cluster_receive_list
-   * contain pairs of process ids and global cluster indices:
-   * - For a pair (p, idx) in @p cluster_send_list the subtree starting at
-   *   cluster idx has to be sent to process p after refinement.
-   * - For a pair (p, idx) in @p cluster_receive_list the subtree starting at
-   *   cluster idx has to be received from process p after refinement.
+   * The subtree send and receive lists are relevant, when the tree structure is
+   * refined based on a locally essential space-time cluster tree, see
+   * @ref distributed_spacetime_cluster_tree::expand_distribution_tree_locally.
+   *
+   * The leaf info send and receive list are required to determine leaf statuses
+   * of non-local space-time clusters, whose moments have to be communicated in
+   * the FMM algorithm.
+   *
+   * The output vectors are filled with pairs (p, idx) of process ids and
+   * pointers to clusters. They are used as follows:
+   * - In @p subtree_send_list : the subtree starting at cluster idx has to be
+   *   sent to process p after refinement.
+   * - In @p subtree_receive_list : the subtree starting at cluster idx has to
+   *   be received from process p after refinement.
+   * - In @p leaf_info_send_list : the leaf information of the spacetime
+   *   clusters associated with cluster idx has to be sent to process p.
+   * - In @p leaf_info_receive_list : the leaf information of the spacetime
+   *   clusters associated with cluster idx has to be received from process p.
    *
    * The routine is based on a tree traversal.
    * @param[in] root  Current cluster in the tree traversal.
-   * @param[in,out] cluster_send_list Vector storing the clusters and process
-   *                                  ids for which data has to be sent.
-   * @param[in,out] cluster_receive_list Vector storing the clusters and process
-   *                                     ids for which data has to be received.
+   * @param[in,out] subtree_send_list Vector storing the clusters and process
+   *                                  ids for which subtree data has to be sent.
+   * @param[in,out] subtree_receive_list  Vector storing the clusters and
+   *                                      process ids for which subtree data has
+   *                                      to be received.
+   * @param[in,out] leaf_info_send_list Vector storing the clusters and process
+   *                                    ids for which leaf information has to be
+   *                                    sent.
+   * @param[in,out] leaf_info_receive_list  Vector storing the clusters and
+   *                                        process ids for which leaf
+   *                                        information has to be received.
    */
-  void determine_refinement_communication_lists(
+  void determine_cluster_communication_lists(
     scheduling_time_cluster* root,
-    std::set< std::pair< lo, scheduling_time_cluster* > > & cluster_send_list,
+    std::set< std::pair< lo, scheduling_time_cluster* > > & subtree_send_list,
     std::set< std::pair< lo, scheduling_time_cluster* > >
-      & cluster_receive_list ) const;
+      & subtree_receive_list,
+    std::set< std::pair< lo, scheduling_time_cluster* > > & leaf_info_send_list,
+    std::set< std::pair< lo, scheduling_time_cluster* > >
+      & leaf_info_receive_list ) const;
 
   /**
    * Clears the nearfield, interaction and send list of all clusters in the

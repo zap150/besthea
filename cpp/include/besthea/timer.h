@@ -49,7 +49,12 @@ namespace besthea {
  */
 class besthea::tools::timer {
  public:
-  using clock_type = std::chrono::high_resolution_clock;  //!< Clock type.
+  // todo: discuss: according to
+  // https://en.cppreference.com/w/cpp/chrono/high_resolution_clock
+  // one should not use high_resolution_clock, but rather
+  // steady_clock or system_clock
+  using clock_type = std::chrono::steady_clock;           //!< Clock type.
+  // using clock_type = std::chrono::high_resolution_clock;
   using unit_type = std::chrono::milliseconds;            //!< Unit type.
 
   /**

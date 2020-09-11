@@ -113,9 +113,9 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   /**
  * Returns the vector of levelwise spatial paddings.
  */
-const std::vector< sc > & get_spatial_paddings( ) const {
-  return _spatial_paddings;
-}
+  const std::vector< sc > & get_spatial_paddings( ) const {
+    return _spatial_paddings;
+  }
 
   /**
    * Returns the bound for the maximal number of refinements in space of the
@@ -196,13 +196,40 @@ const std::vector< sc > & get_spatial_paddings( ) const {
    *                                  clusters. For a pair (p, idx) the subtree
    *                                  with root idx is received from process p.
    * @note The input sets can be determined using
-   * @ref tree_structure::determine_refinement_communication_lists.
+   * @ref tree_structure::determine_cluster_communication_lists.
    */
   void expand_distribution_tree_communicatively(
     const std::set< std::pair< lo, scheduling_time_cluster* > > &
       cluster_send_list,
     const std::set< std::pair< lo, scheduling_time_cluster* > > &
       cluster_receive_list );
+
+  /**
+   * Exchanges necessary leaf information of non-local clusters with other
+   * processes.
+   * @param[in] leaf_info_send_list Contains pairs of process ids and clusters.
+   *                                For a pair (p, idx) the leaf information of
+   *                                clusters associated with cluster idx is sent
+   *                                to process p.
+   * @param[in] leaf_info_receive_list  Contains pairs of process ids and
+   *                                    clusters. For a pair (p, idx) the leaf
+   *                                    information of clusters associated with
+   *                                    cluster idx is received from process p.
+   * @note The input sets can be determined using
+   * @ref tree_structure::determine_cluster_communication_lists.
+   * @todo Discuss: We could get rid of this communication step: If we get rid
+   * of the ordering of associated spacetime clusters (currently the first few
+   * are leaves, the remaining non-leaves) we do not need to know the leaf
+   * information of non-local spacetime clusters. However, the execution of S2M
+   * and L2T operations has to be changed in this case. (basic idea: store the
+   * number of associated leaves. search for these leaves in the vector of
+   * associated spacetime clusters)
+   */
+  void communicate_necessary_leaf_information(
+    const std::set< std::pair< lo, scheduling_time_cluster* > > &
+      leaf_info_send_list,
+    const std::set< std::pair< lo, scheduling_time_cluster* > > &
+      leaf_info_receive_list );
 
   /**
    * Expands the temporal tree structure by recursively traversing the current
@@ -331,6 +358,7 @@ const std::vector< sc > & get_spatial_paddings( ) const {
    * @param[in,out] leaves  Vector containing all the leaves.
    * @note  Call this routine for the spacetime roots at level 0, not the
    *        spacetime root at level -1.
+   * @warning Clusters whose meshes are not available are not collected.
    */
   void collect_real_leaves( general_spacetime_cluster & st_root,
     scheduling_time_cluster & t_root,
@@ -355,51 +383,47 @@ const std::vector< sc > & get_spatial_paddings( ) const {
   /**
    * Finds the associated spacetime clusters for each scheduling time cluster in
    * the distribution tree.
-   * @note The routines
-   * @ref associate_scheduling_clusters_and_space_time_leaves and
-   * @ref associate_scheduling_clusters_and_space_time_non_leaves are executed
-   * to find the leaves.
-   * @warning: Space-time leaves and space-time non-leaves are distinguished.
-   * This distinction is reasonable only for local clusters in the
-   * distribution tree, i.e. clusters with process id @p _my_rank. Only for such
-   * clusters this distinction is required in the FMM.
+   * @note The routine
+   * @ref associate_scheduling_clusters_and_space_time_clusters_recursively
+   * is executed to find the associated clusters.
+   * @warning: Space-time leaves and space-time non-leaves are not distinguished
+   * here. The routine @todo has to be called in addition to distinguish them
+   * and resort the associated clusters such that the first clusters are leaves
+   * and the rest non-leaves.
    */
   void associate_scheduling_clusters_and_space_time_clusters( );
 
   /**
-   * Recursively finds the associated spacetime leaf clusters for each
+   * Recursively finds the associated spacetime clusters for each
    * scheduling time cluster in the distribution tree. For this purpose the
    * distribution tree and the distributed spacetime cluster tree are traversed
    * simultaneously in a recursvie manner.
    * @param[in] t_root  Current cluster in the distribution tree.
    * @param[in] st_root  Current cluster in the distributed spacetime cluster
    *                     tree.
-   * @warning If the global leaf status of a cluster in the distribution tree
-   * is not correct anymore (after a local extension of the distribution tree
-   * this is possible), "false" leaves are detected by this method. However,
-   * for such scheduling time clusters a distinction of leaves and non-leaves
-   * is not necessary.
    * @note  Call this routine for the spacetime roots at level 0, not the
    *        spacetime root at level -1.
    */
-  void associate_scheduling_clusters_and_space_time_leaves(
+  void associate_scheduling_clusters_and_space_time_clusters_recursively(
     scheduling_time_cluster* t_root, general_spacetime_cluster * st_root );
 
   /**
-   * Recursively finds the associated spacetime non-leaf clusters for each
-   * scheduling time cluster in the distribution tree. For this purpose the
-   * distribution tree and the distributed spacetime cluster tree are traversed
-   * simultaneously in a recursvie manner.
-   * @param[in] t_root  Current cluster in the distribution tree.
-   * @param[in] st_root  Current cluster in the distributed spacetime cluster
-   *                     tree.
-   * @warning Some non-leaves might be missing, see
-   * @ref associate_scheduling_clusters_and_space_time_leaves for more details.
-   * @note  Call this routine for the spacetime roots at level 0, not the
-   *        spacetime root at level -1.
+   * Traverses the distribution tree recursively. For all time clusters it
+   * determines the number n of associated spacetime leaf clusters and sorts the
+   * associated spacetime clusters such that the first n clusters are the
+   * leaves.
+   * @param[in] t_root  Current cluster in the tree traversal.
+   * @param[in] leaf_buffer Vector in which leaves are temporarily stored.
+   * @param[in] non_leaf_buffer Vector in which non-leaves are temporarily
+   *                            stored.
+   * @note  At input the buffer sizes can be 0. The buffers are resized
+   *        in the routine as necessary. After the execution of the routine,
+   *        the buffers should be cleared manually, if storage is limited.
    */
-  void associate_scheduling_clusters_and_space_time_non_leaves(
-    scheduling_time_cluster* t_root, general_spacetime_cluster * st_root );
+  void sort_associated_space_time_clusters_recursively(
+    scheduling_time_cluster* t_root,
+    std::vector< general_spacetime_cluster* > & leaf_buffer,
+    std::vector< general_spacetime_cluster* > & non_leaf_buffer );
 
   /**
    * Computes and sets the nearfield list and interaction list for every
@@ -462,6 +486,38 @@ const std::vector< sc > & get_spatial_paddings( ) const {
   void receive_subtree_data_of_distribution_tree(
     const std::vector< scheduling_time_cluster* > & receive_clusters_vector,
     const lo global_tree_levels, const lo communication_offset );
+
+  /**
+   * Sends leaf information for all clusters associated with the time clusters
+   * in the given vector to the process whose index is determined by
+   * @p communication_offset.
+   * @param[in] send_cluster_vector List of all time clusters, for which the
+   *                                leaf information of associated spacetime
+   *                                clusters is sent to another process.
+   * @param[in] communication_offset  The data is sent to the process whose id
+   *                                  is @p _my_rank plus this offset.
+   * @note  This routine is solely called by
+   *        @ref communicate_necessary_leaf_information.
+   */
+  void send_leaf_info(
+    const std::vector< scheduling_time_cluster* > & send_cluster_vector,
+    const lo communication_offset ) const;
+
+  /**
+   * Receives leaf information of all clusters associated with the time clusters
+   * in the given vector from the process whose index is determined by
+   * @p communication_offset and updates it.
+   * @param[in] send_cluster_vector List of all time clusters, for which the
+   *                                leaf information of associated spacetime
+   *                                clusters is received from another process.
+   * @param[in] communication_offset  The data is receive from the process whose
+   *                                  id is @p _my_rank minus this offset.
+   * @note  This routine is solely called by
+   *        @ref communicate_necessary_leaf_information.
+   */
+  void receive_leaf_info(
+    const std::vector< scheduling_time_cluster* > & receive_cluster_vector,
+    const lo communication_offset ) const;
 
   /**
    * Aux for printing

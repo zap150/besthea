@@ -294,6 +294,7 @@ class besthea::mesh::spacetime_cluster {
     std::cout << ", spatial center: (" << spat_center[ 0 ] << ", "
               << spat_center[ 1 ] << ", " << spat_center[ 2 ] << ")";
     std::cout << ", temporal center: " << temp_center;
+    std::cout << ", n_elements: " << get_n_elements( );
     // std::cout << "nr temporal elements: "
     //           << _temporal_cluster.get_n_elements( );
     std::cout << std::endl;
