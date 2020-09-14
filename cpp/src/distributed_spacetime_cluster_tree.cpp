@@ -971,7 +971,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
     start_idx = _spacetime_mesh.get_nearfield_start_idx( );
     // elements are local is set to false by default -> not set here
   }
-  linear_algebra::coordinates< 4 > centroid;
 
   // while adding elements to the cluster count the number of different
   // time elements
@@ -980,12 +979,18 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
 
   std::vector< std::vector< lo > > elems_thread( omp_get_max_threads( ) );
   std::vector< std::vector< sc > > timesteps_thread( omp_get_max_threads( ) );
+  std::vector< sc > max_thread( omp_get_max_threads( ) );
+
+  for ( auto & it : max_thread ) {
+    it = beginning - time_half_size;
+  }
 
 #pragma omp parallel
   {
     elems_thread[ omp_get_thread_num( ) ].reserve(
       cluster.get_n_elements( ) / omp_get_num_threads( ) );
-#pragma omp for schedule( static, 100 )
+    linear_algebra::coordinates< 4 > centroid;
+#pragma omp for
     for ( lo i = 0; i < current_mesh->get_n_elements( ); ++i ) {
       current_mesh->get_centroid( i, centroid );
       if ( ( centroid[ 0 ] >= left ) && ( centroid[ 0 ] < right )
@@ -1003,10 +1008,11 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
         if ( timesteps_thread[ omp_get_thread_num( ) ].size( ) == 0 ) {
           timesteps_thread[ omp_get_thread_num( ) ].push_back( centroid[ 3 ] );
         }
-        if ( centroid[ 3 ]
-          > timesteps_thread[ omp_get_thread_num( ) ].back( ) ) {
+        // if ( centroid[ 3 ]
+        //    > timesteps_thread[ omp_get_thread_num( ) ].back( ) ) {
+        if ( centroid[ 3 ] > max_thread[ omp_get_thread_num( ) ] ) {
           timesteps_thread[ omp_get_thread_num( ) ].push_back( centroid[ 3 ] );
-          // n_time_elements++;
+          max_thread[ omp_get_thread_num( ) ] = centroid[ 3 ];
         }
       }
     }
@@ -1021,11 +1027,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
       cluster.add_element( it2 );
     }
   }
-  // cluster.set_n_time_elements( n_time_elements );
   cluster.set_n_time_elements( timesteps_union.size( ) );
-  std::cout << "Computing node mapping" << std::endl;
   cluster.compute_node_mapping( );
-  std::cout << "Done " << std::endl;
   cluster.set_n_space_nodes( );
 }
 

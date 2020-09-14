@@ -635,8 +635,6 @@ class besthea::mesh::general_spacetime_cluster {
       _elems_2_local_nodes.resize( 6 * _elements.size( ) );
 
       for ( lou i = 0; i < _elements.size( ); ++i ) {
-        // if ( i % 1000 == 0 )
-        //  std::cout << i << std::endl;
         lo element_idx = _mesh.global_2_local( start_idx, _elements[ i ] );
         current_mesh->get_element( element_idx, element );
         _local_2_global_nodes.push_back( element[ 0 ] );
@@ -653,11 +651,12 @@ class besthea::mesh::general_spacetime_cluster {
         _elems_2_local_nodes[ 6 * i + 4 ] = 6 * i + 4;
         _elems_2_local_nodes[ 6 * i + 5 ] = 6 * i + 5;
       }
-      std::sort( _local_2_global_nodes.begin( ), _local_2_global_nodes.end( ) );
-      _local_2_global_nodes.erase( std::unique( _local_2_global_nodes.begin( ),
-                                     _local_2_global_nodes.end( ) ),
-        _local_2_global_nodes.end( ) );
-
+      // std::sort( _local_2_global_nodes.begin( ), _local_2_global_nodes.end( )
+      // ); _local_2_global_nodes.erase( std::unique(
+      // _local_2_global_nodes.begin( ),
+      //                                _local_2_global_nodes.end( ) ),
+      //  _local_2_global_nodes.end( ) );
+      //
       //      for ( lou i = 0; i < _elements.size( ); ++i ) {
       //        lo element_idx = _mesh.global_2_local( start_idx, _elements[ i ]
       //        ); current_mesh->get_element( element_idx, element );
