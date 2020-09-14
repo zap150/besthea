@@ -106,13 +106,13 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   /**
    * Returns the vector of local leaves.
    */
-  const std::vector< general_spacetime_cluster* > & get_local_leaves( ) {
+  const std::vector< general_spacetime_cluster * > & get_local_leaves( ) {
     return _local_leaves;
   }
 
   /**
- * Returns the vector of levelwise spatial paddings.
- */
+   * Returns the vector of levelwise spatial paddings.
+   */
   const std::vector< sc > & get_spatial_paddings( ) const {
     return _spatial_paddings;
   }
@@ -157,7 +157,6 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   }
 
  private:
-
   /**
    * Builts the spacetime cluster tree in a communicative way in the upper part
    * (where clusters can contain elements located in meshes of two or more
@@ -199,9 +198,9 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @ref tree_structure::determine_cluster_communication_lists.
    */
   void expand_distribution_tree_communicatively(
-    const std::set< std::pair< lo, scheduling_time_cluster* > > &
+    const std::set< std::pair< lo, scheduling_time_cluster * > > &
       cluster_send_list,
-    const std::set< std::pair< lo, scheduling_time_cluster* > > &
+    const std::set< std::pair< lo, scheduling_time_cluster * > > &
       cluster_receive_list );
 
   /**
@@ -226,9 +225,9 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * associated spacetime clusters)
    */
   void communicate_necessary_leaf_information(
-    const std::set< std::pair< lo, scheduling_time_cluster* > > &
+    const std::set< std::pair< lo, scheduling_time_cluster * > > &
       leaf_info_send_list,
-    const std::set< std::pair< lo, scheduling_time_cluster* > > &
+    const std::set< std::pair< lo, scheduling_time_cluster * > > &
       leaf_info_receive_list );
 
   /**
@@ -246,9 +245,9 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @note  Call this routine for the spacetime roots at level 0, not the
    *        spacetime root at level -1.
    */
-  void expand_tree_structure_recursively( tree_structure* distribution_tree,
-    general_spacetime_cluster* spacetime_root,
-    scheduling_time_cluster* time_root,
+  void expand_tree_structure_recursively( tree_structure * distribution_tree,
+    general_spacetime_cluster * spacetime_root,
+    scheduling_time_cluster * time_root,
     std::unordered_map< lo, bool > & refine_map );
 
   /**
@@ -311,8 +310,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    *                                  construction.
    */
   void create_spacetime_roots( std::vector< lo > & elems_in_clusters,
-    std::vector< std::pair< general_spacetime_cluster*,
-      scheduling_time_cluster* > > & spacetime_root_pairs );
+    std::vector< std::pair< general_spacetime_cluster *,
+      scheduling_time_cluster * > > & spacetime_root_pairs );
 
   /**
    * Splits all suitably large clusters at an implicitly given level into
@@ -333,10 +332,9 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    *                                children.
    * @todo What to do with early space-time leaf clusters?
    */
-  void split_clusters_levelwise(
-    bool split_space, lo n_space_div, lo n_time_div,
-    std::vector< lo > & elems_in_clusters,
-    std::vector< std::pair< general_spacetime_cluster*,
+  void split_clusters_levelwise( bool split_space, lo n_space_div,
+    lo n_time_div, std::vector< lo > & elems_in_clusters,
+    std::vector< std::pair< general_spacetime_cluster *,
       scheduling_time_cluster * > > & cluster_pairs );
 
   /**
@@ -378,7 +376,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @todo check correctness of determination of temporal cluster data when more
    * general meshes are used.
    */
-  void build_subtree( general_spacetime_cluster & root, const bool split_space );
+  void build_subtree(
+    general_spacetime_cluster & root, const bool split_space );
 
   /**
    * Finds the associated spacetime clusters for each scheduling time cluster in
@@ -405,7 +404,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    *        spacetime root at level -1.
    */
   void associate_scheduling_clusters_and_space_time_clusters_recursively(
-    scheduling_time_cluster* t_root, general_spacetime_cluster * st_root );
+    scheduling_time_cluster * t_root, general_spacetime_cluster * st_root );
 
   /**
    * Traverses the distribution tree recursively. For all time clusters it
@@ -421,9 +420,9 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    *        the buffers should be cleared manually, if storage is limited.
    */
   void sort_associated_space_time_clusters_recursively(
-    scheduling_time_cluster* t_root,
-    std::vector< general_spacetime_cluster* > & leaf_buffer,
-    std::vector< general_spacetime_cluster* > & non_leaf_buffer );
+    scheduling_time_cluster * t_root,
+    std::vector< general_spacetime_cluster * > & leaf_buffer,
+    std::vector< general_spacetime_cluster * > & non_leaf_buffer );
 
   /**
    * Computes and sets the nearfield list and interaction list for every
@@ -468,7 +467,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    *        @ref expand_distribution_tree_communicatively.
    */
   void send_subtree_data_of_distribution_tree(
-    const std::vector< scheduling_time_cluster* > & send_cluster_vector,
+    const std::vector< scheduling_time_cluster * > & send_cluster_vector,
     const lo global_tree_levels, const lo communication_offset ) const;
 
   /**
@@ -484,7 +483,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    *        @ref expand_distribution_tree_communicatively.
    */
   void receive_subtree_data_of_distribution_tree(
-    const std::vector< scheduling_time_cluster* > & receive_clusters_vector,
+    const std::vector< scheduling_time_cluster * > & receive_clusters_vector,
     const lo global_tree_levels, const lo communication_offset );
 
   /**
@@ -500,7 +499,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    *        @ref communicate_necessary_leaf_information.
    */
   void send_leaf_info(
-    const std::vector< scheduling_time_cluster* > & send_cluster_vector,
+    const std::vector< scheduling_time_cluster * > & send_cluster_vector,
     const lo communication_offset ) const;
 
   /**
@@ -517,7 +516,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    *        @ref communicate_necessary_leaf_information.
    */
   void receive_leaf_info(
-    const std::vector< scheduling_time_cluster* > & receive_cluster_vector,
+    const std::vector< scheduling_time_cluster * > & receive_cluster_vector,
     const lo communication_offset ) const;
 
   /**
@@ -546,17 +545,17 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
                                       //!< modified!
   general_spacetime_cluster * _root;  //!< root of the cluster tree
 
-  std::vector< general_spacetime_cluster* >
+  std::vector< general_spacetime_cluster * >
     _local_leaves;  //!< Vector containing the leaves of the distributed
                     //!< space-time cluster tree which are local, i.e.
                     //!< assigned to the process with rank @p _my_rank.
 
-  lo _initial_space_refinement; //!< auxiliary variable determining the
-                                //!< number of spatial refinements executed to
-                                //!< get clusters at level 0
-  lo _start_space_refinement; //!< auxiliary variable to determine in which
-                              //!< level the spatial refinement starts
-                              //!< (relevant if _initial_space_refinement == 0)
+  lo _initial_space_refinement;  //!< auxiliary variable determining the
+                                 //!< number of spatial refinements executed to
+                                 //!< get clusters at level 0
+  lo _start_space_refinement;    //!< auxiliary variable to determine in which
+                                 //!< level the spatial refinement starts
+                               //!< (relevant if _initial_space_refinement == 0)
   lo _local_max_space_level;  //!< bound for the maximal number of spatial
                               //!< refinements in the local part of the
                               //!< distributed tree.
@@ -571,7 +570,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
                                   //!< each spatial level, which is harder to
                                   //!< access)
   slou _spatial_nearfield_limit;  //!< number of the clusters in the vicinity to
-                                //!< be considered as nearfield
+                                  //!< be considered as nearfield
   const std::vector< std::vector< lo > > _idx_2_coord = { { 1, 1, 1 },
     { 0, 1, 1 }, { 0, 0, 1 }, { 1, 0, 1 }, { 1, 1, 0 }, { 0, 1, 0 },
     { 0, 0, 0 },

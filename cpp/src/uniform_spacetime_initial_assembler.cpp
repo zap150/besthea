@@ -91,8 +91,10 @@ void besthea::bem::uniform_spacetime_initial_assembler< kernel_type,
 
     quadrature_wrapper my_quadrature;
     init_quadrature( my_quadrature );
-    sc * x1_ref = my_quadrature._x1_ref.data( );;
-    sc * x2_ref = my_quadrature._x2_ref.data( );;
+    sc * x1_ref = my_quadrature._x1_ref.data( );
+    ;
+    sc * x2_ref = my_quadrature._x2_ref.data( );
+    ;
     sc * y1_ref = my_quadrature._y1_ref.data( );
     sc * y2_ref = my_quadrature._y2_ref.data( );
     sc * y3_ref = my_quadrature._y3_ref.data( );

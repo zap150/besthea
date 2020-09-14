@@ -59,8 +59,7 @@ int main( int argc, char * argv[] ) {
   std::string tree_vector_file = "./test_mesh_generator/tree_structure.bin";
   std::string process_assignment_file
     = "./test_mesh_generator/process_assignment.bin";
-  std::string cluster_bounds_file
-    = "./test_mesh_generator/cluster_bounds.bin";
+  std::string cluster_bounds_file = "./test_mesh_generator/cluster_bounds.bin";
 
   if ( myRank == 0 ) {
     std::cout << "### start mesh generation ###" << std::endl;
@@ -110,9 +109,8 @@ int main( int argc, char * argv[] ) {
   }
   MPI_Barrier( MPI_COMM_WORLD );
 
-  distributed_spacetime_tensor_mesh mesh(
-    "test_mesh_d.txt", tree_vector_file, cluster_bounds_file,
-    process_assignment_file, &comm );
+  distributed_spacetime_tensor_mesh mesh( "test_mesh_d.txt", tree_vector_file,
+    cluster_bounds_file, process_assignment_file, &comm );
 
   // std::cout << mesh.get_n_elements( ) << std::endl;
 

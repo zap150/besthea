@@ -39,8 +39,8 @@
 #include "besthea/block_linear_operator.h"
 #include "besthea/block_vector.h"
 #include "besthea/chebyshev_evaluator.h"
-#include "besthea/distributed_spacetime_cluster_tree.h"
 #include "besthea/distributed_fast_spacetime_be_space.h"
+#include "besthea/distributed_spacetime_cluster_tree.h"
 #include "besthea/full_matrix.h"
 #include "besthea/general_spacetime_cluster.h"
 #include "besthea/lagrange_interpolant.h"
@@ -138,7 +138,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
       _wy_cheb;  //!< Quadrature weights including
   };
 
- /**
+  /**
    * Default constructor.
    */
   distributed_pFMM_matrix( )
@@ -148,8 +148,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
       _temp_order( 5 ),
       _spat_order( 5 ),
       _m2l_integration_order( _spat_order ),
-      _spat_contribution_size( ( ( _spat_order + 3 ) * ( _spat_order + 2 )
-                                * ( _spat_order + 1 ) ) / 6 ),
+      _spat_contribution_size(
+        ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) )
+        / 6 ),
       _contribution_size( ( _temp_order + 1 ) * _spat_contribution_size ),
       _chebyshev( _spat_order ),
       _lagrange( _temp_order ),
@@ -194,15 +195,15 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] alpha
    * @param[in] beta
    */
-  void apply_sl_dl( const block_vector & x,
-    block_vector & y, bool trans, sc alpha, sc beta ) const;
+  void apply_sl_dl( const block_vector & x, block_vector & y, bool trans,
+    sc alpha, sc beta ) const;
 
   /**
    * Sets the MPI communicator associated with the distributed pFMM matrix and
    * the rank of the executing process.
    * @param[in] comm  MPI communicator to be set.
    */
-  void set_MPI_communicator( const MPI_Comm* comm ) {
+  void set_MPI_communicator( const MPI_Comm * comm ) {
     _comm = comm;
     MPI_Comm_rank( *_comm, &_my_rank );
   }
@@ -305,7 +306,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                          file.
    */
   void call_s2m_operations( const block_vector & sources,
-    mesh::scheduling_time_cluster* time_cluster, bool verbose,
+    mesh::scheduling_time_cluster * time_cluster, bool verbose,
     const std::string & verbose_file ) const;
 
   /**
@@ -316,7 +317,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] source_cluster  Considered spacetime cluster.
    */
   void apply_s2m_operation( const block_vector & source_vector,
-    mesh::general_spacetime_cluster* source_cluster ) const;
+    mesh::general_spacetime_cluster * source_cluster ) const;
 
   /**
    * Applies the S2M operation for the given source cluster and sources for
@@ -330,7 +331,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * polynomials in time again?
    */
   void apply_s2m_operation_p0( const block_vector & source_vector,
-    mesh::general_spacetime_cluster* source_cluster ) const;
+    mesh::general_spacetime_cluster * source_cluster ) const;
 
   /**
    * Applies the S2M operation for the given source cluster and sources for
@@ -345,7 +346,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * polynomials in time again?
    */
   void apply_s2m_operations_p1_normal_drv( const block_vector & source_vector,
-    mesh::general_spacetime_cluster* source_cluster ) const;
+    mesh::general_spacetime_cluster * source_cluster ) const;
 
   /**
    * Calls all M2M operations associated with a given scheduling time cluster.
@@ -354,9 +355,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
    */
-  void call_m2m_operations(
-    mesh::scheduling_time_cluster* time_cluster, bool verbose,
-    const std::string & verbose_file ) const;
+  void call_m2m_operations( mesh::scheduling_time_cluster * time_cluster,
+    bool verbose, const std::string & verbose_file ) const;
 
   /**
    * Applies the M2M operations for the given parent cluster and all its
@@ -368,7 +368,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                                - 1: right chilren w.r.t. to time.
    */
   void apply_grouped_m2m_operation(
-    mesh::general_spacetime_cluster* parent_cluster,
+    mesh::general_spacetime_cluster * parent_cluster,
     slou child_configuration ) const;
 
   /**
@@ -378,8 +378,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] temporal_m2m_matrix Matrix used for the temporal m2m operation.
    * @param[in,out] parent_moment Array to which the result is added.
    */
-  void apply_temporal_m2m_operation( const sc* child_moment,
-    const full_matrix & temporal_m2m_matrix, sc *parent_moment ) const;
+  void apply_temporal_m2m_operation( const sc * child_moment,
+    const full_matrix & temporal_m2m_matrix, sc * parent_moment ) const;
 
   /**
    * Applies the spatial m2m operation to a child_moment and adds the result
@@ -393,8 +393,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @note  @p n_space_div_parent and @p octant are used to determine the
    *        appropriate m2m coefficients for the operation.
    */
-  void apply_spatial_m2m_operation( const sc* child_moment,
-    const lo n_space_div_parent, const slou octant, sc* output_array ) const;
+  void apply_spatial_m2m_operation( const sc * child_moment,
+    const lo n_space_div_parent, const slou octant, sc * output_array ) const;
 
   /**
    * Calls all M2L operations associated with a given pair of scheduling time
@@ -405,8 +405,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
    */
-  void call_m2l_operations( mesh::scheduling_time_cluster* src_cluster,
-    mesh::scheduling_time_cluster* tar_cluster, bool verbose,
+  void call_m2l_operations( mesh::scheduling_time_cluster * src_cluster,
+    mesh::scheduling_time_cluster * tar_cluster, bool verbose,
     const std::string & verbose_file ) const;
 
   /**
@@ -415,8 +415,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in,out] tar_cluster Spacetime target cluster for the M2L operation.
    * @todo add buffers instead of reallocation?
    */
-  void apply_m2l_operation( const mesh::general_spacetime_cluster* src_cluster,
-    mesh::general_spacetime_cluster* tar_cluster ) const;
+  void apply_m2l_operation( const mesh::general_spacetime_cluster * src_cluster,
+    mesh::general_spacetime_cluster * tar_cluster ) const;
 
   /**
    * Calls all L2L operations associated with a given scheduling time cluster.
@@ -425,9 +425,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
    */
-  void call_l2l_operations(
-    mesh::scheduling_time_cluster* time_cluster, bool verbose,
-    const std::string & verbose_file ) const;
+  void call_l2l_operations( mesh::scheduling_time_cluster * time_cluster,
+    bool verbose, const std::string & verbose_file ) const;
 
   /**
    * Applies the L2L operations for the given parent cluster and all its
@@ -439,7 +438,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                                - 1: right chilren w.r.t. to time.
    */
   void apply_grouped_l2l_operation(
-    mesh::general_spacetime_cluster* parent_cluster,
+    mesh::general_spacetime_cluster * parent_cluster,
     slou child_configuration ) const;
 
   /**
@@ -451,9 +450,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in,out] child_local_contribution  Array to which the result is
    *                                          added.
    */
-  void apply_temporal_l2l_operation( const sc* parent_local_contribution,
+  void apply_temporal_l2l_operation( const sc * parent_local_contribution,
     const full_matrix & temporal_l2l_matrix,
-    sc* child_local_contribution ) const;
+    sc * child_local_contribution ) const;
 
   /**
    * Applies the spatial l2l operation to a child_moment and adds the result
@@ -469,9 +468,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @note  @p n_space_div_parent and @p octant are used to determine the
    *        appropriate l2l coefficients for the operation.
    */
-  void apply_spatial_l2l_operation( const sc* parent_local,
-    const lo n_space_div_parent, const slou octant,
-    sc* child_local ) const;
+  void apply_spatial_l2l_operation( const sc * parent_local,
+    const lo n_space_div_parent, const slou octant, sc * child_local ) const;
 
   /**
    * Calls all L2T operations associated with a given scheduling time cluster.
@@ -481,7 +479,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
    */
-  void call_l2t_operations( mesh::scheduling_time_cluster* time_cluster,
+  void call_l2t_operations( mesh::scheduling_time_cluster * time_cluster,
     block_vector & output_vector, bool verbose,
     const std::string & verbose_file ) const;
 
@@ -497,7 +495,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @todo Store the quadratures of Chebyshev polynomials in space and Lagrange
    * polynomials in time again?
    */
-  void apply_l2t_operation( const mesh::general_spacetime_cluster* cluster,
+  void apply_l2t_operation( const mesh::general_spacetime_cluster * cluster,
     block_vector & output_vector ) const;
 
   /**
@@ -512,7 +510,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @todo Store the quadratures of Chebyshev polynomials in space and Lagrange
    * polynomials in time again?
    */
-  void apply_l2t_operation_p0( const mesh::general_spacetime_cluster* cluster,
+  void apply_l2t_operation_p0( const mesh::general_spacetime_cluster * cluster,
     block_vector & output_vector ) const;
 
   /**
@@ -529,7 +527,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * polynomials in time again?
    */
   void apply_l2t_operation_p1_normal_drv(
-    const mesh::general_spacetime_cluster* cluster,
+    const mesh::general_spacetime_cluster * cluster,
     block_vector & output_vector ) const;
 
   /**
@@ -547,9 +545,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                          file.
    */
   void apply_nearfield_operations(
-    const mesh::scheduling_time_cluster* cluster,
-    const block_vector & sources, bool trans, block_vector & output_vector,
-    bool verbose, const std::string & verbose_file ) const;
+    const mesh::scheduling_time_cluster * cluster, const block_vector & sources,
+    bool trans, block_vector & output_vector, bool verbose,
+    const std::string & verbose_file ) const;
 
   /**
    * Calls MPI_Testsome for an array of Requests to check for received data.
@@ -567,7 +565,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                          file.
    */
   void check_for_received_data( MPI_Request * array_of_requests,
-    int array_of_indices[ ], int & outcount, bool verbose,
+    int array_of_indices[], int & outcount, bool verbose,
     const std::string & verbose_file ) const;
 
   /**
@@ -583,9 +581,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[out] status Set to 2 if a cluster is found.
    */
   void find_cluster_in_l_list(
-    std::list< mesh::scheduling_time_cluster* > & l_list,
-    std::list< mesh::scheduling_time_cluster* >::iterator &
-      it_next_cluster, char & status ) const;
+    std::list< mesh::scheduling_time_cluster * > & l_list,
+    std::list< mesh::scheduling_time_cluster * >::iterator & it_next_cluster,
+    char & status ) const;
 
   /**
    * Returns an iterator pointing to the next cluster in the m-list whose
@@ -600,9 +598,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[out] status Set to 1 if a cluster is found.
    */
   void find_cluster_in_m_list(
-    std::list< mesh::scheduling_time_cluster* > & m_list,
-    std::list< mesh::scheduling_time_cluster* >::iterator &
-      it_next_cluster, char & status ) const;
+    std::list< mesh::scheduling_time_cluster * > & m_list,
+    std::list< mesh::scheduling_time_cluster * >::iterator & it_next_cluster,
+    char & status ) const;
 
   /**
    * Returns an iterator pointing to the next cluster in the m2l-list whose
@@ -617,9 +615,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[out] status Set to 3 if a cluster is found.
    */
   void find_cluster_in_m2l_list(
-    std::list< mesh::scheduling_time_cluster* > & m2l_list,
-    std::list< mesh::scheduling_time_cluster* >::iterator &
-      it_next_cluster, char & status ) const;
+    std::list< mesh::scheduling_time_cluster * > & m2l_list,
+    std::list< mesh::scheduling_time_cluster * >::iterator & it_next_cluster,
+    char & status ) const;
 
   /**
    * Updates dependency flags or sends moments for M2L operations.
@@ -632,8 +630,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
    */
-  void provide_moments_for_m2l(
-    mesh::scheduling_time_cluster* src_cluster,
+  void provide_moments_for_m2l( mesh::scheduling_time_cluster * src_cluster,
     bool verbose, const std::string & verbose_file ) const;
 
   /**
@@ -649,8 +646,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                          file.
    */
   void provide_moments_to_parents(
-    mesh::scheduling_time_cluster* child_cluster,
-    bool verbose, const std::string & verbose_file ) const;
+    mesh::scheduling_time_cluster * child_cluster, bool verbose,
+    const std::string & verbose_file ) const;
 
   /**
    * Sends local contributions for downward path if necessary.
@@ -664,8 +661,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                          file.
    */
   void provide_local_contributions_to_children(
-    mesh::scheduling_time_cluster* parent_cluster,
-    bool verbose, const std::string & verbose_file ) const;
+    mesh::scheduling_time_cluster * parent_cluster, bool verbose,
+    const std::string & verbose_file ) const;
 
   /**
    * Starts all receive operations given by a vector of pairs of clusters and
@@ -675,7 +672,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                                  array. It is expected to have at least
    *                                  the size of @p receive_vector .
    */
-  void start_receive_operations( MPI_Request array_of_requests[ ] ) const ;
+  void start_receive_operations( MPI_Request array_of_requests[] ) const;
 
   /**
    * Compute quadrature of the Chebyshev polynomials and p0 basis functions for
@@ -687,7 +684,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                polynomial along the columns of the matrix.
    */
   void compute_chebyshev_quadrature_p0(
-    const mesh::general_spacetime_cluster* source_cluster,
+    const mesh::general_spacetime_cluster * source_cluster,
     full_matrix & T ) const;
 
   /**
@@ -700,7 +697,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                    polynomial along the columns of the matrix.
    */
   void compute_normal_drv_chebyshev_quadrature_p1(
-    const mesh::general_spacetime_cluster* source_cluster,
+    const mesh::general_spacetime_cluster * source_cluster,
     full_matrix & T_drv ) const;
 
   /**
@@ -713,7 +710,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                of the polynomial along the rows of the matrix.
    */
   void compute_lagrange_quadrature(
-    const mesh::general_spacetime_cluster* source_cluster,
+    const mesh::general_spacetime_cluster * source_cluster,
     full_matrix & L ) const;
 
   /*!
@@ -804,30 +801,31 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   void cluster_to_polynomials( quadrature_wrapper & my_quadrature, sc x_start,
     sc x_end, sc y_start, sc y_end, sc z_start, sc z_end ) const;
 
-  const MPI_Comm * _comm; //!< MPI communicator associated with the pFMM matrix.
-  int _my_rank; //!< MPI rank of current process.
+  const MPI_Comm *
+    _comm;       //!< MPI communicator associated with the pFMM matrix.
+  int _my_rank;  //!< MPI rank of current process.
   mesh::distributed_spacetime_cluster_tree *
     _distributed_spacetime_tree;  //!< part of a distributed tree hierarchically
                                   //!< decomposing the space-time domain.
   mesh::tree_structure *
-    _scheduling_tree_structure; //!< Temporal tree structure used for scheduling
-                                //!< the FMM operations
+    _scheduling_tree_structure;  //!< Temporal tree structure used for
+                                 //!< scheduling the FMM operations
 
   std::unordered_map< mesh::general_spacetime_cluster *,
-                      std::vector< full_matrix* > >
+    std::vector< full_matrix * > >
     _clusterwise_nearfield_matrices;  //!< nearfield matrices for all the space-
                                       //!< time leaf clusters and their
                                       //!< nearfield clusters.
 
-  std::list< mesh::scheduling_time_cluster* >
+  std::list< mesh::scheduling_time_cluster * >
     _m_list;  //!< M-list for the execution of the FMM.
-  std::list< mesh::scheduling_time_cluster* >
-    _m2l_list; //!< M2L-list for the execution of the FMM.
-  std::list< mesh::scheduling_time_cluster* >
+  std::list< mesh::scheduling_time_cluster * >
+    _m2l_list;  //!< M2L-list for the execution of the FMM.
+  std::list< mesh::scheduling_time_cluster * >
     _l_list;  //!< L2L-list for the execution of the FMM.
-  std::list< mesh::scheduling_time_cluster* >
+  std::list< mesh::scheduling_time_cluster * >
     _n_list;  //!< N-list for the execution of the FMM.
-  std::vector< std::pair< mesh::scheduling_time_cluster*, lo > >
+  std::vector< std::pair< mesh::scheduling_time_cluster *, lo > >
     _receive_data_information;  //!< Contains for each data which has to be
                                 //!< received the corresponding scheduling time
                                 //!< cluster to which the data belongs and the
@@ -842,9 +840,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
                                 //!< M2L operations and the remaining entries to
                                 //!< local contributions which have to be
                                 //!< received in the downward path.
-  lou _n_moments_to_receive_upward; //!< Number of grouped moments which have to
-                                    //!< be received in the upward path of the
-                                    //!< FMM.
+  lou _n_moments_to_receive_upward;  //!< Number of grouped moments which have
+                                     //!< to be received in the upward path of
+                                     //!< the FMM.
   lou _n_moments_to_receive_m2l;  //!< Number of grouped moments which have to
                                   //!< be received for M2L operations.
 
@@ -870,15 +868,15 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   int _temp_order;  //!< degree of interpolation polynomials in time for pFMM.
   int _spat_order;  //!< degree of Chebyshev polynomials for expansion in
                     //!< space in pFMM.
-  int _order_regular; //!< Triangle quadrature order for the regular integrals.
-                      //!< Used for computation of quadratures in S2M steps.
-  int _m2l_integration_order;  //!< _m2l_integration_order + 1 quadrature
-                               //!< points are used for the approximation of
-                               //!< the m2l coefficients.
+  int _order_regular;  //!< Triangle quadrature order for the regular integrals.
+                       //!< Used for computation of quadratures in S2M steps.
+  int _m2l_integration_order;   //!< _m2l_integration_order + 1 quadrature
+                                //!< points are used for the approximation of
+                                //!< the m2l coefficients.
   int _spat_contribution_size;  //!< Spatial size of a contribution. It is
                                 //!< _spat_order + 3 choose 3
-  int _contribution_size; //!< Size of a contribution (moment or local
-                          //!< contribution) of a single spacetime cluster.
+  int _contribution_size;       //!< Size of a contribution (moment or local
+                           //!< contribution) of a single spacetime cluster.
   mutable bem::chebyshev_evaluator
     _chebyshev;  //!< Evaluator of the Chebyshev polynomials.
 

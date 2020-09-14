@@ -121,12 +121,10 @@ int main( int argc, char * argv[] ) {
   if ( geometry_case == 1 ) {
     spatial_mesh_file = "./mesh_files/cube_12.txt";
     time_file = "./mesh_files/time_1_8_uniform.txt";
-  }
-  else if ( geometry_case == 2 ) {
+  } else if ( geometry_case == 2 ) {
     spatial_mesh_file = "./mesh_files/icosahedron.txt";
     time_file = "./mesh_files/time_1_8_uniform.txt";
-  }
-  else if ( geometry_case == 3 ) {
+  } else if ( geometry_case == 3 ) {
     spatial_mesh_file = "./mesh_files/icosahedron.txt";
     time_file = "./mesh_files/time_1_10.txt";
     n_timesteps = 10;
@@ -152,8 +150,8 @@ int main( int argc, char * argv[] ) {
   if ( myRank == 0 ) {
     std::cout << "### geometry case: " << geometry_case << std::endl;
     std::cout << "### test case: " << test_case << std::endl;
-    std::cout << "n_processes: " << n_processes << ", strategy: "
-              << process_assignment_strategy << std::endl;
+    std::cout << "n_processes: " << n_processes
+              << ", strategy: " << process_assignment_strategy << std::endl;
     std::cout << "###############################################" << std::endl;
     std::cout << "WARNING: when comparing standard and distributed pFMM"
               << " matrices the results match only if the trees coincide!"
@@ -219,16 +217,16 @@ int main( int argc, char * argv[] ) {
   if ( myRank == 0 ) {
     std::cout << "################" << std::endl;
     std::cout << "distribution tree for process 0" << std::endl;
-    distributed_mesh.get_distribution_tree( )->
-      print_tree_human_readable( 2, true );
+    distributed_mesh.get_distribution_tree( )->print_tree_human_readable(
+      2, true );
     std::cout << "################" << std::endl;
   }
   MPI_Barrier( comm );
   if ( myRank == 1 ) {
     std::cout << "################" << std::endl;
     std::cout << "distribution tree for process 1" << std::endl;
-    distributed_mesh.get_distribution_tree( )->
-      print_tree_human_readable( 2, true );
+    distributed_mesh.get_distribution_tree( )->print_tree_human_readable(
+      2, true );
     std::cout << "################" << std::endl;
     // distributed_mesh.get_distribution_tree( )->print( );
   }
@@ -241,7 +239,7 @@ int main( int argc, char * argv[] ) {
       = new distributed_pFMM_matrix_heat_dl_p0p1;
     distributed_fast_spacetime_be_assembler distributed_assembler_k( kernel_k,
       distributed_space_p0, distributed_space_p1, &comm, order_sing, order_reg,
-      temp_order, spat_order, cauchy_data::_alpha);
+      temp_order, spat_order, cauchy_data::_alpha );
     distributed_assembler_k.assemble( *K_dist_pFMM );
 
     if ( myRank == 0 ) {
@@ -315,12 +313,12 @@ int main( int argc, char * argv[] ) {
       std::cout << "source id " << block_id << std::endl;
       std::cout << "target id " << block_evaluation_id << std::endl;
       vector & subvec_pFMM = applied_dist_pFMM.get_block( block_evaluation_id );
-      vector & subvec_toeplitz
-        = applied_std.get_block( block_evaluation_id );
+      vector & subvec_toeplitz = applied_std.get_block( block_evaluation_id );
       lo eval_entry_id = 8;
       std::cout << "id: " << eval_entry_id << std::endl;
       std::cout << "entry is " << subvec_pFMM[ eval_entry_id ] << std::endl;
-      std::cout << "should be " << subvec_toeplitz[ eval_entry_id ] << std::endl;
+      std::cout << "should be " << subvec_toeplitz[ eval_entry_id ]
+                << std::endl;
       subvec_pFMM.print_h( );
       std::cout << "exact result block" << std::endl;
       subvec_toeplitz.print_h( );
@@ -338,7 +336,7 @@ int main( int argc, char * argv[] ) {
       = new distributed_pFMM_matrix_heat_dl_p0p1;
     distributed_fast_spacetime_be_assembler distributed_assembler_k( kernel_k,
       distributed_space_p0, distributed_space_p1, &comm, order_sing, order_reg,
-      temp_order, spat_order, cauchy_data::_alpha);
+      temp_order, spat_order, cauchy_data::_alpha );
     distributed_assembler_k.assemble( *K_dist_pFMM );
     if ( myRank == 0 ) {
       t.measure( );
@@ -427,8 +425,8 @@ int main( int argc, char * argv[] ) {
       = new distributed_pFMM_matrix_heat_adl_p1p0;
 
     distributed_fast_spacetime_be_assembler distributed_assembler_k_adj(
-      kernel_ak, distributed_space_p1, distributed_space_p0, &comm,
-      order_sing, order_reg, temp_order, spat_order, cauchy_data::_alpha );
+      kernel_ak, distributed_space_p1, distributed_space_p0, &comm, order_sing,
+      order_reg, temp_order, spat_order, cauchy_data::_alpha );
     distributed_assembler_k_adj.assemble( *K_adj_dist_pFMM );
 
     if ( myRank == 0 ) {
@@ -455,8 +453,7 @@ int main( int argc, char * argv[] ) {
     if ( myRank == 0 ) {
       // t.reset(
       //   "assembly and application of pFMM matrix K_adj (from scratch)" );
-      t.reset(
-        "assembly and application of adjoint of K (from scratch)" );
+      t.reset( "assembly and application of adjoint of K (from scratch)" );
       triangular_surface_mesh space_mesh( spatial_mesh_file );
       uniform_spacetime_tensor_mesh spacetime_mesh(
         space_mesh, end_time, n_timesteps );
@@ -502,12 +499,12 @@ int main( int argc, char * argv[] ) {
       std::cout << "source id " << block_id << std::endl;
       std::cout << "target id " << block_evaluation_id << std::endl;
       vector & subvec_pFMM = applied_dist_pFMM.get_block( block_evaluation_id );
-      vector & subvec_toeplitz
-        = applied_std.get_block( block_evaluation_id );
+      vector & subvec_toeplitz = applied_std.get_block( block_evaluation_id );
       lo eval_entry_id = 0;
       std::cout << "id: " << eval_entry_id << std::endl;
       std::cout << "entry is " << subvec_pFMM[ eval_entry_id ] << std::endl;
-      std::cout << "should be " << subvec_toeplitz[ eval_entry_id ] << std::endl;
+      std::cout << "should be " << subvec_toeplitz[ eval_entry_id ]
+                << std::endl;
       subvec_pFMM.print_h( );
       std::cout << "exact result block" << std::endl;
       subvec_toeplitz.print_h( );
@@ -524,8 +521,8 @@ int main( int argc, char * argv[] ) {
     distributed_pFMM_matrix_heat_adl_p1p0 * K_adj_dist_pFMM
       = new distributed_pFMM_matrix_heat_adl_p1p0;
     distributed_fast_spacetime_be_assembler distributed_assembler_k_adj(
-      kernel_ak, distributed_space_p1, distributed_space_p0, &comm,
-      order_sing, order_reg, temp_order, spat_order, cauchy_data::_alpha );
+      kernel_ak, distributed_space_p1, distributed_space_p0, &comm, order_sing,
+      order_reg, temp_order, spat_order, cauchy_data::_alpha );
     distributed_assembler_k_adj.assemble( *K_adj_dist_pFMM );
 
     if ( myRank == 0 ) {
@@ -544,8 +541,7 @@ int main( int argc, char * argv[] ) {
     if ( myRank == 0 ) {
       // t.reset(
       //   "assembly and application of pFMM matrix K_adj (from scratch)" );
-      t.reset(
-        "assembly and application of adjoint of K (from scratch)" );
+      t.reset( "assembly and application of adjoint of K (from scratch)" );
       triangular_surface_mesh space_mesh( spatial_mesh_file );
       uniform_spacetime_tensor_mesh spacetime_mesh(
         space_mesh, end_time, n_timesteps );
@@ -590,7 +586,7 @@ int main( int argc, char * argv[] ) {
     if ( myRank == 0 ) {
       t.reset( "applying distributed pFMM matrix K_adj" );
     }
-    K_adj_dist_pFMM->apply( neu_proj, applied_dist_pFMM);
+    K_adj_dist_pFMM->apply( neu_proj, applied_dist_pFMM );
     if ( myRank == 0 ) {
       t.measure( );
       std::cout << "error timewise" << std::endl;

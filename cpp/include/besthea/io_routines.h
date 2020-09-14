@@ -43,16 +43,16 @@
  * @param[in] print_vector  Vector which is printed to the file.
  * @param[in] filename Name of the output file
  */
-template < class T >
-void write_vector_to_bin_file( const std::vector< T > & print_vector,
-  const std::string & filename );
+template< class T >
+void write_vector_to_bin_file(
+  const std::vector< T > & print_vector, const std::string & filename );
 
 /**
  * Reads a vector of consecutive values (of same type T) from a binary file.
  * @param[in] filename Name of the input file.
  * @return  Standard vector containing all values read from file.
  */
-template < class T >
+template< class T >
 std::vector< T > read_vector_from_bin_file( const std::string & filename );
 
 #endif /* INCLUDE_IO_ROUTINES_H_ */

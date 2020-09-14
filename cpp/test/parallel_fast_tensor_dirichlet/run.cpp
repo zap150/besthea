@@ -118,12 +118,10 @@ int main( int argc, char * argv[] ) {
   if ( geometry_case == 1 ) {
     spatial_mesh_file = "./mesh_files/cube_12.txt";
     time_file = "./mesh_files/time_1_8_uniform.txt";
-  }
-  else if ( geometry_case == 2 ) {
+  } else if ( geometry_case == 2 ) {
     spatial_mesh_file = "./mesh_files/icosahedron.txt";
     time_file = "./mesh_files/time_1_8_uniform.txt";
-  }
-  else if ( geometry_case == 3 ) {
+  } else if ( geometry_case == 3 ) {
     spatial_mesh_file = "./mesh_files/icosahedron.txt";
     time_file = "./mesh_files/time_1_10.txt";
     n_timesteps = 10;
@@ -148,8 +146,8 @@ int main( int argc, char * argv[] ) {
   std::string process_assignment_file = geometry_dir + "process_assignment.bin";
   if ( myRank == 0 ) {
     std::cout << "### geometry case: " << geometry_case << std::endl;
-    std::cout << "n_processes: " << n_processes << ", strategy: "
-              << process_assignment_strategy << std::endl;
+    std::cout << "n_processes: " << n_processes
+              << ", strategy: " << process_assignment_strategy << std::endl;
     t.reset( "mesh generation" );
 
     // load time mesh defining slices and create temporal tree
@@ -189,8 +187,7 @@ int main( int argc, char * argv[] ) {
   n_blocks = distributed_mesh.get_n_temporal_elements( );
   n_space_elements
     = distributed_mesh.get_local_mesh( )->get_n_spatial_elements( );
-  n_space_nodes
-    = distributed_mesh.get_local_mesh( )->get_n_spatial_nodes( );
+  n_space_nodes = distributed_mesh.get_local_mesh( )->get_n_spatial_nodes( );
 
   distributed_spacetime_cluster_tree distributed_st_tree(
     distributed_mesh, max_n_levels, 40, st_coeff, 3, &comm );
@@ -218,7 +215,7 @@ int main( int argc, char * argv[] ) {
 
   distributed_fast_spacetime_be_assembler distributed_assembler_v( kernel_v,
     distributed_space_p0, distributed_space_p0, &comm, order_sing, order_reg,
-    temp_order, spat_order, cauchy_data::_alpha);
+    temp_order, spat_order, cauchy_data::_alpha );
 
   distributed_assembler_v.assemble( *V );
 
@@ -235,14 +232,13 @@ int main( int argc, char * argv[] ) {
     = new distributed_pFMM_matrix_heat_dl_p0p1;
   distributed_fast_spacetime_be_assembler distributed_assembler_k( kernel_k,
     distributed_space_p0, distributed_space_p1, &comm, order_sing, order_reg,
-    temp_order, spat_order, cauchy_data::_alpha);
+    temp_order, spat_order, cauchy_data::_alpha );
   distributed_assembler_k.assemble( *K );
 
   MPI_Barrier( comm );
   if ( myRank == 0 ) {
     t.measure( );
   }
-
 
   block_vector dir_proj( n_blocks, n_space_nodes, true );
   block_vector neu_block( n_blocks, n_space_elements, true );
@@ -252,11 +248,12 @@ int main( int argc, char * argv[] ) {
   uniform_spacetime_tensor_mesh * spacetime_mesh = nullptr;
   // todo: replace this by a suitable distributed version:
   if ( myRank == 0 ) {
-    t.reset( "sequential application of mass matrix"
-             " + projection error computation" );
+    t.reset(
+      "sequential application of mass matrix"
+      " + projection error computation" );
     space_mesh = new triangular_surface_mesh( spatial_mesh_file );
-    spacetime_mesh = new uniform_spacetime_tensor_mesh(
-      *space_mesh, end_time, n_timesteps );
+    spacetime_mesh
+      = new uniform_spacetime_tensor_mesh( *space_mesh, end_time, n_timesteps );
     spacetime_mesh->refine( refine, temp_refine_factor );
     // std::cout << "number of elements is "
     //           << spacetime_mesh->get_n_spatial_elements( )
@@ -292,13 +289,13 @@ int main( int argc, char * argv[] ) {
   // broadcast dir_proj to all processes
   for ( lo i = 0; i < n_blocks; ++i ) {
     MPI_Bcast( dir_proj.get_block( i ).data( ), n_space_nodes,
-    get_scalar_type< sc >::MPI_SC( ), 0, comm );
+      get_scalar_type< sc >::MPI_SC( ), 0, comm );
   }
   MPI_Barrier( comm );
   // broadcast intermediate value of neu_block( after application of M )
   for ( lo i = 0; i < n_blocks; ++i ) {
     MPI_Bcast( neu_block.get_block( i ).data( ), n_space_elements,
-    get_scalar_type< sc >::MPI_SC( ), 0, comm );
+      get_scalar_type< sc >::MPI_SC( ), 0, comm );
   }
   MPI_Barrier( comm );
   // apply K to dir_proj and add result to neu_block
@@ -319,11 +316,10 @@ int main( int argc, char * argv[] ) {
 
   if ( myRank == 0 ) {
     t.measure( );
-    std::cout << "required number of iterations: "
-              << gmres_iter << std::endl;
+    std::cout << "required number of iterations: " << gmres_iter << std::endl;
     std::cout << "Neumann L2 relative error: "
-            << space_p0->L2_relative_error( cauchy_data::neumann, neu_block )
-            << std::endl;
+              << space_p0->L2_relative_error( cauchy_data::neumann, neu_block )
+              << std::endl;
     delete space_p0;
     delete spacetime_mesh;
     delete space_mesh;

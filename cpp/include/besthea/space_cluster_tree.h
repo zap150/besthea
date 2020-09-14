@@ -176,7 +176,7 @@ class besthea::mesh::space_cluster_tree {
     return _leaves;
   }
 
-/**
+  /**
    * Prints levels of the tree.
    */
   void print( ) {
@@ -186,7 +186,7 @@ class besthea::mesh::space_cluster_tree {
     std::cout << "number of levels: " << _levels << std::endl;
     // print vector of paddings
     std::cout << "padding: " << std::endl;
-    for ( lou i = 0; i < _paddings.size( ); ++ i ) {
+    for ( lou i = 0; i < _paddings.size( ); ++i ) {
       std::cout << _paddings[ i ] << " ";
     }
     std::cout << std::endl;

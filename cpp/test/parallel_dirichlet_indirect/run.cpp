@@ -101,12 +101,10 @@ int main( int argc, char * argv[] ) {
   if ( geometry_case == 1 ) {
     spatial_mesh_file = "./mesh_files/cube_12.txt";
     time_file = "./mesh_files/time_1_8_uniform.txt";
-  }
-  else if ( geometry_case == 2 ) {
+  } else if ( geometry_case == 2 ) {
     spatial_mesh_file = "./mesh_files/icosahedron.txt";
     time_file = "./mesh_files/time_1_8_uniform.txt";
-  }
-  else if ( geometry_case == 3 ) {
+  } else if ( geometry_case == 3 ) {
     spatial_mesh_file = "./mesh_files/icosahedron.txt";
     time_file = "./mesh_files/time_1_10.txt";
     n_timesteps = 10;
@@ -135,7 +133,6 @@ int main( int argc, char * argv[] ) {
 
   // V approximated by distributed pFMM
 
-
   MPI_Barrier( comm );
   timer t;
 
@@ -146,8 +143,8 @@ int main( int argc, char * argv[] ) {
   if ( myRank == 0 ) {
     std::cout << "### geometry case: " << geometry_case << std::endl;
     std::cout << "### test case: " << test_case << std::endl;
-    std::cout << "n_processes: " << n_processes << ", strategy: "
-              << process_assignment_strategy << std::endl;
+    std::cout << "n_processes: " << n_processes
+              << ", strategy: " << process_assignment_strategy << std::endl;
     t.reset( "mesh generation" );
 
     // load time mesh defining slices and create temporal tree
@@ -208,7 +205,7 @@ int main( int argc, char * argv[] ) {
 
   distributed_fast_spacetime_be_assembler distributed_assembler_v( kernel_v,
     distributed_space_p0, distributed_space_p0, &comm, order_sing, order_reg,
-    temp_order, spat_order, cauchy_data::_alpha);
+    temp_order, spat_order, cauchy_data::_alpha );
 
   distributed_assembler_v.assemble( *V_dist_pFMM );
 
@@ -220,16 +217,16 @@ int main( int argc, char * argv[] ) {
   if ( myRank == 0 ) {
     std::cout << "################" << std::endl;
     std::cout << "distribution tree for process 0" << std::endl;
-    distributed_mesh.get_distribution_tree( )->
-      print_tree_human_readable( 2, true );
+    distributed_mesh.get_distribution_tree( )->print_tree_human_readable(
+      2, true );
     std::cout << "################" << std::endl;
   }
   MPI_Barrier( comm );
   if ( myRank == 1 ) {
     std::cout << "################" << std::endl;
     std::cout << "distribution tree for process 1" << std::endl;
-    distributed_mesh.get_distribution_tree( )->
-      print_tree_human_readable( 2, true );
+    distributed_mesh.get_distribution_tree( )->print_tree_human_readable(
+      2, true );
     std::cout << "################" << std::endl;
     // distributed_mesh.get_distribution_tree( )->print( );
   }
@@ -301,7 +298,7 @@ int main( int argc, char * argv[] ) {
     if ( myRank == 0 ) {
       t.measure( );
       std::cout << "resulting subblock distributed pFMM multiplication"
-              << std::endl;
+                << std::endl;
       std::cout << "block id " << block_id << std::endl;
       vector & subvec_dist_pFMM
         = applied_dist_pFMM.get_block( block_evaluation_id );
@@ -336,7 +333,7 @@ int main( int argc, char * argv[] ) {
     // broadcast the random vector to all processes
     for ( lo i = 0; i < n_blocks; ++i ) {
       MPI_Bcast( rand_vec.get_block( i ).data( ), size_of_block,
-      get_scalar_type< sc >::MPI_SC( ), 0, comm );
+        get_scalar_type< sc >::MPI_SC( ), 0, comm );
     }
 
     // let process 0 compute the result with the directly generated matrix V
@@ -386,8 +383,7 @@ int main( int argc, char * argv[] ) {
       }
     }
     MPI_Barrier( comm );
-  }
-  else if ( test_case == 3 ) {
+  } else if ( test_case == 3 ) {
     //##########################################################################
     //##########################################################################
     sc gmres_prec = 1e-8;
@@ -414,7 +410,6 @@ int main( int argc, char * argv[] ) {
 
       t.measure( );
 
-
       block_vector dir_proj;
       space_p0.L2_projection( cauchy_data::dirichlet, dir_proj );
       uniform_spacetime_be_identity M( space_p0, space_p0 );
@@ -431,7 +426,7 @@ int main( int argc, char * argv[] ) {
     // broadcast M_dir_proj to all processes
     for ( lo i = 0; i < n_blocks; ++i ) {
       MPI_Bcast( M_dir_proj.get_block( i ).data( ), size_of_block,
-      get_scalar_type< sc >::MPI_SC( ), 0, comm );
+        get_scalar_type< sc >::MPI_SC( ), 0, comm );
     }
     MPI_Barrier( comm );
     // compute the result with the distributed matrix V_dist_pFMM
@@ -453,7 +448,7 @@ int main( int argc, char * argv[] ) {
         dens_diff.get_block( i ).add( direct_density.get_block( i ), -1.0 );
         std::cout << dens_diff.get_block( i ).norm( ) << ", rel. "
                   << dens_diff.get_block( i ).norm( )
-                      / direct_density.get_block( i ).norm( )
+            / direct_density.get_block( i ).norm( )
                   << std::endl;
       }
     }

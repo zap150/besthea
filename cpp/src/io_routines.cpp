@@ -28,43 +28,44 @@
 
 #include "besthea/io_routines.h"
 
+#include <fstream>  //for ofstream and ifstream
 #include <iostream>
-#include <fstream> //for ofstream and ifstream
 
-template < class T >
-void write_vector_to_bin_file( const std::vector< T > & print_vector,
-  const std::string & filename ) {
+template< class T >
+void write_vector_to_bin_file(
+  const std::vector< T > & print_vector, const std::string & filename ) {
   std::ofstream file_out( filename.c_str( ), std::ios::binary );
-  if ( file_out.is_open( ) )
-  {
+  if ( file_out.is_open( ) ) {
     lou n_chars = print_vector.size( ) * sizeof( T );
     const T * print_vector_data = print_vector.data( );
-    file_out.write( reinterpret_cast< const char* >( print_vector_data ),
-      n_chars );
-    file_out.close();
+    file_out.write(
+      reinterpret_cast< const char * >( print_vector_data ), n_chars );
+    file_out.close( );
   } else {
     std::cout << "Error. Could not open the output file for printing the tree \
-                  structure." << std::endl;
+                  structure."
+              << std::endl;
   }
 }
 
-template < class T >
+template< class T >
 std::vector< T > read_vector_from_bin_file( const std::string & filename ) {
   std::vector< T > out_vector;
   std::ifstream read_file;
   read_file.open( filename.c_str( ) );
   if ( read_file.is_open( ) ) {
-    //determine the number of chars to be received
+    // determine the number of chars to be received
     read_file.seekg( 0, read_file.end );
     lo n_chars = read_file.tellg( );
     read_file.seekg( 0 );
     out_vector.resize( n_chars / sizeof( T ) );
-    //load all chars from file
-    read_file.read( reinterpret_cast< char* >( out_vector.data( ) ), n_chars );
-    read_file.close();
+    // load all chars from file
+    read_file.read( reinterpret_cast< char * >( out_vector.data( ) ), n_chars );
+    read_file.close( );
   } else {
     std::cout << "Error. Could not open the input file for reading the tree \
-                  structure." << std::endl;
+                  structure."
+              << std::endl;
   }
   return out_vector;
 }

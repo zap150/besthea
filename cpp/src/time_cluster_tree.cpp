@@ -75,11 +75,11 @@ std::vector< char > besthea::mesh::time_cluster_tree::compute_tree_structure( )
 
 void besthea::mesh::time_cluster_tree::compute_cluster_bounds(
   time_cluster & root,
-  std::unordered_map< time_cluster*, std::pair< sc, sc > > & cluster_bounds )
+  std::unordered_map< time_cluster *, std::pair< sc, sc > > & cluster_bounds )
   const {
   sc left_bound, right_bound;
   if ( root.get_n_children( ) > 0 ) {
-    const std::vector< time_cluster* > * children = root.get_children( );
+    const std::vector< time_cluster * > * children = root.get_children( );
     for ( auto it : *children ) {
       compute_cluster_bounds( *it, cluster_bounds );
     }
@@ -108,7 +108,7 @@ void besthea::mesh::time_cluster_tree::compute_cluster_bounds(
 
 void besthea::mesh::time_cluster_tree::print_cluster_bounds(
   const std::string filename ) const {
-  std::unordered_map< time_cluster*, std::pair< sc, sc > > cluster_bounds;
+  std::unordered_map< time_cluster *, std::pair< sc, sc > > cluster_bounds;
   compute_cluster_bounds( *_root, cluster_bounds );
   std::vector< sc > cluster_bounds_vector;
   if ( _root != nullptr ) {
@@ -122,12 +122,10 @@ void besthea::mesh::time_cluster_tree::print_cluster_bounds(
         *_root, cluster_bounds, cluster_bounds_vector );
     }
     write_vector_to_bin_file( cluster_bounds_vector, filename );
-  }
-  else {
+  } else {
     std::cout << "Error: Corrupted temporeal tree! _root is nullptr."
               << std::endl;
   }
-
 }
 
 std::vector< lo > besthea::mesh::time_cluster_tree::compute_process_assignments(
@@ -567,11 +565,11 @@ void besthea::mesh::time_cluster_tree::convert_assignment_vector_2_tree_format(
 
 void besthea::mesh::time_cluster_tree::convert_cluster_bounds_map_2_tree_format(
   const time_cluster & root,
-  const std::unordered_map< time_cluster*, std::pair< sc, sc > > & bounds_map,
+  const std::unordered_map< time_cluster *, std::pair< sc, sc > > & bounds_map,
   std::vector< sc > & bounds_vector ) const {
   // it is assumed that root is not a leaf and has always two children.
   // by construction every non-leaf has two children.
-  const std::vector< time_cluster* > * children = root.get_children( );
+  const std::vector< time_cluster * > * children = root.get_children( );
   for ( auto it : *children ) {
     bounds_vector.push_back( bounds_map.at( it ).first );
     bounds_vector.push_back( bounds_map.at( it ).second );
@@ -585,7 +583,6 @@ void besthea::mesh::time_cluster_tree::convert_cluster_bounds_map_2_tree_format(
       *( *children )[ 1 ], bounds_map, bounds_vector );
   }
 }
-
 
 sc besthea::mesh::time_cluster_tree::compute_padding( time_cluster & root ) {
   std::vector< time_cluster * > * children = root.get_children( );

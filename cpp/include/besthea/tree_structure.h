@@ -81,7 +81,7 @@ class besthea::mesh::tree_structure {
    * geometrical data of the clusters.
    */
   tree_structure( const std::string & filename, const sc start_time,
-    const sc end_time, lo process_id = -1  );
+    const sc end_time, lo process_id = -1 );
 
   /**
    * Constructs a tree structure by reading it from files
@@ -94,8 +94,7 @@ class besthea::mesh::tree_structure {
    *                        value is -1.
    */
   tree_structure( const std::string & structure_file,
-    const std::string & cluster_bounds_file,
-    lo process_id = -1 );
+    const std::string & cluster_bounds_file, lo process_id = -1 );
 
   /**
    * Destructor.
@@ -178,10 +177,10 @@ class besthea::mesh::tree_structure {
    * @ref linear_algebra::distributed_pFMM_matrix::prepare_fmm.
    */
   void init_fmm_lists( scheduling_time_cluster & root,
-    std::list< scheduling_time_cluster* > & m_list,
-    std::list< scheduling_time_cluster* > & m2l_list,
-    std::list< scheduling_time_cluster* > & l_list,
-    std::list< scheduling_time_cluster* > & n_list ) const;
+    std::list< scheduling_time_cluster * > & m_list,
+    std::list< scheduling_time_cluster * > & m2l_list,
+    std::list< scheduling_time_cluster * > & l_list,
+    std::list< scheduling_time_cluster * > & n_list ) const;
 
   /**
    * Traverses the tree structure recursively and allocates and initializes the
@@ -191,14 +190,14 @@ class besthea::mesh::tree_structure {
    *                              cluster.
    */
   void initialize_moment_contributions(
-    scheduling_time_cluster& root, lou contribution_size );
+    scheduling_time_cluster & root, lou contribution_size );
 
   /**
    * Fills the associated moments of all clusters in the tree with zeros.
    * The tree is traversed recursively by the routine.
    * @param[in] root  Current cluster in the tree traversal.
    */
-  void clear_moment_contributions( scheduling_time_cluster& root );
+  void clear_moment_contributions( scheduling_time_cluster & root );
 
   /**
    * Traverses the tree structure recursively and allocates and initializes the
@@ -209,14 +208,14 @@ class besthea::mesh::tree_structure {
    *                              cluster.
    */
   void initialize_local_contributions(
-    scheduling_time_cluster& root, lou contribution_size );
+    scheduling_time_cluster & root, lou contribution_size );
 
   /**
    * Fills the associated local contributions of all clusters in the tree with
    * zeros. The tree is traversed recursively by the routine.
    * @param[in] root  Current cluster in the tree traversal.
    */
-  void clear_local_contributions( scheduling_time_cluster& root );
+  void clear_local_contributions( scheduling_time_cluster & root );
 
   /**
    * Returns the structure of the tree represented as a vector of chars.
@@ -237,7 +236,7 @@ class besthea::mesh::tree_structure {
    *         second's global index
    */
   static bool compare_clusters_bottom_up_right_2_left(
-    scheduling_time_cluster* first, scheduling_time_cluster* second );
+    scheduling_time_cluster * first, scheduling_time_cluster * second );
 
   /**
    * Comparison operator for two clusters.
@@ -248,7 +247,7 @@ class besthea::mesh::tree_structure {
    *         second's global index
    */
   static bool compare_clusters_top_down_right_2_left(
-    scheduling_time_cluster* first, scheduling_time_cluster* second );
+    scheduling_time_cluster * first, scheduling_time_cluster * second );
 
   /**
    * Computes the tree structure and prints it to a binary file
@@ -288,7 +287,7 @@ class besthea::mesh::tree_structure {
   scheduling_time_cluster * _root;  //!< root cluster of the tree structure
   lo _levels;                       //!< number of levels in the tree
   std::vector< scheduling_time_cluster * >
-    _leaves;  //!< vector of all clusters without descendants
+    _leaves;          //!< vector of all clusters without descendants
   lo _my_process_id;  //!< id of the process executing the operations
                       //!< @todo Exchange by an MPI query later?
 
@@ -312,8 +311,8 @@ class besthea::mesh::tree_structure {
    *        this routine.
    * @note This method is supposed to be called by the constructor.
    */
-  void array_2_tree( const char * tree_array, scheduling_time_cluster & root,
-    lou & position );
+  void array_2_tree(
+    const char * tree_array, scheduling_time_cluster & root, lou & position );
 
   /**
    * Recursively constructs the tree structure from a given structure array
@@ -326,8 +325,7 @@ class besthea::mesh::tree_structure {
    * @note  This method is supposed to be called by the constructor.
    */
   void create_tree_from_arrays( const char * tree_array,
-    const sc * cluster_bounds, scheduling_time_cluster & root,
-    lou & position );
+    const sc * cluster_bounds, scheduling_time_cluster & root, lou & position );
 
   /** Assigns to each cluster in the tree structure its respective process
    * given in the vector @p process_assignments by traversing the tree.
@@ -375,7 +373,7 @@ class besthea::mesh::tree_structure {
   void add_leaves_to_nearfield_list( scheduling_time_cluster & current_cluster,
     scheduling_time_cluster & target_cluster );
 
-    /**
+  /**
    * Determines all clusters which should be refined during an expansion of the
    * tree structure. Therefore, an entry is added to @p refine_map for every
    * leaf cluster in the tree structure, with the global cluster index as key
@@ -392,7 +390,7 @@ class besthea::mesh::tree_structure {
    *                        of the entries are the global indices of the
    *                        clusters.
    */
-  void determine_clusters_to_refine( scheduling_time_cluster* root,
+  void determine_clusters_to_refine( scheduling_time_cluster * root,
     std::unordered_map< lo, bool > & refine_map ) const;
 
   /**
@@ -401,7 +399,7 @@ class besthea::mesh::tree_structure {
    * @param[in] root  Current cluster in the tree traversal.
    */
   bool subtree_contains_local_cluster(
-    const scheduling_time_cluster* root ) const;
+    const scheduling_time_cluster * root ) const;
 
   /**
    * Determines those clusters in the tree structure for which data has to be
@@ -440,21 +438,21 @@ class besthea::mesh::tree_structure {
    *                                        process ids for which leaf
    *                                        information has to be received.
    */
-  void determine_cluster_communication_lists(
-    scheduling_time_cluster* root,
-    std::set< std::pair< lo, scheduling_time_cluster* > > & subtree_send_list,
-    std::set< std::pair< lo, scheduling_time_cluster* > >
-      & subtree_receive_list,
-    std::set< std::pair< lo, scheduling_time_cluster* > > & leaf_info_send_list,
-    std::set< std::pair< lo, scheduling_time_cluster* > >
-      & leaf_info_receive_list ) const;
+  void determine_cluster_communication_lists( scheduling_time_cluster * root,
+    std::set< std::pair< lo, scheduling_time_cluster * > > & subtree_send_list,
+    std::set< std::pair< lo, scheduling_time_cluster * > > &
+      subtree_receive_list,
+    std::set< std::pair< lo, scheduling_time_cluster * > > &
+      leaf_info_send_list,
+    std::set< std::pair< lo, scheduling_time_cluster * > > &
+      leaf_info_receive_list ) const;
 
   /**
    * Clears the nearfield, interaction and send list of all clusters in the
    * tree. The method relies on a tree traversal.
    * @param[in] root  Current cluster in the tree traversal.
    */
-  void clear_cluster_lists( scheduling_time_cluster* root );
+  void clear_cluster_lists( scheduling_time_cluster * root );
   /**
    * Determines if clusters are active in the upward or downward path (needed
    * for FMM).
@@ -512,8 +510,8 @@ class besthea::mesh::tree_structure {
    * but in the routine @ref prepare_essential_reduction .
    * @note This method is solely used by @ref reduce_2_essential .
    */
-  void determine_essential_clusters( const lo my_process_id,
-    scheduling_time_cluster & root ) const;
+  void determine_essential_clusters(
+    const lo my_process_id, scheduling_time_cluster & root ) const;
 
   /**
    * Aux for printing
@@ -545,8 +543,8 @@ class besthea::mesh::tree_structure {
    *                                          are added.
    */
   void determine_levelwise_output_string( const lo digits,
-  bool print_process_ids, scheduling_time_cluster * root,
-  std::vector< std::string > & levelwise_output_strings ) const;
+    bool print_process_ids, scheduling_time_cluster * root,
+    std::vector< std::string > & levelwise_output_strings ) const;
 };
 
 #endif /* INCLUDE_BESTHEA_TREE_STRUCTURE_H_ */

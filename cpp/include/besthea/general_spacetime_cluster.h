@@ -146,7 +146,7 @@ class besthea::mesh::general_spacetime_cluster {
   /**
    * Returns the distributed spacetime mesh associated with the cluster.
    */
-  const distributed_spacetime_tensor_mesh* get_mesh( ) const {
+  const distributed_spacetime_tensor_mesh * get_mesh( ) const {
     return &_mesh;
   }
 
@@ -161,7 +161,7 @@ class besthea::mesh::general_spacetime_cluster {
    * Returns the value of the variable @p _elements_are_local.
    */
   bool get_elements_are_local( ) const {
-    return _elements_are_local ;
+    return _elements_are_local;
   }
 
   /**
@@ -306,10 +306,10 @@ class besthea::mesh::general_spacetime_cluster {
     bool admissibility = false;
     sc src_center = src_cluster->get_time_center( );
     sc src_half_size = src_cluster->get_time_half_size( );
-    sc min_half_size = ( src_half_size < _time_half_size )
-      ? src_half_size : _time_half_size;
+    sc min_half_size
+      = ( src_half_size < _time_half_size ) ? src_half_size : _time_half_size;
     if ( src_center
-          < _time_center - _time_half_size - src_half_size - min_half_size ) {
+      < _time_center - _time_half_size - src_half_size - min_half_size ) {
       admissibility = true;
     }
     return admissibility;
@@ -329,17 +329,17 @@ class besthea::mesh::general_spacetime_cluster {
     slou spatial_nearfield_limit ) const {
     std::vector< slou > src_box_coordinate = src_cluster->get_box_coordinate( );
     slou x_diff = ( _box_coordinate[ 1 ] > src_box_coordinate[ 1 ] )
-      ? _box_coordinate[ 1 ] - src_box_coordinate[ 1 ] :
-        src_box_coordinate[ 1 ] - _box_coordinate[ 1 ];
+      ? _box_coordinate[ 1 ] - src_box_coordinate[ 1 ]
+      : src_box_coordinate[ 1 ] - _box_coordinate[ 1 ];
     slou y_diff = ( _box_coordinate[ 2 ] > src_box_coordinate[ 2 ] )
-      ? _box_coordinate[ 2 ] - src_box_coordinate[ 2 ] :
-        src_box_coordinate[ 2 ] - _box_coordinate[ 2 ];
+      ? _box_coordinate[ 2 ] - src_box_coordinate[ 2 ]
+      : src_box_coordinate[ 2 ] - _box_coordinate[ 2 ];
     slou z_diff = ( _box_coordinate[ 3 ] > src_box_coordinate[ 3 ] )
-      ? _box_coordinate[ 3 ] - src_box_coordinate[ 3 ] :
-        src_box_coordinate[ 3 ] - _box_coordinate[ 3 ];
-    return ( x_diff <= spatial_nearfield_limit &&
-              y_diff <= spatial_nearfield_limit &&
-              z_diff <= spatial_nearfield_limit );
+      ? _box_coordinate[ 3 ] - src_box_coordinate[ 3 ]
+      : src_box_coordinate[ 3 ] - _box_coordinate[ 3 ];
+    return ( x_diff <= spatial_nearfield_limit
+      && y_diff <= spatial_nearfield_limit
+      && z_diff <= spatial_nearfield_limit );
   }
 
   /**
@@ -536,7 +536,7 @@ class besthea::mesh::general_spacetime_cluster {
     // cluster is local or in the nearfield)
     const spacetime_tensor_mesh * clusters_mesh;
     lo start_idx;
-    if ( _mesh.get_rank( ) == _process_id ) { // local cluster
+    if ( _mesh.get_rank( ) == _process_id ) {  // local cluster
       clusters_mesh = _mesh.get_local_mesh( );
       start_idx = _mesh.get_local_start_idx( );
     } else {
@@ -681,9 +681,9 @@ class besthea::mesh::general_spacetime_cluster {
         _local_2_global_nodes.push_back( element[ 5 ] );
       }
       std::sort( _local_2_global_nodes.begin( ), _local_2_global_nodes.end( ) );
-      _local_2_global_nodes.erase(
-        std::unique( _local_2_global_nodes.begin( ),
-          _local_2_global_nodes.end( ) ), _local_2_global_nodes.end( ) );
+      _local_2_global_nodes.erase( std::unique( _local_2_global_nodes.begin( ),
+                                     _local_2_global_nodes.end( ) ),
+        _local_2_global_nodes.end( ) );
 
       _elems_2_local_nodes.resize( 6 * _elements.size( ) );
 
@@ -771,21 +771,21 @@ class besthea::mesh::general_spacetime_cluster {
    * @param[in] moment_address Address of the moment (in the array stored in the
    *                           associated scheduling_time_cluster)
    */
-  void set_pointer_to_moment( sc* moment_address ) {
+  void set_pointer_to_moment( sc * moment_address ) {
     _moment = moment_address;
   }
 
   /**
    * Returns a pointer to the moment of the current cluster.
    */
-  sc* get_pointer_to_moment( ) {
+  sc * get_pointer_to_moment( ) {
     return _moment;
   }
 
   /**
    * Returns a pointer to the const moment of the current cluster.
    */
-  const sc* get_pointer_to_moment( ) const {
+  const sc * get_pointer_to_moment( ) const {
     return _moment;
   }
 
@@ -795,21 +795,21 @@ class besthea::mesh::general_spacetime_cluster {
    *                                        (in the array stored in the
    *                                        associated scheduling_time_cluster)
    */
-  void set_pointer_to_local_contribution( sc* local_contribution_address ) {
+  void set_pointer_to_local_contribution( sc * local_contribution_address ) {
     _local_contribution = local_contribution_address;
   }
 
   /**
    * Returns a pointer to the local contribution of the current cluster.
    */
-  sc* get_pointer_to_local_contribution( ) {
+  sc * get_pointer_to_local_contribution( ) {
     return _local_contribution;
   }
 
   /**
    * Returns a pointer to the const local contribution of the current cluster.
    */
-  const sc* get_pointer_to_local_contribution( ) const {
+  const sc * get_pointer_to_local_contribution( ) const {
     return _local_contribution;
   }
 
@@ -840,9 +840,8 @@ class besthea::mesh::general_spacetime_cluster {
    * @param[out] indices  Local indices for the current (transformed) element.
    */
   template< class space_type >
-  void local_elem_to_local_space_dofs(
-    lo i_loc_elem, int n_shared_vertices, int rotation, bool swap,
-    std::vector< lo > & indices ) const;
+  void local_elem_to_local_space_dofs( lo i_loc_elem, int n_shared_vertices,
+    int rotation, bool swap, std::vector< lo > & indices ) const;
 
   /**
    * Prints info of the object.
@@ -867,8 +866,8 @@ class besthea::mesh::general_spacetime_cluster {
     // }
     // std::cout << ", nearfield: ";
     // for ( auto nf_cluster : *_nearfield_list ) {
-    //   std::vector< slou > nf_box_coordinate = nf_cluster->get_box_coordinate( );
-    //   std::cout << "(" << nf_box_coordinate[ 0 ] << ", "
+    //   std::vector< slou > nf_box_coordinate = nf_cluster->get_box_coordinate(
+    //   ); std::cout << "(" << nf_box_coordinate[ 0 ] << ", "
     //             << nf_box_coordinate[ 1 ] << ", " << nf_box_coordinate[ 2 ]
     //             << ", " << nf_box_coordinate[ 3 ] << ", "
     //             << nf_box_coordinate[ 4 ] << "), ";
@@ -876,8 +875,8 @@ class besthea::mesh::general_spacetime_cluster {
     // if ( _interaction_list != nullptr ) {
     //   std::cout << ", interaction list: ";
     //   for ( auto ff_cluster : *_interaction_list ) {
-    //   std::vector< slou > ff_box_coordinate = ff_cluster->get_box_coordinate( );
-    //   std::cout << "(" << ff_box_coordinate[ 0 ] << ", "
+    //   std::vector< slou > ff_box_coordinate = ff_cluster->get_box_coordinate(
+    //   ); std::cout << "(" << ff_box_coordinate[ 0 ] << ", "
     //             << ff_box_coordinate[ 1 ] << ", " << ff_box_coordinate[ 2 ]
     //             << ", " << ff_box_coordinate[ 3 ] << ", "
     //             << ff_box_coordinate[ 4 ] << "), ";
@@ -907,9 +906,8 @@ class besthea::mesh::general_spacetime_cluster {
   sc _time_half_size;         //!< temporal half size of the cluster
   vector_type _space_half_size;  //!< half sizes of the cluster's faces (in [x,
                                  //!< y, z] directions)
-  std::vector< lo >
-    _elements;  //!< indices of the cluster's elements within global spacetime
-                //!< tensor mesh
+  std::vector< lo > _elements;   //!< indices of the cluster's elements within
+                                //!< global spacetime tensor mesh
 
   std::vector< lo > _elems_2_local_nodes;   //!< mapping from element nodes
                                             //!< vertices to local node list
@@ -918,19 +916,19 @@ class besthea::mesh::general_spacetime_cluster {
   lo _n_space_nodes;  //!< number of spatial nodes in the cluster.
   general_spacetime_cluster * _parent;  //!< parent of the cluster
   std::vector< general_spacetime_cluster * > *
-    _children;  //!< children of the current cluster
-  bool _global_leaf_status; //!< indicates whether the cluster is a leaf in the
-                        //!< global tree (true) or not (false).
+    _children;               //!< children of the current cluster
+  bool _global_leaf_status;  //!< indicates whether the cluster is a leaf in the
+                             //!< global tree (true) or not (false).
   const distributed_spacetime_tensor_mesh &
-    _mesh;        //!< distributed spacetime mesh associated with the cluster
-  bool _elements_are_local; //!< Indicates if the elements contained in the
-                            //!< cluster are in the local mesh of the
-                            //!< distributed spacetime tensor mesh (true) or
-                            //!< in the nearfield mesh (false).
-  lo _level;      //!< level within the cluster tree
-  short _octant;  //!< octant of the parent cluster
-  short _left_right;  //!< left (0), or right (1) child of the parent
-  sc _padding;        //!< padding of the cluster
+    _mesh;  //!< distributed spacetime mesh associated with the cluster
+  bool _elements_are_local;  //!< Indicates if the elements contained in the
+                             //!< cluster are in the local mesh of the
+                             //!< distributed spacetime tensor mesh (true) or
+                             //!< in the nearfield mesh (false).
+  lo _level;                 //!< level within the cluster tree
+  short _octant;             //!< octant of the parent cluster
+  short _left_right;         //!< left (0), or right (1) child of the parent
+  sc _padding;               //!< padding of the cluster
   std::vector< slou >
     _box_coordinate;  //!< coordinates of the box within boxes on given level
   lo _global_time_index;  //!< Global index of the temporal component of the
@@ -948,69 +946,70 @@ class besthea::mesh::general_spacetime_cluster {
     _nearfield_list;  //!< nearfield list of the cluster
   std::vector< general_spacetime_cluster * > *
     _interaction_list;  //!< interaction list of the cluster
-  sc * _moment; //!< pointer to the moment of the cluster, which is stored in
-                //!< the associated scheduling_time_cluster
-  sc * _local_contribution; //!< pointer to the local contribution of the
-                            //!< cluster, which is stored in the associated
-                            //!< scheduling_time_cluster
+  sc * _moment;  //!< pointer to the moment of the cluster, which is stored in
+                 //!< the associated scheduling_time_cluster
+  sc * _local_contribution;  //!< pointer to the local contribution of the
+                             //!< cluster, which is stored in the associated
+                             //!< scheduling_time_cluster
 };
 
 /** specialization for p0 basis functions */
 template<>
-inline lo besthea::mesh::general_spacetime_cluster::get_n_dofs<
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p0 > >( ) const {
+inline lo besthea::mesh::general_spacetime_cluster::get_n_dofs< besthea::bem::
+    distributed_fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >( )
+  const {
   return _n_elements;
 }
 
 /** specialization for p1 basis functions
  */
 template<>
-inline lo besthea::mesh::general_spacetime_cluster::get_n_dofs<
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p1 > >( )
+inline lo besthea::mesh::general_spacetime_cluster::get_n_dofs< besthea::bem::
+    distributed_fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >( )
   const {
   return _n_time_elements * _n_space_nodes;
 }
 
 /** specialization for p0 basis functions */
 template<>
-inline lo besthea::mesh::general_spacetime_cluster::get_n_space_dofs<
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p0 > >( ) const {
+inline lo besthea::mesh::general_spacetime_cluster::get_n_space_dofs< besthea::
+    bem::distributed_fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >( )
+  const {
   return _n_space_elements;
 }
 
 /** specialization for p1 basis functions */
 template<>
-inline lo besthea::mesh::general_spacetime_cluster::get_n_space_dofs<
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p1 > >( ) const {
+inline lo besthea::mesh::general_spacetime_cluster::get_n_space_dofs< besthea::
+    bem::distributed_fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >( )
+  const {
   return _n_space_nodes;
 }
 
 /** specialization for p0 basis functions */
-template<> inline
-void besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs<
+template<>
+inline void
+besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs<
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 > >( lo i_loc_elem, int n_shared_vertices,
-    int rotation, bool swap, std::vector< lo > & indices ) const {
+  int rotation, bool swap, std::vector< lo > & indices ) const {
   indices[ 0 ] = i_loc_elem;
 }
 
 /** specialization for p1 basis functions */
-template<> inline
-void besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs<
+template<>
+inline void
+besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs<
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p1 > >( lo i_loc_elem, int n_shared_vertices,
-    int rotation, bool swap, std::vector< lo > & indices ) const {
+  int rotation, bool swap, std::vector< lo > & indices ) const {
   std::vector< lo > local_space_indices
     = { local_spacetime_node_idx_2_local_space_node_idx(
-            _elems_2_local_nodes[ 6 * i_loc_elem ] ),
+          _elems_2_local_nodes[ 6 * i_loc_elem ] ),
         local_spacetime_node_idx_2_local_space_node_idx(
-            _elems_2_local_nodes[ 6 * i_loc_elem + 1 ] ),
+          _elems_2_local_nodes[ 6 * i_loc_elem + 1 ] ),
         local_spacetime_node_idx_2_local_space_node_idx(
-            _elems_2_local_nodes[ 6 * i_loc_elem + 2 ] ) };
+          _elems_2_local_nodes[ 6 * i_loc_elem + 2 ] ) };
   switch ( rotation ) {
     case 0:
       if ( n_shared_vertices == 2 && swap ) {

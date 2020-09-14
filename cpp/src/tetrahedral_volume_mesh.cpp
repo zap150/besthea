@@ -968,17 +968,17 @@ void besthea::mesh::tetrahedral_volume_mesh::init_faces( ) {
     }
   }
 
-//  for ( lo i = 0; i < _n_elements; ++i ) {
-//    for ( lo j = 0; j < 4; ++j ) {
-//      std::cout << _element_to_faces[ 4 * i + j ] << " ";
-//    }
-//    std::cout << std::endl;
-//  }
-//
-//  for ( lo i = 0; i < _n_faces; ++i ) {
-//    for ( lo j = 0; j < 3; ++j ) {
-//      std::cout << _faces[ 3 * i + j ] << " ";
-//    }
-//    std::cout << std::endl;
-//  }
+  //  for ( lo i = 0; i < _n_elements; ++i ) {
+  //    for ( lo j = 0; j < 4; ++j ) {
+  //      std::cout << _element_to_faces[ 4 * i + j ] << " ";
+  //    }
+  //    std::cout << std::endl;
+  //  }
+  //
+  //  for ( lo i = 0; i < _n_faces; ++i ) {
+  //    for ( lo j = 0; j < 3; ++j ) {
+  //      std::cout << _faces[ 3 * i + j ] << " ";
+  //    }
+  //    std::cout << std::endl;
+  //  }
 }

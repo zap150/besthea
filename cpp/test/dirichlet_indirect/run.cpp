@@ -91,14 +91,14 @@ int main( int argc, char * argv[] ) {
   lo order_sing = 4;
   lo order_reg = 4;
 
-   block_vector dir_proj;
+  block_vector dir_proj;
 
   // V without approximation
   block_lower_triangular_toeplitz_matrix * V
     = new block_lower_triangular_toeplitz_matrix( );
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
 
-uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
+  uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
 #ifdef USE_P0_BASIS
   space_p0.L2_projection( cauchy_data::dirichlet, dir_proj );
   besthea::bem::uniform_spacetime_be_identity M( space_p0, space_p0 );
@@ -143,7 +143,7 @@ uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
   fast_spacetime_be_assembler fast_assembler_v( kernel_v, space_p1_pFMM,
     space_p1_pFMM, order_sing, order_reg, temp_order, spat_order,
     cauchy_data::_alpha, 1.5, false );
-  #endif
+#endif
 
   fast_assembler_v.assemble( *V_pFMM );
 
@@ -229,13 +229,13 @@ uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
 
       block_vector repr;
       block_vector repr_pFMM;
-    #ifdef USE_P0_BASIS
+#ifdef USE_P0_BASIS
       besthea::bem::uniform_spacetime_be_evaluator evaluator_v(
         kernel_v, space_p0 );
-    #else
+#else
       besthea::bem::uniform_spacetime_be_evaluator evaluator_v(
         kernel_v, space_p1 );
-    #endif
+#endif
       // besthea::bem::uniform_spacetime_be_evaluator evaluator_v(
       //   kernel_v, space_p1 );
       evaluator_v.evaluate( grid_space_mesh.get_nodes( ), dens, repr );
@@ -254,8 +254,7 @@ uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
                 << std::endl;
 
       // print the result in the Ensight format
-      std::vector< std::string > grid_node_labels{
-      "Temperature_interpolation",
+      std::vector< std::string > grid_node_labels{ "Temperature_interpolation",
         "Temperature_result" };
       std::vector< block_vector * > grid_node_data{ &sol_interp, &repr };
       std::string ensight_grid_dir = "ensight_grid";
@@ -263,9 +262,8 @@ uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
       grid_spacetime_mesh.print_ensight_case(
         ensight_grid_dir, &grid_node_labels );
       grid_spacetime_mesh.print_ensight_geometry( ensight_grid_dir );
-      grid_spacetime_mesh.print_ensight_datafiles(
-        ensight_grid_dir, &grid_node_labels, &grid_node_data, nullptr,
-        nullptr );
+      grid_spacetime_mesh.print_ensight_datafiles( ensight_grid_dir,
+        &grid_node_labels, &grid_node_data, nullptr, nullptr );
     }
   }
 }

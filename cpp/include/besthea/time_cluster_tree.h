@@ -138,7 +138,7 @@ class besthea::mesh::time_cluster_tree {
    * @param[in, out] cluster_bounds   Map in which the bounds are stored.
    */
   void compute_cluster_bounds( time_cluster & root,
-    std::unordered_map< time_cluster*, std::pair< sc, sc > > & cluster_bounds )
+    std::unordered_map< time_cluster *, std::pair< sc, sc > > & cluster_bounds )
     const;
 
   /**
@@ -300,7 +300,8 @@ class besthea::mesh::time_cluster_tree {
    * construction of the tree.
    */
   void convert_cluster_bounds_map_2_tree_format( const time_cluster & root,
-    const std::unordered_map< time_cluster*, std::pair< sc, sc > > & bounds_map,
+    const std::unordered_map< time_cluster *, std::pair< sc, sc > > &
+      bounds_map,
     std::vector< sc > & bounds_vector ) const;
 
   /**
