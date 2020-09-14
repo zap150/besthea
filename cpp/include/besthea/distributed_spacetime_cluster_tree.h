@@ -378,7 +378,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @todo check correctness of determination of temporal cluster data when more
    * general meshes are used.
    */
-  void build_subtree( general_spacetime_cluster & root, bool split_space );
+  void build_subtree( general_spacetime_cluster & root, const bool split_space );
 
   /**
    * Finds the associated spacetime clusters for each scheduling time cluster in

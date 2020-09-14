@@ -65,16 +65,18 @@ int main( int argc, char * argv[] ) {
   // declaration of required parameters.
   lo order_sing, order_reg, temp_order, spat_order;
   sc st_coeff;
+  lo max_n_levels;
   lo n_blocks, size_of_block;
 
   st_coeff = 4.0;
+  max_n_levels = 20;
   temp_order = 6;
   spat_order = 6;
   order_sing = 4;
   order_reg = 4;
 
-  lo test_case = 3;
-  lo geometry_case = 2;
+  lo test_case = 1;
+  lo geometry_case = 3;
   if ( argc == 3 ) {
     geometry_case = strtol( argv[ 1 ], NULL, 10 );
     test_case = strtol( argv[ 2 ], NULL, 10 );
@@ -103,6 +105,11 @@ int main( int argc, char * argv[] ) {
   else if ( geometry_case == 2 ) {
     spatial_mesh_file = "./mesh_files/icosahedron.txt";
     time_file = "./mesh_files/time_1_8_uniform.txt";
+  }
+  else if ( geometry_case == 3 ) {
+    spatial_mesh_file = "./mesh_files/icosahedron.txt";
+    time_file = "./mesh_files/time_1_10.txt";
+    n_timesteps = 10;
   }
 
   // parameters for distributed spacetime mesh
@@ -181,13 +188,16 @@ int main( int argc, char * argv[] ) {
   size_of_block = distributed_mesh.get_n_elements( ) / n_blocks;
 
   distributed_spacetime_cluster_tree distributed_st_tree(
-    distributed_mesh, 6, 40, st_coeff, 3, &comm );
+    distributed_mesh, max_n_levels, 40, st_coeff, 3, &comm );
   MPI_Barrier( comm );
 
   if ( myRank == 0 ) {
     t.measure( );
     // distributed_st_tree.print( );
     // distributed_st_tree.get_distribution_tree( )->print( );
+    std::cout << "number of elements: " << distributed_mesh.get_n_elements( )
+              << ", number of timesteps: "
+              << distributed_mesh.get_n_temporal_elements( ) << std::endl;
     t.reset( "assembly of distributed pFMM matrix V" );
   }
 

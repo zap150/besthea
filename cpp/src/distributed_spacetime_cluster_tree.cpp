@@ -202,6 +202,11 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
     cluster_pairs.push_back(
       { spacetime_root, get_distribution_tree( )->get_root( ) } );
   }
+  // remember whether space was split (value of split_space) for all levels
+  // (to allow for a consistent local refinement in case of leaves at different
+  // levels) and add the entry for level 0
+  std::vector< bool > split_space_levelwise;
+  split_space_levelwise.push_back( ( _initial_space_refinement > 0 ) );
 
   // construct clusters in the spacetime tree according to the distribution tree
   n_time_div += 1;
@@ -210,6 +215,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
     n_space_div += 1;
     _local_max_space_level++;
   }
+  split_space_levelwise.push_back( split_space );
+
+
   // loop over levels of the clusters which are next to be constructed
   for ( lo child_level = 1; child_level < dist_tree_depth_coll;
         ++child_level ) {
@@ -231,6 +239,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
     } else {
       split_space = false;
     }
+    split_space_levelwise.push_back( split_space );
   }
 
   std::vector< general_spacetime_cluster * > leaves;
@@ -244,7 +253,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
     // reasonably high this takes a while!
     fill_elements( *it );
 
-    build_subtree( *it, split_space );
+    build_subtree( *it, split_space_levelwise[ it->get_level( ) ] );
   }
 
   if ( _real_max_levels < get_distribution_tree( )->get_levels( ) ) {
@@ -1050,7 +1059,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
-  general_spacetime_cluster & root, bool split_space ) {
+  general_spacetime_cluster & root, const bool split_space ) {
   if ( root.get_level( ) + 1 > _max_levels - 1
     || root.get_n_elements( ) < _n_min_elems
     || root.get_n_time_elements( ) == 1 ) {

@@ -84,9 +84,11 @@ int main( int argc, char * argv[] ) {
   // declaration of required parameters.
   lo order_sing, order_reg, temp_order, spat_order;
   sc st_coeff;
+  lo max_n_levels;
   lo n_blocks, n_space_elements, n_space_nodes;
 
   st_coeff = 4.0;
+  max_n_levels = 20;
   temp_order = 6;
   spat_order = 6;
   order_sing = 4;
@@ -101,7 +103,9 @@ int main( int argc, char * argv[] ) {
   // spacetime mesh for the test.
   std::string spatial_mesh_file;
   std::string time_file;
-
+  // WARNING: only uniform timesteps are allowed for the non-approximated single
+  // layer operator. choose a time file and set the parameters for the standard
+  // spacetime mesh accordingly
   // parameters for standard spacetime mesh
   lo n_timesteps = 8;
   int refine = 1;
@@ -118,6 +122,11 @@ int main( int argc, char * argv[] ) {
   else if ( geometry_case == 2 ) {
     spatial_mesh_file = "./mesh_files/icosahedron.txt";
     time_file = "./mesh_files/time_1_8_uniform.txt";
+  }
+  else if ( geometry_case == 3 ) {
+    spatial_mesh_file = "./mesh_files/icosahedron.txt";
+    time_file = "./mesh_files/time_1_10.txt";
+    n_timesteps = 10;
   }
   // parameters for distributed spacetime mesh
   // refinement of mesh within slices
@@ -184,7 +193,7 @@ int main( int argc, char * argv[] ) {
     = distributed_mesh.get_local_mesh( )->get_n_spatial_nodes( );
 
   distributed_spacetime_cluster_tree distributed_st_tree(
-    distributed_mesh, 6, 40, st_coeff, 3, &comm );
+    distributed_mesh, max_n_levels, 40, st_coeff, 3, &comm );
   MPI_Barrier( comm );
   if ( myRank == 0 ) {
     t.measure( );
