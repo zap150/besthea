@@ -507,9 +507,10 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * Receives leaf information of all clusters associated with the time clusters
    * in the given vector from the process whose index is determined by
    * @p communication_offset and updates it.
-   * @param[in] send_cluster_vector List of all time clusters, for which the
-   *                                leaf information of associated spacetime
-   *                                clusters is received from another process.
+   * @param[in] receive_cluster_vector  List of all time clusters, for which the
+   *                                    leaf information of associated spacetime
+   *                                    clusters is received from another
+   *                                    process.
    * @param[in] communication_offset  The data is receive from the process whose
    *                                  id is @p _my_rank minus this offset.
    * @note  This routine is solely called by
