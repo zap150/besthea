@@ -121,28 +121,46 @@ besthea::mesh::distributed_spacetime_cluster_tree::
 
   // extend the locally essential distribution tree:
   // first determine clusters in the distribution tree for which the extension
-  // cannot be done locally
-  std::set< std::pair< lo, scheduling_time_cluster * > > cluster_send_list;
-  std::set< std::pair< lo, scheduling_time_cluster * > > cluster_receive_list;
+  // cannot be done locally. in addition, determine scheduling time clusters
+  // where the leaf information of the associated spacetime clusters is
+  // required, but not available (for later)
+  std::set< std::pair< lo, scheduling_time_cluster * > > subtree_send_list;
+  std::set< std::pair< lo, scheduling_time_cluster * > > subtree_receive_list;
+  std::set< std::pair< lo, scheduling_time_cluster * > > leaf_info_send_list;
+  std::set< std::pair< lo, scheduling_time_cluster * > > leaf_info_receive_list;
   tree_structure * distribution_tree = get_distribution_tree( );
-  distribution_tree->determine_refinement_communication_lists(
-    distribution_tree->get_root( ), cluster_send_list, cluster_receive_list );
+  distribution_tree->determine_cluster_communication_lists(
+    distribution_tree->get_root( ), subtree_send_list, subtree_receive_list,
+    leaf_info_send_list, leaf_info_receive_list );
   // secondly, expand the distribution tree locally
   expand_distribution_tree_locally( );
   // finally, expand the distribution tree communicatively and reduce it again
   // to a locally essential tree
   expand_distribution_tree_communicatively(
-    cluster_send_list, cluster_receive_list );
+    subtree_send_list, subtree_receive_list );
   distribution_tree->reduce_2_essential( );
 
   collect_local_leaves( *_root );
 
   associate_scheduling_clusters_and_space_time_clusters( );
+  // communicate necessary leaf information
+  communicate_necessary_leaf_information(
+    leaf_info_send_list, leaf_info_receive_list );
+
+  std::vector< general_spacetime_cluster * > leaf_buffer;
+  std::vector< general_spacetime_cluster * > non_leaf_buffer;
+  sort_associated_space_time_clusters_recursively(
+    distribution_tree->get_root( ), leaf_buffer, non_leaf_buffer );
+  // clear the buffer vectors
+  leaf_buffer.clear( );
+  leaf_buffer.shrink_to_fit( );
+  non_leaf_buffer.clear( );
+  non_leaf_buffer.shrink_to_fit( );
   fill_nearfield_and_interaction_lists( *_root );
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
-  general_spacetime_cluster * root ) {
+  general_spacetime_cluster * pseudo_root ) {
   tree_structure * dist_tree = get_distribution_tree( );
   lo dist_tree_depth = dist_tree->get_levels( );
   lo dist_tree_depth_coll;
@@ -183,6 +201,11 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
     cluster_pairs.push_back(
       { spacetime_root, get_distribution_tree( )->get_root( ) } );
   }
+  // remember whether space was split (value of split_space) for all levels
+  // (to allow for a consistent local refinement in case of leaves at different
+  // levels) and add the entry for level 0
+  std::vector< bool > split_space_levelwise;
+  split_space_levelwise.push_back( ( _initial_space_refinement > 0 ) );
 
   // construct clusters in the spacetime tree according to the distribution tree
   n_time_div += 1;
@@ -191,6 +214,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
     n_space_div += 1;
     _local_max_space_level++;
   }
+  split_space_levelwise.push_back( split_space );
+
   // loop over levels of the clusters which are next to be constructed
   for ( lo child_level = 1; child_level < dist_tree_depth_coll;
         ++child_level ) {
@@ -212,6 +237,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
     } else {
       split_space = false;
     }
+    split_space_levelwise.push_back( split_space );
   }
 
   std::vector< general_spacetime_cluster * > leaves;
@@ -250,13 +276,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
     // @todo Discuss: Inefficient way of filling in the elements? For each
     // leaf cluster the whole mesh is traversed once. If the depth of the tree
     // is reasonably high this takes a while!
-    std::cout << "Filling." << std::endl;
     fill_elements( *it );
 
-    std::cout << "Finished. Building subtree." << std::endl;
-
-    build_subtree( *it, split_space );
-    std::cout << "Finished." << std::endl;
+    build_subtree( *it, split_space_levelwise[ it->get_level( ) ] );
   }
   t.measure( );
 
@@ -277,9 +299,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   scheduling_time_cluster * time_root = distribution_tree->get_root( );
   distribution_tree->determine_clusters_to_refine( time_root, refine_map );
   if ( _root != nullptr ) {
-    // expand the tree structure according to the spacetime tree, by
-    // traversing the distribution tree and the spacetime tree (for each
-    // spacetime root)
+    // expand the tree structure according to the spacetime tree, by traversing
+    // the distribution tree and the spacetime tree (for each spacetime root)
     for ( auto spacetime_root : *( _root->get_children( ) ) ) {
       expand_tree_structure_recursively(
         distribution_tree, spacetime_root, time_root, refine_map );
@@ -299,9 +320,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
 void besthea::mesh::distributed_spacetime_cluster_tree::
   expand_distribution_tree_communicatively(
     const std::set< std::pair< lo, scheduling_time_cluster * > > &
-      cluster_send_list,
+      subtree_send_list,
     const std::set< std::pair< lo, scheduling_time_cluster * > > &
-      cluster_receive_list ) {
+      subtree_receive_list ) {
   tree_structure * distribution_tree = get_distribution_tree( );
   // first communicate the maximal depth of the distribution tree.
   lo global_tree_levels = distribution_tree->get_levels( );
@@ -310,22 +331,22 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   // the sets are sorted by default lexicographically, i.e. first in ascending
   // order with respect to the process ids. the code relies on that.
   lo max_offset = 0;
-  if ( cluster_send_list.size( ) > 0 ) {
-    max_offset = _my_rank - cluster_send_list.begin( )->first;
+  if ( subtree_send_list.size( ) > 0 ) {
+    max_offset = _my_rank - subtree_send_list.begin( )->first;
   }
-  if ( cluster_receive_list.size( ) > 0 ) {
+  if ( subtree_receive_list.size( ) > 0 ) {
     max_offset = std::max(
-      max_offset, cluster_receive_list.rbegin( )->first - _my_rank );
+      max_offset, subtree_receive_list.rbegin( )->first - _my_rank );
   }
   // execute the send and receive operations offsetwise
-  auto send_list_it = cluster_send_list.rbegin( );
-  auto receive_list_it = cluster_receive_list.begin( );
+  auto send_list_it = subtree_send_list.rbegin( );
+  auto receive_list_it = subtree_receive_list.begin( );
   for ( lo offset = 1; offset <= max_offset; ++offset ) {
     // depending on the rank decide whether to send or receive first
     if ( ( _my_rank / offset ) % 2 == 1 ) {
       // send first, receive later
       std::vector< scheduling_time_cluster * > current_send_clusters;
-      while ( ( send_list_it != cluster_send_list.rend( ) )
+      while ( ( send_list_it != subtree_send_list.rend( ) )
         && ( _my_rank - send_list_it->first == offset ) ) {
         current_send_clusters.push_back( send_list_it->second );
         ++send_list_it;
@@ -334,7 +355,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
         current_send_clusters, global_tree_levels, offset );
       // now receive
       std::vector< scheduling_time_cluster * > current_receive_clusters;
-      while ( ( receive_list_it != cluster_receive_list.end( ) )
+      while ( ( receive_list_it != subtree_receive_list.end( ) )
         && ( receive_list_it->first - _my_rank == offset ) ) {
         current_receive_clusters.push_back( receive_list_it->second );
         ++receive_list_it;
@@ -344,7 +365,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     } else {
       // receive first
       std::vector< scheduling_time_cluster * > current_receive_clusters;
-      while ( ( receive_list_it != cluster_receive_list.end( ) )
+      while ( ( receive_list_it != subtree_receive_list.end( ) )
         && ( receive_list_it->first - _my_rank == offset ) ) {
         current_receive_clusters.push_back( receive_list_it->second );
         ++receive_list_it;
@@ -353,7 +374,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
         current_receive_clusters, global_tree_levels, offset );
       // now send
       std::vector< scheduling_time_cluster * > current_send_clusters;
-      while ( ( send_list_it != cluster_send_list.rend( ) )
+      while ( ( send_list_it != subtree_send_list.rend( ) )
         && ( _my_rank - send_list_it->first == offset ) ) {
         current_send_clusters.push_back( send_list_it->second );
         ++send_list_it;
@@ -374,13 +395,72 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::
+  communicate_necessary_leaf_information(
+    const std::set< std::pair< lo, scheduling_time_cluster * > > &
+      leaf_info_send_list,
+    const std::set< std::pair< lo, scheduling_time_cluster * > > &
+      leaf_info_receive_list ) {
+  // the sets are sorted by default lexicographically, i.e. first in ascending
+  // order with respect to the process ids. the code relies on that.
+  lo max_offset = 0;
+  if ( leaf_info_send_list.size( ) > 0 ) {
+    max_offset = leaf_info_send_list.rbegin( )->first - _my_rank;
+  }
+  if ( leaf_info_receive_list.size( ) > 0 ) {
+    max_offset = std::max(
+      max_offset, _my_rank - leaf_info_receive_list.begin( )->first );
+  }
+  // execute the send and receive operations offsetwise
+  auto send_list_it = leaf_info_send_list.begin( );
+  auto receive_list_it = leaf_info_receive_list.rbegin( );
+  for ( lo offset = 1; offset <= max_offset; ++offset ) {
+    // depending on the rank decide whether to send or receive first
+    if ( ( _my_rank / offset ) % 2 == 1 ) {
+      // send first, receive later
+      std::vector< scheduling_time_cluster * > current_send_clusters;
+      while ( ( send_list_it != leaf_info_send_list.end( ) )
+        && ( send_list_it->first - _my_rank == offset ) ) {
+        current_send_clusters.push_back( send_list_it->second );
+        ++send_list_it;
+      }
+      send_leaf_info( current_send_clusters, offset );
+      // now receive
+      std::vector< scheduling_time_cluster * > current_receive_clusters;
+      while ( ( receive_list_it != leaf_info_receive_list.rend( ) )
+        && ( _my_rank - receive_list_it->first == offset ) ) {
+        current_receive_clusters.push_back( receive_list_it->second );
+        ++receive_list_it;
+      }
+      receive_leaf_info( current_receive_clusters, offset );
+    } else {
+      // receive first
+      std::vector< scheduling_time_cluster * > current_receive_clusters;
+      while ( ( receive_list_it != leaf_info_receive_list.rend( ) )
+        && ( _my_rank - receive_list_it->first == offset ) ) {
+        current_receive_clusters.push_back( receive_list_it->second );
+        ++receive_list_it;
+      }
+      receive_leaf_info( current_receive_clusters, offset );
+      // now send
+      std::vector< scheduling_time_cluster * > current_send_clusters;
+      while ( ( send_list_it != leaf_info_send_list.end( ) )
+        && ( send_list_it->first - _my_rank == offset ) ) {
+        current_send_clusters.push_back( send_list_it->second );
+        ++send_list_it;
+      }
+      send_leaf_info( current_send_clusters, offset );
+    }
+  }
+}
+
+void besthea::mesh::distributed_spacetime_cluster_tree::
   expand_tree_structure_recursively( tree_structure * distribution_tree,
     general_spacetime_cluster * spacetime_root,
     scheduling_time_cluster * time_root,
     std::unordered_map< lo, bool > & refine_map ) {
-  // if the current time cluster is a leaf handled by the process
-  // _my_process_id and the current space-time cluster is not a leaf expand
-  // the temporal tree structure
+  // if the current time cluster is a leaf handled by the process _my_process_id
+  // and the current space-time cluster is not a leaf expand the temporal tree
+  // structure
   if ( time_root->get_n_children( ) == 0
     && refine_map[ time_root->get_global_index( ) ]
     && spacetime_root->get_n_children( ) > 0 ) {
@@ -831,6 +911,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
           }
         }
       }
+    } else if ( st_cluster->get_n_elements( ) < _n_min_elems ) {
+      // mark st_cluster as a global leaf in the distributed tree.
+      st_cluster->set_global_leaf_status( true );
     }
   }
   // replace the old vector of cluster pairs by the one which was newly
@@ -904,15 +987,17 @@ void besthea::mesh::distributed_spacetime_cluster_tree::collect_real_leaves(
         // cluster and scheduling time cluster
         collect_real_leaves( *st_child, *t_child, leaves );
       }
-    } else if ( st_root.get_n_elements( ) < _n_min_elems ) {
+    }
+    // else if ( st_root.get_n_elements( ) < _n_min_elems ) {
+    else if ( st_root.is_global_leaf( ) ) {
       leaves.push_back( &st_root );
     }
   }
   // if t_root is a leaf in the global tree structure, the corresponding
-  // space-time cluster are leaves and have to be refined. By construction,
-  // these clusters are either leaf clusters in the nearfield (whose meshes
-  // are available ) or local leaf clusters.
-  else if ( t_root.get_global_leaf_status( ) && t_root.mesh_is_available( ) ) {
+  // space-time clusters are leaves and have to be refined if their meshes are
+  // available. Clusters whose mesh is not available are not added to the vector
+  // leaves.
+  else if ( t_root.is_global_leaf( ) && t_root.mesh_is_available( ) ) {
     leaves.push_back( &st_root );
   }
 }
@@ -1180,12 +1265,12 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
 //}
 
 void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
-  general_spacetime_cluster & root, bool split_space ) {
+  general_spacetime_cluster & root, const bool split_space ) {
   if ( root.get_level( ) + 1 > _max_levels - 1
     || root.get_n_elements( ) < _n_min_elems
     || root.get_n_time_elements( ) == 1 ) {
     root.set_n_children( 0 );
-
+    root.set_global_leaf_status( true );
     if ( root.get_level( ) + 1 > _real_max_levels ) {
       _real_max_levels = root.get_level( ) + 1;
     }
@@ -1624,21 +1709,13 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
 
 void besthea::mesh::distributed_spacetime_cluster_tree::
   associate_scheduling_clusters_and_space_time_clusters( ) {
-  // Traverse the two trees twice to determine all associated clusters, first
-  // the leaves and then the non-leaves. This ensures that first the spacetime
-  // leaves are added to the lists.
+  // Traverse the two trees to determine all associated clusters. It is not
+  // distinguished whether space time clusters are leaves or not.
   if ( _root != nullptr ) {
     scheduling_time_cluster * time_root = get_distribution_tree( )->get_root( );
-    // consider first all spacetime roots and associate scheduling clusters
-    // with the corresponding spacetime leaf clusters
+    // traverse the tree recursively for all spacetime roots
     for ( auto spacetime_root : *_root->get_children( ) ) {
-      associate_scheduling_clusters_and_space_time_leaves(
-        time_root, spacetime_root );
-    }
-    // now, consider all spacetime roots and associate scheduling clusters
-    // with the corresponding spacetime non-leaf clusters
-    for ( auto spacetime_root : *_root->get_children( ) ) {
-      associate_scheduling_clusters_and_space_time_non_leaves(
+      associate_scheduling_clusters_and_space_time_clusters_recursively(
         time_root, spacetime_root );
     }
   } else {
@@ -1648,36 +1725,26 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::
-  associate_scheduling_clusters_and_space_time_leaves(
+  associate_scheduling_clusters_and_space_time_clusters_recursively(
     scheduling_time_cluster * t_root, general_spacetime_cluster * st_root ) {
-  if ( st_root->get_n_children( ) == 0 ) {
-    // check if st_root is a leaf in the global space time cluster tree
-    if ( t_root->get_global_leaf_status( )
-      || st_root->get_n_elements( ) < _n_min_elems ) {
-      // add spacetime leaf to the list of associated clusters.
-      t_root->add_associated_spacetime_cluster( st_root );
-      t_root->increase_n_associated_leaves( );
-    }
-  } else {
+  t_root->add_associated_spacetime_cluster( st_root );
+  if ( st_root->get_n_children( ) > 0 && t_root->get_n_children( ) > 0 ) {
     // if t_root is not a leaf traverse the two trees further to find the
-    // associated spacetime leaf clusters of the descendants.
-    if ( t_root->get_n_children( ) > 0 ) {
-      std::vector< scheduling_time_cluster * > * time_children
-        = t_root->get_children( );
-      std::vector< general_spacetime_cluster * > * spacetime_children
-        = st_root->get_children( );
-      for ( auto time_child : *time_children ) {
-        short time_child_configuration = time_child->get_configuration( );
-        for ( auto spacetime_child : *spacetime_children ) {
-          short spacetime_child_configuration
-            = spacetime_child->get_temporal_configuration( );
-          // check if the temporal component of the spacetime child is the
-          // same as the current temporal child and call routine recursively
-          // if yes
-          if ( time_child_configuration == spacetime_child_configuration ) {
-            associate_scheduling_clusters_and_space_time_leaves(
-              time_child, spacetime_child );
-          }
+    // associated spacetime clusters of the descendants.
+    std::vector< scheduling_time_cluster * > * time_children
+      = t_root->get_children( );
+    std::vector< general_spacetime_cluster * > * spacetime_children
+      = st_root->get_children( );
+    for ( auto time_child : *time_children ) {
+      short time_child_configuration = time_child->get_configuration( );
+      for ( auto spacetime_child : *spacetime_children ) {
+        short spacetime_child_configuration
+          = spacetime_child->get_temporal_configuration( );
+        // check if the temporal component of the spacetime child is the same
+        // as the current temporal child and call routine recursively if yes
+        if ( time_child_configuration == spacetime_child_configuration ) {
+          associate_scheduling_clusters_and_space_time_clusters_recursively(
+            time_child, spacetime_child );
         }
       }
     }
@@ -1685,37 +1752,44 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::
-  associate_scheduling_clusters_and_space_time_non_leaves(
-    scheduling_time_cluster * t_root, general_spacetime_cluster * st_root ) {
-  if ( st_root->get_n_children( ) > 0 ) {
-    // add spacetime non-leaf to the list of associated clusters.
-    t_root->add_associated_spacetime_cluster( st_root );
-    // if root is not a leaf traverse the two trees further to find the
-    // associated spacetime non-leaf clusters of the descendants.
-    if ( t_root->get_n_children( ) > 0 ) {
-      std::vector< scheduling_time_cluster * > * time_children
-        = t_root->get_children( );
-      std::vector< general_spacetime_cluster * > * spacetime_children
-        = st_root->get_children( );
-      for ( auto time_child : *time_children ) {
-        short time_child_configuration = time_child->get_configuration( );
-        for ( auto spacetime_child : *spacetime_children ) {
-          short spacetime_child_configuration
-            = spacetime_child->get_temporal_configuration( );
-          // check if the temporal component of the spacetime child is the
-          // same as the current temporal child and call routine recursively
-          // if yes
-          if ( time_child_configuration == spacetime_child_configuration ) {
-            associate_scheduling_clusters_and_space_time_non_leaves(
-              time_child, spacetime_child );
-          }
-        }
+  sort_associated_space_time_clusters_recursively(
+    scheduling_time_cluster * t_root,
+    std::vector< general_spacetime_cluster * > & leaf_buffer,
+    std::vector< general_spacetime_cluster * > & non_leaf_buffer ) {
+  // execute the routine first for all children
+  if ( t_root->get_n_children( ) > 0 ) {
+    for ( auto t_child : *t_root->get_children( ) ) {
+      sort_associated_space_time_clusters_recursively(
+        t_child, leaf_buffer, non_leaf_buffer );
+    }
+  }
+  std::vector< general_spacetime_cluster * > * associated_st_clusters
+    = t_root->get_associated_spacetime_clusters( );
+  if ( associated_st_clusters != nullptr ) {
+    // construct vectors to temporarily store the leaf and non-leaf clusters.
+    leaf_buffer.resize( 0 );
+    non_leaf_buffer.resize( 0 );
+    leaf_buffer.reserve( associated_st_clusters->size( ) );
+    non_leaf_buffer.reserve( associated_st_clusters->size( ) );
+    // go through the associated spacetime clusters and separate leaf and
+    // non-leaf clusters
+    for ( auto st_cluster : *associated_st_clusters ) {
+      if ( st_cluster->is_global_leaf( ) ) {
+        leaf_buffer.push_back( st_cluster );
+      } else {
+        non_leaf_buffer.push_back( st_cluster );
       }
     }
-  } else if ( ( !t_root->get_global_leaf_status( ) )
-    && ( st_root->get_n_elements( ) >= _n_min_elems ) ) {
-    // spacetime leaf is a non-leaf in the global space-time cluster tree.
-    t_root->add_associated_spacetime_cluster( st_root );
+    // overwrite the associated_st_clusters by adding first the clusters of
+    // leaf_buffer and then those of non_leaf_buffer
+    lou n_leaves = leaf_buffer.size( );
+    t_root->set_n_associated_leaves( n_leaves );
+    for ( lou i = 0; i < n_leaves; ++i ) {
+      ( *associated_st_clusters )[ i ] = leaf_buffer[ i ];
+    }
+    for ( lou i = 0; i < non_leaf_buffer.size( ); ++i ) {
+      ( *associated_st_clusters )[ n_leaves + i ] = non_leaf_buffer[ i ];
+    }
   }
 }
 
@@ -1920,6 +1994,60 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
       lo receive_cluster_vec_size
         = ( 1 << ( global_tree_levels - receive_cluster_level ) ) - 1;
       receive_array_pos += receive_cluster_vec_size;
+    }
+  }
+}
+
+void besthea::mesh::distributed_spacetime_cluster_tree::send_leaf_info(
+  const std::vector< scheduling_time_cluster * > & send_cluster_vector,
+  const lo communication_offset ) const {
+  if ( send_cluster_vector.size( ) > 0 ) {
+    // determine first the size of the array of leaf info which is sent
+    lou array_size = 0;
+    for ( auto send_cluster : send_cluster_vector ) {
+      array_size += send_cluster->get_associated_spacetime_clusters( )->size( );
+    }
+    bool leaf_info_array[ array_size ];
+    // fill the array appropriately
+    lo pos = 0;
+    for ( auto send_cluster : send_cluster_vector ) {
+      for ( auto st_cluster :
+        *send_cluster->get_associated_spacetime_clusters( ) ) {
+        leaf_info_array[ pos ] = st_cluster->is_global_leaf( );
+        pos++;
+      }
+    }
+    // send the whole array at once to the appropriate process
+    MPI_Send( leaf_info_array, array_size, MPI_CXX_BOOL,
+      _my_rank + communication_offset, communication_offset, *_comm );
+  }
+}
+
+void besthea::mesh::distributed_spacetime_cluster_tree::receive_leaf_info(
+  const std::vector< scheduling_time_cluster * > & receive_cluster_vector,
+  const lo communication_offset ) const {
+  if ( receive_cluster_vector.size( ) > 0 ) {
+    // determine first the size of the array of leaf info which is received
+    lou array_size = 0;
+    for ( auto receive_cluster : receive_cluster_vector ) {
+      array_size
+        += receive_cluster->get_associated_spacetime_clusters( )->size( );
+    }
+    bool leaf_info_array[ array_size ];
+
+    // start a blocking receive operation to receive the information
+    MPI_Status status;
+    MPI_Recv( leaf_info_array, array_size, MPI_CXX_BOOL,
+      _my_rank - communication_offset, communication_offset, *_comm, &status );
+    // update the global leaf status of all spacetime clusters associated with
+    // scheduling time clusters in the receive cluster vector
+    lo pos = 0;
+    for ( auto receive_cluster : receive_cluster_vector ) {
+      for ( auto st_cluster :
+        *receive_cluster->get_associated_spacetime_clusters( ) ) {
+        st_cluster->set_global_leaf_status( leaf_info_array[ pos ] );
+        pos++;
+      }
     }
   }
 }

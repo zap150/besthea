@@ -27,6 +27,7 @@
  */
 
 #include "besthea/distributed_spacetime_tensor_mesh.h"
+
 #include "besthea/scheduling_time_cluster.h"
 #include "besthea/tree_structure.h"
 
@@ -53,7 +54,7 @@ besthea::mesh::distributed_spacetime_tensor_mesh::
   lo n_elems_array[ 2 ];
   n_elems_array[ 0 ] = _my_mesh->get_n_elements( );
   n_elems_array[ 1 ] = _my_mesh->get_n_temporal_elements( );
-  MPI_Allreduce( MPI_IN_PLACE , n_elems_array, 2,
+  MPI_Allreduce( MPI_IN_PLACE, n_elems_array, 2,
     get_index_type< lo >::MPI_LO( ), MPI_SUM, *_comm );
   _n_global_elements = n_elems_array[ 0 ];
   _n_global_time_elements = n_elems_array[ 1 ];
@@ -76,19 +77,19 @@ besthea::mesh::distributed_spacetime_tensor_mesh::
 }
 
 besthea::mesh::tree_structure const *
-  besthea::mesh::distributed_spacetime_tensor_mesh::
-  get_distribution_tree( ) const {
+besthea::mesh::distributed_spacetime_tensor_mesh::get_distribution_tree( )
+  const {
   return _dist_tree;
 }
 
-besthea::mesh::tree_structure*
-  besthea::mesh::distributed_spacetime_tensor_mesh::get_distribution_tree( ) {
+besthea::mesh::tree_structure *
+besthea::mesh::distributed_spacetime_tensor_mesh::get_distribution_tree( ) {
   return _dist_tree;
 }
 
 void besthea::mesh::distributed_spacetime_tensor_mesh::find_my_slices(
-  scheduling_time_cluster * root, std::vector< lo > & slice_indices,
-  lo start, lo end ) {
+  scheduling_time_cluster * root, std::vector< lo > & slice_indices, lo start,
+  lo end ) {
   if ( root->get_n_children( ) > 0 ) {
     std::vector< scheduling_time_cluster * > * children = root->get_children( );
     lo split_index = 0;
@@ -130,7 +131,7 @@ void besthea::mesh::distributed_spacetime_tensor_mesh::find_slices_to_load(
 
       // if a cluster in the nearfield is not local, add its slices to the
       // corresponding set
-      std::vector< scheduling_time_cluster* >* nearfield
+      std::vector< scheduling_time_cluster * > * nearfield
         = leaf_cluster->get_nearfield_list( );
       for ( auto nearfield_cluster : *nearfield ) {
         lo nearfield_cluster_owner = nearfield_cluster->get_process_id( );
@@ -208,14 +209,14 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
 
   lo mesh_idx = 0;
   while ( ( mesh_idx < _n_meshes )
-          && ( next_slice_to_load != local_slice_indices.end( ) ) ) {
+    && ( next_slice_to_load != local_slice_indices.end( ) ) ) {
     filestream >> current_idx;
     filestream >> t_file_path;
     filestream >> s_file_path;
 
     if ( mesh_idx == *next_slice_to_load ) {
       // check whether the mesh is a nearfield mesh or a local one
-      if ( !is_local_mesh ) { // nearfield mesh
+      if ( !is_local_mesh ) {  // nearfield mesh
         if ( mesh_idx == nearfield_start_mesh ) {
           _my_nearfield_start_idx = current_idx;
         }
@@ -242,8 +243,7 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
           }
         }
         temp_file.close( );
-      }
-      else { // local mesh
+      } else {  // local mesh
         if ( mesh_idx == local_start_mesh ) {
           _local_start_idx = current_idx;
         }

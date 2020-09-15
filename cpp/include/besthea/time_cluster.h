@@ -63,8 +63,8 @@ class besthea::mesh::time_cluster {
    * @param[in] parent Pointer to the cluster's parent.
    * @param[in] level Level within the cluster tree.
    * @param[in] mesh Reference to the underlying temporal mesh.
-   * @param[in] store_elements Boolean determining whether to allocate array for
-   * indices of cluster's element (necessary only for leaf clusters)
+   * @param[in] allocate_elements Boolean determining whether to allocate array
+   * for indices of cluster's element (necessary only for leaf clusters)
    */
   time_cluster( sc center, sc half_size, lo n_elements, time_cluster * parent,
     lo level, const temporal_mesh & mesh, bool allocate_elements = true )

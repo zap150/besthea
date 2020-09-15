@@ -98,7 +98,8 @@ class besthea::bem::distributed_fast_spacetime_be_space
   typedef basis_type type;
 
   distributed_fast_spacetime_be_space(
-    const distributed_fast_spacetime_be_space & that ) = delete;
+    const distributed_fast_spacetime_be_space & that )
+    = delete;
 
   /**
    * Destructor.

@@ -173,8 +173,8 @@ class besthea::bem::spacetime_heat_hs_kernel_antiderivative
    */
 #pragma omp declare simd uniform( this, nx, ny, t0, t1, tau0, tau1 ) \
   simdlen( DATA_WIDTH )
-  sc do_definite_integral_over_different_intervals( sc xy1, sc xy2, sc xy3, const sc * nx,
-    const sc * ny, sc t0, sc t1, sc tau0, sc tau1 ) const {
+  sc do_definite_integral_over_different_intervals( sc xy1, sc xy2, sc xy3,
+    const sc * nx, const sc * ny, sc t0, sc t1, sc tau0, sc tau1 ) const {
     return _zero;
   }
 
@@ -187,7 +187,8 @@ class besthea::bem::spacetime_heat_hs_kernel_antiderivative
  * @param[in] ny Normal in the `y` variable.
  */
 #pragma omp declare simd uniform( this, nx, ny ) simdlen( DATA_WIDTH )
-  sc do_anti_tau_limit( sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny ) const {
+  sc do_anti_tau_limit(
+    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny ) const {
     sc norm = std::sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
 
     sc value = _one / ( _four * _pi * _alpha * norm );

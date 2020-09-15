@@ -66,9 +66,10 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
   using full_matrix_type
     = besthea::linear_algebra::full_matrix;  //!< shortcut for the full matrix
                                              //!< type
-  using pfmm_matrix_type = besthea::linear_algebra::
-    distributed_pFMM_matrix< kernel_type,
-    test_space_type, trial_space_type >;  //!< shortcut for the pFMM matrix type
+  using pfmm_matrix_type
+    = besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+      test_space_type,
+      trial_space_type >;  //!< shortcut for the pFMM matrix type
   using vector_type = besthea::linear_algebra::vector;  //!< vector type
 
   /**
@@ -151,10 +152,11 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
   distributed_fast_spacetime_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
     MPI_Comm * comm, int order_singular = 4, int order_regular = 4,
-    int temp_order = 5, int spat_order = 5, sc alpha = 1.0);
+    int temp_order = 5, int spat_order = 5, sc alpha = 1.0 );
 
   distributed_fast_spacetime_be_assembler(
-    const distributed_fast_spacetime_be_assembler & that ) = delete;
+    const distributed_fast_spacetime_be_assembler & that )
+    = delete;
 
   /**
    * Destructor.
@@ -403,8 +405,9 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
   static constexpr std::array< int, 4 > n_simplices{ 1, 2, 5,
     6 };  //!< Number of simplices for all configurations (disjoint, shared
           // vertex, shared edge, identical).
-  int _my_rank;           //!< MPI rank of the current process.
-  const MPI_Comm * _comm; //!< MPI communicator associated with the pFMM matrix.
+  int _my_rank;  //!< MPI rank of the current process.
+  const MPI_Comm *
+    _comm;  //!< MPI communicator associated with the pFMM matrix.
 };
 
 #endif /* INCLUDE_BESTHEA_DISTRIBUTED_FAST_SPACETIME_BE_ASSEMBLER_H_ */

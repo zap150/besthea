@@ -403,6 +403,12 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
     centroid[ 2 ] = ( x1[ 2 ] + x2[ 2 ] + x3[ 2 ] ) / 3.0;
   }
 
+  /**
+   * Returns the centroid of a spacetime element in the current mesh.
+   * @param[in] i_elem  Index of the spacetime element.
+   * @param[out] centroid  The centroid (the first tree components are spatial,
+   *                       components, the last is temporal).
+   */
   void get_centroid(
     lo i_elem, linear_algebra::coordinates< 4 > & centroid ) const {
     lo space_elem_idx;
@@ -566,7 +572,8 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
   triangular_surface_mesh *
     _space_mesh;               //!< pointer to a triangular_surface_mesh.h
   temporal_mesh * _time_mesh;  //!< pointer to a temporal_mesh.h
-  const lo _n_nodes_per_element = 6;
+  const lo _n_nodes_per_element = 6;  //!< number of spacetime nodes each
+                                      //!< spacetime element has.
 };
 
 #endif /* INCLUDE_BESTHEA_SPACETIME_TENSOR_MESH_H_ */

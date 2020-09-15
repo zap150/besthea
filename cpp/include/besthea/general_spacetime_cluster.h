@@ -73,8 +73,12 @@ class besthea::mesh::general_spacetime_cluster {
    * @param[in] parent Pointer to the cluster's parent
    * @param[in] level Level within the cluster tree
    * @param[in] octant Index of the spatial octant within the parent cluster
+   * @param[in] coordinate  Coordinates of the box within boxes on given level
    * @param[in] left_right 0 - left temp. child, 1 - right temp. child
-   * @param[in] coordinate Coordinates of the box within boxes on given level
+   * @param[in] global_time_index Global time index of the temporal component
+   *                              of the current general space-time cluster.
+   * @param[in] n_space_div Number of splittings in space dimensions.
+   * @param[in] n_time_div  Number of splittings in temporal dimension.
    * @param[in] mesh Reference to the underlying distributed spacetime tensor
    * mesh.
    * @param[in] process_id Rank of an MPI process owning the cluster.
@@ -98,6 +102,7 @@ class besthea::mesh::general_spacetime_cluster {
       _n_space_nodes( 0 ),
       _parent( parent ),
       _children( nullptr ),
+      _global_leaf_status( false ),
       _mesh( mesh ),
       _elements_are_local( false ),
       _level( level ),
@@ -222,6 +227,21 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
+   * Returns the global leaf status of the current cluster.
+   */
+  bool is_global_leaf( ) {
+    return _global_leaf_status;
+  }
+
+  /**
+   * Sets the global leaf status of the current cluster to a given value
+   * @param[in] status  Value to be set
+   */
+  void set_global_leaf_status( bool status ) {
+    _global_leaf_status = status;
+  }
+
+  /**
    * Returns the parent of the current cluster.
    */
   general_spacetime_cluster * get_parent( ) const {
@@ -295,6 +315,16 @@ class besthea::mesh::general_spacetime_cluster {
     return admissibility;
   }
 
+  /**
+   * Determines if a given source cluster is in the spatial vicinity of the
+   * current cluster. This is determined by considering the regular grid in
+   * space: A cluster is not in the spatial vicinity if it is more than
+   * @p spatial_nearfield_limit steps away from the current cluster along any
+   * of the tree spatial directions.
+   * @param[in] src_cluster Source cluster which is considered.
+   * @param[in] spatial_nearfield_limit Parameter used to define the spatial
+   *                                    vicinity.
+   */
   bool is_in_spatial_vicinity( general_spacetime_cluster * src_cluster,
     slou spatial_nearfield_limit ) const {
     std::vector< slou > src_box_coordinate = src_cluster->get_box_coordinate( );
@@ -488,6 +518,16 @@ class besthea::mesh::general_spacetime_cluster {
     }
   }
 
+  /**
+   * Computes the padding of a cluster which is necessary to ensure that all
+   * elements are included in it. Clusters are padded uniformly in space (the
+   * lower and upper bound is modified by the same amount along all dimensions)
+   * and uniformly in time.
+   * @param[out] space_padding  Padding in space.
+   * @param[out] time_padding   Padding in time.
+   * @note  Padding in time is not planned to be used and could probably be
+   *        removed.
+   */
   void compute_padding( sc & space_padding, sc & time_padding ) const {
     std::vector< linear_algebra::coordinates< 4 > > node_vector;
     node_vector.resize( 6 );
@@ -591,8 +631,8 @@ class besthea::mesh::general_spacetime_cluster {
 
   /**
    * Return numbers of spatial and temporal subdivisioning of the bounding box.
-   * @param[in] n_space_div Number of spatial subdivisioning.
-   * @param[in]
+   * @param[out] n_space_div Number of spatial subdivisioning.
+   * @param[out] n_time_div  Number of temporal subdivisioning.
    */
   void get_n_divs( lo & n_space_div, lo & n_time_div ) {
     n_space_div = _n_space_div;
@@ -643,7 +683,6 @@ class besthea::mesh::general_spacetime_cluster {
         _local_2_global_nodes.push_back( element[ 3 ] );
         _local_2_global_nodes.push_back( element[ 4 ] );
         _local_2_global_nodes.push_back( element[ 5 ] );
-
         _elems_2_local_nodes[ 6 * i ] = 6 * i;
         _elems_2_local_nodes[ 6 * i + 1 ] = 6 * i + 1;
         _elems_2_local_nodes[ 6 * i + 2 ] = 6 * i + 2;
@@ -694,6 +733,13 @@ class besthea::mesh::general_spacetime_cluster {
     }
   }
 
+  /**
+   * Returns the local space node index corresponding to a given local spacetime
+   * node index.
+   * @param[in] local_spacetime_node_idx  Local spacetime node index whose
+   *                                      corresponding local space node index
+   *                                      is computed.
+   */
   lo local_spacetime_node_idx_2_local_space_node_idx(
     lo local_spacetime_node_idx ) const {
     return local_spacetime_node_idx % _n_space_nodes;
@@ -801,7 +847,6 @@ class besthea::mesh::general_spacetime_cluster {
    * @param[in] rotation  Virtual element rotation (regularized quadrature).
    * @param[in] swap  Virtual element inversion (regularized quadrature).
    * @param[out] indices  Local indices for the current (transformed) element.
-   * @todo Is this suitable for p1 basis functions?!
    */
   template< class space_type >
   void local_elem_to_local_space_dofs( lo i_loc_elem, int n_shared_vertices,
@@ -820,6 +865,14 @@ class besthea::mesh::general_spacetime_cluster {
     std::cout << ", box coordinates: (" << _box_coordinate[ 0 ] << ", "
               << _box_coordinate[ 1 ] << ", " << _box_coordinate[ 2 ] << ", "
               << _box_coordinate[ 3 ] << ", " << _box_coordinate[ 4 ] << ")";
+    std::cout << ", space_center: (" << _space_center[ 0 ] << ", "
+              << _space_center[ 1 ] << ", " << _space_center[ 2 ] << ")";
+    std::cout << ", octant " << _octant;
+    std::cout << ", global_leaf_status: " << _global_leaf_status;
+    // std::cout << ", elements: ";
+    // for ( lou i = 0; i < _elements.size( ); ++i ) {
+    //   std::cout << _elements[ i ] << " ";
+    // }
     // std::cout << ", nearfield: ";
     // for ( auto nf_cluster : *_nearfield_list ) {
     //   std::vector< slou > nf_box_coordinate = nf_cluster->get_box_coordinate(
@@ -863,7 +916,8 @@ class besthea::mesh::general_spacetime_cluster {
   vector_type _space_half_size;  //!< half sizes of the cluster's faces (in [x,
                                  //!< y, z] directions)
   std::vector< lo > _elements;   //!< indices of the cluster's elements within
-                                 //!< global spacetime tensor mesh
+
+                                //!< global spacetime tensor mesh
 
   std::vector< lo > _elems_2_local_nodes;   //!< mapping from element nodes
                                             //!< vertices to local node list
@@ -872,7 +926,9 @@ class besthea::mesh::general_spacetime_cluster {
   lo _n_space_nodes;  //!< number of spatial nodes in the cluster.
   general_spacetime_cluster * _parent;  //!< parent of the cluster
   std::vector< general_spacetime_cluster * > *
-    _children;  //!< children of the current cluster
+    _children;               //!< children of the current cluster
+  bool _global_leaf_status;  //!< indicates whether the cluster is a leaf in the
+                             //!< global tree (true) or not (false).
   const distributed_spacetime_tensor_mesh &
     _mesh;  //!< distributed spacetime mesh associated with the cluster
   bool _elements_are_local;  //!< Indicates if the elements contained in the
@@ -950,6 +1006,7 @@ besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs<
   indices[ 0 ] = i_loc_elem;
 }
 
+/** specialization for p1 basis functions */
 template<>
 inline void
 besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs<

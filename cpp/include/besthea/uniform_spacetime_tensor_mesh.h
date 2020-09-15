@@ -155,7 +155,6 @@ class besthea::mesh::uniform_spacetime_tensor_mesh
     return true;
   }
 
-
  protected:
   /**
    * Refines the spatial mesh by quadrisection.

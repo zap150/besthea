@@ -108,14 +108,14 @@ class besthea::linear_algebra::pFMM_matrix
    * Destructor
    */
   virtual ~pFMM_matrix( ) {
-    #ifdef NEARFIELD_CLUSTERWISE
+#ifdef NEARFIELD_CLUSTERWISE
     for ( auto it = _clusterwise_nearfield_matrices.begin( );
           it != _clusterwise_nearfield_matrices.end( ); ++it ) {
       for ( auto it_in = ( *it ).begin( ); it_in != ( *it ).end( ); ++it_in ) {
         delete *it_in;
       }
     }
-    #else
+#else
     lo matrix_idx = 0;
     for ( auto it = _nearfield_matrices.begin( );
           it != _nearfield_matrices.end( ); ++it ) {
@@ -133,7 +133,7 @@ class besthea::linear_algebra::pFMM_matrix
       }
       matrix_idx++;
     }
-    #endif
+#endif
 
     for ( auto it = _farfield_matrices.begin( );
           it != _farfield_matrices.end( ); ++it ) {
@@ -340,7 +340,7 @@ class besthea::linear_algebra::pFMM_matrix
    */
   void apply_s2m_operations_p1( block_vector_type const & x ) const;
 
-    /*!
+  /*!
    * @brief Executes s2m operations for all leaves of the spacetime cluster
    * and a given vector x for spatial basis functions in p1.
    * The integrals in space used for the s2m operations include the normal
@@ -476,7 +476,7 @@ class besthea::linear_algebra::pFMM_matrix
    */
   void apply_l2t_operations_p0( block_vector_type & y ) const;
 
-   /*!
+  /*!
    * @brief Executes l2t operations for all leaves of the spacetime cluster
    * and adds the results to a vector y for spatial basis functions in p1.
    * @param[in,out] y Vector to which the results are added.

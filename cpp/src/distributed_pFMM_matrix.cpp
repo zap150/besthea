@@ -36,6 +36,7 @@ using besthea::mesh::distributed_spacetime_cluster_tree;
 using besthea::mesh::general_spacetime_cluster;
 using besthea::mesh::scheduling_time_cluster;
 
+#include <filesystem>
 #include <set>
 #include <sstream>
 
@@ -143,6 +144,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   // @todo: add appropriate verbose mode if desired
   bool verbose = true;
+  std::filesystem::create_directory( "./verbose/" );
   // std::string verbose_file = verbose_dir + "/process_";
   std::string verbose_file = "verbose/process_";
   verbose_file += std::to_string( _my_rank );
@@ -296,9 +298,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   }
   // Scale the global update y_pFMM by alpha and add it to the global vector y.
   y.add( y_pFMM, alpha );
-  if ( _my_rank == 0 ) {
-    std::cout << "application executed" << std::endl;
-  }
+  // if ( _my_rank == 0 ) {
+  //   std::cout << "application executed" << std::endl;
+  // }
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -1114,7 +1116,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       outfile.close( );
     }
   }
-  // execute an m2l operatoin for each spacetime cluster associated with
+
+  // execute an m2l operation for each spacetime cluster associated with
   // tar_cluster and each source in its interaction list, whose temporal
   // component is src_cluster (global_time_index coincides with global index
   // of src_cluster)

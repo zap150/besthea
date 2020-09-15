@@ -56,8 +56,8 @@ namespace besthea {
  * Class serving as a container holding spacetime tensor product meshes
  * distributed among MPI processes.
  */
-class besthea::mesh::distributed_spacetime_tensor_mesh :
-      public besthea::mesh::mesh{
+class besthea::mesh::distributed_spacetime_tensor_mesh
+  : public besthea::mesh::mesh {
  public:
   /**
    * Constructor taking decomposition file and MPI communicator. Based on the
@@ -68,6 +68,8 @@ class besthea::mesh::distributed_spacetime_tensor_mesh :
    * cluster tree.
    * @param[in] cluster_bounds_file Path to the file containing the cluster
    * bounds of the clusters in the initial temporal cluster tree.
+   * @param[in] distribution_file Path to the file containing the process
+   * assignments for the clusters in the initial temporal cluster tree.
    * @param[in] comm Pointer to the MPI communicator associated with
    * decomposition.
    */
@@ -192,7 +194,7 @@ class besthea::mesh::distributed_spacetime_tensor_mesh :
   /**
    * Returns the tree composed of scheduling_time_clusters (modifiable).
    */
-  tree_structure* get_distribution_tree( );
+  tree_structure * get_distribution_tree( );
 
   /**
    * Returns start of the global time interval
@@ -262,8 +264,7 @@ class besthea::mesh::distributed_spacetime_tensor_mesh :
    * distribution among MPI processes.
    */
   bool load( const std::string & decomposition_file,
-    const std::string & tree_file,
-    const std::string & cluster_bounds_file,
+    const std::string & tree_file, const std::string & cluster_bounds_file,
     const std::string & distribution_file );
 
   /**
@@ -293,11 +294,11 @@ class besthea::mesh::distributed_spacetime_tensor_mesh :
    * admissibility criteria).
    */
   void find_slices_to_load( std::set< lo > & nearfield_slice_indices,
-    std::set< lo > & local_slice_indices ) const ;
+    std::set< lo > & local_slice_indices ) const;
 
-  int _n_processes;  //!< total number of MPI processes in the communicator
-  lo _n_meshes;      //!< total number of input meshes
-  lo _n_meshes_per_rank;             //!< number of meshes owned by this process
+  int _n_processes;       //!< total number of MPI processes in the communicator
+  lo _n_meshes;           //!< total number of input meshes
+  lo _n_meshes_per_rank;  //!< number of meshes owned by this process
   std::vector< sc > _slices;         //!< vector defining the global mesh slices
   spacetime_tensor_mesh * _my_mesh;  //!< part of the global mesh owned by the
                                      //!< rank (including the nearfield)
@@ -309,20 +310,21 @@ class besthea::mesh::distributed_spacetime_tensor_mesh :
   temporal_mesh *
     _nearfield_time_mesh;  //!< nearfield temporal mesh the nearfield spacetime
                            //!< mesh is composed of
-  lo _local_start_idx;  //!< initial timestep on this MPI rank (used for loc/glob
-                     //!< mapping)
-  lo _my_nearfield_start_idx; //!< initial timestep of the nearfield meshes on
-                              //!< this MPI rank (used for nearfield/glob
-                              //!< mapping)
+  lo _local_start_idx;     //!< initial timestep on this MPI rank (used for
+                           //!< loc/glob mapping)
+  lo _my_nearfield_start_idx;   //!< initial timestep of the nearfield meshes on
+                                //!< this MPI rank (used for nearfield/glob
+                                //!< mapping)
   tree_structure * _dist_tree;  //!< temporal tree with distribution of clusters
                                 //!< among MPI processes (reduced to essential)
   sc _t_start;                  //!< start of the global time interval
   sc _t_end;                    //!< end of the global time interval
   lo _n_global_elements;  //!< total number of elements in the distributed mesh
-  lo _n_global_time_elements;
-  const MPI_Comm * _comm; //!< MPI communicator associated with the distributed
-                          //!< mesh
-  int _my_rank;           //!< MPI rank of the current process
+  lo _n_global_time_elements;  //!< total number of time elements in the
+                               //!< distributed mesh
+  const MPI_Comm * _comm;  //!< MPI communicator associated with the distributed
+                           //!< mesh
+  int _my_rank;            //!< MPI rank of the current process
 };
 
 #endif /* INCLUDE_BESTHEA_DISTRIBUTED_SPACETIME_TENSOR_MESH_H_ */

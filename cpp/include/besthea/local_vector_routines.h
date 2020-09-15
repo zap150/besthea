@@ -51,41 +51,38 @@ namespace besthea {
 }
 
 /*!
-  * Gets local part of a block vector corresponding to dofs in a spacetime
-  * cluster.
-  * @param[in] cluster  Cluster determining the local dofs.
-  * @param[in] block_vector Input vector in block format.
-  * @param[in,out] local_vector Local part of block vector.
-  * @tparam space_type  fast_spacetime_be_space representing either p0 or p1
-  *                     basis functions. It determines the dofs.
-  * @warning The local vector must have the correct size.
-  * @note The local vector is not a block vector anymore, but a contiguous
-  *       vector.
-  */
+ * Gets local part of a block vector corresponding to dofs in a spacetime
+ * cluster.
+ * @param[in] cluster  Cluster determining the local dofs.
+ * @param[in] block_vector Input vector in block format.
+ * @param[in,out] local_vector Local part of block vector.
+ * @tparam space_type  fast_spacetime_be_space representing either p0 or p1
+ *                     basis functions. It determines the dofs.
+ * @warning The local vector must have the correct size.
+ * @note The local vector is not a block vector anymore, but a contiguous
+ *       vector.
+ */
 template< class space_type >
-void get_local_part_of_block_vector(
-  besthea::mesh::spacetime_cluster* cluster,
+void get_local_part_of_block_vector( besthea::mesh::spacetime_cluster * cluster,
   const besthea::linear_algebra::block_vector & block_vector,
   besthea::linear_algebra::vector & local_vector );
 
 /*!
-  * Adds local vector to appropriate positions of a block vector. The positions
-  * are determined by the dofs in a spacetime cluster.
-  * @param[in] cluster  Cluster determining the positions in the block_vector to
-  *                     which the local vector is added.
-  * @param[in] local_vector Local part of block vector to be added.
-  * @param[in,out] block_vector Block vector to which the local vector is added.
-  * @tparam space_type  fast_spacetime_be_space representing either p0 or p1
-  *                     basis functions. It determines the dofs.
-  * @note The entries in the local vector are ordered according to the ordering
-  *       of the time elements and spatial dofs in the spacetime cluster (time
-  *       step after time step).
-  */
+ * Adds local vector to appropriate positions of a block vector. The positions
+ * are determined by the dofs in a spacetime cluster.
+ * @param[in] cluster  Cluster determining the positions in the block_vector to
+ *                     which the local vector is added.
+ * @param[in] local_vector Local part of block vector to be added.
+ * @param[in,out] block_vector Block vector to which the local vector is added.
+ * @tparam space_type  fast_spacetime_be_space representing either p0 or p1
+ *                     basis functions. It determines the dofs.
+ * @note The entries in the local vector are ordered according to the ordering
+ *       of the time elements and spatial dofs in the spacetime cluster (time
+ *       step after time step).
+ */
 template< class space_type >
-void add_local_part_to_block_vector(
-  besthea::mesh::spacetime_cluster* cluster,
+void add_local_part_to_block_vector( besthea::mesh::spacetime_cluster * cluster,
   const besthea::linear_algebra::vector & local_vector,
-  besthea::linear_algebra::block_vector & block_vector);
+  besthea::linear_algebra::block_vector & block_vector );
 
 #endif /* INCLUDE_BESTHEA_LOCAL_VECTOR_ROUTINES_H_ */
-

@@ -30,7 +30,6 @@
 #include "besthea/settings.h"
 #include "besthea/vector.h"
 
-
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -49,24 +48,24 @@ int main( int argc, char * argv[] ) {
   vector_type eval_points( n_eval_points ), lagrange_values( n_eval_points );
   // initialize evaluation points uniformly in [-1, 1]
   for ( lo i = 0; i < n_eval_points; ++i ) {
-    eval_points[ i ] = -1.0 + 2.0 * i / (n_eval_points - 1.0);
+    eval_points[ i ] = -1.0 + 2.0 * i / ( n_eval_points - 1.0 );
   }
   // evaluate lagrange polynomial
-  lagrange_interpolant lagrange(order);
+  lagrange_interpolant lagrange( order );
   lagrange.evaluate( poly_index, eval_points, lagrange_values );
   std::cout << "values of lagrange polynomial are: " << std::endl;
   for ( lo i = 0; i < n_eval_points; ++i )
     std::cout << lagrange_values[ i ] << " ";
   std::cout << std::endl;
   // evaluate chebyshev polynomial
-  vector_type all_cheb_values( n_eval_points * (order + 1));
-  chebyshev_evaluator chebyshev(order);
+  vector_type all_cheb_values( n_eval_points * ( order + 1 ) );
+  chebyshev_evaluator chebyshev( order );
   chebyshev.evaluate( eval_points, all_cheb_values );
   std::cout << "values of chebyshev polynomials (order <= " << order;
   std::cout << " are: " << std::endl;
   for ( lo i = 0; i <= order; ++i ) {
     for ( lo j = 0; j < n_eval_points; ++j )
-      printf("%.4f ", all_cheb_values[ n_eval_points * i + j ]);
+      printf( "%.4f ", all_cheb_values[ n_eval_points * i + j ] );
     std::cout << std::endl;
   }
   chebyshev.evaluate_derivative( eval_points, all_cheb_values );
@@ -74,7 +73,7 @@ int main( int argc, char * argv[] ) {
   std::cout << " are: " << std::endl;
   for ( lo i = 0; i <= order; ++i ) {
     for ( lo j = 0; j < n_eval_points; ++j )
-      printf("%.4f ", all_cheb_values[ n_eval_points * i + j ]);
+      printf( "%.4f ", all_cheb_values[ n_eval_points * i + j ] );
     std::cout << std::endl;
   }
 }

@@ -82,7 +82,7 @@ class besthea::linear_algebra::vector {
    */
   void print( std::ostream & stream = std::cout ) const;
 
-    /**
+  /**
    * Prints the vector horizontally.
    * @param[in] stream
    */

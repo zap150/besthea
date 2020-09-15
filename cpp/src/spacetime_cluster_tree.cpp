@@ -187,7 +187,6 @@ void besthea::mesh::spacetime_cluster_tree::build_tree(
   // if ( ( split_space_descendant ) || ( level < _start_temporal_level ) ) {
   //   delete space_children;
   // }
-
 }
 
 void besthea::mesh::spacetime_cluster_tree::get_space_clusters_on_level(

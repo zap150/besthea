@@ -65,29 +65,55 @@ int main( int argc, char * argv[] ) {
   // declaration of required parameters.
   lo order_sing, order_reg, temp_order, spat_order;
   sc st_coeff;
+  lo max_n_levels;
   lo n_blocks, size_of_block;
 
   st_coeff = 4.0;
+  max_n_levels = 20;
   temp_order = 6;
   spat_order = 6;
   order_sing = 4;
   order_reg = 4;
 
   lo test_case = 1;
+  lo geometry_case = 3;
+  if ( argc == 3 ) {
+    geometry_case = strtol( argv[ 1 ], NULL, 10 );
+    test_case = strtol( argv[ 2 ], NULL, 10 );
+  }
 
   // mesh data to construct equivalent standard spacetime mesh and distributed
   // spacetime mesh for the test.
-  std::string spatial_mesh_file = "./mesh_files/cube_12.txt";
+  std::string spatial_mesh_file;
+  std::string time_file;
+  // WARNING: only uniform timesteps are allowed for the non-approximated single
+  // layer operator. choose a time file and set the parameters for the standard
+  // spacetime mesh accordingly
   // parameters for standard spacetime mesh
-  int refine = 7;
+  int refine = 2;
   int temp_refine_factor = 1;
   lo n_timesteps = 10;
-  sc end_time = 1.0;
+ sc end_time = 1.0;
+
+  std::string geometry_dir = "./parallel_dirichlet_indirect/geometry_case_"
+    + std::to_string( geometry_case ) + "/";
+  std::filesystem::create_directory( geometry_dir );
+  if ( geometry_case == 1 ) {
+    spatial_mesh_file = "./mesh_files/cube_12.txt";
+    time_file = "./mesh_files/time_1_8_uniform.txt";
+  } else if ( geometry_case == 2 ) {
+    spatial_mesh_file = "./mesh_files/icosahedron.txt";
+    time_file = "./mesh_files/time_1_8_uniform.txt";
+  } else if ( geometry_case == 3 ) {
+    spatial_mesh_file = "./mesh_files/icosahedron.txt";
+    time_file = "./mesh_files/time_1_10.txt";
+    n_timesteps = 10;
+  }
+
   // parameters for distributed spacetime mesh
-  std::string time_file = "./testfile.txt";  // file defining temporal slices
-  lo time_refinement = 7;                    // defining mesh within slices
-  lo space_refinement = 7;
-  //
+  // refinement of mesh within slices
+  lo time_refinement = temp_refine_factor * refine;
+  lo space_refinement = refine;
   lo process_assignment_strategy = 1;
 
   // kernel for the single layer operator
@@ -108,16 +134,18 @@ int main( int argc, char * argv[] ) {
   // V approximated by distributed pFMM
 
   MPI_Barrier( comm );
+  timer t;
 
   // generation of distributed mesh
-  std::string tree_vector_file
-    = "./parallel_dirichlet_indirect/test_case_1/tree_structure.bin";
-  std::string cluster_bounds_file
-    = "./parallel_dirichlet_indirect/test_case_1/cluster_bounds.bin";
-  std::string process_assignment_file
-    = "./parallel_dirichlet_indirect/test_case_1/process_assignment.bin";
+  std::string tree_vector_file = geometry_dir + "tree_structure.bin";
+  std::string cluster_bounds_file = geometry_dir + "cluster_bounds.bin";
+  std::string process_assignment_file = geometry_dir + "process_assignment.bin";
   if ( myRank == 0 ) {
-    std::cout << "### start mesh generation ###" << std::endl;
+    std::cout << "### geometry case: " << geometry_case << std::endl;
+    std::cout << "### test case: " << test_case << std::endl;
+    std::cout << "n_processes: " << n_processes
+              << ", strategy: " << process_assignment_strategy << std::endl;
+    t.reset( "mesh generation" );
 
     // load time mesh defining slices and create temporal tree
     temporal_mesh time_mesh( time_file );
@@ -142,20 +170,18 @@ int main( int argc, char * argv[] ) {
     spacetime_mesh_generator generator(
       spatial_mesh_file, time_file, time_refinement, space_refinement );
 
-    generator.generate(
-      "./parallel_dirichlet_indirect/test_case_1/", "test_mesh", "txt" );
-    std::cout << "### end mesh generation ###" << std::endl;
+    generator.generate( geometry_dir, "test_mesh", "txt" );
+    t.measure( );
   }
   MPI_Barrier( comm );
 
   if ( myRank == 0 ) {
-    std::cout << "assembling distributed pFMM matrix" << std::endl;
+    t.reset( "assembly of distributed mesh and tree " );
   }
 
   distributed_spacetime_tensor_mesh distributed_mesh(
-    "./parallel_dirichlet_indirect/test_case_1/test_mesh_d.txt",
-    tree_vector_file, cluster_bounds_file, process_assignment_file, &comm );
-  std::cout << " ELEMENTS " << distributed_mesh.get_n_elements( ) << std::endl;
+    geometry_dir + "test_mesh_d.txt", tree_vector_file, cluster_bounds_file,
+    process_assignment_file, &comm );
 
   // number of blocks in a blockvector corresponds to global number of timesteps
   n_blocks = distributed_mesh.get_n_temporal_elements( );
@@ -163,12 +189,17 @@ int main( int argc, char * argv[] ) {
   size_of_block = distributed_mesh.get_n_elements( ) / n_blocks;
 
   distributed_spacetime_cluster_tree distributed_st_tree(
-    distributed_mesh, 6, 40, st_coeff, 3, &comm );
+    distributed_mesh, max_n_levels, 40, st_coeff, 3, &comm );
   MPI_Barrier( comm );
+
   if ( myRank == 0 ) {
-    distributed_st_tree.print( );
-    std::cout << std::endl << std::endl << std::endl;
+    t.measure( );
+    // distributed_st_tree.print( );
     // distributed_st_tree.get_distribution_tree( )->print( );
+    std::cout << "number of elements: " << distributed_mesh.get_n_elements( )
+              << ", number of timesteps: "
+              << distributed_mesh.get_n_temporal_elements( ) << std::endl;
+    t.reset( "assembly of distributed pFMM matrix V" );
   }
 
   distributed_fast_spacetime_be_space< basis_tri_p0 > distributed_space_p0(
@@ -184,22 +215,24 @@ int main( int argc, char * argv[] ) {
 
   MPI_Barrier( comm );
   if ( myRank == 0 ) {
-    std::cout << "finished assembling distributed pFMM matrix" << std::endl;
+    t.measure( );
   }
 
   if ( myRank == 0 ) {
+    std::cout << "################" << std::endl;
+    std::cout << "distribution tree for process 0" << std::endl;
     distributed_mesh.get_distribution_tree( )->print_tree_human_readable(
       2, true );
+    std::cout << "################" << std::endl;
   }
   MPI_Barrier( comm );
   if ( myRank == 1 ) {
+    std::cout << "################" << std::endl;
+    std::cout << "distribution tree for process 1" << std::endl;
     distributed_mesh.get_distribution_tree( )->print_tree_human_readable(
       2, true );
-  }
-  MPI_Barrier( comm );
-  if ( myRank == 2 ) {
-    distributed_mesh.get_distribution_tree( )->print_tree_human_readable(
-      2, true );
+    std::cout << "################" << std::endl;
+    // distributed_mesh.get_distribution_tree( )->print( );
   }
 
   if ( test_case == 1 ) {
@@ -207,15 +240,15 @@ int main( int argc, char * argv[] ) {
     //##########################################################################
     // lo block_id = n_blocks - 1 - 2;
     lo block_id = 0;
-    lo block_evaluation_id = 16;
+    lo block_evaluation_id = 8;
     lo toeplitz_id = block_evaluation_id - block_id;
     //   lo block_evaluation_id = n_blocks - 1;
 
     // let process 0 compute the result for a subblock with the directly
     // generated matrix V
     vector x_loc_0( size_of_block );
-    // x_loc_0( 9 ) = 1.0;
-    x_loc_0.fill( 1.0 );
+    x_loc_0( 10 ) = 1.0;
+    // x_loc_0.fill( 1.0 );
     vector y_loc( size_of_block );
 
     block_vector full_block_vector( n_blocks, size_of_block, true );
@@ -223,6 +256,9 @@ int main( int argc, char * argv[] ) {
     block_vector applied_pFMM( n_blocks, size_of_block, true );
 
     if ( myRank == 0 ) {
+      std::cout << "block_id = " << block_id << ", block_evaluation_id "
+                << block_evaluation_id << std::endl;
+      t.reset( "assembly and application of toeplitz matrix V (from scratch)" );
       // construct matrix V directly
       triangular_surface_mesh space_mesh( spatial_mesh_file );
       uniform_spacetime_tensor_mesh spacetime_mesh(
@@ -245,18 +281,15 @@ int main( int argc, char * argv[] ) {
       //   space_p0_pFMM, order_sing, order_reg, temp_order, spat_order,
       //   cauchy_data::_alpha, 1.5, false );
       // fast_assembler_v.assemble( *V_pFMM );
-
-      std::cout << "applying V" << std::endl;
-      std::cout << "block_id = " << block_id << ", block_evaluation_id "
-                << block_evaluation_id << std::endl;
       full_matrix & V_block_loc = V->get_block( toeplitz_id );
       V_block_loc.apply( x_loc_0, y_loc );
+      t.measure( );
       // V_pFMM->apply( full_block_vector, applied_pFMM );
       delete V;
     }
     // compute the corresponding result with the distributed matrix V_dist_pFMM
     if ( myRank == 0 ) {
-      std::cout << "applying distributed pFMM matrix" << std::endl;
+      t.reset( "applying distributed pFMM matrix V" );
     }
 
     MPI_Barrier( comm );
@@ -267,6 +300,7 @@ int main( int argc, char * argv[] ) {
     // ############################################################
     // ### print the results
     if ( myRank == 0 ) {
+      t.measure( );
       std::cout << "resulting subblock distributed pFMM multiplication"
                 << std::endl;
       std::cout << "block id " << block_id << std::endl;
@@ -309,6 +343,7 @@ int main( int argc, char * argv[] ) {
     // let process 0 compute the result with the directly generated matrix V
     block_vector applied_std( n_blocks, size_of_block, true );
     if ( myRank == 0 ) {
+      t.reset( "assembly and application of toeplitz matrix V (from scratch)" );
       // construct matrix V directly
       triangular_surface_mesh space_mesh( spatial_mesh_file );
       uniform_spacetime_tensor_mesh spacetime_mesh(
@@ -323,17 +358,16 @@ int main( int argc, char * argv[] ) {
         kernel_v, space_p0, space_p0, order_sing, order_reg );
       assembler_v.assemble( *V );
 
-      std::cout << "applying V" << std::endl;
-
       block_vector temp_vec( n_blocks, size_of_block, true );
       V->apply( rand_vec, applied_std );
+      t.measure( );
       // V->apply( rand_vec, applied_std );
       delete V;
     }
 
     // compute the result with the distributed matrix V_dist_pFMM
     if ( myRank == 0 ) {
-      std::cout << "applying V_dist_pFMM" << std::endl;
+      t.reset( "applying V_dist_pFMM" );
     }
     MPI_Barrier( comm );
     block_vector temp_vec( n_blocks, size_of_block, true );
@@ -341,6 +375,7 @@ int main( int argc, char * argv[] ) {
     V_dist_pFMM->apply( rand_vec, applied_dist_pFMM );
 
     if ( myRank == 0 ) {
+      t.measure( );
       std::cout << "error timewise distributed pFMM" << std::endl;
       block_vector applied_diff( applied_dist_pFMM );
       for ( lo i = 0; i < n_blocks; ++i ) {
@@ -362,6 +397,7 @@ int main( int argc, char * argv[] ) {
     block_vector direct_density( n_blocks, size_of_block );
     // let process 0 compute the result with the directly generated matrix V
     if ( myRank == 0 ) {
+      t.reset( "assembly of toeplitz matrix V (includes tree construction)" );
       // construct matrix V directly
       triangular_surface_mesh space_mesh( spatial_mesh_file );
       uniform_spacetime_tensor_mesh spacetime_mesh(
@@ -376,7 +412,7 @@ int main( int argc, char * argv[] ) {
         kernel_v, space_p0, space_p0, order_sing, order_reg );
       assembler_v.assemble( *V );
 
-      std::cout << "applying V" << std::endl;
+      t.measure( );
 
       block_vector dir_proj;
       space_p0.L2_projection( cauchy_data::dirichlet, dir_proj );
@@ -384,8 +420,10 @@ int main( int argc, char * argv[] ) {
       M.assemble( );
       M.apply( dir_proj, M_dir_proj );
 
+      t.reset( "solving with toeplitz matrix V" );
       V->mkl_fgmres_solve(
         M_dir_proj, direct_density, gmres_prec, gmres_iter, gmres_iter );
+      t.measure( );
       std::cout << "iterations standard: " << gmres_iter << std::endl;
       delete V;
     }
@@ -399,9 +437,13 @@ int main( int argc, char * argv[] ) {
     gmres_prec = 1e-8;
     gmres_iter = 500;
     block_vector density_pFMM( n_blocks, size_of_block, true );
+    if ( myRank == 0 ) {
+      t.reset( "solving with distributed pFMM matrix" );
+    }
     V_dist_pFMM->mkl_fgmres_solve(
       M_dir_proj, density_pFMM, gmres_prec, gmres_iter, gmres_iter );
     if ( myRank == 0 ) {
+      t.measure( );
       std::cout << "iterations pFMM: " << gmres_iter << std::endl;
 
       std::cout << "error of densities timewise" << std::endl;
