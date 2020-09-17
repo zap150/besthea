@@ -268,10 +268,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
   //  t.measure( );
   //  std::cout << "Done" << std::endl;
 
-  besthea::tools::timer t;
-
-  std::cout << "Number of leaves: " << leaves.size( ) << std::endl;
-
   for ( auto it : leaves ) {
     // @todo Discuss: Inefficient way of filling in the elements? For each
     // leaf cluster the whole mesh is traversed once. If the depth of the tree
@@ -280,7 +276,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
 
     build_subtree( *it, split_space_levelwise[ it->get_level( ) ] );
   }
-  t.measure( );
 
   if ( _real_max_levels < get_distribution_tree( )->get_levels( ) ) {
     std::cout << "Warning: Depth of local spacetime tree is less than depth of"

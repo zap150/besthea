@@ -31,6 +31,7 @@
 
 #define USE_P0_BASIS
 
+#include <cmath>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
@@ -74,13 +75,40 @@ int main( int argc, char * argv[] ) {
   order_reg = 4;
 
   std::string spatial_mesh_file = "./mesh_files/cube_12.txt";
-  int refine = 1;
+  int refine = 2;
   int temp_refine_factor = 2;
   lo n_time_slices = 256;
   sc end_time = 1.0;
   lo spacetime_levels = 8;
-  // parameters for distributed spacetime mesh
-  // std::string time_file = "./testfile.txt";  // file defining temporal slices
+  lo time_levels = 9;
+  lo n_min_time_elems = 2;
+  lo n_min_st_elems = 50;
+
+  if ( argc > 1 ) {
+    spatial_mesh_file.assign( argv[ 1 ] );
+  }
+  if ( argc > 2 ) {
+    n_time_slices = std::atoi( argv[ 2 ] );
+  }
+  if ( argc > 3 ) {
+    refine = std::atoi( argv[ 3 ] );
+  }
+  if ( argc > 4 ) {
+    temp_refine_factor = std::atoi( argv[ 4 ] );
+  }
+  if ( argc > 5 ) {
+    time_levels = std::atoi( argv[ 5 ] );
+  }
+  if ( argc > 6 ) {
+    spacetime_levels = std::atoi( argv[ 6 ] );
+  }
+  if ( argc > 7 ) {
+    n_min_st_elems = std::atoi( argv[ 7 ] );
+  }
+  if ( argc > 8 ) {
+    n_min_time_elems = std::atoi( argv[ 8 ] );
+  }
+
   lo time_refinement = temp_refine_factor * refine;
   lo space_refinement = refine;
 
@@ -106,8 +134,6 @@ int main( int argc, char * argv[] ) {
     // load time mesh defining slices and create temporal tree
     // temporal_mesh time_mesh( time_file );
     temporal_mesh time_mesh( 0.0, 1.0, n_time_slices );
-    lo time_levels = 8;
-    lo n_min_time_elems = 2;
     time_cluster_tree time_tree( time_mesh, time_levels, n_min_time_elems );
 
     // write tree structure to file
@@ -134,6 +160,11 @@ int main( int argc, char * argv[] ) {
     generator.generate(
       "./parallel_dirichlet_indirect/test_case_1/", "test_mesh", "txt" );
     std::cout << "### end mesh generation ###" << std::endl;
+    std::cout << "Number of temporal slices: " << n_time_slices << std::endl;
+    std::cout << "Number of temporal elements: "
+              << n_time_slices * std::pow( 2.0, time_refinement ) << std::endl;
+    std::cout << "Number of spatial elements: " << tri_mesh.get_n_elements( )
+              << std::endl;
   }
   MPI_Barrier( comm );
 
@@ -145,7 +176,7 @@ int main( int argc, char * argv[] ) {
     "./parallel_dirichlet_indirect/test_case_1/test_mesh_d.txt",
     tree_vector_file, cluster_bounds_file, process_assignment_file, &comm );
   if ( my_rank == 0 ) {
-    std::cout << "Number of spacetime elements"
+    std::cout << "Number of spacetime elements: "
               << distributed_mesh.get_n_elements( ) << std::endl;
   }
   // number of blocks in a blockvector corresponds to global number of timesteps
