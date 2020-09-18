@@ -295,6 +295,13 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   void compute_spatial_m2m_coeffs( );
 
+  /**
+   * Prints information about the underlying distributed spacetime cluster tree
+   * and the operations which have to be applied.
+   * @param[in] root_process  Process responsible for printing the information.
+   */
+  void print_information( const int root_process );
+
  private:
   /**
    * Calls all S2M operations associated with a given scheduling time cluster.
@@ -800,6 +807,36 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   void cluster_to_polynomials( quadrature_wrapper & my_quadrature, sc x_start,
     sc x_end, sc y_start, sc y_end, sc z_start, sc z_end ) const;
+
+  /**
+   * Returns the ratio of entries of the nearfield blocks of the pFMM matrix
+   * handled by this process and entries of the global, non-approximated matrix.
+   * @note Zeros in nearfield blocks and the full matrix are counted.
+   * @warning If executed in parallel, the results should be added up to get
+   * a meaningful result (due to the comparison with the global number of
+   * entries).
+   */
+  sc compute_nearfield_ratio( );
+
+  /**
+   * Returns the ratio of non-zero entries of the nearfield blocks of the
+   * pFMM matrix handled by this process and non-zero entries of the global,
+   * non-approximated matrix.
+   * @warning If executed in parallel, the results should be added up to get
+   * a meaningful result (due to the comparison with the global number of
+   * entries).
+   */
+  sc compute_nonzero_nearfield_ratio( );
+
+  /**
+   * Counts the number of all FMM operations levelwise
+   * @note m2m and l2l operations are counted for the levels of the children
+   */
+  void count_fmm_operations_levelwise( std::vector< lou > & n_s2m_operations,
+    std::vector< lou > & n_m2m_operations,
+    std::vector< lou > & n_m2l_operations,
+    std::vector< lou > & n_l2l_operations,
+    std::vector< lou > & n_l2t_operations );
 
   const MPI_Comm *
     _comm;       //!< MPI communicator associated with the pFMM matrix.

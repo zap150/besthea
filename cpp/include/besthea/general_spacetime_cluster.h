@@ -907,7 +907,7 @@ class besthea::mesh::general_spacetime_cluster {
   vector_type _space_half_size;  //!< half sizes of the cluster's faces (in [x,
                                  //!< y, z] directions)
   std::vector< lo > _elements;   //!< indices of the cluster's elements within
-                                //!< global spacetime tensor mesh
+                                 //!< global spacetime tensor mesh
 
   std::vector< lo > _elems_2_local_nodes;   //!< mapping from element nodes
                                             //!< vertices to local node list

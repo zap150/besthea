@@ -166,10 +166,12 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
   /**
    * Assembles the fast spacetime matrix.
    * @param[out] global_matrix Assembled pFMM matrix.
+   * @param[out] info_mode  If true, the nearfield matrices are not assembled.
    * @warning Currently there are some restrictions on the test
    * and trial spaces (same meshes and trees)
    */
-  void assemble( pfmm_matrix_type & global_matrix ) const;
+  void assemble(
+    pfmm_matrix_type & global_matrix, bool info_mode = false ) const;
 
  private:
   /**

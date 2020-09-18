@@ -65,34 +65,46 @@ int main( int argc, char * argv[] ) {
   // declaration of required parameters.
   lo order_sing, order_reg, temp_order, spat_order;
   sc st_coeff;
-  lo max_n_levels;
+  lo max_n_levels, n_min_elems;
   lo n_blocks, size_of_block;
 
   st_coeff = 4.0;
   max_n_levels = 20;
+  n_min_elems = 800;
   temp_order = 6;
   spat_order = 6;
   order_sing = 4;
   order_reg = 4;
 
-  lo test_case = 1;
-  lo geometry_case = 3;
+  if ( myRank == 0 ) {
+    std::cout << "### parameter choices: ###" << std::endl;
+    std::cout << "st_coeff = " << st_coeff << std::endl;
+    std::cout << "n_min_elems = " << n_min_elems << std::endl;
+    std::cout << "temp_order = " << temp_order << std::endl;
+    std::cout << "spat_order = " << spat_order << std::endl;
+    std::cout << "order_sing = " << order_sing << std::endl;
+    std::cout << "order_reg = " << order_reg << std::endl;
+    std::cout << "###########################" << std::endl;
+  }
+
+  lo test_case = 0;
+  lo geometry_case = 1;
+  int refine = 2;
   if ( argc == 3 ) {
     geometry_case = strtol( argv[ 1 ], NULL, 10 );
     test_case = strtol( argv[ 2 ], NULL, 10 );
+  } else if ( argc == 4 ) {
+    geometry_case = strtol( argv[ 1 ], NULL, 10 );
+    test_case = strtol( argv[ 2 ], NULL, 10 );
+    refine = strtol( argv[ 3 ], NULL, 10 );
   }
 
   // mesh data to construct equivalent standard spacetime mesh and distributed
   // spacetime mesh for the test.
   std::string spatial_mesh_file;
-  std::string time_file;
-  // WARNING: only uniform timesteps are allowed for the non-approximated single
-  // layer operator. choose a time file and set the parameters for the standard
-  // spacetime mesh accordingly
-  // parameters for standard spacetime mesh
-  lo n_timesteps = 8;
-  int refine = 1;
-  int temp_refine_factor = 2;
+  lo n_timesteps = 16;
+
+  int temp_refine_factor = 1;
   sc end_time = 1.0;
 
   std::string geometry_dir = "./parallel_dirichlet_indirect/geometry_case_"
@@ -100,14 +112,13 @@ int main( int argc, char * argv[] ) {
   std::filesystem::create_directory( geometry_dir );
   if ( geometry_case == 1 ) {
     spatial_mesh_file = "./mesh_files/cube_12.txt";
-    time_file = "./mesh_files/time_1_8_uniform.txt";
+    n_timesteps = 16;
   } else if ( geometry_case == 2 ) {
     spatial_mesh_file = "./mesh_files/icosahedron.txt";
-    time_file = "./mesh_files/time_1_8_uniform.txt";
+    n_timesteps = 16;
   } else if ( geometry_case == 3 ) {
     spatial_mesh_file = "./mesh_files/icosahedron.txt";
-    time_file = "./mesh_files/time_1_10.txt";
-    n_timesteps = 10;
+    n_timesteps = 20;
   }
 
   // parameters for distributed spacetime mesh
@@ -133,6 +144,8 @@ int main( int argc, char * argv[] ) {
 
   // V approximated by distributed pFMM
 
+  bool info_mode = ( test_case == 0 );
+
   MPI_Barrier( comm );
   timer t;
 
@@ -143,12 +156,15 @@ int main( int argc, char * argv[] ) {
   if ( myRank == 0 ) {
     std::cout << "### geometry case: " << geometry_case << std::endl;
     std::cout << "### test case: " << test_case << std::endl;
+    std::cout << "refine = " << refine << std::endl;
+    std::cout << "temporal refinement factor = " << temp_refine_factor
+              << std::endl;
     std::cout << "n_processes: " << n_processes
               << ", strategy: " << process_assignment_strategy << std::endl;
     t.reset( "mesh generation" );
 
     // load time mesh defining slices and create temporal tree
-    temporal_mesh time_mesh( time_file );
+    temporal_mesh time_mesh( 0, end_time, n_timesteps );
     lo time_levels = 6;
     lo n_min_time_elems = 2;
     time_cluster_tree time_tree( time_mesh, time_levels, n_min_time_elems );
@@ -163,8 +179,10 @@ int main( int argc, char * argv[] ) {
     time_tree.print_process_assignments(
       n_processes, process_assignment_strategy, process_assignment_file );
 
+    triangular_surface_mesh space_mesh( spatial_mesh_file );
+
     spacetime_mesh_generator generator(
-      spatial_mesh_file, time_file, time_refinement, space_refinement );
+      space_mesh, end_time, n_timesteps, time_refinement, space_refinement );
 
     generator.generate( geometry_dir, "test_mesh", "txt" );
     t.measure( );
@@ -185,13 +203,12 @@ int main( int argc, char * argv[] ) {
   size_of_block = distributed_mesh.get_n_elements( ) / n_blocks;
 
   distributed_spacetime_cluster_tree distributed_st_tree(
-    distributed_mesh, max_n_levels, 40, st_coeff, 3, &comm );
+    distributed_mesh, max_n_levels, n_min_elems, st_coeff, 3, &comm );
   MPI_Barrier( comm );
 
   if ( myRank == 0 ) {
     t.measure( );
     // distributed_st_tree.print( );
-    // distributed_st_tree.get_distribution_tree( )->print( );
     std::cout << "number of elements: " << distributed_mesh.get_n_elements( )
               << ", number of timesteps: "
               << distributed_mesh.get_n_temporal_elements( ) << std::endl;
@@ -207,31 +224,35 @@ int main( int argc, char * argv[] ) {
     distributed_space_p0, distributed_space_p0, &comm, order_sing, order_reg,
     temp_order, spat_order, cauchy_data::_alpha );
 
-  distributed_assembler_v.assemble( *V_dist_pFMM );
+  distributed_assembler_v.assemble( *V_dist_pFMM, info_mode );
 
   MPI_Barrier( comm );
   if ( myRank == 0 ) {
     t.measure( );
   }
 
-  if ( myRank == 0 ) {
-    std::cout << "################" << std::endl;
-    std::cout << "distribution tree for process 0" << std::endl;
-    distributed_mesh.get_distribution_tree( )->print_tree_human_readable(
-      2, true );
-    std::cout << "################" << std::endl;
-  }
-  MPI_Barrier( comm );
-  if ( myRank == 1 ) {
-    std::cout << "################" << std::endl;
-    std::cout << "distribution tree for process 1" << std::endl;
-    distributed_mesh.get_distribution_tree( )->print_tree_human_readable(
-      2, true );
-    std::cout << "################" << std::endl;
-    // distributed_mesh.get_distribution_tree( )->print( );
-  }
-
-  if ( test_case == 1 ) {
+  if ( test_case == 0 ) {
+    //##########################################################################
+    //##########################################################################
+    // just print information
+    // if ( myRank == 0 ) {
+    //   std::cout << "################" << std::endl;
+    //   std::cout << "distribution tree for process 0" << std::endl;
+    //   distributed_mesh.get_distribution_tree( )->print_tree_human_readable(
+    //     2, true );
+    //   std::cout << "################" << std::endl;
+    // }
+    // MPI_Barrier( comm );
+    // if ( myRank == 1 ) {
+    //   std::cout << "################" << std::endl;
+    //   std::cout << "distribution tree for process 1" << std::endl;
+    //   distributed_mesh.get_distribution_tree( )->print_tree_human_readable(
+    //     2, true );
+    //   std::cout << "################" << std::endl;
+    //   // distributed_mesh.get_distribution_tree( )->print( );
+    // }
+    V_dist_pFMM->print_information( 0 );
+  } else if ( test_case == 1 ) {
     //##########################################################################
     //##########################################################################
     // lo block_id = n_blocks - 1 - 2;

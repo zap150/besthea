@@ -80,7 +80,8 @@ besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   test_space_type, trial_space_type >::assemble( pfmm_matrix_type &
-    global_matrix ) const {
+                                                   global_matrix,
+  bool info_mode ) const {
   global_matrix.set_MPI_communicator( _comm );
   global_matrix.set_trees( _test_space->get_tree( ) );
   global_matrix.set_order( _spat_order, _temp_order, _order_regular );
@@ -106,7 +107,9 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   global_matrix.prepare_fmm( );
 
   // assemble the nearfield matrices of the pFMM matrix
-  assemble_nearfield( global_matrix );
+  if ( !info_mode ) {
+    assemble_nearfield( global_matrix );
+  }
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >

@@ -118,6 +118,13 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   }
 
   /**
+   * Returns the effective number of levels in the cluster tree.
+   */
+  lo get_max_levels( ) const {
+    return _max_levels;
+  }
+
+  /**
    * Returns the bound for the maximal number of refinements in space of the
    * clusters in the local part of the distributed tree.
    */
@@ -127,7 +134,6 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
 
   /**
    * Returns the level where space is first refined.
-   * @note: If @p _initial_space_refinement != 0 this is always 2.
    */
   lo get_start_space_refinement( ) const {
     return _start_space_refinement;
@@ -155,6 +161,12 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     // print cluster information recursively
     print_internal( *_root );
   }
+
+  /**
+   * Prints various information about the cluster tree
+   * @param[in] root_process  Process responsible for printing the information.
+   */
+  void print_information( const int root_process );
 
  private:
   /**
@@ -275,6 +287,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
       + pos_z).
    * @todo Since exact bounds of scheduling time clusters are now available they
    * could be used to make this routine simpler.
+   * @todo Routine needs to be adapted to allow correct execution for
+   * non-uniform time-slices (no temporal bisections of clusters anymore!)
    */
   void get_n_elements_in_subdivisioning( general_spacetime_cluster & root,
     lo n_space_div, lo n_time_div, std::vector< lo > & elems_in_clusters );
@@ -375,6 +389,9 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    *                        constructing the children of root.
    * @todo check correctness of determination of temporal cluster data when more
    * general meshes are used.
+   * @note The member variables @p _real_max_levels and
+   * @p _local_max_space_level are updated in this routine.
+   *
    */
   void build_subtree(
     general_spacetime_cluster & root, const bool split_space );
@@ -555,10 +572,11 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
                                  //!< get clusters at level 0
   lo _start_space_refinement;    //!< auxiliary variable to determine in which
                                  //!< level the spatial refinement starts
-                               //!< (relevant if _initial_space_refinement == 0)
-  lo _local_max_space_level;  //!< bound for the maximal number of spatial
-                              //!< refinements in the local part of the
-                              //!< distributed tree.
+                                 //!< (relevant if
+                                 //!< _initial_space_refinement == 0)
+  lo _local_max_space_level;     //!< bound for the maximal number of spatial
+                                 //!< refinements in the local part of the
+                                 //!< distributed tree.
 
   sc _s_t_coeff;    //!< coefficient to determine the coupling of the spatial
                     //!< and temporal levels

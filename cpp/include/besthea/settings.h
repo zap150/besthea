@@ -141,4 +141,14 @@ struct get_index_type< long > {
   }
 };
 
+template<>
+struct get_index_type< unsigned long > {
+  /**
+   * Returns indexing MPI datatype based on the template C++ type.
+   */
+  static MPI_Datatype MPI_LO( ) {
+    return MPI_UNSIGNED_LONG;
+  }
+};
+
 #endif /* INCLUDE_BESTHEA_SETTINGS_H_ */

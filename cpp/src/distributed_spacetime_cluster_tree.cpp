@@ -32,6 +32,7 @@
 #include "besthea/tree_structure.h"
 
 #include <algorithm>
+#include <assert.h>
 #include <cmath>
 #include <vector>
 
@@ -88,14 +89,22 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   // determine for which temporal level the first spatial refinement is needed
   _start_space_refinement = 1;
   delta *= 0.5;
-  if ( _initial_space_refinement == 0 ) {
-    while ( max_half_size <= st_coeff * sqrt( delta ) ) {
-      delta *= 0.5;
-      _start_space_refinement += 1;
-    }
-  } else {
-    _start_space_refinement = 2;
+  while ( max_half_size <= st_coeff * sqrt( delta ) ) {
+    delta *= 0.5;
+    _start_space_refinement += 1;
   }
+  // like this it is guaranteed that max_halfsize <= st_coeff * sqrt( delta )
+  // on all levels of the tree
+
+  // // old version:
+  // if ( _initial_space_refinement == 0 ) {
+  //   while ( max_half_size <= st_coeff * sqrt( delta ) ) {
+  //     delta *= 0.5;
+  //     _start_space_refinement += 1;
+  //   }
+  // } else {
+  //   _start_space_refinement = 2;
+  // }
 
   // create root at level -1 as combination of whole space and time.
   // set first value of pseudoroot to a distinguished value to avoid problems.
@@ -110,6 +119,8 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   build_tree( _root );
 
   _max_levels = std::min( _max_levels, _real_max_levels );
+  // note: _real_max_levels is global, since communication takes place in build
+  // tree routine
   _spatial_paddings.resize( _max_levels );
   _spatial_paddings.shrink_to_fit( );
 
@@ -212,7 +223,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
   bool split_space = ( _start_space_refinement <= 1 );
   if ( split_space ) {
     n_space_div += 1;
-    _local_max_space_level++;
   }
   split_space_levelwise.push_back( split_space );
 
@@ -229,11 +239,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
     if ( !split_space && child_level + 1 >= _start_space_refinement ) {
       split_space = true;
       n_space_div++;
-      if ( child_level + 1 < dist_tree_depth_coll ) {
-        // increase _local_max_space_level accordingly, but only if the next
-        // level is still considered in this loop
-        _local_max_space_level++;
-      }
     } else {
       split_space = false;
     }
@@ -251,17 +256,18 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
     // reasonably high this takes a while!
     fill_elements( *it );
 
-    build_subtree( *it, split_space_levelwise[ it->get_level( ) ] );
-  }
-
-  if ( _real_max_levels < get_distribution_tree( )->get_levels( ) ) {
-    std::cout << "Warning: Depth of local spacetime tree is less than depth of"
-              << " local distribution tree!" << std::endl;
+    build_subtree( *it, split_space_levelwise[ it->get_level( ) + 1 ] );
   }
 
   // exchange necessary data
   MPI_Allreduce( MPI_IN_PLACE, &_real_max_levels, 1,
     get_index_type< lo >::MPI_LO( ), MPI_MAX, *_comm );
+
+  if ( _real_max_levels < get_distribution_tree( )->get_levels( ) ) {
+    std::cout << "Warning: Depth of local spacetime tree is less than depth of"
+              << " local distribution tree!" << std::endl;
+    assert( _real_max_levels >= get_distribution_tree( )->get_levels( ) );
+  }
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::
@@ -962,6 +968,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::collect_real_leaves(
 
 void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
   general_spacetime_cluster & cluster ) {
+  assert( cluster.get_level( ) > 1 );
   lo n_space_div, n_time_div;
   cluster.get_n_divs( n_space_div, n_time_div );
   lo n_space_clusters = 1;
@@ -1052,6 +1059,11 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
     root.set_global_leaf_status( true );
     if ( root.get_level( ) + 1 > _real_max_levels ) {
       _real_max_levels = root.get_level( ) + 1;
+    }
+    lo n_space_div, n_time_div;
+    root.get_n_divs( n_space_div, n_time_div );
+    if ( n_space_div > _local_max_space_level ) {
+      _local_max_space_level = n_space_div;
     }
     return;
   }
@@ -1364,11 +1376,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
     }
 
     root.set_n_children( n_clusters );
-
-    // update _local_max_space_level when necessary
-    if ( n_clusters > 0 && n_space_div + 1 > _local_max_space_level ) {
-      _local_max_space_level = n_space_div + 1;
-    }
 
     for ( lo i = 0; i < 16; ++i ) {
       if ( clusters[ i ] != nullptr ) {
@@ -1827,5 +1834,75 @@ void besthea::mesh::distributed_spacetime_cluster_tree::receive_leaf_info(
         pos++;
       }
     }
+  }
+}
+
+void besthea::mesh::distributed_spacetime_cluster_tree::print_information(
+  const int root_process ) {
+  if ( _my_rank == root_process ) {
+    std::cout << "#############################################################"
+              << "###########################" << std::endl;
+    std::cout << "number of levels = " << _max_levels << std::endl;
+    std::cout << "initial space level = " << _initial_space_refinement
+              << std::endl;
+    std::cout << "first space refinement level = " << _start_space_refinement
+              << std::endl;
+  }
+  lo global_max_space_level;
+  MPI_Reduce( &_local_max_space_level, &global_max_space_level, 1,
+    get_index_type< lo >::MPI_LO( ), MPI_MAX, root_process, *_comm );
+  if ( _my_rank == root_process ) {
+    std::cout << "maximal space level = " << global_max_space_level
+              << std::endl;
+  }
+  // determine levelwise number of leaves:
+  std::vector< lou > n_leaves_levelwise( _max_levels, 0 );
+  std::vector< sc > n_time_elems_levelwise( _max_levels, 0.0 );
+  std::vector< sc > n_space_elems_levelwise( _max_levels, 0.0 );
+  for ( auto leaf : _local_leaves ) {
+    n_leaves_levelwise[ leaf->get_level( ) ] += 1;
+    n_time_elems_levelwise[ leaf->get_level( ) ]
+      += leaf->get_n_time_elements( );
+    n_space_elems_levelwise[ leaf->get_level( ) ]
+      += leaf->get_n_space_elements( );
+  }
+  if ( _my_rank == root_process ) {
+    MPI_Reduce( MPI_IN_PLACE, n_leaves_levelwise.data( ), _max_levels,
+      get_index_type< lo >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+    MPI_Reduce( MPI_IN_PLACE, n_time_elems_levelwise.data( ), _max_levels,
+      get_scalar_type< sc >::MPI_SC( ), MPI_SUM, root_process, *_comm );
+    MPI_Reduce( MPI_IN_PLACE, n_space_elems_levelwise.data( ), _max_levels,
+      get_scalar_type< sc >::MPI_SC( ), MPI_SUM, root_process, *_comm );
+  } else {
+    MPI_Reduce( n_leaves_levelwise.data( ), nullptr, _max_levels,
+      get_index_type< lo >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+    MPI_Reduce( n_time_elems_levelwise.data( ), nullptr, _max_levels,
+      get_scalar_type< sc >::MPI_SC( ), MPI_SUM, root_process, *_comm );
+    MPI_Reduce( n_space_elems_levelwise.data( ), nullptr, _max_levels,
+      get_scalar_type< sc >::MPI_SC( ), MPI_SUM, root_process, *_comm );
+  }
+  if ( _my_rank == root_process ) {
+    std::cout << "#############################################################"
+              << "###########################" << std::endl;
+    lou n_global_leaves = 0;
+    for ( lo i = 0; i < _max_levels; ++i ) {
+      n_global_leaves += n_leaves_levelwise[ i ];
+    }
+    std::cout << "leaf information:" << std::endl;
+    std::cout << "global number of leaves: " << n_global_leaves << std::endl;
+    std::cout << "levelwise information:" << std::endl;
+    for ( lo i = 0; i < _max_levels; ++i ) {
+      std::cout << "level " << i << ": "
+                << " leaves: " << n_leaves_levelwise[ i ];
+      if ( n_leaves_levelwise[ i ] > 0 ) {
+        n_time_elems_levelwise[ i ] /= n_leaves_levelwise[ i ];
+        n_space_elems_levelwise[ i ] /= n_leaves_levelwise[ i ];
+        std::cout << ", mean_n_elems_time: " << n_time_elems_levelwise[ i ]
+                  << ", mean_n_elems_space: " << n_space_elems_levelwise[ i ];
+      }
+      std::cout << std::endl;
+    }
+    std::cout << "#############################################################"
+              << "###########################" << std::endl;
   }
 }

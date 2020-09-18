@@ -375,7 +375,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // entries in the second part of the receive vector
   std::sort( _receive_data_information.begin( ) + _n_moments_to_receive_upward,
     _receive_data_information.end( ),
-    [&]( const std::pair< scheduling_time_cluster *, lo > pair_one,
+    [ & ]( const std::pair< scheduling_time_cluster *, lo > pair_one,
       const std::pair< scheduling_time_cluster *, lo > pair_two ) {
       return _scheduling_tree_structure->compare_clusters_top_down_right_2_left(
         pair_one.first, pair_two.first );
@@ -645,6 +645,96 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     h_par_no_pad[ 0 ] = h_child_no_pad[ 0 ];
     h_par_no_pad[ 1 ] = h_child_no_pad[ 1 ];
     h_par_no_pad[ 2 ] = h_child_no_pad[ 2 ];
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::print_information( const int root_process ) {
+  // first print some information of the underlying distributed space time tree
+  _distributed_spacetime_tree->print_information( root_process );
+  // print rough nearfield percentage
+  sc local_nearfield_ratio = compute_nearfield_ratio( );
+  sc local_nonzero_nearfield_ratio = compute_nonzero_nearfield_ratio( );
+  sc global_nearfield_ratio, global_nonzero_nearfield_ratio;
+  MPI_Reduce( &local_nearfield_ratio, &global_nearfield_ratio, 1,
+    get_scalar_type< sc >::MPI_SC( ), MPI_SUM, root_process, *_comm );
+  MPI_Reduce( &local_nonzero_nearfield_ratio, &global_nonzero_nearfield_ratio,
+    1, get_scalar_type< sc >::MPI_SC( ), MPI_SUM, root_process, *_comm );
+  if ( _my_rank == root_process ) {
+    std::cout << "nearfield ratio (including zeros) = "
+              << global_nearfield_ratio << std::endl;
+    std::cout << "nearfield ratio (counting non-zero entries only) = "
+              << global_nonzero_nearfield_ratio << std::endl;
+  }
+  // count the fmm operations and print them levelwise
+  std::vector< lou > n_s2m_operations, n_m2m_operations, n_m2l_operations,
+    n_l2l_operations, n_l2t_operations;
+  count_fmm_operations_levelwise( n_s2m_operations, n_m2m_operations,
+    n_m2l_operations, n_l2l_operations, n_l2t_operations );
+  lo n_max_levels = _distributed_spacetime_tree->get_max_levels( );
+
+  if ( _my_rank == root_process ) {
+    MPI_Reduce( MPI_IN_PLACE, n_s2m_operations.data( ), n_max_levels,
+      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+    MPI_Reduce( MPI_IN_PLACE, n_m2m_operations.data( ), n_max_levels,
+      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+    MPI_Reduce( MPI_IN_PLACE, n_m2l_operations.data( ), n_max_levels,
+      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+    MPI_Reduce( MPI_IN_PLACE, n_l2l_operations.data( ), n_max_levels,
+      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+    MPI_Reduce( MPI_IN_PLACE, n_l2t_operations.data( ), n_max_levels,
+      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+  } else {
+    MPI_Reduce( n_s2m_operations.data( ), nullptr, n_max_levels,
+      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+    MPI_Reduce( n_m2m_operations.data( ), nullptr, n_max_levels,
+      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+    MPI_Reduce( n_m2l_operations.data( ), nullptr, n_max_levels,
+      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+    MPI_Reduce( n_l2l_operations.data( ), nullptr, n_max_levels,
+      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+    MPI_Reduce( n_l2t_operations.data( ), nullptr, n_max_levels,
+      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+  }
+
+  if ( _my_rank == root_process ) {
+    lo start_space_refinement
+      = _distributed_spacetime_tree->get_start_space_refinement( );
+    std::cout << "number of s2m operations: " << std::endl;
+    for ( lo i = 2; i < n_max_levels; ++i ) {
+      std::cout << "level " << i << ": " << n_s2m_operations[ i ] << std::endl;
+    }
+    std::cout << "number of m2m operations: " << std::endl;
+    for ( lo i = 2; i < n_max_levels; ++i ) {
+      std::cout << "level " << i << ": " << n_m2m_operations[ i ];
+      if ( i >= start_space_refinement
+        && ( ( i - start_space_refinement ) ) % 2 == 0 ) {
+        std::cout << " spacetime m2m" << std::endl;
+      } else {
+        std::cout << " temporal m2m" << std::endl;
+      }
+    }
+    std::cout << "number of m2l operations: " << std::endl;
+    for ( lo i = 2; i < n_max_levels; ++i ) {
+      std::cout << "level " << i << ": " << n_m2l_operations[ i ] << std::endl;
+    }
+    std::cout << "number of l2l operations: " << std::endl;
+    for ( lo i = 2; i < n_max_levels; ++i ) {
+      std::cout << "level " << i << ": " << n_l2l_operations[ i ];
+      if ( i >= start_space_refinement
+        && ( ( i - start_space_refinement ) ) % 2 == 0 ) {
+        std::cout << " spacetime l2l" << std::endl;
+      } else {
+        std::cout << " temporal l2l" << std::endl;
+      }
+    }
+    std::cout << "number of l2t operations: " << std::endl;
+    for ( lo i = 2; i < n_max_levels; ++i ) {
+      std::cout << "level " << i << ": " << n_l2t_operations[ i ] << std::endl;
+    }
+    std::cout << "#############################################################"
+              << "###########################" << std::endl;
   }
 }
 
@@ -2537,6 +2627,200 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       = -1.0 + 2.0 * ( my_quadrature._y2[ i ] - start_1 ) / ( end_1 - start_1 );
     my_quadrature._y3_polynomial[ i ]
       = -1.0 + 2.0 * ( my_quadrature._y3[ i ] - start_2 ) / ( end_2 - start_2 );
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
+  source_space >::compute_nonzero_nearfield_ratio( ) {
+  lou n_nearfield_entries = 0;
+
+  // get the local and nearfield mesh (needed to determine correct number of
+  // non-zero nearfield matrix entries)
+  const mesh::spacetime_tensor_mesh * nearfield_mesh;
+  const mesh::spacetime_tensor_mesh * local_mesh;
+  local_mesh = _distributed_spacetime_tree->get_mesh( ).get_local_mesh( );
+  nearfield_mesh
+    = _distributed_spacetime_tree->get_mesh( ).get_nearfield_mesh( );
+  const mesh::spacetime_tensor_mesh * tar_mesh;
+  const mesh::spacetime_tensor_mesh * src_mesh;
+
+  for ( auto it : _n_list ) {
+    const std::vector< general_spacetime_cluster * > * st_targets
+      = it->get_associated_spacetime_clusters( );
+    if ( it->get_process_id( ) == _my_rank ) {
+      tar_mesh = local_mesh;
+    } else {
+      tar_mesh = nearfield_mesh;
+    }
+    lou n_associated_leaves = it->get_n_associated_leaves( );
+    for ( lou i = 0; i < n_associated_leaves; ++i ) {
+      // consider all associated st target clusters
+      general_spacetime_cluster * st_target = ( *st_targets )[ i ];
+      lo n_tar_elements_space = st_target->get_n_space_elements( );
+      lo n_tar_elements_time = st_target->get_n_time_elements( );
+      lo n_tar_elements = st_target->get_n_elements( );
+      std::vector< general_spacetime_cluster * > * st_nearfield_list
+        = st_target->get_nearfield_list( );
+      for ( lou src_index = 0; src_index < st_nearfield_list->size( );
+            ++src_index ) {
+        // consider all spacetime clusters in the nearfield of the current
+        // target cluster
+        general_spacetime_cluster * st_source
+          = ( *st_nearfield_list )[ src_index ];
+        if ( st_source->get_elements_are_local( ) ) {
+          src_mesh = local_mesh;
+        } else {
+          src_mesh = nearfield_mesh;
+        }
+        lo n_src_elements_space = st_source->get_n_space_elements( );
+        lo n_src_elements_time = st_source->get_n_time_elements( );
+        lo n_src_elements = st_source->get_n_elements( );
+        // depending on the configuration in time update the number of nearfield
+        // entries appropriately.
+        if ( st_source->get_level( ) >= st_target->get_level( ) ) {
+          if ( std::abs(
+                 st_target->get_time_center( ) - st_source->get_time_center( ) )
+            < st_target->get_time_half_size( ) ) {
+            // source cluster's temporal component is contained in target
+            // cluster's
+            lo src_max_time_idx = src_mesh->get_time_element(
+              st_source->get_element( n_src_elements - 1 ) );
+            lo tar_max_time_idx = tar_mesh->get_time_element(
+              st_target->get_element( n_tar_elements - 1 ) );
+            n_nearfield_entries += n_src_elements_space * n_tar_elements_space
+              * ( ( n_src_elements_time * ( n_src_elements_time + 1 ) ) / 2
+                + n_src_elements_time
+                  * ( tar_max_time_idx - src_max_time_idx ) );
+          }
+        } else if ( std::abs( st_source->get_time_center( )
+                      - st_target->get_time_center( ) )
+          < st_source->get_time_half_size( ) ) {
+          // target cluster's temporal component is contained in source
+          // cluster's
+          lo src_min_time_idx
+            = src_mesh->get_time_element( st_source->get_element( 0 ) );
+          lo tar_min_time_idx
+            = tar_mesh->get_time_element( st_target->get_element( 0 ) );
+          n_nearfield_entries += n_src_elements_space * n_tar_elements_space
+            * ( ( n_tar_elements_time * ( n_tar_elements_time + 1 ) ) / 2
+              + n_tar_elements_time * ( tar_min_time_idx - src_min_time_idx ) );
+        } else {
+          n_nearfield_entries += n_src_elements_space * n_tar_elements_space
+            * n_src_elements_time * n_tar_elements_time;
+        }
+      }
+    }
+  }
+  lou n_global_time_elements
+    = _distributed_spacetime_tree->get_mesh( ).get_n_temporal_elements( );
+  lou n_global_elements
+    = _distributed_spacetime_tree->get_mesh( ).get_n_elements( );
+  lou n_global_space_elements = n_global_elements / n_global_time_elements;
+  return n_nearfield_entries
+    / ( (sc) n_global_space_elements * n_global_space_elements
+      * ( n_global_time_elements * ( n_global_time_elements + 1 ) / 2 ) );
+}
+
+template< class kernel_type, class target_space, class source_space >
+sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
+  source_space >::compute_nearfield_ratio( ) {
+  lou n_nearfield_entries = 0;
+  for ( auto it : _n_list ) {
+    const std::vector< general_spacetime_cluster * > * st_targets
+      = it->get_associated_spacetime_clusters( );
+    lou n_associated_leaves = it->get_n_associated_leaves( );
+    for ( lou i = 0; i < n_associated_leaves; ++i ) {
+      general_spacetime_cluster * st_target = ( *st_targets )[ i ];
+      lo n_target_elements = st_target->get_n_elements( );
+      std::vector< general_spacetime_cluster * > * st_nearfield_list
+        = st_target->get_nearfield_list( );
+      for ( lou src_index = 0; src_index < st_nearfield_list->size( );
+            ++src_index ) {
+        general_spacetime_cluster * st_source
+          = ( *st_nearfield_list )[ src_index ];
+        n_nearfield_entries += n_target_elements * st_source->get_n_elements( );
+      }
+    }
+  }
+  lou n_global_elements
+    = _distributed_spacetime_tree->get_mesh( ).get_n_elements( );
+  return n_nearfield_entries / ( (sc) n_global_elements * n_global_elements );
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space,
+  source_space >::count_fmm_operations_levelwise( std::vector< lou > &
+                                                    n_s2m_operations,
+  std::vector< lou > & n_m2m_operations, std::vector< lou > & n_m2l_operations,
+  std::vector< lou > & n_l2l_operations,
+  std::vector< lou > & n_l2t_operations ) {
+  lo n_max_levels = _distributed_spacetime_tree->get_max_levels( );
+  // count the number of s2m operations
+  n_s2m_operations.resize( n_max_levels );
+  for ( lo i = 0; i < n_max_levels; ++i ) {
+    n_s2m_operations[ i ] = 0;
+  }
+  for ( auto it : _m_list ) {
+    if ( it->get_n_associated_leaves( ) > 0 ) {
+      n_s2m_operations[ it->get_level( ) ] += it->get_n_associated_leaves( );
+    }
+  }
+
+  // count the number of m2m operations
+  n_m2m_operations.resize( n_max_levels );
+  for ( lo i = 0; i < n_max_levels; ++i ) {
+    n_m2m_operations[ i ] = 0;
+  }
+  for ( auto it : _m_list ) {
+    if ( it->get_parent( )->is_active_in_upward_path( ) ) {
+      n_m2m_operations[ it->get_level( ) ]
+        += it->get_associated_spacetime_clusters( )->size( );
+    }
+  }
+
+  // count the number of m2l. in addition, count the number of l2t operations
+  // for those clusters whose parents are not active in the downward path
+  n_m2l_operations.resize( n_max_levels );
+  for ( lo i = 0; i < n_max_levels; ++i ) {
+    n_m2l_operations[ i ] = 0;
+  }
+  n_l2t_operations.resize( n_max_levels );
+  for ( lo i = 0; i < n_max_levels; ++i ) {
+    n_l2t_operations[ i ] = 0;
+  }
+  for ( auto it : _m2l_list ) {
+    std::vector< general_spacetime_cluster * > * associated_st_targets
+      = it->get_associated_spacetime_clusters( );
+    for ( auto spacetime_tar : *associated_st_targets ) {
+      n_m2l_operations[ it->get_level( ) ]
+        += spacetime_tar->get_interaction_list( )->size( );
+    }
+    if ( !it->get_parent( )->is_active_in_downward_path( ) ) {
+      if ( it->get_n_associated_leaves( ) > 0 ) {
+        n_l2t_operations[ it->get_level( ) ] += it->get_n_associated_leaves( );
+      }
+    }
+  }
+
+  // count the number of l2l operations
+  n_l2l_operations.resize( n_max_levels );
+  for ( lo i = 0; i < n_max_levels; ++i ) {
+    n_l2l_operations[ i ] = 0;
+  }
+  for ( auto it : _l_list ) {
+    if ( it->get_parent( )->is_active_in_downward_path( ) ) {
+      n_l2l_operations[ it->get_level( ) ]
+        += it->get_associated_spacetime_clusters( )->size( );
+    }
+  }
+
+  // count the number of l2t operations
+  for ( auto it : _l_list ) {
+    if ( it->get_n_associated_leaves( ) > 0 ) {
+      n_l2t_operations[ it->get_level( ) ] += it->get_n_associated_leaves( );
+    }
   }
 }
 
