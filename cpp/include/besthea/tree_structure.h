@@ -283,6 +283,15 @@ class besthea::mesh::tree_structure {
   void print_tree_human_readable(
     const lo digits, const bool print_process_ids ) const;
 
+  /**
+   * Computes a vector which maps global indices to levelwise indices.
+   * To get the levelwise indices, the clusters on each level are enumerated
+   * from left to right without skipping entries for non-existing clusters.
+   * @note The routine @ref fill_global_2_levelwise_index_vector is used for the
+   * computation of the mapping.
+   */
+  std::vector< lo > compute_global_2_levelwise_indices( ) const;
+
  private:
   scheduling_time_cluster * _root;  //!< root cluster of the tree structure
   lo _levels;                       //!< number of levels in the tree
@@ -512,6 +521,25 @@ class besthea::mesh::tree_structure {
    */
   void determine_essential_clusters(
     const lo my_process_id, scheduling_time_cluster & root ) const;
+
+  /**
+   * Recursively fills the vector which maps global indices to levelwise
+   * indices by traversing the tree structure.
+   * @param[in] root  Current cluster in the tree traversal.
+   * @param[in,out] levelwise_counters  Structure to keep track of the next
+   *                                    levelwise index, which has to be
+   *                                    assigned. When calling the function the
+   *                                    first time, it should contain "number
+   *                                    of tree levels" zeros.
+   * @param[in,out] global_2_levelwise_indices  Result vector. Its size has to
+   *                                            be at least the maximal global
+   *                                            index of clusters in the tree
+   *                                            structure.
+   */
+  void fill_global_2_levelwise_index_vector(
+    const scheduling_time_cluster * root,
+    std::vector< lou > & levelwise_counters,
+    std::vector< lo > & global_2_levelwise_indices ) const;
 
   /**
    * Aux for printing
