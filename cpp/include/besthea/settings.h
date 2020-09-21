@@ -36,9 +36,11 @@
 #include "boost/align.hpp"
 #include "mpi.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
+#include <vector>
 
 #ifndef DATA_ALIGN
 #define DATA_ALIGN 64  //!< Cache-line size in bytes.
@@ -150,5 +152,10 @@ struct get_index_type< unsigned long > {
     return MPI_UNSIGNED_LONG;
   }
 };
+
+// create custom OpenMP reuductions
+#pragma omp declare reduction( lo_vec_plus : std::vector<lo> : \
+   std::transform(omp_in.begin(), omp_in.end(), omp_out.begin(), \
+    omp_out.begin(), std::plus<lo>()) ) initializer(omp_priv(omp_orig))
 
 #endif /* INCLUDE_BESTHEA_SETTINGS_H_ */

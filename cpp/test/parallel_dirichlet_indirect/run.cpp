@@ -176,6 +176,10 @@ int main( int argc, char * argv[] ) {
     time_tree.print_cluster_bounds( cluster_bounds_file );
 
     // compute process assignment and write it to file
+
+    std::cout << "n_processes: " << n_processes
+              << ", strategy: " << process_assignment_strategy << std::endl;
+
     time_tree.print_process_assignments(
       n_processes, process_assignment_strategy, process_assignment_file );
 

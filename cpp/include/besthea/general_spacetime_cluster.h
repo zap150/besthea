@@ -669,7 +669,11 @@ class besthea::mesh::general_spacetime_cluster {
         current_mesh = _mesh.get_nearfield_mesh( );
         start_idx = _mesh.get_nearfield_start_idx( );
       }
+
       linear_algebra::indices< 6 > element;
+      _local_2_global_nodes.resize( 6 * _elements.size( ) );
+      _elems_2_local_nodes.resize( 6 * _elements.size( ) );
+
       for ( lou i = 0; i < _elements.size( ); ++i ) {
         lo element_idx = _mesh.global_2_local( start_idx, _elements[ i ] );
         current_mesh->get_element( element_idx, element );
@@ -679,48 +683,53 @@ class besthea::mesh::general_spacetime_cluster {
         _local_2_global_nodes.push_back( element[ 3 ] );
         _local_2_global_nodes.push_back( element[ 4 ] );
         _local_2_global_nodes.push_back( element[ 5 ] );
+        _elems_2_local_nodes[ 6 * i ] = 6 * i;
+        _elems_2_local_nodes[ 6 * i + 1 ] = 6 * i + 1;
+        _elems_2_local_nodes[ 6 * i + 2 ] = 6 * i + 2;
+        _elems_2_local_nodes[ 6 * i + 3 ] = 6 * i + 3;
+        _elems_2_local_nodes[ 6 * i + 4 ] = 6 * i + 4;
+        _elems_2_local_nodes[ 6 * i + 5 ] = 6 * i + 5;
       }
-      std::sort( _local_2_global_nodes.begin( ), _local_2_global_nodes.end( ) );
-      _local_2_global_nodes.erase( std::unique( _local_2_global_nodes.begin( ),
-                                     _local_2_global_nodes.end( ) ),
-        _local_2_global_nodes.end( ) );
-
-      _elems_2_local_nodes.resize( 6 * _elements.size( ) );
-
-      for ( lou i = 0; i < _elements.size( ); ++i ) {
-        lo element_idx = _mesh.global_2_local( start_idx, _elements[ i ] );
-        current_mesh->get_element( element_idx, element );
-
-        auto idx_it = std::find( _local_2_global_nodes.begin( ),
-          _local_2_global_nodes.end( ), element[ 0 ] );
-        _elems_2_local_nodes[ 6 * i ]
-          = std::distance( _local_2_global_nodes.begin( ), idx_it );
-
-        idx_it = std::find( _local_2_global_nodes.begin( ),
-          _local_2_global_nodes.end( ), element[ 1 ] );
-        _elems_2_local_nodes[ 6 * i + 1 ]
-          = std::distance( _local_2_global_nodes.begin( ), idx_it );
-
-        idx_it = std::find( _local_2_global_nodes.begin( ),
-          _local_2_global_nodes.end( ), element[ 2 ] );
-        _elems_2_local_nodes[ 6 * i + 2 ]
-          = std::distance( _local_2_global_nodes.begin( ), idx_it );
-
-        idx_it = std::find( _local_2_global_nodes.begin( ),
-          _local_2_global_nodes.end( ), element[ 3 ] );
-        _elems_2_local_nodes[ 6 * i + 3 ]
-          = std::distance( _local_2_global_nodes.begin( ), idx_it );
-
-        idx_it = std::find( _local_2_global_nodes.begin( ),
-          _local_2_global_nodes.end( ), element[ 4 ] );
-        _elems_2_local_nodes[ 6 * i + 4 ]
-          = std::distance( _local_2_global_nodes.begin( ), idx_it );
-
-        idx_it = std::find( _local_2_global_nodes.begin( ),
-          _local_2_global_nodes.end( ), element[ 5 ] );
-        _elems_2_local_nodes[ 6 * i + 5 ]
-          = std::distance( _local_2_global_nodes.begin( ), idx_it );
-      }
+      // std::sort( _local_2_global_nodes.begin( ), _local_2_global_nodes.end( )
+      // ); _local_2_global_nodes.erase( std::unique(
+      // _local_2_global_nodes.begin( ),
+      //                                _local_2_global_nodes.end( ) ),
+      //  _local_2_global_nodes.end( ) );
+      //
+      //      for ( lou i = 0; i < _elements.size( ); ++i ) {
+      //        lo element_idx = _mesh.global_2_local( start_idx, _elements[ i ]
+      //        ); current_mesh->get_element( element_idx, element );
+      //
+      //        auto idx_it = std::find( _local_2_global_nodes.begin( ),
+      //          _local_2_global_nodes.end( ), element[ 0 ] );
+      //        _elems_2_local_nodes[ 6 * i ]
+      //          = std::distance( _local_2_global_nodes.begin( ), idx_it );
+      //
+      //        idx_it = std::find( _local_2_global_nodes.begin( ),
+      //          _local_2_global_nodes.end( ), element[ 1 ] );
+      //        _elems_2_local_nodes[ 6 * i + 1 ]
+      //          = std::distance( _local_2_global_nodes.begin( ), idx_it );
+      //
+      //        idx_it = std::find( _local_2_global_nodes.begin( ),
+      //          _local_2_global_nodes.end( ), element[ 2 ] );
+      //        _elems_2_local_nodes[ 6 * i + 2 ]
+      //          = std::distance( _local_2_global_nodes.begin( ), idx_it );
+      //
+      //        idx_it = std::find( _local_2_global_nodes.begin( ),
+      //          _local_2_global_nodes.end( ), element[ 3 ] );
+      //        _elems_2_local_nodes[ 6 * i + 3 ]
+      //          = std::distance( _local_2_global_nodes.begin( ), idx_it );
+      //
+      //        idx_it = std::find( _local_2_global_nodes.begin( ),
+      //          _local_2_global_nodes.end( ), element[ 4 ] );
+      //        _elems_2_local_nodes[ 6 * i + 4 ]
+      //          = std::distance( _local_2_global_nodes.begin( ), idx_it );
+      //
+      //        idx_it = std::find( _local_2_global_nodes.begin( ),
+      //          _local_2_global_nodes.end( ), element[ 5 ] );
+      //        _elems_2_local_nodes[ 6 * i + 5 ]
+      //          = std::distance( _local_2_global_nodes.begin( ), idx_it );
+      //      }
     }
   }
 
