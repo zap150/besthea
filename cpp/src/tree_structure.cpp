@@ -891,37 +891,6 @@ void besthea::mesh::tree_structure::determine_essential_clusters(
   root.set_essential_status( root_status );
 }
 
-std::vector< lo >
-besthea::mesh::tree_structure::compute_global_2_levelwise_indices( ) const {
-  // determine the greatest global index among all clusters in the tree
-  lo max_glob_idx = 0;
-  for ( auto leaf : _leaves ) {
-    if ( leaf->get_global_index( ) > max_glob_idx ) {
-      max_glob_idx = leaf->get_global_index( );
-    }
-  }
-  std::vector< lo > output_vector( max_glob_idx + 1, -1 );
-  std::vector< lou > levelwise_counters( _levels, 0 );
-  fill_global_2_levelwise_index_vector(
-    _root, levelwise_counters, output_vector );
-  return output_vector;
-}
-
-void besthea::mesh::tree_structure::fill_global_2_levelwise_index_vector(
-  const scheduling_time_cluster * root, std::vector< lou > & levelwise_counters,
-  std::vector< lo > & global_2_levelwise_indices ) const {
-  global_2_levelwise_indices[ root->get_global_index( ) ]
-    = levelwise_counters[ root->get_level( ) ];
-  levelwise_counters[ root->get_level( ) ] += 1;
-  // call routine recursively for all children
-  if ( root->get_n_children( ) > 0 ) {
-    for ( auto child : *root->get_children( ) ) {
-      fill_global_2_levelwise_index_vector(
-        child, levelwise_counters, global_2_levelwise_indices );
-    }
-  }
-}
-
 void besthea::mesh::tree_structure::determine_levelwise_output_string(
   const lo digits, bool print_process_ids, scheduling_time_cluster * root,
   std::vector< std::string > & levelwise_output_strings ) const {

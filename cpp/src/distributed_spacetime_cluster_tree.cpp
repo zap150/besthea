@@ -198,8 +198,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
 
   if ( _initial_space_refinement > 0 ) {
     // execute the initial spatial refinements
-    get_n_elements_in_subdivisioning(
-      *_root, n_space_div, time_clusters_on_level, n_elems_per_subdivisioning );
+    get_n_elements_in_subdivisioning( *_root, n_space_div, 0,
+      time_clusters_on_level, n_elems_per_subdivisioning );
     create_spacetime_roots( n_elems_per_subdivisioning, cluster_pairs );
   } else {
     // no initial spatial refinement is necessary. construct the root at level 0
@@ -234,20 +234,15 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
 
   // update time_clusters_on_level (to contain clusters at level 1)
   time_clusters_on_level = *( dist_tree->get_root( )->get_children( ) );
-  // compute a mapping from global 2 levelwise indices of time clusters to
-  // which is used in the levelwise splitting of clusters
-  std::vector< lo > time_cluster_global_2_levelwise_index
-    = dist_tree->compute_global_2_levelwise_indices( );
 
   // loop over levels of the clusters which are next to be constructed
   for ( lo child_level = 1; child_level < dist_tree_depth_coll;
         ++child_level ) {
     // get global number of elements per cluster
-    get_n_elements_in_subdivisioning(
-      *_root, n_space_div, time_clusters_on_level, n_elems_per_subdivisioning );
+    get_n_elements_in_subdivisioning( *_root, n_space_div, child_level,
+      time_clusters_on_level, n_elems_per_subdivisioning );
     split_clusters_levelwise( split_space, n_space_div, n_time_div,
-      n_elems_per_subdivisioning, time_cluster_global_2_levelwise_index,
-      cluster_pairs );
+      n_elems_per_subdivisioning, cluster_pairs );
     // replace time_cluster_on_level with the appropriate vector for the next
     // level
     std::vector< scheduling_time_cluster * > time_clusters_next_level;
@@ -579,12 +574,12 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
 
 void besthea::mesh::distributed_spacetime_cluster_tree::
   get_n_elements_in_subdivisioning( general_spacetime_cluster & root,
-    lo n_space_div,
+    lo n_space_div, lo level_time,
     const std::vector< scheduling_time_cluster * > & time_clusters_on_level,
     std::vector< lo > & elems_in_clusters ) {
   lo n_space_clusters = 1;
-  lo n_time_clusters = time_clusters_on_level.size( );
-
+  lo n_time_clusters
+    = 1 << level_time;  // upper estimate on the number of levels
   for ( lo i = 0; i < n_space_div; ++i ) {
     n_space_clusters *= 2;
   }
@@ -624,15 +619,20 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   steps_z.push_back( space_center[ 2 ] + half_size[ 2 ] + 1.0 );
 
   // assign slices to tree nodes
-  std::vector< sc > starts;
-  starts.reserve( n_time_clusters );
-  std::vector< sc > ends;
-  ends.reserve( n_time_clusters );
-  for ( lo i = 0; i < n_time_clusters; ++i ) {
+  std::vector< sc > starts(
+    n_time_clusters, std::numeric_limits< sc >::infinity( ) );
+  std::vector< sc > ends(
+    n_time_clusters, -std::numeric_limits< sc >::infinity( ) );
+  // compute the level conversion factor to compute local levelwise cluster
+  // indices from global cluster indices.
+  lo level_conversion_factor = ( 1 << level_time ) - 1;
+  for ( lou i = 0; i < time_clusters_on_level.size( ); ++i ) {
     sc center_time = time_clusters_on_level[ i ]->get_center( );
     sc half_size_time = time_clusters_on_level[ i ]->get_half_size( );
-    starts.push_back( center_time - half_size_time );
-    ends.push_back( center_time + half_size_time );
+    lo access_index = time_clusters_on_level[ i ]->get_global_index( )
+      - level_conversion_factor;
+    starts[ access_index ] = center_time - half_size_time;
+    ends[ access_index ] = center_time + half_size_time;
   }
 
   // starts[ 0 ] -= 1.0; todo: discuss; this is not used anymore, because it
@@ -806,7 +806,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::create_spacetime_roots(
 void besthea::mesh::distributed_spacetime_cluster_tree::
   split_clusters_levelwise( bool split_space, lo n_space_div, lo n_time_div,
     std::vector< lo > & elems_in_clusters,
-    const std::vector< lo > & global_2_levelwise_indices_time,
     std::vector< std::pair< general_spacetime_cluster *,
       scheduling_time_cluster * > > & cluster_pairs ) {
   // compute number of space clusters at the level of children
@@ -851,8 +850,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
           } else {
             coord_t = 2 * parent_coord[ 4 ] + 1;  // right child
           }
-          lo time_index_on_level
-            = global_2_levelwise_indices_time[ global_time_index ];
+          // compute the time index on the current level (n_time_div) by
+          // substracting the correct conversion term.
+          lo time_index_on_level = global_time_index - ( 1 << n_time_div ) + 1;
 
           sc new_time_center = t_child->get_center( );
           sc new_time_half_size = t_child->get_half_size( );
@@ -1331,7 +1331,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
 
   // decide whether to split space when refining the descendant
   bool split_space_descendant = false;
-  if ( !split_space && root.get_level( ) + 1 >= _start_space_refinement ) {
+  if ( !split_space && root.get_level( ) + 2 >= _start_space_refinement ) {
+    // root.get_level( ) + 2 is the correct level since the decision is always
+    // made from the perspective of the children
     split_space_descendant = true;
   }
 
@@ -1862,9 +1864,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     general_spacetime_cluster & target_cluster ) {
   if ( current_cluster.get_n_children( ) == 0 ) {
     target_cluster.add_to_nearfield_list( &current_cluster );
-    // std::cout << "called this " << std::endl;
-    // target_cluster.print( );
-    // current_cluster.print( );
   } else {
     for ( auto child : *current_cluster.get_children( ) ) {
       add_leaves_to_nearfield_list( *child, target_cluster );

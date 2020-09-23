@@ -297,7 +297,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * non-uniform time-slices (no temporal bisections of clusters anymore!)
    */
   void get_n_elements_in_subdivisioning( general_spacetime_cluster & root,
-    lo n_space_div,
+    lo n_space_div, lo level_time,
     const std::vector< scheduling_time_cluster * > & time_clusters_on_level,
     std::vector< lo > & elems_in_clusters );
 
@@ -362,7 +362,6 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    */
   void split_clusters_levelwise( bool split_space, lo n_space_div,
     lo n_time_div, std::vector< lo > & elems_in_clusters,
-    const std::vector< lo > & global_2_levelwise_indices_time,
     std::vector< std::pair< general_spacetime_cluster *,
       scheduling_time_cluster * > > & cluster_pairs );
 

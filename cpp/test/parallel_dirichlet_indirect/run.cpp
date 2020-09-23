@@ -67,14 +67,16 @@ int main( int argc, char * argv[] ) {
   sc st_coeff;
   lo max_n_levels, n_min_elems;
   lo n_blocks, size_of_block;
+  lo distribution_time_levels;
 
-  st_coeff = 4.0;
+  st_coeff = 3.0;
   max_n_levels = 20;
-  n_min_elems = 800;
-  temp_order = 6;
-  spat_order = 6;
+  n_min_elems = 400;
+  temp_order = 5;
+  spat_order = 5;
   order_sing = 4;
   order_reg = 4;
+  distribution_time_levels = 6;
 
   if ( myRank == 0 ) {
     std::cout << "### parameter choices: ###" << std::endl;
@@ -84,12 +86,14 @@ int main( int argc, char * argv[] ) {
     std::cout << "spat_order = " << spat_order << std::endl;
     std::cout << "order_sing = " << order_sing << std::endl;
     std::cout << "order_reg = " << order_reg << std::endl;
+    std::cout << "distribution_time_levels = " << distribution_time_levels
+              << std::endl;
     std::cout << "###########################" << std::endl;
   }
 
-  lo test_case = 0;
-  lo geometry_case = 1;
-  int refine = 2;
+  lo test_case = 1;
+  lo geometry_case = 4;
+  int refine = 0;
   if ( argc == 3 ) {
     geometry_case = strtol( argv[ 1 ], NULL, 10 );
     test_case = strtol( argv[ 2 ], NULL, 10 );
@@ -103,8 +107,9 @@ int main( int argc, char * argv[] ) {
   // spacetime mesh for the test.
   std::string spatial_mesh_file;
   lo n_timesteps = 16;
+  lo space_init_refine = 0;
 
-  int temp_refine_factor = 1;
+  int temp_refine_factor = 2;
   sc end_time = 1.0;
 
   std::string geometry_dir = "./parallel_dirichlet_indirect/geometry_case_"
@@ -119,6 +124,12 @@ int main( int argc, char * argv[] ) {
   } else if ( geometry_case == 3 ) {
     spatial_mesh_file = "./mesh_files/icosahedron.txt";
     n_timesteps = 20;
+  } else if ( geometry_case == 4 ) {
+    // Similar to Messner, Schanz, Tausch in J.Comp.Phys.
+    // choose st_coeff = 3 such that first space refinement level is 6
+    spatial_mesh_file = "./mesh_files/cube_24_half_scale.txt";
+    n_timesteps = 32;
+    space_init_refine = 2;
   }
 
   // parameters for distributed spacetime mesh
@@ -165,9 +176,9 @@ int main( int argc, char * argv[] ) {
 
     // load time mesh defining slices and create temporal tree
     temporal_mesh time_mesh( 0, end_time, n_timesteps );
-    lo time_levels = 6;
     lo n_min_time_elems = 2;
-    time_cluster_tree time_tree( time_mesh, time_levels, n_min_time_elems );
+    time_cluster_tree time_tree(
+      time_mesh, distribution_time_levels, n_min_time_elems );
 
     // write tree structure to file
     time_tree.print_tree_structure( tree_vector_file );
@@ -176,14 +187,13 @@ int main( int argc, char * argv[] ) {
     time_tree.print_cluster_bounds( cluster_bounds_file );
 
     // compute process assignment and write it to file
-
-    std::cout << "n_processes: " << n_processes
-              << ", strategy: " << process_assignment_strategy << std::endl;
-
     time_tree.print_process_assignments(
       n_processes, process_assignment_strategy, process_assignment_file );
 
     triangular_surface_mesh space_mesh( spatial_mesh_file );
+    if ( space_init_refine > 0 ) {
+      space_mesh.refine( space_init_refine );
+    }
 
     spacetime_mesh_generator generator(
       space_mesh, end_time, n_timesteps, time_refinement, space_refinement );
@@ -213,6 +223,7 @@ int main( int argc, char * argv[] ) {
   if ( myRank == 0 ) {
     t.measure( );
     // distributed_st_tree.print( );
+    // distributed_st_tree.get_distribution_tree( )->print( );
     std::cout << "number of elements: " << distributed_mesh.get_n_elements( )
               << ", number of timesteps: "
               << distributed_mesh.get_n_temporal_elements( ) << std::endl;
@@ -282,6 +293,9 @@ int main( int argc, char * argv[] ) {
       t.reset( "assembly and application of toeplitz matrix V (from scratch)" );
       // construct matrix V directly
       triangular_surface_mesh space_mesh( spatial_mesh_file );
+      if ( space_init_refine > 0 ) {
+        space_mesh.refine( space_init_refine );
+      }
       uniform_spacetime_tensor_mesh spacetime_mesh(
         space_mesh, end_time, n_timesteps );
       spacetime_mesh.refine( refine, temp_refine_factor );
@@ -298,7 +312,8 @@ int main( int argc, char * argv[] ) {
       // tree.print( );
       // fast_spacetime_be_space< basis_tri_p0 > space_p0_pFMM( tree );
       // pFMM_matrix_heat_sl_p0p0 * V_pFMM = new pFMM_matrix_heat_sl_p0p0;
-      // fast_spacetime_be_assembler fast_assembler_v( kernel_v, space_p0_pFMM,
+      // fast_spacetime_be_assembler fast_assembler_v( kernel_v,
+      // space_p0_pFMM,
       //   space_p0_pFMM, order_sing, order_reg, temp_order, spat_order,
       //   cauchy_data::_alpha, 1.5, false );
       // fast_assembler_v.assemble( *V_pFMM );
@@ -308,7 +323,8 @@ int main( int argc, char * argv[] ) {
       // V_pFMM->apply( full_block_vector, applied_pFMM );
       delete V;
     }
-    // compute the corresponding result with the distributed matrix V_dist_pFMM
+    // compute the corresponding result with the distributed matrix
+    // V_dist_pFMM
     if ( myRank == 0 ) {
       t.reset( "applying distributed pFMM matrix V" );
     }
@@ -342,7 +358,8 @@ int main( int argc, char * argv[] ) {
     // std::cout << "difference between pFMM results:" << std::endl;
     // subvec_dist_pFMM.add( subvec_pFMM, -1.0 );
     // std::cout << subvec_dist_pFMM.norm( ) << ", rel. "
-    //           << subvec_dist_pFMM.norm( ) / subvec_pFMM.norm( ) << std::endl;
+    //           << subvec_dist_pFMM.norm( ) / subvec_pFMM.norm( ) <<
+    //           std::endl;
   } else if ( test_case == 2 ) {
     //##########################################################################
     //##########################################################################
@@ -367,6 +384,9 @@ int main( int argc, char * argv[] ) {
       t.reset( "assembly and application of toeplitz matrix V (from scratch)" );
       // construct matrix V directly
       triangular_surface_mesh space_mesh( spatial_mesh_file );
+      if ( space_init_refine > 0 ) {
+        space_mesh.refine( space_init_refine );
+      }
       uniform_spacetime_tensor_mesh spacetime_mesh(
         space_mesh, end_time, n_timesteps );
       spacetime_mesh.refine( refine, temp_refine_factor );
@@ -421,6 +441,9 @@ int main( int argc, char * argv[] ) {
       t.reset( "assembly of toeplitz matrix V (includes tree construction)" );
       // construct matrix V directly
       triangular_surface_mesh space_mesh( spatial_mesh_file );
+      if ( space_init_refine > 0 ) {
+        space_mesh.refine( space_init_refine );
+      }
       uniform_spacetime_tensor_mesh spacetime_mesh(
         space_mesh, end_time, n_timesteps );
       spacetime_mesh.refine( refine, temp_refine_factor );
