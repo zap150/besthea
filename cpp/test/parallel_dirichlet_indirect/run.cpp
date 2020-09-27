@@ -65,31 +65,19 @@ int main( int argc, char * argv[] ) {
   // declaration of required parameters.
   lo order_sing, order_reg, temp_order, spat_order;
   sc st_coeff;
-  lo max_n_levels, n_min_elems;
+  lo max_n_levels, n_min_elems, n_nearfield_clusters;
   lo n_blocks, size_of_block;
   lo distribution_time_levels;
 
-  st_coeff = 3.0;
+  n_nearfield_clusters = 3;
+  st_coeff = 4.0;
   max_n_levels = 20;
-  n_min_elems = 400;
+  n_min_elems = 800;
   temp_order = 5;
   spat_order = 5;
   order_sing = 4;
   order_reg = 4;
-  distribution_time_levels = 6;
-
-  if ( myRank == 0 ) {
-    std::cout << "### parameter choices: ###" << std::endl;
-    std::cout << "st_coeff = " << st_coeff << std::endl;
-    std::cout << "n_min_elems = " << n_min_elems << std::endl;
-    std::cout << "temp_order = " << temp_order << std::endl;
-    std::cout << "spat_order = " << spat_order << std::endl;
-    std::cout << "order_sing = " << order_sing << std::endl;
-    std::cout << "order_reg = " << order_reg << std::endl;
-    std::cout << "distribution_time_levels = " << distribution_time_levels
-              << std::endl;
-    std::cout << "###########################" << std::endl;
-  }
+  distribution_time_levels = 5;
 
   lo test_case = 1;
   lo geometry_case = 4;
@@ -97,10 +85,30 @@ int main( int argc, char * argv[] ) {
   if ( argc == 3 ) {
     geometry_case = strtol( argv[ 1 ], NULL, 10 );
     test_case = strtol( argv[ 2 ], NULL, 10 );
-  } else if ( argc == 4 ) {
+  } else if ( argc == 6 ) {
     geometry_case = strtol( argv[ 1 ], NULL, 10 );
     test_case = strtol( argv[ 2 ], NULL, 10 );
     refine = strtol( argv[ 3 ], NULL, 10 );
+    n_min_elems = strtol( argv[ 4 ], NULL, 10 );
+    n_nearfield_clusters = strtol( argv[ 5 ], NULL, 10 );
+  }
+
+  if ( myRank == 0 ) {
+    std::cout << "### parameter choices: ###" << std::endl;
+    std::cout << "st_coeff = " << st_coeff << std::endl;
+    std::cout << "n_min_elems = " << n_min_elems << std::endl;
+    std::cout << "n_nearfield_clusters = " << n_nearfield_clusters << std::endl;
+    std::cout << "temp_order = " << temp_order << std::endl;
+    std::cout << "spat_order = " << spat_order << std::endl;
+    std::cout << "order_sing = " << order_sing << std::endl;
+    std::cout << "order_reg = " << order_reg << std::endl;
+    std::cout << "distribution_time_levels = " << distribution_time_levels
+              << std::endl;
+    std::cout << "###########################" << std::endl;
+    std::cout << "number of MPI processes: " << n_processes << std::endl;
+    std::cout << "max. number of OpenMP threads: " << omp_get_max_threads( )
+              << std::endl;
+    std::cout << "###########################" << std::endl;
   }
 
   // mesh data to construct equivalent standard spacetime mesh and distributed
@@ -126,10 +134,11 @@ int main( int argc, char * argv[] ) {
     n_timesteps = 20;
   } else if ( geometry_case == 4 ) {
     // Similar to Messner, Schanz, Tausch in J.Comp.Phys.
-    // choose st_coeff = 3 such that first space refinement level is 6
+    // choose st_coeff = 4 such that first space refinement level is 6
     spatial_mesh_file = "./mesh_files/cube_24_half_scale.txt";
     n_timesteps = 32;
     space_init_refine = 2;
+    end_time = 0.5;
   }
 
   // parameters for distributed spacetime mesh
@@ -170,8 +179,8 @@ int main( int argc, char * argv[] ) {
     std::cout << "refine = " << refine << std::endl;
     std::cout << "temporal refinement factor = " << temp_refine_factor
               << std::endl;
-    std::cout << "n_processes: " << n_processes
-              << ", strategy: " << process_assignment_strategy << std::endl;
+    std::cout << "refinement strategy: " << process_assignment_strategy
+              << std::endl;
     t.reset( "mesh generation" );
 
     // load time mesh defining slices and create temporal tree
@@ -204,20 +213,21 @@ int main( int argc, char * argv[] ) {
   MPI_Barrier( comm );
 
   if ( myRank == 0 ) {
-    t.reset( "assembly of distributed mesh and tree " );
+    t.reset( "assembly of distributed mesh and tree" );
   }
 
   distributed_spacetime_tensor_mesh distributed_mesh(
     geometry_dir + "test_mesh_d.txt", tree_vector_file, cluster_bounds_file,
     process_assignment_file, &comm );
 
-  // number of blocks in a blockvector corresponds to global number of timesteps
+  // number of blocks in a blockvector corresponds to global number of
+  // timesteps
   n_blocks = distributed_mesh.get_n_temporal_elements( );
   // size of a block in blockvector corresponds to number of spatial elements
   size_of_block = distributed_mesh.get_n_elements( ) / n_blocks;
 
-  distributed_spacetime_cluster_tree distributed_st_tree(
-    distributed_mesh, max_n_levels, n_min_elems, st_coeff, 3, &comm );
+  distributed_spacetime_cluster_tree distributed_st_tree( distributed_mesh,
+    max_n_levels, n_min_elems, st_coeff, n_nearfield_clusters, &comm );
   MPI_Barrier( comm );
 
   if ( myRank == 0 ) {
