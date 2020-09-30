@@ -41,6 +41,7 @@
 #include "besthea/compound_block_linear_operator.h"
 #include "besthea/compound_linear_operator.h"
 #include "besthea/coordinates.h"
+#include "besthea/distributed_pFMM_matrix.h"
 #include "besthea/full_matrix.h"
 #include "besthea/indices.h"
 #include "besthea/mkl_cg_inverse.h"

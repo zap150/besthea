@@ -75,7 +75,7 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::L2_projection(
 
   typename spacetime_be_space< basis_type >::quadrature_wrapper my_quadrature;
   this->init_quadrature( order_rhs_spatial, order_rhs_temporal, my_quadrature );
-  lo size_t = my_quadrature._wt.size( );
+  lo size_wt = my_quadrature._wt.size( );
   lo size_x = my_quadrature._wx.size( );
   sc * x1_ref = my_quadrature._x1_ref.data( );
   sc * x2_ref = my_quadrature._x2_ref.data( );
@@ -97,7 +97,7 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::L2_projection(
       _spacetime_mesh->get_spatial_normal( i_elem, n );
       area_xt = _spacetime_mesh->spatial_area( i_elem ) * timestep;
 
-      for ( lo i_t = 0; i_t < size_t; ++i_t ) {
+      for ( lo i_t = 0; i_t < size_wt; ++i_t ) {
         for ( lo i_x = 0; i_x < size_x; ++i_x ) {
           fun_val = f( x1_mapped[ i_x ], x2_mapped[ i_x ], x3_mapped[ i_x ], n,
                       t_mapped[ i_t ] )
@@ -138,7 +138,7 @@ sc besthea::bem::uniform_spacetime_be_space< basis_type >::L2_relative_error(
 
   typename spacetime_be_space< basis_type >::quadrature_wrapper my_quadrature;
   this->init_quadrature( order_rhs_spatial, order_rhs_temporal, my_quadrature );
-  lo size_t = my_quadrature._wt.size( );
+  lo size_wt = my_quadrature._wt.size( );
   lo size_x = my_quadrature._wx.size( );
   sc * x1_ref = my_quadrature._x1_ref.data( );
   sc * x2_ref = my_quadrature._x2_ref.data( );
@@ -167,7 +167,7 @@ sc besthea::bem::uniform_spacetime_be_space< basis_type >::L2_relative_error(
             i_elem, i_loc, x1_ref[ i_x ], x2_ref[ i_x ], n.data( ) );
           local_value += approximation_data[ l2g_data[ i_loc ] ] * basis_val;
         }
-        for ( lo i_t = 0; i_t < size_t; ++i_t ) {
+        for ( lo i_t = 0; i_t < size_wt; ++i_t ) {
           fun_val = f( x1_mapped[ i_x ], x2_mapped[ i_x ], x3_mapped[ i_x ], n,
             t_mapped[ i_t ] );
           absdiff = std::abs( fun_val - local_value );

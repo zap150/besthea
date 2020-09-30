@@ -81,7 +81,7 @@ class besthea::mesh::space_cluster_tree {
    * @param[in,out] neighbors Reference to the std::vector in which the pointers
    * to the neighbors should be included.
    */
-  void find_neighbors( space_cluster & cluster, lo limit,
+  void find_neighbors( space_cluster & cluster, slou limit,
     std::vector< space_cluster * > & neighbors ) const;
 
   /**
@@ -176,6 +176,22 @@ class besthea::mesh::space_cluster_tree {
     return _leaves;
   }
 
+  /**
+   * Prints levels of the tree.
+   */
+  void print( ) {
+    // print cluster information recursively
+    print_internal( _root );
+    // print general tree information
+    std::cout << "number of levels: " << _levels << std::endl;
+    // print vector of paddings
+    std::cout << "padding: " << std::endl;
+    for ( lou i = 0; i < _paddings.size( ); ++i ) {
+      std::cout << _paddings[ i ] << " ";
+    }
+    std::cout << std::endl;
+  }
+
  private:
   space_cluster * _root;                  //!< root cluster of the tree
   const triangular_surface_mesh & _mesh;  //!< underlying mesh
@@ -231,6 +247,21 @@ class besthea::mesh::space_cluster_tree {
    * @param[in] root Root cluster of the tree.
    */
   void collect_leaves( space_cluster & root );
+
+  /**
+   * Aux for printing
+   */
+  void print_internal( space_cluster * root ) {
+    if ( root != nullptr ) {
+      root->print( );
+      std::vector< space_cluster * > * children = root->get_children( );
+      if ( children != nullptr )
+        for ( auto it = children->begin( ); it != children->end( ); ++it ) {
+          for ( lo i = 0; i < ( *it )->get_level( ); ++i ) std::cout << " ";
+          print_internal( *it );
+        }
+    }
+  }
 };
 
 #endif /* INCLUDE_BESTHEA_SPACE_CLUSTER_TREE_H_ */

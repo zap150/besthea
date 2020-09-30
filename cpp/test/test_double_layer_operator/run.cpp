@@ -210,9 +210,9 @@ int main( int argc, char * argv[] ) {
     pFMM_matrix_heat_adl_p1p0 * K_adj_pFMM = new pFMM_matrix_heat_adl_p1p0;
     //   tree.print( );
 
-    fast_spacetime_be_assembler fast_assembler_k_adj( kernel_ak,
-      space_p1_pFMM, space_p0_pFMM, order_sing, order_reg, temp_order, 
-      spat_order, cauchy_data::_alpha, 1.5, false );
+    fast_spacetime_be_assembler fast_assembler_k_adj( kernel_ak, space_p1_pFMM,
+      space_p0_pFMM, order_sing, order_reg, temp_order, spat_order,
+      cauchy_data::_alpha, 1.5, false );
     t.reset( "K_adj_pFMM" );
     fast_assembler_k_adj.assemble( *K_adj_pFMM );
     t.measure( );
@@ -254,9 +254,9 @@ int main( int argc, char * argv[] ) {
     pFMM_matrix_heat_adl_p1p0 * K_adj_pFMM = new pFMM_matrix_heat_adl_p1p0;
     //   tree.print( );
 
-    fast_spacetime_be_assembler fast_assembler_k_adj( kernel_ak,
-      space_p1_pFMM, space_p0_pFMM, order_sing, order_reg, temp_order, 
-      spat_order, cauchy_data::_alpha, 1.5, false );
+    fast_spacetime_be_assembler fast_assembler_k_adj( kernel_ak, space_p1_pFMM,
+      space_p0_pFMM, order_sing, order_reg, temp_order, spat_order,
+      cauchy_data::_alpha, 1.5, false );
     t.reset( "K_adj_pFMM" );
     fast_assembler_k_adj.assemble( *K_adj_pFMM );
     t.measure( );
@@ -268,7 +268,7 @@ int main( int argc, char * argv[] ) {
     K->apply( neu_proj, applied_toeplitz, true );
     // multiplicate neu_proj with spatially adjoint pFMM matrix K
     block_vector applied_pFMM( n_blocks, cols_of_block, true );
-    K_adj_pFMM->apply( neu_proj, applied_pFMM);
+    K_adj_pFMM->apply( neu_proj, applied_pFMM );
     std::cout << "error timewise" << std::endl;
     for ( lo i = 0; i < applied_toeplitz.get_block_size( ); ++i ) {
       applied_pFMM.get_block( i ).add( applied_toeplitz.get_block( i ), -1.0 );

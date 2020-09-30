@@ -26,7 +26,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <besthea/spacetime_cluster_tree.h>
+#include "besthea/spacetime_cluster_tree.h"
 
 #include <algorithm>
 #include <cmath>
@@ -35,7 +35,7 @@
 besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
   const spacetime_tensor_mesh & spacetime_mesh, lo time_levels,
   lo n_min_time_elems, lo n_min_space_elems, sc st_coeff,
-  lo spatial_nearfield_limit )
+  slou spatial_nearfield_limit )
   : _levels( 0 ),
     _spacetime_mesh( spacetime_mesh ),
     _space_mesh( *( spacetime_mesh.get_spatial_surface_mesh( ) ) ),
@@ -49,9 +49,8 @@ besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
   sc xmin, xmax, ymin, ymax, zmin, zmax;
   _space_mesh.compute_bounding_box( xmin, xmax, ymin, ymax, zmin, zmax );
 
-  sc max_half_size = std::max( { ( xmax - xmin ) / 2.0, ( ymax - ymin ) / 2.0,
-                       ( zmax - zmin ) / 2.0 } )
-    / 2.0;
+  sc max_half_size
+    = std::max( { ( xmax - xmin ), ( ymax - ymin ), ( zmax - zmin ) } ) / 2.0;
 
   sc delta = _time_mesh.get_end( ) - _time_mesh.get_start( );
 
@@ -74,17 +73,20 @@ besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
     _space_mesh, _start_spatial_level + n_s_levels, n_min_space_elems );
 
   // determine for which temporal level the first spatial refinement is needed
-  _start_temporal_level = 0;
+  _start_temporal_level = 1;
+  delta *= 0.5;
   if ( _start_spatial_level == 0 ) {
     while ( max_half_size <= st_coeff * sqrt( delta ) ) {
       delta *= 0.5;
       _start_temporal_level += 1;
     }
-    // shift _start_temporal_level if necessary to guarantee levels as in
-    // Messner's work
-    if ( ( n_t_levels - _start_temporal_level ) % 2 ) {
-      _start_temporal_level -= 1;
-    }
+    // // shift _start_temporal_level if necessary to guarantee levels as in
+    // // Messner's work
+    // if ( ( n_t_levels - _start_temporal_level ) % 2 ) {
+    //   _start_temporal_level -= 1;
+    // }
+  } else {
+    _start_temporal_level = 2;
   }
 
   // next, we assemble their combination into a space-time tree
@@ -97,7 +99,7 @@ besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
   //   time_cluster * >( _space_tree->get_root( ), _time_tree->get_root( ) ),
   //   & _root ) );
 
-  // if the space has to be split to fullfil the condition, the individual roots
+  // if the space has to be split to fulfill the condition, the individual roots
   // are stored in the space_roots vector
   std::vector< space_cluster * > space_roots;
   get_space_clusters_on_level(
@@ -106,19 +108,16 @@ besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
   // determine whether the individual roots are split in the first step of the
   // building of the cluster tree (guarantees levels as in Messner's work)
   // TODO: discuss if this should be kept in the final code (somehow haphazard)
-  bool split_space = false;
-  if ( ( _start_temporal_level == 0 ) && ( n_t_levels % 2 ) ) {
-    split_space = true;
-  }
+  // if ( ( _start_temporal_level == 0 ) && ( n_t_levels % 2 ) ) {
+  //   split_space = true;
+  // }
+  bool split_space = ( _start_temporal_level <= 1 );
 
   for ( auto it = space_roots.begin( ); it != space_roots.end( ); ++it ) {
     spacetime_cluster * cluster
       = new spacetime_cluster( **it, *_time_tree->get_root( ), _root, 0 );
     _map_to_spacetime_clusters.insert(
-      std::pair< std::pair< space_cluster *, time_cluster * >,
-        spacetime_cluster * >( std::pair< space_cluster *, time_cluster * >(
-                                 *it, _time_tree->get_root( ) ),
-        cluster ) );
+      { { *it, _time_tree->get_root( ) }, cluster } );
     build_tree( cluster, 1, split_space );
 
     // the roots of the subtrees are linked to the level -1 global root
@@ -181,9 +180,13 @@ void besthea::mesh::spacetime_cluster_tree::build_tree(
     }
   }
   // delete space children, if they have been allocated in this routine
-  if ( ( split_space_descendant ) || ( level < _start_temporal_level ) ) {
+  if ( !split_space ) {
     delete space_children;
   }
+  // old code:
+  // if ( ( split_space_descendant ) || ( level < _start_temporal_level ) ) {
+  //   delete space_children;
+  // }
 }
 
 void besthea::mesh::spacetime_cluster_tree::get_space_clusters_on_level(

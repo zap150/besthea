@@ -63,9 +63,11 @@ class besthea::mesh::time_cluster {
    * @param[in] parent Pointer to the cluster's parent.
    * @param[in] level Level within the cluster tree.
    * @param[in] mesh Reference to the underlying temporal mesh.
+   * @param[in] allocate_elements Boolean determining whether to allocate array
+   * for indices of cluster's element (necessary only for leaf clusters)
    */
   time_cluster( sc center, sc half_size, lo n_elements, time_cluster * parent,
-    lo level, const temporal_mesh & mesh )
+    lo level, const temporal_mesh & mesh, bool allocate_elements = true )
     : _n_elements( n_elements ),
       _center( center ),
       _half_size( half_size ),
@@ -75,7 +77,9 @@ class besthea::mesh::time_cluster {
       _level( level ),
       _lagrange_quad( 1, 1 ),
       _lagrange_drv_int( 1, 1 ) {
-    _elements.reserve( _n_elements );
+    if ( allocate_elements ) {
+      _elements.reserve( _n_elements );
+    }
   }
 
   time_cluster( const time_cluster & that ) = delete;
@@ -141,9 +145,9 @@ class besthea::mesh::time_cluster {
   lo get_element( lo idx ) const {
     return _elements[ idx ];
   }
-  
+
   /**
-   * Returns reference to vector of global element indices for elements in the 
+   * Returns reference to vector of global element indices for elements in the
    * cluster
    */
   const std::vector< lo > & get_all_elements( ) const {
@@ -166,7 +170,7 @@ class besthea::mesh::time_cluster {
   /**
    * Returns number of cluster's children.
    */
-  lo get_n_children( ) {
+  lo get_n_children( ) const {
     if ( _children != nullptr ) {
       return _children->size( );
     } else {
@@ -180,14 +184,14 @@ class besthea::mesh::time_cluster {
   std::vector< time_cluster * > * get_children( ) {
     return _children;
   }
-  
-    /**
+
+  /**
    * Returns a pointer to the parent.
    */
   time_cluster * get_parent( ) {
     return _parent;
   }
-    
+
   /**
    * Returns a pointer to the children.
    */
@@ -237,7 +241,7 @@ class besthea::mesh::time_cluster {
     if ( this == _parent->_children->back( ) ) {
       return _parent->_children->front( );
     } else if ( ( _parent->get_left_neighbour( ) != nullptr )
-      && ( _parent->get_left_neighbour( )->_children->size( ) == 2 ) ) {
+      && ( _parent->get_left_neighbour( )->_children != nullptr ) ) {
       return _parent->get_left_neighbour( )->_children->back( );
     } else {
       return nullptr;
@@ -245,13 +249,13 @@ class besthea::mesh::time_cluster {
   }
 
   /**
-   * Returns a reference to the matrix storing the quadrature of the Lagrange 
+   * Returns a reference to the matrix storing the quadrature of the Lagrange
    * polynomials on a cluster.
    */
   full_matrix_type & get_lagrange_quad( ) {
     return _lagrange_quad;
   }
-  
+
   /**
    * Returns a reference to the matrix storing the integrals of the derivatives
    * of the Lagrange polynomials on a cluster.
@@ -266,16 +270,25 @@ class besthea::mesh::time_cluster {
   const temporal_mesh & get_mesh( ) {
     return _mesh;
   }
-  
+
   /**
    * Determines whether the current cluster is the left child of its parent.
-   * \note If the current cluster is the root of the tree \p false is returned.
+   * @note If the current cluster is the root of the tree \p false is returned.
    */
   bool is_left_child( ) const {
     if ( _parent == nullptr )
       return false;
-    else 
+    else
       return ( this == _parent->_children->front( ) );
+  }
+
+  /**
+   * Prints info of the object.
+   */
+  void print( ) {
+    std::cout << "level: " << _level;
+    std::cout << ", center: " << _center << ", half size: " << _half_size
+              << ", elements: " << _n_elements << std::endl;
   }
 
  private:
@@ -289,14 +302,14 @@ class besthea::mesh::time_cluster {
   const temporal_mesh & _mesh;  //!< temporal mesh associated with the cluster
   lo _level;                    //!< level within the cluster tree
   full_matrix_type
-    _lagrange_quad;   //!< quadrature of the Lagrange polynomials defined on
-                      //!< temporal clusters over temporal elements; 
-                      //!< (rows - indices of the polynomials,
-                      //!<  columns - element of the cluster)
+    _lagrange_quad;  //!< quadrature of the Lagrange polynomials defined on
+                     //!< temporal clusters over temporal elements;
+                     //!< (rows - indices of the polynomials,
+                     //!<  columns - element of the cluster)
   full_matrix_type
     _lagrange_drv_int;  //!< integrals of the derivatives of the Lagrange
-                        //!< polynomials defined on temporal clusters over 
-                        //!< temporal elements; 
+                        //!< polynomials defined on temporal clusters over
+                        //!< temporal elements;
                         //!< (rows - indices of the polynomials,
                         //!<  columns - element of the cluster)
 };

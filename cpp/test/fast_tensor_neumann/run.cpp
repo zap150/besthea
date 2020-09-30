@@ -111,8 +111,8 @@ int main( int argc, char * argv[] ) {
   //   tree.print( );
 
   spacetime_heat_adl_kernel_antiderivative kernel_ak( cauchy_data::_alpha );
-  fast_spacetime_be_assembler fast_assembler_adj_k( kernel_ak, 
-    space_p1, space_p0, order_sing, order_reg, temp_order, spat_order, 
+  fast_spacetime_be_assembler fast_assembler_adj_k( kernel_ak, space_p1,
+    space_p0, order_sing, order_reg, temp_order, spat_order,
     cauchy_data::_alpha, 1.5, false );
   t.reset( "K_adj" );
   fast_assembler_adj_k.assemble( *K_adj );
@@ -153,11 +153,11 @@ int main( int argc, char * argv[] ) {
   fast_assembler_d.assemble( *D );
   t.measure( );
 
-  pFMM_matrix_heat_sl_p1p1* V11 = new pFMM_matrix_heat_sl_p1p1( );
+  pFMM_matrix_heat_sl_p1p1 * V11 = new pFMM_matrix_heat_sl_p1p1( );
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
-  fast_spacetime_be_assembler fast_assembler_v(
-    kernel_v, space_p1, space_p1, order_sing, order_reg, temp_order,
-    spat_order, cauchy_data::_alpha, 1.5, false );
+  fast_spacetime_be_assembler fast_assembler_v( kernel_v, space_p1, space_p1,
+    order_sing, order_reg, temp_order, spat_order, cauchy_data::_alpha, 1.5,
+    false );
   t.reset( "V11" );
   fast_assembler_v.assemble( *V11 );
   t.measure( );
@@ -183,8 +183,7 @@ int main( int argc, char * argv[] ) {
   // gmres_iter = 500;
   D->mkl_fgmres_solve(
     preconditioner, rhs, dir, gmres_prec, gmres_iter, gmres_iter );
-  std::cout << "  iterations: " << gmres_iter << ", residual: " <<
-  gmres_prec
+  std::cout << "  iterations: " << gmres_iter << ", residual: " << gmres_prec
             << std::endl;
   t.measure( );
 
@@ -204,28 +203,26 @@ int main( int argc, char * argv[] ) {
     grid_spacetime_mesh.print_info( );
 
     block_vector slp;
-    spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha);
-    uniform_spacetime_be_evaluator evaluator_v( kernel_v, space_p0, order_reg ); 
-    t.reset( "SLP" ); 
-    evaluator_v.evaluate(grid_space_mesh.get_nodes( ), neu_proj, slp ); 
+    uniform_spacetime_be_evaluator evaluator_v( kernel_v, space_p0, order_reg );
+    t.reset( "SLP" );
+    evaluator_v.evaluate( grid_space_mesh.get_nodes( ), neu_proj, slp );
     t.measure( );
 
     block_vector dlp;
     spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
-    uniform_spacetime_be_evaluator evaluator_k( kernel_k, space_p1, order_reg ); 
-    t.reset( "DLP" ); 
-    evaluator_k.evaluate( grid_space_mesh.get_nodes( ), dir, dlp ); 
+    uniform_spacetime_be_evaluator evaluator_k( kernel_k, space_p1, order_reg );
+    t.reset( "DLP" );
+    evaluator_k.evaluate( grid_space_mesh.get_nodes( ), dir, dlp );
     t.measure( );
 
     slp.add( dlp, -1.0 );
 
     block_vector sol_interp;
-    uniform_spacetime_be_space< basis_tri_p1 > grid_space_p1( 
+    uniform_spacetime_be_space< basis_tri_p1 > grid_space_p1(
       grid_spacetime_mesh );
     grid_space_p1.interpolation( cauchy_data::dirichlet, sol_interp );
     std::cout << "Solution l2 relative error: "
-              << space_p1.l2_relative_error( sol_interp, slp ) <<
-              std::endl;
+              << space_p1.l2_relative_error( sol_interp, slp ) << std::endl;
 
     /*
     t.reset( "Printing Ensight grid" );

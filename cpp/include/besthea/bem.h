@@ -36,6 +36,8 @@
 #include "besthea/basis_tetra_p1.h"
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
+#include "besthea/distributed_fast_spacetime_be_assembler.h"
+#include "besthea/distributed_fast_spacetime_be_space.h"
 #include "besthea/fast_spacetime_be_assembler.h"
 #include "besthea/fast_spacetime_be_space.h"
 #include "besthea/fe_space.h"

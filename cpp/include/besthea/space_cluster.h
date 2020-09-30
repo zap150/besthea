@@ -33,8 +33,6 @@
 #ifndef INCLUDE_BESTHEA_SPACE_CLUSTER_H_
 #define INCLUDE_BESTHEA_SPACE_CLUSTER_H_
 
-// TODO: is the include list ok (fast be spaces are not included directly, but
-// via forward declaration) 
 // #include "besthea/fast_spacetime_be_space.h"
 #include "besthea/full_matrix.h"
 #include "besthea/settings.h"
@@ -91,7 +89,6 @@ class besthea::mesh::space_cluster {
       _mesh( mesh ),
       _level( level ),
       _octant( octant ),
-      _padding( 0.0 ),
       _box_coordinate( coordinate ),
       _cheb_T_p0( 1, 1 ),
       _cheb_T_p1( 1, 1 ),
@@ -344,21 +341,6 @@ class besthea::mesh::space_cluster {
   }
 
   /**
-   * Sets padding of the cluster.
-   * @param[in] padding Padding of the cluster.
-   */
-  void set_padding( sc padding ) {
-    _padding = padding;
-  }
-
-  /**
-   * Returns padding of the cluster.
-   */
-  sc get_padding( ) const {
-    return _padding;
-  }
-
-  /**
    * Returns level of the cluster in the cluster tree.
    */
   lo get_level( ) const {
@@ -407,7 +389,7 @@ class besthea::mesh::space_cluster {
    * Returns a reference to the matrix storing quadratures of the product
    * of Chebyshev polynomials, p1 basis functions and the selected component of
    * the normal vector over the elements of the cluster.
-   * \param[in] dim   Indicates which component of the normal vector is used
+   * @param[in] dim   Indicates which component of the normal vector is used
    *                  (0,1,2).
    */
   full_matrix_type & get_cheb_times_normal_quad( lo dim ) {
@@ -422,7 +404,7 @@ class besthea::mesh::space_cluster {
   /**
    * Returns a reference to the vector storing the selected component of the
    * surface curls of p1 basis functions.
-   * \param[in] dim   Indicates which component of the surface curls is returned
+   * @param[in] dim   Indicates which component of the surface curls is returned
    *                  (0,1,2).
    */
   std::vector< sc > & get_surf_curls( lo dim ) {
@@ -467,9 +449,8 @@ class besthea::mesh::space_cluster {
    * @param[out] indices Local indices for the current (transformed) element.
    */
   template< class space_type >
-  void local_elem_to_local_dofs( 
-    lo i_loc_elem, int n_shared_vertices, int rotation, bool swap, 
-    std::vector< lo > & indices ) const;
+  void local_elem_to_local_dofs( lo i_loc_elem, int n_shared_vertices,
+    int rotation, bool swap, std::vector< lo > & indices ) const;
 
   /**
    * Returns the degrees of freedom depending on the space.
@@ -520,6 +501,17 @@ class besthea::mesh::space_cluster {
     }
   }
 
+  /**
+   * Prints info of the object.
+   */
+  void print( ) {
+    std::cout << "level: " << _level;
+    std::cout << ", center: (" << _center[ 0 ] << ", " << _center[ 1 ] << ", "
+              << _center[ 2 ] << "), half size: (" << _half_size[ 0 ] << ", "
+              << _half_size[ 1 ] << ", " << _half_size[ 1 ]
+              << "), elements: " << _n_elements << std::endl;
+  }
+
  private:
   lo _n_elements;          //!< number of elements in the cluster
   vector_type _center;     //!< center of the cluster
@@ -534,19 +526,18 @@ class besthea::mesh::space_cluster {
     _mesh;        //!< spatial mesh associated with the cluster
   lo _level;      //!< level within the cluster tree
   short _octant;  //!< octant of the parent cluster
-  sc _padding;    //!< padding of the cluster
   std::vector< slou >
     _box_coordinate;  //!< coordinates of the box within boxes on given level
   full_matrix_type
-    _cheb_T_p0;   //!< matrix storing quadrature of the Chebyshev polynomials 
-                  //!< times p0 basis functions
-                  //!< (rows element of the cluster,
-                  //!< columns - order of the polynomial)
-  full_matrix_type 
-    _cheb_T_p1;   //!< matrix storing quadrature of the Chebyshev polynomials 
-                  //!< times p1 basis functions
-                  //!< (rows element of the cluster,
-                  //!< columns - order of the polynomial)
+    _cheb_T_p0;  //!< matrix storing quadrature of the Chebyshev polynomials
+                 //!< times p0 basis functions
+                 //!< (rows element of the cluster,
+                 //!< columns - order of the polynomial)
+  full_matrix_type
+    _cheb_T_p1;  //!< matrix storing quadrature of the Chebyshev polynomials
+                 //!< times p1 basis functions
+                 //!< (rows element of the cluster,
+                 //!< columns - order of the polynomial)
   full_matrix_type
     _cheb_normal_drv_T;  //!< matrix storing quadrature of the normal
                          //!< derivatives of the Chebyshev polynomials (weighted
@@ -596,26 +587,26 @@ class besthea::mesh::space_cluster {
 };
 
 /** specialization for p0 basis functions */
-template<> inline
-void besthea::mesh::space_cluster::local_elem_to_local_dofs< 
+template<>
+inline void besthea::mesh::space_cluster::local_elem_to_local_dofs<
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >(
-  lo i_loc_elem, int n_shared_vertices, int rotation, bool swap, 
+  lo i_loc_elem, int n_shared_vertices, int rotation, bool swap,
   std::vector< lo > & indices ) const {
   indices[ 0 ] = i_loc_elem;
 }
 
 /** specialization for p1 basis functions
- * \todo Is a more elegant implementation with map as in basis_tri_p1.cpp
+ * @todo Is a more elegant implementation with map as in basis_tri_p1.cpp
  * possible without wasting too much storage.
  */
-template<> inline
-void besthea::mesh::space_cluster::local_elem_to_local_dofs< 
+template<>
+inline void besthea::mesh::space_cluster::local_elem_to_local_dofs<
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >(
-  lo i_loc_elem, int n_shared_vertices, int rotation, bool swap, 
+  lo i_loc_elem, int n_shared_vertices, int rotation, bool swap,
   std::vector< lo > & indices ) const {
-  std::vector< lo > local_indices = { _elems_2_local_nodes[ 3* i_loc_elem ],
-    _elems_2_local_nodes[ 3* i_loc_elem + 1 ], 
-    _elems_2_local_nodes[ 3* i_loc_elem + 2 ] };
+  std::vector< lo > local_indices = { _elems_2_local_nodes[ 3 * i_loc_elem ],
+    _elems_2_local_nodes[ 3 * i_loc_elem + 1 ],
+    _elems_2_local_nodes[ 3 * i_loc_elem + 2 ] };
 
   switch ( rotation ) {
     case 0:
@@ -652,16 +643,18 @@ void besthea::mesh::space_cluster::local_elem_to_local_dofs<
 }
 
 /** specialization for p0 basis functions */
-template<> inline
-lo besthea::mesh::space_cluster::get_n_dofs<
-besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >( ) const {
+template<>
+inline lo besthea::mesh::space_cluster::get_n_dofs<
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >( )
+  const {
   return _n_elements;
 }
 
 /** specialization for p1 basis functions */
-template<> inline
-lo besthea::mesh::space_cluster::get_n_dofs<
-besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >( ) const {
+template<>
+inline lo besthea::mesh::space_cluster::get_n_dofs<
+  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >( )
+  const {
   return _local_2_global_nodes.size( );
 }
 

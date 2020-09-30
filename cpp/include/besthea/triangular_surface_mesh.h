@@ -148,6 +148,15 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
     = nullptr ) const;
 
   /**
+   * Saves the mesh into a textfile readable by besthea load method.
+   * @param[in] directory Directory where to put the file.
+   * @param[in] filename Name of the output file.
+   * @param[in] suffix Suffix of the output file.
+   */
+  bool save( const std::string & directory, const std::string & filename,
+    const std::string & suffix );
+
+  /**
    * Loads mesh from a file.
    * @param[in] file File name.
    */

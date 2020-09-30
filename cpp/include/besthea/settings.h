@@ -34,10 +34,13 @@
 #define INCLUDE_BESTHEA_SETTINGS_H_
 
 #include "boost/align.hpp"
+#include "mpi.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
+#include <vector>
 
 #ifndef DATA_ALIGN
 #define DATA_ALIGN 64  //!< Cache-line size in bytes.
@@ -48,7 +51,7 @@
 #endif
 
 // pragma to switch between cluster- and timestep-wise nearfield computation
-#define NEARFIELD_CLUSTERWISE //!< Pragma to control nearfield computation
+#define NEARFIELD_CLUSTERWISE  //!< Pragma to control nearfield computation
 
 namespace besthea {
   using scalar = double;  //!< Floating point type.
@@ -73,5 +76,86 @@ using los = besthea::index_signed;           //!< Signed indexing type.
 using lou = besthea::index_unsigned;         //!< Unsigned indexing type.
 using slos = besthea::short_index;           //!< Short signed indexing type.
 using slou = besthea::short_index_unsigned;  //!< Short unsigned indexing type.
+
+// structures to deduce MPI datatypes
+
+/**
+ * Returns scalar MPI datatype based on the template C++ type.
+ */
+template< class scalar_type >
+struct get_scalar_type {};
+
+/**
+ * Returns scalar MPI datatype based on the template C++ type.
+ */
+template<>
+struct get_scalar_type< double > {
+  /**
+   * Returns scalar MPI datatype based on the template C++ type.
+   */
+  static MPI_Datatype MPI_SC( ) {
+    return MPI_DOUBLE;
+  }
+};
+
+/**
+ * Returns scalar MPI datatype based on the template C++ type.
+ */
+template<>
+struct get_scalar_type< float > {
+  /**
+   * Returns scalar MPI datatype based on the template C++ type.
+   */
+  static MPI_Datatype MPI_SC( ) {
+    return MPI_FLOAT;
+  }
+};
+
+/**
+ * Returns indexing MPI datatype based on the template C++ type.
+ */
+template< class index_type >
+struct get_index_type {};
+
+/**
+ * Returns indexing MPI datatype based on the template C++ type.
+ */
+template<>
+struct get_index_type< int > {
+  /**
+   * Returns indexing MPI datatype based on the template C++ type.
+   */
+  static MPI_Datatype MPI_LO( ) {
+    return MPI_INT;
+  }
+};
+
+/**
+ * Returns indexing MPI datatype based on the template C++ type.
+ */
+template<>
+struct get_index_type< long > {
+  /**
+   * Returns indexing MPI datatype based on the template C++ type.
+   */
+  static MPI_Datatype MPI_LO( ) {
+    return MPI_LONG;
+  }
+};
+
+template<>
+struct get_index_type< unsigned long > {
+  /**
+   * Returns indexing MPI datatype based on the template C++ type.
+   */
+  static MPI_Datatype MPI_LO( ) {
+    return MPI_UNSIGNED_LONG;
+  }
+};
+
+// create custom OpenMP reuductions
+#pragma omp declare reduction( lo_vec_plus : std::vector<lo> : \
+   std::transform(omp_in.begin(), omp_in.end(), omp_out.begin(), \
+    omp_out.begin(), std::plus<lo>()) ) initializer(omp_priv(omp_orig))
 
 #endif /* INCLUDE_BESTHEA_SETTINGS_H_ */

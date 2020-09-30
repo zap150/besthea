@@ -58,6 +58,22 @@ besthea::mesh::temporal_mesh::temporal_mesh(
   init_lengths( );
 }
 
+besthea::mesh::temporal_mesh::temporal_mesh( std::vector< sc > & timesteps ) {
+  _start_time = timesteps.at( 0 );
+  _end_time = timesteps.at( timesteps.size( ) - 1 );
+  _n_timesteps = timesteps.size( ) - 1;
+  _n_temporal_nodes = _n_timesteps + 1;
+
+  _elements.resize( 2 * _n_timesteps );
+  _nodes = timesteps;
+
+  for ( lo i_elem = 0; i_elem < _n_timesteps; ++i_elem ) {
+    _elements[ 2 * i_elem ] = i_elem;
+    _elements[ 2 * i_elem + 1 ] = i_elem + 1;
+  }
+  init_lengths( );
+}
+
 besthea::mesh::temporal_mesh::~temporal_mesh( ) {
 }
 
@@ -116,6 +132,34 @@ bool besthea::mesh::temporal_mesh::load( const std::string & file ) {
 
   init_lengths( );
 
+  return true;
+}
+
+bool besthea::mesh::temporal_mesh::save( const std::string & directory,
+  const std::string & filename, const std::string & suffix ) {
+  std::string file_path = directory + filename + "." + suffix;
+
+  std::ofstream file( file_path.c_str( ) );
+
+  if ( !file.is_open( ) ) {
+    std::cout << "File '" << file_path << "' could not be opened!" << std::endl;
+    return false;
+  }
+
+  file << "1\n"
+       << "2\n\n"
+       << _n_temporal_nodes << "\n";
+
+  for ( lo i = 0; i < _n_temporal_nodes; ++i ) {
+    file << get_node( i ) << "\n";
+  }
+
+  file << "\n" << _n_timesteps << "\n";
+
+  for ( lo i = 0; i < _n_timesteps; ++i ) {
+    file << _elements[ 2 * i ] << " " << _elements[ 2 * i + 1 ] << "\n";
+  }
+  file.close( );
   return true;
 }
 

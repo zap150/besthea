@@ -48,10 +48,12 @@ namespace besthea {
  */
 class besthea::bem::uniform_spacetime_be_solver {
  public:
-  using block_matrix_type
-    = besthea::linear_algebra::block_lower_triangular_toeplitz_matrix; //!< Block matrix type.
-  using block_vector_type = besthea::linear_algebra::block_vector; //!< Block vector type.
-  using sparse_matrix_type = besthea::linear_algebra::sparse_matrix; //!< Sparse matrix type.
+  using block_matrix_type = besthea::linear_algebra::
+    block_lower_triangular_toeplitz_matrix;  //!< Block matrix type.
+  using block_vector_type
+    = besthea::linear_algebra::block_vector;  //!< Block vector type.
+  using sparse_matrix_type
+    = besthea::linear_algebra::sparse_matrix;  //!< Sparse matrix type.
 
   /**
    * Time marching solver for the Dirichlet problem Vt=(1/2M+K)u (V11 is

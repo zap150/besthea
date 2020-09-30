@@ -943,14 +943,14 @@ void besthea::mesh::tetrahedral_volume_mesh::init_faces( ) {
   lo offset = 0;
   for ( lo i = 0; i < _n_edges; ++i ) {
     if ( local_faces[ i ].size( ) != 0 ) {
-      for ( auto it = local_faces[ i ].begin( ); it != local_faces[ i ].end( );
-            ++it ) {
+      for ( auto it_faces = local_faces[ i ].begin( );
+            it_faces != local_faces[ i ].end( ); ++it_faces ) {
         offsets[ i ].push_back( offset );
         offset++;
         get_edge( i, edge );
         _faces.push_back( edge[ 0 ] );
         _faces.push_back( edge[ 1 ] );
-        _faces.push_back( *it );
+        _faces.push_back( *it_faces );
       }
     }
   }
@@ -962,23 +962,23 @@ void besthea::mesh::tetrahedral_volume_mesh::init_faces( ) {
     for ( lo j = 0; j < 4; ++j ) {
       std::pair< lo, lo > idx = element_to_faces_tmp[ 4 * i + j ];
       // std::cout << idx.first << " " << idx.second << std::endl;
-      lo offset = offsets[ idx.first ][ idx.second ];
+      lo current_offset = offsets[ idx.first ][ idx.second ];
       // std::cout << offset << std::endl;
-      _element_to_faces[ 4 * i + j ] = offset;
+      _element_to_faces[ 4 * i + j ] = current_offset;
     }
   }
 
-//  for ( lo i = 0; i < _n_elements; ++i ) {
-//    for ( lo j = 0; j < 4; ++j ) {
-//      std::cout << _element_to_faces[ 4 * i + j ] << " ";
-//    }
-//    std::cout << std::endl;
-//  }
-//
-//  for ( lo i = 0; i < _n_faces; ++i ) {
-//    for ( lo j = 0; j < 3; ++j ) {
-//      std::cout << _faces[ 3 * i + j ] << " ";
-//    }
-//    std::cout << std::endl;
-//  }
+  //  for ( lo i = 0; i < _n_elements; ++i ) {
+  //    for ( lo j = 0; j < 4; ++j ) {
+  //      std::cout << _element_to_faces[ 4 * i + j ] << " ";
+  //    }
+  //    std::cout << std::endl;
+  //  }
+  //
+  //  for ( lo i = 0; i < _n_faces; ++i ) {
+  //    for ( lo j = 0; j < 3; ++j ) {
+  //      std::cout << _faces[ 3 * i + j ] << " ";
+  //    }
+  //    std::cout << std::endl;
+  //  }
 }
