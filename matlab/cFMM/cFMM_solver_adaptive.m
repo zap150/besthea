@@ -12,12 +12,16 @@ classdef cFMM_solver_adaptive < handle
     cluster_tree
     % maximal number of intervals in each leaf cluster
     n_max
-    % levels of a cluster tree
+    % highest level allowed in the cluster tree
     L
+    % effective maximal level in the cluster tree
+    max_level
     % temporal panels
     panels
     % length of all the panels
     h_panels
+    % maximum length of all the panels
+    h_max_panels
     
     % order of the Lagrange interolation
     L_order
@@ -41,6 +45,10 @@ classdef cFMM_solver_adaptive < handle
     % list of levelwise padding
     % ATTENTION: level j is stored at position j + 1 
     levelwise_pad_list
+    
+    % list of levelwise cluster sizes (including padding)
+    % ATTENTION: level j is stored at position j + 1 
+    levelwise_cluster_size
     
     %lowest level on which interactions (M2L operations) happen
     lowest_interaction_level
@@ -80,6 +88,7 @@ classdef cFMM_solver_adaptive < handle
       obj.eta = eta;
       obj.panels = panels;
       obj.h_panels = panels(2,:) - panels(1,:);
+      obj.h_max_panels = max( obj.h_panels );
       obj.use_m2t_and_s2l = use_m2t_and_s2l;
       obj.lowest_interaction_level = obj.L+1;
       
@@ -96,8 +105,22 @@ classdef cFMM_solver_adaptive < handle
         t_start, t_end, 0);
       obj.cluster_tree = binary_tree(cluster, 0, 0);
       obj.construct_cluster_tree(obj.cluster_tree);
+      obj.max_level = obj.L;
+      while (obj.nr_levelwise_leaves(obj.max_level+1) == 0)
+        obj.max_level = obj.max_level - 1;
+      end
       obj.set_pad_list();
       obj.pad_cluster_tree(obj.cluster_tree);
+      % compute levelwise cluster size.
+      obj.levelwise_cluster_size = zeros( obj.max_level + 2, 1 );
+      obj.levelwise_cluster_size( 1 : obj.max_level + 1 ) = ...
+        ( t_end - t_start ) * 2.^( - ( 0 : obj.max_level )' ) ...
+        + obj.levelwise_pad_list( 1 : obj.max_level + 1, 2 ) ...
+        + obj.levelwise_pad_list( 1 : obj.max_level + 1, 1 );
+      % add h_max_panels as fictive size of clusters at level max_level + 1 
+      % (useful for bpx preconditioning)
+      obj.levelwise_cluster_size( obj.max_level + 2 ) = obj.h_max_panels;
+          
       obj.assmbl_intrctn_nghbr_lsts(obj.cluster_tree);
       
       obj.find_lowest_interaction_level(obj.cluster_tree);
@@ -140,6 +163,97 @@ classdef cFMM_solver_adaptive < handle
       end
     end
     
+    function z = apply_bpx_prec( obj, r )
+      %Applies the bpx preconditioner based on the cluster hierarchy to the 
+      %vector r.
+      obj.bpx_precondition_upward_path( obj.cluster_tree, r );
+      obj.bpx_precondition_downward_path( obj.cluster_tree );
+      z = obj.eval_bpx_for_leaves( r );
+    end
+    
+    function bpx_precondition_upward_path( obj, cluster_tree, r )
+      % Realizes the upward path of the bpx preconditioner: 
+      % for all clusters starting at leaf level the projection coefficients of
+      % the right hand side are computed by restrictions (simple summations due 
+      % to the use of p0 basis functions).
+      % The routine is realized by a recursive tree traversal.
+      cluster = cluster_tree.get_value( );
+      cluster.set_bpx_rhs_projection_coeffs( 0 );
+      left_subtree = cluster_tree.get_left_child( );
+      right_subtree = cluster_tree.get_right_child( );
+      % add the projection coefficients of the children to those of the current 
+      % cluster, if it is not a leaf
+      if ( left_subtree ~= 0 ) 
+        bpx_precondition_upward_path( obj, left_subtree, r );
+        cluster.set_bpx_rhs_projection_coeffs( ...
+          cluster.get_bpx_rhs_projection_coeffs( ) ...
+          + left_subtree.get_value( ).get_bpx_rhs_projection_coeffs( ) );
+      end
+      if ( right_subtree ~= 0 )
+        bpx_precondition_upward_path( obj, right_subtree, r );
+        cluster.set_bpx_rhs_projection_coeffs( ...
+          cluster.get_bpx_rhs_projection_coeffs( ) ...
+          + right_subtree.get_value( ).get_bpx_rhs_projection_coeffs( ) );
+      end
+      % compute the projection coefficients directly for leaf clusters.
+      if ( left_subtree == 0 && right_subtree == 0 ) 
+        cluster.set_bpx_rhs_projection_coeffs( ...
+          sum( r( cluster.get_start_index( ) : cluster.get_end_index( ) ) ) );
+      end
+    end
+    
+    function bpx_precondition_downward_path( obj, cluster_tree )
+      % Realizes the downward path of the bpx preconditioner.
+      % for all clusters starting at the root the appropriate contributions are
+      % computed and passed downwards to the children. The evaluation for leaf
+      % clusters is done in a separate step.
+      % The routine is realized by a recursive tree traversal.
+      
+      left_subtree = cluster_tree.get_left_child( );
+      right_subtree = cluster_tree.get_right_child( );
+      parent_subtree = cluster_tree.get_parent( );
+      level = cluster_tree.get_level( );
+      cluster = cluster_tree.get_value( );
+      % compute the size of the cluster
+      start_panel = cluster.get_panel( cluster.get_start_index( ) );
+      end_panel = cluster.get_panel( cluster.get_end_index( ) );
+      cluster_size = end_panel( 2 ) - start_panel( 1 );
+      % compute the bpx contribution for the current cluster
+      cluster.set_bpx_contribution( ...
+        cluster.get_bpx_rhs_projection_coeffs( ) / cluster_size ...
+        * ( 1 / sqrt( obj.levelwise_cluster_size( level + 1 ) ) ...
+          - 1 / sqrt( obj.levelwise_cluster_size( level + 2 ) ) ) );
+      % add the parent bpx contribution if available
+      if ( parent_subtree ~= 0 ) 
+        cluster.set_bpx_contribution( ...
+          cluster.get_bpx_contribution( ) ...
+          + parent_subtree.get_value( ).get_bpx_contribution( ) );
+      end
+      % call the routine recursively for children, if they exist
+      if ( left_subtree ~= 0 )
+        bpx_precondition_downward_path( obj, left_subtree );
+      end
+      if ( right_subtree ~= 0 )
+        bpx_precondition_downward_path( obj, right_subtree );
+      end
+    end
+    
+    function z = eval_bpx_for_leaves( obj, r )
+      % Realizes the final evaluation step of the bpx preconditioner for leaf
+      % clusters in the cluster tree.
+      z = zeros( size( r ) );
+      for i = 1 : obj.nr_leaves
+        curr_level = obj.ordered_leaves{ i }.get_level( );
+        curr_leaf = obj.ordered_leaves{ i }.get_value( );
+        start_idx = curr_leaf.get_start_index( );
+        end_idx = curr_leaf.get_end_index( );
+        z( start_idx : end_idx ) = ...
+          curr_leaf.get_bpx_contribution( ) ...
+          + 1 / sqrt( obj.levelwise_cluster_size( curr_level + 2 ) ) ...
+          * r( start_idx : end_idx ) ./ obj.h_panels( start_idx : end_idx )';
+      end
+    end
+      
 %      function y = apply_fmm_matrix(obj, x)
 %        
 %        % downward pass
@@ -285,13 +399,22 @@ classdef cFMM_solver_adaptive < handle
 %        @obj.apply_diag_prec);
 %     end
     
-    function x = solve_iterative_std_fmm(obj, eps)
-      x = gmres(@obj.apply_fmm_matrix_std, obj.rhs_proj, 100, eps, 600);
+    function [ x, inner_iter ] = solve_iterative_std_fmm(obj, eps)
+      [ x, ~, ~, iter ] = gmres(@obj.apply_fmm_matrix_std, ...
+        obj.rhs_proj, 100, eps, 600);
+      inner_iter = ( iter( 1 ) - 1 ) * 100 + iter( 2 );
     end
     
-    function x = solve_iterative_std_fmm_prec(obj, eps)
-      x = gmres(@obj.apply_fmm_matrix_std, obj.rhs_proj, 100, eps, 600 , ...
-        @obj.apply_diag_prec);
+    function [ x, inner_iter ] = solve_iterative_std_fmm_diag_prec(obj, eps)
+      [ x, ~, ~, iter ] = gmres(@obj.apply_fmm_matrix_std, ...
+        obj.rhs_proj, 100, eps, 600, @obj.apply_diag_prec);
+      inner_iter = ( iter( 1 ) - 1 ) * 100 + iter( 2 );
+    end
+    
+    function [x, inner_iter] = solve_iterative_std_fmm_bpx_prec(obj, eps)
+      [ x, ~, ~, iter ] = gmres(@obj.apply_fmm_matrix_std, ...
+        obj.rhs_proj, 100, eps, 600, @obj.apply_bpx_prec);
+      inner_iter = ( iter( 1 ) - 1 ) * 100 + iter( 2 );
     end
     
 %     function x = solve_direct(obj)  
@@ -404,12 +527,7 @@ classdef cFMM_solver_adaptive < handle
     % operations
     function count_matrix = print_info( obj )
       fprintf('Information about cFFM_solver_adaptive:')
-      % compute maximal level where leaves are
-      max_level = obj.L;
-      while (obj.nr_levelwise_leaves(max_level+1) == 0)
-        max_level = max_level - 1;
-      end
-      fprintf('Max level in cluster tree: %d\n', max_level);
+      fprintf('Max level in cluster tree: %d\n', obj.max_level);
       num_string = sprintf('%d ', obj.nr_levelwise_leaves);
       fprintf('Leaves per level: %s\n', num_string);
       % print minimal level where M2L operations are done

@@ -222,17 +222,19 @@ classdef cFMM_solver < handle
     
     
     function x = solve_iterative( obj )
-      %x = gmres(@obj.apply_fmm_matrix, obj.rhs_proj, 100, 1e-5, 600 );
-
-      x = gmres(@obj.apply_fmm_matrix, obj.rhs_proj, 100, 1e-5, 600, ...
-       @obj.apply_diag_prec );
+      x = gmres(@obj.apply_fmm_matrix, obj.rhs_proj, 100, 1e-5, 600 );
     end
     
     function x = solve_iterative_std_fmm( obj )
-      x = gmres(@obj.apply_fmm_matrix_std, obj.rhs_proj, 100, 1e-5, 600, ...
-        @obj.apply_diag_prec);
-      %x = gmres(@obj.apply_fmm_matrix, obj.rhs_proj, 100, 1e-5, 600, ...
-      %  @obj.apply_diag_prec );
+%       x = gmres(@obj.apply_fmm_matrix_std, obj.rhs_proj, 100, 1e-5, 600, ...
+%         @obj.apply_diag_prec);
+      x = gmres(@obj.apply_fmm_matrix, obj.rhs_proj, 100, 1e-5, 600 );
+    end
+    
+    function x = solve_iterative_std_fmm_prec( obj, eps )
+%       x = gmres(@obj.apply_fmm_matrix_std, obj.rhs_proj, 100, 1e-5, 600, ...
+%         @obj.apply_diag_prec);
+      x = gmres(@obj.apply_fmm_matrix, obj.rhs_proj, 100, eps, 600 );
     end
     
     function x = solve_direct( obj )     

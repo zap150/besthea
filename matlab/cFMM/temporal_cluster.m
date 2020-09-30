@@ -24,6 +24,8 @@ classdef temporal_cluster < handle
     local_expansion
     children_moments_count
     left_child_translated
+    
+    %###########################################################################
     % the following structures are only used in case of non-constant time steps
     nearfield_matrices 
     % list of all target clusters, for which an s2l operation is done
@@ -36,6 +38,10 @@ classdef temporal_cluster < handle
     m2t_list
     % cell containing the m2t matrices according to the clusters in m2t_list
     m2t_matrices
+    %###########################################################################
+    % the following members are only used in case of bpx preconditioning
+    bpx_rhs_projection_coeffs;
+    bpx_contribution;
   end
   
   methods
@@ -56,6 +62,9 @@ classdef temporal_cluster < handle
       obj.right_child = 0;
       obj.s2l_list = {};
       obj.m2t_list = {};
+      
+      obj.bpx_rhs_projection_coeffs = 0;
+      obj.bpx_contribution = 0;
     end
     
     function panels = get_panels( obj )
@@ -332,6 +341,21 @@ classdef temporal_cluster < handle
       obj.left_child_translated = 0;
     end
     
+    function f = get_bpx_rhs_projection_coeffs( obj )
+      f = obj.bpx_rhs_projection_coeffs;
+    end
+    
+    function set_bpx_rhs_projection_coeffs( obj, f )
+      obj.bpx_rhs_projection_coeffs = f;
+    end
+    
+    function z = get_bpx_contribution( obj )
+      z = obj.bpx_contribution;
+    end
+    
+    function set_bpx_contribution( obj, z )
+      obj.bpx_contribution = z;
+    end  
   end
 end
 

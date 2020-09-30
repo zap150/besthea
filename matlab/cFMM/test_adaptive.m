@@ -101,12 +101,12 @@ switch computation_case
         tic
         fmm_solver = cFMM_solver_adaptive(t_start, t_end, N_steps, ...
           L, order, eta, coarse_rhs_projection, panels, false);
-        x_non_adptv = fmm_solver.solve_iterative_std_fmm_prec(1e-7);
+        x_non_adptv = fmm_solver.solve_iterative_std_fmm_diag_prec(1e-7);
         toc
         tic
         fmm_solver = cFMM_solver_adaptive(t_start, t_end, N_steps, ...
           L, order, eta, coarse_rhs_projection, panels, false);
-        x_non_adptv = fmm_solver.solve_iterative_std_fmm_prec(1e-7);
+        x_non_adptv = fmm_solver.solve_iterative_std_fmm_diag_prec(1e-7);
         toc
         err_non_adptv = fmm_solver.l2_error(x_non_adptv, exact_solution);
         fmm_solver.print_info();
@@ -115,7 +115,7 @@ switch computation_case
         tic
         fmm_solver_adaptive = cFMM_solver_adaptive(t_start, t_end, N_steps, ...
           L, order, eta, coarse_rhs_projection, panels, true);
-        x_adptv = fmm_solver_adaptive.solve_iterative_std_fmm_prec(1e-7);
+        x_adptv = fmm_solver_adaptive.solve_iterative_std_fmm_diag_prec(1e-7);
         toc
         err_adptv = fmm_solver_adaptive.l2_error(x_adptv, exact_solution);
         fmm_solver_adaptive.print_info();
@@ -190,7 +190,7 @@ switch computation_case
           tic
           fmm_solver = cFMM_solver_adaptive(t_start, t_end, N_steps, ...
             L, order, eta, coarse_rhs_projection, panels, false);
-          x_adptv = fmm_solver.solve_iterative_std_fmm_prec(1e-7);
+          x_adptv = fmm_solver.solve_iterative_std_fmm_diag_prec(1e-7);
           time_adptv(j) = toc;
           err_adptv(j)=fmm_solver.l2_error(x_adptv, exact_solution);
       %     %  plot info about used routines
@@ -233,7 +233,7 @@ switch computation_case
           tic
           fmm_solver = cFMM_solver_adaptive(t_start, t_end, N_steps, ...
             L, order, eta, coarse_rhs_projection, panels, false);
-          x_non_adptv = fmm_solver.solve_iterative_std_fmm_prec(1e-7);
+          x_non_adptv = fmm_solver.solve_iterative_std_fmm_diag_prec(1e-7);
           time_non_adptv(L_coarse -ref_start + 1) = toc;
           err_non_adptv(L_coarse -ref_start + 1) = ...
             fmm_solver.l2_error(x_non_adptv, exact_solution);
@@ -255,7 +255,7 @@ switch computation_case
     %     tic
     %     fmm_solver_adaptive = cFMM_solver_adaptive(t_start, t_end, N_steps, ...
     %       L, order, eta, coarse_rhs_projection, panels, true);
-    %     x_adptv = fmm_solver_adaptive.solve_iterative_std_fmm_prec();
+    %     x_adptv = fmm_solver_adaptive.solve_iterative_std_fmm_diag_prec();
     %     toc
     %     err_adptv = fmm_solver_adaptive.l2_error(x_adptv, exact_solution);
     %     % plot info about used routines
