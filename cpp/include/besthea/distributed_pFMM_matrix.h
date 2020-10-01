@@ -296,6 +296,26 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   void compute_spatial_m2m_coeffs( );
 
   /**
+   * Pseudo-parallel FGMRES based on the implementation in MKL.
+   * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on
+   * exit.
+   * @param[in] n_iterations_until_restart Maximal number of iterations before
+   * restart.
+   * @param[in] trans Use transpose of this.
+   * @param[in] root_id Id of the process which executes the sequential steps
+   *                    of the FGMRES implementation in MKL.
+   * @todo implement a true parallel version.
+   */
+  bool mkl_fgmres_solve_parallel( const block_vector & rhs,
+    block_vector & solution, sc & relative_residual_error, lo & n_iterations,
+    lo n_iterations_until_restart = 0, bool trans = false,
+    int root_id = 0 ) const;
+
+  /**
    * Prints information about the underlying distributed spacetime cluster tree
    * and the operations which have to be applied.
    * @param[in] root_process  Process responsible for printing the information.

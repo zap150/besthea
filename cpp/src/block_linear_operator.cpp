@@ -225,7 +225,7 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
   dfgmres_init( &size, solution_contiguous.data( ), rhs_contiguous.data( ),
     &rci, ipar, dpar, tmp_data );
   if ( rci ) {
-    std::cout << "Failed to initialize MKL CG." << std::endl;
+    std::cout << "Failed to initialize MKL FGMRES." << std::endl;
     return false;
   }
 

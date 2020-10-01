@@ -103,11 +103,13 @@ int main( int argc, char * argv[] ) {
 
   if ( argc == 2 ) {
     geometry_case = strtol( argv[ 1 ], NULL, 10 );
-  } else if ( argc == 5 ) {
+  } else if ( argc == 7 ) {
     geometry_case = strtol( argv[ 1 ], NULL, 10 );
     refine = strtol( argv[ 2 ], NULL, 10 );
     n_min_elems = strtol( argv[ 3 ], NULL, 10 );
     n_nearfield_clusters = strtol( argv[ 4 ], NULL, 10 );
+    temp_order = strtol( argv[ 5 ], NULL, 10 );
+    spat_order = strtol( argv[ 6 ], NULL, 10 );
   }
 
   if ( myRank == 0 ) {
@@ -247,24 +249,6 @@ int main( int argc, char * argv[] ) {
   MPI_Barrier( comm );
 
   if ( myRank == 0 ) {
-    t.reset( "assembly of distributed pFMM matrix V" );
-  }
-
-  distributed_pFMM_matrix_heat_sl_p0p0 * V
-    = new distributed_pFMM_matrix_heat_sl_p0p0;
-
-  distributed_fast_spacetime_be_assembler distributed_assembler_v( kernel_v,
-    distributed_space_p0, distributed_space_p0, &comm, order_sing, order_reg,
-    temp_order, spat_order, cauchy_data::_alpha );
-
-  distributed_assembler_v.assemble( *V );
-
-  MPI_Barrier( comm );
-  if ( myRank == 0 ) {
-    t.measure( );
-  }
-
-  if ( myRank == 0 ) {
     t.reset( "assembly of distributed pFMM matrix K" );
   }
 
@@ -365,7 +349,27 @@ int main( int argc, char * argv[] ) {
     t.reset( "application of K" );
   }
   K->apply( dir_proj, neu_block, false, 1.0, 1.0 );
+  MPI_Barrier( comm );
+  if ( myRank == 0 ) {
+    t.measure( );
+  }
 
+  delete K;
+  MPI_Barrier( comm );
+  if ( myRank == 0 ) {
+    t.reset( "assembly of distributed pFMM matrix V" );
+  }
+
+  distributed_pFMM_matrix_heat_sl_p0p0 * V
+    = new distributed_pFMM_matrix_heat_sl_p0p0;
+
+  distributed_fast_spacetime_be_assembler distributed_assembler_v( kernel_v,
+    distributed_space_p0, distributed_space_p0, &comm, order_sing, order_reg,
+    temp_order, spat_order, cauchy_data::_alpha );
+
+  distributed_assembler_v.assemble( *V );
+
+  MPI_Barrier( comm );
   if ( myRank == 0 ) {
     t.measure( );
     t.reset( "solving for neumann datum" );
@@ -374,7 +378,8 @@ int main( int argc, char * argv[] ) {
   block_vector rhs( neu_block );
   sc gmres_prec = 1e-8;
   lo gmres_iter = 500;
-  V->mkl_fgmres_solve( rhs, neu_block, gmres_prec, gmres_iter, gmres_iter );
+  V->mkl_fgmres_solve_parallel(
+    rhs, neu_block, gmres_prec, gmres_iter, gmres_iter );
 
   if ( myRank == 0 ) {
     t.measure( );
@@ -387,6 +392,5 @@ int main( int argc, char * argv[] ) {
     delete space_mesh;
   }
   delete V;
-  delete K;
   MPI_Finalize( );
 }
