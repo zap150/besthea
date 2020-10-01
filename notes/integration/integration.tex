@@ -338,7 +338,7 @@ and observing that the limit of the function $\tilde g^{\dif \tau \dif t}$ for $
 For $K^0(\vr)$ we can write
 \begin{align*}
   K^0(\vr) &= \alpha\frac{\partial}{\partial \vn_\vy} \int_{0}^{h_t} G^{\dif \tau}_\alpha(\vr,0) - G^{\dif \tau}_\alpha(\vr, t) \,\dif t 
-  = \alpha \bigg( \frac{\partial G^{\dif\tau}_\alpha}{\partial \vn_\vy} (\vr,0) - \frac{\partial G^{\dif\tau\dif t}_\alpha}{\partial \vn_\vy}(\vr,h_t) + \frac{\partial G^{\dif\tau\dif t}_1}{\partial \vn_\vy}(\vr,0) \bigg).
+  = \alpha \bigg( \frac{\partial G^{\dif\tau}_\alpha}{\partial \vn_\vy} (\vr,0) - \frac{\partial G^{\dif\tau\dif t}_\alpha}{\partial \vn_\vy}(\vr,h_t) + \frac{\partial G^{\dif\tau\dif t}_\alpha}{\partial \vn_\vy}(\vr,0) \bigg).
 \end{align*}
 Similarly as in \eqref{eq:dn_G_dt_dtau} with \eqref{eq:G_to_g} we have
 \begin{equation*}
@@ -450,7 +450,7 @@ To evaluate the discretized representation formula in $\vx\in\Omega$ and the tem
  &= \sum_{d=0}^{k-1} \sum_{j=1}^{E_\vx} w_{i,j} \int_{\gamma_j} \int_{0}^{h_t} G_\alpha(\vx-\vy,(d+1)h_t-\tau) \,\dif\tau \,\dif\vs_\vy \\
   &= \sum_{j=1}^{E_\vx} \int_{\gamma_j} \sum_{d=0}^{k-1} w_{i,j} [ G_\alpha^{\dif\tau}(\vx-\vy, dh_t) - G_\alpha^{\dif\tau}(\vx-\vy, (d+1)h_t) ] \,\dif\vs_\vy
 \end{align*}
-with $G_1^{\dif\tau}$ from \eqref{eq:G_dtau} and its limit for $\delta \to 0_+$ in \eqref{eq:G_dtau_lim_d}. Note that as in the case of matrix assembly, one can reuse the analytic evaluations for all combinations of $k,i$ such that $k-i=d$ is constant.
+with $G_\alpha^{\dif\tau}$ from \eqref{eq:G_dtau} and its limit for $\delta \to 0_+$ in \eqref{eq:G_dtau_lim_d}. Note that as in the case of matrix assembly, one can reuse the analytic evaluations for all combinations of $k,i$ such that $k-i=d$ is constant.
 
 \subsection{Double-layer potential}
 
