@@ -30,6 +30,7 @@
 
 #include "besthea/blas_lapack_wrapper.h"
 #include "besthea/quadrature.h"
+#include "mkl_rci.h"
 
 using besthea::linear_algebra::full_matrix;
 using besthea::mesh::distributed_spacetime_cluster_tree;
@@ -646,6 +647,139 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     h_par_no_pad[ 1 ] = h_child_no_pad[ 1 ];
     h_par_no_pad[ 2 ] = h_child_no_pad[ 2 ];
   }
+}
+
+template< class kernel_type, class target_space, class source_space >
+bool besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::mkl_fgmres_solve_parallel( const block_vector &
+                                                             rhs,
+  block_vector & solution, sc & relative_residual_error, lo & n_iterations,
+  lo n_iterations_until_restart, bool trans, int root_id ) const {
+  lo size = _dim_domain * _block_dim;
+
+  if ( _dim_domain != _dim_range || size != rhs.size( )
+    || size != solution.size( ) ) {
+    std::cout << "Check dimensions!" << std::endl;
+    return false;
+  }
+
+  if ( n_iterations_until_restart == 0 ) {
+    n_iterations_until_restart = n_iterations;
+  }
+
+  lo rci;  // indicates current status in FGMRES
+  // the following data is only relevant for process root_id, but declared for
+  // all for simplicity
+  lo iter;
+  lo ipar[ 128 ];
+  sc dpar[ 128 ];
+  std::vector< sc > tmp;
+  vector_type * rhs_contiguous = nullptr;
+  vector_type * solution_contiguous = nullptr;
+  sc * tmp_data = nullptr;
+  if ( _my_rank == root_id ) {
+    // allocate a buffer for the mkl routines
+    tmp.resize( ( 2 * n_iterations_until_restart + 1 ) * size
+      + n_iterations_until_restart * ( n_iterations_until_restart + 9 ) / 2
+      + 1 );
+    tmp_data = tmp.data( );
+
+    rhs_contiguous = new vector_type( size );
+    solution_contiguous = new vector_type( size );
+    rhs.copy_to_vector( *rhs_contiguous );
+    solution.copy_to_vector( *solution_contiguous );
+
+    dfgmres_init( &size, solution_contiguous->data( ), rhs_contiguous->data( ),
+      &rci, ipar, dpar, tmp_data );
+    if ( rci ) {
+      std::cout << "Failed to initialize MKL FGMRES." << std::endl;
+      delete rhs_contiguous;
+      delete solution_contiguous;
+      return false;
+    }
+
+    ipar[ 0 ] = size;          // size of the problem
+    ipar[ 4 ] = n_iterations;  // maximum number of iterations
+    ipar[ 7 ] = 1;             // perform the iteration stopping test
+    ipar[ 8 ] = 1;             // do the residual stopping test
+    ipar[ 9 ] = 0;             // do not request user stopping test
+    ipar[ 10 ] = 0;            // non-preconditioned
+    ipar[ 11 ] = 1;  // perform test for zero norm of generated direction
+    ipar[ 14 ]
+      = n_iterations_until_restart;  // number of iterations before restart
+
+    dpar[ 0 ] = relative_residual_error;  // relative tolerance
+
+    dfgmres_check( &size, solution_contiguous->data( ), rhs_contiguous->data( ),
+      &rci, ipar, dpar, tmp_data );
+    if ( rci ) {
+      std::cout << "MKL parameters incorrect." << std::endl;
+      delete rhs_contiguous;
+      delete solution_contiguous;
+      return false;
+    }
+  }
+
+  block_vector tmp_1( _block_dim, _dim_domain );
+  block_vector tmp_2( _block_dim, _dim_domain );
+
+  while ( true ) {
+    if ( _my_rank == root_id ) {
+      dfgmres( &size, solution_contiguous->data( ), rhs_contiguous->data( ),
+        &rci, ipar, dpar, tmp_data );
+    }
+    // broadcast rci to decide whether to apply the operator or not
+    MPI_Bcast( &rci, 1, get_index_type< lo >::MPI_LO( ), root_id, *_comm );
+    if ( rci == 1 ) {  // apply operator
+      if ( _my_rank == root_id ) {
+        tmp_1.copy_from_raw(
+          _block_dim, _dim_domain, tmp_data + ipar[ 21 ] - 1 );
+      }
+      // broadcast block vector tmp_1 to all processes.
+      for ( lo i = 0; i < _block_dim; ++i ) {
+        MPI_Bcast( tmp_1.get_block( i ).data( ), _dim_domain,
+          get_scalar_type< sc >::MPI_SC( ), root_id, *_comm );
+      }
+      apply( tmp_1, tmp_2, trans, 1.0, 0.0 );
+      if ( _my_rank == root_id ) {
+        tmp_2.copy_to_raw( tmp_data + ipar[ 22 ] - 1 );
+      }
+      continue;
+    } else if ( rci == 0 ) {  // success, no further applications needed
+      if ( _my_rank == root_id ) {
+        dfgmres_get( &size, solution_contiguous->data( ),
+          rhs_contiguous->data( ), &rci, ipar, dpar, tmp_data, &iter );
+        solution.copy_from_vector(
+          _block_dim, _dim_domain, *solution_contiguous );
+        n_iterations = iter;
+        relative_residual_error = dpar[ 4 ] / dpar[ 2 ];
+      }
+      // broadcast solution, n_iterations and relative_residual_error to all
+      // processes (for the sake of completeness)
+      for ( lo i = 0; i < _block_dim; ++i ) {
+        MPI_Bcast( solution.get_block( i ).data( ), _dim_domain,
+          get_scalar_type< sc >::MPI_SC( ), root_id, *_comm );
+      }
+      MPI_Bcast( &relative_residual_error, 1, get_scalar_type< sc >::MPI_SC( ),
+        root_id, *_comm );
+      MPI_Bcast(
+        &n_iterations, 1, get_index_type< lo >::MPI_LO( ), root_id, *_comm );
+      break;
+    } else {
+      std::cout << "Only RCI codes 0,1 supported." << std::endl;
+      if ( _my_rank == root_id ) {
+        delete rhs_contiguous;
+        delete solution_contiguous;
+      }
+      return false;
+    }
+    break;
+  }
+  if ( _my_rank == root_id ) {
+    delete rhs_contiguous;
+    delete solution_contiguous;
+  }
+  return true;
 }
 
 template< class kernel_type, class target_space, class source_space >
