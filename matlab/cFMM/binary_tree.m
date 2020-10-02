@@ -57,6 +57,27 @@ classdef binary_tree < handle
     function parent = get_parent( obj )
       parent = obj.parent;
     end
+    
+    function [ clusters_on_level, found_clusters ] ...
+      = get_clusters_on_level( obj, target_level, clusters_on_level, ...
+                               found_clusters )
+      if ( obj.level == target_level )
+        clusters_on_level{ found_clusters + 1 } = obj.value;
+        found_clusters = found_clusters + 1;
+      else
+        if ( obj.left_child ~= 0 )
+          [ clusters_on_level, found_clusters ] ...
+            = obj.left_child.get_clusters_on_level( target_level, ...
+                                            clusters_on_level, found_clusters ); 
+        end
+        if ( obj.right_child ~= 0 )
+          [ clusters_on_level, found_clusters ] ...
+            = obj.right_child.get_clusters_on_level( target_level, ...
+                                            clusters_on_level, found_clusters ); 
+        end
+      end
+    end
+    
   end
 end
 

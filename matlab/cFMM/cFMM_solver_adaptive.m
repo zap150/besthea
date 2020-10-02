@@ -2,7 +2,7 @@ classdef cFMM_solver_adaptive < handle
 %CFMM_SOLVER Summary of this class goes here
   %   Detailed explanation goes here
   
-  properties (Access = private)
+  properties (Access = public )
     T_start
     T_end
     % function handle to the rhs, or a vector containing the projection ...
@@ -71,8 +71,10 @@ classdef cFMM_solver_adaptive < handle
     V1
     V2
     
-    % for preconditioning
-    V_diag
+    % for two level additive schwarz preconditioning
+    coarse_level
+    clusters_on_coarse_level
+    V_coarse
   end
   
   methods
@@ -91,6 +93,7 @@ classdef cFMM_solver_adaptive < handle
       obj.h_max_panels = max( obj.h_panels );
       obj.use_m2t_and_s2l = use_m2t_and_s2l;
       obj.lowest_interaction_level = obj.L+1;
+      obj.coarse_level = 0;
       
       % construct temporal cluster tree
       obj.levelwise_leaves = cell(1, L+1);
@@ -146,8 +149,30 @@ classdef cFMM_solver_adaptive < handle
       end
     end
     
-    function x = apply_diag_prec(obj, y)
-      %loop through all levels and apply inverse nearfield matrices
+    function initialize_2_lev_add_schw_preconditioner( obj, coarse_level )
+      obj.coarse_level = coarse_level;
+      cluster_cell = cell( 1, 2^coarse_level );
+      [ obj.clusters_on_coarse_level, n_coarse_clusters ] ...
+        = obj.cluster_tree.get_clusters_on_level( coarse_level, ...
+                                                  cluster_cell, 0 );
+      obj.clusters_on_coarse_level ...
+        = obj.clusters_on_coarse_level( 1 : n_coarse_clusters );
+      coarse_panels = zeros( 2, n_coarse_clusters );
+      for i = 1 : n_coarse_clusters
+        coarse_panels( 1, i ) = obj.panels( ...
+          1, obj.clusters_on_coarse_level{ i }.get_start_index( ) );
+        coarse_panels( 2, i ) = obj.panels( ...
+          2, obj.clusters_on_coarse_level{ i }.get_end_index( ) );
+      end
+      % assemble the coarse grid matrix directly
+      coarse_cluster = temporal_cluster( ...
+        coarse_panels, 1, n_coarse_clusters, obj.T_start, obj.T_end, 0 );
+      assembler = full_assembler_arb_timestep( );
+      obj.V_coarse = assembler.assemble_V( coarse_cluster, coarse_cluster );
+    end
+    
+    function x = apply_diag_prec( obj, y )
+      % loop through all leaves and apply inverse nearfield matrices
       x = zeros(size(y));
       for i = 1 : obj.nr_leaves
         curr_leaf = obj.ordered_leaves{i}.get_value();
@@ -251,6 +276,42 @@ classdef cFMM_solver_adaptive < handle
           curr_leaf.get_bpx_contribution( ) ...
           + 1 / sqrt( obj.levelwise_cluster_size( curr_level + 2 ) ) ...
           * r( start_idx : end_idx ) ./ obj.h_panels( start_idx : end_idx )';
+      end
+    end
+    
+    function z = apply_2_lev_add_schw_prec( obj, r )
+      z = zeros (size( r ) );
+      % apply the operations for the fine spaces first
+      for i = 1 : obj.nr_leaves
+        curr_leaf = obj.ordered_leaves{ i }.get_value( );
+        % We want to access the nearfield matrix which describes the action
+        % of the cluster with itself. Since the cluster itself is always
+        % its last neighbor (by construction), the index nf_mat_ind to 
+        % access the matrix is the size of the lists of neighbors.
+        nf_mat_ind = size( curr_leaf.get_neighbors( ), 2 );
+        start_ind = curr_leaf.get_start_index( );
+        end_ind = curr_leaf.get_end_index( );
+        z( start_ind : end_ind ) = curr_leaf.apply_inv_nearfield_mat( ...
+          r( start_ind : end_ind ), nf_mat_ind );
+      end
+      % apply the operation for the coarse space
+      % restrict r to the coarse space
+      n_coarse = length( obj.clusters_on_coarse_level );
+      r_coarse = zeros( n_coarse, 1 );
+      for i = 1 : n_coarse
+        current_cluster = obj.clusters_on_coarse_level{ i };
+        start_idx = current_cluster.get_start_index( );
+        end_idx = current_cluster.get_end_index( );
+        r_coarse( i ) = sum( r ( start_idx : end_idx ) );
+      end
+      % apply the inverse of the coarse matrix
+      z_coarse = obj.V_coarse \ r_coarse;
+      % add the coarse grid contribution to the result z
+      for i = 1 : n_coarse
+        current_cluster = obj.clusters_on_coarse_level{ i };
+        start_idx = current_cluster.get_start_index( );
+        end_idx = current_cluster.get_end_index( );
+        z( start_idx : end_idx ) = z( start_idx : end_idx ) + z_coarse( i );
       end
     end
       
@@ -399,22 +460,98 @@ classdef cFMM_solver_adaptive < handle
 %        @obj.apply_diag_prec);
 %     end
     
-    function [ x, inner_iter ] = solve_iterative_std_fmm(obj, eps)
-      [ x, ~, ~, iter ] = gmres(@obj.apply_fmm_matrix_std, ...
-        obj.rhs_proj, 100, eps, 600);
-      inner_iter = ( iter( 1 ) - 1 ) * 100 + iter( 2 );
+    function [ x, inner_iter ] ...
+        = solve_iterative_std_fmm( obj, eps, method, init_guess )
+      if ( nargin == 2 )
+        [ x, ~, ~, iter ] = gmres(@obj.apply_fmm_matrix_std, ...
+          obj.rhs_proj, 100, eps, 600);
+        inner_iter = ( iter( 1 ) - 1 ) * 100 + iter( 2 );
+      end
+      if ( nargin > 2 )
+        if ( nargin == 3 )
+          init_guess = zeros( size( obj.rhs_proj ) );
+        end
+        if ( method == 0 )
+          [ x, ~, ~, iter ] = gmres(@obj.apply_fmm_matrix_std, ...
+            obj.rhs_proj, 100, eps, 600, [], [], init_guess );
+          inner_iter = ( iter( 1 ) - 1 ) * 100 + iter( 2 );
+        elseif ( method == 1 )
+          [ x, ~, ~, iter ] = bicgstab(@obj.apply_fmm_matrix_std, ...
+            obj.rhs_proj, eps, 600, [], [], init_guess );
+          inner_iter = iter;
+        end
+      end
     end
     
-    function [ x, inner_iter ] = solve_iterative_std_fmm_diag_prec(obj, eps)
-      [ x, ~, ~, iter ] = gmres(@obj.apply_fmm_matrix_std, ...
-        obj.rhs_proj, 100, eps, 600, @obj.apply_diag_prec);
-      inner_iter = ( iter( 1 ) - 1 ) * 100 + iter( 2 );
+    function [ x, inner_iter ] ...
+        = solve_iterative_std_fmm_diag_prec( obj, eps, method, init_guess )
+      if ( nargin == 2 )
+        [ x, ~, ~, iter ] = gmres( @obj.apply_fmm_matrix_std, ...
+          obj.rhs_proj, 100, eps, 600, @obj.apply_diag_prec );
+        inner_iter = ( iter( 1 ) - 1 ) * 100 + iter( 2 );
+      end
+      if ( nargin > 2 )
+        if ( nargin == 3 )
+          init_guess = zeros( size( obj.rhs_proj ) );
+        end
+        if ( method == 0 )
+          [ x, ~, ~, iter ] = gmres(@obj.apply_fmm_matrix_std, ...
+            obj.rhs_proj, 100, eps, 600, @obj.apply_diag_prec, [], init_guess );
+          inner_iter = ( iter( 1 ) - 1 ) * 100 + iter( 2 );
+        elseif ( method == 1 )
+          [ x, ~, ~, iter ] = bicgstab(@obj.apply_fmm_matrix_std, ...
+            obj.rhs_proj, eps, 600, @obj.apply_diag_prec, [], init_guess );
+          inner_iter = iter;
+        end
+      end
     end
     
-    function [x, inner_iter] = solve_iterative_std_fmm_bpx_prec(obj, eps)
-      [ x, ~, ~, iter ] = gmres(@obj.apply_fmm_matrix_std, ...
-        obj.rhs_proj, 100, eps, 600, @obj.apply_bpx_prec);
-      inner_iter = ( iter( 1 ) - 1 ) * 100 + iter( 2 );
+    function [ x, inner_iter ] ...
+        = solve_iterative_std_fmm_bpx_prec( obj, eps, method, init_guess )
+      if ( nargin == 2 )
+        [ x, ~, ~, iter ] = gmres( @obj.apply_fmm_matrix_std, ...
+          obj.rhs_proj, 100, eps, 600, @obj.apply_bpx_prec );
+        inner_iter = ( iter( 1 ) - 1 ) * 100 + iter( 2 );
+      end
+      if ( nargin > 2 )
+        if ( nargin == 3 )
+          init_guess = zeros( size( obj.rhs_proj ) );
+        end
+        if ( method == 0 )
+          [ x, ~, ~, iter ] = gmres(@obj.apply_fmm_matrix_std, ...
+            obj.rhs_proj, 100, eps, 600, @obj.apply_bpx_prec, [], init_guess );
+          inner_iter = ( iter( 1 ) - 1 ) * 100 + iter( 2 );
+        elseif ( method == 1 )
+          [ x, ~, ~, iter ] = bicgstab(@obj.apply_fmm_matrix_std, ...
+            obj.rhs_proj, eps, 600, @obj.apply_bpx_prec, [], init_guess );
+          inner_iter = iter;
+        end
+      end
+    end
+    
+    function [ x, inner_iter ] ...
+        = solve_iteartive_std_fmm_2_lev_add_schw_prec( obj, eps, method, init_guess )
+      if ( nargin == 2 )
+        [ x, ~, ~, iter ] = gmres( @obj.apply_fmm_matrix_std, ...
+          obj.rhs_proj, 100, eps, 600, @obj.apply_2_lev_add_schw_prec );
+        inner_iter = ( iter( 1 ) - 1 ) * 100 + iter( 2 );
+      end
+      if ( nargin > 2 )
+        if ( nargin == 3 )
+          init_guess = zeros( size( obj.rhs_proj ) );
+        end
+        if ( method == 0 )
+          [ x, ~, ~, iter ] = gmres(@obj.apply_fmm_matrix_std, ...
+            obj.rhs_proj, 100, eps, 600, @obj.apply_2_lev_add_schw_prec, [], ...
+            init_guess );
+          inner_iter = ( iter( 1 ) - 1 ) * 100 + iter( 2 );
+        elseif ( method == 1 )
+          [ x, ~, ~, iter ] = bicgstab(@obj.apply_fmm_matrix_std, ...
+            obj.rhs_proj, eps, 600, @obj.apply_2_lev_add_schw_prec, [], ...
+            init_guess );
+          inner_iter = iter;
+        end
+      end
     end
     
 %     function x = solve_direct(obj)  

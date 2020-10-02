@@ -2,7 +2,7 @@ function [result, V] = causal_full( T, nT, rhs_fun )
 %CAUSAL_FULL Summary of this function goes here
 %   Detailed explanation goes here
 
-    function V = assemble_matrix( end_time, n_steps , a )
+    function V = assemble_matrix( end_time, n_steps )
         v = zeros( nT, 1 );
         V = zeros( nT, nT );
         for i = 0 : nT - 1
