@@ -61,10 +61,10 @@ TEST_CASE( "System matrices are assembled", "[matrices]" ) {
   lo initial_n_min_time_elems = 2;
 
   // space-time tree parameters
-  lo max_n_levels = GENERATE( 8 );
-  lo n_min_elems = GENERATE( 10, 20 );
+  lo max_n_levels = GENERATE( 6, 8 );
+  lo n_min_elems = GENERATE( 10 );
   sc st_coeff = 4.0;
-  slou spatial_nearfield_limit = GENERATE( 3, 4 );
+  slou spatial_nearfield_limit = GENERATE( 3 );
 
   // space-time mesh refinement
   lo refine = GENERATE( 1 );
