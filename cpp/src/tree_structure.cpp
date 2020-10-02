@@ -994,3 +994,27 @@ bool besthea::mesh::tree_structure::compare_clusters_top_down_right_2_left(
   }
   return ret_val;
 }
+
+void besthea::mesh::tree_structure::count_number_of_contributions(
+  scheduling_time_cluster * root, lo & n_moments, lo & n_moments_receive,
+  lo & n_local_contributions ) {
+  if ( root->is_active_in_upward_path( )
+    && root->get_associated_spacetime_clusters( ) != nullptr ) {
+    n_moments += root->get_associated_spacetime_clusters( )->size( );
+  }
+  if ( root->is_active_in_downward_path( )
+    && root->get_associated_spacetime_clusters( ) != nullptr ) {
+    n_local_contributions
+      += root->get_associated_spacetime_clusters( )->size( );
+  }
+  if ( root->get_n_associated_moment_receive_buffers( ) > 0 ) {
+    n_moments_receive += root->get_n_associated_moment_receive_buffers( )
+      * root->get_associated_spacetime_clusters( )->size( );
+  }
+  if ( root->get_n_children( ) > 0 ) {
+    for ( auto child : *root->get_children( ) ) {
+      count_number_of_contributions(
+        child, n_moments, n_moments_receive, n_local_contributions );
+    }
+  }
+}

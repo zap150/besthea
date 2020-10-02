@@ -249,6 +249,9 @@ class besthea::mesh::tree_structure {
   static bool compare_clusters_top_down_right_2_left(
     scheduling_time_cluster * first, scheduling_time_cluster * second );
 
+  void count_number_of_contributions( scheduling_time_cluster * root,
+    lo & n_moments, lo & n_moments_receive, lo & n_local_contributions );
+
   /**
    * Computes the tree structure and prints it to a binary file
    * @param[in] filename Name of the output file
