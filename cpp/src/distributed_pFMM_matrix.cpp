@@ -375,7 +375,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // entries in the second part of the receive vector
   std::sort( _receive_data_information.begin( ) + _n_moments_to_receive_upward,
     _receive_data_information.end( ),
-    [ & ]( const std::pair< scheduling_time_cluster *, lo > pair_one,
+    [&]( const std::pair< scheduling_time_cluster *, lo > pair_one,
       const std::pair< scheduling_time_cluster *, lo > pair_two ) {
       return _scheduling_tree_structure->compare_clusters_top_down_right_2_left(
         pair_one.first, pair_two.first );
@@ -756,6 +756,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
     std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
       = time_cluster->get_associated_spacetime_clusters( );
+#pragma omp parallel for schedule( dynamic )
     for ( lou i = 0; i < time_cluster->get_n_associated_leaves( ); ++i ) {
       apply_s2m_operation( sources, ( *associated_spacetime_clusters )[ i ] );
     }
@@ -958,6 +959,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     lou n_associated_leaves = parent_cluster->get_n_associated_leaves( );
     // call the m2m operations for all non-leaf spacetime clusters which are
     // associated with the parent scheduling time cluster
+#pragma omp parallel for schedule( dynamic )
     for ( lou i = n_associated_leaves;
           i < associated_spacetime_clusters->size( ); ++i ) {
       apply_grouped_m2m_operation(
@@ -1214,14 +1216,39 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   std::vector< general_spacetime_cluster * > * associated_spacetime_targets
     = tar_cluster->get_associated_spacetime_clusters( );
+  //  for ( auto spacetime_tar : *associated_spacetime_targets ) {
+  //    std::vector< general_spacetime_cluster * > * spacetime_interaction_list
+  //      = spacetime_tar->get_interaction_list( );
+  //    for ( auto spacetime_src : *spacetime_interaction_list ) {
+  //      if ( spacetime_src->get_global_time_index( )
+  //        == src_cluster->get_global_index( ) ) {
+  //        apply_m2l_operation( spacetime_src, spacetime_tar );
+  //      }
+  //    }
+  //  }
+
+  lo length = 0;
+  for ( auto spacetime_tar : *associated_spacetime_targets ) {
+    length += spacetime_tar->get_interaction_list( )->size( );
+  }
+  std::vector< general_spacetime_cluster * > st_tar_clusters( length );
+  std::vector< general_spacetime_cluster * > st_src_clusters( length );
+  lo count = 0;
   for ( auto spacetime_tar : *associated_spacetime_targets ) {
     std::vector< general_spacetime_cluster * > * spacetime_interaction_list
       = spacetime_tar->get_interaction_list( );
     for ( auto spacetime_src : *spacetime_interaction_list ) {
-      if ( spacetime_src->get_global_time_index( )
-        == src_cluster->get_global_index( ) ) {
-        apply_m2l_operation( spacetime_src, spacetime_tar );
-      }
+      st_tar_clusters[ count ] = spacetime_tar;
+      st_src_clusters[ count ] = spacetime_src;
+      count++;
+    }
+  }
+
+#pragma omp parallel for schedule( dynamic )
+  for ( lo i = 0; i < length; ++i ) {
+    if ( st_src_clusters[ i ]->get_global_time_index( )
+      == src_cluster->get_global_index( ) ) {
+      apply_m2l_operation( st_src_clusters[ i ], st_tar_clusters[ i ] );
     }
   }
 }
@@ -1408,6 +1435,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   lou n_associated_leaves = parent_cluster->get_n_associated_leaves( );
   // call the l2l operations for all non-leaf spacetime clusters which are
   // associated with the parent scheduling time cluster
+#pragma omp parallel for schedule( dynamic )
   for ( lou i = n_associated_leaves; i < associated_spacetime_clusters->size( );
         ++i ) {
     apply_grouped_l2l_operation(
@@ -1662,6 +1690,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
     std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
       = time_cluster->get_associated_spacetime_clusters( );
+#pragma omp parallel for schedule( dynamic )
     for ( lou i = 0; i < time_cluster->get_n_associated_leaves( ); ++i ) {
       apply_l2t_operation(
         ( *associated_spacetime_clusters )[ i ], output_vector );
