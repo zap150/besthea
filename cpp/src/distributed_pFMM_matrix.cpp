@@ -787,27 +787,45 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::print_information( const int root_process ) {
   // first print some information of the underlying distributed space time tree
   _distributed_spacetime_tree->print_information( root_process );
+
   // print rough nearfield percentage
+  // compute the nearfield ratios (two versions) on each process.
   sc local_nearfield_ratio = compute_nearfield_ratio( );
   sc local_nonzero_nearfield_ratio = compute_nonzero_nearfield_ratio( );
-  sc global_nearfield_ratio, global_nonzero_nearfield_ratio;
-  MPI_Reduce( &local_nearfield_ratio, &global_nearfield_ratio, 1,
-    get_scalar_type< sc >::MPI_SC( ), MPI_SUM, root_process, *_comm );
-  MPI_Reduce( &local_nonzero_nearfield_ratio, &global_nonzero_nearfield_ratio,
-    1, get_scalar_type< sc >::MPI_SC( ), MPI_SUM, root_process, *_comm );
+  sc global_nearfield_ratio( 0 ), global_nonzero_nearfield_ratio( 0 );
+  // gather the nearfield ratios at the root process
+  int n_processes;
+  MPI_Comm_size( *_comm, &n_processes );
+  sc * all_local_nonzero_nearfield_ratios = nullptr;
+  sc * all_local_nearfield_ratios = nullptr;
   if ( _my_rank == root_process ) {
+    all_local_nonzero_nearfield_ratios = new sc[ n_processes ];
+    all_local_nearfield_ratios = new sc[ n_processes ];
+  }
+
+  MPI_Gather( &local_nearfield_ratio, 1, get_scalar_type< sc >::MPI_SC( ),
+    all_local_nearfield_ratios, 1, get_scalar_type< sc >::MPI_SC( ),
+    root_process, *_comm );
+  MPI_Gather( &local_nonzero_nearfield_ratio, 1,
+    get_scalar_type< sc >::MPI_SC( ), all_local_nonzero_nearfield_ratios, 1,
+    get_scalar_type< sc >::MPI_SC( ), root_process, *_comm );
+  if ( _my_rank == root_process ) {
+    for ( lo i = 0; i < n_processes; ++i ) {
+      global_nearfield_ratio += all_local_nearfield_ratios[ i ];
+      global_nonzero_nearfield_ratio += all_local_nonzero_nearfield_ratios[ i ];
+    }
     std::cout << "nearfield ratio (including zeros) = "
               << global_nearfield_ratio << std::endl;
     std::cout << "nearfield ratio (counting non-zero entries only) = "
               << global_nonzero_nearfield_ratio << std::endl;
   }
-  // count the fmm operations and print them levelwise
+  // count the fmm operations levelwise
   std::vector< lou > n_s2m_operations, n_m2m_operations, n_m2l_operations,
     n_l2l_operations, n_l2t_operations;
   count_fmm_operations_levelwise( n_s2m_operations, n_m2m_operations,
     n_m2l_operations, n_l2l_operations, n_l2t_operations );
+  // collect the numbers of operations at the root process via reduce operations
   lo n_max_levels = _distributed_spacetime_tree->get_max_levels( );
-
   if ( _my_rank == root_process ) {
     MPI_Reduce( MPI_IN_PLACE, n_s2m_operations.data( ), n_max_levels,
       get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
@@ -831,7 +849,30 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     MPI_Reduce( n_l2t_operations.data( ), nullptr, n_max_levels,
       get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
   }
-
+  // count the number of allocated moments (own and received) and
+  // local contributions
+  lo local_n_moments( 0 ), local_n_moments_receive( 0 ),
+    local_n_local_contributions( 0 );
+  _scheduling_tree_structure->count_number_of_contributions(
+    _scheduling_tree_structure->get_root( ), local_n_moments,
+    local_n_moments_receive, local_n_local_contributions );
+  lo * all_n_moments = nullptr;
+  lo * all_n_moments_receive = nullptr;
+  lo * all_n_local_contributions = nullptr;
+  if ( _my_rank == root_process ) {
+    all_n_moments = new lo[ n_processes ];
+    all_n_moments_receive = new lo[ n_processes ];
+    all_n_local_contributions = new lo[ n_processes ];
+  }
+  // gather the computed numbers at the root process
+  MPI_Gather( &local_n_moments, 1, get_index_type< lo >::MPI_LO( ),
+    all_n_moments, 1, get_index_type< lo >::MPI_LO( ), root_process, *_comm );
+  MPI_Gather( &local_n_moments_receive, 1, get_index_type< lo >::MPI_LO( ),
+    all_n_moments_receive, 1, get_index_type< lo >::MPI_LO( ), root_process,
+    *_comm );
+  MPI_Gather( &local_n_local_contributions, 1, get_index_type< lo >::MPI_LO( ),
+    all_n_local_contributions, 1, get_index_type< lo >::MPI_LO( ), root_process,
+    *_comm );
   if ( _my_rank == root_process ) {
     lo start_space_refinement
       = _distributed_spacetime_tree->get_start_space_refinement( );
@@ -869,6 +910,39 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
     std::cout << "#############################################################"
               << "###########################" << std::endl;
+    std::cout << "rough memory estimates per process: " << std::endl;
+    lo n_global_elements
+      = _distributed_spacetime_tree->get_mesh( ).get_n_elements( );
+    sc total_storage_nearfield = 0.0;
+    sc total_storage_contributions = 0.0;
+    for ( int i = 0; i < n_processes; ++i ) {
+      sc local_storage_nearfield = n_global_elements * n_global_elements
+        * all_local_nearfield_ratios[ i ];
+      local_storage_nearfield
+        *= 8. / 1024. / 1024. / 1024.;  // get memory for double entries in GiB.
+      sc local_storage_contributions
+        = ( all_n_moments[ i ] + all_n_moments_receive[ i ]
+            + all_n_local_contributions[ i ] )
+        * 8. * _contribution_size / 1024. / 1024. / 1024.;
+      total_storage_nearfield += local_storage_nearfield;
+      total_storage_contributions += local_storage_contributions;
+      std::cout << "process " << i
+                << ": nearfield_matrices: " << local_storage_nearfield
+                << " GiB, moment and local contributions: "
+                << local_storage_contributions << " GiB." << std::endl;
+    }
+    std::cout << "total storage: nearfield matrices: "
+              << total_storage_nearfield
+              << " GiB, moment and local contributions: "
+              << total_storage_contributions << " GiB." << std::endl;
+    std::cout << "storage per allocated vector: "
+              << n_global_elements * 8. / 1024. / 1024. / 1024. << " GiB."
+              << std::endl;
+    delete[] all_local_nearfield_ratios;
+    delete[] all_local_nonzero_nearfield_ratios;
+    delete[] all_n_moments;
+    delete[] all_n_moments_receive;
+    delete[] all_n_local_contributions;
   }
 }
 

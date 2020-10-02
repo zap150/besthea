@@ -689,6 +689,15 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
+   * Returns the number of associated moment receive buffers. It corresponds
+   * to the number of children of the current scheduling time cluster which are
+   * handled by a different process than the current cluster.
+   */
+  lou get_n_associated_moment_receive_buffers( ) {
+    return _associated_moments_receive_buffers.size( );
+  }
+
+  /**
    * Determines the tree structure of the subtree whose root is the current
    * cluster.
    * @return  A vector of the tree structure in the usual tree format
