@@ -56,23 +56,23 @@ struct cauchy_data {
 TEST_CASE( "System matrices are assembled", "[matrices]" ) {
   // number of time-slices and initial time-tree parameters
   sc end_time = 1.0;
-  lo n_timeslices = GENERATE( 16 );
+  lo n_timeslices = GENERATE( 10, 16 );
   lo initial_time_levels = 6;
   lo initial_n_min_time_elems = 2;
 
   // space-time tree parameters
-  lo max_n_levels = GENERATE( 6 );
-  lo n_min_elems = GENERATE( 20 );
+  lo max_n_levels = GENERATE( 4, 6, 8 );
+  lo n_min_elems = GENERATE( 10, 20 );
   sc st_coeff = 4.0;
-  slou spatial_nearfield_limit = GENERATE( 3 );
+  slou spatial_nearfield_limit = GENERATE( 2, 3, 4 );
 
   // space-time mesh refinement
-  lo refine = 1;
+  lo refine = GENERATE( 1, 2 );
   lo temp_refine_factor = 1;
 
   // pFMM parameters
-  lo temp_order = 6;
-  lo spat_order = 6;
+  lo temp_order = GENERATE( 5, 6 );
+  lo spat_order = GENERATE( 5, 6 );
   lo order_sing = 4;
   lo order_reg = 4;
 
