@@ -67,16 +67,18 @@ struct cauchy_data {
     return value;
   }
 
-  static constexpr sc _alpha{ 4.0 };
-  static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
-  static constexpr sc _shift{ 0.5 };
+  static constexpr sc _alpha{ 1.0 };
+  static constexpr std::array< sc, 3 > _y{ 1.5, 1.5, 1.5 };
+  static constexpr sc _shift{ 0.0 };
 };
 
 int main( int argc, char * argv[] ) {
-  std::string file = "./mesh_files/cube_12_vol.txt";
+  std::string file;
+  // file = "./mesh_files/cube_12_vol.txt";
+  file = "./mesh_files/cube_24_half_scale.txt";
   int refine = 2;
   lo n_timesteps = 8;
-  sc end_time = 1.0;
+  sc end_time = 0.125;
   std::string grid_file;
   //   int grid_refine = 2;
 
@@ -107,9 +109,9 @@ int main( int argc, char * argv[] ) {
     volume_mesh.print_info( );
   } else {
     space_mesh.load( file );
-    space_mesh.refine( refine );
+    space_mesh.refine( refine + 2 );
   }
-  n_timesteps *= std::exp2( refine );
+  n_timesteps *= std::exp2( 2 * refine );
   uniform_spacetime_tensor_mesh spacetime_mesh(
     space_mesh, end_time, n_timesteps );
 

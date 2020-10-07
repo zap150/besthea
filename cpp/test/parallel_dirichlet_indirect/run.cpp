@@ -49,7 +49,7 @@ struct cauchy_data {
     return value;
   }
 
-  static constexpr sc _alpha{ 4 };
+  static constexpr sc _alpha{ 1.0 };
   static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
 };
 
@@ -143,12 +143,19 @@ int main( int argc, char * argv[] ) {
     space_init_refine = 2;
     end_time = 0.5;
   } else if ( geometry_case == 5 ) {
-    // similar to 4, but considering only half of the temporal domain (to
-    // overcome problems due to memory requirements)
+    // same as 4, but considering only half of the temporal domain (to overcome
+    // problems due to memory requirements)
     spatial_mesh_file = "./mesh_files/cube_24_half_scale.txt";
     n_timesteps = 16;
     space_init_refine = 2;
     end_time = 0.25;
+  } else if ( geometry_case == 6 ) {
+    // same as 4, but considering only a quarter of the temporal domain (to
+    // overcome problems due to memory requirements)
+    spatial_mesh_file = "./mesh_files/cube_24_half_scale.txt";
+    n_timesteps = 8;
+    space_init_refine = 2;
+    end_time = 0.125;
   }
 
   // parameters for distributed spacetime mesh

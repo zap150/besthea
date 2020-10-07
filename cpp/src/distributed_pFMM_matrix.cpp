@@ -144,12 +144,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   std::list< mesh::scheduling_time_cluster * > n_list = _n_list;
 
   // @todo: add appropriate verbose mode if desired
-  bool verbose = true;
-  std::filesystem::create_directory( "./verbose/" );
+  bool verbose = false;
   // std::string verbose_file = verbose_dir + "/process_";
   std::string verbose_file = "verbose/process_";
   verbose_file += std::to_string( _my_rank );
   if ( verbose ) {
+    std::filesystem::create_directory( "./verbose/" );
     // remove existing verbose file and write to new one
     remove( verbose_file.c_str( ) );
   }
