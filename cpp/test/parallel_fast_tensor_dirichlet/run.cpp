@@ -96,7 +96,7 @@ int main( int argc, char * argv[] ) {
   spat_order = 6;
   order_sing = 4;
   order_reg = 4;
-  distribution_time_levels = 5;
+  distribution_time_levels = 6;
 
   lo geometry_case = 2;
   int refine = 0;
