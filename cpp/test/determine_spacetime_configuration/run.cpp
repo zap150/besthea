@@ -68,17 +68,18 @@ struct cauchy_data {
   }
 
   static constexpr sc _alpha{ 4.0 };
-  static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
+  static constexpr std::array< sc, 3 > _y{ 1.5, 1.5, 1.5 };
   static constexpr sc _shift{ 0.0 };
 };
 
 int main( int argc, char * argv[] ) {
   // read the space mesh from file and refine it twice (to get 192 elements)
-  std::string spatial_mesh_file = "./mesh_files/cube_12.txt";
+  std::string spatial_mesh_file = "./mesh_files/cube_24_half_scale.txt";
   triangular_surface_mesh space_mesh( spatial_mesh_file );
   space_mesh.refine( 2 );
   // for a sequence of timesteps determine the L2 error of the piecewise
   // constant L2 projection of the Neumann data.
+
   for ( lo n_timesteps = 4; n_timesteps < ( 1 << 11 ); n_timesteps *= 2 ) {
     uniform_spacetime_tensor_mesh spacetime_mesh(
       space_mesh, 1.0, n_timesteps );
@@ -90,4 +91,25 @@ int main( int argc, char * argv[] ) {
               << space_p0.L2_relative_error( cauchy_data::neumann, neu_proj )
               << std::endl;
   }
+
+  // // different test: check best approximation error for the examples of
+  // // Messner, Schanz, Tausch (2014), Section 5.1, Table 3
+  // lo n_timesteps = 32;
+  // sc end_time = 0.5;
+  // for ( lo n_refinements = 0; n_refinements < 2; ++n_refinements ) {
+  //   uniform_spacetime_tensor_mesh spacetime_mesh(
+  //     space_mesh, end_time, n_timesteps );
+  //   spacetime_mesh.refine( n_refinements, 2 );
+  //   block_vector neu_proj(
+  //     n_timesteps, spacetime_mesh.get_n_spatial_elements( ) );
+  //   uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
+  //   space_p0.L2_projection( cauchy_data::neumann, neu_proj );
+  //   std::cout << "n_refinements: " << n_refinements;
+  //   std::cout << ", n_space_elements: "
+  //             << spacetime_mesh.get_n_spatial_elements( );
+  //   std::cout << ", n_timesteps: " << n_timesteps << ", rel. error: "
+  //             << space_p0.L2_relative_error( cauchy_data::neumann, neu_proj )
+  //             << std::endl;
+  //   n_timesteps *= 4;
+  // }
 }

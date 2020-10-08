@@ -68,7 +68,7 @@ struct cauchy_data {
   }
 
   static constexpr sc _alpha{ 4.0 };
-  static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
+  static constexpr std::array< sc, 3 > _y{ 1.5, 1.5, 1.5 };
   static constexpr sc _shift{ 0.0 };
 };
 
@@ -84,33 +84,54 @@ int main( int argc, char * argv[] ) {
   // declaration of required parameters.
   lo order_sing, order_reg, temp_order, spat_order;
   sc st_coeff;
-  lo max_n_levels;
+  lo max_n_levels, n_min_elems, n_nearfield_clusters;
   lo n_blocks;
+  lo distribution_time_levels;
 
-  st_coeff = 4.0;
+  n_nearfield_clusters = 3;
+  st_coeff = 8.0;
   max_n_levels = 20;
-  temp_order = 6;
-  spat_order = 6;
+  n_min_elems = 800;
+  temp_order = 5;
+  spat_order = 5;
   order_sing = 4;
   order_reg = 4;
+  distribution_time_levels = 6;
 
   lo test_case = 3;
-  lo geometry_case = 2;
-  if ( argc == 3 ) {
+  lo geometry_case = 4;
+  int refine = 0;
+  if ( argc == 6 ) {
     geometry_case = strtol( argv[ 1 ], NULL, 10 );
     test_case = strtol( argv[ 2 ], NULL, 10 );
+    refine = strtol( argv[ 3 ], NULL, 10 );
+    n_min_elems = strtol( argv[ 4 ], NULL, 10 );
+    n_nearfield_clusters = strtol( argv[ 5 ], NULL, 10 );
+  }
+
+  if ( myRank == 0 ) {
+    std::cout << "### parameter choices: ###" << std::endl;
+    std::cout << "st_coeff = " << st_coeff << std::endl;
+    std::cout << "n_min_elems = " << n_min_elems << std::endl;
+    std::cout << "n_nearfield_clusters = " << n_nearfield_clusters << std::endl;
+    std::cout << "temp_order = " << temp_order << std::endl;
+    std::cout << "spat_order = " << spat_order << std::endl;
+    std::cout << "order_sing = " << order_sing << std::endl;
+    std::cout << "order_reg = " << order_reg << std::endl;
+    std::cout << "distribution_time_levels = " << distribution_time_levels
+              << std::endl;
+    std::cout << "###########################" << std::endl;
+    std::cout << "number of MPI processes: " << n_processes << std::endl;
+    std::cout << "max. number of OpenMP threads: " << omp_get_max_threads( )
+              << std::endl;
+    std::cout << "###########################" << std::endl;
   }
 
   // mesh data to construct equivalent standard spacetime mesh and distributed
   // spacetime mesh for the test.
   std::string spatial_mesh_file;
-  std::string time_file;
-  // WARNING: only uniform timesteps are allowed for the non-approximated single
-  // layer operator. choose a time file and set the parameters for the standard
-  // spacetime mesh accordingly
-  // parameters for standard spacetime mesh
-  lo n_timesteps = 8;
-  int refine = 1;
+  lo n_timesteps = 16;
+  lo space_init_refine = 0;
   int temp_refine_factor = 2;
   sc end_time = 1.0;
 
@@ -120,14 +141,20 @@ int main( int argc, char * argv[] ) {
   std::filesystem::create_directory( geometry_dir );
   if ( geometry_case == 1 ) {
     spatial_mesh_file = "./mesh_files/cube_12.txt";
-    time_file = "./mesh_files/time_1_8_uniform.txt";
+    n_timesteps = 16;
   } else if ( geometry_case == 2 ) {
     spatial_mesh_file = "./mesh_files/icosahedron.txt";
-    time_file = "./mesh_files/time_1_8_uniform.txt";
+    n_timesteps = 16;
   } else if ( geometry_case == 3 ) {
     spatial_mesh_file = "./mesh_files/icosahedron.txt";
-    time_file = "./mesh_files/time_1_10.txt";
-    n_timesteps = 10;
+    n_timesteps = 20;
+  } else if ( geometry_case == 4 ) {
+    // Similar to Messner, Schanz, Tausch in J.Comp.Phys.
+    // choose st_coeff = 4 such that first space refinement level is 6
+    spatial_mesh_file = "./mesh_files/cube_24_half_scale.txt";
+    n_timesteps = 32;
+    space_init_refine = 2;
+    end_time = 0.5;
   }
 
   // parameters for distributed spacetime mesh
@@ -163,10 +190,10 @@ int main( int argc, char * argv[] ) {
     t.reset( "mesh generation" );
 
     // load time mesh defining slices and create temporal tree
-    temporal_mesh time_mesh( time_file );
-    lo time_levels = 6;
+    temporal_mesh time_mesh( 0, end_time, n_timesteps );
     lo n_min_time_elems = 2;
-    time_cluster_tree time_tree( time_mesh, time_levels, n_min_time_elems );
+    time_cluster_tree time_tree(
+      time_mesh, distribution_time_levels, n_min_time_elems );
 
     // write tree structure to file
     time_tree.print_tree_structure( tree_vector_file );
@@ -178,8 +205,13 @@ int main( int argc, char * argv[] ) {
     time_tree.print_process_assignments(
       n_processes, process_assignment_strategy, process_assignment_file );
 
+    triangular_surface_mesh space_mesh( spatial_mesh_file );
+    if ( space_init_refine > 0 ) {
+      space_mesh.refine( space_init_refine );
+    }
+
     spacetime_mesh_generator generator(
-      spatial_mesh_file, time_file, time_refinement, space_refinement );
+      space_mesh, end_time, n_timesteps, time_refinement, space_refinement );
 
     generator.generate( geometry_dir, "test_mesh", "txt" );
     t.measure( );
@@ -187,7 +219,7 @@ int main( int argc, char * argv[] ) {
   MPI_Barrier( comm );
 
   if ( myRank == 0 ) {
-    t.reset( "assembly of distributed mesh and tree " );
+    t.reset( "assembly of distributed mesh and tree" );
   }
 
   distributed_spacetime_tensor_mesh distributed_mesh(
@@ -197,8 +229,8 @@ int main( int argc, char * argv[] ) {
   // number of blocks in a blockvector corresponds to global number of timesteps
   n_blocks = distributed_mesh.get_n_temporal_elements( );
 
-  distributed_spacetime_cluster_tree distributed_st_tree(
-    distributed_mesh, max_n_levels, 40, st_coeff, 3, &comm );
+  distributed_spacetime_cluster_tree distributed_st_tree( distributed_mesh,
+    max_n_levels, n_min_elems, st_coeff, n_nearfield_clusters, &comm );
   MPI_Barrier( comm );
   if ( myRank == 0 ) {
     t.measure( );
@@ -256,7 +288,7 @@ int main( int argc, char * argv[] ) {
 
     lo entry_id = 0;
     lo block_id = 0;
-    lo block_evaluation_id = 8;
+    lo block_evaluation_id = 0;
     vector x_loc_0( cols_of_block );
     x_loc_0( entry_id ) = 1.0;
     block_vector x_block_vec( n_blocks, cols_of_block, true );
@@ -266,6 +298,7 @@ int main( int argc, char * argv[] ) {
     if ( myRank == 0 ) {
       t.reset( "assembly and application of toeplitz matrix K (from scratch)" );
       triangular_surface_mesh space_mesh( spatial_mesh_file );
+      space_mesh.refine( space_init_refine );
       uniform_spacetime_tensor_mesh spacetime_mesh(
         space_mesh, end_time, n_timesteps );
       spacetime_mesh.refine( refine, temp_refine_factor );
@@ -314,7 +347,7 @@ int main( int argc, char * argv[] ) {
       std::cout << "target id " << block_evaluation_id << std::endl;
       vector & subvec_pFMM = applied_dist_pFMM.get_block( block_evaluation_id );
       vector & subvec_toeplitz = applied_std.get_block( block_evaluation_id );
-      lo eval_entry_id = 8;
+      lo eval_entry_id = 0;
       std::cout << "id: " << eval_entry_id << std::endl;
       std::cout << "entry is " << subvec_pFMM[ eval_entry_id ] << std::endl;
       std::cout << "should be " << subvec_toeplitz[ eval_entry_id ]
@@ -355,6 +388,7 @@ int main( int argc, char * argv[] ) {
     if ( myRank == 0 ) {
       t.reset( "assembly and application of toeplitz matrix K (from scratch)" );
       triangular_surface_mesh space_mesh( spatial_mesh_file );
+      space_mesh.refine( space_init_refine );
       uniform_spacetime_tensor_mesh spacetime_mesh(
         space_mesh, end_time, n_timesteps );
       spacetime_mesh.refine( refine, temp_refine_factor );
@@ -455,6 +489,7 @@ int main( int argc, char * argv[] ) {
       //   "assembly and application of pFMM matrix K_adj (from scratch)" );
       t.reset( "assembly and application of adjoint of K (from scratch)" );
       triangular_surface_mesh space_mesh( spatial_mesh_file );
+      space_mesh.refine( space_init_refine );
       uniform_spacetime_tensor_mesh spacetime_mesh(
         space_mesh, end_time, n_timesteps );
       spacetime_mesh.refine( refine, temp_refine_factor );
@@ -543,6 +578,7 @@ int main( int argc, char * argv[] ) {
       //   "assembly and application of pFMM matrix K_adj (from scratch)" );
       t.reset( "assembly and application of adjoint of K (from scratch)" );
       triangular_surface_mesh space_mesh( spatial_mesh_file );
+      space_mesh.refine( space_init_refine );
       uniform_spacetime_tensor_mesh spacetime_mesh(
         space_mesh, end_time, n_timesteps );
       spacetime_mesh.refine( refine, temp_refine_factor );

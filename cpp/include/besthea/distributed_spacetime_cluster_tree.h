@@ -425,9 +425,9 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @ref associate_scheduling_clusters_and_space_time_clusters_recursively
    * is executed to find the associated clusters.
    * @warning: Space-time leaves and space-time non-leaves are not distinguished
-   * here. The routine @todo has to be called in addition to distinguish them
-   * and resort the associated clusters such that the first clusters are leaves
-   * and the rest non-leaves.
+   * here. The routine @ref sort_associated_space_time_clusters_recursively has
+   * to be called in addition to distinguish them and resort the associated
+   * clusters such that the first clusters are leaves and the rest non-leaves.
    */
   void associate_scheduling_clusters_and_space_time_clusters( );
 

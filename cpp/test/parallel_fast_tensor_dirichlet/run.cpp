@@ -68,7 +68,7 @@ struct cauchy_data {
   }
 
   static constexpr sc _alpha{ 4.0 };
-  static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
+  static constexpr std::array< sc, 3 > _y{ 1.5, 1.5, 1.5 };
   static constexpr sc _shift{ 0.0 };
 };
 
@@ -84,31 +84,55 @@ int main( int argc, char * argv[] ) {
   // declaration of required parameters.
   lo order_sing, order_reg, temp_order, spat_order;
   sc st_coeff;
-  lo max_n_levels;
-  lo n_blocks, n_space_elements, n_space_nodes;
+  lo max_n_levels, n_min_elems, n_nearfield_clusters;
+  lo n_blocks;
+  lo distribution_time_levels;
 
+  n_nearfield_clusters = 3;
   st_coeff = 4.0;
   max_n_levels = 20;
+  n_min_elems = 400;
   temp_order = 6;
   spat_order = 6;
   order_sing = 4;
   order_reg = 4;
+  distribution_time_levels = 5;
 
   lo geometry_case = 2;
+  int refine = 0;
+
   if ( argc == 2 ) {
     geometry_case = strtol( argv[ 1 ], NULL, 10 );
+  } else if ( argc == 5 ) {
+    geometry_case = strtol( argv[ 1 ], NULL, 10 );
+    refine = strtol( argv[ 2 ], NULL, 10 );
+    n_min_elems = strtol( argv[ 3 ], NULL, 10 );
+    n_nearfield_clusters = strtol( argv[ 4 ], NULL, 10 );
+  }
+
+  if ( myRank == 0 ) {
+    std::cout << "### parameter choices: ###" << std::endl;
+    std::cout << "st_coeff = " << st_coeff << std::endl;
+    std::cout << "n_min_elems = " << n_min_elems << std::endl;
+    std::cout << "n_nearfield_clusters = " << n_nearfield_clusters << std::endl;
+    std::cout << "temp_order = " << temp_order << std::endl;
+    std::cout << "spat_order = " << spat_order << std::endl;
+    std::cout << "order_sing = " << order_sing << std::endl;
+    std::cout << "order_reg = " << order_reg << std::endl;
+    std::cout << "distribution_time_levels = " << distribution_time_levels
+              << std::endl;
+    std::cout << "###########################" << std::endl;
+    std::cout << "number of MPI processes: " << n_processes << std::endl;
+    std::cout << "max. number of OpenMP threads: " << omp_get_max_threads( )
+              << std::endl;
+    std::cout << "###########################" << std::endl;
   }
 
   // mesh data to construct equivalent standard spacetime mesh and distributed
   // spacetime mesh for the test.
   std::string spatial_mesh_file;
-  std::string time_file;
-  // WARNING: only uniform timesteps are allowed for the non-approximated single
-  // layer operator. choose a time file and set the parameters for the standard
-  // spacetime mesh accordingly
-  // parameters for standard spacetime mesh
-  lo n_timesteps = 8;
-  int refine = 1;
+  lo n_timesteps = 16;
+  lo space_init_refine = 0;
   int temp_refine_factor = 2;
   sc end_time = 1.0;
 
@@ -117,14 +141,20 @@ int main( int argc, char * argv[] ) {
   std::filesystem::create_directory( geometry_dir );
   if ( geometry_case == 1 ) {
     spatial_mesh_file = "./mesh_files/cube_12.txt";
-    time_file = "./mesh_files/time_1_8_uniform.txt";
+    n_timesteps = 16;
   } else if ( geometry_case == 2 ) {
     spatial_mesh_file = "./mesh_files/icosahedron.txt";
-    time_file = "./mesh_files/time_1_8_uniform.txt";
+    n_timesteps = 16;
   } else if ( geometry_case == 3 ) {
     spatial_mesh_file = "./mesh_files/icosahedron.txt";
-    time_file = "./mesh_files/time_1_10.txt";
-    n_timesteps = 10;
+    n_timesteps = 20;
+  } else if ( geometry_case == 4 ) {
+    // Similar to Messner, Schanz, Tausch in J.Comp.Phys.
+    // choose st_coeff = 4 such that first space refinement level is 6
+    spatial_mesh_file = "./mesh_files/cube_24_half_scale.txt";
+    n_timesteps = 32;
+    space_init_refine = 2;
+    end_time = 0.5;
   }
   // parameters for distributed spacetime mesh
   // refinement of mesh within slices
@@ -146,15 +176,18 @@ int main( int argc, char * argv[] ) {
   std::string process_assignment_file = geometry_dir + "process_assignment.bin";
   if ( myRank == 0 ) {
     std::cout << "### geometry case: " << geometry_case << std::endl;
+    std::cout << "refine = " << refine << std::endl;
+    std::cout << "temporal refinement factor = " << temp_refine_factor
+              << std::endl;
     std::cout << "n_processes: " << n_processes
               << ", strategy: " << process_assignment_strategy << std::endl;
     t.reset( "mesh generation" );
 
     // load time mesh defining slices and create temporal tree
-    temporal_mesh time_mesh( time_file );
-    lo time_levels = 6;
+    temporal_mesh time_mesh( 0, end_time, n_timesteps );
     lo n_min_time_elems = 2;
-    time_cluster_tree time_tree( time_mesh, time_levels, n_min_time_elems );
+    time_cluster_tree time_tree(
+      time_mesh, distribution_time_levels, n_min_time_elems );
 
     // write tree structure to file
     time_tree.print_tree_structure( tree_vector_file );
@@ -163,12 +196,16 @@ int main( int argc, char * argv[] ) {
     time_tree.print_cluster_bounds( cluster_bounds_file );
 
     // compute process assignment and write it to file
-
     time_tree.print_process_assignments(
       n_processes, process_assignment_strategy, process_assignment_file );
 
+    triangular_surface_mesh space_mesh( spatial_mesh_file );
+    if ( space_init_refine > 0 ) {
+      space_mesh.refine( space_init_refine );
+    }
+
     spacetime_mesh_generator generator(
-      spatial_mesh_file, time_file, time_refinement, space_refinement );
+      space_mesh, end_time, n_timesteps, time_refinement, space_refinement );
 
     generator.generate( geometry_dir, "test_mesh", "txt" );
     t.measure( );
@@ -185,18 +222,21 @@ int main( int argc, char * argv[] ) {
 
   // number of blocks in a blockvector corresponds to global number of timesteps
   n_blocks = distributed_mesh.get_n_temporal_elements( );
-  n_space_elements
+  lo n_space_elements
     = distributed_mesh.get_local_mesh( )->get_n_spatial_elements( );
-  n_space_nodes = distributed_mesh.get_local_mesh( )->get_n_spatial_nodes( );
+  lo n_space_nodes = distributed_mesh.get_local_mesh( )->get_n_spatial_nodes( );
 
-  distributed_spacetime_cluster_tree distributed_st_tree(
-    distributed_mesh, max_n_levels, 40, st_coeff, 3, &comm );
+  distributed_spacetime_cluster_tree distributed_st_tree( distributed_mesh,
+    max_n_levels, n_min_elems, st_coeff, n_nearfield_clusters, &comm );
   MPI_Barrier( comm );
   if ( myRank == 0 ) {
     t.measure( );
     // distributed_st_tree.print( );
     // std::cout << std::endl << std::endl << std::endl;
     // distributed_st_tree.get_distribution_tree( )->print( );
+    std::cout << "number of elements: " << distributed_mesh.get_n_elements( )
+              << ", number of timesteps: "
+              << distributed_mesh.get_n_temporal_elements( ) << std::endl;
   }
 
   distributed_fast_spacetime_be_space< basis_tri_p0 > distributed_space_p0(
@@ -252,15 +292,17 @@ int main( int argc, char * argv[] ) {
       "sequential application of mass matrix"
       " + projection error computation" );
     space_mesh = new triangular_surface_mesh( spatial_mesh_file );
+    if ( space_init_refine > 0 ) {
+      space_mesh->refine( space_init_refine );
+    }
     spacetime_mesh
       = new uniform_spacetime_tensor_mesh( *space_mesh, end_time, n_timesteps );
     spacetime_mesh->refine( refine, temp_refine_factor );
-    // std::cout << "number of elements is "
-    //           << spacetime_mesh->get_n_spatial_elements( )
-    //           << ", should be " << n_space_elements << std::endl;
-    // std::cout << "number of nodes is "
-    //           << spacetime_mesh->get_n_spatial_nodes( )
-    //           << ", should be " << n_space_nodes << std::endl;
+    std::cout << "number of elements is "
+              << spacetime_mesh->get_n_spatial_elements( ) << ", should be "
+              << n_space_elements << std::endl;
+    std::cout << "number of nodes is " << spacetime_mesh->get_n_spatial_nodes( )
+              << ", should be " << n_space_nodes << std::endl;
     space_p0
       = new uniform_spacetime_be_space< basis_tri_p0 >( *spacetime_mesh );
     space_p1
@@ -284,6 +326,26 @@ int main( int argc, char * argv[] ) {
     M.apply( dir_proj, neu_block, false, 0.5, 0.0 );
     std::cout << "applied M" << std::endl;
     t.measure( );
+
+    // pFMM_matrix_heat_dl_p0p1 * K_seq = new pFMM_matrix_heat_dl_p0p1;
+    // besthea::mesh::spacetime_cluster_tree seq_tree(
+    //   *spacetime_mesh, 400, 3, 10, st_coeff );
+    // //   tree.print( );
+    // fast_spacetime_be_space< basis_tri_p0 > fast_space_p0( seq_tree );
+    // fast_spacetime_be_space< basis_tri_p1 > fast_space_p1( seq_tree );
+
+    // fast_spacetime_be_assembler fast_seq_assembler_k( kernel_k,
+    // fast_space_p0,
+    //   fast_space_p1, order_sing, order_reg, temp_order, spat_order,
+    //   cauchy_data::_alpha, 1.5, false );
+    // t.reset( "K_seq" );
+    // fast_seq_assembler_k.assemble( *K_seq );
+    // t.measure( );
+    // t.reset( "applying K (sequentially)" );
+    // K_seq->apply( dir_proj, neu_block, false, 1.0, 1.0 );
+    // t.measure( );
+    // delete K_seq;
+
     delete space_p1;
   }
   // broadcast dir_proj to all processes
