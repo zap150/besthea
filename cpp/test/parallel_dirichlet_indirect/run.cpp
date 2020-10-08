@@ -156,6 +156,13 @@ int main( int argc, char * argv[] ) {
     n_timesteps = 8;
     space_init_refine = 2;
     end_time = 0.125;
+  } else if ( geometry_case == 7 ) {
+    // same as 5, but refined already once to allow execution with more
+    // processes
+    spatial_mesh_file = "./mesh_files/cube_24_half_scale.txt";
+    n_timesteps = 64;
+    space_init_refine = 3;
+    end_time = 0.25;
   }
 
   // parameters for distributed spacetime mesh
