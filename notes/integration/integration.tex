@@ -337,8 +337,8 @@ and observing that the limit of the function $\tilde g^{\dif \tau \dif t}$ for $
 
 For $K^0(\vr)$ we can write
 \begin{align*}
-  K^0(\vr) &= \alpha\frac{\partial}{\partial \vn_\vy} \int_{0}^{h_t} G^{\dif \tau}_\alpha(\vr,0) - G^{\dif \tau}_\alpha(\vr, t) \,\dif t 
-  = \alpha \bigg( \frac{\partial G^{\dif\tau}_\alpha}{\partial \vn_\vy} (\vr,0) - \frac{\partial G^{\dif\tau\dif t}_\alpha}{\partial \vn_\vy}(\vr,h_t) + \frac{\partial G^{\dif\tau\dif t}_\alpha}{\partial \vn_\vy}(\vr,0) \bigg).
+  K^0(\vr) &= \alpha\frac{\partial}{\partial \vn_\vy} \int_{0}^{h_t} G^{\dif \tau}_\alpha(\vr,0) - G^{\dif \tau}_\alpha(\vr, t) \,\dif t  \\
+  &= \alpha \bigg( h_t\frac{\partial G^{\dif\tau}_\alpha}{\partial \vn_\vy} (\vr,0) - \frac{\partial G^{\dif\tau\dif t}_\alpha}{\partial \vn_\vy}(\vr,h_t) + \frac{\partial G^{\dif\tau\dif t}_\alpha}{\partial \vn_\vy}(\vr,0) \bigg).
 \end{align*}
 Similarly as in \eqref{eq:dn_G_dt_dtau} with \eqref{eq:G_to_g} we have
 \begin{equation*}
@@ -358,10 +358,10 @@ For $\|\vr\| > 0$ it holds
 \label{eq:dn_G_dtau_lim_r}
   \lim_{\delta \to 0_+} \alpha\frac{\partial G^{\dif\tau}_\alpha}{\partial \vn_\vy}(\vr,\delta) = \frac{ \vr \cdot \vn_\vy}{4\pi\|\vr\|^3}.
 \end{equation}
-For $\delta > 0$ we again have
-\begin{equation*}
-  \lim_{\|\vr\| \to 0_+}\alpha \frac{\partial G^{\dif\tau}_\alpha}{\partial \vn_\vy}(\vr,\delta) = 0.
-\end{equation*}
+%For $\delta > 0$ we again have %%% not necessary
+%\begin{equation*}
+%  \lim_{\|\vr\| \to 0_+}\alpha \frac{\partial G^{\dif\tau}_\alpha}{\partial \vn_\vy}(\vr,\delta) = 0.
+%\end{equation*}
 
 The layout of the block matrix $\matK_h$ is the same as in \eqref{eq:V_mat}. The individual blocks in $\matK_h$ are set up as
 \begin{equation*}
