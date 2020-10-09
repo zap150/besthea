@@ -79,8 +79,8 @@ int main( int argc, char * argv[] ) {
   // for a sequence of timesteps determine the L2 error of the piecewise
   // constant L2 projection of the Neumann data.
 
-  for ( lo space_refine = 0; space_refine < 6; ++space_refine ) {
-    for ( lo n_timesteps = 4; n_timesteps < ( 1 << 13 ); n_timesteps *= 2 ) {
+  for ( lo space_refine = 0; space_refine < 7; ++space_refine ) {
+    for ( lo n_timesteps = 4; n_timesteps < ( 1 << 15 ); n_timesteps *= 2 ) {
       uniform_spacetime_tensor_mesh spacetime_mesh(
         space_mesh, 1.0, n_timesteps );
       block_vector neu_proj(
@@ -91,6 +91,7 @@ int main( int argc, char * argv[] ) {
                 << ", ";
     }
     std::cout << std::endl;
+    space_mesh.refine( 1 );
   }
 
   // // different test: check best approximation error for the examples of
