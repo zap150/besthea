@@ -47,11 +47,11 @@ all: ${LIBFMM_A} ${EXECUTABLES} ${TEST_CPP} ${TEST_H} catch
 ${LIBFMM_A}: ${LIB_CPP} ${LIB_H}
 	@echo generating lib
 	@cd .. ; $(MAKE) lib/libbesthea.a
-	
+
 catch: ./catch/catch_mpi_main.o
-	${CXX} ${CXXFLAGS} -o ./catch/catch_test.exe ./catch/catch_mpi_main.o ${CATCH_CPP} -L../lib -lbesthea  ${LDLIBSOPTIONS}  -I../include 
-	
-./catch/catch_mpi_main.o: ./catch/catch_mpi_main.cpp
+	${CXX} ${CXXFLAGS} -o ./catch/catch_test.exe ./catch/catch_mpi_main.o ${CATCH_CPP} -L../lib -lbesthea  ${LDLIBSOPTIONS}  -I../include
+
+./catch/catch_mpi_main.o: ./catch/catch_mpi_main.cpp ${LIBFMM_A}
 	${COMPILELINE} ./catch/catch_mpi_main.cpp -o ./catch/catch_mpi_main.o
 
 clean:

@@ -291,10 +291,6 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    n_space_clusters * n_space_clusters * n_space_clusters
       + pos_x * n_space_clusters * n_space_clusters + pos_y * n_space_clusters
       + pos_z).
-   * @todo Since exact bounds of scheduling time clusters are now available they
-   * could be used to make this routine simpler.
-   * @todo Routine needs to be adapted to allow correct execution for
-   * non-uniform time-slices (no temporal bisections of clusters anymore!)
    */
   void get_n_elements_in_subdivisioning( general_spacetime_cluster & root,
     lo n_space_div, lo level_time,

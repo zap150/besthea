@@ -635,11 +635,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     ends[ access_index ] = center_time + half_size_time;
   }
 
-  // starts[ 0 ] -= 1.0; todo: discuss; this is not used anymore, because it
-  // causes wrong results in case that the leftmost cluster is an early leaf
-  // cluster. Since the time center of an element is always a weighted sum of
-  // its nodes it should not matter in any case.
-
   sc delta_x = ( 2 * half_size[ 0 ] ) / n_space_clusters;
   sc delta_y = ( 2 * half_size[ 1 ] ) / n_space_clusters;
   sc delta_z = ( 2 * half_size[ 2 ] ) / n_space_clusters;
