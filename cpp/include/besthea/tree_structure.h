@@ -67,6 +67,8 @@ namespace besthea {
  * (slices, cluster bounds). If the time slices are already assigned to clusters
  * we could also use them to build the tree instead of the tree structure
  * vector)
+ * @warning: if the tree structure is computed on each process separately it is
+ * not guaranteed that it is the same for all processes!
  */
 class besthea::mesh::tree_structure {
  public:
@@ -292,7 +294,7 @@ class besthea::mesh::tree_structure {
   std::vector< scheduling_time_cluster * >
     _leaves;          //!< vector of all clusters without descendants
   lo _my_process_id;  //!< id of the process executing the operations
-                      //!< @todo Exchange by an MPI query later?
+                      //!< @todo Rename consistently?
 
   friend class besthea::mesh::distributed_spacetime_cluster_tree;
 

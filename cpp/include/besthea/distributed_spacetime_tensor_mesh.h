@@ -273,8 +273,7 @@ class besthea::mesh::distributed_spacetime_tensor_mesh
    * @param[in,out] slices_indices Indices of the slices owned by the process.
    * @param[in] start Start index of curren cluster.
    * @param[in] end End index of current clusters.
-   * @todo replace by a loop over all leaves (now the cluster bounds are
-   * initialized properly)
+   * @todo delete? not used anymore
    */
   void find_my_slices( scheduling_time_cluster * root,
     std::vector< lo > & slices_indices, lo start, lo end );
