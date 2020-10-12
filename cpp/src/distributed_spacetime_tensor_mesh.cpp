@@ -87,31 +87,6 @@ besthea::mesh::distributed_spacetime_tensor_mesh::get_distribution_tree( ) {
   return _dist_tree;
 }
 
-void besthea::mesh::distributed_spacetime_tensor_mesh::find_my_slices(
-  scheduling_time_cluster * root, std::vector< lo > & slice_indices, lo start,
-  lo end ) {
-  if ( root->get_n_children( ) > 0 ) {
-    std::vector< scheduling_time_cluster * > * children = root->get_children( );
-    lo split_index = 0;
-    sc center = root->get_center( );
-
-    for ( lo i = start; i < end; ++i ) {
-      if ( ( _slices[ i + 1 ] + _slices[ i ] ) / 2.0 <= center ) {
-        split_index = i + 1;
-      }
-    }
-    find_my_slices( children->at( 0 ), slice_indices, start, split_index );
-    find_my_slices( children->at( 1 ), slice_indices, split_index, end );
-  } else {
-    lo cluster_owner = root->get_process_id( );
-    if ( cluster_owner == _my_rank ) {
-      for ( lo i = 0; i < end - start; ++i ) {
-        slice_indices.push_back( start + i );
-      }
-    }
-  }
-}
-
 void besthea::mesh::distributed_spacetime_tensor_mesh::find_slices_to_load(
   std::set< lo > & nearfield_slice_indices,
   std::set< lo > & local_slice_indices ) const {

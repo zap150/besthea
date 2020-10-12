@@ -74,22 +74,24 @@ struct cauchy_data {
 
 int main( int argc, char * argv[] ) {
   // read the space mesh from file and refine it twice (to get 192 elements)
-  std::string spatial_mesh_file = "./mesh_files/cube_24_half_scale.txt";
+  std::string spatial_mesh_file = "./mesh_files/cube_12.txt";
   triangular_surface_mesh space_mesh( spatial_mesh_file );
-  space_mesh.refine( 2 );
   // for a sequence of timesteps determine the L2 error of the piecewise
   // constant L2 projection of the Neumann data.
 
-  for ( lo n_timesteps = 4; n_timesteps < ( 1 << 11 ); n_timesteps *= 2 ) {
-    uniform_spacetime_tensor_mesh spacetime_mesh(
-      space_mesh, 1.0, n_timesteps );
-    block_vector neu_proj(
-      n_timesteps, spacetime_mesh.get_n_spatial_elements( ) );
-    uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
-    space_p0.L2_projection( cauchy_data::neumann, neu_proj );
-    std::cout << "n_timesteps: " << n_timesteps << ", rel. error: "
-              << space_p0.L2_relative_error( cauchy_data::neumann, neu_proj )
-              << std::endl;
+  for ( lo space_refine = 0; space_refine < 7; ++space_refine ) {
+    for ( lo n_timesteps = 4; n_timesteps < ( 1 << 15 ); n_timesteps *= 2 ) {
+      uniform_spacetime_tensor_mesh spacetime_mesh(
+        space_mesh, 1.0, n_timesteps );
+      block_vector neu_proj(
+        n_timesteps, spacetime_mesh.get_n_spatial_elements( ) );
+      uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
+      space_p0.L2_projection( cauchy_data::neumann, neu_proj );
+      std::cout << space_p0.L2_relative_error( cauchy_data::neumann, neu_proj )
+                << ", ";
+    }
+    std::cout << std::endl;
+    space_mesh.refine( 1 );
   }
 
   // // different test: check best approximation error for the examples of
