@@ -268,17 +268,6 @@ class besthea::mesh::distributed_spacetime_tensor_mesh
     const std::string & distribution_file );
 
   /**
-   * Goes through the temporal tree and finds leaf clusters with the same owner
-   * @param[in] root Root cluster of the tree.
-   * @param[in,out] slices_indices Indices of the slices owned by the process.
-   * @param[in] start Start index of curren cluster.
-   * @param[in] end End index of current clusters.
-   * @todo delete? not used anymore
-   */
-  void find_my_slices( scheduling_time_cluster * root,
-    std::vector< lo > & slices_indices, lo start, lo end );
-
-  /**
    * Goes through the leaves of the temporal tree and adds time slice indices
    * whose meshes have to be loaded to the appropriate sets.
    * @param[in, out] nearfield_slice_indices  Set of all slice indices
