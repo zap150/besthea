@@ -49,7 +49,7 @@ struct cauchy_data {
     return value;
   }
 
-  static constexpr sc _alpha{ 4 };
+  static constexpr sc _alpha{ 0.5 };
   static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
 };
 

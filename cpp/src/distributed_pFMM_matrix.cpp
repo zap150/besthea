@@ -94,7 +94,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   //#### multiply the global result vector by beta ####
   // @todo discuss: should the multiplication be done like this or only in a
   // local part of the result vector?
-  // #pragma omp parallel for schedule( static )
+   #pragma omp parallel for schedule( static )
   for ( lo i = 0; i < y.get_block_size( ); ++i ) {
     for ( lo j = 0; j < y.get_size_of_block( ); ++j ) {
       y.set( i, j, y.get( i, j ) * beta );
@@ -1216,16 +1216,16 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   std::vector< general_spacetime_cluster * > * associated_spacetime_targets
     = tar_cluster->get_associated_spacetime_clusters( );
-  //  for ( auto spacetime_tar : *associated_spacetime_targets ) {
-  //    std::vector< general_spacetime_cluster * > * spacetime_interaction_list
-  //      = spacetime_tar->get_interaction_list( );
-  //    for ( auto spacetime_src : *spacetime_interaction_list ) {
-  //      if ( spacetime_src->get_global_time_index( )
-  //        == src_cluster->get_global_index( ) ) {
-  //        apply_m2l_operation( spacetime_src, spacetime_tar );
-  //      }
-  //    }
-  //  }
+//    for ( auto spacetime_tar : *associated_spacetime_targets ) {
+//      std::vector< general_spacetime_cluster * > * spacetime_interaction_list
+//        = spacetime_tar->get_interaction_list( );
+//      for ( auto spacetime_src : *spacetime_interaction_list ) {
+//        if ( spacetime_src->get_global_time_index( )
+//          == src_cluster->get_global_index( ) ) {
+//          apply_m2l_operation( spacetime_src, spacetime_tar );
+//        }
+//      }
+//    }
 
   lo length = 0;
   for ( auto spacetime_tar : *associated_spacetime_targets ) {
@@ -1245,7 +1245,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   }
 
 #pragma omp parallel for schedule( dynamic )
-  for ( lo i = 0; i < length; ++i ) {
+  for ( lo i = 0; i < count; ++i ) {
     if ( st_src_clusters[ i ]->get_global_time_index( )
       == src_cluster->get_global_index( ) ) {
       apply_m2l_operation( st_src_clusters[ i ], st_tar_clusters[ i ] );
@@ -1397,6 +1397,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         for ( lo beta0 = 0; beta0 <= _spat_order - alpha1 - alpha2; ++beta0 ) {
           for ( lo a = 0; a <= _temp_order; ++a ) {
             for ( lo b = 0; b <= _temp_order; ++b ) {
+#pragma omp atomic update
               tar_local[ a + local_index * ( _temp_order + 1 ) ]
                 += buffer_for_coeffs[ alpha0 * hlp_acs_alpha
                      + beta0 * hlp_acs_beta + a * hlp_acs_a + b ]
@@ -1435,7 +1436,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   lou n_associated_leaves = parent_cluster->get_n_associated_leaves( );
   // call the l2l operations for all non-leaf spacetime clusters which are
   // associated with the parent scheduling time cluster
-#pragma omp parallel for schedule( dynamic )
+//#pragma omp parallel for schedule( dynamic )
   for ( lou i = n_associated_leaves; i < associated_spacetime_clusters->size( );
         ++i ) {
     apply_grouped_l2l_operation(
@@ -1690,7 +1691,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
     std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
       = time_cluster->get_associated_spacetime_clusters( );
-#pragma omp parallel for schedule( dynamic )
+//#pragma omp parallel for schedule( dynamic )
     for ( lou i = 0; i < time_cluster->get_n_associated_leaves( ); ++i ) {
       apply_l2t_operation(
         ( *associated_spacetime_clusters )[ i ], output_vector );
