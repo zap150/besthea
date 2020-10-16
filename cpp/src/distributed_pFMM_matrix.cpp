@@ -89,13 +89,13 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::apply_sl_dl( const block_vector & x,
   block_vector & y, bool trans, sc alpha, sc beta ) const {
-  // Specialization for the single and double layer operators
+// Specialization for the single and double layer operators
 
-  //############################################################################
-  //#### multiply the global result vector by beta ####
-  // @todo discuss: should the multiplication be done like this or only in a
-  // local part of the result vector?
-   #pragma omp parallel for schedule( static )
+//############################################################################
+//#### multiply the global result vector by beta ####
+// @todo discuss: should the multiplication be done like this or only in a
+// local part of the result vector?
+#pragma omp parallel for schedule( static )
   for ( lo i = 0; i < y.get_block_size( ); ++i ) {
     for ( lo j = 0; j < y.get_size_of_block( ); ++j ) {
       y.set( i, j, y.get( i, j ) * beta );
@@ -165,125 +165,158 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   start_receive_operations( array_of_requests );
 
   // start the main "job scheduling" algorithm
-  while ( !m_list.empty( ) || !m2l_list.empty( ) || !l_list.empty( )
-    || !n_list.empty( ) ) {
-    // check if data has been received since the last iteration
-    if ( outcount != MPI_UNDEFINED ) {
-      check_for_received_data(
-        array_of_requests, array_of_indices, outcount, verbose, verbose_file );
-    }
-    // check if there is a cluster in one of the 4 lists whose operations
-    // are ready to be executed.
-    char status = 0;
-    std::list< scheduling_time_cluster * >::iterator it_current_cluster;
-    find_cluster_in_m_list( m_list, it_current_cluster, status );
-    if ( status == 0 ) {
-      // search in l list if no cluster was found yet
-      find_cluster_in_l_list( l_list, it_current_cluster, status );
-      if ( status == 0 ) {
-        // search in m2l list if no cluster was found yet
-        find_cluster_in_m2l_list( m2l_list, it_current_cluster, status );
+#pragma omp parallel
+  {
+#pragma omp single
+    {
+      while ( !m_list.empty( ) || !m2l_list.empty( ) || !l_list.empty( )
+        || !n_list.empty( ) ) {
+        // check if data has been received since the last iteration
+        if ( outcount != MPI_UNDEFINED ) {
+          check_for_received_data( array_of_requests, array_of_indices,
+            outcount, verbose, verbose_file );
+        }
+        // check if there is a cluster in one of the 4 lists whose operations
+        // are ready to be executed.
+        char status = 0;
+        std::list< scheduling_time_cluster * >::iterator it_current_cluster;
+        find_cluster_in_m_list( m_list, it_current_cluster, status );
         if ( status == 0 ) {
-          // take the first cluster from the n-list if it is not empty
-          if ( n_list.size( ) != 0 ) {
-            it_current_cluster = n_list.begin( );
-            status = 4;
+          // search in l list if no cluster was found yet
+          find_cluster_in_l_list( l_list, it_current_cluster, status );
+          if ( status == 0 ) {
+            // search in m2l list if no cluster was found yet
+            find_cluster_in_m2l_list( m2l_list, it_current_cluster, status );
+            if ( status == 0 ) {
+              // take the first cluster from the n-list if it is not empty
+              if ( n_list.size( ) != 0 ) {
+                it_current_cluster = n_list.begin( );
+                status = 4;
+              }
+            }
           }
         }
-      }
-    }
-    // if verbose mode is chosen, write info about next operation to file
-    if ( verbose && status != 0 ) {
-      std::stringstream outss;
-      outss << "executing ";
-      switch ( status ) {
-        case 1:
-          outss << "m-list operations ";
-          break;
-        case 2:
-          outss << "l-list operations ";
-          break;
-        case 3:
-          outss << "m2l-list operations ";
-          break;
-        case 4:
-          outss << "n-list operations ";
-          break;
-      }
-      outss << "for cluster " << ( *it_current_cluster )->get_global_index( );
-      std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
-      if ( outfile.is_open( ) ) {
-        outfile << outss.str( ) << std::endl;
-        outfile.close( );
-      }
-    }
-    // start the appropriate fmm operations according to status
-    // TODO: the switch routine could be avoided by using several else
-    // statements above. Switch is used for better clarity.
-    switch ( status ) {
-      case 1: {
-        call_s2m_operations( x, *it_current_cluster, verbose, verbose_file );
-        provide_moments_for_m2l( *it_current_cluster, verbose, verbose_file );
-        call_m2m_operations( *it_current_cluster, verbose, verbose_file );
-        provide_moments_to_parents(
-          *it_current_cluster, verbose, verbose_file );
-        m_list.erase( it_current_cluster );
-        break;
-      }
-      case 2: {
-        call_l2l_operations( *it_current_cluster, verbose, verbose_file );
-        // check if all the m2l operations have been executed yet
-        if ( ( *it_current_cluster )->get_interaction_list( ) == nullptr
-          || ( *it_current_cluster )->get_m2l_counter( )
-            == ( *it_current_cluster )->get_interaction_list( )->size( ) ) {
-          // set status of parent's local contributions to completed
-          ( *it_current_cluster )->set_downward_path_status( 2 );
-          call_l2t_operations(
-            *it_current_cluster, y_pFMM, verbose, verbose_file );
-          provide_local_contributions_to_children(
-            *it_current_cluster, verbose, verbose_file );
-        } else {
-          ( *it_current_cluster )->set_downward_path_status( 1 );
-        }
-        l_list.erase( it_current_cluster );
-        break;
-      }
-      case 3: {
-        std::vector< scheduling_time_cluster * > * ready_interaction_list
-          = ( *it_current_cluster )->get_ready_interaction_list( );
-        for ( slou i = ( *it_current_cluster )->get_m2l_counter( );
-              i < ready_interaction_list->size( ); ++i ) {
-          call_m2l_operations( ( *ready_interaction_list )[ i ],
-            *it_current_cluster, verbose, verbose_file );
-          ( *it_current_cluster )->set_m2l_counter( i + 1 );
-        }
-        // check if all the m2l operations have been executed yet
-        if ( ( *it_current_cluster )->get_m2l_counter( )
-          == ( *it_current_cluster )->get_interaction_list( )->size( ) ) {
-          if ( ( *it_current_cluster )->get_downward_path_status( ) == 1 ) {
-            // set status of parent's local contributions to completed
-            ( *it_current_cluster )->set_downward_path_status( 2 );
-            call_l2t_operations(
-              *it_current_cluster, y_pFMM, verbose, verbose_file );
-            provide_local_contributions_to_children(
-              *it_current_cluster, verbose, verbose_file );
+        // if verbose mode is chosen, write info about next operation to file
+        if ( verbose && status != 0 ) {
+          std::stringstream outss;
+          outss << "executing ";
+          switch ( status ) {
+            case 1:
+              outss << "m-list operations ";
+              break;
+            case 2:
+              outss << "l-list operations ";
+              break;
+            case 3:
+              outss << "m2l-list operations ";
+              break;
+            case 4:
+              outss << "n-list operations ";
+              break;
           }
-          m2l_list.erase( it_current_cluster );
+          outss << "for cluster "
+                << ( *it_current_cluster )->get_global_index( );
+          std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
+          if ( outfile.is_open( ) ) {
+            outfile << outss.str( ) << std::endl;
+            outfile.close( );
+          }
         }
-        break;
-      }
-      case 4: {
-        apply_nearfield_operations(
-          *it_current_cluster, x, trans, y_pFMM, verbose, verbose_file );
-        n_list.erase( it_current_cluster );
-        break;
-      }
-    }
-    if ( verbose ) {
-      std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
-      if ( outfile.is_open( ) ) {
-        outfile << std::endl;
-        outfile.close( );
+
+        scheduling_time_cluster * current_cluster = *it_current_cluster;
+
+        // start the appropriate fmm operations according to status
+        // TODO: the switch routine could be avoided by using several else
+        // statements above. Switch is used for better clarity.
+        switch ( status ) {
+          case 1: {
+            //#pragma omp parallel
+            //        {
+            //#pragma omp single
+            //          {
+
+            m_list.erase( it_current_cluster );
+#pragma omp task
+            {
+              call_s2m_operations( x, current_cluster, verbose, verbose_file );
+              int * aux_dep_omp = _aux_dep_omp;
+              //#pragma omp task depend( in                                \
+//                         : aux_dep_omp [0:1] ) depend( out \
+//                                                       : aux_dep_omp [2:1] )
+              provide_moments_for_m2l( current_cluster, verbose, verbose_file );
+              call_m2m_operations( current_cluster, verbose, verbose_file );
+
+              provide_moments_to_parents(
+                current_cluster, verbose, verbose_file );
+            }
+            // m_list.erase( it_current_cluster );
+            break;
+          }
+          case 2: {
+            l_list.erase( it_current_cluster );
+#pragma omp task
+            {
+              call_l2l_operations( current_cluster, verbose, verbose_file );
+              // check if all the m2l operations have been executed yet
+              if ( current_cluster->get_interaction_list( ) == nullptr
+                || current_cluster->get_m2l_counter( )
+                  == current_cluster->get_interaction_list( )->size( ) ) {
+                // set status of parent's local contributions to completed
+                current_cluster->set_downward_path_status( 2 );
+                call_l2t_operations(
+                  current_cluster, y_pFMM, verbose, verbose_file );
+                provide_local_contributions_to_children(
+                  current_cluster, verbose, verbose_file );
+              } else {
+                current_cluster->set_downward_path_status( 1 );
+              }
+            }
+            break;
+          }
+          case 3: {
+            m2l_list.erase( it_current_cluster );
+#pragma omp task
+            {
+              std::vector< scheduling_time_cluster * > * ready_interaction_list
+                = current_cluster->get_ready_interaction_list( );
+              for ( slou i = current_cluster->get_m2l_counter( );
+                    i < ready_interaction_list->size( ); ++i ) {
+                call_m2l_operations( ( *ready_interaction_list )[ i ],
+                  current_cluster, verbose, verbose_file );
+                current_cluster->set_m2l_counter( i + 1 );
+              }
+              // check if all the m2l operations have been executed yet
+              if ( current_cluster->get_m2l_counter( )
+                == current_cluster->get_interaction_list( )->size( ) ) {
+                if ( current_cluster->get_downward_path_status( ) == 1 ) {
+                  // set status of parent's local contributions to completed
+                  current_cluster->set_downward_path_status( 2 );
+                  call_l2t_operations(
+                    current_cluster, y_pFMM, verbose, verbose_file );
+                  provide_local_contributions_to_children(
+                    current_cluster, verbose, verbose_file );
+                }
+              }
+            }
+            break;
+          }
+          case 4: {
+            n_list.erase( it_current_cluster );
+#pragma omp task
+            {
+              apply_nearfield_operations(
+                current_cluster, x, trans, y_pFMM, verbose, verbose_file );
+            }
+            break;
+          }
+        }
+        if ( verbose ) {
+          std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
+          if ( outfile.is_open( ) ) {
+            outfile << std::endl;
+            outfile.close( );
+          }
+        }
       }
     }
   }
@@ -303,6 +336,240 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   //   std::cout << "application executed" << std::endl;
   // }
 }
+
+// template< class kernel_type, class target_space, class source_space >
+// void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+//  target_space, source_space >::apply_sl_dl( const block_vector & x,
+//  block_vector & y, bool trans, sc alpha, sc beta ) const {
+//// Specialization for the single and double layer operators
+//
+////############################################################################
+////#### multiply the global result vector by beta ####
+//// @todo discuss: should the multiplication be done like this or only in a
+//// local part of the result vector?
+//#pragma omp parallel for schedule( static )
+//  for ( lo i = 0; i < y.get_block_size( ); ++i ) {
+//    for ( lo j = 0; j < y.get_size_of_block( ); ++j ) {
+//      y.set( i, j, y.get( i, j ) * beta );
+//    }
+//  }
+//
+//  //############################################################################
+//  //#### setup phase ####
+//  // reset the contributions of all clusters to zero
+//  _scheduling_tree_structure->clear_moment_contributions(
+//    *_scheduling_tree_structure->get_root( ) );
+//  _scheduling_tree_structure->clear_local_contributions(
+//    *_scheduling_tree_structure->get_root( ) );
+//
+//  // reset the dependency data of all the clusters in the 4 lists.
+//  reset_scheduling_clusters_dependency_data( );
+//
+//  // @todo allocate buffers which are reused in computations to avoid
+//  // reallocation
+//  // std::vector< full_matrix > buffer_matrices;
+//  // buffer_matrices.resize( 8 );
+//  // for ( auto it = buffer_matrices.begin( ); it != buffer_matrices.end( );
+//  //       ++it ) {
+//  // ( *it ).resize( _temp_order + 1, _spat_contribution_size );
+//  // }
+//  // vector_type buffer_for_gaussians( ( _m2l_integration_order + 1 )
+//  //     * ( _m2l_integration_order + 1 ) * ( _temp_order + 1 )
+//  //     * ( _temp_order + 1 ), false );
+//  // vector_type buffer_for_coeffs( ( _spat_order + 1 ) * ( _spat_order + 1 )
+//  //     * ( _temp_order + 1 ) * ( _temp_order + 1 ), false );
+//  // full_matrix aux_buffer_0( ( _temp_order + 1 ) * ( _temp_order + 1 ),
+//  //   _spat_contribution_size, false );
+//  // full_matrix aux_buffer_1( ( _temp_order + 1 ) * ( _temp_order + 1 ),
+//  //   _spat_contribution_size, false );
+//
+//  // initialize data which is used to check for received data.
+//  int outcount = 0;
+//  int array_of_indices[ _receive_data_information.size( ) ];
+//  for ( lou i = 0; i < _receive_data_information.size( ); ++i ) {
+//    array_of_indices[ i ] = 0;
+//  }
+//  // copy the 4 FMM lists to avoid reallocating them in each application
+//  std::list< mesh::scheduling_time_cluster * > m_list = _m_list;
+//  std::list< mesh::scheduling_time_cluster * > m2l_list = _m2l_list;
+//  std::list< mesh::scheduling_time_cluster * > l_list = _l_list;
+//  std::list< mesh::scheduling_time_cluster * > n_list = _n_list;
+//
+//  // @todo: add appropriate verbose mode if desired
+//  bool verbose = false;
+//  // std::string verbose_file = verbose_dir + "/process_";
+//  std::string verbose_file = "verbose/process_";
+//  verbose_file += std::to_string( _my_rank );
+//  if ( verbose ) {
+//    std::filesystem::create_directory( "./verbose/" );
+//    // remove existing verbose file and write to new one
+//    remove( verbose_file.c_str( ) );
+//  }
+//
+//  //############################################################################
+//  //#### distributed pFMM ####
+//  // allocate a global result vector. Only the entries corresponding to
+//  clusters
+//  // assigned to the current process are computed.
+//  block_vector y_pFMM( y.get_block_size( ), y.get_size_of_block( ), true );
+//
+//  // start the receive operations
+//  MPI_Request array_of_requests[ _receive_data_information.size( ) ];
+//  start_receive_operations( array_of_requests );
+//
+//  // start the main "job scheduling" algorithm
+//  while ( !m_list.empty( ) || !m2l_list.empty( ) || !l_list.empty( )
+//    || !n_list.empty( ) ) {
+//    // check if data has been received since the last iteration
+//    if ( outcount != MPI_UNDEFINED ) {
+//      check_for_received_data(
+//        array_of_requests, array_of_indices, outcount, verbose, verbose_file
+//        );
+//    }
+//    // check if there is a cluster in one of the 4 lists whose operations
+//    // are ready to be executed.
+//    char status = 0;
+//    std::list< scheduling_time_cluster * >::iterator it_current_cluster;
+//    find_cluster_in_m_list( m_list, it_current_cluster, status );
+//    if ( status == 0 ) {
+//      // search in l list if no cluster was found yet
+//      find_cluster_in_l_list( l_list, it_current_cluster, status );
+//      if ( status == 0 ) {
+//        // search in m2l list if no cluster was found yet
+//        find_cluster_in_m2l_list( m2l_list, it_current_cluster, status );
+//        if ( status == 0 ) {
+//          // take the first cluster from the n-list if it is not empty
+//          if ( n_list.size( ) != 0 ) {
+//            it_current_cluster = n_list.begin( );
+//            status = 4;
+//          }
+//        }
+//      }
+//    }
+//    // if verbose mode is chosen, write info about next operation to file
+//    if ( verbose && status != 0 ) {
+//      std::stringstream outss;
+//      outss << "executing ";
+//      switch ( status ) {
+//        case 1:
+//          outss << "m-list operations ";
+//          break;
+//        case 2:
+//          outss << "l-list operations ";
+//          break;
+//        case 3:
+//          outss << "m2l-list operations ";
+//          break;
+//        case 4:
+//          outss << "n-list operations ";
+//          break;
+//      }
+//      outss << "for cluster " << ( *it_current_cluster )->get_global_index( );
+//      std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
+//      if ( outfile.is_open( ) ) {
+//        outfile << outss.str( ) << std::endl;
+//        outfile.close( );
+//      }
+//    }
+//    // start the appropriate fmm operations according to status
+//    // TODO: the switch routine could be avoided by using several else
+//    // statements above. Switch is used for better clarity.
+//    switch ( status ) {
+//      case 1: {
+//        //#pragma omp parallel
+//        //        {
+//        //#pragma omp single
+//        //          {
+//        call_s2m_operations( x, *it_current_cluster, verbose, verbose_file );
+//        int * aux_dep_omp = _aux_dep_omp;
+//        //#pragma omp task depend( in                                \
+////                         : aux_dep_omp [0:1] ) depend( out \
+////                                                       : aux_dep_omp [2:1] )
+//        provide_moments_for_m2l( *it_current_cluster, verbose, verbose_file );
+//        call_m2m_operations( *it_current_cluster, verbose, verbose_file );
+//
+//        provide_moments_to_parents(
+//          *it_current_cluster, verbose, verbose_file );
+//
+//        m_list.erase( it_current_cluster );
+//        break;
+//      }
+//      case 2: {
+//        call_l2l_operations( *it_current_cluster, verbose, verbose_file );
+//        // check if all the m2l operations have been executed yet
+//        if ( ( *it_current_cluster )->get_interaction_list( ) == nullptr
+//          || ( *it_current_cluster )->get_m2l_counter( )
+//            == ( *it_current_cluster )->get_interaction_list( )->size( ) ) {
+//          // set status of parent's local contributions to completed
+//          ( *it_current_cluster )->set_downward_path_status( 2 );
+//          call_l2t_operations(
+//            *it_current_cluster, y_pFMM, verbose, verbose_file );
+//          provide_local_contributions_to_children(
+//            *it_current_cluster, verbose, verbose_file );
+//        } else {
+//          ( *it_current_cluster )->set_downward_path_status( 1 );
+//        }
+//        l_list.erase( it_current_cluster );
+//        break;
+//      }
+//      case 3: {
+//        std::vector< scheduling_time_cluster * > * ready_interaction_list
+//          = ( *it_current_cluster )->get_ready_interaction_list( );
+//        for ( slou i = ( *it_current_cluster )->get_m2l_counter( );
+//              i < ready_interaction_list->size( ); ++i ) {
+//          call_m2l_operations( ( *ready_interaction_list )[ i ],
+//            *it_current_cluster, verbose, verbose_file );
+//          ( *it_current_cluster )->set_m2l_counter( i + 1 );
+//        }
+//        // check if all the m2l operations have been executed yet
+//        if ( ( *it_current_cluster )->get_m2l_counter( )
+//          == ( *it_current_cluster )->get_interaction_list( )->size( ) ) {
+//          if ( ( *it_current_cluster )->get_downward_path_status( ) == 1 ) {
+//            // set status of parent's local contributions to completed
+//            ( *it_current_cluster )->set_downward_path_status( 2 );
+//            call_l2t_operations(
+//              *it_current_cluster, y_pFMM, verbose, verbose_file );
+//            provide_local_contributions_to_children(
+//              *it_current_cluster, verbose, verbose_file );
+//          }
+//          m2l_list.erase( it_current_cluster );
+//        }
+//        break;
+//      }
+//      case 4: {
+//        apply_nearfield_operations(
+//          *it_current_cluster, x, trans, y_pFMM, verbose, verbose_file );
+//        n_list.erase( it_current_cluster );
+//        break;
+//      }
+//    }
+//    if ( verbose ) {
+//      std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
+//      if ( outfile.is_open( ) ) {
+//        outfile << std::endl;
+//        outfile.close( );
+//      }
+//    }
+//  }
+//
+//  //############################################################################
+//  //### communicate the result with an Allreduce operation for each timestep
+//  ###
+//  // @todo: Can we do this in a less cumbersome way?! Is a global reduction
+//  even
+//  // necessary?
+//  for ( lo block_idx = 0; block_idx < y_pFMM.get_block_size( ); ++block_idx )
+//  {
+//    MPI_Allreduce( MPI_IN_PLACE, y_pFMM.get_block( block_idx ).data( ),
+//      y_pFMM.get_size_of_block( ), get_scalar_type< sc >::MPI_SC( ), MPI_SUM,
+//      *_comm );
+//  }
+//  // Scale the global update y_pFMM by alpha and add it to the global vector
+//  y. y.add( y_pFMM, alpha );
+//  // if ( _my_rank == 0 ) {
+//  //   std::cout << "application executed" << std::endl;
+//  // }
+//}
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
@@ -429,7 +696,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   lo max_space_level
     = _distributed_spacetime_tree->get_local_max_space_level( );
   // Declare the structures containing coefficients of appropriate size.
-  // NOTE: The M2M coefficients are computed for all levels except the last one,
+  // NOTE: The M2M coefficients are computed for all levels except the last
+  // one,
   //       even in case they are not needed for the first few levels.
   _m2m_coeffs_s_dim_0_left.resize( max_space_level );
   _m2m_coeffs_s_dim_0_right.resize( max_space_level );
@@ -468,8 +736,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     for ( lo i = 0; i < initial_space_refinement; ++i ) {
       paddings_refinementwise[ i ] = paddings_levelwise[ 0 ];
     }
-    // get the correct padding from paddings_levelwise (spatial refinement every
-    // second step)
+    // get the correct padding from paddings_levelwise (spatial refinement
+    // every second step)
     lo current_idx = 0;
     for ( lo i = initial_space_refinement; i <= max_space_level; ++i ) {
       // note: by construction current_idx should never be out of bound for
@@ -785,7 +1053,8 @@ bool besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::print_information( const int root_process ) {
-  // first print some information of the underlying distributed space time tree
+  // first print some information of the underlying distributed space time
+  // tree
   _distributed_spacetime_tree->print_information( root_process );
 
   // print rough nearfield percentage
@@ -824,7 +1093,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     n_l2l_operations, n_l2t_operations;
   count_fmm_operations_levelwise( n_s2m_operations, n_m2m_operations,
     n_m2l_operations, n_l2l_operations, n_l2t_operations );
-  // collect the numbers of operations at the root process via reduce operations
+  // collect the numbers of operations at the root process via reduce
+  // operations
   lo n_max_levels = _distributed_spacetime_tree->get_max_levels( );
   if ( _my_rank == root_process ) {
     MPI_Reduce( MPI_IN_PLACE, n_s2m_operations.data( ), n_max_levels,
@@ -964,9 +1234,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
     std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
       = time_cluster->get_associated_spacetime_clusters( );
-#pragma omp parallel for schedule( dynamic )
+    int * aux_dep_omp = _aux_dep_omp;
+    //#pragma omp parallel for schedule( dynamic )
+
     for ( lou i = 0; i < time_cluster->get_n_associated_leaves( ); ++i ) {
-      apply_s2m_operation( sources, ( *associated_spacetime_clusters )[ i ] );
+      general_spacetime_cluster * current_cluster
+        = ( *associated_spacetime_clusters )[ i ];
+      //#pragma omp task depend( out : aux_dep_omp[:1] )
+      apply_s2m_operation( sources, current_cluster );
     }
   }
 }
@@ -1030,6 +1305,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   // get references of current moment and all required matrices
   sc * moment = source_cluster->get_pointer_to_moment( );
+
   full_matrix T;
   compute_chebyshev_quadrature_p0( source_cluster, T );
   full_matrix L;
@@ -1118,8 +1394,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         local_start_idx, spacetime_elements[ i_time * n_space_elements ] ) );
     for ( lo i_space = 0; i_space < n_space_nodes; ++i_space ) {
       // local_2_global_nodes gives the indices of the spacetime nodes. take
-      // the rest from division by the number of global spatial nodes to get the
-      // spatial node index
+      // the rest from division by the number of global spatial nodes to get
+      // the spatial node index
       lo global_space_index
         = local_2_global_nodes[ i_space ] % local_mesh->get_n_spatial_nodes( );
       // for the spatial mesh no transformation from local 2 global is
@@ -1151,7 +1427,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                                                        time_cluster,
   bool verbose, const std::string & verbose_file ) const {
   scheduling_time_cluster * parent_cluster = time_cluster->get_parent( );
-  // m2m operations are only executed if the parent is active in the upward path
+  // m2m operations are only executed if the parent is active in the upward
+  // path
   if ( parent_cluster->is_active_in_upward_path( ) ) {
     if ( verbose ) {
       std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
@@ -1165,13 +1442,19 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
       = parent_cluster->get_associated_spacetime_clusters( );
     lou n_associated_leaves = parent_cluster->get_n_associated_leaves( );
+    int * aux_dep_omp = _aux_dep_omp;
     // call the m2m operations for all non-leaf spacetime clusters which are
     // associated with the parent scheduling time cluster
-#pragma omp parallel for schedule( dynamic )
+    //#pragma omp parallel for schedule( dynamic )
+
     for ( lou i = n_associated_leaves;
           i < associated_spacetime_clusters->size( ); ++i ) {
-      apply_grouped_m2m_operation(
-        ( *associated_spacetime_clusters )[ i ], configuration );
+      general_spacetime_cluster * current_cluster
+        = ( *associated_spacetime_clusters )[ i ];
+      //#pragma omp task depend( in                                \
+//                         : aux_dep_omp [0:1] ) depend( out \
+//                                                       : aux_dep_omp [1:1] )
+      apply_grouped_m2m_operation( current_cluster, configuration );
     }
   }
 }
@@ -1183,6 +1466,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                                                  parent_cluster,
   slou child_configuration ) const {
   sc * parent_moment = parent_cluster->get_pointer_to_moment( );
+
   std::vector< general_spacetime_cluster * > * children
     = parent_cluster->get_children( );
   // ###############################################
@@ -1356,14 +1640,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         // correction needed for skipped entries of child_moment
         child_index += _spat_order + 1 - alpha0 - alpha1 - alpha2;
       }
-      // correction for current index; necessary since alpha1 does not run until
-      // _spat_order - alpha0 as it does in stored child_moment
+      // correction for current index; necessary since alpha1 does not run
+      // until _spat_order - alpha0 as it does in stored child_moment
       child_index += ( ( beta2 + 1 ) * beta2 ) / 2;
     }
   }
 
-  // compute intermediate result lambda_1 ignoring zero entries for the sake of
-  // better readability
+  // compute intermediate result lambda_1 ignoring zero entries for the sake
+  // of better readability
   for ( lo beta1 = 0; beta1 <= _spat_order; ++beta1 ) {
     for ( lo beta2 = 0; beta2 <= _spat_order - beta1; ++beta2 ) {
       for ( lo alpha0 = 0; alpha0 <= _spat_order - beta1 - beta2; ++alpha0 ) {
@@ -1424,16 +1708,17 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   std::vector< general_spacetime_cluster * > * associated_spacetime_targets
     = tar_cluster->get_associated_spacetime_clusters( );
-//    for ( auto spacetime_tar : *associated_spacetime_targets ) {
-//      std::vector< general_spacetime_cluster * > * spacetime_interaction_list
-//        = spacetime_tar->get_interaction_list( );
-//      for ( auto spacetime_src : *spacetime_interaction_list ) {
-//        if ( spacetime_src->get_global_time_index( )
-//          == src_cluster->get_global_index( ) ) {
-//          apply_m2l_operation( spacetime_src, spacetime_tar );
-//        }
-//      }
-//    }
+  //    for ( auto spacetime_tar : *associated_spacetime_targets ) {
+  //      std::vector< general_spacetime_cluster * > *
+  //      spacetime_interaction_list
+  //        = spacetime_tar->get_interaction_list( );
+  //      for ( auto spacetime_src : *spacetime_interaction_list ) {
+  //        if ( spacetime_src->get_global_time_index( )
+  //          == src_cluster->get_global_index( ) ) {
+  //          apply_m2l_operation( spacetime_src, spacetime_tar );
+  //        }
+  //      }
+  //    }
 
   lo length = 0;
   for ( auto spacetime_tar : *associated_spacetime_targets ) {
@@ -1508,7 +1793,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     cheb_nodes[ i ] = std::cos(
       M_PI * ( 2 * i + 1 ) / ( 2 * ( _m2l_integration_order + 1 ) ) );
   }
-  // evaluate Chebyshev polynomials for all degrees <= _spat_order for integrals
+  // evaluate Chebyshev polynomials for all degrees <= _spat_order for
+  // integrals
   vector_type all_poly_vals(
     ( _m2l_integration_order + 1 ) * ( _spat_order + 1 ), false );
   _chebyshev.evaluate( cheb_nodes, all_poly_vals );
@@ -1557,8 +1843,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         }
         ++buffer_0_index;
       }
-      // correction for moment index; this is necessary since beta1 does not run
-      // until _spat_order - beta0 as it does in src_moment;
+      // correction for moment index; this is necessary since beta1 does not
+      // run until _spat_order - beta0 as it does in src_moment;
       moment_index += ( ( alpha2 + 1 ) * alpha2 ) / 2;
     }
   }
@@ -1616,8 +1902,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         }
         ++local_index;
       }
-      // correction for buffer_1 index; this is necessary since alpha0 does not
-      // run until _spat_order - alpha1 as it does in aux_buffer_1;
+      // correction for buffer_1 index; this is necessary since alpha0 does
+      // not run until _spat_order - alpha1 as it does in aux_buffer_1;
       buffer_1_index += ( ( alpha0 + 1 ) * alpha0 ) / 2;
     }
   }
@@ -1629,7 +1915,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                                                        time_cluster,
   bool verbose, const std::string & verbose_file ) const {
   scheduling_time_cluster * parent_cluster = time_cluster->get_parent( );
-  // m2m operations are only executed if the parent is active in the upward path
+  // m2m operations are only executed if the parent is active in the upward
+  // path
   if ( verbose ) {
     std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
     if ( outfile.is_open( ) ) {
@@ -1644,9 +1931,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   lou n_associated_leaves = parent_cluster->get_n_associated_leaves( );
   // call the l2l operations for all non-leaf spacetime clusters which are
   // associated with the parent scheduling time cluster
-//#pragma omp parallel for schedule( dynamic )
+  //#pragma omp parallel for schedule( dynamic )
+  int * aux_dep_omp = _aux_dep_omp;
   for ( lou i = n_associated_leaves; i < associated_spacetime_clusters->size( );
         ++i ) {
+    //#pragma omp task depend( out : aux_dep_omp [0:1] )
     apply_grouped_l2l_operation(
       ( *associated_spacetime_clusters )[ i ], configuration );
   }
@@ -1822,8 +2111,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     lou parent_index = 0;
     for ( lo alpha0 = 0; alpha0 <= _spat_order - beta2; ++alpha0 ) {
       for ( lo alpha1 = 0; alpha1 <= _spat_order - beta2 - alpha0; ++alpha1 ) {
-        // correction for skipped entries of parent_local due to starting point
-        // alpha2 = beta2 in the next loop
+        // correction for skipped entries of parent_local due to starting
+        // point alpha2 = beta2 in the next loop
         parent_index += beta2;
         for ( lo alpha2 = beta2; alpha2 <= _spat_order - alpha0 - alpha1;
               ++alpha2 ) {
@@ -1899,7 +2188,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
     std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
       = time_cluster->get_associated_spacetime_clusters( );
-//#pragma omp parallel for schedule( dynamic )
+    //#pragma omp parallel for schedule( dynamic )
     for ( lou i = 0; i < time_cluster->get_n_associated_leaves( ); ++i ) {
       apply_l2t_operation(
         ( *associated_spacetime_clusters )[ i ], output_vector );
@@ -2066,8 +2355,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         local_start_idx, spacetime_elements[ i_time * n_space_elements ] ) );
     for ( lo i_space = 0; i_space < n_space_nodes; ++i_space ) {
       // local_2_global_nodes gives the indices of the spacetime nodes. take
-      // the rest from division by the number of global spatial nodes to get the
-      // spatial node index
+      // the rest from division by the number of global spatial nodes to get
+      // the spatial node index
       lo global_space_index
         = local_2_global_nodes[ i_space ] % local_mesh->get_n_spatial_nodes( );
       // for the spatial mesh no transformation from local 2 global is
@@ -2103,8 +2392,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     // construct a local result_vector
     vector_type local_result(
       current_spacetime_target->get_n_dofs< target_space >( ), true );
-    // get the nearfield list of the current spacetime target cluster and apply
-    // the nearfield operations for all the clusters in this list.
+    // get the nearfield list of the current spacetime target cluster and
+    // apply the nearfield operations for all the clusters in this list.
     std::vector< general_spacetime_cluster * > * spacetime_nearfield_list
       = current_spacetime_target->get_nearfield_list( );
     for ( lou src_index = 0; src_index < spacetime_nearfield_list->size( );
@@ -2287,7 +2576,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                                                 child_cluster,
   bool verbose, const std::string & verbose_file ) const {
   scheduling_time_cluster * parent_cluster = child_cluster->get_parent( );
-  // moments have to be provided only if the parent is active in the upward path
+  // moments have to be provided only if the parent is active in the upward
+  // path
   if ( parent_cluster->is_active_in_upward_path( ) ) {
     lo parent_process_id = parent_cluster->get_process_id( );
     if ( parent_process_id == _my_rank ) {
@@ -2454,8 +2744,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   for ( lo i = 0; i < n_space_elems; ++i ) {
     // we use that the elements in the cluster are tensor products of spatial
     // elements and timesteps, and are sorted w.r.t. the timesteps. In
-    // particular we get all spatial elements in the cluster by considering the
-    // first n_space_elems spacetime elements.
+    // particular we get all spatial elements in the cluster by considering
+    // the first n_space_elems spacetime elements.
     lo local_elem_idx = distributed_mesh->global_2_local(
       local_start_idx, source_cluster->get_element( i ) );
     lo local_elem_idx_space = local_mesh->get_space_element( local_elem_idx );
@@ -2660,7 +2950,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       local_elem_idx_time, elem_t_start, elem_t_end );
     sc elem_size = elem_t_end[ 0 ] - elem_t_start[ 0 ];
     // compute the quadrature points in the current element in relative
-    // coordinates with respect to the time cluster and transform them to [-1,1]
+    // coordinates with respect to the time cluster and transform them to
+    // [-1,1]
     for ( std::vector< sc, besthea::allocator_type< sc > >::size_type j = 0;
           j < line_t.size( ); ++j ) {
       eval_points[ j ] = -1.0
@@ -2772,8 +3063,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   reset_downward_path_status_recursively(
     _distributed_spacetime_tree->get_distribution_tree( )->get_root( ) );
 
-  // reset the m2l counter and clear the ready interaction list of the clusters
-  // in the _m2l_list.
+  // reset the m2l counter and clear the ready interaction list of the
+  // clusters in the _m2l_list.
   for ( scheduling_time_cluster * cluster : _m2l_list ) {
     cluster->set_m2l_counter( 0 );
     cluster->clear_ready_interaction_list( );
@@ -2914,8 +3205,8 @@ sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
         lo n_src_elements_space = st_source->get_n_space_elements( );
         lo n_src_elements_time = st_source->get_n_time_elements( );
         lo n_src_elements = st_source->get_n_elements( );
-        // depending on the configuration in time update the number of nearfield
-        // entries appropriately.
+        // depending on the configuration in time update the number of
+        // nearfield entries appropriately.
         if ( st_source->get_level( ) >= st_target->get_level( ) ) {
           if ( std::abs(
                  st_target->get_time_center( ) - st_source->get_time_center( ) )

@@ -155,6 +155,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
       _chebyshev( _spat_order ),
       _lagrange( _temp_order ),
       _alpha( 1.0 ) {
+    _aux_dep_omp = new int[ 5 ];
   }
 
   distributed_pFMM_matrix( const distributed_pFMM_matrix & that ) = delete;
@@ -171,6 +172,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
         delete matrix;
       }
     }
+    delete[] _aux_dep_omp;
   }
 
   /*!
@@ -941,6 +943,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     _lagrange;  //!< Evaluator of the Lagrange polynomials.
 
   sc _alpha;  //!< Heat conductivity.
+
+  int * _aux_dep_omp;  //!< auxiliary variable for openmp depend clause
 };
 
 /** Typedef for the distributed single layer p0-p0 PFMM matrix */
