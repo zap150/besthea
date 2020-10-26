@@ -860,6 +860,18 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     std::vector< lou > & n_l2l_operations,
     std::vector< lou > & n_l2t_operations );
 
+  void m_list_task( const block_vector & x,
+    mesh::scheduling_time_cluster * time_cluster, bool verbose,
+    const std::string & verbose_file ) const;
+
+  void l_list_task( block_vector & y_pFMM,
+    mesh::scheduling_time_cluster * time_cluster, bool verbose,
+    const std::string & verbose_file ) const;
+
+  void m2l_list_task( block_vector & y_pFMM,
+    mesh::scheduling_time_cluster * time_cluster, bool verbose,
+    const std::string & verbose_file ) const;
+
   const MPI_Comm *
     _comm;       //!< MPI communicator associated with the pFMM matrix.
   int _my_rank;  //!< MPI rank of current process.

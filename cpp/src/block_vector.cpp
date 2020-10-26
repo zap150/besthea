@@ -250,7 +250,7 @@ void besthea::linear_algebra::block_vector::add_local_part<
 
   for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
     for ( lo i_space = 0; i_space < n_space_elements; ++i_space ) {
-      this->add( time_elements[ i_time ], space_elements[ i_space ],
+      this->add_atomic( time_elements[ i_time ], space_elements[ i_space ],
         local_vector[ i_time * n_space_elements + i_space ] );
     }
   }
@@ -270,7 +270,8 @@ void besthea::linear_algebra::block_vector::add_local_part<
 
   for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
     for ( lo i_space = 0; i_space < n_space_nodes; ++i_space ) {
-      this->add( time_elements[ i_time ], local_2_global_nodes[ i_space ],
+      this->add_atomic( time_elements[ i_time ],
+        local_2_global_nodes[ i_space ],
         local_vector[ i_time * n_space_nodes + i_space ] );
     }
   }
