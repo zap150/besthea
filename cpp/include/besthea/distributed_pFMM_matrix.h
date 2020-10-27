@@ -155,7 +155,6 @@ class besthea::linear_algebra::distributed_pFMM_matrix
       _chebyshev( _spat_order ),
       _lagrange( _temp_order ),
       _alpha( 1.0 ) {
-    _aux_dep_omp = new int[ 5 ];
   }
 
   distributed_pFMM_matrix( const distributed_pFMM_matrix & that ) = delete;
@@ -172,7 +171,6 @@ class besthea::linear_algebra::distributed_pFMM_matrix
         delete matrix;
       }
     }
-    delete[] _aux_dep_omp;
   }
 
   /*!
@@ -860,17 +858,48 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     std::vector< lou > & n_l2l_operations,
     std::vector< lou > & n_l2t_operations );
 
+  /**
+   * Task in the M-list
+   * @param[in] x Input vector
+   * @param[in] time_cluster  Considered scheduling time cluster.
+   * @param[in] verbose If true, the required time is written to file.
+   * @param[in] verbose_file  If @p verbose is true, this is used as output
+   *                          file.
+   */
   void m_list_task( const block_vector & x,
     mesh::scheduling_time_cluster * time_cluster, bool verbose,
     const std::string & verbose_file ) const;
 
+  /**
+   * Task in the L-list
+   * @param[in] y_pFMM Output vector
+   * @param[in] time_cluster  Considered scheduling time cluster.
+   * @param[in] verbose If true, the required time is written to file.
+   * @param[in] verbose_file  If @p verbose is true, this is used as output
+   *                          file.
+   */
   void l_list_task( block_vector & y_pFMM,
     mesh::scheduling_time_cluster * time_cluster, bool verbose,
     const std::string & verbose_file ) const;
 
+  /**
+   * Task in the M2L-list
+   * @param[in] y_pFMM Output vector
+   * @param[in] time_cluster  Considered scheduling time cluster.
+   * @param[in] verbose If true, the required time is written to file.
+   * @param[in] verbose_file  If @p verbose is true, this is used as output
+   *                          file.
+   */
   void m2l_list_task( block_vector & y_pFMM,
     mesh::scheduling_time_cluster * time_cluster, bool verbose,
     const std::string & verbose_file ) const;
+
+  /**
+   * @param[in] current_index Index of the received data.
+   * @param[in] current_cluster Processed scheduling_time_cluster.
+   */
+  void upward_path_task(
+    lou current_index, mesh::scheduling_time_cluster * current_cluster ) const;
 
   const MPI_Comm *
     _comm;       //!< MPI communicator associated with the pFMM matrix.
@@ -955,8 +984,6 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     _lagrange;  //!< Evaluator of the Lagrange polynomials.
 
   sc _alpha;  //!< Heat conductivity.
-
-  int * _aux_dep_omp;  //!< auxiliary variable for openmp depend clause
 };
 
 /** Typedef for the distributed single layer p0-p0 PFMM matrix */

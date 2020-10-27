@@ -519,8 +519,8 @@ class besthea::mesh::scheduling_time_cluster {
     return _ready_interaction_list;
   }
 
-  lo get_ready_interaction_list_size( ) {
-    lo size;
+  lou get_ready_interaction_list_size( ) {
+    lou size;
 #pragma omp atomic read
     size = _ready_interaction_list_size;
     return size;
@@ -1202,9 +1202,9 @@ class besthea::mesh::scheduling_time_cluster {
     _pos_in_m2l_list;  //!< auxiliary variable storing position in the m2l list
                        //!< used in @ref
                        //!< besthea::linear_algebra::distributed_pFMM_matrix::apply
-  lo _ready_interaction_list_size;  //!< size of the ready interaction list
-                                    //!< (stored as variable due to possible
-                                    //!< data races)
+  lou _ready_interaction_list_size;  //!< size of the ready interaction list
+                                     //!< (stored as variable due to possible
+                                     //!< data races)
 };
 
 #endif /* INCLUDE_BESTHEA_SCHEDULING_TIME_CLUSTER_H_ */
