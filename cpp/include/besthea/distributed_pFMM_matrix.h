@@ -154,7 +154,10 @@ class besthea::linear_algebra::distributed_pFMM_matrix
       _contribution_size( ( _temp_order + 1 ) * _spat_contribution_size ),
       _chebyshev( _spat_order ),
       _lagrange( _temp_order ),
-      _alpha( 1.0 ) {
+      _alpha( 1.0 ),
+      _cheb_nodes( _m2l_integration_order + 1, false ),
+      _all_poly_vals(
+        ( _m2l_integration_order + 1 ) * ( _spat_order + 1 ), false ) {
   }
 
   distributed_pFMM_matrix( const distributed_pFMM_matrix & that ) = delete;
@@ -294,6 +297,11 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * Compute the spatial m2m coefficients for all local spatial levels.
    */
   void compute_spatial_m2m_coeffs( );
+
+  /**
+   * Compute Chebyshev nodes and evaluate them.
+   */
+  void compute_chebyshev( );
 
   /**
    * Pseudo-parallel FGMRES based on the implementation in MKL.
@@ -747,11 +755,6 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                            cluster.
    * @param[in] tar_time_nodes  Interpolation nodes in time for the target
    *                            cluster.
-   * @param[in] cheb_nodes  Chebyshev nodes of degree ( _spat_order + 1 )
-   * @param[in] evaluated_chebyshev Vector of evaluated Chebyshev polynomials
-   *                                with degree <= _spat_order at \p cheb_nodes
-   *                                as given by
-   *                           @ref besthea::bem::chebyshev_evaluator::evaluate.
    * @param[in] half_size Half size in space of the current clusters along the
    *                      dimension for which the coefficients are computed.
    * @param[in] center_diff The appropriate component of the difference vector
@@ -765,8 +768,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                                coefficients.
    */
   void compute_coupling_coeffs( const vector_type & src_time_nodes,
-    const vector_type & tar_time_nodes, const vector_type & cheb_nodes,
-    const vector_type & evaluated_chebyshev, const sc half_size,
+    const vector_type & tar_time_nodes, const sc half_size,
     const sc center_diff, vector_type & buffer_for_gaussians,
     vector_type & coupling_coeffs ) const;
 
@@ -984,6 +986,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     _lagrange;  //!< Evaluator of the Lagrange polynomials.
 
   sc _alpha;  //!< Heat conductivity.
+
+  vector_type _cheb_nodes;     //!< Chebyshev nodes for numerical integration
+  vector_type _all_poly_vals;  //!< evaluation of Chebyshev polynomials
 };
 
 /** Typedef for the distributed single layer p0-p0 PFMM matrix */

@@ -227,7 +227,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
               // task depends on previously generated M-list tasks to prevent
               // collision in m2m operations
-#pragma omp task depend( inout : aux_dep_m [idx:1] )
+#pragma omp task depend( inout : aux_dep_m [idx:1] ) priority( 1000 )
               upward_path_task( current_index, current_cluster );
             } else if ( current_index
               < _n_moments_to_receive_upward + _n_moments_to_receive_m2l ) {
@@ -242,7 +242,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                     lo idx_receiver = ( *it )->get_pos_in_m_list( );
                     // task depends on previously generated m2l-list task to
                     // avoid collision when adding to ready interaction list
-#pragma omp task depend( inout : aux_dep_m2l_send [idx_receiver:1] )
+#pragma omp task depend( inout                                 \
+                         : aux_dep_m2l_send [idx_receiver:1] ) \
+  priority( 1000 )
                     ( *it )->add_to_ready_interaction_list( current_cluster );
                   }
                 }
@@ -252,7 +254,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               lo idx_l = current_cluster->get_pos_in_l_list( );
               // task depends on previously generated l-list tasks to prevent
               // collision in updating status
-#pragma omp task depend( inout : aux_dep_l [idx_l:1] )
+#pragma omp task depend( inout : aux_dep_l [idx_l:1] ) priority( 1000 )
               current_cluster->set_downward_path_status( 2 );
             }
           }
@@ -438,7 +440,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             n_list.erase( it_current_cluster );
             // no dependencies, possible collisions are treated by atomic
             // operations
-#pragma omp task priority( 100 )
+#pragma omp task priority( 200 )
             apply_nearfield_operations(
               current_cluster, x, trans, y_pFMM, verbose, verbose_file );
             break;
@@ -469,6 +471,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // if ( _my_rank == 0 ) {
   //   std::cout << "application executed" << std::endl;
   // }
+
+  delete aux_dep_m;
+  delete aux_dep_l;
+  delete aux_dep_m2l;
+  delete aux_dep_m2l_send;
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -835,6 +842,29 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 }
 
 template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::compute_chebyshev( ) {
+  // initialize Chebyshev nodes for numerical integration
+  if ( _cheb_nodes.size( ) != _m2l_integration_order + 1 ) {
+    _cheb_nodes.resize( _m2l_integration_order + 1, false );
+  }
+  for ( lo i = 0; i <= _m2l_integration_order; ++i ) {
+    _cheb_nodes[ i ] = std::cos(
+      M_PI * ( 2 * i + 1 ) / ( 2 * ( _m2l_integration_order + 1 ) ) );
+  }
+
+  // evaluate Chebyshev polynomials for all degrees <= _spat_order for
+  // integrals
+  if ( _all_poly_vals.size( )
+    != ( _m2l_integration_order + 1 ) * ( _spat_order + 1 ) ) {
+    _all_poly_vals.resize(
+      ( _m2l_integration_order + 1 ) * ( _spat_order + 1 ), false );
+  }
+
+  _chebyshev.evaluate( _cheb_nodes, _all_poly_vals );
+}
+
+template< class kernel_type, class target_space, class source_space >
 bool besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::mkl_fgmres_solve_parallel( const block_vector &
                                                              rhs,
@@ -1155,7 +1185,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     for ( lou i = 0; i < time_cluster->get_n_associated_leaves( ); ++i ) {
       general_spacetime_cluster * current_cluster
         = ( *associated_spacetime_clusters )[ i ];
-      //#pragma omp task depend( out : aux_dep_omp[:1] )
+
       apply_s2m_operation( sources, current_cluster );
     }
   }
@@ -1700,18 +1730,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       = src_center_time + src_half_size_time * time_nodes[ i ];
   }
 
-  // initialize Chebyshev nodes for numerical integration
-  vector_type cheb_nodes( _m2l_integration_order + 1, false );
-  for ( lo i = 0; i <= _m2l_integration_order; ++i ) {
-    cheb_nodes[ i ] = std::cos(
-      M_PI * ( 2 * i + 1 ) / ( 2 * ( _m2l_integration_order + 1 ) ) );
-  }
-  // evaluate Chebyshev polynomials for all degrees <= _spat_order for
-  // integrals
-  vector_type all_poly_vals(
-    ( _m2l_integration_order + 1 ) * ( _spat_order + 1 ), false );
-  _chebyshev.evaluate( cheb_nodes, all_poly_vals );
-
   // get spatial properties ( difference of cluster, half length )
   vector_type center_diff_space( tar_center_space );
   for ( lo i = 0; i < 3; ++i ) {
@@ -1725,9 +1743,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   }
 
   // compute coupling coefficients for dimension 2
-  compute_coupling_coeffs( src_time_nodes, tar_time_nodes, cheb_nodes,
-    all_poly_vals, half_size_space[ 2 ], center_diff_space[ 2 ],
-    buffer_for_gaussians, buffer_for_coeffs );
+  compute_coupling_coeffs( src_time_nodes, tar_time_nodes, half_size_space[ 2 ],
+    center_diff_space[ 2 ], buffer_for_gaussians, buffer_for_coeffs );
 
   const sc * src_moment = src_cluster->get_pointer_to_moment( );
   sc * tar_local = tar_cluster->get_pointer_to_local_contribution( );
@@ -1763,9 +1780,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   }
 
   // update coefficients and compute 2nd intermediate product in aux_buffer_1
-  compute_coupling_coeffs( src_time_nodes, tar_time_nodes, cheb_nodes,
-    all_poly_vals, half_size_space[ 1 ], center_diff_space[ 1 ],
-    buffer_for_gaussians, buffer_for_coeffs );
+  compute_coupling_coeffs( src_time_nodes, tar_time_nodes, half_size_space[ 1 ],
+    center_diff_space[ 1 ], buffer_for_gaussians, buffer_for_coeffs );
 
   lo buffer_1_index = 0;
   for ( lo alpha1 = 0; alpha1 <= _spat_order; ++alpha1 ) {
@@ -1792,9 +1808,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   }
 
   // update coefficients and update targets local contribution with m2l result
-  compute_coupling_coeffs( src_time_nodes, tar_time_nodes, cheb_nodes,
-    all_poly_vals, half_size_space[ 0 ], center_diff_space[ 0 ],
-    buffer_for_gaussians, buffer_for_coeffs );
+  compute_coupling_coeffs( src_time_nodes, tar_time_nodes, half_size_space[ 0 ],
+    center_diff_space[ 0 ], buffer_for_gaussians, buffer_for_coeffs );
 
   int local_index = 0;
   for ( lo alpha0 = 0; alpha0 <= _spat_order; ++alpha0 ) {
@@ -2834,10 +2849,8 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::compute_coupling_coeffs( const vector_type &
                                                            src_time_nodes,
-  const vector_type & tar_time_nodes, const vector_type & cheb_nodes,
-  const vector_type & evaluated_chebyshev, const sc half_size,
-  const sc center_diff, vector_type & buffer_for_gaussians,
-  vector_type & coupling_coeffs ) const {
+  const vector_type & tar_time_nodes, const sc half_size, const sc center_diff,
+  vector_type & buffer_for_gaussians, vector_type & coupling_coeffs ) const {
   coupling_coeffs.fill( 0.0 );
   // evaluate the gaussian kernel for the numerical integration
   sc h_alpha = half_size * half_size / ( 4.0 * _alpha );
@@ -2846,11 +2859,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   for ( lo a = 0; a <= _temp_order; ++a ) {
     for ( lo b = 0; b <= _temp_order; ++b ) {
       sc h_delta_ab = h_alpha / ( tar_time_nodes[ a ] - src_time_nodes[ b ] );
-      for ( lo mu = 0; mu < cheb_nodes.size( ); ++mu ) {
-        for ( lo nu = 0; nu < cheb_nodes.size( ); ++nu ) {
+      for ( lo mu = 0; mu < _cheb_nodes.size( ); ++mu ) {
+        for ( lo nu = 0; nu < _cheb_nodes.size( ); ++nu ) {
           buffer_for_gaussians[ index_gaussian ] = std::exp( -h_delta_ab
-            * ( scaled_center_diff + cheb_nodes[ mu ] - cheb_nodes[ nu ] )
-            * ( scaled_center_diff + cheb_nodes[ mu ] - cheb_nodes[ nu ] ) );
+            * ( scaled_center_diff + _cheb_nodes[ mu ] - _cheb_nodes[ nu ] )
+            * ( scaled_center_diff + _cheb_nodes[ mu ] - _cheb_nodes[ nu ] ) );
           ++index_gaussian;
         }
       }
@@ -2859,18 +2872,18 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   // compute the numerical integrals
   lou index_integral = 0;
-  sc mul_factor = 4.0 / ( cheb_nodes.size( ) * cheb_nodes.size( ) );
+  sc mul_factor = 4.0 / ( _cheb_nodes.size( ) * _cheb_nodes.size( ) );
   for ( lo alpha = 0; alpha <= _spat_order; ++alpha ) {
     for ( lo beta = 0; beta <= _spat_order; ++beta ) {
       index_gaussian = 0;
       for ( lo a = 0; a <= _temp_order; ++a ) {
         for ( lo b = 0; b <= _temp_order; ++b ) {
-          for ( lo mu = 0; mu < cheb_nodes.size( ); ++mu ) {
-            for ( lo nu = 0; nu < cheb_nodes.size( ); ++nu ) {
+          for ( lo mu = 0; mu < _cheb_nodes.size( ); ++mu ) {
+            for ( lo nu = 0; nu < _cheb_nodes.size( ); ++nu ) {
               coupling_coeffs[ index_integral ]
                 += buffer_for_gaussians[ index_gaussian ]
-                * evaluated_chebyshev[ alpha * cheb_nodes.size( ) + mu ]
-                * evaluated_chebyshev[ beta * cheb_nodes.size( ) + nu ];
+                * _all_poly_vals[ alpha * _cheb_nodes.size( ) + mu ]
+                * _all_poly_vals[ beta * _cheb_nodes.size( ) + nu ];
               ++index_gaussian;
             }
           }

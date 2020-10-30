@@ -106,6 +106,9 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   // matrix and determine the receive information data.
   global_matrix.prepare_fmm( );
 
+  // precompute Chebyshev nodes and values
+  global_matrix.compute_chebyshev( );
+
   // assemble the nearfield matrices of the pFMM matrix
   if ( !info_mode ) {
     assemble_nearfield( global_matrix );
