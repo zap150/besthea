@@ -157,7 +157,13 @@ class besthea::linear_algebra::distributed_pFMM_matrix
       _alpha( 1.0 ),
       _cheb_nodes( _m2l_integration_order + 1, false ),
       _all_poly_vals(
-        ( _m2l_integration_order + 1 ) * ( _spat_order + 1 ), false ) {
+        ( _m2l_integration_order + 1 ) * ( _spat_order + 1 ), false ),
+      _all_poly_vals_mult_coll( 0 ),
+      _gaussian_indices( 0 ),
+      _integral_indices( 0 ),
+      _multipliers( _spat_order * _spat_order * _temp_order * _temp_order ),
+      _a_indices( _spat_order * _spat_order * _temp_order * _temp_order ),
+      _b_indices( _spat_order * _spat_order * _temp_order * _temp_order ) {
   }
 
   distributed_pFMM_matrix( const distributed_pFMM_matrix & that ) = delete;
@@ -989,6 +995,25 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   vector_type _cheb_nodes;     //!< Chebyshev nodes for numerical integration
   vector_type _all_poly_vals;  //!< evaluation of Chebyshev polynomials
+
+  std::vector< sc, besthea::allocator_type< sc > >
+    _cheb_nodes_sum_coll;  //!< summed Chebyshev nodes for collapsed loop,
+                           //!< aligned
+
+  std::vector< sc, besthea::allocator_type< sc > >
+    _all_poly_vals_mult_coll;  //!< summed Chebyshev nodes for collapsed loop,
+                               //!< aligned
+
+  std::vector< lou > _gaussian_indices;  //!< auxiliary vector of indices to the
+                                         //!< buffer_for_guasisans
+  std::vector< lou > _integral_indices;  //!< auxiliary vector of indices to the
+                                         //!< coupling_coeffs
+  std::vector< sc, besthea::allocator_type< sc > >
+    _multipliers;                 //!< auxiliary vector of multipliers
+  std::vector< lou > _a_indices;  //!< auxiliary vector of indices to the
+                                  //!< coupling_coeffs
+  std::vector< lou > _b_indices;  //!< auxiliary vector of indices to the
+                                  //!< coupling_coeffs
 };
 
 /** Typedef for the distributed single layer p0-p0 PFMM matrix */

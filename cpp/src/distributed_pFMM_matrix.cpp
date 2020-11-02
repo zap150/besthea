@@ -862,6 +862,136 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   }
 
   _chebyshev.evaluate( _cheb_nodes, _all_poly_vals );
+
+  _cheb_nodes_sum_coll.resize( _cheb_nodes.size( ) * _cheb_nodes.size( ) );
+  lo counter = 0;
+
+  for ( lo mu = 0; mu < _cheb_nodes.size( ); ++mu ) {
+    for ( lo nu = 0; nu < _cheb_nodes.size( ); ++nu ) {
+      _cheb_nodes_sum_coll[ counter ] = _cheb_nodes[ mu ] - _cheb_nodes[ nu ];
+      ++counter;
+    }
+  }
+
+  //  _all_poly_vals_mult_coll.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
+  //    * ( _temp_order + 1 ) * ( _temp_order + 1 ) * _cheb_nodes.size( )
+  //    * _cheb_nodes.size( ) );
+  //  _gaussian_indices.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
+  //    * ( _temp_order + 1 ) * ( _temp_order + 1 ) * _cheb_nodes.size( )
+  //    * _cheb_nodes.size( ) );
+  //  _integral_indices.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
+  //    * ( _temp_order + 1 ) * ( _temp_order + 1 ) * _cheb_nodes.size( )
+  //    * _cheb_nodes.size( ) );
+  //  _multipliers.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
+  //    * ( _temp_order + 1 ) * ( _temp_order + 1 ) * _cheb_nodes.size( )
+  //    * _cheb_nodes.size( ) );
+  //  _a_indices.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
+  //    * ( _temp_order + 1 ) * ( _temp_order + 1 ) );
+  //  _b_indices.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
+  //    * ( _temp_order + 1 ) * ( _temp_order + 1 ) );
+  //
+  //  counter = 0;
+  //
+  //  lou index_integral = 0;
+  //  lou index_gaussian = 0;
+  //  sc mul_factor = 4.0 / ( _cheb_nodes.size( ) * _cheb_nodes.size( ) );
+  //  for ( lo alpha = 0; alpha <= _spat_order; ++alpha ) {
+  //    for ( lo beta = 0; beta <= _spat_order; ++beta ) {
+  //      index_gaussian = 0;
+  //      for ( lo a = 0; a <= _temp_order; ++a ) {
+  //        for ( lo b = 0; b <= _temp_order; ++b ) {
+  //          for ( lo mu = 0; mu < _cheb_nodes.size( ); ++mu ) {
+  //            for ( lo nu = 0; nu < _cheb_nodes.size( ); ++nu ) {
+  //              _gaussian_indices[ counter ] = index_gaussian;
+  //              _integral_indices[ counter ] = index_integral;
+  //              _all_poly_vals_mult_coll[ counter ]
+  //                = _all_poly_vals[ alpha * _cheb_nodes.size( ) + mu ]
+  //                * _all_poly_vals[ beta * _cheb_nodes.size( ) + nu ];
+  //
+  //              ++counter;
+  //              ++index_gaussian;
+  //            }
+  //          }
+  //          _multipliers[ index_integral ] = 1.0;
+  //          if ( alpha == 0 ) {
+  //            _multipliers[ index_integral ] *= 0.5;
+  //          }
+  //          if ( beta == 0 ) {
+  //            _multipliers[ index_integral ] *= 0.5;
+  //          }
+  //          _a_indices[ index_integral ] = a;
+  //          _b_indices[ index_integral ] = b;
+  //          ++index_integral;
+  //        }
+  //      }
+  //    }
+  //  }
+
+  _all_poly_vals_mult_coll.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
+    * _cheb_nodes.size( ) * _cheb_nodes.size( ) );
+  _gaussian_indices.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
+    * ( _temp_order + 1 ) * ( _temp_order + 1 ) * _cheb_nodes.size( )
+    * _cheb_nodes.size( ) );
+  _integral_indices.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
+    * ( _temp_order + 1 ) * ( _temp_order + 1 ) * _cheb_nodes.size( )
+    * _cheb_nodes.size( ) );
+  _multipliers.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
+    * ( _temp_order + 1 ) * ( _temp_order + 1 ) * _cheb_nodes.size( )
+    * _cheb_nodes.size( ) );
+  _a_indices.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
+    * ( _temp_order + 1 ) * ( _temp_order + 1 ) );
+  _b_indices.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
+    * ( _temp_order + 1 ) * ( _temp_order + 1 ) );
+
+  counter = 0;
+
+  lou index_integral = 0;
+  lou index_gaussian = 0;
+  sc mul_factor = 4.0 / ( _cheb_nodes.size( ) * _cheb_nodes.size( ) );
+  for ( lo alpha = 0; alpha <= _spat_order; ++alpha ) {
+    for ( lo beta = 0; beta <= _spat_order; ++beta ) {
+      for ( lo mu = 0; mu < _cheb_nodes.size( ); ++mu ) {
+        for ( lo nu = 0; nu < _cheb_nodes.size( ); ++nu ) {
+          _all_poly_vals_mult_coll[ counter ]
+            = _all_poly_vals[ alpha * _cheb_nodes.size( ) + mu ]
+            * _all_poly_vals[ beta * _cheb_nodes.size( ) + nu ];
+          ++counter;
+        }
+      }
+    }
+  }
+
+  //  for ( lo alpha = 0; alpha <= _spat_order; ++alpha ) {
+  //    for ( lo beta = 0; beta <= _spat_order; ++beta ) {
+  //      index_gaussian = 0;
+  //      for ( lo a = 0; a <= _temp_order; ++a ) {
+  //        for ( lo b = 0; b <= _temp_order; ++b ) {
+  //          for ( lo mu = 0; mu < _cheb_nodes.size( ); ++mu ) {
+  //            for ( lo nu = 0; nu < _cheb_nodes.size( ); ++nu ) {
+  //              _gaussian_indices[ counter ] = index_gaussian;
+  //              _integral_indices[ counter ] = index_integral;
+  //              _all_poly_vals_mult_coll[ counter ]
+  //                = _all_poly_vals[ alpha * _cheb_nodes.size( ) + mu ]
+  //                * _all_poly_vals[ beta * _cheb_nodes.size( ) + nu ];
+  //
+  //              ++counter;
+  //              ++index_gaussian;
+  //            }
+  //          }
+  //          _multipliers[ index_integral ] = 1.0;
+  //          if ( alpha == 0 ) {
+  //            _multipliers[ index_integral ] *= 0.5;
+  //          }
+  //          if ( beta == 0 ) {
+  //            _multipliers[ index_integral ] *= 0.5;
+  //          }
+  //          _a_indices[ index_integral ] = a;
+  //          _b_indices[ index_integral ] = b;
+  //          ++index_integral;
+  //        }
+  //      }
+  //    }
+  //  }
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -2856,16 +2986,22 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   sc h_alpha = half_size * half_size / ( 4.0 * _alpha );
   sc scaled_center_diff = center_diff / half_size;
   lou index_gaussian = 0;
+
+  sc * buffer_for_gaussians_data = buffer_for_gaussians.data( );
+  const sc * cheb_nodes_sum_coll_data = _cheb_nodes_sum_coll.data( );
+  const sc * all_poly_vals_mult_coll_data = _all_poly_vals_mult_coll.data( );
+
   for ( lo a = 0; a <= _temp_order; ++a ) {
     for ( lo b = 0; b <= _temp_order; ++b ) {
       sc h_delta_ab = h_alpha / ( tar_time_nodes[ a ] - src_time_nodes[ b ] );
-      for ( lo mu = 0; mu < _cheb_nodes.size( ); ++mu ) {
-        for ( lo nu = 0; nu < _cheb_nodes.size( ); ++nu ) {
-          buffer_for_gaussians[ index_gaussian ] = std::exp( -h_delta_ab
-            * ( scaled_center_diff + _cheb_nodes[ mu ] - _cheb_nodes[ nu ] )
-            * ( scaled_center_diff + _cheb_nodes[ mu ] - _cheb_nodes[ nu ] ) );
-          ++index_gaussian;
-        }
+
+#pragma omp simd aligned( cheb_nodes_sum_coll_data, buffer_for_gaussians_data \
+                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+      for ( lou i = 0; i < _cheb_nodes_sum_coll.size( ); ++i ) {
+        buffer_for_gaussians_data[ index_gaussian ] = std::exp( -h_delta_ab
+          * ( scaled_center_diff + cheb_nodes_sum_coll_data[ i ] )
+          * ( scaled_center_diff + cheb_nodes_sum_coll_data[ i ] ) );
+        ++index_gaussian;
       }
     }
   }
@@ -2873,20 +3009,26 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // compute the numerical integrals
   lou index_integral = 0;
   sc mul_factor = 4.0 / ( _cheb_nodes.size( ) * _cheb_nodes.size( ) );
+
   for ( lo alpha = 0; alpha <= _spat_order; ++alpha ) {
     for ( lo beta = 0; beta <= _spat_order; ++beta ) {
       index_gaussian = 0;
       for ( lo a = 0; a <= _temp_order; ++a ) {
         for ( lo b = 0; b <= _temp_order; ++b ) {
-          for ( lo mu = 0; mu < _cheb_nodes.size( ); ++mu ) {
-            for ( lo nu = 0; nu < _cheb_nodes.size( ); ++nu ) {
-              coupling_coeffs[ index_integral ]
-                += buffer_for_gaussians[ index_gaussian ]
-                * _all_poly_vals[ alpha * _cheb_nodes.size( ) + mu ]
-                * _all_poly_vals[ beta * _cheb_nodes.size( ) + nu ];
-              ++index_gaussian;
-            }
+          sc val = 0.0;
+
+          lo start_idx = alpha * ( _spat_order + 1 ) * _cheb_nodes.size( )
+              * _cheb_nodes.size( )
+            + beta * _cheb_nodes.size( ) * _cheb_nodes.size( );
+          const sc * curr_ptr = all_poly_vals_mult_coll_data + start_idx;
+#pragma omp simd aligned( buffer_for_gaussians_data, curr_ptr : DATA_ALIGN ) reduction( + : val )
+          for ( lo idx = 0; idx < _cheb_nodes.size( ) * _cheb_nodes.size( );
+                ++idx ) {
+            val
+              += buffer_for_gaussians_data[ index_gaussian ] * curr_ptr[ idx ];
+            ++index_gaussian;
           }
+          coupling_coeffs[ index_integral ] += val;
           sc mul_factor_ab = mul_factor
             / std::sqrt( 4.0 * M_PI * _alpha
               * ( tar_time_nodes[ a ] - src_time_nodes[ b ] ) );
@@ -2904,6 +3046,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       }
     }
   }
+
   // TODO: activate (and check!) this to avoid if clauses in the above loop
   //   for ( lo k = 0; k <= _spat_order; ++ k ) {
   //     lou index_temp = 0;
