@@ -864,7 +864,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   _chebyshev.evaluate( _cheb_nodes, _all_poly_vals );
 
-  _cheb_nodes_sum_coll.resize( _cheb_nodes.size( ) * _cheb_nodes.size( ) );
+  if ( _cheb_nodes_sum_coll.size( )
+    != (lou) _cheb_nodes.size( ) * _cheb_nodes.size( ) ) {
+    _cheb_nodes_sum_coll.resize( _cheb_nodes.size( ) * _cheb_nodes.size( ) );
+  }
   lo counter = 0;
 
   for ( lo mu = 0; mu < _cheb_nodes.size( ); ++mu ) {
@@ -874,14 +877,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
   }
 
-  _all_poly_vals_mult_coll.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
-    * _cheb_nodes.size( ) * _cheb_nodes.size( ) );
-  _multipliers.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
-    * ( _temp_order + 1 ) * ( _temp_order + 1 ) );
-  _a_indices.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
-    * ( _temp_order + 1 ) * ( _temp_order + 1 ) );
-  _b_indices.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
-    * ( _temp_order + 1 ) * ( _temp_order + 1 ) );
+  if ( _all_poly_vals_mult_coll.size( )
+    != ( lou )( _spat_order + 1 ) * ( _spat_order + 1 ) * _cheb_nodes.size( )
+      * _cheb_nodes.size( ) ) {
+    _all_poly_vals_mult_coll.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
+      * _cheb_nodes.size( ) * _cheb_nodes.size( ) );
+  }
 
   counter = 0;
 
@@ -892,27 +893,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           _all_poly_vals_mult_coll[ counter ]
             = _all_poly_vals[ alpha * _cheb_nodes.size( ) + mu ]
             * _all_poly_vals[ beta * _cheb_nodes.size( ) + nu ];
-          ++counter;
-        }
-      }
-    }
-  }
-
-  counter = 0;
-  sc mul_factor = 4.0 / ( _cheb_nodes.size( ) * _cheb_nodes.size( ) );
-  for ( lo alpha = 0; alpha <= _spat_order; ++alpha ) {
-    for ( lo beta = 0; beta <= _spat_order; ++beta ) {
-      for ( lo a = 0; a <= _temp_order; ++a ) {
-        for ( lo b = 0; b <= _temp_order; ++b ) {
-          _multipliers[ counter ] = mul_factor;
-          if ( alpha == 0 ) {
-            _multipliers[ counter ] *= 0.5;
-          }
-          if ( beta == 0 ) {
-            _multipliers[ counter ] *= 0.5;
-          }
-          _a_indices[ counter ] = a;
-          _b_indices[ counter ] = b;
           ++counter;
         }
       }
@@ -2934,6 +2914,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   }
 
   // compute the numerical integrals
+  sc mul_factor = 4.0 / ( _cheb_nodes.size( ) * _cheb_nodes.size( ) );
   lou index_integral = 0;
 
   for ( lo alpha = 0; alpha <= _spat_order; ++alpha ) {
@@ -2955,25 +2936,27 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             ++index_gaussian;
           }
           coupling_coeffs[ index_integral ] += val;
+
+          sc mul_factor_ab = mul_factor
+            / std::sqrt( 4.0 * M_PI * _alpha
+              * ( tar_time_nodes[ a ] - src_time_nodes[ b ] ) );
+          // gamma = 2 for all alpha and beta ( wrong, correction in
+          //                    case of
+          // alpha == 0 or beta == 0 )
+          // an attempt to compute this in a separate loop with precomputed
+          // mul_factor_ab was slower
+          if ( alpha == 0 ) {
+            mul_factor_ab *= 0.5;
+          }
+          if ( beta == 0 ) {
+            mul_factor_ab *= 0.5;
+          }
+          coupling_coeffs[ index_integral ] *= mul_factor_ab;
+
           ++index_integral;
         }
       }
     }
-  }
-
-  const sc * multipliers_data = _multipliers.data( );
-  const lou * a_indices_data = _a_indices.data( );
-  const lou * b_indices_data = _b_indices.data( );
-  sc * coupling_coeffs_data = coupling_coeffs.data( );
-#pragma omp simd aligned(                                                \
-  multipliers_data, a_indices_data, b_indices_data, coupling_coeffs_data \
-  : DATA_ALIGN ) simdlen( DATA_WIDTH )
-  for ( lo i = 0; i < _multipliers.size( ); ++i ) {
-    sc mul_factor_ab = multipliers_data[ i ]
-      / std::sqrt( 4.0 * M_PI * _alpha
-        * ( tar_time_nodes[ a_indices_data[ i ] ]
-          - src_time_nodes[ b_indices_data[ i ] ] ) );
-    coupling_coeffs_data[ i ] *= mul_factor_ab;
   }
 
   // TODO: activate (and check!) this to avoid if clauses in the above loop

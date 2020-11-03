@@ -158,11 +158,10 @@ class besthea::linear_algebra::distributed_pFMM_matrix
       _cheb_nodes( _m2l_integration_order + 1, false ),
       _all_poly_vals(
         ( _m2l_integration_order + 1 ) * ( _spat_order + 1 ), false ),
-      _cheb_nodes_sum_coll( 0 ),
-      _all_poly_vals_mult_coll( 0 ),
-      _multipliers( 0 ),
-      _a_indices( 0 ),
-      _b_indices( 0 ) {
+      _cheb_nodes_sum_coll(
+        ( _m2l_integration_order + 1 ) * ( _m2l_integration_order + 1 ) ),
+      _all_poly_vals_mult_coll( ( _spat_order + 1 ) * ( _spat_order + 1 )
+        * ( _m2l_integration_order + 1 ) * ( _m2l_integration_order + 1 ) ) {
   }
 
   distributed_pFMM_matrix( const distributed_pFMM_matrix & that ) = delete;
@@ -1002,14 +1001,6 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   std::vector< sc, besthea::allocator_type< sc > >
     _all_poly_vals_mult_coll;  //!< summed Chebyshev nodes for collapsed loop,
                                //!< aligned
-  std::vector< sc, besthea::allocator_type< sc > >
-    _multipliers;  //!< auxiliary vector of multipliers
-  std::vector< lou, besthea::allocator_type< lou > >
-    _a_indices;  //!< auxiliary vector of indices to the
-                 //!< coupling_coeffs
-  std::vector< lou, besthea::allocator_type< lou > >
-    _b_indices;  //!< auxiliary vector of indices to the
-                 //!< coupling_coeffs
 };
 
 /** Typedef for the distributed single layer p0-p0 PFMM matrix */
