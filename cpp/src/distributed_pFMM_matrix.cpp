@@ -845,6 +845,7 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::compute_chebyshev( ) {
   // initialize Chebyshev nodes for numerical integration
+
   if ( _cheb_nodes.size( ) != _m2l_integration_order + 1 ) {
     _cheb_nodes.resize( _m2l_integration_order + 1, false );
   }
@@ -873,71 +874,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
   }
 
-  //  _all_poly_vals_mult_coll.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
-  //    * ( _temp_order + 1 ) * ( _temp_order + 1 ) * _cheb_nodes.size( )
-  //    * _cheb_nodes.size( ) );
-  //  _gaussian_indices.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
-  //    * ( _temp_order + 1 ) * ( _temp_order + 1 ) * _cheb_nodes.size( )
-  //    * _cheb_nodes.size( ) );
-  //  _integral_indices.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
-  //    * ( _temp_order + 1 ) * ( _temp_order + 1 ) * _cheb_nodes.size( )
-  //    * _cheb_nodes.size( ) );
-  //  _multipliers.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
-  //    * ( _temp_order + 1 ) * ( _temp_order + 1 ) * _cheb_nodes.size( )
-  //    * _cheb_nodes.size( ) );
-  //  _a_indices.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
-  //    * ( _temp_order + 1 ) * ( _temp_order + 1 ) );
-  //  _b_indices.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
-  //    * ( _temp_order + 1 ) * ( _temp_order + 1 ) );
-  //
-  //  counter = 0;
-  //
-  //  lou index_integral = 0;
-  //  lou index_gaussian = 0;
-  //  sc mul_factor = 4.0 / ( _cheb_nodes.size( ) * _cheb_nodes.size( ) );
-  //  for ( lo alpha = 0; alpha <= _spat_order; ++alpha ) {
-  //    for ( lo beta = 0; beta <= _spat_order; ++beta ) {
-  //      index_gaussian = 0;
-  //      for ( lo a = 0; a <= _temp_order; ++a ) {
-  //        for ( lo b = 0; b <= _temp_order; ++b ) {
-  //          for ( lo mu = 0; mu < _cheb_nodes.size( ); ++mu ) {
-  //            for ( lo nu = 0; nu < _cheb_nodes.size( ); ++nu ) {
-  //              _gaussian_indices[ counter ] = index_gaussian;
-  //              _integral_indices[ counter ] = index_integral;
-  //              _all_poly_vals_mult_coll[ counter ]
-  //                = _all_poly_vals[ alpha * _cheb_nodes.size( ) + mu ]
-  //                * _all_poly_vals[ beta * _cheb_nodes.size( ) + nu ];
-  //
-  //              ++counter;
-  //              ++index_gaussian;
-  //            }
-  //          }
-  //          _multipliers[ index_integral ] = 1.0;
-  //          if ( alpha == 0 ) {
-  //            _multipliers[ index_integral ] *= 0.5;
-  //          }
-  //          if ( beta == 0 ) {
-  //            _multipliers[ index_integral ] *= 0.5;
-  //          }
-  //          _a_indices[ index_integral ] = a;
-  //          _b_indices[ index_integral ] = b;
-  //          ++index_integral;
-  //        }
-  //      }
-  //    }
-  //  }
-
   _all_poly_vals_mult_coll.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
     * _cheb_nodes.size( ) * _cheb_nodes.size( ) );
-  _gaussian_indices.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
-    * ( _temp_order + 1 ) * ( _temp_order + 1 ) * _cheb_nodes.size( )
-    * _cheb_nodes.size( ) );
-  _integral_indices.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
-    * ( _temp_order + 1 ) * ( _temp_order + 1 ) * _cheb_nodes.size( )
-    * _cheb_nodes.size( ) );
   _multipliers.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
-    * ( _temp_order + 1 ) * ( _temp_order + 1 ) * _cheb_nodes.size( )
-    * _cheb_nodes.size( ) );
+    * ( _temp_order + 1 ) * ( _temp_order + 1 ) );
   _a_indices.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
     * ( _temp_order + 1 ) * ( _temp_order + 1 ) );
   _b_indices.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
@@ -945,9 +885,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   counter = 0;
 
-  lou index_integral = 0;
-  lou index_gaussian = 0;
-  sc mul_factor = 4.0 / ( _cheb_nodes.size( ) * _cheb_nodes.size( ) );
   for ( lo alpha = 0; alpha <= _spat_order; ++alpha ) {
     for ( lo beta = 0; beta <= _spat_order; ++beta ) {
       for ( lo mu = 0; mu < _cheb_nodes.size( ); ++mu ) {
@@ -961,37 +898,26 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
   }
 
-  //  for ( lo alpha = 0; alpha <= _spat_order; ++alpha ) {
-  //    for ( lo beta = 0; beta <= _spat_order; ++beta ) {
-  //      index_gaussian = 0;
-  //      for ( lo a = 0; a <= _temp_order; ++a ) {
-  //        for ( lo b = 0; b <= _temp_order; ++b ) {
-  //          for ( lo mu = 0; mu < _cheb_nodes.size( ); ++mu ) {
-  //            for ( lo nu = 0; nu < _cheb_nodes.size( ); ++nu ) {
-  //              _gaussian_indices[ counter ] = index_gaussian;
-  //              _integral_indices[ counter ] = index_integral;
-  //              _all_poly_vals_mult_coll[ counter ]
-  //                = _all_poly_vals[ alpha * _cheb_nodes.size( ) + mu ]
-  //                * _all_poly_vals[ beta * _cheb_nodes.size( ) + nu ];
-  //
-  //              ++counter;
-  //              ++index_gaussian;
-  //            }
-  //          }
-  //          _multipliers[ index_integral ] = 1.0;
-  //          if ( alpha == 0 ) {
-  //            _multipliers[ index_integral ] *= 0.5;
-  //          }
-  //          if ( beta == 0 ) {
-  //            _multipliers[ index_integral ] *= 0.5;
-  //          }
-  //          _a_indices[ index_integral ] = a;
-  //          _b_indices[ index_integral ] = b;
-  //          ++index_integral;
-  //        }
-  //      }
-  //    }
-  //  }
+  counter = 0;
+  sc mul_factor = 4.0 / ( _cheb_nodes.size( ) * _cheb_nodes.size( ) );
+  for ( lo alpha = 0; alpha <= _spat_order; ++alpha ) {
+    for ( lo beta = 0; beta <= _spat_order; ++beta ) {
+      for ( lo a = 0; a <= _temp_order; ++a ) {
+        for ( lo b = 0; b <= _temp_order; ++b ) {
+          _multipliers[ counter ] = mul_factor;
+          if ( alpha == 0 ) {
+            _multipliers[ counter ] *= 0.5;
+          }
+          if ( beta == 0 ) {
+            _multipliers[ counter ] *= 0.5;
+          }
+          _a_indices[ counter ] = a;
+          _b_indices[ counter ] = b;
+          ++counter;
+        }
+      }
+    }
+  }
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -2994,21 +2920,21 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   for ( lo a = 0; a <= _temp_order; ++a ) {
     for ( lo b = 0; b <= _temp_order; ++b ) {
       sc h_delta_ab = h_alpha / ( tar_time_nodes[ a ] - src_time_nodes[ b ] );
-
+      lou i;
 #pragma omp simd aligned( cheb_nodes_sum_coll_data, buffer_for_gaussians_data \
                           : DATA_ALIGN ) simdlen( DATA_WIDTH )
-      for ( lou i = 0; i < _cheb_nodes_sum_coll.size( ); ++i ) {
-        buffer_for_gaussians_data[ index_gaussian ] = std::exp( -h_delta_ab
+      for ( i = 0; i < _cheb_nodes_sum_coll.size( ); ++i ) {
+        buffer_for_gaussians_data[ index_gaussian + i ] = std::exp( -h_delta_ab
           * ( scaled_center_diff + cheb_nodes_sum_coll_data[ i ] )
           * ( scaled_center_diff + cheb_nodes_sum_coll_data[ i ] ) );
-        ++index_gaussian;
+        //++index_gaussian;
       }
+      index_gaussian += i;
     }
   }
 
   // compute the numerical integrals
   lou index_integral = 0;
-  sc mul_factor = 4.0 / ( _cheb_nodes.size( ) * _cheb_nodes.size( ) );
 
   for ( lo alpha = 0; alpha <= _spat_order; ++alpha ) {
     for ( lo beta = 0; beta <= _spat_order; ++beta ) {
@@ -3020,31 +2946,34 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           lo start_idx = alpha * ( _spat_order + 1 ) * _cheb_nodes.size( )
               * _cheb_nodes.size( )
             + beta * _cheb_nodes.size( ) * _cheb_nodes.size( );
-          const sc * curr_ptr = all_poly_vals_mult_coll_data + start_idx;
-#pragma omp simd aligned( buffer_for_gaussians_data, curr_ptr : DATA_ALIGN ) reduction( + : val )
+          const sc * curr_ptr = all_poly_vals_mult_coll_data;  // + start_idx;
+#pragma omp simd aligned( buffer_for_gaussians_data,curr_ptr : DATA_ALIGN ) reduction( + : val )
           for ( lo idx = 0; idx < _cheb_nodes.size( ) * _cheb_nodes.size( );
                 ++idx ) {
-            val
-              += buffer_for_gaussians_data[ index_gaussian ] * curr_ptr[ idx ];
+            val += buffer_for_gaussians_data[ index_gaussian ]
+              * curr_ptr[ start_idx + idx ];
             ++index_gaussian;
           }
           coupling_coeffs[ index_integral ] += val;
-          sc mul_factor_ab = mul_factor
-            / std::sqrt( 4.0 * M_PI * _alpha
-              * ( tar_time_nodes[ a ] - src_time_nodes[ b ] ) );
-          // gamma = 2 for all alpha and beta ( wrong, correction in case of
-          // alpha == 0 or beta == 0 )
-          if ( alpha == 0 ) {
-            mul_factor_ab *= 0.5;
-          }
-          if ( beta == 0 ) {
-            mul_factor_ab *= 0.5;
-          }
-          coupling_coeffs[ index_integral ] *= mul_factor_ab;
           ++index_integral;
         }
       }
     }
+  }
+
+  const sc * multipliers_data = _multipliers.data( );
+  const lou * a_indices_data = _a_indices.data( );
+  const lou * b_indices_data = _b_indices.data( );
+  sc * coupling_coeffs_data = coupling_coeffs.data( );
+#pragma omp simd aligned(                                                \
+  multipliers_data, a_indices_data, b_indices_data, coupling_coeffs_data \
+  : DATA_ALIGN ) simdlen( DATA_WIDTH )
+  for ( lo i = 0; i < _multipliers.size( ); ++i ) {
+    sc mul_factor_ab = multipliers_data[ i ]
+      / std::sqrt( 4.0 * M_PI * _alpha
+        * ( tar_time_nodes[ a_indices_data[ i ] ]
+          - src_time_nodes[ b_indices_data[ i ] ] ) );
+    coupling_coeffs_data[ i ] *= mul_factor_ab;
   }
 
   // TODO: activate (and check!) this to avoid if clauses in the above loop
@@ -3077,8 +3006,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   reset_downward_path_status_recursively(
     _distributed_spacetime_tree->get_distribution_tree( )->get_root( ) );
 
-  // reset the m2l counter and clear the ready interaction list of the
-  // clusters in the _m2l_list.
+  // reset the m2l counter and clear the ready interaction
+  // list of the clusters in the _m2l_list.
   for ( scheduling_time_cluster * cluster : _m2l_list ) {
     cluster->set_sched_m2l_counter( 0 );
     cluster->set_m2l_counter( 0 );
@@ -3146,7 +3075,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   lo size = my_quadrature._wy_cheb.size( );
 
   // x1, x2, x3 are vectors in R^3,
-  // y%_mapped are the %th components of the vectors to which y#_ref is mapped
+  // y%_mapped are the %th components of the vectors to which y#_ref is
+  // mapped
 #pragma omp simd aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref \
                           : DATA_ALIGN ) simdlen( DATA_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
@@ -3179,8 +3109,8 @@ sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
   source_space >::compute_nonzero_nearfield_ratio( ) {
   lou n_nearfield_entries = 0;
 
-  // get the local and nearfield mesh (needed to determine correct number of
-  // non-zero nearfield matrix entries)
+  // get the local and nearfield mesh (needed to determine correct
+  // number of non-zero nearfield matrix entries)
   const mesh::spacetime_tensor_mesh * nearfield_mesh;
   const mesh::spacetime_tensor_mesh * local_mesh;
   local_mesh = _distributed_spacetime_tree->get_mesh( ).get_local_mesh( );
@@ -3208,8 +3138,8 @@ sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
         = st_target->get_nearfield_list( );
       for ( lou src_index = 0; src_index < st_nearfield_list->size( );
             ++src_index ) {
-        // consider all spacetime clusters in the nearfield of the current
-        // target cluster
+        // consider all spacetime clusters in the nearfield of the
+        // current target cluster
         general_spacetime_cluster * st_source
           = ( *st_nearfield_list )[ src_index ];
         if ( st_source->get_elements_are_local( ) ) {
@@ -3226,8 +3156,8 @@ sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
           if ( std::abs(
                  st_target->get_time_center( ) - st_source->get_time_center( ) )
             < st_target->get_time_half_size( ) ) {
-            // source cluster's temporal component is contained in target
-            // cluster's
+            // source cluster's temporal component is contained in
+            // target cluster's
             lo src_max_time_idx = src_mesh->get_time_element(
               st_source->get_element( n_src_elements - 1 ) );
             lo tar_max_time_idx = tar_mesh->get_time_element(
@@ -3324,8 +3254,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
   }
 
-  // count the number of m2l. in addition, count the number of l2t operations
-  // for those clusters whose parents are not active in the downward path
+  // count the number of m2l. in addition, count the number of l2t
+  // operations for those clusters whose parents are not active in the
+  // downward path
   n_m2l_operations.resize( n_max_levels );
   for ( lo i = 0; i < n_max_levels; ++i ) {
     n_m2l_operations[ i ] = 0;
