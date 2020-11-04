@@ -180,11 +180,19 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   char * aux_dep_m = new char[ std::distance( first, last ) ];
   std::fill( aux_dep_m, aux_dep_m + sizeof( aux_dep_m ), 0 );
 
+  // allocate buffers for m2l computation
+  _aux_buffer_0.resize( omp_get_max_threads( ) );
+  _aux_buffer_1.resize( omp_get_max_threads( ) );
+
   // start the main "job scheduling" algorithm
   // the "master" thread checks for new available data, spawns tasks, and
   // removes clusters from lists
 #pragma omp parallel
   {
+    _aux_buffer_0[ omp_get_thread_num( ) ].resize(
+      ( _temp_order + 1 ) * ( _temp_order + 1 ), _spat_contribution_size );
+    _aux_buffer_1[ omp_get_thread_num( ) ].resize(
+      ( _temp_order + 1 ) * ( _temp_order + 1 ), _spat_contribution_size );
 #pragma omp single
     {
       // start the receive operationss
@@ -845,54 +853,51 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::compute_chebyshev( ) {
   // initialize Chebyshev nodes for numerical integration
+  vector_type cheb_nodes( _m2l_integration_order + 1,
+    false );  //!< Chebyshev nodes for numerical integration
+  vector_type all_poly_vals(
+    ( _m2l_integration_order + 1 ) * ( _spat_order + 1 ),
+    false );  //!< evaluation of Chebyshev polynomials
 
-  if ( _cheb_nodes.size( ) != _m2l_integration_order + 1 ) {
-    _cheb_nodes.resize( _m2l_integration_order + 1, false );
-  }
   for ( lo i = 0; i <= _m2l_integration_order; ++i ) {
-    _cheb_nodes[ i ] = std::cos(
+    cheb_nodes[ i ] = std::cos(
       M_PI * ( 2 * i + 1 ) / ( 2 * ( _m2l_integration_order + 1 ) ) );
   }
 
   // evaluate Chebyshev polynomials for all degrees <= _spat_order for
   // integrals
-  if ( _all_poly_vals.size( )
-    != ( _m2l_integration_order + 1 ) * ( _spat_order + 1 ) ) {
-    _all_poly_vals.resize(
-      ( _m2l_integration_order + 1 ) * ( _spat_order + 1 ), false );
-  }
 
-  _chebyshev.evaluate( _cheb_nodes, _all_poly_vals );
+  _chebyshev.evaluate( cheb_nodes, all_poly_vals );
 
   if ( _cheb_nodes_sum_coll.size( )
-    != (lou) _cheb_nodes.size( ) * _cheb_nodes.size( ) ) {
-    _cheb_nodes_sum_coll.resize( _cheb_nodes.size( ) * _cheb_nodes.size( ) );
+    != (lou) cheb_nodes.size( ) * cheb_nodes.size( ) ) {
+    _cheb_nodes_sum_coll.resize( cheb_nodes.size( ) * cheb_nodes.size( ) );
   }
   lo counter = 0;
 
-  for ( lo mu = 0; mu < _cheb_nodes.size( ); ++mu ) {
-    for ( lo nu = 0; nu < _cheb_nodes.size( ); ++nu ) {
-      _cheb_nodes_sum_coll[ counter ] = _cheb_nodes[ mu ] - _cheb_nodes[ nu ];
+  for ( lo mu = 0; mu < cheb_nodes.size( ); ++mu ) {
+    for ( lo nu = 0; nu < cheb_nodes.size( ); ++nu ) {
+      _cheb_nodes_sum_coll[ counter ] = cheb_nodes[ mu ] - cheb_nodes[ nu ];
       ++counter;
     }
   }
 
   if ( _all_poly_vals_mult_coll.size( )
-    != ( lou )( _spat_order + 1 ) * ( _spat_order + 1 ) * _cheb_nodes.size( )
-      * _cheb_nodes.size( ) ) {
+    != ( lou )( _spat_order + 1 ) * ( _spat_order + 1 ) * cheb_nodes.size( )
+      * cheb_nodes.size( ) ) {
     _all_poly_vals_mult_coll.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
-      * _cheb_nodes.size( ) * _cheb_nodes.size( ) );
+      * cheb_nodes.size( ) * cheb_nodes.size( ) );
   }
 
   counter = 0;
 
   for ( lo alpha = 0; alpha <= _spat_order; ++alpha ) {
     for ( lo beta = 0; beta <= _spat_order; ++beta ) {
-      for ( lo mu = 0; mu < _cheb_nodes.size( ); ++mu ) {
-        for ( lo nu = 0; nu < _cheb_nodes.size( ); ++nu ) {
+      for ( lo mu = 0; mu < cheb_nodes.size( ); ++mu ) {
+        for ( lo nu = 0; nu < cheb_nodes.size( ); ++nu ) {
           _all_poly_vals_mult_coll[ counter ]
-            = _all_poly_vals[ alpha * _cheb_nodes.size( ) + mu ]
-            * _all_poly_vals[ beta * _cheb_nodes.size( ) + nu ];
+            = all_poly_vals[ alpha * cheb_nodes.size( ) + mu ]
+            * all_poly_vals[ beta * cheb_nodes.size( ) + nu ];
           ++counter;
         }
       }
@@ -1739,10 +1744,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   vector_type buffer_for_coeffs( ( _spat_order + 1 ) * ( _spat_order + 1 )
     * ( _temp_order + 1 ) * ( _temp_order + 1 ) );
   // buffer matrices to store intermediate m2l results.
-  full_matrix aux_buffer_0(
-    ( _temp_order + 1 ) * ( _temp_order + 1 ), _spat_contribution_size, true );
-  full_matrix aux_buffer_1(
-    ( _temp_order + 1 ) * ( _temp_order + 1 ), _spat_contribution_size, true );
+  lo thread_num = omp_get_thread_num( );
+  _aux_buffer_0[ thread_num ].fill( 0.0 );
+  _aux_buffer_1[ thread_num ].fill( 0.0 );
 
   // get geometrical data of the clusters
   sc src_half_size_time;
@@ -1790,6 +1794,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     = ( _spat_order + 1 ) * ( _temp_order + 1 ) * ( _temp_order + 1 );
   lo hlp_acs_beta = ( _temp_order + 1 ) * ( _temp_order + 1 );
   lo hlp_acs_a = ( _temp_order + 1 );
+
+  sc * aux_buffer_0_data = _aux_buffer_0[ thread_num ].data( );
+  sc * buffer_for_coeffs_data = buffer_for_coeffs.data( );
+
   // compute first intermediate product and store it in aux_buffer_0
   lo buffer_0_index = 0;
   for ( lo alpha2 = 0; alpha2 <= _spat_order; ++alpha2 ) {
@@ -1797,10 +1805,16 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     for ( lo beta0 = 0; beta0 <= _spat_order - alpha2; ++beta0 ) {
       for ( lo beta1 = 0; beta1 <= _spat_order - alpha2 - beta0; ++beta1 ) {
         for ( lo beta2 = 0; beta2 <= _spat_order - beta0 - beta1; ++beta2 ) {
+          // no need for reduction, in a single inner cycle data are written on
+          // unique positions
           for ( lo a = 0; a <= _temp_order; ++a ) {
+#pragma omp simd aligned(                               \
+  aux_buffer_0_data, buffer_for_coeffs_data, src_moment \
+  : DATA_ALIGN ) simdlen( DATA_WIDTH )
             for ( lo b = 0; b <= _temp_order; ++b ) {
-              aux_buffer_0( hlp_acs_a * a + b, buffer_0_index )
-                += buffer_for_coeffs[ alpha2 * hlp_acs_alpha
+              aux_buffer_0_data[ buffer_0_index * hlp_acs_beta + hlp_acs_a * a
+                + b ]
+                += buffer_for_coeffs_data[ alpha2 * hlp_acs_alpha
                      + beta2 * hlp_acs_beta + a * hlp_acs_a + b ]
                 * src_moment[ b + moment_index * ( _temp_order + 1 ) ];
             }
@@ -1814,10 +1828,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       moment_index += ( ( alpha2 + 1 ) * alpha2 ) / 2;
     }
   }
-
   // update coefficients and compute 2nd intermediate product in aux_buffer_1
   compute_coupling_coeffs( src_time_nodes, tar_time_nodes, half_size_space[ 1 ],
     center_diff_space[ 1 ], buffer_for_gaussians, buffer_for_coeffs );
+
+  sc * aux_buffer_1_data = _aux_buffer_1[ thread_num ].data( );
 
   lo buffer_1_index = 0;
   for ( lo alpha1 = 0; alpha1 <= _spat_order; ++alpha1 ) {
@@ -1826,11 +1841,16 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       for ( lo beta0 = 0; beta0 <= _spat_order - alpha1 - alpha2; ++beta0 ) {
         for ( lo beta1 = 0; beta1 <= _spat_order - beta0 - alpha2; ++beta1 ) {
           for ( lo a = 0; a <= _temp_order; ++a ) {
+#pragma omp simd aligned(                                      \
+  aux_buffer_1_data, buffer_for_coeffs_data, aux_buffer_0_data \
+  : DATA_ALIGN ) simdlen( DATA_WIDTH )
             for ( lo b = 0; b <= _temp_order; ++b ) {
-              aux_buffer_1( hlp_acs_a * a + b, buffer_1_index )
-                += buffer_for_coeffs[ alpha1 * hlp_acs_alpha
+              aux_buffer_1_data[ buffer_1_index * hlp_acs_beta + hlp_acs_a * a
+                + b ]
+                += buffer_for_coeffs_data[ alpha1 * hlp_acs_alpha
                      + beta1 * hlp_acs_beta + a * hlp_acs_a + b ]
-                * aux_buffer_0( hlp_acs_a * a + b, buffer_0_index );
+                * aux_buffer_0_data[ buffer_0_index * hlp_acs_beta
+                  + hlp_acs_a * a + b ];
             }
           }
           ++buffer_0_index;
@@ -1846,7 +1866,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // update coefficients and update targets local contribution with m2l result
   compute_coupling_coeffs( src_time_nodes, tar_time_nodes, half_size_space[ 0 ],
     center_diff_space[ 0 ], buffer_for_gaussians, buffer_for_coeffs );
-
+  sc val = 0;
   int local_index = 0;
   for ( lo alpha0 = 0; alpha0 <= _spat_order; ++alpha0 ) {
     buffer_1_index = 0;
@@ -1854,13 +1874,15 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       for ( lo alpha2 = 0; alpha2 <= _spat_order - alpha0 - alpha1; ++alpha2 ) {
         for ( lo beta0 = 0; beta0 <= _spat_order - alpha1 - alpha2; ++beta0 ) {
           for ( lo a = 0; a <= _temp_order; ++a ) {
+            val = 0;
+#pragma omp simd aligned(  buffer_for_coeffs_data, aux_buffer_1_data, tar_local : DATA_ALIGN ) simdlen( DATA_WIDTH) reduction( + : val)
             for ( lo b = 0; b <= _temp_order; ++b ) {
-#pragma omp atomic update
-              tar_local[ a + local_index * ( _temp_order + 1 ) ]
-                += buffer_for_coeffs[ alpha0 * hlp_acs_alpha
-                     + beta0 * hlp_acs_beta + a * hlp_acs_a + b ]
-                * aux_buffer_1( hlp_acs_a * a + b, buffer_1_index );
+              val += buffer_for_coeffs_data[ alpha0 * hlp_acs_alpha
+                       + beta0 * hlp_acs_beta + a * hlp_acs_a + b ]
+                * aux_buffer_1_data[ buffer_1_index * hlp_acs_beta
+                  + hlp_acs_a * a + b ];
             }
+            tar_local[ a + local_index * ( _temp_order + 1 ) ] += val;
           }
           ++buffer_1_index;
         }
@@ -2914,7 +2936,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   }
 
   // compute the numerical integrals
-  sc mul_factor = 4.0 / ( _cheb_nodes.size( ) * _cheb_nodes.size( ) );
+  sc mul_factor = 4.0 / ( _cheb_nodes_sum_coll.size( ) );
   lou index_integral = 0;
 
   for ( lo alpha = 0; alpha <= _spat_order; ++alpha ) {
@@ -2924,13 +2946,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         for ( lo b = 0; b <= _temp_order; ++b ) {
           sc val = 0.0;
 
-          lo start_idx = alpha * ( _spat_order + 1 ) * _cheb_nodes.size( )
-              * _cheb_nodes.size( )
-            + beta * _cheb_nodes.size( ) * _cheb_nodes.size( );
+          lo start_idx
+            = alpha * ( _spat_order + 1 ) * _cheb_nodes_sum_coll.size( )
+            + beta * _cheb_nodes_sum_coll.size( );
           const sc * curr_ptr = all_poly_vals_mult_coll_data;  // + start_idx;
 #pragma omp simd aligned( buffer_for_gaussians_data,curr_ptr : DATA_ALIGN ) reduction( + : val )
-          for ( lo idx = 0; idx < _cheb_nodes.size( ) * _cheb_nodes.size( );
-                ++idx ) {
+          for ( lou idx = 0; idx < _cheb_nodes_sum_coll.size( ); ++idx ) {
             val += buffer_for_gaussians_data[ index_gaussian ]
               * curr_ptr[ start_idx + idx ];
             ++index_gaussian;

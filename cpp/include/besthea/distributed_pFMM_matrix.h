@@ -155,9 +155,6 @@ class besthea::linear_algebra::distributed_pFMM_matrix
       _chebyshev( _spat_order ),
       _lagrange( _temp_order ),
       _alpha( 1.0 ),
-      _cheb_nodes( _m2l_integration_order + 1, false ),
-      _all_poly_vals(
-        ( _m2l_integration_order + 1 ) * ( _spat_order + 1 ), false ),
       _cheb_nodes_sum_coll(
         ( _m2l_integration_order + 1 ) * ( _m2l_integration_order + 1 ) ),
       _all_poly_vals_mult_coll( ( _spat_order + 1 ) * ( _spat_order + 1 )
@@ -991,9 +988,6 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   sc _alpha;  //!< Heat conductivity.
 
-  vector_type _cheb_nodes;     //!< Chebyshev nodes for numerical integration
-  vector_type _all_poly_vals;  //!< evaluation of Chebyshev polynomials
-
   std::vector< sc, besthea::allocator_type< sc > >
     _cheb_nodes_sum_coll;  //!< summed Chebyshev nodes for collapsed loop,
                            //!< aligned
@@ -1001,6 +995,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   std::vector< sc, besthea::allocator_type< sc > >
     _all_poly_vals_mult_coll;  //!< summed Chebyshev nodes for collapsed loop,
                                //!< aligned
+
+  mutable std::vector< full_matrix > _aux_buffer_0;
+  mutable std::vector< full_matrix > _aux_buffer_1;
 };
 
 /** Typedef for the distributed single layer p0-p0 PFMM matrix */

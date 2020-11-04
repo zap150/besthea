@@ -271,8 +271,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
     collect_real_leaves( *spacetime_root, *temporal_root, leaves );
   }
 
-  const spacetime_tensor_mesh * current_mesh
-    = _spacetime_mesh.get_local_mesh( );
+  // const spacetime_tensor_mesh * current_mesh
+  //  = _spacetime_mesh.get_local_mesh( );
   for ( auto it : leaves ) {
     it->reserve_elements( it->get_n_elements( ) );
   }
@@ -1066,8 +1066,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
 
   // while adding elements to the cluster count the number of different
   // time elements
-  lo n_time_elements = 0;
-  sc last_timestep = beginning - time_half_size;
+  // lo n_time_elements = 0;
+  // sc last_timestep = beginning - time_half_size;
 
   std::vector< std::vector< lo > > elems_thread( omp_get_max_threads( ) );
   std::vector< std::vector< sc > > timesteps_thread( omp_get_max_threads( ) );
