@@ -1,3 +1,5 @@
+*CMakeCache.txt
+*CMakeFiles/
 *.pdf
 *.optrpt
 *.vtu.*
