@@ -49,7 +49,7 @@ struct cauchy_data {
     return value;
   }
 
-  static constexpr sc _alpha{ 4 };
+  static constexpr sc _alpha{ 1.0 };
   static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
 };
 
@@ -85,12 +85,15 @@ int main( int argc, char * argv[] ) {
   if ( argc == 3 ) {
     geometry_case = strtol( argv[ 1 ], NULL, 10 );
     test_case = strtol( argv[ 2 ], NULL, 10 );
-  } else if ( argc == 6 ) {
+  } else if ( argc == 9 ) {
     geometry_case = strtol( argv[ 1 ], NULL, 10 );
     test_case = strtol( argv[ 2 ], NULL, 10 );
     refine = strtol( argv[ 3 ], NULL, 10 );
     n_min_elems = strtol( argv[ 4 ], NULL, 10 );
     n_nearfield_clusters = strtol( argv[ 5 ], NULL, 10 );
+    temp_order = strtol( argv[ 6 ], NULL, 10 );
+    spat_order = strtol( argv[ 7 ], NULL, 10 );
+    st_coeff = atof( argv[ 8 ] );
   }
 
   if ( myRank == 0 ) {
@@ -139,6 +142,27 @@ int main( int argc, char * argv[] ) {
     n_timesteps = 32;
     space_init_refine = 2;
     end_time = 0.5;
+  } else if ( geometry_case == 5 ) {
+    // same as 4, but considering only half of the temporal domain (to overcome
+    // problems due to memory requirements)
+    spatial_mesh_file = "./mesh_files/cube_24_half_scale.txt";
+    n_timesteps = 16;
+    space_init_refine = 2;
+    end_time = 0.25;
+  } else if ( geometry_case == 6 ) {
+    // same as 4, but considering only a quarter of the temporal domain (to
+    // overcome problems due to memory requirements)
+    spatial_mesh_file = "./mesh_files/cube_24_half_scale.txt";
+    n_timesteps = 8;
+    space_init_refine = 2;
+    end_time = 0.125;
+  } else if ( geometry_case == 7 ) {
+    // same as 5, but refined already once to allow execution with more
+    // processes
+    spatial_mesh_file = "./mesh_files/cube_24_half_scale.txt";
+    n_timesteps = 64;
+    space_init_refine = 3;
+    end_time = 0.25;
   }
 
   // parameters for distributed spacetime mesh
