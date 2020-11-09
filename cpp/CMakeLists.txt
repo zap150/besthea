@@ -22,10 +22,9 @@ include(cmake/macros.cmake)
 
 #find_package(MKL REQUIRED)
 #include_directories(SYSTEM ${MKL_INCLUDE_DIRS})
-include_directories(/usr/include/mkl)
+include_directories(SYSTEM /usr/include/mkl)
 link_directories(/usr/lib/x86_64-linux-gnu/mkl)
-include_directories($ENV{MKLROOT}/include)
-link_directories(/usr/lib/x86_64-linux-gnu/mkl)
+include_directories(SYSTEM $ENV{MKLROOT}/include)
 link_directories($ENV{MKLROOT}/lib)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMKL_INT=long")
 
