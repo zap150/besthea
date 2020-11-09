@@ -28,9 +28,9 @@
 
 #include "besthea/linear_operator.h"
 
-#include "mkl_rci.h"
-
 #include <vector>
+
+#include <mkl_rci.h>
 
 bool besthea::linear_algebra::linear_operator::mkl_cg_solve(
   const vector_type & rhs, vector_type & solution, sc & relative_residual_error,

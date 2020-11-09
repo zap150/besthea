@@ -28,8 +28,6 @@
 
 #include "besthea/vector.h"
 
-#include "besthea/blas_lapack_wrapper.h"
-
 #include <algorithm>
 #include <random>
 

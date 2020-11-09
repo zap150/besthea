@@ -28,18 +28,18 @@
 
 #include "besthea/distributed_pFMM_matrix.h"
 
-#include "besthea/blas_lapack_wrapper.h"
 #include "besthea/quadrature.h"
-#include "mkl_rci.h"
+
+#include <filesystem>
+#include <set>
+#include <sstream>
+
+#include <mkl_rci.h>
 
 using besthea::linear_algebra::full_matrix;
 using besthea::mesh::distributed_spacetime_cluster_tree;
 using besthea::mesh::general_spacetime_cluster;
 using besthea::mesh::scheduling_time_cluster;
-
-#include <filesystem>
-#include <set>
-#include <sstream>
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,

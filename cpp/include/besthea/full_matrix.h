@@ -33,12 +33,13 @@
 #ifndef INCLUDE_BESTHEA_FULL_MATRIX_H_
 #define INCLUDE_BESTHEA_FULL_MATRIX_H_
 
-#include "besthea/blas_lapack_wrapper.h"
 #include "besthea/matrix.h"
 #include "besthea/settings.h"
 
 #include <iostream>
 #include <vector>
+
+#include <mkl.h>
 
 namespace besthea {
   namespace linear_algebra {

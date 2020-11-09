@@ -33,11 +33,12 @@
 #ifndef INCLUDE_BESTHEA_VECTOR_H_
 #define INCLUDE_BESTHEA_VECTOR_H_
 
-#include "besthea/blas_lapack_wrapper.h"
 #include "besthea/settings.h"
 
 #include <iostream>
 #include <vector>
+
+#include <mkl.h>
 
 namespace besthea {
   namespace linear_algebra {

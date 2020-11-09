@@ -28,8 +28,6 @@
 
 #include "besthea/full_matrix.h"
 
-#include "besthea/blas_lapack_wrapper.h"
-
 #include <algorithm>
 #include <random>
 
