@@ -11,6 +11,10 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+include(cmake/macros.cmake)
+
+setup_compiler()
+
 if("${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
   message(FATAL_ERROR "In-source build is disabled. Remove CMakeCache.txt and"
     " CMakFiles and start again from a dedicated build directory.")
@@ -18,23 +22,17 @@ endif()
 
 add_compile_definitions(DATA_WIDTH=4)
 
-include(cmake/macros.cmake)
+enable_OpenMP()
 
 #find_package(MKL REQUIRED)
 #include_directories(SYSTEM ${MKL_INCLUDE_DIRS})
 
-include_directories(/usr/include/mkl)
-link_directories(/usr/lib/x86_64-linux-gnu/mkl)
 include_directories($ENV{MKLROOT}/include)
 link_directories($ENV{MKLROOT}/lib)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMKL_INT=long")
 
 find_package(MPI REQUIRED)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
-
-enable_OpenMP()
-
-#define_module(LIBRARY besthea)
 
 include_directories(include external external/eigen)
 
@@ -43,3 +41,4 @@ file(GLOB besthea_SOURCES src/*.cpp)
 add_library(besthea STATIC ${besthea_SOURCES})
 
 add_subdirectory(test/uniform_tensor_dirichlet)
+add_subdirectory(test/uniform_tensor_neumann)

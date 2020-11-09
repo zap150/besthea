@@ -80,9 +80,6 @@ struct cauchy_data {
 };
 
 int main( int argc, char * argv[] ) {
-  mkl_set_interface_layer(MKL_INTERFACE_ILP64);
-  mkl_set_threading_layer(MKL_THREADING_INTEL);
-
   std::string file = "./mesh_files/cube_192_vol.txt";
   int refine = 0;
   lo n_timesteps = 8;
