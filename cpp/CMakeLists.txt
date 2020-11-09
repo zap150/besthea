@@ -11,6 +11,11 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+if("${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
+  message(FATAL_ERROR "In-source build is disabled. Remove CMakeCache.txt and"
+    " CMakFiles and start again from a dedicated build directory.")
+endif()
+
 add_compile_definitions(DATA_WIDTH=4)
 
 include(cmake/macros.cmake)
