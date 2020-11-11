@@ -34,7 +34,18 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMKL_INT=long")
 find_package(MPI REQUIRED)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 
-include_directories(include external third_party/eigen)
+add_subdirectory(third_party/boost/align)
+include_directories(include third_party/boost/align/include)
+add_subdirectory(third_party/boost/config)
+include_directories(include third_party/boost/config/include)
+add_subdirectory(third_party/boost/assert)
+include_directories(include third_party/boost/assert/include)
+add_subdirectory(third_party/boost/static_assert)
+include_directories(include third_party/boost/static_assert/include)
+add_subdirectory(third_party/boost/core)
+include_directories(include third_party/boost/core/include)
+
+include_directories(include third_party/eigen)
 
 file(GLOB besthea_SOURCES src/*.cpp)
 
