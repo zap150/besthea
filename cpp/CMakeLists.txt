@@ -34,7 +34,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMKL_INT=long")
 find_package(MPI REQUIRED)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 
-include_directories(include external external/eigen)
+include_directories(include external third_party/eigen)
 
 file(GLOB besthea_SOURCES src/*.cpp)
 
