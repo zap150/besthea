@@ -60,7 +60,7 @@ besthea::linear_algebra::block_vector::~block_vector( ) {
 void besthea::linear_algebra::block_vector::print(
   std::ostream & stream ) const {
   for ( const vector_type & v : _data ) {
-    v.print( );
+    v.print( stream );
   }
 }
 

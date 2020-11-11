@@ -171,7 +171,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
-  general_spacetime_cluster * pseudo_root ) {
+  [[maybe_unused]] general_spacetime_cluster * pseudo_root ) {
   tree_structure * dist_tree = get_distribution_tree( );
   lo dist_tree_depth = dist_tree->get_levels( );
   lo dist_tree_depth_coll;
@@ -1911,8 +1911,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
         = ( 1 << ( global_tree_levels - send_cluster_level ) ) - 1;
       send_array_size += send_cluster_vec_size;
     }
-    char send_structure_array[ send_array_size ];
-    sc send_cluster_bounds_array[ 2 * send_array_size ];
+    std::vector< char > send_structure_array( send_array_size );
+    std::vector< sc > send_cluster_bounds_array( 2 * send_array_size );
     for ( lou i = 0; i < send_array_size; ++i ) {
       send_structure_array[ i ] = 0;
     }
@@ -1945,10 +1945,10 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
       send_array_pos += send_cluster_vec_size;
     }
     // send first the tree structure
-    MPI_Send( send_structure_array, send_array_size, MPI_CHAR,
+    MPI_Send( send_structure_array.data( ), send_array_size, MPI_CHAR,
       _my_rank - communication_offset, communication_offset, *_comm );
     // next, send the cluster bounds (tag increased by 1 to distinguish)
-    MPI_Send( send_cluster_bounds_array, 2 * send_array_size,
+    MPI_Send( send_cluster_bounds_array.data( ), 2 * send_array_size,
       get_scalar_type< sc >::MPI_SC( ), _my_rank - communication_offset,
       communication_offset + 1, *_comm );
   }
@@ -1967,15 +1967,15 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
         = ( 1 << ( global_tree_levels - receive_cluster_level ) ) - 1;
       receive_array_size += receive_cluster_vec_size;
     }
-    char receive_structure_array[ receive_array_size ];
-    sc receive_cluster_bounds_array[ 2 * receive_array_size ];
+    std::vector< char > receive_structure_array( receive_array_size );
+    std::vector< sc > receive_cluster_bounds_array( 2 * receive_array_size );
     // call the appropriate receive operations for the tree structure data and
     // the cluster bounds data
     MPI_Status status_1, status_2;
-    MPI_Recv( receive_structure_array, receive_array_size, MPI_CHAR,
+    MPI_Recv( receive_structure_array.data( ), receive_array_size, MPI_CHAR,
       _my_rank + communication_offset, communication_offset, *_comm,
       &status_1 );
-    MPI_Recv( receive_cluster_bounds_array, 2 * receive_array_size,
+    MPI_Recv( receive_cluster_bounds_array.data( ), 2 * receive_array_size,
       get_scalar_type< sc >::MPI_SC( ), _my_rank + communication_offset,
       communication_offset + 1, *_comm, &status_2 );
 
@@ -1990,9 +1990,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
         local_pos += 1;
         // refine the tree structure uniformly at the given cluster.
         receive_clusters_vector[ i ]->set_global_leaf_status( false );
-        distribution_tree->create_tree_from_arrays( receive_structure_array,
-          receive_cluster_bounds_array, *( receive_clusters_vector[ i ] ),
-          local_pos );
+        distribution_tree->create_tree_from_arrays(
+          receive_structure_array.data( ), receive_cluster_bounds_array.data( ),
+          *( receive_clusters_vector[ i ] ), local_pos );
       }
       // find the starting position of the entries corresponding to the
       // subtree of the next cluster
@@ -2013,7 +2013,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::send_leaf_info(
     for ( auto send_cluster : send_cluster_vector ) {
       array_size += send_cluster->get_associated_spacetime_clusters( )->size( );
     }
-    bool leaf_info_array[ array_size ];
+    bool * leaf_info_array = new bool[ array_size ];
     // fill the array appropriately
     lo pos = 0;
     for ( auto send_cluster : send_cluster_vector ) {
@@ -2026,6 +2026,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::send_leaf_info(
     // send the whole array at once to the appropriate process
     MPI_Send( leaf_info_array, array_size, MPI_CXX_BOOL,
       _my_rank + communication_offset, communication_offset, *_comm );
+    delete[] leaf_info_array;
   }
 }
 
@@ -2039,7 +2040,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::receive_leaf_info(
       array_size
         += receive_cluster->get_associated_spacetime_clusters( )->size( );
     }
-    bool leaf_info_array[ array_size ];
+    bool * leaf_info_array = new bool[ array_size ];
 
     // start a blocking receive operation to receive the information
     MPI_Status status;
@@ -2055,6 +2056,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::receive_leaf_info(
         pos++;
       }
     }
+    delete[] leaf_info_array;
   }
 }
 

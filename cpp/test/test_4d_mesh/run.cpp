@@ -52,10 +52,8 @@ struct cauchy_data {
 };
 
 int main( int argc, char * argv[] ) {
-  lo test_case = 3;
   std::string file = "./mesh_files/cube_12_st.txt";
   int refine = 1;
-  lo n_timesteps = 8;
 
   if ( argc > 1 ) {
     file.assign( argv[ 1 ] );
@@ -66,6 +64,6 @@ int main( int argc, char * argv[] ) {
 
   tetrahedral_spacetime_mesh spacetime_mesh( file );
   spacetime_mesh.print_info( );
-  spacetime_mesh.refine( 1 );
+  spacetime_mesh.refine( refine );
   spacetime_mesh.print_info( );
 }

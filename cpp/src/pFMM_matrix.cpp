@@ -960,7 +960,8 @@ void besthea::linear_algebra::pFMM_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  apply_s2m_operations( block_vector_type const & x, bool trans ) const {
+  apply_s2m_operations(
+    block_vector_type const & x, [[maybe_unused]] bool trans ) const {
   apply_s2m_operations_p0( x );
 }
 
@@ -970,7 +971,8 @@ void besthea::linear_algebra::pFMM_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
-  apply_s2m_operations( block_vector_type const & x, bool trans ) const {
+  apply_s2m_operations(
+    block_vector_type const & x, [[maybe_unused]] bool trans ) const {
   apply_s2m_operations_p1( x );
 }
 
@@ -1005,7 +1007,8 @@ void besthea::linear_algebra::pFMM_matrix<
   besthea::bem::spacetime_heat_adl_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  apply_s2m_operations( block_vector_type const & x, bool trans ) const {
+  apply_s2m_operations(
+    block_vector_type const & x, [[maybe_unused]] bool trans ) const {
   apply_s2m_operations_p0( x );
 }
 
@@ -1562,7 +1565,8 @@ void besthea::linear_algebra::pFMM_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  apply_l2t_operations( block_vector_type & y, bool trans ) const {
+  apply_l2t_operations(
+    block_vector_type & y, [[maybe_unused]] bool trans ) const {
   this->apply_l2t_operations_p0( y );
 }
 
@@ -1572,7 +1576,8 @@ void besthea::linear_algebra::pFMM_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
-  apply_l2t_operations( block_vector_type & y, bool trans ) const {
+  apply_l2t_operations(
+    block_vector_type & y, [[maybe_unused]] bool trans ) const {
   this->apply_l2t_operations_p1( y );
 }
 
@@ -1596,7 +1601,8 @@ void besthea::linear_algebra::pFMM_matrix<
   besthea::bem::spacetime_heat_adl_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  apply_l2t_operations( block_vector_type & y, bool trans ) const {
+  apply_l2t_operations(
+    block_vector_type & y, [[maybe_unused]] bool trans ) const {
   this->apply_l2t_operations_p1_normal_drv( y );
 }
 

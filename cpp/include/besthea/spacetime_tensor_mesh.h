@@ -448,10 +448,12 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * @param[in] element_labels Labels for elemental data.
    * @param[in] time_stride Stride for time steps
    */
-  virtual bool print_ensight_case( const std::string & directory,
-    const std::vector< std::string > * node_labels = nullptr,
-    const std::vector< std::string > * element_labels = nullptr,
-    lo time_stride = 1 ) const {
+  virtual bool print_ensight_case(
+    [[maybe_unused]] const std::string & directory,
+    [[maybe_unused]] const std::vector< std::string > * node_labels = nullptr,
+    [[maybe_unused]] const std::vector< std::string > * element_labels
+    = nullptr,
+    [[maybe_unused]] lo time_stride = 1 ) const {
     return false;
   }
 
@@ -459,7 +461,8 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * Prints the EnSight Gold geometry file.
    * @param[in] directory Directory to which the geometry file is saved.
    */
-  virtual bool print_ensight_geometry( const std::string & directory ) const {
+  virtual bool print_ensight_geometry(
+    [[maybe_unused]] const std::string & directory ) const {
     return false;
   }
 
@@ -472,13 +475,18 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * @param[in] element_data Scalar elemental data.
    * @param[in] time_stride Stride for time steps.
    */
-  virtual bool print_ensight_datafiles( const std::string & directory,
-    const std::vector< std::string > * node_labels = nullptr,
-    const std::vector< linear_algebra::block_vector * > * node_data = nullptr,
-    const std::vector< std::string > * element_labels = nullptr,
-    const std::vector< linear_algebra::block_vector * > * element_data
+  virtual bool print_ensight_datafiles(
+    [[maybe_unused]] const std::string & directory,
+    [[maybe_unused]] const std::vector< std::string > * node_labels = nullptr,
+    [[maybe_unused]] const std::vector< linear_algebra::block_vector * > *
+      node_data
     = nullptr,
-    lo time_stride = 1 ) const {
+    [[maybe_unused]] const std::vector< std::string > * element_labels
+    = nullptr,
+    [[maybe_unused]] const std::vector< linear_algebra::block_vector * > *
+      element_data
+    = nullptr,
+    [[maybe_unused]] lo time_stride = 1 ) const {
     return false;
   }
 

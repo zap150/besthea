@@ -999,8 +999,9 @@ template<>
 inline void
 besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs<
   besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p0 > >( lo i_loc_elem, int n_shared_vertices,
-  int rotation, bool swap, std::vector< lo > & indices ) const {
+    besthea::bem::basis_tri_p0 > >( lo i_loc_elem,
+  [[maybe_unused]] int n_shared_vertices, [[maybe_unused]] int rotation,
+  [[maybe_unused]] bool swap, std::vector< lo > & indices ) const {
   indices[ 0 ] = i_loc_elem;
 }
 
@@ -1009,8 +1010,9 @@ template<>
 inline void
 besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs<
   besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p1 > >( lo i_loc_elem, int n_shared_vertices,
-  int rotation, bool swap, std::vector< lo > & indices ) const {
+    besthea::bem::basis_tri_p1 > >( lo i_loc_elem,
+  [[maybe_unused]] int n_shared_vertices, [[maybe_unused]] int rotation,
+  [[maybe_unused]] bool swap, std::vector< lo > & indices ) const {
   std::vector< lo > local_space_indices
     = { local_spacetime_node_idx_2_local_space_node_idx(
           _elems_2_local_nodes[ 6 * i_loc_elem ] ),

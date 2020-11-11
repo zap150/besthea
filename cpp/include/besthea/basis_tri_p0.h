@@ -97,8 +97,9 @@ class besthea::bem::basis_tri_p0
    * @param[in] n Element normal.
    */
 #pragma omp declare simd uniform( this, i_elem, i_fun, n ) simdlen( DATA_WIDTH )
-  sc do_evaluate(
-    lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n ) const {
+  sc do_evaluate( [[maybe_unused]] lo i_elem, [[maybe_unused]] lo i_fun,
+    [[maybe_unused]] sc x1_ref, [[maybe_unused]] sc x2_ref,
+    [[maybe_unused]] const sc * n ) const {
     return 1.0;
   }
 
@@ -116,8 +117,10 @@ class besthea::bem::basis_tri_p0
    */
 #pragma omp declare simd uniform( this, i_elem, i_fun, n, n_shared_vertices, \
   rotation, swap ) simdlen( DATA_WIDTH )
-  sc do_evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, const sc * n,
-    int n_shared_vertices, int rotation, bool swap ) const {
+  sc do_evaluate( [[maybe_unused]] lo i_elem, [[maybe_unused]] lo i_fun,
+    [[maybe_unused]] sc x1_ref, [[maybe_unused]] sc x2_ref,
+    [[maybe_unused]] const sc * n, [[maybe_unused]] int n_shared_vertices,
+    [[maybe_unused]] int rotation, [[maybe_unused]] bool swap ) const {
     return 1.0;
   }
 };

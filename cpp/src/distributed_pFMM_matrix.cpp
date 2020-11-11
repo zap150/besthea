@@ -134,7 +134,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   // initialize data which is used to check for received data.
   int outcount = 0;
-  int array_of_indices[ _receive_data_information.size( ) ];
+  std::vector< int > array_of_indices( _receive_data_information.size( ) );
   for ( lou i = 0; i < _receive_data_information.size( ); ++i ) {
     array_of_indices[ i ] = 0;
   }
@@ -199,7 +199,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 #pragma omp single
     {
       // start the receive operationss
-      MPI_Request array_of_requests[ _receive_data_information.size( ) ];
+      std::vector< MPI_Request > array_of_requests(
+        _receive_data_information.size( ) );
       start_receive_operations( array_of_requests );
       while ( true ) {
         if ( m_list.empty( ) && m2l_list.empty( ) && l_list.empty( )
@@ -1508,7 +1509,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     // apply the spatial m2m operation to all child moments and store the
     // results in a buffer
     // @todo use buffer as input argument to avoid reallocation.
-    sc buffer_array[ ( _temp_order + 1 ) * _spat_contribution_size ];
+    std::vector< sc > buffer_array(
+      ( _temp_order + 1 ) * _spat_contribution_size );
     for ( int i = 0; i < ( _temp_order + 1 ) * _spat_contribution_size; ++i ) {
       buffer_array[ i ] = 0.0;
     }
@@ -1524,7 +1526,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     // apply the temporal m2m operation to the buffer and add the result to
     // the parent moment
     apply_temporal_m2m_operation(
-      buffer_array, temporal_m2m_matrix, parent_moment );
+      buffer_array.data( ), temporal_m2m_matrix, parent_moment );
   }
 }
 
@@ -1550,7 +1552,8 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::apply_spatial_m2m_operation( const sc *
                                                                child_moment,
-  const lo n_space_div_parent, const slou octant, sc * output_array ) const {
+  const lo n_space_div_parent, const slou octant,
+  std::vector< sc > & output_array ) const {
   const vector_type * m2m_coeffs_s_dim_0;
   const vector_type * m2m_coeffs_s_dim_1;
   const vector_type * m2m_coeffs_s_dim_2;
@@ -1695,7 +1698,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   std::vector< general_spacetime_cluster * > * associated_spacetime_targets
     = tar_cluster->get_associated_spacetime_clusters( );
 #pragma omp taskloop
-  for ( lo i = 0; i < associated_spacetime_targets->size( ); ++i ) {
+  for ( lou i = 0; i < associated_spacetime_targets->size( ); ++i ) {
     //      for ( auto spacetime_tar : *associated_spacetime_targets ) {
     std::vector< general_spacetime_cluster * > * spacetime_interaction_list
       = ( *associated_spacetime_targets )[ i ]->get_interaction_list( );
@@ -1967,12 +1970,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     // apply the temporal l2l operation to the parent's local contribution and
     // store the results in a buffer
     // @todo use buffer as input argument to avoid reallocation.
-    sc buffer_array[ ( _temp_order + 1 ) * _spat_contribution_size ];
+    std::vector< sc > buffer_array(
+      ( _temp_order + 1 ) * _spat_contribution_size );
     for ( int i = 0; i < ( _temp_order + 1 ) * _spat_contribution_size; ++i ) {
       buffer_array[ i ] = 0.0;
     }
     apply_temporal_m2m_operation(
-      parent_local_contribution, temporal_l2l_matrix, buffer_array );
+      parent_local_contribution, temporal_l2l_matrix, buffer_array.data( ) );
 
     for ( auto child : *children ) {
       short child_octant, current_configuration;
@@ -1980,7 +1984,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       if ( current_configuration == child_configuration ) {
         sc * child_local_contribution
           = child->get_pointer_to_local_contribution( );
-        apply_spatial_l2l_operation( buffer_array, n_space_div_parent,
+        apply_spatial_l2l_operation( buffer_array.data( ), n_space_div_parent,
           child_octant, child_local_contribution );
       }
     }
@@ -2385,12 +2389,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::check_for_received_data( MPI_Request *
-                                                           array_of_requests,
-  int array_of_indices[], int & outcount, bool verbose,
+  target_space,
+  source_space >::check_for_received_data( std::vector< MPI_Request > &
+                                             array_of_requests,
+  std::vector< int > & array_of_indices, int & outcount, bool verbose,
   const std::string & verbose_file ) const {
-  MPI_Testsome( _receive_data_information.size( ), array_of_requests, &outcount,
-    array_of_indices, MPI_STATUSES_IGNORE );
+  MPI_Testsome( _receive_data_information.size( ), array_of_requests.data( ),
+    &outcount, array_of_indices.data( ), MPI_STATUSES_IGNORE );
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -2559,8 +2564,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::start_receive_operations( MPI_Request
-    array_of_requests[] ) const {
+  target_space,
+  source_space >::start_receive_operations( std::vector< MPI_Request > &
+    array_of_requests ) const {
   // start the receive operations for the moments in the upward path
   for ( lou i = 0; i < _n_moments_to_receive_upward; ++i ) {
     lo source_id = _receive_data_information[ i ].second;

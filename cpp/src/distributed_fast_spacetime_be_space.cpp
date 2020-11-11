@@ -98,10 +98,11 @@ besthea::bem::distributed_fast_spacetime_be_space<
 
 template< class basis_type >
 void besthea::bem::distributed_fast_spacetime_be_space<
-  basis_type >::L2_projection( sc ( *f )( sc, sc, sc,
+  basis_type >::L2_projection( [[maybe_unused]] sc ( *f )( sc, sc, sc,
                                  const linear_algebra::coordinates< 3 > &, sc ),
-  block_vector_type & projection, int order_matrix, int order_rhs_spatial,
-  int order_rhs_temporal ) const {
+  [[maybe_unused]] block_vector_type & projection,
+  [[maybe_unused]] int order_matrix, [[maybe_unused]] int order_rhs_spatial,
+  [[maybe_unused]] int order_rhs_temporal ) const {
   std::cout << "distributed_fast_spacetime_be_space: "
             << "L2 projection not implemented yet! " << std::endl;
   //   besthea::linear_algebra::sparse_matrix M;
@@ -170,11 +171,12 @@ void besthea::bem::distributed_fast_spacetime_be_space<
 
 template< class basis_type >
 sc besthea::bem::distributed_fast_spacetime_be_space<
-  basis_type >::L2_relative_error( sc ( *f )( sc, sc, sc,
+  basis_type >::L2_relative_error( [[maybe_unused]] sc ( *f )( sc, sc, sc,
                                      const linear_algebra::coordinates< 3 > &,
                                      sc ),
-  const block_vector_type & approximation, int order_rhs_spatial,
-  int order_rhs_temporal ) const {
+  [[maybe_unused]] const block_vector_type & approximation,
+  [[maybe_unused]] int order_rhs_spatial,
+  [[maybe_unused]] int order_rhs_temporal ) const {
   std::cout << "distributed_fast_spacetime_be_space: "
             << "L2 relative error not implemented yet! " << std::endl;
   //   lo n_timesteps = get_mesh( )->get_n_temporal_elements( );

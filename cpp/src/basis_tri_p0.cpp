@@ -51,7 +51,7 @@ void besthea::bem::basis_tri_p0::do_local_to_global(
 }
 
 void besthea::bem::basis_tri_p0::do_local_to_global( lo i_elem,
-  int n_shared_vertices, int rotation, bool swap,
-  std::vector< lo > & indices ) const {
+  [[maybe_unused]] int n_shared_vertices, [[maybe_unused]] int rotation,
+  [[maybe_unused]] bool swap, std::vector< lo > & indices ) const {
   indices[ 0 ] = i_elem;
 }

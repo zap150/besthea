@@ -44,8 +44,9 @@ besthea::bem::spacetime_be_space< basis_type >::~spacetime_be_space( ) {
 
 template< class basis_type >
 void besthea::bem::spacetime_be_space< basis_type >::interpolation(
-  sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-  block_vector_type & interpolation ) const {
+  [[maybe_unused]] sc ( *f )(
+    sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
+  [[maybe_unused]] block_vector_type & interpolation ) const {
   std::cout << "Only use specialized templates in descendant classes!"
             << std::endl;
 }

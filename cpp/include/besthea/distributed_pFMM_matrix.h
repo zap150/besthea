@@ -430,7 +430,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *        appropriate m2m coefficients for the operation.
    */
   void apply_spatial_m2m_operation( const sc * child_moment,
-    const lo n_space_div_parent, const slou octant, sc * output_array ) const;
+    const lo n_space_div_parent, const slou octant,
+    std::vector< sc > & output_array ) const;
 
   /**
    * Calls all M2L operations associated with a given pair of scheduling time
@@ -600,9 +601,10 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
    */
-  void check_for_received_data( MPI_Request * array_of_requests,
-    int array_of_indices[], int & outcount, bool verbose,
-    const std::string & verbose_file ) const;
+  void check_for_received_data( std::vector< MPI_Request > & array_of_requests,
+    std::vector< int > & array_of_indices, int & outcount,
+    [[maybe_unused]] bool verbose,
+    [[maybe_unused]] const std::string & verbose_file ) const;
 
   /**
    * Returns an iterator pointing to the next cluster in the l-list whose
@@ -708,7 +710,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                                  array. It is expected to have at least
    *                                  the size of @p receive_vector .
    */
-  void start_receive_operations( MPI_Request array_of_requests[] ) const;
+  void start_receive_operations(
+    std::vector< MPI_Request > & array_of_requests ) const;
 
   /**
    * Compute quadrature of the Chebyshev polynomials and p0 basis functions for
