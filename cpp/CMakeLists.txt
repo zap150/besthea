@@ -12,6 +12,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 include(cmake/macros.cmake)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake/Modules)
 
 setup_compiler()
 
@@ -24,12 +25,8 @@ add_compile_definitions(DATA_WIDTH=4)
 
 enable_OpenMP()
 
-#find_package(MKL REQUIRED)
-#include_directories(SYSTEM ${MKL_INCLUDE_DIRS})
-
-include_directories($ENV{MKLROOT}/include)
-link_directories($ENV{MKLROOT}/lib)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMKL_INT=long")
+find_package(MKL REQUIRED)
+include_directories(SYSTEM ${MKL_INCLUDE_DIRS})
 
 find_package(MPI REQUIRED)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
