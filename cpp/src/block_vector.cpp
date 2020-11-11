@@ -305,7 +305,7 @@ void besthea::linear_algebra::block_vector::add_local_part< besthea::bem::
           spacetime_elements[ i_time * n_space_elements + i_space ] ) );
       // for the spatial mesh no transformation from local 2 global is
       // necessary since there is just one global space mesh at the moment.
-      add( global_time_index, global_space_index,
+      add_atomic( global_time_index, global_space_index,
         local_vector[ i_time * n_space_elements + i_space ] );
     }
   }
@@ -346,7 +346,7 @@ void besthea::linear_algebra::block_vector::add_local_part< besthea::bem::
         = local_2_global_nodes[ i_space ] % local_mesh->get_n_spatial_nodes( );
       // for the spatial mesh no transformation from local 2 global is
       // necessary since there is just one global space mesh at the moment.
-      add( global_time_index, global_space_index,
+      add_atomic( global_time_index, global_space_index,
         local_vector[ i_time * n_space_nodes + i_space ] );
     }
   }

@@ -30,6 +30,7 @@
 
 #include "besthea/blas_lapack_wrapper.h"
 #include "besthea/quadrature.h"
+#include "besthea/timer.h"
 #include "mkl_rci.h"
 
 using besthea::linear_algebra::full_matrix;
@@ -183,7 +184,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // allocate buffers for m2l computation
   _aux_buffer_0.resize( omp_get_max_threads( ) );
   _aux_buffer_1.resize( omp_get_max_threads( ) );
-
   // start the main "job scheduling" algorithm
   // the "master" thread checks for new available data, spawns tasks, and
   // removes clusters from lists
@@ -193,12 +193,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       ( _temp_order + 1 ) * ( _temp_order + 1 ), _spat_contribution_size );
     _aux_buffer_1[ omp_get_thread_num( ) ].resize(
       ( _temp_order + 1 ) * ( _temp_order + 1 ), _spat_contribution_size );
+
+//    besthea::tools::timer t;
+//    t.reset();
 #pragma omp single
     {
       // start the receive operationss
       MPI_Request array_of_requests[ _receive_data_information.size( ) ];
       start_receive_operations( array_of_requests );
-
       while ( true ) {
         if ( m_list.empty( ) && m2l_list.empty( ) && l_list.empty( )
           && n_list.empty( ) ) {
@@ -1222,7 +1224,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
     std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
       = time_cluster->get_associated_spacetime_clusters( );
-
+#pragma omp taskloop shared( sources )
     for ( lou i = 0; i < time_cluster->get_n_associated_leaves( ); ++i ) {
       general_spacetime_cluster * current_cluster
         = ( *associated_spacetime_clusters )[ i ];
@@ -1432,6 +1434,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     // call the m2m operations for all non-leaf spacetime clusters which are
     // associated with the parent scheduling time cluster
 
+#pragma omp taskloop
     for ( lou i = n_associated_leaves;
           i < associated_spacetime_clusters->size( ); ++i ) {
       general_spacetime_cluster * current_cluster
@@ -1691,41 +1694,17 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   std::vector< general_spacetime_cluster * > * associated_spacetime_targets
     = tar_cluster->get_associated_spacetime_clusters( );
-  //    for ( auto spacetime_tar : *associated_spacetime_targets ) {
-  //      std::vector< general_spacetime_cluster * > *
-  //      spacetime_interaction_list
-  //        = spacetime_tar->get_interaction_list( );
-  //      for ( auto spacetime_src : *spacetime_interaction_list ) {
-  //        if ( spacetime_src->get_global_time_index( )
-  //          == src_cluster->get_global_index( ) ) {
-  //          apply_m2l_operation( spacetime_src, spacetime_tar );
-  //        }
-  //      }
-  //    }
-
-  lo length = 0;
-  for ( auto spacetime_tar : *associated_spacetime_targets ) {
-    length += spacetime_tar->get_interaction_list( )->size( );
-  }
-  std::vector< general_spacetime_cluster * > st_tar_clusters( length );
-  std::vector< general_spacetime_cluster * > st_src_clusters( length );
-  lo count = 0;
-  for ( auto spacetime_tar : *associated_spacetime_targets ) {
+#pragma omp taskloop
+  for ( lo i = 0; i < associated_spacetime_targets->size( ); ++i ) {
+    //      for ( auto spacetime_tar : *associated_spacetime_targets ) {
     std::vector< general_spacetime_cluster * > * spacetime_interaction_list
-      = spacetime_tar->get_interaction_list( );
+      = ( *associated_spacetime_targets )[ i ]->get_interaction_list( );
     for ( auto spacetime_src : *spacetime_interaction_list ) {
-      st_tar_clusters[ count ] = spacetime_tar;
-      st_src_clusters[ count ] = spacetime_src;
-      count++;
-    }
-  }
-
-  //#pragma omp parallel for schedule( dynamic )
-  //#pragma omp taskloop
-  for ( lo i = 0; i < count; ++i ) {
-    if ( st_src_clusters[ i ]->get_global_time_index( )
-      == src_cluster->get_global_index( ) ) {
-      apply_m2l_operation( st_src_clusters[ i ], st_tar_clusters[ i ] );
+      if ( spacetime_src->get_global_time_index( )
+        == src_cluster->get_global_index( ) ) {
+        apply_m2l_operation(
+          spacetime_src, ( *associated_spacetime_targets )[ i ] );
+      }
     }
   }
 }
@@ -1875,7 +1854,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         for ( lo beta0 = 0; beta0 <= _spat_order - alpha1 - alpha2; ++beta0 ) {
           for ( lo a = 0; a <= _temp_order; ++a ) {
             val = 0;
-#pragma omp simd aligned(  buffer_for_coeffs_data, aux_buffer_1_data, tar_local : DATA_ALIGN ) simdlen( DATA_WIDTH) reduction( + : val)
+#pragma omp simd aligned( buffer_for_coeffs_data, aux_buffer_1_data, tar_local : DATA_ALIGN ) simdlen( DATA_WIDTH) reduction( + : val)
             for ( lo b = 0; b <= _temp_order; ++b ) {
               val += buffer_for_coeffs_data[ alpha0 * hlp_acs_alpha
                        + beta0 * hlp_acs_beta + a * hlp_acs_a + b ]
@@ -1915,8 +1894,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
     = parent_cluster->get_associated_spacetime_clusters( );
   lou n_associated_leaves = parent_cluster->get_n_associated_leaves( );
-  // call the l2l operations for all non-leaf spacetime clusters which are
-  // associated with the parent scheduling time cluster
+// call the l2l operations for all non-leaf spacetime clusters which are
+// associated with the parent scheduling time cluster
+#pragma omp taskloop
   for ( lou i = n_associated_leaves; i < associated_spacetime_clusters->size( );
         ++i ) {
     apply_grouped_l2l_operation(
@@ -2171,8 +2151,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
     std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
       = time_cluster->get_associated_spacetime_clusters( );
-
-    for ( lou i = 0; i < time_cluster->get_n_associated_leaves( ); ++i ) {
+    lou i;
+    lou n = time_cluster->get_n_associated_leaves( );
+#pragma omp taskloop shared( output_vector, associated_spacetime_clusters )
+    for ( i = 0; i < n; ++i ) {
       apply_l2t_operation(
         ( *associated_spacetime_clusters )[ i ], output_vector );
     }
@@ -2344,8 +2326,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         = local_2_global_nodes[ i_space ] % local_mesh->get_n_spatial_nodes( );
       // for the spatial mesh no transformation from local 2 global is
       // necessary since there is just one global space mesh at the moment.
-      output_vector.add( distributed_mesh->local_2_global_time(
-                           local_start_idx, local_time_index ),
+      output_vector.add_atomic( distributed_mesh->local_2_global_time(
+                                  local_start_idx, local_time_index ),
         global_space_index, targets( i_time, i_space ) );
     }
   }
@@ -2369,6 +2351,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     associated_spacetime_targets
     = cluster->get_associated_spacetime_clusters( );
   lou n_associated_leaves = cluster->get_n_associated_leaves( );
+#pragma omp taskloop shared( output_vector, _clusterwise_nearfield_matrices )
   for ( lou i = 0; i < n_associated_leaves; ++i ) {
     general_spacetime_cluster * current_spacetime_target
       = ( *associated_spacetime_targets )[ i ];
