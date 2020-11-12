@@ -36,8 +36,6 @@ if (MKLROOT_PATH)
   if (IS_DIRECTORY ${EXPECT_ICC_LIBPATH})
 	set(ICC_LIBRARY_DIR ${EXPECT_ICC_LIBPATH})
   endif (IS_DIRECTORY ${EXPECT_ICC_LIBPATH})
-
-  message($ENV{LIBRARY_PATH})
 	
   # find specific library files
   find_library(LIB_MKL_CORE NAMES mkl_core HINTS ${MKL_LIBRARY_DIR})
