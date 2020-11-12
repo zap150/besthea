@@ -22,14 +22,6 @@ if (MKLROOT_PATH)
 	#  set(EXPECT_MKL_LIBPATH "${MKLROOT_PATH}/lib/ia32")
 	#endif (CMAKE_SIZEOF_VOID_P MATCHES 8)
   endif (CMAKE_SYSTEM_NAME MATCHES "Linux")
-
-  if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
-    set(EXPECT_ICC_LIBPATH "${MKLROOT_PATH}/../compiler/lib")
-  endif (CMAKE_SYSTEM_NAME MATCHES "Darwin")
-  
-  if (CMAKE_SYSTEM_NAME MATCHES "Linux")
-    set(EXPECT_ICC_LIBPATH "${MKLROOT_PATH}/../compiler/lib/intel64_lin")
-  endif (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	
   # set include
 	
@@ -44,12 +36,14 @@ if (MKLROOT_PATH)
   if (IS_DIRECTORY ${EXPECT_ICC_LIBPATH})
 	set(ICC_LIBRARY_DIR ${EXPECT_ICC_LIBPATH})
   endif (IS_DIRECTORY ${EXPECT_ICC_LIBPATH})
+
+  message($ENV{LIBRARY_PATH})
 	
   # find specific library files
   find_library(LIB_MKL_CORE NAMES mkl_core HINTS ${MKL_LIBRARY_DIR})
   find_library(LIB_MKL_INTEL_THREAD NAMES mkl_intel_thread HINTS ${MKL_LIBRARY_DIR})
   find_library(LIB_MKL_INTEL_ILP64 NAMES mkl_intel_ilp64 HINTS ${MKL_LIBRARY_DIR})
-  find_library(LIB_IOMP5 NAMES iomp5 HINTS ${ICC_LIBRARY_DIR} ENV ${LIBRARY_PATH})
+  find_library(LIB_IOMP5 NAMES iomp5 HINTS $ENV{LIBRARY_PATH} ENV ${LIBRARY_PATH})
   find_library(LIB_PTHREAD NAMES pthread)	
 	
 endif (MKLROOT_PATH)
