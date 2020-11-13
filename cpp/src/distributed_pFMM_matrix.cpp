@@ -256,7 +256,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 #pragma omp task depend( inout                                 \
                          : aux_dep_m2l_send [idx_receiver:1] ) \
   priority( 1000 )
-                    ( *it )->add_to_ready_interaction_list( current_cluster );
+                    ( *it )->update_ready_interaction_size( );
                   }
                 }
               }
@@ -329,6 +329,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
             lo idx_m_parent
               = current_cluster->get_parent( )->get_pos_in_m_list( );
+            lo idx_m = current_cluster->get_pos_in_m_list( );
+
             std::vector< scheduling_time_cluster * > * send_list
               = current_cluster->get_send_list( );
             lo send_list_size = 0;
@@ -344,15 +346,17 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                 // same cluster in the send-list (so the receiving does not
                 // collide)
                 case 0: {
-#pragma omp task depend( inout : aux_dep_m [idx_m_parent:1] ) priority( 500 )
+#pragma omp task depend( inout                                               \
+                         : aux_dep_m [idx_m_parent:1], aux_dep_m [idx_m:1] ) \
+  priority( 500 )
                   m_list_task( x, current_cluster, verbose, verbose_file );
                   break;
                 }
                 case 1: {
                   lo idx_receiver_1 = send_list->at( 0 )->get_pos_in_m_list( );
-#pragma omp task depend( inout                          \
-                         : aux_dep_m [idx_m_parent:1] ) \
-  depend( inout                                         \
+#pragma omp task depend( inout                                               \
+                         : aux_dep_m [idx_m_parent:1], aux_dep_m [idx_m:1] ) \
+  depend( inout                                                              \
           : aux_dep_m2l_send [idx_receiver_1:1] ) priority( 500 )
                   m_list_task( x, current_cluster, verbose, verbose_file );
                   break;
@@ -361,11 +365,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                   lo idx_receiver_1 = send_list->at( 0 )->get_pos_in_m_list( );
                   lo idx_receiver_2 = send_list->at( 1 )->get_pos_in_m_list( );
 
-#pragma omp task depend( inout                          \
-                         : aux_dep_m [idx_m_parent:1] ) \
-  depend( inout                                         \
-          : aux_dep_m2l_send [idx_receiver_1:1] )       \
-    depend( inout                                       \
+#pragma omp task depend( inout                                               \
+                         : aux_dep_m [idx_m_parent:1], aux_dep_m [idx_m:1] ) \
+  depend( inout                                                              \
+          : aux_dep_m2l_send [idx_receiver_1:1] )                            \
+    depend( inout                                                            \
             : aux_dep_m2l_send[ idx_receiver_2 ] ) priority( 500 )
                   m_list_task( x, current_cluster, verbose, verbose_file );
                   break;
@@ -378,15 +382,15 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                 // same cluster in the send-list (so the receiver's m2l
                 // operations do not collide)
                 case 0: {
-#pragma omp task priority( 500 )
+#pragma omp task depend( inout : aux_dep_m [idx_m:1] ) priority( 500 )
                   m_list_task( x, current_cluster, verbose, verbose_file );
                   break;
                 }
                 case 1: {
                   lo idx_receiver_1 = send_list->at( 0 )->get_pos_in_m_list( );
-#pragma omp task depend( inout                                   \
-                         : aux_dep_m2l_send [idx_receiver_1:1] ) \
-  priority( 500 )
+#pragma omp task depend( \
+  inout                  \
+  : aux_dep_m2l_send [idx_receiver_1:1], aux_dep_m [idx_m:1] ) priority( 500 )
                   m_list_task( x, current_cluster, verbose, verbose_file );
                   break;
                 }
@@ -394,9 +398,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                   lo idx_receiver_1 = send_list->at( 0 )->get_pos_in_m_list( );
                   lo idx_receiver_2 = send_list->at( 1 )->get_pos_in_m_list( );
 
-#pragma omp task depend( inout                                   \
-                         : aux_dep_m2l_send [idx_receiver_1:1] ) \
-  depend( inout                                                  \
+#pragma omp task depend(                                       \
+  inout                                                        \
+  : aux_dep_m2l_send [idx_receiver_1:1], aux_dep_m [idx_m:1] ) \
+  depend( inout                                                \
           : aux_dep_m2l_send [idx_receiver_2:1] ) priority( 500 )
                   m_list_task( x, current_cluster, verbose, verbose_file );
                   break;
@@ -424,7 +429,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             lo idx_l = current_cluster->get_pos_in_l_list( );
             lou ready_int_list_size
               = current_cluster->get_ready_interaction_list_size( );
-            current_cluster->set_sched_m2l_counter( ready_int_list_size );
             if ( ready_int_list_size
               == current_cluster->get_interaction_list( )->size( ) ) {
               m2l_list.erase( it_current_cluster );
@@ -483,10 +487,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   //   std::cout << "application executed" << std::endl;
   // }
 
-  delete aux_dep_m;
-  delete aux_dep_l;
-  delete aux_dep_m2l;
-  delete aux_dep_m2l_send;
+  delete[] aux_dep_m;
+  delete[] aux_dep_l;
+  delete[] aux_dep_m2l;
+  delete[] aux_dep_m2l_send;
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -1702,6 +1706,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     //      for ( auto spacetime_tar : *associated_spacetime_targets ) {
     std::vector< general_spacetime_cluster * > * spacetime_interaction_list
       = ( *associated_spacetime_targets )[ i ]->get_interaction_list( );
+
     for ( auto spacetime_src : *spacetime_interaction_list ) {
       if ( spacetime_src->get_global_time_index( )
         == src_cluster->get_global_index( ) ) {
@@ -2442,7 +2447,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // if the size of ready_interaction_list is greater than m2l_counter.
   while ( status != 3 && it_next_cluster != m2l_list.end( ) ) {
     if ( ( *it_next_cluster )->get_ready_interaction_list_size( )
-      > ( *it_next_cluster )->get_sched_m2l_counter( ) )
+      == ( *it_next_cluster )->get_interaction_list( )->size( ) )
       status = 3;
     else
       ++it_next_cluster;
@@ -2462,7 +2467,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     for ( auto it = send_list->begin( ); it != send_list->end( ); ++it ) {
       lo tar_process_id = ( *it )->get_process_id( );
       if ( tar_process_id == _my_rank ) {
-        ( *it )->add_to_ready_interaction_list( src_cluster );
+        ( *it )->update_ready_interaction_size( );
       } else if ( process_send_list.count( tar_process_id ) == 0 ) {
         if ( verbose ) {
           std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
@@ -3002,7 +3007,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // reset the m2l counter and clear the ready interaction
   // list of the clusters in the _m2l_list.
   for ( scheduling_time_cluster * cluster : _m2l_list ) {
-    cluster->set_sched_m2l_counter( 0 );
     cluster->set_m2l_counter( 0 );
     cluster->clear_ready_interaction_list( );
   }
@@ -3330,9 +3334,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   besthea::mesh::scheduling_time_cluster * current_cluster, bool verbose,
   const std::string & verbose_file ) const {
   std::vector< scheduling_time_cluster * > * ready_interaction_list
-    = current_cluster->get_ready_interaction_list( );
-  for ( slou i = current_cluster->get_m2l_counter( );
-        i < current_cluster->get_ready_interaction_list_size( ); ++i ) {
+    = current_cluster->get_interaction_list( );
+  //  for ( slou i = current_cluster->get_m2l_counter( );
+  for ( slou i = 0; i < current_cluster->get_ready_interaction_list_size( );
+        ++i ) {
     call_m2l_operations( ( *ready_interaction_list )[ i ], current_cluster,
       verbose, verbose_file );
     current_cluster->set_m2l_counter( i + 1 );

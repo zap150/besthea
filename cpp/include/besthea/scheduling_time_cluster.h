@@ -93,9 +93,7 @@ class besthea::mesh::scheduling_time_cluster {
       _active_upward_path( false ),
       _active_downward_path( false ),
       _upward_path_counter( -1 ),
-      _ready_interaction_list( nullptr ),
       _m2l_counter( 0 ),
-      _sched_m2l_counter( 0 ),
       _downward_path_status( 0 ),
       _associated_spacetime_clusters( nullptr ),
       _n_associated_leaves( 0 ),
@@ -107,7 +105,6 @@ class besthea::mesh::scheduling_time_cluster {
       _pos_in_l_list( -1 ),
       _pos_in_m2l_list( -1 ),
       _ready_interaction_list_size( 0 ) {
-    _ready_interaction_list = new std::vector< scheduling_time_cluster * >( );
   }
 
   scheduling_time_cluster( const scheduling_time_cluster & that ) = delete;
@@ -132,8 +129,6 @@ class besthea::mesh::scheduling_time_cluster {
       delete _interaction_list;
     if ( _send_list != nullptr )
       delete _send_list;
-    if ( _ready_interaction_list != nullptr )
-      delete _ready_interaction_list;
     if ( _associated_spacetime_clusters != nullptr )
       delete _associated_spacetime_clusters;
     if ( _associated_moments != nullptr )
@@ -167,8 +162,6 @@ class besthea::mesh::scheduling_time_cluster {
    * Deletes the ready interaction list
    */
   void delete_ready_interaction_list( ) {
-    delete _ready_interaction_list;
-    _ready_interaction_list = nullptr;
     _ready_interaction_list_size = 0;
   }
 
@@ -488,7 +481,6 @@ class besthea::mesh::scheduling_time_cluster {
    * @note If @p _ready_interaction_list is not allocated this is done here.
    */
   void add_to_ready_interaction_list( scheduling_time_cluster * src_cluster ) {
-    _ready_interaction_list->push_back( src_cluster );
 #pragma omp atomic update
     _ready_interaction_list_size++;
   }
@@ -498,25 +490,13 @@ class besthea::mesh::scheduling_time_cluster {
    * @note: The ready interaction list is only cleared, not deleted!
    */
   void clear_ready_interaction_list( ) {
-    _ready_interaction_list->clear( );
 #pragma omp atomic write
     _ready_interaction_list_size = 0;
   }
 
-  /**
-   * Returns a pointer to the list of clusters which are ready for interactions.
-   */
-  std::vector< scheduling_time_cluster * > * get_ready_interaction_list( ) {
-    return _ready_interaction_list;
-  }
-
-  /**
-   * Returns a pointer to the (const!) list of clusters which are ready for
-   * interactions.
-   */
-  const std::vector< scheduling_time_cluster * > * get_ready_interaction_list( )
-    const {
-    return _ready_interaction_list;
+  void update_ready_interaction_size( ) {
+#pragma omp atomic update
+    _ready_interaction_list_size++;
   }
 
   lou get_ready_interaction_list_size( ) {
@@ -623,20 +603,6 @@ class besthea::mesh::scheduling_time_cluster {
     _m2l_counter = new_value;
   }
 
-  /**
-   * Returns the value of @p _sched_m2l_counter .
-   */
-  lou get_sched_m2l_counter( ) const {
-    return _sched_m2l_counter;
-  }
-
-  /**
-   * Sets the scheduled m2l counter to a new given value.
-   * @param[in] new_value Value to which the counter is set.
-   */
-  void set_sched_m2l_counter( const slou new_value ) {
-    _sched_m2l_counter = new_value;
-  }
   /**
    * Sets the downward path status to the given value.
    * @param[in] new_status  Value to be set.
@@ -1146,15 +1112,8 @@ class besthea::mesh::scheduling_time_cluster {
   lo _upward_path_counter;  //!< Used to keep track of the dependencies in the
                             //!< upward path. If it is 0, the dependencies are
                             //!< fulfilled.
-  std::vector< scheduling_time_cluster * > *
-    _ready_interaction_list;  //!< Clusters from the interaction list are added
-                              //!< to this list, when their moments are ready.
-                              //!< It is used to manage the execution of M2L
-                              //!< operations in the distributed FMM.
   slou _m2l_counter;  //!< Used to keep track of the completed m2l operations.
 
-  slou _sched_m2l_counter;  //<! Used to keep track of the scheduled m2l
-                            // operations.
   char
     _downward_path_status;  //!< Used to keep track of the status in the
                             //!< downward path. Three status are distinguished
