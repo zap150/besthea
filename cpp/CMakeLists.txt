@@ -1,13 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 project(besthea)
 
-if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
-  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8.3)
-    message(FATAL_ERROR "GCC compiler is too old, besthea can be"
-      " compiled only with g++-8.3 or higher.")
-  endif()
-endif()
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
@@ -21,28 +14,17 @@ if("${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
     " CMakFiles and start again from a dedicated build directory.")
 endif()
 
-add_compile_definitions(DATA_WIDTH=4)
-
-enable_OpenMP()
+add_compile_definitions(DATA_WIDTH=8)
 
 find_package(MKL REQUIRED)
-include_directories(SYSTEM ${MKL_INCLUDE_DIRS})
+include_directories(${MKL_INCLUDE_DIRS})
 
 find_package(MPI REQUIRED)
-include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+include_directories(${MPI_INCLUDE_PATH})
 
-add_subdirectory(third_party/boost/align)
-include_directories(include third_party/boost/align/include)
-add_subdirectory(third_party/boost/config)
-include_directories(include third_party/boost/config/include)
-add_subdirectory(third_party/boost/assert)
-include_directories(include third_party/boost/assert/include)
-add_subdirectory(third_party/boost/static_assert)
-include_directories(include third_party/boost/static_assert/include)
-add_subdirectory(third_party/boost/core)
-include_directories(include third_party/boost/core/include)
-
-include_directories(include third_party/eigen)
+enable_OpenMP()
+enable_Boost()
+enable_Eigen()
 
 file(GLOB besthea_SOURCES src/*.cpp)
 

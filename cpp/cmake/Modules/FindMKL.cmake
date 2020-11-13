@@ -7,10 +7,14 @@ set(MKLROOT_PATH $ENV{MKLROOT})
 # Stage 2: find include path and libraries
 	
 if (MKLROOT_PATH)
-  # root-path found
-	
+  # includes
   set(EXPECT_MKL_INCPATH "${MKLROOT_PATH}/include")
 	
+  if (IS_DIRECTORY ${EXPECT_MKL_INCPATH})
+    set(MKL_INCLUDE_DIR ${EXPECT_MKL_INCPATH})
+  endif (IS_DIRECTORY ${EXPECT_MKL_INCPATH})
+
+  # libs
   if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     set(EXPECT_MKL_LIBPATH "${MKLROOT_PATH}/lib")
   endif (CMAKE_SYSTEM_NAME MATCHES "Darwin")
@@ -23,22 +27,18 @@ if (MKLROOT_PATH)
 	#endif (CMAKE_SIZEOF_VOID_P MATCHES 8)
   endif (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	
-  # set include
-	
-  if (IS_DIRECTORY ${EXPECT_MKL_INCPATH})
-    set(MKL_INCLUDE_DIR ${EXPECT_MKL_INCPATH})
-  endif (IS_DIRECTORY ${EXPECT_MKL_INCPATH})
-	
   if (IS_DIRECTORY ${EXPECT_MKL_LIBPATH})
-	set(MKL_LIBRARY_DIR ${EXPECT_MKL_LIBPATH})
+	  set(MKL_LIBRARY_DIR ${EXPECT_MKL_LIBPATH})
   endif (IS_DIRECTORY ${EXPECT_MKL_LIBPATH})
 	
-  string(REPLACE ":" " " ICC_LIBRARY_DIR $ENV{LIBRARY_PATH})
+  string(REPLACE ":" ";" ICC_LIBRARY_DIR $ENV{LIBRARY_PATH})
 	
   # find specific library files
   find_library(LIB_MKL_CORE NAMES mkl_core HINTS ${MKL_LIBRARY_DIR})
-  find_library(LIB_MKL_INTEL_THREAD NAMES mkl_intel_thread HINTS ${MKL_LIBRARY_DIR})
-  find_library(LIB_MKL_INTEL_ILP64 NAMES mkl_intel_ilp64 HINTS ${MKL_LIBRARY_DIR})
+  find_library(LIB_MKL_INTEL_THREAD NAMES mkl_intel_thread 
+    HINTS ${MKL_LIBRARY_DIR})
+  find_library(LIB_MKL_INTEL_ILP64 NAMES mkl_intel_ilp64 
+    HINTS ${MKL_LIBRARY_DIR})
   find_library(LIB_IOMP5 NAMES iomp5 HINTS ${ICC_LIBRARY_DIR})
   find_library(LIB_PTHREAD NAMES pthread)	
 	
