@@ -1,0 +1,53 @@
+EIGEN_INC=./external/eigen
+BOOST_INC=./external
+SIMD=4
+
+#CXX=icpc
+#CXXFLAGS=-xHost -O3 -g -DDATA_WIDTH=${SIMD} -qopenmp -std=c++17 -w2 -I${MKLROOT}/include -I${EIGEN_INC} -I${BOOST_INC}
+
+CXX=g++
+CXXFLAGS=-fopenmp -O3 -ffast-math -g -std=c++17 -DDATA_WIDTH=${SIMD} -Wall -Wshadow -I${MKLROOT}/include -I${EIGEN_INC} -I${BOOST_INC} -DMKL_INT=long
+
+#########################DO NOT MODIFY BELOW THIS LINE##########################
+################################################################################
+
+COMPILELINE=${CXX} ${CXXFLAGS} -I./include -c
+
+OBJECTDIR=build
+
+FILES=$(notdir $(wildcard src/*.cpp))
+CXXFILES=$(addprefix src/,${FILES})
+
+OBJECTFILES=$(addprefix ${OBJECTDIR}/,$(FILES:.cpp=.o))
+DEPFILES=$(addprefix ${OBJECTDIR}/,$(FILES:.cpp=.o.d))
+
+all: test
+
+test: lib/libbesthea.a
+	cd test && ${MAKE}
+
+lib/libbesthea.a: ${OBJECTFILES}
+	mkdir -p lib
+	ar -r $@ $?
+
+${OBJECTDIR}/%.o: src/%.cpp
+	mkdir -p ${OBJECTDIR}
+	rm -f "$@.d"
+	${COMPILELINE} -fPIC -MMD -MP -MF "$@.d" -o $@ $<
+
+clean:
+	rm -rf build
+	cd test && ${MAKE} clean
+
+distclean: clean
+	rm -rf lib
+	cd test && ${MAKE} distclean
+
+help:
+	@echo "This makefile supports the following targets:"
+	@echo "    all  (default target, builds static library)"
+	@echo "    clean"
+	@echo "    distclean"
+	@echo "    help"
+
+-include $(DEPFILES)
