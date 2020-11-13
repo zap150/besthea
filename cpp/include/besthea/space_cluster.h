@@ -590,7 +590,8 @@ class besthea::mesh::space_cluster {
 template<>
 inline void besthea::mesh::space_cluster::local_elem_to_local_dofs<
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >(
-  lo i_loc_elem, int n_shared_vertices, int rotation, bool swap,
+  lo i_loc_elem, [[maybe_unused]] int n_shared_vertices,
+  [[maybe_unused]] int rotation, [[maybe_unused]] bool swap,
   std::vector< lo > & indices ) const {
   indices[ 0 ] = i_loc_elem;
 }

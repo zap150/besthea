@@ -154,7 +154,11 @@ class besthea::linear_algebra::distributed_pFMM_matrix
       _contribution_size( ( _temp_order + 1 ) * _spat_contribution_size ),
       _chebyshev( _spat_order ),
       _lagrange( _temp_order ),
-      _alpha( 1.0 ) {
+      _alpha( 1.0 ),
+      _cheb_nodes_sum_coll(
+        ( _m2l_integration_order + 1 ) * ( _m2l_integration_order + 1 ) ),
+      _all_poly_vals_mult_coll( ( _spat_order + 1 ) * ( _spat_order + 1 )
+        * ( _m2l_integration_order + 1 ) * ( _m2l_integration_order + 1 ) ) {
   }
 
   distributed_pFMM_matrix( const distributed_pFMM_matrix & that ) = delete;
@@ -296,6 +300,11 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   void compute_spatial_m2m_coeffs( );
 
   /**
+   * Compute Chebyshev nodes and evaluate them.
+   */
+  void compute_chebyshev( );
+
+  /**
    * Pseudo-parallel FGMRES based on the implementation in MKL.
    * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
    * @param[out] solution Solution vector.
@@ -421,7 +430,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *        appropriate m2m coefficients for the operation.
    */
   void apply_spatial_m2m_operation( const sc * child_moment,
-    const lo n_space_div_parent, const slou octant, sc * output_array ) const;
+    const lo n_space_div_parent, const slou octant,
+    std::vector< sc > & output_array ) const;
 
   /**
    * Calls all M2L operations associated with a given pair of scheduling time
@@ -591,9 +601,10 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
    */
-  void check_for_received_data( MPI_Request * array_of_requests,
-    int array_of_indices[], int & outcount, bool verbose,
-    const std::string & verbose_file ) const;
+  void check_for_received_data( std::vector< MPI_Request > & array_of_requests,
+    std::vector< int > & array_of_indices, int & outcount,
+    [[maybe_unused]] bool verbose,
+    [[maybe_unused]] const std::string & verbose_file ) const;
 
   /**
    * Returns an iterator pointing to the next cluster in the l-list whose
@@ -699,7 +710,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                                  array. It is expected to have at least
    *                                  the size of @p receive_vector .
    */
-  void start_receive_operations( MPI_Request array_of_requests[] ) const;
+  void start_receive_operations(
+    std::vector< MPI_Request > & array_of_requests ) const;
 
   /**
    * Compute quadrature of the Chebyshev polynomials and p0 basis functions for
@@ -747,11 +759,6 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                            cluster.
    * @param[in] tar_time_nodes  Interpolation nodes in time for the target
    *                            cluster.
-   * @param[in] cheb_nodes  Chebyshev nodes of degree ( _spat_order + 1 )
-   * @param[in] evaluated_chebyshev Vector of evaluated Chebyshev polynomials
-   *                                with degree <= _spat_order at \p cheb_nodes
-   *                                as given by
-   *                           @ref besthea::bem::chebyshev_evaluator::evaluate.
    * @param[in] half_size Half size in space of the current clusters along the
    *                      dimension for which the coefficients are computed.
    * @param[in] center_diff The appropriate component of the difference vector
@@ -765,8 +772,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                                coefficients.
    */
   void compute_coupling_coeffs( const vector_type & src_time_nodes,
-    const vector_type & tar_time_nodes, const vector_type & cheb_nodes,
-    const vector_type & evaluated_chebyshev, const sc half_size,
+    const vector_type & tar_time_nodes, const sc half_size,
     const sc center_diff, vector_type & buffer_for_gaussians,
     vector_type & coupling_coeffs ) const;
 
@@ -858,6 +864,49 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     std::vector< lou > & n_l2l_operations,
     std::vector< lou > & n_l2t_operations );
 
+  /**
+   * Task in the M-list
+   * @param[in] x Input vector
+   * @param[in] time_cluster  Considered scheduling time cluster.
+   * @param[in] verbose If true, the required time is written to file.
+   * @param[in] verbose_file  If @p verbose is true, this is used as output
+   *                          file.
+   */
+  void m_list_task( const block_vector & x,
+    mesh::scheduling_time_cluster * time_cluster, bool verbose,
+    const std::string & verbose_file ) const;
+
+  /**
+   * Task in the L-list
+   * @param[in] y_pFMM Output vector
+   * @param[in] time_cluster  Considered scheduling time cluster.
+   * @param[in] verbose If true, the required time is written to file.
+   * @param[in] verbose_file  If @p verbose is true, this is used as output
+   *                          file.
+   */
+  void l_list_task( block_vector & y_pFMM,
+    mesh::scheduling_time_cluster * time_cluster, bool verbose,
+    const std::string & verbose_file ) const;
+
+  /**
+   * Task in the M2L-list
+   * @param[in] y_pFMM Output vector
+   * @param[in] time_cluster  Considered scheduling time cluster.
+   * @param[in] verbose If true, the required time is written to file.
+   * @param[in] verbose_file  If @p verbose is true, this is used as output
+   *                          file.
+   */
+  void m2l_list_task( block_vector & y_pFMM,
+    mesh::scheduling_time_cluster * time_cluster, bool verbose,
+    const std::string & verbose_file ) const;
+
+  /**
+   * @param[in] current_index Index of the received data.
+   * @param[in] current_cluster Processed scheduling_time_cluster.
+   */
+  void upward_path_task(
+    lou current_index, mesh::scheduling_time_cluster * current_cluster ) const;
+
   const MPI_Comm *
     _comm;       //!< MPI communicator associated with the pFMM matrix.
   int _my_rank;  //!< MPI rank of current process.
@@ -941,6 +990,17 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     _lagrange;  //!< Evaluator of the Lagrange polynomials.
 
   sc _alpha;  //!< Heat conductivity.
+
+  std::vector< sc, besthea::allocator_type< sc > >
+    _cheb_nodes_sum_coll;  //!< summed Chebyshev nodes for collapsed loop,
+                           //!< aligned
+
+  std::vector< sc, besthea::allocator_type< sc > >
+    _all_poly_vals_mult_coll;  //!< summed Chebyshev nodes for collapsed loop,
+                               //!< aligned
+
+  mutable std::vector< full_matrix > _aux_buffer_0;
+  mutable std::vector< full_matrix > _aux_buffer_1;
 };
 
 /** Typedef for the distributed single layer p0-p0 PFMM matrix */

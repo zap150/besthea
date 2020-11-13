@@ -73,7 +73,7 @@ void besthea::linear_algebra::block_lower_triangular_toeplitz_matrix::apply(
 void besthea::linear_algebra::block_lower_triangular_toeplitz_matrix::print(
   std::ostream & stream ) const {
   for ( const matrix_type & m : _data ) {
-    m.print( );
+    m.print( stream );
   }
 }
 

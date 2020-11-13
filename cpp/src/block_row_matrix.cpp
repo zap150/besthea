@@ -47,7 +47,7 @@ besthea::linear_algebra::block_row_matrix::block_row_matrix(
 void besthea::linear_algebra::block_row_matrix::print(
   std::ostream & stream ) const {
   for ( const matrix_type & m : _data ) {
-    m.print( );
+    m.print( stream );
   }
 }
 

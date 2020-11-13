@@ -106,6 +106,9 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   // matrix and determine the receive information data.
   global_matrix.prepare_fmm( );
 
+  // precompute Chebyshev nodes and values
+  global_matrix.compute_chebyshev( );
+
   // assemble the nearfield matrices of the pFMM matrix
   if ( !info_mode ) {
     assemble_nearfield( global_matrix );
@@ -400,324 +403,327 @@ void besthea::bem::distributed_fast_spacetime_be_assembler<
   besthea::bem::spacetime_heat_hs_kernel_antiderivative,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
-  assemble_nearfield_matrix( general_spacetime_cluster * target_cluster,
-    general_spacetime_cluster * source_cluster,
-    full_matrix_type & nearfield_matrix ) const {
-  //   auto & test_basis = _test_space->get_basis( );
-  //   auto & trial_basis = _trial_space->get_basis( );
-  //   auto test_mesh = _test_space->get_mesh( );
-  //   auto trial_mesh = _trial_space->get_mesh( );
+  assemble_nearfield_matrix(
+    [[maybe_unused]] general_spacetime_cluster * target_cluster,
+    [[maybe_unused]] general_spacetime_cluster * source_cluster,
+    [[maybe_unused]] full_matrix_type & nearfield_matrix ) const {
+  /*
+auto & test_basis = _test_space->get_basis( );
+auto & trial_basis = _trial_space->get_basis( );
+auto test_mesh = _test_space->get_mesh( );
+auto trial_mesh = _trial_space->get_mesh( );
 
-  //   time_cluster_type & test_time_cluster = target_cluster->get_time_cluster(
-  //   ); lo n_test_time_elem = test_time_cluster.get_n_elements( );
-  //   space_cluster_type & test_space_cluster
-  //     = target_cluster->get_space_cluster( );
-  //   lo n_test_space_dofs = test_space_cluster.get_n_dofs<
-  //     besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >(
-  //     );
-  //   lo n_test_space_elem = test_space_cluster.get_n_elements( );
-  //   std::vector< lo > test_space_elems = test_space_cluster.get_all_elements(
-  //   );
+time_cluster_type & test_time_cluster = target_cluster->get_time_cluster(
+); lo n_test_time_elem = test_time_cluster.get_n_elements( );
+space_cluster_type & test_space_cluster
+ = target_cluster->get_space_cluster( );
+lo n_test_space_dofs = test_space_cluster.get_n_dofs<
+ besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >(
+ );
+lo n_test_space_elem = test_space_cluster.get_n_elements( );
+std::vector< lo > test_space_elems = test_space_cluster.get_all_elements(
+);
 
-  //   time_cluster_type & trial_time_cluster =
-  //   source_cluster->get_time_cluster( ); lo n_trial_time_elem =
-  //   trial_time_cluster.get_n_elements( ); space_cluster_type &
-  //   trial_space_cluster
-  //     = source_cluster->get_space_cluster( );
-  //   lo n_trial_space_dofs = trial_space_cluster.get_n_dofs<
-  //     besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >(
-  //     );
-  //   lo n_trial_space_elem = trial_space_cluster.get_n_elements( );
-  //   std::vector< lo > trial_space_elems =
-  //   trial_space_cluster.get_all_elements( );
+time_cluster_type & trial_time_cluster =
+source_cluster->get_time_cluster( ); lo n_trial_time_elem =
+trial_time_cluster.get_n_elements( ); space_cluster_type &
+trial_space_cluster
+ = source_cluster->get_space_cluster( );
+lo n_trial_space_dofs = trial_space_cluster.get_n_dofs<
+ besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >(
+ );
+lo n_trial_space_elem = trial_space_cluster.get_n_elements( );
+std::vector< lo > trial_space_elems =
+trial_space_cluster.get_all_elements( );
 
-  //   bool same_time_cluster
-  //     = ( test_time_cluster.get_center( ) == trial_time_cluster.get_center( )
-  //     );
-  // #pragma omp parallel
-  //   {
-  //     std::vector< lo > test_loc_access( 3 );
-  //     std::vector< lo > trial_loc_access( 3 );
+bool same_time_cluster
+ = ( test_time_cluster.get_center( ) == trial_time_cluster.get_center( )
+ );
+#pragma omp parallel
+{
+ std::vector< lo > test_loc_access( 3 );
+ std::vector< lo > trial_loc_access( 3 );
 
-  //     sc areas, test_area;
-  //     sc value11, value12, value13;
-  //     sc value21, value22, value23;
-  //     sc value31, value32, value33;
-  //     lo size;
-  //     int n_shared_vertices = 0;
-  //     int rot_test = 0;
-  //     int rot_trial = 0;
+ sc areas, test_area;
+ sc value11, value12, value13;
+ sc value21, value22, value23;
+ sc value31, value32, value33;
+ lo size;
+ int n_shared_vertices = 0;
+ int rot_test = 0;
+ int rot_trial = 0;
 
-  //     sc t0, t1, tau0, tau1;
-  //     linear_algebra::coordinates< 3 > x1, x2, x3;
-  //     linear_algebra::coordinates< 3 > y1, y2, y3;
-  //     linear_algebra::coordinates< 3 > nx, ny;
+ sc t0, t1, tau0, tau1;
+ linear_algebra::coordinates< 3 > x1, x2, x3;
+ linear_algebra::coordinates< 3 > y1, y2, y3;
+ linear_algebra::coordinates< 3 > nx, ny;
 
-  //     sc * nx_data = nx.data( );
-  //     sc * ny_data = ny.data( );
+ sc * nx_data = nx.data( );
+ sc * ny_data = ny.data( );
 
-  //     sc test_curls[ 9 ], trial_curls[ 9 ];
-  //     sc phi1x, phi1y;
-  //     sc kernel1, kernel2;
-  //     lo test_curl_offset, trial_curl_offset;
-  //     sc curl_dot[ 9 ];
+ sc test_curls[ 9 ], trial_curls[ 9 ];
+ sc phi1x, phi1y;
+ sc kernel1, kernel2;
+ lo test_curl_offset, trial_curl_offset;
+ sc curl_dot[ 9 ];
 
-  //     quadrature_wrapper my_quadrature;
-  //     init_quadrature( my_quadrature );
-  //     sc * x1_ref = nullptr;
-  //     sc * x2_ref = nullptr;
-  //     sc * y1_ref = nullptr;
-  //     sc * y2_ref = nullptr;
-  //     sc * w = nullptr;
-  //     sc * x1_mapped = my_quadrature._x1.data( );
-  //     sc * x2_mapped = my_quadrature._x2.data( );
-  //     sc * x3_mapped = my_quadrature._x3.data( );
-  //     sc * y1_mapped = my_quadrature._y1.data( );
-  //     sc * y2_mapped = my_quadrature._y2.data( );
-  //     sc * y3_mapped = my_quadrature._y3.data( );
+ quadrature_wrapper my_quadrature;
+ init_quadrature( my_quadrature );
+ sc * x1_ref = nullptr;
+ sc * x2_ref = nullptr;
+ sc * y1_ref = nullptr;
+ sc * y2_ref = nullptr;
+ sc * w = nullptr;
+ sc * x1_mapped = my_quadrature._x1.data( );
+ sc * x2_mapped = my_quadrature._x2.data( );
+ sc * x3_mapped = my_quadrature._x3.data( );
+ sc * y1_mapped = my_quadrature._y1.data( );
+ sc * y2_mapped = my_quadrature._y2.data( );
+ sc * y3_mapped = my_quadrature._y3.data( );
 
-  //     lo gl_test_elem_time, gl_test_elem_space;
-  //     lo gl_trial_elem_time, gl_trial_elem_space;
+ lo gl_test_elem_time, gl_test_elem_space;
+ lo gl_trial_elem_time, gl_trial_elem_space;
 
-  //     for ( lo i_test_time = 0; i_test_time < n_test_time_elem; ++i_test_time
-  //     ) {
-  //       gl_test_elem_time = test_time_cluster.get_element( i_test_time );
-  //       test_mesh->get_temporal_nodes( gl_test_elem_time, &t0, &t1 );
-  //       lo i_trial_max = n_trial_time_elem - 1;
-  //       if ( same_time_cluster ) {
-  //         i_trial_max = i_test_time;
-  //       }
-  //       for ( lo i_trial_time = 0; i_trial_time <= i_trial_max;
-  //       ++i_trial_time ) {
-  //         gl_trial_elem_time = trial_time_cluster.get_element( i_trial_time
-  //         ); trial_mesh->get_temporal_nodes( gl_trial_elem_time, &tau0, &tau1
-  //         );
+ for ( lo i_test_time = 0; i_test_time < n_test_time_elem; ++i_test_time
+ ) {
+   gl_test_elem_time = test_time_cluster.get_element( i_test_time );
+   test_mesh->get_temporal_nodes( gl_test_elem_time, &t0, &t1 );
+   lo i_trial_max = n_trial_time_elem - 1;
+   if ( same_time_cluster ) {
+     i_trial_max = i_test_time;
+   }
+   for ( lo i_trial_time = 0; i_trial_time <= i_trial_max;
+   ++i_trial_time ) {
+     gl_trial_elem_time = trial_time_cluster.get_element( i_trial_time
+     ); trial_mesh->get_temporal_nodes( gl_trial_elem_time, &tau0, &tau1
+     );
 
-  //         bool shared_t_element = t0 == tau0;
-  //         bool shared_t_vertex = t0 == tau1;
-  // #pragma omp for schedule( dynamic, 1 )
-  //         for ( lo i_test_space = 0; i_test_space < n_test_space_elem;
-  //               ++i_test_space ) {
-  //           gl_test_elem_space = test_space_elems[ i_test_space ];
+     bool shared_t_element = t0 == tau0;
+     bool shared_t_vertex = t0 == tau1;
+#pragma omp for schedule( dynamic, 1 )
+     for ( lo i_test_space = 0; i_test_space < n_test_space_elem;
+           ++i_test_space ) {
+       gl_test_elem_space = test_space_elems[ i_test_space ];
 
-  //           test_mesh->get_spatial_nodes( gl_test_elem_space, x1, x2, x3 );
-  //           test_mesh->get_spatial_normal( gl_test_elem_space, nx );
-  //           test_area = test_mesh->spatial_area( gl_test_elem_space );
+       test_mesh->get_spatial_nodes( gl_test_elem_space, x1, x2, x3 );
+       test_mesh->get_spatial_normal( gl_test_elem_space, nx );
+       test_area = test_mesh->spatial_area( gl_test_elem_space );
 
-  //           for ( lo i_trial_space = 0; i_trial_space < n_trial_space_elem;
-  //                 ++i_trial_space ) {
-  //             gl_trial_elem_space = trial_space_elems[ i_trial_space ];
+       for ( lo i_trial_space = 0; i_trial_space < n_trial_space_elem;
+             ++i_trial_space ) {
+         gl_trial_elem_space = trial_space_elems[ i_trial_space ];
 
-  //             if ( shared_t_element || shared_t_vertex ) {
-  //               get_type( gl_test_elem_space, gl_trial_elem_space,
-  //                 n_shared_vertices, rot_test, rot_trial );
-  //             } else {
-  //               n_shared_vertices = 0;
-  //               rot_test = 0;
-  //               rot_trial = 0;
-  //             }
-  //             trial_mesh->get_spatial_nodes( gl_trial_elem_space, y1, y2, y3
-  //             ); trial_mesh->get_spatial_normal( gl_trial_elem_space, ny );
-  //             areas = test_area * trial_mesh->spatial_area(
-  //             gl_trial_elem_space );
+         if ( shared_t_element || shared_t_vertex ) {
+           get_type( gl_test_elem_space, gl_trial_elem_space,
+             n_shared_vertices, rot_test, rot_trial );
+         } else {
+           n_shared_vertices = 0;
+           rot_test = 0;
+           rot_trial = 0;
+         }
+         trial_mesh->get_spatial_nodes( gl_trial_elem_space, y1, y2, y3
+         ); trial_mesh->get_spatial_normal( gl_trial_elem_space, ny );
+         areas = test_area * trial_mesh->spatial_area(
+         gl_trial_elem_space );
 
-  //             test_space_cluster
-  //               .local_elem_to_local_dofs<
-  //               besthea::bem::fast_spacetime_be_space<
-  //                 besthea::bem::basis_tri_p1 > >( i_test_space,
-  //                 n_shared_vertices, rot_test, false, test_loc_access );
-  //             trial_space_cluster
-  //               .local_elem_to_local_dofs<
-  //               besthea::bem::fast_spacetime_be_space<
-  //                 besthea::bem::basis_tri_p1 > >( i_trial_space,
-  //                 n_shared_vertices, rot_trial, true, trial_loc_access );
+         test_space_cluster
+           .local_elem_to_local_dofs<
+           besthea::bem::fast_spacetime_be_space<
+             besthea::bem::basis_tri_p1 > >( i_test_space,
+             n_shared_vertices, rot_test, false, test_loc_access );
+         trial_space_cluster
+           .local_elem_to_local_dofs<
+           besthea::bem::fast_spacetime_be_space<
+             besthea::bem::basis_tri_p1 > >( i_trial_space,
+             n_shared_vertices, rot_trial, true, trial_loc_access );
 
-  //             triangles_to_geometry( x1, x2, x3, y1, y2, y3,
-  //             n_shared_vertices,
-  //               rot_test, rot_trial, my_quadrature );
-  //             x1_ref = my_quadrature._x1_ref[ n_shared_vertices ].data( );
-  //             x2_ref = my_quadrature._x2_ref[ n_shared_vertices ].data( );
-  //             y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
-  //             y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
-  //             w = my_quadrature._w[ n_shared_vertices ].data( );
+         triangles_to_geometry( x1, x2, x3, y1, y2, y3,
+         n_shared_vertices,
+           rot_test, rot_trial, my_quadrature );
+         x1_ref = my_quadrature._x1_ref[ n_shared_vertices ].data( );
+         x2_ref = my_quadrature._x2_ref[ n_shared_vertices ].data( );
+         y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
+         y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
+         w = my_quadrature._w[ n_shared_vertices ].data( );
 
-  //             size = my_quadrature._w[ n_shared_vertices ].size( );
+         size = my_quadrature._w[ n_shared_vertices ].size( );
 
-  //             test_basis.evaluate_curl( gl_test_elem_space, nx,
-  //             n_shared_vertices,
-  //               rot_test, false, test_curls );
-  //             trial_basis.evaluate_curl( gl_trial_elem_space, ny,
-  //               n_shared_vertices, rot_trial, true, trial_curls );
+         test_basis.evaluate_curl( gl_test_elem_space, nx,
+         n_shared_vertices,
+           rot_test, false, test_curls );
+         trial_basis.evaluate_curl( gl_trial_elem_space, ny,
+           n_shared_vertices, rot_trial, true, trial_curls );
 
-  //             for ( lo i_loc_test = 0; i_loc_test < 3; ++i_loc_test ) {
-  //               for ( lo i_loc_trial = 0; i_loc_trial < 3; ++i_loc_trial ) {
-  //                 test_curl_offset = 3 * i_loc_test;
-  //                 trial_curl_offset = 3 * i_loc_trial;
-  //                 curl_dot[ i_loc_trial * 3 + i_loc_test ]
-  //                   = test_curls[ test_curl_offset ]
-  //                     * trial_curls[ trial_curl_offset ]
-  //                   + test_curls[ test_curl_offset + 1 ]
-  //                     * trial_curls[ trial_curl_offset + 1 ]
-  //                   + test_curls[ test_curl_offset + 2 ]
-  //                     * trial_curls[ trial_curl_offset + 2 ];
-  //               }
-  //             }
+         for ( lo i_loc_test = 0; i_loc_test < 3; ++i_loc_test ) {
+           for ( lo i_loc_trial = 0; i_loc_trial < 3; ++i_loc_trial ) {
+             test_curl_offset = 3 * i_loc_test;
+             trial_curl_offset = 3 * i_loc_trial;
+             curl_dot[ i_loc_trial * 3 + i_loc_test ]
+               = test_curls[ test_curl_offset ]
+                 * trial_curls[ trial_curl_offset ]
+               + test_curls[ test_curl_offset + 1 ]
+                 * trial_curls[ trial_curl_offset + 1 ]
+               + test_curls[ test_curl_offset + 2 ]
+                 * trial_curls[ trial_curl_offset + 2 ];
+           }
+         }
 
-  //             value11 = value12 = value13 = 0.0;
-  //             value21 = value22 = value23 = 0.0;
-  //             value31 = value32 = value33 = 0.0;
+         value11 = value12 = value13 = 0.0;
+         value21 = value22 = value23 = 0.0;
+         value31 = value32 = value33 = 0.0;
 
-  //             if ( shared_t_element ) {
-  // #pragma omp simd \
-//             aligned( x1_mapped, x2_mapped, x3_mapped, x1_ref, x2_ref :
-  //             DATA_ALIGN ) \
-//             aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, w :
-  //             DATA_ALIGN ) \
-//             private( kernel1, kernel2, phi1x, phi1y ) \
-//             reduction( + : value11, value12, value13 ) \
-//             reduction( + : value21, value22, value23 ) \
-//             reduction( + : value31, value32, value33 ) \
-//             simdlen( DATA_WIDTH )
-  //               for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-  //                 _kernel->definite_integral_over_same_interval(
-  //                   x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-  //                   x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-  //                   x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data,
-  //                   ny_data, t0, t1, &kernel1, &kernel2 );
+         if ( shared_t_element ) {
+#pragma omp simd \
+       aligned( x1_mapped, x2_mapped, x3_mapped, x1_ref, x2_ref :
+         DATA_ALIGN ) \
+       aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, w :
+         DATA_ALIGN ) \
+       private( kernel1, kernel2, phi1x, phi1y ) \
+       reduction( + : value11, value12, value13 ) \
+       reduction( + : value21, value22, value23 ) \
+       reduction( + : value31, value32, value33 ) \
+       simdlen( DATA_WIDTH )
+           for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+             _kernel->definite_integral_over_same_interval(
+               x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+               x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+               x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data,
+               ny_data, t0, t1, &kernel1, &kernel2 );
 
-  //                 phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
-  //                 phi1y = (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ];
-  //                 // phi2* = *1_ref[ i_quad ] and phi3* = *2_ref[ i_quad ];
+             phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
+             phi1y = (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ];
+             // phi2* = *1_ref[ i_quad ] and phi3* = *2_ref[ i_quad ];
 
-  //                 value11 += ( kernel1 * curl_dot[ 0 ] + kernel2 * phi1x *
-  //                 phi1y )
-  //                   * w[ i_quad ];
-  //                 value21 += ( kernel1 * curl_dot[ 1 ]
-  //                              + kernel2 * x1_ref[ i_quad ] * phi1y )
-  //                   * w[ i_quad ];
-  //                 value31 += ( kernel1 * curl_dot[ 2 ]
-  //                              + kernel2 * x2_ref[ i_quad ] * phi1y )
-  //                   * w[ i_quad ];
-  //                 value12 += ( kernel1 * curl_dot[ 3 ]
-  //                              + kernel2 * phi1x * y1_ref[ i_quad ] )
-  //                   * w[ i_quad ];
-  //                 value22 += ( kernel1 * curl_dot[ 4 ]
-  //                              + kernel2 * x1_ref[ i_quad ] * y1_ref[ i_quad
-  //                              ] )
-  //                   * w[ i_quad ];
-  //                 value32 += ( kernel1 * curl_dot[ 5 ]
-  //                              + kernel2 * x2_ref[ i_quad ] * y1_ref[ i_quad
-  //                              ] )
-  //                   * w[ i_quad ];
-  //                 value13 += ( kernel1 * curl_dot[ 6 ]
-  //                              + kernel2 * phi1x * y2_ref[ i_quad ] )
-  //                   * w[ i_quad ];
-  //                 value23 += ( kernel1 * curl_dot[ 7 ]
-  //                              + kernel2 * x1_ref[ i_quad ] * y2_ref[ i_quad
-  //                              ] )
-  //                   * w[ i_quad ];
-  //                 value33 += ( kernel1 * curl_dot[ 8 ]
-  //                              + kernel2 * x2_ref[ i_quad ] * y2_ref[ i_quad
-  //                              ] )
-  //                   * w[ i_quad ];
-  //               }
-  //             } else {
-  // #pragma omp simd \
-//             aligned( x1_mapped, x2_mapped, x3_mapped, x1_ref, x2_ref :
-  //             DATA_ALIGN ) \
-//             aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, w :
-  //             DATA_ALIGN ) \
-//             private( kernel1, kernel2, phi1x, phi1y ) \
-//             reduction( + : value11, value12, value13 ) \
-//             reduction( + : value21, value22, value23 ) \
-//             reduction( + : value31, value32, value33 ) \
-//             simdlen( DATA_WIDTH )
-  //               for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-  //                 _kernel->definite_integral_over_different_intervals(
-  //                   x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-  //                   x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-  //                   x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data,
-  //                   ny_data, t0, t1, tau0, tau1, &kernel1, &kernel2 );
+             value11 += ( kernel1 * curl_dot[ 0 ] + kernel2 * phi1x *
+             phi1y )
+               * w[ i_quad ];
+             value21 += ( kernel1 * curl_dot[ 1 ]
+                          + kernel2 * x1_ref[ i_quad ] * phi1y )
+               * w[ i_quad ];
+             value31 += ( kernel1 * curl_dot[ 2 ]
+                          + kernel2 * x2_ref[ i_quad ] * phi1y )
+               * w[ i_quad ];
+             value12 += ( kernel1 * curl_dot[ 3 ]
+                          + kernel2 * phi1x * y1_ref[ i_quad ] )
+               * w[ i_quad ];
+             value22 += ( kernel1 * curl_dot[ 4 ]
+                          + kernel2 * x1_ref[ i_quad ] * y1_ref[ i_quad
+                          ] )
+               * w[ i_quad ];
+             value32 += ( kernel1 * curl_dot[ 5 ]
+                          + kernel2 * x2_ref[ i_quad ] * y1_ref[ i_quad
+                          ] )
+               * w[ i_quad ];
+             value13 += ( kernel1 * curl_dot[ 6 ]
+                          + kernel2 * phi1x * y2_ref[ i_quad ] )
+               * w[ i_quad ];
+             value23 += ( kernel1 * curl_dot[ 7 ]
+                          + kernel2 * x1_ref[ i_quad ] * y2_ref[ i_quad
+                          ] )
+               * w[ i_quad ];
+             value33 += ( kernel1 * curl_dot[ 8 ]
+                          + kernel2 * x2_ref[ i_quad ] * y2_ref[ i_quad
+                          ] )
+               * w[ i_quad ];
+           }
+         } else {
+#pragma omp simd \
+       aligned( x1_mapped, x2_mapped, x3_mapped, x1_ref, x2_ref :
+         DATA_ALIGN ) \
+       aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, w :
+         DATA_ALIGN ) \
+       private( kernel1, kernel2, phi1x, phi1y ) \
+       reduction( + : value11, value12, value13 ) \
+       reduction( + : value21, value22, value23 ) \
+       reduction( + : value31, value32, value33 ) \
+       simdlen( DATA_WIDTH )
+           for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+             _kernel->definite_integral_over_different_intervals(
+               x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+               x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+               x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data,
+               ny_data, t0, t1, tau0, tau1, &kernel1, &kernel2 );
 
-  //                 phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
-  //                 phi1y = (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ];
-  //                 // phi2* = *1_ref[ i_quad ] and phi3* = *2_ref[ i_quad ];
+             phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
+             phi1y = (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ];
+             // phi2* = *1_ref[ i_quad ] and phi3* = *2_ref[ i_quad ];
 
-  //                 value11 += ( kernel1 * curl_dot[ 0 ] + kernel2 * phi1x *
-  //                 phi1y )
-  //                   * w[ i_quad ];
-  //                 value21 += ( kernel1 * curl_dot[ 1 ]
-  //                              + kernel2 * x1_ref[ i_quad ] * phi1y )
-  //                   * w[ i_quad ];
-  //                 value31 += ( kernel1 * curl_dot[ 2 ]
-  //                              + kernel2 * x2_ref[ i_quad ] * phi1y )
-  //                   * w[ i_quad ];
-  //                 value12 += ( kernel1 * curl_dot[ 3 ]
-  //                              + kernel2 * phi1x * y1_ref[ i_quad ] )
-  //                   * w[ i_quad ];
-  //                 value22 += ( kernel1 * curl_dot[ 4 ]
-  //                              + kernel2 * x1_ref[ i_quad ] * y1_ref[ i_quad
-  //                              ] )
-  //                   * w[ i_quad ];
-  //                 value32 += ( kernel1 * curl_dot[ 5 ]
-  //                              + kernel2 * x2_ref[ i_quad ] * y1_ref[ i_quad
-  //                              ] )
-  //                   * w[ i_quad ];
-  //                 value13 += ( kernel1 * curl_dot[ 6 ]
-  //                              + kernel2 * phi1x * y2_ref[ i_quad ] )
-  //                   * w[ i_quad ];
-  //                 value23 += ( kernel1 * curl_dot[ 7 ]
-  //                              + kernel2 * x1_ref[ i_quad ] * y2_ref[ i_quad
-  //                              ] )
-  //                   * w[ i_quad ];
-  //                 value33 += ( kernel1 * curl_dot[ 8 ]
-  //                              + kernel2 * x2_ref[ i_quad ] * y2_ref[ i_quad
-  //                              ] )
-  //                   * w[ i_quad ];
-  //               }
-  //             }
+             value11 += ( kernel1 * curl_dot[ 0 ] + kernel2 * phi1x *
+             phi1y )
+               * w[ i_quad ];
+             value21 += ( kernel1 * curl_dot[ 1 ]
+                          + kernel2 * x1_ref[ i_quad ] * phi1y )
+               * w[ i_quad ];
+             value31 += ( kernel1 * curl_dot[ 2 ]
+                          + kernel2 * x2_ref[ i_quad ] * phi1y )
+               * w[ i_quad ];
+             value12 += ( kernel1 * curl_dot[ 3 ]
+                          + kernel2 * phi1x * y1_ref[ i_quad ] )
+               * w[ i_quad ];
+             value22 += ( kernel1 * curl_dot[ 4 ]
+                          + kernel2 * x1_ref[ i_quad ] * y1_ref[ i_quad
+                          ] )
+               * w[ i_quad ];
+             value32 += ( kernel1 * curl_dot[ 5 ]
+                          + kernel2 * x2_ref[ i_quad ] * y1_ref[ i_quad
+                          ] )
+               * w[ i_quad ];
+             value13 += ( kernel1 * curl_dot[ 6 ]
+                          + kernel2 * phi1x * y2_ref[ i_quad ] )
+               * w[ i_quad ];
+             value23 += ( kernel1 * curl_dot[ 7 ]
+                          + kernel2 * x1_ref[ i_quad ] * y2_ref[ i_quad
+                          ] )
+               * w[ i_quad ];
+             value33 += ( kernel1 * curl_dot[ 8 ]
+                          + kernel2 * x2_ref[ i_quad ] * y2_ref[ i_quad
+                          ] )
+               * w[ i_quad ];
+           }
+         }
 
-  //             nearfield_matrix.add_atomic(
-  //               i_test_time * n_test_space_dofs + test_loc_access[ 0 ],
-  //               i_trial_time * n_trial_space_dofs + trial_loc_access[ 0 ],
-  //               value11 * areas );
-  //             nearfield_matrix.add_atomic(
-  //               i_test_time * n_test_space_dofs + test_loc_access[ 0 ],
-  //               i_trial_time * n_trial_space_dofs + trial_loc_access[ 1 ],
-  //               value12 * areas );
-  //             nearfield_matrix.add_atomic(
-  //               i_test_time * n_test_space_dofs + test_loc_access[ 0 ],
-  //               i_trial_time * n_trial_space_dofs + trial_loc_access[ 2 ],
-  //               value13 * areas );
-  //             nearfield_matrix.add_atomic(
-  //               i_test_time * n_test_space_dofs + test_loc_access[ 1 ],
-  //               i_trial_time * n_trial_space_dofs + trial_loc_access[ 0 ],
-  //               value21 * areas );
-  //             nearfield_matrix.add_atomic(
-  //               i_test_time * n_test_space_dofs + test_loc_access[ 1 ],
-  //               i_trial_time * n_trial_space_dofs + trial_loc_access[ 1 ],
-  //               value22 * areas );
-  //             nearfield_matrix.add_atomic(
-  //               i_test_time * n_test_space_dofs + test_loc_access[ 1 ],
-  //               i_trial_time * n_trial_space_dofs + trial_loc_access[ 2 ],
-  //               value23 * areas );
-  //             nearfield_matrix.add_atomic(
-  //               i_test_time * n_test_space_dofs + test_loc_access[ 2 ],
-  //               i_trial_time * n_trial_space_dofs + trial_loc_access[ 0 ],
-  //               value31 * areas );
-  //             nearfield_matrix.add_atomic(
-  //               i_test_time * n_test_space_dofs + test_loc_access[ 2 ],
-  //               i_trial_time * n_trial_space_dofs + trial_loc_access[ 1 ],
-  //               value32 * areas );
-  //             nearfield_matrix.add_atomic(
-  //               i_test_time * n_test_space_dofs + test_loc_access[ 2 ],
-  //               i_trial_time * n_trial_space_dofs + trial_loc_access[ 2 ],
-  //               value33 * areas );
-  //           }
-  //         }
-  //       }
-  //     }
-  //   }
+         nearfield_matrix.add_atomic(
+           i_test_time * n_test_space_dofs + test_loc_access[ 0 ],
+           i_trial_time * n_trial_space_dofs + trial_loc_access[ 0 ],
+           value11 * areas );
+         nearfield_matrix.add_atomic(
+           i_test_time * n_test_space_dofs + test_loc_access[ 0 ],
+           i_trial_time * n_trial_space_dofs + trial_loc_access[ 1 ],
+           value12 * areas );
+         nearfield_matrix.add_atomic(
+           i_test_time * n_test_space_dofs + test_loc_access[ 0 ],
+           i_trial_time * n_trial_space_dofs + trial_loc_access[ 2 ],
+           value13 * areas );
+         nearfield_matrix.add_atomic(
+           i_test_time * n_test_space_dofs + test_loc_access[ 1 ],
+           i_trial_time * n_trial_space_dofs + trial_loc_access[ 0 ],
+           value21 * areas );
+         nearfield_matrix.add_atomic(
+           i_test_time * n_test_space_dofs + test_loc_access[ 1 ],
+           i_trial_time * n_trial_space_dofs + trial_loc_access[ 1 ],
+           value22 * areas );
+         nearfield_matrix.add_atomic(
+           i_test_time * n_test_space_dofs + test_loc_access[ 1 ],
+           i_trial_time * n_trial_space_dofs + trial_loc_access[ 2 ],
+           value23 * areas );
+         nearfield_matrix.add_atomic(
+           i_test_time * n_test_space_dofs + test_loc_access[ 2 ],
+           i_trial_time * n_trial_space_dofs + trial_loc_access[ 0 ],
+           value31 * areas );
+         nearfield_matrix.add_atomic(
+           i_test_time * n_test_space_dofs + test_loc_access[ 2 ],
+           i_trial_time * n_trial_space_dofs + trial_loc_access[ 1 ],
+           value32 * areas );
+         nearfield_matrix.add_atomic(
+           i_test_time * n_test_space_dofs + test_loc_access[ 2 ],
+           i_trial_time * n_trial_space_dofs + trial_loc_access[ 2 ],
+           value33 * areas );
+       }
+     }
+   }
+ }
+}
+*/
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >

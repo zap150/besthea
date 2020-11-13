@@ -78,7 +78,8 @@ besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 bool besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
-  trial_space_type >::is_spatial_nearfield( lo test_idx, lo trial_idx ) const {
+  trial_space_type >::is_spatial_nearfield( [[maybe_unused]] lo test_idx,
+  [[maybe_unused]] lo trial_idx ) const {
   //   auto test_mesh = _test_space->get_spatial_mesh( );
   //   auto trial_mesh = _trial_space->get_spatial_mesh( );
   //
@@ -1784,8 +1785,8 @@ void besthea::bem::fast_spacetime_be_assembler<
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
-  trial_space_type >::compute_surface_curls( space_cluster_type * cluster )
-  const {
+  trial_space_type >::
+  compute_surface_curls( [[maybe_unused]] space_cluster_type * cluster ) const {
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
