@@ -1,3 +1,10 @@
+macro(check_insource)
+  if("${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
+    message(FATAL_ERROR "In source build is not allowed. "
+    "Remove CMakeCache.txt and CMakFiles and use a dedicated build directory.")
+  endif()
+endmacro()
+
 macro(setup_compiler)
   if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
@@ -12,32 +19,39 @@ macro(setup_compiler)
     message(FATAL_ERROR "Unknown C++ compiler: ${CMAKE_CXX_COMPILER_ID}.")
   endif()
 
+  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD_REQUIRED True)
   set(CMAKE_CXX_FLAGS_RELEASE "-O3")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g -O3")
   message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
+  add_compile_definitions(DATA_WIDTH=8)
 endmacro()
 
 macro(enable_OpenMP)
   find_package(OpenMP REQUIRED)
-
-  message(STATUS "Found OpenMP.")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endmacro()
 
 macro(enable_Boost)
-  #add_subdirectory(third_party/boost/align)
   include_directories(include third_party/boost/align/include)
-  #add_subdirectory(third_party/boost/config)
   include_directories(include third_party/boost/config/include)
-  #add_subdirectory(third_party/boost/assert)
   include_directories(include third_party/boost/assert/include)
-  #add_subdirectory(third_party/boost/static_assert)
   include_directories(include third_party/boost/static_assert/include)
-  #add_subdirectory(third_party/boost/core)
   include_directories(include third_party/boost/core/include)
+
 endmacro()
 
 macro(enable_Eigen)
   include_directories(include third_party/eigen)
+endmacro()
+
+macro(enable_MKL)
+  find_package(MKL REQUIRED)
+  include_directories(${MKL_INCLUDE_DIRS})
+endmacro()
+
+macro(enable_MPI)
+  find_package(MPI REQUIRED)
+  include_directories(${MPI_INCLUDE_PATH})
 endmacro()
