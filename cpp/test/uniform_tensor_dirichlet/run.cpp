@@ -115,7 +115,7 @@ int main( int argc, char * argv[] ) {
     space_mesh.load( file );
     space_mesh.refine( refine );
   }
-  n_timesteps *= std::exp2( 2 * refine );
+  n_timesteps *= std::exp2( refine );
   uniform_spacetime_tensor_mesh spacetime_mesh(
     space_mesh, end_time, n_timesteps );
 
