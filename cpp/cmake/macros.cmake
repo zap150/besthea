@@ -1,14 +1,15 @@
 macro(check_insource)
   if("${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
     message(FATAL_ERROR "In source build is not allowed. "
-    "Remove CMakeCache.txt and CMakFiles and use a dedicated build directory.")
+    "Remove CMakeCache.txt and CMakeFiles and use a dedicated build directory, "
+    "e.g., mkdir build && cd build && cmake .. && make")
   endif()
 endmacro()
 
 macro(setup_compiler)
   if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic-errors")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic-errors")
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8.3)
       message(FATAL_ERROR "GCC compiler is too old, besthea can be"
         " compiled only with g++-8.3 or higher.")
@@ -33,9 +34,18 @@ macro(setup_compiler)
   add_compile_definitions(DATA_WIDTH=${DATA_WIDTH})
 endmacro()
 
+# also adds flag to linker, but we want to link against iomp5
+#macro(enable_OpenMP)
+#  find_package(OpenMP REQUIRED)
+#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+#endmacro()
+
 macro(enable_OpenMP)
-  find_package(OpenMP REQUIRED)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+  if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
+    add_compile_options("-fopenmp")
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
+    add_compile_options("-qopenmp")
+  endif()
 endmacro()
 
 macro(enable_Boost)
