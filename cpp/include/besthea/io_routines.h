@@ -56,3 +56,4 @@ template< class T >
 std::vector< T > read_vector_from_bin_file( const std::string & filename );
 
 #endif /* INCLUDE_IO_ROUTINES_H_ */
+

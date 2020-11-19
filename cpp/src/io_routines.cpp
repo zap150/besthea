@@ -88,3 +88,4 @@ template std::vector< lo > read_vector_from_bin_file< lo >(
 
 template std::vector< sc > read_vector_from_bin_file< sc >(
   const std::string & filename );
+

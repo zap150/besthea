@@ -16,6 +16,24 @@ macro(setup_compiler)
     endif()
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w3")
+    # attribute appears more than once
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 2620")
+    # parameter was never referenced
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 869")
+    # declaration hides variable
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 1599")
+    # value copied to temporary, reference to temporary used
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 383")
+    # Inlining inhibited by limit max-total-size
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 11074")
+    # To get full report use -qopt-report=4 -qopt-report-phase ipo
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 11076")
+
+    ## ALL BELOW TO BE TAKEN CARE OF
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 2259")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 2547")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 1572")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 39")
   else()
     message(FATAL_ERROR "Unknown C++ compiler: ${CMAKE_CXX_COMPILER_ID}")
   endif()

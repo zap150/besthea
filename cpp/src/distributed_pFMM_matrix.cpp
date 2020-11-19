@@ -1037,7 +1037,6 @@ bool besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       }
       return false;
     }
-    break;
   }
   if ( _my_rank == root_id ) {
     delete rhs_contiguous;

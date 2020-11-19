@@ -101,8 +101,6 @@ bool besthea::linear_algebra::block_linear_operator::mkl_cg_solve(
       std::cout << "Only RCI codes 0,1 supported." << std::endl;
       return false;
     }
-
-    break;
   }
 
   return true;
@@ -183,8 +181,6 @@ bool besthea::linear_algebra::block_linear_operator::mkl_cg_solve(
       std::cout << "Only RCI codes 0,1,3 supported." << std::endl;
       return false;
     }
-
-    break;
   }
 
   return true;
@@ -268,8 +264,6 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
       std::cout << "Only RCI codes 0,1 supported." << std::endl;
       return false;
     }
-
-    break;
   }
 
   return true;
@@ -358,8 +352,6 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
       std::cout << "Only RCI codes 0,1,3 supported." << std::endl;
       return false;
     }
-
-    break;
   }
 
   return true;

@@ -761,7 +761,7 @@ bool besthea::mesh::tetrahedral_volume_mesh::print_ensight_datafiles(
     data_file.write( strings[ 2 ].c_str( ), 80 );
 
     for ( lo j = 0; j < _n_nodes; ++j ) {
-      float value = ( *node_data )[ i ]->get( j );
+      float value = static_cast<float>( ( *node_data )[ i ]->get( j ) );
       data_file.write(
         reinterpret_cast< const char * >( &value ), sizeof( float ) );
     }
@@ -809,7 +809,7 @@ bool besthea::mesh::tetrahedral_volume_mesh::print_ensight_datafiles(
     data_file.write( strings[ 2 ].c_str( ), 80 );
 
     for ( lo j = 0; j < _n_elements; ++j ) {
-      float value = ( *element_data )[ i ]->get( j );
+      float value = static_cast<float>( ( *element_data )[ i ]->get( j ) );
       data_file.write(
         reinterpret_cast< const char * >( &value ), sizeof( float ) );
     }
