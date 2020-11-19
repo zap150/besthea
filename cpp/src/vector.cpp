@@ -34,10 +34,6 @@
 besthea::linear_algebra::vector::vector( ) : _size( 0 ), _data( ) {
 }
 
-besthea::linear_algebra::vector::vector( const vector & that )
-  : _size( that._size ), _data( that._data ) {
-}
-
 besthea::linear_algebra::vector::vector( std::initializer_list< sc > list )
   : _size( list.size( ) ), _data( list ) {
 }

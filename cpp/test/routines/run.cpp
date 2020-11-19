@@ -34,7 +34,7 @@
 #include <cstdlib>
 #include <iostream>
 
-int main( int argc, char * argv[] ) {
+int main( int, char ** ) {
   using vector_type = besthea::linear_algebra::vector;
   using lagrange_interpolant = besthea::bem::lagrange_interpolant;
   using chebyshev_evaluator = besthea::bem::chebyshev_evaluator;

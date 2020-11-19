@@ -477,17 +477,14 @@ class besthea::mesh::scheduling_time_cluster {
 
   /**
    * Adds a cluster to @p _ready_interaction_list.
-   * @param[in] src_cluster Pointer to a target cluster.
-   * @note If @p _ready_interaction_list is not allocated this is done here.
    */
-  void add_to_ready_interaction_list( scheduling_time_cluster * src_cluster ) {
+  void add_to_ready_interaction_list( ) {
 #pragma omp atomic update
     _ready_interaction_list_size++;
   }
 
   /**
    * Clears the ready interaction list.
-   * @note: The ready interaction list is only cleared, not deleted!
    */
   void clear_ready_interaction_list( ) {
 #pragma omp atomic write

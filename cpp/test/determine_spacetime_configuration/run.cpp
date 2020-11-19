@@ -38,7 +38,7 @@ using namespace besthea::linear_algebra;
 using namespace besthea::tools;
 
 struct cauchy_data {
-  static sc dirichlet( sc x1, sc x2, sc x3, const coordinates< 3 > & n, sc t ) {
+  static sc dirichlet( sc x1, sc x2, sc x3, const coordinates< 3 > &, sc t ) {
     sc norm2 = ( x1 - _y[ 0 ] ) * ( x1 - _y[ 0 ] )
       + ( x2 - _y[ 1 ] ) * ( x2 - _y[ 1 ] )
       + ( x3 - _y[ 2 ] ) * ( x3 - _y[ 2 ] );
@@ -72,7 +72,7 @@ struct cauchy_data {
   static constexpr sc _shift{ 0.0 };
 };
 
-int main( int argc, char * argv[] ) {
+int main( int, char ** ) {
   // read the space mesh from file and refine it twice (to get 192 elements)
   std::string spatial_mesh_file = "./mesh_files/cube_12.txt";
   triangular_surface_mesh space_mesh( spatial_mesh_file );

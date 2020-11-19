@@ -54,12 +54,6 @@ class besthea::linear_algebra::vector {
   vector( );
 
   /**
-   * Copy constructor.
-   * @param[in] that Vector to be deep copied.
-   */
-  vector( const vector & that );
-
-  /**
    * Constructor with an initializer list.
    * @param[in] list Initializer list for std::vector.
    */

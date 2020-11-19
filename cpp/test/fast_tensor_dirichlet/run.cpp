@@ -38,7 +38,7 @@ using namespace besthea::linear_algebra;
 using namespace besthea::tools;
 
 struct cauchy_data {
-  static sc dirichlet( sc x1, sc x2, sc x3, const coordinates< 3 > & n, sc t ) {
+  static sc dirichlet( sc x1, sc x2, sc x3, const coordinates< 3 > &, sc t ) {
     sc norm2 = ( x1 - _y[ 0 ] ) * ( x1 - _y[ 0 ] )
       + ( x2 - _y[ 1 ] ) * ( x2 - _y[ 1 ] )
       + ( x3 - _y[ 2 ] ) * ( x3 - _y[ 2 ] );
