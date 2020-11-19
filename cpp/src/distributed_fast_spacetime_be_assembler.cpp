@@ -122,21 +122,19 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   const std::vector< general_spacetime_cluster * > & local_leaves
     = _test_space->get_tree( )->get_local_leaves( );
 
-  general_spacetime_cluster * current_cluster;
-  general_spacetime_cluster * nearfield_cluster;
-
-  full_matrix_type * block;
-
+#pragma omp parallel for
   for ( std::vector< general_spacetime_cluster * >::size_type leaf_index = 0;
         leaf_index < local_leaves.size( ); ++leaf_index ) {
-    current_cluster = local_leaves[ leaf_index ];
+    general_spacetime_cluster * current_cluster = local_leaves[ leaf_index ];
     std::vector< general_spacetime_cluster * > * nearfield_list
       = current_cluster->get_nearfield_list( );
     for ( std::vector< general_spacetime_cluster * >::size_type src_index = 0;
           src_index < nearfield_list->size( ); ++src_index ) {
-      nearfield_cluster = ( *nearfield_list )[ src_index ];
+      general_spacetime_cluster * nearfield_cluster
+        = ( *nearfield_list )[ src_index ];
 
-      block = global_matrix.create_nearfield_matrix( leaf_index, src_index );
+      full_matrix_type * block
+        = global_matrix.create_nearfield_matrix( leaf_index, src_index );
       assemble_nearfield_matrix( current_cluster, nearfield_cluster, *block );
     }
   }
@@ -207,7 +205,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
       time_configuration = 2;
     }
   }
-#pragma omp parallel
+  //#pragma omp parallel
   {
     std::vector< lo > test_loc_access( n_loc_rows );
     std::vector< lo > trial_loc_access( n_loc_columns );
@@ -270,7 +268,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
         i_trial_max = trial_offset + i_test_time;
       }
       for ( lo i_trial_time = 0; i_trial_time <= i_trial_max; ++i_trial_time ) {
-#pragma omp for schedule( dynamic, 1 )
+        //#pragma omp for schedule( dynamic )
         for ( lo i_test_space = 0; i_test_space < n_test_space_elem;
               ++i_test_space ) {
           // get the index of the current spacetime test element and transform
@@ -383,7 +381,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
                 }
 
                 value *= test_area * trial_area;
-                nearfield_matrix.add_atomic( i_test_time * n_test_space_dofs
+                nearfield_matrix.add( i_test_time * n_test_space_dofs
                     + test_loc_access[ i_loc_test ],
                   i_trial_time * n_trial_space_dofs
                     + trial_loc_access[ i_loc_trial ],
