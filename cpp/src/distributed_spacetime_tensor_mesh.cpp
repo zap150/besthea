@@ -74,6 +74,12 @@ besthea::mesh::distributed_spacetime_tensor_mesh::
   if ( _dist_tree != nullptr ) {
     delete _dist_tree;
   }
+  if ( _nearfield_time_mesh != nullptr ) {
+    delete _nearfield_time_mesh;
+  }
+  if ( _nearfield_mesh != nullptr ) {
+    delete _nearfield_mesh;
+  }
 }
 
 besthea::mesh::tree_structure const *
