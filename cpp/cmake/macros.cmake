@@ -1,6 +1,6 @@
 macro(check_insource)
   if("${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
-    message(FATAL_ERROR "In source build is not allowed. "
+    message(FATAL_ERROR
     "Remove CMakeCache.txt and CMakeFiles and use a dedicated build directory, "
     "e.g., mkdir build && cd build && cmake .. && make")
   endif()
@@ -12,12 +12,12 @@ macro(setup_compiler)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic-errors")
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8.3)
       message(FATAL_ERROR "GCC compiler is too old, besthea can be"
-        " compiled only with g++-8.3 or higher.")
+        " compiled only with g++-8 or higher")
     endif()
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w3")
   else()
-    message(FATAL_ERROR "Unknown C++ compiler: ${CMAKE_CXX_COMPILER_ID}.")
+    message(FATAL_ERROR "Unknown C++ compiler: ${CMAKE_CXX_COMPILER_ID}")
   endif()
 
   set(CMAKE_CXX_STANDARD 17)
@@ -29,7 +29,7 @@ macro(setup_compiler)
     set(DATA_WIDTH 8)
   endif()
 
-  message(STATUS "Setting DATA_WIDTH to ${DATA_WIDTH}.")
+  message(STATUS "Setting DATA_WIDTH to ${DATA_WIDTH}")
 
   add_compile_definitions(DATA_WIDTH=${DATA_WIDTH})
 endmacro()
