@@ -1,4 +1,4 @@
-%% Test 1: Test BPX preconditioner for a uniform mesh
+%% Test 1: Test several preconditioners for a uniform mesh
 %
 clc, clear
 
