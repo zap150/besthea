@@ -8,17 +8,24 @@ endmacro()
 
 macro(setup_compiler)
   if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic-errors")
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8.3)
       message(FATAL_ERROR "GCC compiler is too old, besthea can be"
-        " compiled only with g++-8 or higher")
+        " compiled only with g++ 8.3.0 or higher")
     endif()
+    
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic-errors")
+    
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
       link_libraries(stdc++fs)
       #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lstdc++fs")
     endif()
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.0.1)
+      message(FATAL_ERROR "Intel compiler is too old, besthea can be"
+        " compiled only with icpc 19.0.1 or higher")
+    endif()
+    
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w3")
     # attribute appears more than once
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 2620")
