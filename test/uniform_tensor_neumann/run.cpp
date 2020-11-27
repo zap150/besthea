@@ -58,17 +58,13 @@ struct cauchy_data {
   }
 
   static sc initial( sc x1, sc x2, sc x3 ) {
-    sc value = 0.0;
+    sc norm2 = ( x1 - _y[ 0 ] ) * ( x1 - _y[ 0 ] )
+      + ( x2 - _y[ 1 ] ) * ( x2 - _y[ 1 ] )
+      + ( x3 - _y[ 2 ] ) * ( x3 - _y[ 2 ] );
+    int dummy = 0.0;
+    sc value = std::pow( 4.0 * M_PI * _alpha * _shift, -1.5 )
+      * std::exp( -norm2 / ( 4.0 * _alpha * _shift + dummy ) );
 
-    if (_shift > 0.0)
-    {
-      sc norm2 = ( x1 - _y[ 0 ] ) * ( x1 - _y[ 0 ] )
-        + ( x2 - _y[ 1 ] ) * ( x2 - _y[ 1 ] )
-        + ( x3 - _y[ 2 ] ) * ( x3 - _y[ 2 ] );
-      value = std::pow( 4.0 * M_PI * _alpha * _shift, -1.5 )
-        * std::exp( -norm2 / ( 4.0 * _alpha * _shift ) );
-    }
-    
     return value;
   }
 
