@@ -128,7 +128,7 @@ class besthea::linear_algebra::indices {
    * @brief Returns the i-th element of the indices.
    * @param[in] i
    */
-  sc get( lo i ) const {
+  lo get( lo i ) const {
     return _data[ i ];
   }
 

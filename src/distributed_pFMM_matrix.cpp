@@ -3340,7 +3340,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         ++i ) {
     call_m2l_operations( ( *ready_interaction_list )[ i ], current_cluster,
       verbose, verbose_file );
-    current_cluster->set_m2l_counter( i + 1 );
+    current_cluster->set_m2l_counter( (slou)(i + 1) );
   }
   // check if all the m2l operations have been executed yet
   if ( current_cluster->get_m2l_counter( )

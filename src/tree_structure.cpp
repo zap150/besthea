@@ -726,7 +726,7 @@ void besthea::mesh::tree_structure::prepare_essential_reduction(
     // status is inherited from the children.
     if ( max_child_status > 0
       && root.get_essential_status( ) < max_child_status ) {
-      char new_status = ( max_child_status == 3 ) ? 2 : max_child_status;
+      char new_status = ( max_child_status == 3 ) ? (char)2 : max_child_status;
       root.set_essential_status( new_status );
     }
   }
@@ -820,7 +820,8 @@ void besthea::mesh::tree_structure::determine_essential_clusters(
     }
   }
   lo current_process_id = root.get_process_id( );
-  char root_status = ( current_process_id == my_process_id ) ? 3 : 0;
+  char root_status = 
+    ( current_process_id == my_process_id ) ? (char)3 : (char)0;
   if ( root_status == 3 ) {
     // set status of each child to 1 if it is 0 (child is essential in time
     // tree)
@@ -905,7 +906,7 @@ void besthea::mesh::tree_structure::determine_levelwise_output_string(
     // compute the number of digits the output_val needs
     lo id_digits = 1;
     if ( output_val > 0 ) {
-      id_digits = (lo) ceil( log10( output_val + 1 ) );
+      id_digits = (lo) ceil( log10( (double) output_val + 1 ) );
     } else if ( output_val < 0 ) {
       id_digits = 2;
     }

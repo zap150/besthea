@@ -66,7 +66,7 @@ TEST_CASE( "System matrices are assembled", "[matrices]" ) {
   lo max_n_levels = 8;
   lo n_min_elems = GENERATE( 10 );
   sc st_coeff = 4.0;
-  slou spatial_nearfield_limit = GENERATE( 3 );
+  slou spatial_nearfield_limit = (slou)(GENERATE( 3 ));
 
   // space-time mesh refinement
   lo refine = GENERATE( 1 );

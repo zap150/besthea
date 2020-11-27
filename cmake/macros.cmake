@@ -40,7 +40,6 @@ macro(setup_compiler)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 11076")
 
     ## ALL BELOW TO BE TAKEN CARE OF
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 2259")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 2547")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 1572")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 39")

@@ -476,9 +476,9 @@ void besthea::mesh::time_cluster_tree::tree_2_vector(
   // since the tree is a full binary tree by construction (in build tree)
   const std::vector< time_cluster * > * children = root.get_children( );
   char left_child_status
-    = ( ( *children )[ 0 ]->get_n_children( ) > 0 ) ? 1 : 2;
+    = ( ( *children )[ 0 ]->get_n_children( ) > 0 ) ? (char)1 : (char)2;
   char right_child_status
-    = ( ( *children )[ 1 ]->get_n_children( ) > 0 ) ? 1 : 2;
+    = ( ( *children )[ 1 ]->get_n_children( ) > 0 ) ? (char)1 : (char)2;
   tree_vector.push_back( left_child_status );
   tree_vector.push_back( right_child_status );
   if ( left_child_status == 1 ) {

@@ -329,14 +329,14 @@ class besthea::mesh::general_spacetime_cluster {
     slou spatial_nearfield_limit ) const {
     std::vector< slou > src_box_coordinate = src_cluster->get_box_coordinate( );
     slou x_diff = ( _box_coordinate[ 1 ] > src_box_coordinate[ 1 ] )
-      ? _box_coordinate[ 1 ] - src_box_coordinate[ 1 ]
-      : src_box_coordinate[ 1 ] - _box_coordinate[ 1 ];
+      ? (slou)( _box_coordinate[ 1 ] - src_box_coordinate[ 1 ] )
+      : (slou)( src_box_coordinate[ 1 ] - _box_coordinate[ 1 ] );
     slou y_diff = ( _box_coordinate[ 2 ] > src_box_coordinate[ 2 ] )
-      ? _box_coordinate[ 2 ] - src_box_coordinate[ 2 ]
-      : src_box_coordinate[ 2 ] - _box_coordinate[ 2 ];
+      ? (slou)( _box_coordinate[ 2 ] - src_box_coordinate[ 2 ] )
+      : (slou)( src_box_coordinate[ 2 ] - _box_coordinate[ 2 ] );
     slou z_diff = ( _box_coordinate[ 3 ] > src_box_coordinate[ 3 ] )
-      ? _box_coordinate[ 3 ] - src_box_coordinate[ 3 ]
-      : src_box_coordinate[ 3 ] - _box_coordinate[ 3 ];
+      ? (slou)( _box_coordinate[ 3 ] - src_box_coordinate[ 3 ] )
+      : (slou)( src_box_coordinate[ 3 ] - _box_coordinate[ 3 ] );
     return ( x_diff <= spatial_nearfield_limit
       && y_diff <= spatial_nearfield_limit
       && z_diff <= spatial_nearfield_limit );

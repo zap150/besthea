@@ -288,12 +288,12 @@ void besthea::mesh::space_cluster_tree::find_neighbors( space_cluster & cluster,
   std::vector< slou > current_coordinates( 4 );
 
   // compute lower bounds of following loops manually to avoid overflow
-  slou i_low
-    = ( (lo) coordinates[ 1 ] - limit > 0 ? coordinates[ 1 ] - limit : 0 );
-  slou j_low
-    = ( (lo) coordinates[ 2 ] - limit > 0 ? coordinates[ 2 ] - limit : 0 );
-  slou k_low
-    = ( (lo) coordinates[ 3 ] - limit > 0 ? coordinates[ 3 ] - limit : 0 );
+  slou i_low = (slou)
+      ( (lo) coordinates[ 1 ] - limit > 0 ? coordinates[ 1 ] - limit : 0 );
+  slou j_low = (slou)
+      ( (lo) coordinates[ 2 ] - limit > 0 ? coordinates[ 2 ] - limit : 0 );
+  slou k_low = (slou)
+      ( (lo) coordinates[ 3 ] - limit > 0 ? coordinates[ 3 ] - limit : 0 );
   for ( slou i = i_low; i < coordinates[ 1 ] + limit + 1; ++i ) {
     for ( slou j = j_low; j < coordinates[ 2 ] + limit + 1; ++j ) {
       for ( slou k = k_low; k < coordinates[ 3 ] + limit + 1; ++k ) {
