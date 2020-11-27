@@ -34,13 +34,14 @@ macro(setup_compiler)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 1599")
     # value copied to temporary, reference to temporary used
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 383")
-    # Inlining inhibited by limit max-total-size
+    # inlining inhibited by limit max-total-size
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 11074")
-    # To get full report use -qopt-report=4 -qopt-report-phase ipo
+    # to get full report use -qopt-report=4 -qopt-report-phase ipo
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 11076")
+    # specified as both a system and non-system include directory
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 2547")
 
     ## ALL BELOW TO BE TAKEN CARE OF
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 2547")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 1572")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 39")
   else()
