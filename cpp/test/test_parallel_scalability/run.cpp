@@ -78,7 +78,6 @@ int main( int argc, char * argv[] ) {
   int refine = 2;
   int temp_refine_factor = 2;
   lo n_time_slices = 256;
-  sc end_time = 1.0;
   lo spacetime_levels = 8;
   lo time_levels = 9;
   lo n_min_time_elems = 2;
@@ -185,7 +184,7 @@ int main( int argc, char * argv[] ) {
   size_of_block = distributed_mesh.get_n_elements( ) / n_blocks;
 
   distributed_spacetime_cluster_tree distributed_st_tree(
-    distributed_mesh, spacetime_levels, 40, st_coeff, 3, &comm );
+    distributed_mesh, spacetime_levels, n_min_st_elems, st_coeff, 3, &comm );
   MPI_Barrier( comm );
   if ( my_rank == 0 ) {
     // distributed_st_tree.print( );

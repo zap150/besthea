@@ -140,9 +140,9 @@ class besthea::linear_algebra::sparse_matrix
 
     for ( Eigen::Index k = 0; k < _data.outerSize( ); ++k )
       for ( iterator_type it( _data, k ); it; ++it ) {
-        std::cout << it.row( ) << " ";  // row index
-        std::cout << it.col( ) << " ";  // col index (here it is equal to k)
-        std::cout << it.value( ) << std::endl;
+        stream << it.row( ) << " ";  // row index
+        stream << it.col( ) << " ";  // col index (here it is equal to k)
+        stream << it.value( ) << std::endl;
       }
   }
 

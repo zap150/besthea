@@ -313,8 +313,8 @@ class besthea::linear_algebra::pFMM_matrix
    * computed in
    * \ref besthea::bem::fast_spacetime_be_assembler.
    */
-  void apply_s2m_operations(
-    block_vector_type const & x, bool trans = false ) const;
+  void apply_s2m_operations( [[maybe_unused]] block_vector_type const & x,
+    [[maybe_unused]] bool trans = false ) const;
 
   /*!
    * @brief Executes s2m operations for all leaves of the spacetime cluster
@@ -462,7 +462,8 @@ class besthea::linear_algebra::pFMM_matrix
    * computed in
    * \ref besthea::bem::fast_spacetime_be_assembler.
    */
-  void apply_l2t_operations( block_vector_type & y, bool trans = false ) const;
+  void apply_l2t_operations( [[maybe_unused]] block_vector_type & y,
+    [[maybe_unused]] bool trans = false ) const;
 
   /*!
    * @brief Executes l2t operations for all leaves of the spacetime cluster

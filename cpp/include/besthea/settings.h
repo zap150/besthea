@@ -68,7 +68,7 @@ namespace besthea {
   template< class T >
   using allocator_type = boost::alignment::aligned_allocator< T,
     DATA_ALIGN >;  //!< Aligned allocator.
-};                 // namespace besthea
+}  // namespace besthea
 
 using sc = besthea::scalar;                  //!< Floating point type.
 using lo = besthea::index;                   //!< Indexing type.

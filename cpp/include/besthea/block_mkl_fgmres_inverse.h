@@ -90,7 +90,8 @@ class besthea::linear_algebra::block_mkl_fgmres_inverse
    * @param[in] beta
    */
   virtual void apply( const block_vector_type & x, block_vector_type & y,
-    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
+    [[maybe_unused]] bool trans = false, [[maybe_unused]] sc alpha = 1.0,
+    [[maybe_unused]] sc beta = 0.0 ) const override;
 
  protected:
   lo _n_iterations_until_restart;  //!< maximal number of iterations before
