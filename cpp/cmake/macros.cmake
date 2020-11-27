@@ -14,6 +14,10 @@ macro(setup_compiler)
       message(FATAL_ERROR "GCC compiler is too old, besthea can be"
         " compiled only with g++-8 or higher")
     endif()
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
+      link_libraries(stdc++fs)
+      #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lstdc++fs")
+    endif()
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w3")
     # attribute appears more than once
