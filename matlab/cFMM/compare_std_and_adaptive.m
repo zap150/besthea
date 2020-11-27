@@ -4,6 +4,8 @@
 %
 clc, clear
 
+%accuracy of the GMRES
+eps = 1e-6;
 % levels of the binary tree
 L = 4;
 % number of temporal panels per temporal cluster
@@ -24,6 +26,7 @@ exact_solution = @(t) (exp(t));
 
 fprintf('\nSolving problem with %d time-steps, end-time = %f. \n', ...
   2^L * N_steps, t_end);
+fprintf('GMRES prec = 1e%d \n', log10( eps ) ); 
 
 fprintf('\nSolving using GMRES with standard FMM. \n');
 fmm_solver = cFMM_solver(t_start, t_end, N_steps, L, order, rhs_fun);
@@ -31,7 +34,7 @@ fmm_solver = cFMM_solver(t_start, t_end, N_steps, L, order, rhs_fun);
 
 %x_stndrd = fmm_solver.apply_fmm_matrix_std(vec);
 tic
-x_stndrd = fmm_solver.solve_iterative_std_fmm();
+x_stndrd = fmm_solver.solve_iterative_std_fmm_prec( eps );
 toc
 err_stndrd = fmm_solver.l2_error(x_stndrd, exact_solution, t_end, N_steps*2^L);
 
@@ -49,6 +52,7 @@ panels(1, :) = t_start : ht : t_end - ht;
 panels(2, :) = t_start + ht : ht : t_end;
 
 fprintf('\nSolving using GMRES with standard FMM (adaptive code basis). \n');
+
 fmm_solver = cFMM_solver_adaptive(t_start, t_end, N_steps, L, order, ... 
       eta, rhs_fun, panels, true);
     
@@ -56,7 +60,7 @@ fmm_solver = cFMM_solver_adaptive(t_start, t_end, N_steps, L, order, ...
 % x_adptv = fmm_solver.apply_fmm_matrix_std(vec);
     
 tic
-x_adptv = fmm_solver.solve_iterative_std_fmm_prec(1e-5);
+x_adptv = fmm_solver.solve_iterative_std_fmm_diag_prec( eps );
 toc
 err_adptv = fmm_solver.l2_error(x_adptv, exact_solution);
 
@@ -162,7 +166,7 @@ fmm_solver = cFMM_solver_adaptive(t_start, t_end, N_steps, L, order, ...
 %vec = ones(size(panels,2), 1);
 %x_adptv = fmm_solver.apply_fmm_matrix_std(vec);
 tic
-x_adptv = fmm_solver.solve_iterative_std_fmm_prec(1e-5);
+x_adptv = fmm_solver.solve_iterative_std_fmm_diag_prec(1e-5);
 toc
 err_adptv = fmm_solver.l2_error(x_adptv, exact_solution);
 
