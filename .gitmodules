@@ -1,18 +1,18 @@
-[submodule "cpp/third_party/eigen"]
-	path = cpp/third_party/eigen
+[submodule "third_party/eigen"]
+	path = third_party/eigen
 	url = https://github.com/zap150/eigen.git
-[submodule "cpp/third_party/boost/align"]
-	path = cpp/third_party/boost/align
+[submodule "third_party/boost/align"]
+	path = third_party/boost/align
 	url = https://github.com/zap150/align.git
-[submodule "cpp/third_party/boost/config"]
-	path = cpp/third_party/boost/config
+[submodule "third_party/boost/config"]
+	path = third_party/boost/config
 	url = https://github.com/zap150/config.git
-[submodule "cpp/third_party/boost/assert"]
-	path = cpp/third_party/boost/assert
+[submodule "third_party/boost/assert"]
+	path = third_party/boost/assert
 	url = https://github.com/zap150/assert.git
-[submodule "cpp/third_party/boost/static_assert"]
-	path = cpp/third_party/boost/static_assert
+[submodule "third_party/boost/static_assert"]
+	path = third_party/boost/static_assert
 	url = https://github.com/zap150/static_assert.git
-[submodule "cpp/third_party/boost/core"]
-	path = cpp/third_party/boost/core
+[submodule "third_party/boost/core"]
+	path = third_party/boost/core
 	url = https://github.com/zap150/core.git
