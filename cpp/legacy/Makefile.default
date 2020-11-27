@@ -1,12 +1,16 @@
-EIGEN_INC=./external/eigen
-BOOST_INC=./external
+EIGEN_INC=./third_party/eigen
+BOOST_ALIGN_INC=./third_party/boost/align/include
+BOOST_CONFIG_INC=./third_party/boost/config/include
+BOOST_ASSERT_INC=./third_party/boost/assert/include
+BOOST_STATIC_ASSERT_INC=./third_party/boost/static_assert/include
+BOOST_CORE_INC=./third_party/boost/core/include
 SIMD=4
 
-#CXX=icpc
-#CXXFLAGS=-xHost -O3 -g -DDATA_WIDTH=${SIMD} -qopenmp -std=c++17 -w2 -I${MKLROOT}/include -I${EIGEN_INC} -I${BOOST_INC}
+#CXX=mpiicpc
+#CXXFLAGS=-xHost -O3 -g -DDATA_WIDTH=${SIMD} -qopenmp -std=c++17 -w2 -I${MKLROOT}/include -I${EIGEN_INC} -I${BOOST_ALIGN_INC} -I${BOOST_CONFIG_INC} -I${BOOST_ASSERT_INC} -I${BOOST_STATIC_ASSERT_INC} -I${BOOST_CORE_INC}
 
-CXX=g++
-CXXFLAGS=-fopenmp -O3 -ffast-math -g -std=c++17 -DDATA_WIDTH=${SIMD} -Wall -Wshadow -I${MKLROOT}/include -I${EIGEN_INC} -I${BOOST_INC} -DMKL_INT=long
+CXX=mpicxx
+CXXFLAGS=-fopenmp -O3 -ffast-math -g -std=c++17 -DDATA_WIDTH=${SIMD} -Wall -Wshadow -I${MKLROOT}/include -I${EIGEN_INC} -I${BOOST_ALIGN_INC} -I${BOOST_CONFIG_INC} -I${BOOST_ASSERT_INC} -I${BOOST_STATIC_ASSERT_INC} -I${BOOST_CORE_INC} -DMKL_INT=long
 
 #########################DO NOT MODIFY BELOW THIS LINE##########################
 ################################################################################
