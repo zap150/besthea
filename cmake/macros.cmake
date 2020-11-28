@@ -20,6 +20,7 @@ macro(setup_compiler)
       link_libraries(stdc++fs)
     endif()
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
+    # link_libraries(stdc++fs)
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.0.1)
       message(FATAL_ERROR "Intel compiler is too old, besthea can be"
         " compiled only with icpc 19.0.1 or higher")
@@ -41,9 +42,6 @@ macro(setup_compiler)
     # specified as both a system and non-system include directory
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 2547")
 
-    ## ALL BELOW TO BE TAKEN CARE OF
-    # floating-point equality and inequality comparisons are unreliable
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 1572")
   else()
     message(FATAL_ERROR "Unknown C++ compiler: ${CMAKE_CXX_COMPILER_ID}")
   endif()

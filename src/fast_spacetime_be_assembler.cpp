@@ -233,7 +233,7 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
       // first, assemble diagonal block
       block
         = global_matrix.create_nearfield_matrix( global_elem_i, global_elem_i );
-      assemble_nearfield_matrix( t0, t1, t0, t1, *block );
+      assemble_nearfield_matrix( t0, t1, t0, t1, 0, *block );
       //      if ( i == 0 ) {
       //        block->print( );
       //        std::cout << "end" << std::endl;
@@ -250,7 +250,12 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
           global_elem_j, &tau0, &tau1 );
         block = global_matrix.create_nearfield_matrix(
           global_elem_i, global_elem_j );
-        assemble_nearfield_matrix( t0, t1, tau0, tau1, *block );
+        // in case that the index global_elem_j is less than global_elem_i - 1
+        // the time intervals are separated, otherwise they share a vertex.
+        char time_configuration
+          = ( global_elem_j < global_elem_i - 1 ? (char) 2 : (char) 1 );
+        assemble_nearfield_matrix(
+          t0, t1, tau0, tau1, time_configuration, *block );
       }
       // std::cout << std::endl << "   ";
       // next interact with the previous cluster
@@ -262,7 +267,12 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
             global_elem_j, &tau0, &tau1 );
           block = global_matrix.create_nearfield_matrix(
             global_elem_i, global_elem_j );
-          assemble_nearfield_matrix( t0, t1, tau0, tau1, *block );
+          // in case that the index global_elem_j is less than global_elem_i - 1
+          // the time intervals are separated, otherwise they share a vertex.
+          char time_configuration
+            = ( global_elem_j < global_elem_i - 1 ? (char) 2 : (char) 1 );
+          assemble_nearfield_matrix(
+            t0, t1, tau0, tau1, time_configuration, *block );
         }
       }
       // std::cout << std::endl;
@@ -308,7 +318,11 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
             global_elem_j, &tau0, &tau1 );
           block = global_matrix.create_farfield_matrix(
             global_elem_i, global_elem_j );
-          assemble_nearfield_matrix( t0, t1, tau0, tau1, *block );
+          // time configuration is always 2 in the farfield (i.e. time intervals
+          // are disjoint)
+          char time_configuration = 2;
+          assemble_nearfield_matrix(
+            t0, t1, tau0, tau1, time_configuration, *block );
         }
         // std::cout << std::endl;
         farfield_cluster = farfield_cluster->get_left_neighbour( );
@@ -333,6 +347,8 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   for ( auto it = leaves.begin( ); it != leaves.end( ); ++it ) {
     current_cluster = *it;
 
+    char time_configuration = 0;  // start with same time element.
+
     // go over every element in the current time cluster
     for ( lo i = 0; i < current_cluster->get_n_elements( ); ++i ) {
       global_elem_i = current_cluster->get_element( i );
@@ -349,7 +365,14 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
       block
         = global_matrix.create_nearfield_matrix( global_elem_i, global_elem_j,
           leaves.size( ) * current_cluster->get_n_elements( ) - global_elem_i );
-      assemble_nearfield_matrix( t0, t1, tau0, tau1, *block );
+
+      assemble_nearfield_matrix(
+        t0, t1, tau0, tau1, time_configuration, *block );
+
+      if ( i < 2 ) {
+        // update time configuration for next step in loop.
+        ++time_configuration;
+      }
     }
   }
 }
@@ -387,8 +410,10 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   lo n_loc_rows = test_basis.dimension_local( );
   lo n_loc_columns = trial_basis.dimension_local( );
 
-  bool same_time_cluster
-    = ( test_time_cluster.get_center( ) == trial_time_cluster.get_center( ) );
+  // bool same_time_cluster
+  //   = ( test_time_cluster.get_center( ) == trial_time_cluster.get_center( )
+  //   );
+  bool same_time_cluster = ( &test_time_cluster == &trial_time_cluster );
 #pragma omp parallel
   {
     std::vector< lo > test_loc_access( n_loc_rows );
@@ -437,8 +462,8 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
         gl_trial_elem_time = trial_time_cluster.get_element( i_trial_time );
         trial_mesh->get_temporal_nodes( gl_trial_elem_time, &tau0, &tau1 );
 
-        bool shared_t_element = t0 == tau0;
-        bool shared_t_vertex = t0 == tau1;
+        bool shared_t_element = ( gl_trial_elem_time == gl_test_elem_time );
+        bool shared_t_vertex = ( gl_trial_elem_time == gl_test_elem_time - 1 );
 #pragma omp for schedule( dynamic, 1 )
         for ( lo i_test_space = 0; i_test_space < n_test_space_elem;
               ++i_test_space ) {
@@ -573,8 +598,10 @@ void besthea::bem::fast_spacetime_be_assembler<
   lo n_trial_space_elem = trial_space_cluster.get_n_elements( );
   std::vector< lo > trial_space_elems = trial_space_cluster.get_all_elements( );
 
-  bool same_time_cluster
-    = ( test_time_cluster.get_center( ) == trial_time_cluster.get_center( ) );
+  // bool same_time_cluster
+  //   = ( test_time_cluster.get_center( ) == trial_time_cluster.get_center( )
+  //   );
+  bool same_time_cluster = ( &test_time_cluster == &trial_time_cluster );
 #pragma omp parallel
   {
     std::vector< lo > test_loc_access( 3 );
@@ -631,8 +658,8 @@ void besthea::bem::fast_spacetime_be_assembler<
         gl_trial_elem_time = trial_time_cluster.get_element( i_trial_time );
         trial_mesh->get_temporal_nodes( gl_trial_elem_time, &tau0, &tau1 );
 
-        bool shared_t_element = t0 == tau0;
-        bool shared_t_vertex = t0 == tau1;
+        bool shared_t_element = ( gl_trial_elem_time == gl_test_elem_time );
+        bool shared_t_vertex = ( gl_trial_elem_time == gl_test_elem_time - 1 );
 #pragma omp for schedule( dynamic, 1 )
         for ( lo i_test_space = 0; i_test_space < n_test_space_elem;
               ++i_test_space ) {
@@ -842,7 +869,7 @@ void besthea::bem::fast_spacetime_be_assembler<
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::assemble_nearfield_matrix( sc t0, sc t1, sc tau0, sc tau1,
-  full_matrix_type & nearfield_matrix ) const {
+  char temporal_configuration, full_matrix_type & nearfield_matrix ) const {
   auto & test_basis = _test_space->get_basis( );
   auto & trial_basis = _trial_space->get_basis( );
   auto test_mesh = _test_space->get_mesh( );
@@ -887,16 +914,15 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
     sc * y3_mapped = my_quadrature._y3.data( );
     sc * kernel_data = my_quadrature._kernel_values.data( );
 
-    bool shared_t_element = t0 == tau0;
-    bool shared_t_vertex = t0 == tau1;
-
 #pragma omp for schedule( dynamic, 1 )
     for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
       for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
         test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
         test_mesh->get_spatial_normal( i_test, nx );
         test_area = test_mesh->spatial_area( i_test );
-        if ( shared_t_element || shared_t_vertex ) {
+        // special quadrature in case of same element ( configuration 0 ) or
+        // in case of shared vertex ( configuration 1 ).
+        if ( temporal_configuration == 0 || temporal_configuration == 1 ) {
           get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
         } else {
           n_shared_vertices = 0;
@@ -922,7 +948,7 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 
         size = my_quadrature._w[ n_shared_vertices ].size( );
 
-        if ( shared_t_element ) {
+        if ( temporal_configuration == 0 ) {
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
                           y2_mapped, y3_mapped, kernel_data, w        \
                           : DATA_ALIGN ) simdlen( DATA_WIDTH )
@@ -984,7 +1010,7 @@ void besthea::bem::fast_spacetime_be_assembler<
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
   assemble_nearfield_matrix( sc t0, sc t1, sc tau0, sc tau1,
-    full_matrix_type & nearfield_matrix ) const {
+    char temporal_configuration, full_matrix_type & nearfield_matrix ) const {
   auto & test_basis = _test_space->get_basis( );
   auto & trial_basis = _trial_space->get_basis( );
   auto test_mesh = _test_space->get_mesh( );
@@ -1035,9 +1061,6 @@ void besthea::bem::fast_spacetime_be_assembler<
     sc * y2_mapped = my_quadrature._y2.data( );
     sc * y3_mapped = my_quadrature._y3.data( );
 
-    bool shared_t_element = t0 == tau0;
-    bool shared_t_vertex = t0 == tau1;
-
 #pragma omp for schedule( dynamic, 1 )
     for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
       for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
@@ -1045,7 +1068,9 @@ void besthea::bem::fast_spacetime_be_assembler<
         test_mesh->get_spatial_normal( i_test, nx );
         test_area = test_mesh->spatial_area( i_test );
 
-        if ( shared_t_element || shared_t_vertex ) {
+        // special quadrature in case of same element ( configuration 0 ) or
+        // in case of shared vertex ( configuration 1 ).
+        if ( temporal_configuration == 0 || temporal_configuration == 1 ) {
           get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
         } else {
           n_shared_vertices = 0;
@@ -1094,7 +1119,7 @@ void besthea::bem::fast_spacetime_be_assembler<
         value21 = value22 = value23 = 0.0;
         value31 = value32 = value33 = 0.0;
 
-        if ( shared_t_element ) {
+        if ( temporal_configuration == 0 ) {
 #pragma omp simd \
         aligned( x1_mapped, x2_mapped, x3_mapped, x1_ref, x2_ref : DATA_ALIGN ) \
         aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, w : DATA_ALIGN ) \

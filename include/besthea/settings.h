@@ -51,6 +51,7 @@
 #endif
 
 // pragma to switch between cluster- and timestep-wise nearfield computation
+// NOTE: this is only relevant in case of non-distributed pFMM
 #define NEARFIELD_CLUSTERWISE  //!< Pragma to control nearfield computation
 
 namespace besthea {

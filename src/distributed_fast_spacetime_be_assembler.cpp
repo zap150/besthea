@@ -239,8 +239,8 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
     sc * y3_mapped = my_quadrature._y3.data( );
     sc * kernel_data = my_quadrature._kernel_values.data( );
 
-    lo test_elem_time, gl_test_elem_space;
-    lo gl_trial_elem_time, gl_trial_elem_space;
+    lo test_elem_time, gl_test_elem_time, gl_test_elem_space;
+    lo trial_elem_time, gl_trial_elem_time, gl_trial_elem_space;
 
     lo test_element_spacetime, trial_element_spacetime;
 
@@ -295,14 +295,17 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
               = distributed_trial_mesh.global_2_local( trial_mesh_start_idx,
                 trial_elems[ i_trial_time * n_trial_space_elem
                   + i_trial_space ] );
-            gl_trial_elem_time
+            trial_elem_time
               = trial_mesh->get_time_element( trial_element_spacetime );
-            trial_mesh->get_temporal_nodes( gl_trial_elem_time, &tau0, &tau1 );
+            trial_mesh->get_temporal_nodes( trial_elem_time, &tau0, &tau1 );
             gl_trial_elem_space
               = trial_mesh->get_space_element( trial_element_spacetime );
             // determine the configuration in time and space.
-            bool shared_t_element = t0 == tau0;
-            bool shared_t_vertex = t0 == tau1;
+            gl_trial_elem_time = trial_mesh_start_idx + trial_elem_time;
+            gl_test_elem_time = test_mesh_start_idx + test_elem_time;
+            bool shared_t_element = ( gl_trial_elem_time == gl_test_elem_time );
+            bool shared_t_vertex
+              = ( gl_trial_elem_time == gl_test_elem_time - 1 );
             if ( shared_t_element || shared_t_vertex ) {
               get_type( gl_test_elem_space, gl_trial_elem_space,
                 n_shared_vertices, rot_test, rot_trial );
