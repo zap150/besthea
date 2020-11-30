@@ -175,7 +175,6 @@ void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
   }
 
 #ifndef NEARFIELD_CLUSTERWISE
-  lo count = 0;
 #pragma omp parallel
   {
     full_matrix_type * current_block;
@@ -193,11 +192,6 @@ void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
       for ( lo j = 0; j < local_y.size( ); ++j ) {
         y.add_atomic( indices.first, j, local_y[ j ] );
       }
-      if ( count == 0 ) {
-        std::cout << "nearfield matrix is " << std::endl;
-        current_block->print( );
-      }
-      ++count;
     }
   }
 #else

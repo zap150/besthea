@@ -226,11 +226,16 @@ class besthea::bem::fast_spacetime_be_assembler {
    * @param[in] t1 Final time of the test function quadrature.
    * @param[in] tau0 Initial time of the trial function quadrature.
    * @param[in] tau1 Final time of the trial function quadrature.
+   * @param[in] temporal_configuration  help variable to determine the
+   *                                    configuration of the time intervals:
+   *                                      - 0: same cluster
+   *                                      - 1: shared vertex
+   *                                      - 2: disjoint cluster.
    * @param[out] nearfield_matrix Reference to the matrix which should be
    * assembled.
    */
-  void assemble_nearfield_matrix(
-    sc t0, sc t1, sc tau0, sc tau1, full_matrix_type & nearfield_matrix ) const;
+  void assemble_nearfield_matrix( sc t0, sc t1, sc tau0, sc tau1,
+    char temporal_configuration, full_matrix_type & nearfield_matrix ) const;
 
   /**
    * Assembles clusterwise nearfield matrix

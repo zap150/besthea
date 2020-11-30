@@ -54,13 +54,17 @@ int main( int argc, char * argv[] ) {
       // if all tests are passed, it's enough if we hear that from
       // the master.
       if ( ss.str( ).rfind( "All tests passed" ) == std::string::npos )
-        std::cout << "MPI rank: " << rank << std::endl << ss.str( );
+        std::cout << "MPI rank: " << rank << ", number of processes " << size
+                  << std::endl
+                  << ss.str( );
     }
   }
   // master prints last
   MPI_Barrier( MPI_COMM_WORLD );
   if ( rank == 0 )
-    std::cout << "MPI rank: " << rank << std::endl << ss.str( );
+    std::cout << "MPI rank: " << rank << ", number of processes " << size
+              << std::endl
+              << ss.str( );
   MPI_Finalize( );
   return result;
 }
