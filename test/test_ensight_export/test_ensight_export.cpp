@@ -72,7 +72,7 @@ int main( int argc, char * argv[] ) {
     }
 
     for ( lo i = 0; i < mesh.get_n_elements( ); ++i ) {
-      something_data[ i ] = sin( (double)i ) * cos( (double)ts );
+      something_data[ i ] = sin( (double) i ) * cos( (double) ts );
     }
   }
 
