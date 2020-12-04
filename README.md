@@ -24,7 +24,9 @@ git pull --recurse-submodules
 git submodule update --init --recursive
 ```
 
-Except for the Boost and Eigen submodules and the Catch header provided in the repository, BESTHEA requires the installation of MPI and Intel MKL. To configure the project make sure that the `MKLROOT` and `LIBRARY_PATH` by calling the scripts `mklvars.sh` and `compilervars.sh` provided by the MKL installation. 
+Except for the Boost and Eigen submodules and the Catch header provided in the repository, BESTHEA requires the installation of MPI and Intel MKL. To configure the project make sure that the `MKLROOT` and `LIBRARY_PATH` by calling the scripts `mklvars.sh` and `compilervars.sh` provided by the MKL installation.
+
+Two branches are available in the project. The `master` branch is supposed to be stable (as stable as a research project can be), while `develop` inlcudes the newest enhancements before they are ready to be merged in `master`.  
 
 **CMake**
 
