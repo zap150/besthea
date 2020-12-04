@@ -7,6 +7,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake/Modules)
 check_insource()
 setup_compiler()
 
+enable_filesystem()
 enable_MKL()
 enable_MPI()
 enable_OpenMP()

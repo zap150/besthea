@@ -15,12 +15,8 @@ macro(setup_compiler)
     
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic-errors")
-    
-    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
-      link_libraries(stdc++fs)
-    endif()
+
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
-    # link_libraries(stdc++fs)
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.0.1)
       message(FATAL_ERROR "Intel compiler is too old, besthea can be"
         " compiled only with icpc 19.0.1 or higher")
@@ -58,6 +54,34 @@ macro(setup_compiler)
   message(STATUS "Setting DATA_WIDTH to ${DATA_WIDTH}")
 
   add_compile_definitions(DATA_WIDTH=${DATA_WIDTH})
+endmacro()
+
+macro(enable_filesystem)
+  # try without -lstd++fs
+  try_run(RUNS_WITH_STDFS COMPILES_WITH_STDFS
+    "${CMAKE_BINARY_DIR}/try"
+    "${CMAKE_SOURCE_DIR}/cmake/has_stdfs.cpp"
+    CMAKE_FLAGS -DCMAKE_CXX_STANDARD=17 -DCMAKE_CXX_STANDARD_REQUIRED=ON
+    RUN_OUTPUT_VARIABLE TRY_OUTPUT)
+
+  if (NOT COMPILES_WITH_STDFS OR RUNS_WITH_STDFS STREQUAL "FAILED_TO_RUN")
+    # try with -lstd++fs
+    try_run(RUNS_WITH_STDFS COMPILES_WITH_STDFS
+      "${CMAKE_BINARY_DIR}/try"
+      "${CMAKE_SOURCE_DIR}/cmake/has_stdfs.cpp"
+      CMAKE_FLAGS -DCMAKE_CXX_STANDARD=17 -DCMAKE_CXX_STANDARD_REQUIRED=ON
+      LINK_LIBRARIES stdc++fs
+      RUN_OUTPUT_VARIABLE TRY_OUTPUT)
+
+      if (NOT COMPILES_WITH_STDFS OR RUNS_WITH_STDFS STREQUAL "FAILED_TO_RUN")
+        message(FATAL_ERROR "No std::filesystem support")
+      else()
+        message(STATUS "Found std::filesystem: libstdc++fs")
+        link_libraries(stdc++fs)
+      endif()
+  else()
+    message(STATUS "Found std::filesystem: libstdc++")
+  endif()
 endmacro()
 
 # also adds flag to linker, but we want to link against iomp5
