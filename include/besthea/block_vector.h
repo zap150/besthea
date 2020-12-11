@@ -28,14 +28,13 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file vector.h
- * @brief Vector of scalars.
+/** @file block_vector.h
+ * @brief Collection of scalar vector forming a block vector.
  */
 
 #ifndef INCLUDE_BESTHEA_BLOCK_VECTOR_H_
 #define INCLUDE_BESTHEA_BLOCK_VECTOR_H_
 
-//#include "besthea/fast_spacetime_be_space.h"
 #include "besthea/settings.h"
 #include "besthea/vector.h"
 
@@ -63,7 +62,7 @@ namespace besthea {
 }
 
 /**
- *  Class representing a vector.
+ *  Class representing a block vector.
  */
 class besthea::linear_algebra::block_vector {
  public:
@@ -325,8 +324,8 @@ class besthea::linear_algebra::block_vector {
   }
 
  protected:
-  lo _block_size;                    //!< block size
-  lo _size;                          //!< vector size
+  lo _block_size;                    //!< block size (number of blocks)
+  lo _size;                          //!< vector size (size of block)
   std::vector< vector_type > _data;  //!< raw data
 };
 
