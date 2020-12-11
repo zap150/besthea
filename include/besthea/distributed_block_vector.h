@@ -68,6 +68,17 @@ namespace besthea {
 class besthea::linear_algebra::distributed_block_vector {
  public:
   using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
+
+  /**
+   * Constructor.
+   */
+  distributed_block_vector( );
+
+  /**
+   * Copy constructor.
+   * @param[in] that Vector to be copied.
+   */
+  distributed_block_vector( const distributed_block_vector & that );
 };
 
 #endif
