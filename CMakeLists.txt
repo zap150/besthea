@@ -19,8 +19,8 @@ file(GLOB besthea_SOURCES src/*.cpp)
 include_directories(include)
 add_library(besthea STATIC ${besthea_SOURCES})
 
-option(BUILD_TEST "Build tests using the library" OFF)
+option(BUILD_EXAMPLES "Build examples using the library" OFF)
 
-if(BUILD_TEST)
-  add_subdirectory(test)
+if(BUILD_EXAMPLES)
+  add_subdirectory(examples)
 endif()

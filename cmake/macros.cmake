@@ -60,7 +60,7 @@ macro(enable_filesystem)
   # try without -lstd++fs
   try_run(RUNS_WITH_STDFS COMPILES_WITH_STDFS
     "${CMAKE_BINARY_DIR}/try"
-    "${CMAKE_SOURCE_DIR}/cmake/has_stdfs.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/has_stdfs.cpp"
     CMAKE_FLAGS -DCMAKE_CXX_STANDARD=17 -DCMAKE_CXX_STANDARD_REQUIRED=ON
     RUN_OUTPUT_VARIABLE TRY_OUTPUT)
 
@@ -68,7 +68,7 @@ macro(enable_filesystem)
     # try with -lstd++fs
     try_run(RUNS_WITH_STDFS COMPILES_WITH_STDFS
       "${CMAKE_BINARY_DIR}/try"
-      "${CMAKE_SOURCE_DIR}/cmake/has_stdfs.cpp"
+      "${CMAKE_CURRENT_SOURCE_DIR}/cmake/has_stdfs.cpp"
       CMAKE_FLAGS -DCMAKE_CXX_STANDARD=17 -DCMAKE_CXX_STANDARD_REQUIRED=ON
       LINK_LIBRARIES stdc++fs
       RUN_OUTPUT_VARIABLE TRY_OUTPUT)
