@@ -33,6 +33,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
+#include <lyra/lyra.hpp>
 #include <mkl.h>
 
 using namespace besthea::mesh;
@@ -77,28 +78,38 @@ struct cauchy_data {
 };
 
 int main( int argc, char * argv[] ) {
-  std::string file = "./mesh_files/cube_192_vol.txt";
+  std::string file, grid_file = "";
   int refine = 0;
   lo n_timesteps = 8;
   sc end_time = 1.0;
-  std::string grid_file = "./mesh_files/grid_xy.txt";
   int grid_refine = 2;
 
-  if ( argc > 1 ) {
-    file.assign( argv[ 1 ] );
+  bool help;
+  auto cli = lyra::help( help )
+    | lyra::opt( file, "surface mesh" )[ "--mesh" ](
+      "Surface mesh of the spatial domain" )
+        .required( )
+    | lyra::opt( grid_file, "grid mesh" )[ "--grid" ](
+      "Grid mesh inside of the surface mesh for the representation formula" )
+    | lyra::opt( refine, "mesh refinement" )[ "--refine" ](
+      "Number of surface mesh refinements" )
+    | lyra::opt( grid_refine, "grid refinement" )[ "--grid_refine" ](
+      "Number of grid mesh refinements" )
+    | lyra::opt( n_timesteps, "number of timesteps" )[ "--timesteps" ](
+      "Number of timesteps" )
+    | lyra::opt( end_time, "end time" )[ "--endtime" ]( "End time" );
+
+  auto result = cli.parse( { argc, argv } );
+
+  if ( !result ) {
+    std::cerr << "Error in command line: " << result.errorMessage( )
+              << std::endl;
+    return 1;
   }
-  if ( argc > 2 ) {
-    n_timesteps = std::atoi( argv[ 2 ] );
-  }
-  if ( argc > 3 ) {
-    end_time = std::atof( argv[ 3 ] );
-  }
-  if ( argc > 4 ) {
-    refine = std::atoi( argv[ 4 ] );
-    grid_refine += refine;
-  }
-  if ( argc > 5 ) {
-    grid_file.assign( argv[ 5 ] );
+
+  if ( help ) {
+    std::cout << cli;
+    return 0;
   }
 
   triangular_surface_mesh space_mesh;

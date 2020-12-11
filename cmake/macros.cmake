@@ -128,3 +128,7 @@ endmacro()
 macro(enable_catch)
   include_directories(SYSTEM third_party/catch)
 endmacro()
+
+macro(enable_Lyra)
+  include_directories(SYSTEM third_party/lyra/include)
+endmacro()

@@ -14,6 +14,7 @@ enable_OpenMP()
 enable_Boost()
 enable_Eigen()
 enable_catch()
+enable_Lyra()
 
 file(GLOB besthea_SOURCES src/*.cpp)
 include_directories(include)
