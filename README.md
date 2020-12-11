@@ -50,9 +50,9 @@ or CMake variables
 cmake -DCMAKE_C_COMPILER=icc -DCMAKE_CXX_COMPILER=icpc ..
 ```
 
-The project includes test executables testing the library. These can be enabled by setting 
+The project includes example executables testing the library. These can be enabled by setting 
 ```
-cmake -DBUILD_TEST=ON ..
+cmake -DBUILD_EXAMPLES=ON ..
 ```
 
 The BESTHEA library uses OpenMP SIMD. To fully leverage its potential we recommend the Intel compiler with optimisation flags set in accordance with the system. E.g. on a Skylake CPU we would use 
