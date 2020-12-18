@@ -68,7 +68,7 @@ cmake -DDATA_WIDTH=4 ..
 
 **Usage**
 
-The `install` target installs `libbesthea.a` to `build/lib` and executable examples to `build/bin` together with example mesh files. After `cd ./bin`, one can run an example
+The `install` target installs `libbesthea.a` to `build/lib`, public headers to `build/include/besthea`, and executable examples to `build/bin` together with example mesh files. After `cd ./bin`, one can run an example
 ```
 ./uniform_tensor_neumann --mesh cube_192.txt --grid grid_cube_xy.txt
 ```
