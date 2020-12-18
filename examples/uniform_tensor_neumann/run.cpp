@@ -33,6 +33,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
+#include <lyra/lyra.hpp>
 
 using namespace besthea::mesh;
 using namespace besthea::linear_algebra;
@@ -75,45 +76,83 @@ struct cauchy_data {
   static constexpr sc _shift{ 0.0 };
 };
 
-int main( int argc, char * argv[] ) {
-  std::string file = "./mesh_files/cube_192_vol.txt";
+struct config {
+  void dump( ) {
+    std::cout << "config: " << std::endl;
+    std::cout << "  mesh:        " << file << std::endl;
+    std::cout << "  grid:        " << grid_file << std::endl;
+    std::cout << "  refine:      " << refine << std::endl;
+    std::cout << "  grid_refine: " << grid_refine << std::endl;
+    std::cout << "  timesteps:   " << n_timesteps << std::endl;
+    std::cout << "  end_time:    " << end_time << std::endl;
+  }
+
+  std::string file = "";
+  std::string grid_file = "";
   int refine = 0;
   lo n_timesteps = 8;
   sc end_time = 1.0;
-  std::string grid_file = "./mesh_files/grid_xy.txt";
   int grid_refine = 2;
+};  // struct config
 
-  if ( argc > 1 ) {
-    file.assign( argv[ 1 ] );
+namespace {
+  config configure( int argc, char * argv[] ) {
+    config c;
+    bool help = false;
+
+    auto cli = lyra::help( help )
+      | lyra::opt( c.file, "surface mesh" )[ "--mesh" ](
+        "Surface mesh of the spatial domain, "
+        "refined by the 'refine' parameter" )
+          .required( )
+      | lyra::opt( c.grid_file, "grid mesh" )[ "--grid" ](
+        "Grid mesh inside of the surface mesh for the representation formula, "
+        "refined by the 'grid_refine parameter'" )
+      | lyra::opt( c.refine, "mesh refinement" )[ "--refine" ](
+        "Number of surface mesh refinements" )
+      | lyra::opt( c.grid_refine, "grid refinement" )[ "--grid_refine" ](
+        "Number of grid mesh refinements" )
+      | lyra::opt( c.n_timesteps, "number of timesteps" )[ "--timesteps" ](
+        "Number of timesteps for the given mesh, refined by the refine "
+        "parameter" )
+      | lyra::opt( c.end_time, "end time" )[ "--endtime" ]( "End time" );
+
+    auto result = cli.parse( { argc, argv } );
+
+    if ( !result ) {
+      std::cerr << "Error in command line: " << result.errorMessage( )
+                << std::endl;
+      exit( 1 );
+    }
+
+    if ( help || !result ) {
+      std::cout << cli << std::endl;
+      exit( 0 );
+    }
+
+    c.dump( );
+
+    return c;
   }
-  if ( argc > 2 ) {
-    n_timesteps = std::atoi( argv[ 2 ] );
-  }
-  if ( argc > 3 ) {
-    end_time = std::atof( argv[ 3 ] );
-  }
-  if ( argc > 4 ) {
-    refine = std::atoi( argv[ 4 ] );
-    grid_refine += refine;
-  }
-  if ( argc > 5 ) {
-    grid_file.assign( argv[ 5 ] );
-  }
+}  // namespace
+
+int main( int argc, char * argv[] ) {
+  config c = configure( argc, argv );
 
   triangular_surface_mesh space_mesh;
   tetrahedral_volume_mesh volume_mesh;
   if ( cauchy_data::_shift > 0.0 ) {
-    volume_mesh.load( file );
-    volume_mesh.refine( refine );
+    volume_mesh.load( c.file );
+    volume_mesh.refine( c.refine );
     space_mesh.from_tetrahedral( volume_mesh );
     volume_mesh.print_info( );
   } else {
-    space_mesh.load( file );
-    space_mesh.refine( refine );
+    space_mesh.load( c.file );
+    space_mesh.refine( c.refine );
   }
-  n_timesteps *= std::exp2( refine );
+  c.n_timesteps *= std::exp2( c.refine );
   uniform_spacetime_tensor_mesh spacetime_mesh(
-    space_mesh, end_time, n_timesteps );
+    space_mesh, c.end_time, c.n_timesteps );
 
   space_mesh.print_info( );
   spacetime_mesh.print_info( );
@@ -135,7 +174,6 @@ int main( int argc, char * argv[] ) {
   t.reset( "K" );
   assembler_k.assemble( *K );
   t.measure( );
-  // K.print( );
 
   uniform_spacetime_be_identity M( space_p0, space_p1, 1 );
   t.reset( "M" );
@@ -192,14 +230,7 @@ int main( int argc, char * argv[] ) {
   t.reset( "D" );
   assembler_d.assemble( *D );
   t.measure( );
-  // D.print( );
 
-  /*
-  t.reset( "Solving the system" );
-  D->cholesky_decompose_solve( dir );
-  t.measure( );
-  */
-  ///*
   block_lower_triangular_toeplitz_matrix * V11
     = new block_lower_triangular_toeplitz_matrix( );
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
@@ -212,9 +243,8 @@ int main( int argc, char * argv[] ) {
   t.reset( "M11" );
   M11.assemble( );
   t.measure( );
-  // V11->print( );
-  // M11.print( );
-  block_mkl_cg_inverse M11_inv( M11, 1e-8, 100 );
+
+  block_mkl_cg_inverse M11_inv( M11, 1e-6, 100 );
   compound_block_linear_operator preconditioner;
   preconditioner.push_back( M11_inv );
   preconditioner.push_back( *V11 );
@@ -223,18 +253,11 @@ int main( int argc, char * argv[] ) {
   block_vector rhs( dir );
   sc gmres_prec = 1e-5;
   lo gmres_iter = 500;
-  //  D->mkl_fgmres_solve( rhs, dir, gmres_prec, gmres_iter, gmres_iter );
-  //  std::cout << "  iterations: " << gmres_iter << ", residual: " <<
-  //  gmres_prec
-  //            << std::endl;
-  //  gmres_prec = 1e-8;
-  //  gmres_iter = 500;
   D->mkl_fgmres_solve(
     preconditioner, rhs, dir, gmres_prec, gmres_iter, gmres_iter );
   std::cout << "  iterations: " << gmres_iter << ", residual: " << gmres_prec
             << std::endl;
   t.measure( );
-  //*/
 
   delete D;
   delete V11;
@@ -243,12 +266,12 @@ int main( int argc, char * argv[] ) {
             << space_p1.L2_relative_error( cauchy_data::dirichlet, dir )
             << std::endl;
 
-  if ( !grid_file.empty( ) ) {
-    triangular_surface_mesh grid_space_mesh( grid_file );
+  if ( !c.grid_file.empty( ) ) {
+    triangular_surface_mesh grid_space_mesh( c.grid_file );
     grid_space_mesh.scale( 0.95 );
-    grid_space_mesh.refine( grid_refine );
+    grid_space_mesh.refine( c.grid_refine );
     uniform_spacetime_tensor_mesh grid_spacetime_mesh(
-      grid_space_mesh, end_time, spacetime_mesh.get_n_temporal_elements( ) );
+      grid_space_mesh, c.end_time, spacetime_mesh.get_n_temporal_elements( ) );
     grid_spacetime_mesh.print_info( );
 
     block_vector slp;
@@ -287,10 +310,8 @@ int main( int argc, char * argv[] ) {
     std::cout << "Solution l2 relative error: "
               << space_p1.l2_relative_error( sol_interp, slp ) << std::endl;
 
-    /*
     t.reset( "Printing Ensight grid" );
-    std::vector< std::string > grid_node_labels{
-    "Temperature_interpolation",
+    std::vector< std::string > grid_node_labels{ "Temperature_interpolation",
       "Temperature_result" };
     std::vector< block_vector * > grid_node_data{ &sol_interp, &slp };
     std::string ensight_grid_dir = "ensight_grid";
@@ -299,13 +320,10 @@ int main( int argc, char * argv[] ) {
       ensight_grid_dir, &grid_node_labels );
     grid_spacetime_mesh.print_ensight_geometry( ensight_grid_dir );
     grid_spacetime_mesh.print_ensight_datafiles(
-      ensight_grid_dir, &grid_node_labels, &grid_node_data, nullptr,
-      nullptr );
+      ensight_grid_dir, &grid_node_labels, &grid_node_data, nullptr, nullptr );
     t.measure( );
-    */
   }
 
-  /*
   t.reset( "Printing Ensight surface" );
   std::vector< std::string > node_labels{ "Dirichlet_projection",
     "Dirichlet_result" };
@@ -314,10 +332,9 @@ int main( int argc, char * argv[] ) {
   std::vector< block_vector * > elem_data{ &neu_proj };
   std::string ensight_dir = "ensight_surface";
   std::filesystem::create_directory( ensight_dir );
-  spacetime_mesh.print_ensight_case( ensight_dir, &node_labels,
-  &elem_labels ); spacetime_mesh.print_ensight_geometry( ensight_dir );
+  spacetime_mesh.print_ensight_case( ensight_dir, &node_labels, &elem_labels );
+  spacetime_mesh.print_ensight_geometry( ensight_dir );
   spacetime_mesh.print_ensight_datafiles(
     ensight_dir, &node_labels, &node_data, &elem_labels, &elem_data );
   t.measure( );
-  */
 }
