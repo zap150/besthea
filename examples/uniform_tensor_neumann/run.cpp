@@ -269,7 +269,6 @@ int main( int argc, char * argv[] ) {
 
   if ( !c.grid_file.empty( ) ) {
     triangular_surface_mesh grid_space_mesh( c.grid_file );
-    grid_space_mesh.scale( 0.95 );
     grid_space_mesh.refine( c.grid_refine );
     uniform_spacetime_tensor_mesh grid_spacetime_mesh(
       grid_space_mesh, c.end_time, spacetime_mesh.get_n_temporal_elements( ) );
