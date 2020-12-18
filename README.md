@@ -30,9 +30,9 @@ git submodule update --init --recursive
 
 **Dependencies**
 
-Except for the Boost and Eigen submodules and the Catch header provided in the repository, BESTHEA requires the installation of MPI and Intel MKL. To configure the project make sure that the `MKLROOT` and `LIBRARY_PATH` by calling the scripts `mklvars.sh` and `compilervars.sh` provided by the MKL installation.
+Except for the Boost, Eigen, and Lyra submodules and the Catch header provided in the repository, BESTHEA requires the installation of MPI and Intel MKL. To configure the project make sure that the `MKLROOT` and `LIBRARY_PATH` by calling the scripts `mklvars.sh` and `compilervars.sh` provided by the MKL installation.
 
-**CMake**
+**Build**
 
 The compilation of BESTHEA is based on CMake. Since in-source build is disabled, create a build directory and call cmake from within as
 ```
@@ -40,6 +40,7 @@ mkdir build
 cd build
 cmake ..
 make
+make install
 ```
 To specify the compiler you can either use environment variables as
 ```
@@ -64,6 +65,18 @@ To specify the vector length processed in OpenMS SIMD loops, i.e. the `simdlen` 
 ```
 cmake -DDATA_WIDTH=4 ..
 ```
+
+**Usage**
+
+The `install` target installs `libbesthea.a` to `build/lib` and executable examples to `build/bin` together with example mesh files. After `cd ./bin`, one can run an example
+```
+./uniform_tensor_neumann --mesh cube_192.txt --grid grid_cube_xy.txt
+```
+or
+```
+./uniform_tensor_neumann --help
+```
+to see all command line options.
 
 ## Contact
 
