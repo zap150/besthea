@@ -122,10 +122,11 @@ namespace {
     if ( !result ) {
       std::cerr << "Error in command line: " << result.errorMessage( )
                 << std::endl;
+      std::cout << cli << std::endl;
       exit( 1 );
     }
 
-    if ( help || !result ) {
+    if ( help ) {
       std::cout << cli << std::endl;
       exit( 0 );
     }
