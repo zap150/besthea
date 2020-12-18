@@ -164,7 +164,8 @@ include_directories(include)
 add_library(besthea STATIC ${besthea_SOURCES})
 
 install (TARGETS besthea ARCHIVE DESTINATION "${CMAKE_BINARY_DIR}/lib")
-install(FILES ${besthea_INCLUDES} DESTINATION "${CMAKE_BINARY_DIR}/include")
+install(FILES ${besthea_INCLUDES} 
+  DESTINATION "${CMAKE_BINARY_DIR}/include/besthea")
 
 option(BUILD_EXAMPLES "Build examples using the library" OFF)
 
