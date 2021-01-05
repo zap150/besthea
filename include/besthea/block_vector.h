@@ -38,6 +38,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/settings.h"
 #include "besthea/vector.h"
 
+#include <cmath>
 #include <iostream>
 #include <vector>
 
@@ -122,7 +123,7 @@ class besthea::linear_algebra::block_vector {
   }
 
   /**
-   * Returns the block dimension.
+   * Returns the block dimension (number of blocks)..
    */
   lo get_block_size( ) const {
     return _block_size;
@@ -194,6 +195,12 @@ class besthea::linear_algebra::block_vector {
     _data[ d ][ i ] += value;
   }
 
+  /**
+   * Copies data from another block vector.
+   * @param[in] that Vector to be copied.
+   */
+  void copy( const block_vector & that );
+
   /*!
    * @brief Copies data from a raw vector.
    * @param[in] block_size Number of blocks.
@@ -240,6 +247,33 @@ class besthea::linear_algebra::block_vector {
   void fill( sc value ) {
     for ( lo i = 0; i < _block_size; ++i ) {
       _data[ i ].fill( value );
+    }
+  }
+
+  /*!
+   * @brief Returns the euclidean dot product.
+   * @param[in] v
+   */
+  sc dot( block_vector const & v ) const {
+    sc val = 0.0;
+    for ( lo i = 0; i < _block_size; ++i ) {
+      val += _data[ i ].dot( v.get_block( i ) );
+    }
+
+    return val;
+  }
+
+  /*!
+   * @brief Returns the Euclidean norm of the vector.
+   * @return Euclidean norm of the vector.
+   */
+  sc norm( ) const {
+    return std::sqrt( this->dot( *this ) );
+  }
+
+  void scale( sc alpha ) {
+    for ( auto & it : _data ) {
+      it.scale( alpha );
     }
   }
 

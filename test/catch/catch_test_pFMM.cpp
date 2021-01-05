@@ -256,9 +256,11 @@ TEST_CASE( "System matrices are assembled", "[matrices]" ) {
       sc fmm_prec = gmres_prec;
       lo fmm_iter = gmres_iter;
       // solve with pFMM matrix
-      V_dist_pFMM->mkl_fgmres_solve(
-        M_dir_proj, density_fmm, fmm_prec, fmm_iter, fmm_iter );
+      // V_dist_pFMM->mkl_fgmres_solve(
+      //  M_dir_proj, density_fmm, fmm_prec, fmm_iter, fmm_iter );
 
+      V_dist_pFMM->gmres_solve( M_dir_proj, density_fmm, fmm_prec, fmm_iter );
+      std::cout << "N iter: " << fmm_iter << std::endl;
       CHECK( fmm_iter == Approx( full_iter ).epsilon( 0.05 ) );
 
       // compare results

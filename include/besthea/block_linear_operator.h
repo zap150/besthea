@@ -36,6 +36,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define INCLUDE_BESTHEA_BLOCK_LINEAR_OPERATOR_H_
 
 #include "besthea/block_vector.h"
+#include "besthea/distributed_block_vector.h"
 #include "besthea/settings.h"
 
 namespace besthea {
@@ -51,6 +52,9 @@ class besthea::linear_algebra::block_linear_operator {
   using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
   using block_vector_type
     = besthea::linear_algebra::block_vector;  //!< Block vector type.
+  using distributed_block_vector_type
+    = besthea::linear_algebra::distributed_block_vector;  //!< Block vector
+                                                          //!< type.
 
  public:
   block_linear_operator( )
@@ -85,7 +89,17 @@ class besthea::linear_algebra::block_linear_operator {
    */
   virtual void apply( const block_vector_type & x, block_vector_type & y,
     bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const = 0;
-
+  /*!
+   * @brief y = beta * y + alpha * (this)^trans * x.
+   * @param[in] x
+   * @param[in,out] y
+   * @param[in] trans
+   * @param[in] alpha
+   * @param[in] beta
+   */
+  virtual void apply( const distributed_block_vector_type & x,
+    distributed_block_vector_type & y, bool trans = false, sc alpha = 1.0,
+    sc beta = 0.0 ) const { };
   /**
    * CG as implemented in MKL.
    * @param[in] rhs Right-hand side vector.
@@ -149,6 +163,64 @@ class besthea::linear_algebra::block_linear_operator {
     sc & relative_residual_error, lo & n_iterations,
     lo n_iterations_until_restart = 0, bool trans = false,
     bool trans_preconditioner = false ) const;
+
+  /**
+   * GMRES solver
+   * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on
+   * exit.
+   * @param[in] prec Preconditioner operator.
+   * @param[in] trans Use transpose of this.
+   */
+  bool gmres_solve( const block_vector_type & rhs, block_vector_type & solution,
+    sc & relative_residual_error, lo & n_iterations,
+    const block_linear_operator & prec, bool trans = false ) const;
+
+  /**
+   * GMRES solver
+   * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on
+   * exit.
+   * @param[in] trans Use transpose of this.
+   */
+  bool gmres_solve( const block_vector_type & rhs, block_vector_type & solution,
+    sc & relative_residual_error, lo & n_iterations, bool trans = false ) const;
+
+  /**
+   * GMRES solver
+   * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on
+   * exit.
+   * @param[in] prec Preconditioner operator.
+   * @param[in] trans Use transpose of this.
+   */
+  bool gmres_solve( const distributed_block_vector_type & rhs,
+    distributed_block_vector_type & solution, sc & relative_residual_error,
+    lo & n_iterations, const block_linear_operator & prec,
+    bool trans = false ) const;
+
+  /**
+   * GMRES solver
+   * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on
+   * exit.
+   * @param[in] trans Use transpose of this.
+   */
+  bool gmres_solve( const distributed_block_vector_type & rhs,
+    distributed_block_vector_type & solution, sc & relative_residual_error,
+    lo & n_iterations, bool trans = false ) const;
 
   /**
    * Returns the domain dimension.

@@ -357,3 +357,458 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
 
   return true;
 }
+
+bool besthea::linear_algebra::block_linear_operator::gmres_solve(
+  const block_vector_type & rhs, block_vector_type & solution,
+  sc & relative_residual_error, lo & n_iterations,
+  const block_linear_operator & prec, bool trans ) const {
+  // initialize data
+  lo max_it = n_iterations;
+  n_iterations = 0;
+  sc hs;
+  lo block_size = rhs.get_block_size( );
+  lo size_of_blocks = rhs.get_size_of_block( );
+  block_vector_type r( rhs );
+  std::vector< block_vector_type > V(
+    max_it );  // orthogonalized search directions
+  block_vector_type vs( rhs.get_block_size( ), rhs.get_size_of_block( ),
+    true );  // new search direction
+  block_vector_type vs_prec( rhs.get_block_size( ), rhs.get_size_of_block( ),
+    true );  // auxiliary result of preconditioning
+  std::vector< std::vector< sc > > H(
+    max_it + 1 );  // Heesenberg matrix of the minimization problem
+  std::vector< sc > gamma( max_it + 1 );  // rhs of minimization problem
+  std::vector< sc > c( max_it + 1 );      // coeffs of Givens rotation
+  std::vector< sc > s( max_it + 1 );      // coeffs of Givens rotation
+  sc norm_vs;                             // h_k+1,k
+  block_vector_type u_tilde( solution.get_block_size( ),
+    solution.get_size_of_block( ), true );  // solution=prec*u_tilde
+  sc gmres_eps = 1e-20;
+
+  this->apply( solution, r, trans, -1.0, 1.0 );
+  gamma[ 0 ] = r.norm( );
+
+  if ( std::abs( gamma[ 0 ] ) < gmres_eps ) {
+    return true;
+  }
+
+  V[ 0 ].copy( r );
+  V[ 0 ].scale( 1.0 / gamma[ 0 ] );
+
+  sc ref_error = relative_residual_error * gamma[ 0 ];
+  lo k = 0;
+
+  while ( std::abs( gamma[ k ] ) > ref_error && k < max_it ) {
+    prec.apply( V[ k ], vs_prec, false, 1.0, 0.0 );
+    this->apply( vs_prec, vs, trans, 1.0, 0.0 );
+
+    H[ k ].resize( k + 1 );
+
+    for ( lo i = 0; i < k + 1; ++i ) {
+      H[ k ][ i ] = V[ i ].dot( vs );
+      vs.add( V[ i ], -H[ k ][ i ] );
+    }
+
+    for ( lo i = 0; i < k; ++i ) {
+      hs = c[ i ] * H[ k ][ i ] + s[ i ] * H[ k ][ i + 1 ];
+      H[ k ][ i + 1 ] = c[ i ] * H[ k ][ i + 1 ] - s[ i ] * H[ k ][ i ];
+      H[ k ][ i ] = hs;
+    }
+
+    norm_vs = vs.norm( );
+    if ( norm_vs < gmres_eps ) {
+      k++;
+      break;
+    }
+
+    V[ k + 1 ].resize( block_size );
+    V[ k + 1 ].resize_blocks( size_of_blocks );
+    V[ k + 1 ].copy( vs );
+    V[ k + 1 ].scale( 1.0 / norm_vs );
+
+    // coefficients of next Givens rotation
+    sc beta = std::sqrt( norm_vs * norm_vs + H[ k ][ k ] * H[ k ][ k ] );
+    c[ k ] = H[ k ][ k ] / beta;
+    s[ k ] = norm_vs / beta;
+
+    // new Givens rotation
+    H[ k ][ k ] = beta;
+    if ( beta < gmres_eps ) {
+      throw std::runtime_error( "Gmres aborted, matrix seems to be singular" );
+    }
+
+    gamma[ k + 1 ] = -s[ k ] * gamma[ k ];
+    gamma[ k ] *= c[ k ];
+
+    ++k;
+  }
+
+  if ( k == 0 ) {
+    if ( !( std::abs( gamma[ k ] ) < ref_error ) ) {
+      std::cout << "Gmres failed, stopped after " << k << " iterations!"
+                << std::endl;
+    }
+    n_iterations = k;
+    return;
+  }
+
+  // solve minimization problem by inverting upper triangle Hessenberg matrix
+  vector_type z( k );
+  for ( lo i = k - 1; i >= 0; i-- ) {
+    sc sum = 0;
+    for ( lo j = i + 1; j < k; ++j ) {
+      sum += H[ j ][ i ] * z[ j ];
+    }
+    z[ i ] = ( gamma[ i ] - sum ) / H[ i ][ i ];
+  }
+
+  for ( lo i = 0; i < k; ++i ) {
+    u_tilde.add( V[ i ], z[ i ] );
+  }
+
+  prec.apply( u_tilde, solution, false, 1.0, 1.0 );
+
+  n_iterations = k;
+}
+
+bool besthea::linear_algebra::block_linear_operator::gmres_solve(
+  const block_vector_type & rhs, block_vector_type & solution,
+  sc & relative_residual_error, lo & n_iterations, bool trans ) const {
+  // initialize data
+
+  lo max_it = n_iterations;
+  n_iterations = 0;
+  sc hs;
+  lo block_size = rhs.get_block_size( );
+  lo size_of_blocks = rhs.get_size_of_block( );
+  block_vector_type r( rhs );
+  std::vector< block_vector_type > V(
+    max_it + 1 );  // orthogonalized search directions
+  block_vector_type vs( rhs.get_block_size( ), rhs.get_size_of_block( ),
+    true );  // new search direction
+  block_vector_type vs_prec( rhs.get_block_size( ), rhs.get_size_of_block( ),
+    true );  // auxiliary result of preconditioning
+  std::vector< std::vector< sc > > H(
+    max_it + 1 );  // Heesenberg matrix of the minimization problem
+  std::vector< sc > gamma( max_it + 1 );  // rhs of minimization problem
+  std::vector< sc > c( max_it + 1 );      // coeffs of Givens rotation
+  std::vector< sc > s( max_it + 1 );      // coeffs of Givens rotation
+  sc norm_vs;                             // h_k+1,k
+  block_vector_type u_tilde( solution.get_block_size( ),
+    solution.get_size_of_block( ), true );  // solution=prec*u_tilde
+  sc gmres_eps = 1e-20;
+
+  this->apply( solution, r, trans, -1.0, 1.0 );
+  gamma[ 0 ] = r.norm( );
+
+  if ( gamma[ 0 ] == 0.0 ) {
+    return true;
+  }
+
+  V[ 0 ].copy( r );
+  V[ 0 ].scale( 1.0 / gamma[ 0 ] );
+
+  sc ref_error = relative_residual_error * gamma[ 0 ];
+  lo k = 0;
+
+  while ( std::abs( gamma[ k ] ) > ref_error && k < max_it ) {
+    this->apply( V[ k ], vs, trans, 1.0, 0.0 );
+
+    H[ k ].resize( k + 1 );
+
+    for ( lo i = 0; i < k + 1; ++i ) {
+      H[ k ][ i ] = V[ i ].dot( vs );
+      vs.add( V[ i ], -H[ k ][ i ] );
+    }
+
+    for ( lo i = 0; i < k; ++i ) {
+      hs = c[ i ] * H[ k ][ i ] + s[ i ] * H[ k ][ i + 1 ];
+      H[ k ][ i + 1 ] = c[ i ] * H[ k ][ i + 1 ] - s[ i ] * H[ k ][ i ];
+      H[ k ][ i ] = hs;
+    }
+
+    norm_vs = vs.norm( );
+    if ( norm_vs == 0.0 ) {
+      k++;
+      break;
+    }
+
+    V[ k + 1 ].resize( block_size );
+    V[ k + 1 ].resize_blocks( size_of_blocks );
+    V[ k + 1 ].copy( vs );
+    V[ k + 1 ].scale( 1.0 / norm_vs );
+
+    // coefficients of next Givens rotation
+    sc beta = std::sqrt( norm_vs * norm_vs + H[ k ][ k ] * H[ k ][ k ] );
+    c[ k ] = H[ k ][ k ] / beta;
+    s[ k ] = norm_vs / beta;
+
+    // new Givens rotation
+    H[ k ][ k ] = beta;
+    if ( beta < gmres_eps ) {
+      throw std::runtime_error( "Gmres aborted, matrix seems to be singular" );
+    }
+
+    gamma[ k + 1 ] = -s[ k ] * gamma[ k ];
+    gamma[ k ] *= c[ k ];
+
+    ++k;
+  }
+
+  if ( k == 0 ) {
+    if ( !( std::abs( gamma[ k ] ) < ref_error ) ) {
+      std::cout << "Gmres failed, stopped after " << k << " iterations!"
+                << std::endl;
+    }
+    n_iterations = k;
+    return true;
+  }
+
+  // solve minimization problem by inverting upper triangle Hessenberg matrix
+  vector_type z( k );
+  for ( lo i = k - 1; i >= 0; i-- ) {
+    sc sum = 0;
+    for ( lo j = i + 1; j < k; ++j ) {
+      sum += H[ j ][ i ] * z[ j ];
+    }
+    z[ i ] = ( gamma[ i ] - sum ) / H[ i ][ i ];
+  }
+
+  for ( lo i = 0; i < k; ++i ) {
+    u_tilde.add( V[ i ], z[ i ] );
+  }
+
+  solution.add( u_tilde );
+
+  n_iterations = k;
+}
+
+bool besthea::linear_algebra::block_linear_operator::gmres_solve(
+  const distributed_block_vector_type & rhs,
+  distributed_block_vector_type & solution, sc & relative_residual_error,
+  lo & n_iterations, const block_linear_operator & prec, bool trans ) const {
+  // initialize data
+  lo max_it = n_iterations;
+  n_iterations = 0;
+  sc hs;
+  lo block_size = rhs.get_block_size( );
+  lo size_of_blocks = rhs.get_size_of_block( );
+  distributed_block_vector_type r( rhs );
+  std::vector< distributed_block_vector_type > V(
+    max_it );  // orthogonalized search directions
+  distributed_block_vector_type vs( rhs.get_block_size( ),
+    rhs.get_size_of_block( ),
+    true );  // new search direction
+  distributed_block_vector_type vs_prec( rhs.get_block_size( ),
+    rhs.get_size_of_block( ),
+    true );  // auxiliary result of preconditioning
+  std::vector< std::vector< sc > > H(
+    max_it + 1 );  // Heesenberg matrix of the minimization problem
+  std::vector< sc > gamma( max_it + 1 );  // rhs of minimization problem
+  std::vector< sc > c( max_it + 1 );      // coeffs of Givens rotation
+  std::vector< sc > s( max_it + 1 );      // coeffs of Givens rotation
+  sc norm_vs;                             // h_k+1,k
+  distributed_block_vector_type u_tilde( solution.get_block_size( ),
+    solution.get_size_of_block( ), true );  // solution=prec*u_tilde
+  sc gmres_eps = 1e-20;
+
+  this->apply( solution, r, trans, -1.0, 1.0 );
+  gamma[ 0 ] = r.norm( );
+
+  if ( std::abs( gamma[ 0 ] ) < gmres_eps ) {
+    return true;
+  }
+
+  V[ 0 ].copy( r );
+  V[ 0 ].scale( 1.0 / gamma[ 0 ] );
+
+  sc ref_error = relative_residual_error * gamma[ 0 ];
+  lo k = 0;
+
+  while ( std::abs( gamma[ k ] ) > ref_error && k < max_it ) {
+    prec.apply( V[ k ], vs_prec, false, 1.0, 0.0 );
+    this->apply( vs_prec, vs, trans, 1.0, 0.0 );
+
+    H[ k ].resize( k + 1 );
+
+    for ( lo i = 0; i < k + 1; ++i ) {
+      H[ k ][ i ] = V[ i ].dot( vs );
+      vs.add( V[ i ], -H[ k ][ i ] );
+    }
+
+    for ( lo i = 0; i < k; ++i ) {
+      hs = c[ i ] * H[ k ][ i ] + s[ i ] * H[ k ][ i + 1 ];
+      H[ k ][ i + 1 ] = c[ i ] * H[ k ][ i + 1 ] - s[ i ] * H[ k ][ i ];
+      H[ k ][ i ] = hs;
+    }
+
+    norm_vs = vs.norm( );
+    if ( norm_vs < gmres_eps ) {
+      k++;
+      break;
+    }
+
+    V[ k + 1 ].resize( block_size );
+    V[ k + 1 ].resize_blocks( size_of_blocks );
+    V[ k + 1 ].copy( vs );
+    V[ k + 1 ].scale( 1.0 / norm_vs );
+
+    // coefficients of next Givens rotation
+    sc beta = std::sqrt( norm_vs * norm_vs + H[ k ][ k ] * H[ k ][ k ] );
+    c[ k ] = H[ k ][ k ] / beta;
+    s[ k ] = norm_vs / beta;
+
+    // new Givens rotation
+    H[ k ][ k ] = beta;
+    if ( beta < gmres_eps ) {
+      throw std::runtime_error( "Gmres aborted, matrix seems to be singular" );
+    }
+
+    gamma[ k + 1 ] = -s[ k ] * gamma[ k ];
+    gamma[ k ] *= c[ k ];
+
+    ++k;
+  }
+
+  if ( k == 0 ) {
+    if ( !( std::abs( gamma[ k ] ) < ref_error ) ) {
+      std::cout << "Gmres failed, stopped after " << k << " iterations!"
+                << std::endl;
+    }
+    n_iterations = k;
+    return;
+  }
+
+  // solve minimization problem by inverting upper triangle Hessenberg matrix
+  vector_type z( k );
+  for ( lo i = k - 1; i >= 0; i-- ) {
+    sc sum = 0;
+    for ( lo j = i + 1; j < k; ++j ) {
+      sum += H[ j ][ i ] * z[ j ];
+    }
+    z[ i ] = ( gamma[ i ] - sum ) / H[ i ][ i ];
+  }
+
+  for ( lo i = 0; i < k; ++i ) {
+    u_tilde.add( V[ i ], z[ i ] );
+  }
+
+  prec.apply( u_tilde, solution, false, 1.0, 1.0 );
+
+  n_iterations = k;
+}
+
+bool besthea::linear_algebra::block_linear_operator::gmres_solve(
+  const distributed_block_vector_type & rhs,
+  distributed_block_vector_type & solution, sc & relative_residual_error,
+  lo & n_iterations, bool trans ) const {
+  // initialize data
+
+  lo max_it = n_iterations;
+  n_iterations = 0;
+  sc hs;
+  lo block_size = rhs.get_block_size( );
+  lo size_of_blocks = rhs.get_size_of_block( );
+  distributed_block_vector_type r( rhs );
+  std::vector< distributed_block_vector_type > V(
+    max_it + 1 );  // orthogonalized search directions
+  distributed_block_vector_type vs( rhs.get_block_size( ),
+    rhs.get_size_of_block( ),
+    true );  // new search direction
+  distributed_block_vector_type vs_prec( rhs.get_block_size( ),
+    rhs.get_size_of_block( ),
+    true );  // auxiliary result of preconditioning
+  std::vector< std::vector< sc > > H(
+    max_it + 1 );  // Heesenberg matrix of the minimization problem
+  std::vector< sc > gamma( max_it + 1 );  // rhs of minimization problem
+  std::vector< sc > c( max_it + 1 );      // coeffs of Givens rotation
+  std::vector< sc > s( max_it + 1 );      // coeffs of Givens rotation
+  sc norm_vs;                             // h_k+1,k
+  distributed_block_vector_type u_tilde( solution.get_block_size( ),
+    solution.get_size_of_block( ), true );  // solution=prec*u_tilde
+  sc gmres_eps = 1e-20;
+
+  this->apply( solution, r, trans, -1.0, 1.0 );
+  gamma[ 0 ] = r.norm( );
+
+  if ( gamma[ 0 ] == 0.0 ) {
+    return true;
+  }
+
+  V[ 0 ].copy( r );
+  V[ 0 ].scale( 1.0 / gamma[ 0 ] );
+
+  sc ref_error = relative_residual_error * gamma[ 0 ];
+  lo k = 0;
+
+  while ( std::abs( gamma[ k ] ) > ref_error && k < max_it ) {
+    this->apply( V[ k ], vs, trans, 1.0, 0.0 );
+
+    H[ k ].resize( k + 1 );
+
+    for ( lo i = 0; i < k + 1; ++i ) {
+      H[ k ][ i ] = V[ i ].dot( vs );
+      vs.add( V[ i ], -H[ k ][ i ] );
+    }
+
+    for ( lo i = 0; i < k; ++i ) {
+      hs = c[ i ] * H[ k ][ i ] + s[ i ] * H[ k ][ i + 1 ];
+      H[ k ][ i + 1 ] = c[ i ] * H[ k ][ i + 1 ] - s[ i ] * H[ k ][ i ];
+      H[ k ][ i ] = hs;
+    }
+
+    norm_vs = vs.norm( );
+    if ( norm_vs == 0.0 ) {
+      k++;
+      break;
+    }
+
+    V[ k + 1 ].resize( block_size );
+    V[ k + 1 ].resize_blocks( size_of_blocks );
+    V[ k + 1 ].copy( vs );
+    V[ k + 1 ].scale( 1.0 / norm_vs );
+
+    // coefficients of next Givens rotation
+    sc beta = std::sqrt( norm_vs * norm_vs + H[ k ][ k ] * H[ k ][ k ] );
+    c[ k ] = H[ k ][ k ] / beta;
+    s[ k ] = norm_vs / beta;
+
+    // new Givens rotation
+    H[ k ][ k ] = beta;
+    if ( beta < gmres_eps ) {
+      throw std::runtime_error( "Gmres aborted, matrix seems to be singular" );
+    }
+
+    gamma[ k + 1 ] = -s[ k ] * gamma[ k ];
+    gamma[ k ] *= c[ k ];
+
+    ++k;
+  }
+
+  if ( k == 0 ) {
+    if ( !( std::abs( gamma[ k ] ) < ref_error ) ) {
+      std::cout << "Gmres failed, stopped after " << k << " iterations!"
+                << std::endl;
+    }
+    n_iterations = k;
+    return true;
+  }
+
+  // solve minimization problem by inverting upper triangle Hessenberg matrix
+  vector_type z( k );
+  for ( lo i = k - 1; i >= 0; i-- ) {
+    sc sum = 0;
+    for ( lo j = i + 1; j < k; ++j ) {
+      sum += H[ j ][ i ] * z[ j ];
+    }
+    z[ i ] = ( gamma[ i ] - sum ) / H[ i ][ i ];
+  }
+
+  for ( lo i = 0; i < k; ++i ) {
+    u_tilde.add( V[ i ], z[ i ] );
+  }
+
+  solution.add( u_tilde );
+
+  n_iterations = k;
+}

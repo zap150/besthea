@@ -28,56 +28,232 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "besthea/block_vector.h"
+#include "besthea/distributed_block_vector.h"
 
 #include "besthea/general_spacetime_cluster.h"
 #include "besthea/spacetime_cluster.h"
 
-besthea::linear_algebra::block_vector::block_vector( )
-  : _block_size( 0 ), _size( 0 ), _data( ) {
+besthea::linear_algebra::distributed_block_vector::distributed_block_vector( )
+  : _block_size( 0 ), _size( 0 ), _data( ), _owners( ), _duplicated( true ) {
+  _comm = MPI_COMM_WORLD;
+  MPI_Comm_rank( _comm, &_rank );
 }
 
-besthea::linear_algebra::block_vector::block_vector(
-  lo block_size, std::initializer_list< sc > list )
+besthea::linear_algebra::distributed_block_vector::distributed_block_vector(
+  lo block_size, std::initializer_list< sc > list, MPI_Comm comm )
   : _block_size( block_size ),
     _size( list.size( ) ),
-    //    _data( block_size, list ) { // Why does this work??
-    _data( block_size, vector_type( list ) ) {
+    _data( block_size, vector_type( list ) ),
+    _owners( block_size ),
+    _comm( comm ),
+    _duplicated( true ) {
+  int comm_size;
+  MPI_Comm_rank( _comm, &_rank );
+  MPI_Comm_size( _comm, &comm_size );
+
+  // vector is duplicated on all MPI ranks:
+  std::fill( _owners.begin( ), _owners.end( ), std::vector< int >{ _rank } );
+
+  _my_blocks.resize( _block_size );
+  for ( lo i = 0; i < _block_size; ++i ) {
+    _my_blocks.push_back( i );
+  }
+
+  for ( auto & it : _owners ) {
+    for ( int i = 0; i < comm_size; ++i ) {
+      if ( i != _rank ) {
+        it.push_back( i );
+      }
+    }
+  }
 }
 
-besthea::linear_algebra::block_vector::block_vector(
-  lo block_size, lo size, bool zero )
+besthea::linear_algebra::distributed_block_vector::distributed_block_vector(
+  lo block_size, lo size, bool zero, MPI_Comm comm )
   : _block_size( block_size ),
     _size( size ),
-    _data( block_size, vector_type( size, zero ) ) {
-}
+    _data( block_size, vector_type( size, zero ) ),
+    _owners( block_size ),
+    _my_blocks( std::vector< lo >{ } ),
+    _comm( comm ),
+    _duplicated( true ) {
+  int comm_size;
+  MPI_Comm_rank( _comm, &_rank );
+  MPI_Comm_size( _comm, &comm_size );
 
-besthea::linear_algebra::block_vector::block_vector( const block_vector & that )
-  : _block_size( that._block_size ), _size( that._size ), _data( that._data ) {
-}
+  // vector is duplicated on all MPI ranks:
+  std::fill( _owners.begin( ), _owners.end( ), std::vector< int >{ _rank } );
 
-besthea::linear_algebra::block_vector::~block_vector( ) {
-}
-
-void besthea::linear_algebra::block_vector::print(
-  std::ostream & stream ) const {
-  for ( const vector_type & v : _data ) {
-    v.print( stream );
-  }
-}
-
-void besthea::linear_algebra::block_vector::copy( block_vector const & that ) {
-  resize( that.get_block_size( ) );
-  resize_blocks( that.get_size_of_block( ) );
+  _my_blocks.resize( _block_size );
   for ( lo i = 0; i < _block_size; ++i ) {
-    _data[ i ].copy( that._data[ i ] );
+    _my_blocks.push_back( i );
+  }
+
+  for ( auto & it : _owners ) {
+    for ( int i = 0; i < comm_size; ++i ) {
+      if ( i != _rank ) {
+        it.push_back( i );
+      }
+    }
   }
 }
 
-void besthea::linear_algebra::block_vector::copy_from_raw(
+besthea::linear_algebra::distributed_block_vector::distributed_block_vector(
+  std::vector< lo > & my_blocks, lo block_size, lo size, bool zero,
+  MPI_Comm comm )
+  : _block_size( block_size ),
+    _size( size ),
+    _data( block_size ),
+    _owners( block_size ),
+    _my_blocks( my_blocks ),
+    _comm( comm ),
+    _duplicated( false ) {
+  MPI_Comm_rank( _comm, &_rank );
+  for ( auto it : my_blocks ) {
+    _owners.at( it ).push_back( _rank );
+  }
+
+  communicate_owners( my_blocks );
+
+  lo i = 0;
+  for ( auto & it : _data ) {
+    if ( _owners.at( i ).at( 0 ) == _rank ) {
+      it.resize( size, zero );
+    }
+    i++;
+  }
+}
+
+besthea::linear_algebra::distributed_block_vector::distributed_block_vector(
+  const distributed_block_vector & that )
+  : _block_size( that._block_size ),
+    _size( that._size ),
+    _data( that._data ),
+    _owners( that._owners ),
+    _my_blocks( that._my_blocks ),
+    _comm( that._comm ),
+    _rank( that._rank ),
+    _duplicated( that._duplicated ) {
+}
+
+besthea::linear_algebra::distributed_block_vector::
+  ~distributed_block_vector( ) {
+}
+
+void besthea::linear_algebra::distributed_block_vector::resize(
+  lo block_size ) {
+  int comm_size;
+
+  MPI_Comm_size( _comm, &comm_size );
+  _data.resize( block_size );
+  _block_size = block_size;
+  _owners.resize( block_size );
+
+  // vector is duplicated on all MPI ranks:
+  std::fill( _owners.begin( ), _owners.end( ), std::vector< int >{ _rank } );
+  _duplicated = true;
+
+  for ( auto & it : _owners ) {
+    for ( int i = 0; i < comm_size; ++i ) {
+      if ( i != _rank ) {
+        it.push_back( i );
+      }
+    }
+  }
+}
+
+void besthea::linear_algebra::distributed_block_vector::resize(
+  std::vector< lo > & my_blocks, lo block_size ) {
+  int comm_size;
+
+  MPI_Comm_size( _comm, &comm_size );
+  _data.resize( block_size );
+  _block_size = block_size;
+  _owners.resize( block_size );
+
+  _my_blocks = my_blocks;
+
+  for ( auto it : my_blocks ) {
+    _owners.at( it ).push_back( _rank );
+  }
+
+  communicate_owners( my_blocks );
+  _duplicated = false;
+}
+
+void besthea::linear_algebra::distributed_block_vector::communicate_owners(
+  std::vector< lo > & my_blocks ) {
+  int comm_size;
+
+  MPI_Comm_size( _comm, &comm_size );
+  int * n_blocks_per_rank = new int[ comm_size ];
+  std::fill_n( n_blocks_per_rank, comm_size, 0 );
+  n_blocks_per_rank[ _rank ] = my_blocks.size( );
+
+  MPI_Allgather(
+    MPI_IN_PLACE, 1, MPI_INT, n_blocks_per_rank, 1, MPI_INT, _comm );
+
+  lo length = 0;
+  for ( lo i = 0; i < comm_size; ++i ) {
+    length += n_blocks_per_rank[ i ];
+  }
+  lo * blocks_per_rank = new lo[ length ];
+
+  int * offsets = new int[ comm_size ];
+  offsets[ 0 ] = 0;
+  for ( lo i = 0; i < comm_size; ++i ) {
+    offsets[ i ] = offsets[ i - 1 ] + n_blocks_per_rank[ i - 1 ];
+  }
+
+  MPI_Allgatherv( my_blocks.data( ), my_blocks.size( ),
+    get_index_type< lo >::MPI_LO( ), blocks_per_rank, n_blocks_per_rank,
+    offsets, get_index_type< lo >::MPI_LO( ), _comm );
+
+  for ( lo i = 0; i < comm_size; ++i ) {
+    for ( lo j = offsets[ i ]; j < offsets[ i ] + n_blocks_per_rank[ i ];
+          ++j ) {
+      if ( i != _rank ) {
+        _owners[ blocks_per_rank[ j ] ].push_back( i );
+      }
+    }
+  }
+
+  delete[] blocks_per_rank;
+  delete[] n_blocks_per_rank;
+  delete[] offsets;
+}
+
+void besthea::linear_algebra::distributed_block_vector::copy(
+  distributed_block_vector const & that ) {
+  _block_size = that._block_size;
+  _size = that._size;
+  _data = that._data;
+  _owners = that._owners;
+  _my_blocks = that._my_blocks;
+  _comm = that._comm;
+  _rank = that._rank;
+  _duplicated = that._duplicated;
+}
+
+void besthea::linear_algebra::distributed_block_vector::copy_from_raw(
   lo block_size, lo size, const sc * data ) {
   if ( block_size != _block_size ) {
+    int comm_size;
+
+    MPI_Comm_size( _comm, &comm_size );
     resize( block_size );
+    _owners.resize( block_size );
+
+    // vector is duplicated on all MPI ranks:
+    std::fill( _owners.begin( ), _owners.end( ), std::vector< int >{ _rank } );
+
+    for ( auto & it : _owners ) {
+      for ( int i = 0; i < comm_size; ++i ) {
+        if ( i != _rank ) {
+          it.push_back( i );
+        }
+      }
+    }
   }
   if ( size != _size ) {
     resize_blocks( size, false );
@@ -87,16 +263,73 @@ void besthea::linear_algebra::block_vector::copy_from_raw(
   }
 }
 
-void besthea::linear_algebra::block_vector::copy_to_raw( sc * data ) const {
-  for ( lo i = 0; i < _block_size; ++i ) {
-    _data[ i ].copy_to_raw( data + i * _size );
+void besthea::linear_algebra::distributed_block_vector::copy_from_raw(
+  std::vector< lo > & my_blocks, lo block_size, lo size, const sc * data ) {
+  if ( block_size != _block_size ) {
+    int comm_size;
+
+    MPI_Comm_size( _comm, &comm_size );
+    resize( block_size );
+    _owners.resize( block_size, std::vector< int >{ } );
+
+    for ( auto it : my_blocks ) {
+      _owners.at( it ).push_back( _rank );
+    }
+
+    communicate_owners( my_blocks );
+  }
+  if ( size != _size ) {
+    resize_blocks( size, false );
+  }
+  for ( lo i = 0; i < block_size; ++i ) {
+    if ( _owners[ i ][ 0 ] == _rank ) {
+      _data[ i ].copy_from_raw( size, data + i * size );
+    }
   }
 }
 
-void besthea::linear_algebra::block_vector::copy_from_vector(
+void besthea::linear_algebra::distributed_block_vector::copy_to_raw(
+  sc * data ) const {
+  for ( lo i = 0; i < _block_size; ++i ) {
+    // owner (the lowest rank owning the block) broadcasts the block
+    int root;
+    if ( _owners[ i ].size( ) == 1 ) {
+      root = _owners[ i ][ 0 ];
+    } else {
+      root = _owners[ i ][ 0 ] < _owners[ i ][ 1 ] ? _owners[ i ][ 0 ]
+                                                   : _owners[ i ][ 1 ];
+    }
+
+    if ( root == _rank ) {
+      MPI_Bcast( (void *) _data[ i ].data( ), _size,
+        get_scalar_type< sc >::MPI_SC( ), root, _comm );
+      _data[ i ].copy_to_raw( data + i * _size );
+    } else {
+      MPI_Bcast( data + i * _size, _size, get_scalar_type< sc >::MPI_SC( ),
+        root, _comm );
+    }
+  }
+}
+
+void besthea::linear_algebra::distributed_block_vector::copy_from_vector(
   lo block_size, lo size, const vector_type & data ) {
   if ( block_size != _block_size ) {
+    int comm_size;
+
+    MPI_Comm_size( _comm, &comm_size );
     resize( block_size );
+    _owners.resize( block_size );
+
+    // vector is duplicated on all MPI ranks:
+    std::fill( _owners.begin( ), _owners.end( ), std::vector< int >{ _rank } );
+
+    for ( auto & it : _owners ) {
+      for ( int i = 0; i < comm_size; ++i ) {
+        if ( i != _rank ) {
+          it.push_back( i );
+        }
+      }
+    }
   }
   if ( size != _size ) {
     resize_blocks( size, false );
@@ -106,18 +339,104 @@ void besthea::linear_algebra::block_vector::copy_from_vector(
   }
 }
 
-void besthea::linear_algebra::block_vector::copy_to_vector(
-  vector_type & data ) const {
-  if ( data.size( ) != _block_size * _size ) {
-    data.resize( _block_size * _size, false );
+void besthea::linear_algebra::distributed_block_vector::copy_from_vector(
+  std::vector< lo > & my_blocks, lo block_size, lo size,
+  const vector_type & data ) {
+  if ( block_size != _block_size ) {
+    int comm_size;
+
+    MPI_Comm_size( _comm, &comm_size );
+    resize( block_size );
+    _owners.resize( block_size, std::vector< int >{ } );
+
+    for ( auto it : my_blocks ) {
+      _owners.at( it ).push_back( _rank );
+    }
+
+    communicate_owners( my_blocks );
   }
-  for ( lo i = 0; i < _block_size; ++i ) {
-    _data[ i ].copy_to_raw( data.data( ) + i * _size );
+  if ( size != _size ) {
+    resize_blocks( size, false );
+  }
+  for ( lo i = 0; i < block_size; ++i ) {
+    if ( _owners[ i ][ 0 ] == _rank ) {
+      _data[ i ].copy_from_raw( size, data.data( ) + i * size );
+    }
   }
 }
 
+void besthea::linear_algebra::distributed_block_vector::copy_to_vector(
+  vector_type & data ) const {
+  for ( lo i = 0; i < _block_size; ++i ) {
+    // owner (the lowest rank owning the block) broadcasts the block
+    int root;
+    if ( _owners[ i ].size( ) == 1 ) {
+      root = _owners[ i ][ 0 ];
+    } else {
+      root = _owners[ i ][ 0 ] < _owners[ i ][ 1 ] ? _owners[ i ][ 0 ]
+                                                   : _owners[ i ][ 1 ];
+    }
+
+    if ( root == _rank ) {
+      MPI_Bcast( (void *) _data[ i ].data( ), _size,
+        get_scalar_type< sc >::MPI_SC( ), root, _comm );
+      _data[ i ].copy_to_raw( data.data( ) + i * _size );
+    } else {
+      MPI_Bcast( data.data( ) + i * _size, _size,
+        get_scalar_type< sc >::MPI_SC( ), root, _comm );
+    }
+  }
+}
+
+void besthea::linear_algebra::distributed_block_vector::send_block(
+  lo block_idx, int rank, vector_type & data ) const {
+  int primary_owner = get_primary_owner( block_idx );
+  if ( primary_owner == _rank ) {
+    MPI_Send( _data[ block_idx ].data( ), _size,
+      get_scalar_type< sc >::MPI_SC( ), rank, 0, _comm );
+  }
+  if ( rank == _rank ) {
+    if ( data.size( ) != _size ) {
+      data.resize( _size, false );
+    }
+    MPI_Status status;
+    MPI_Recv( data.data( ), _size, get_scalar_type< sc >::MPI_SC( ),
+      primary_owner, 0, _comm, &status );
+  }
+}
+
+void besthea::linear_algebra::distributed_block_vector::add(
+  distributed_block_vector const & v, sc alpha ) {
+  for ( lo i = 0; i < _block_size; ++i ) {
+    if ( am_i_owner( i ) ) {
+      if ( v.am_i_owner( i ) ) {
+        _data[ i ].add( v._data[ i ], alpha );
+      }
+    }
+  }
+}
+
+sc besthea::linear_algebra::distributed_block_vector::dot(
+  distributed_block_vector const & v ) const {
+  sc val = 0.0;
+  if ( _duplicated ) {
+    for ( lo i = 0; i < _block_size; ++i ) {
+      val += _data[ i ].dot( v.get_block( i ) );
+    }
+  } else {
+    for ( lo i = 0; i < _block_size; ++i ) {
+      if ( _rank == get_primary_owner( i ) ) {
+        val += _data[ i ].dot( v.get_block( i ) );
+      }
+    }
+    MPI_Allreduce(
+      MPI_IN_PLACE, &val, 1, get_scalar_type< sc >::MPI_SC( ), MPI_SUM, _comm );
+  }
+  return val;
+}
+
 template<>
-void besthea::linear_algebra::block_vector::get_local_part<
+void besthea::linear_algebra::distributed_block_vector::get_local_part<
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >(
   besthea::mesh::spacetime_cluster * cluster,
   besthea::linear_algebra::vector & local_vector ) const {
@@ -137,7 +456,7 @@ void besthea::linear_algebra::block_vector::get_local_part<
 }
 
 template<>
-void besthea::linear_algebra::block_vector::get_local_part<
+void besthea::linear_algebra::distributed_block_vector::get_local_part<
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >(
   besthea::mesh::spacetime_cluster * cluster,
   besthea::linear_algebra::vector & local_vector ) const {
@@ -157,8 +476,9 @@ void besthea::linear_algebra::block_vector::get_local_part<
 }
 
 template<>
-void besthea::linear_algebra::block_vector::get_local_part< besthea::bem::
-    distributed_fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >(
+void besthea::linear_algebra::distributed_block_vector::get_local_part<
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 > >(
   besthea::mesh::general_spacetime_cluster * cluster,
   besthea::linear_algebra::vector & local_vector ) const {
   lo n_time_elements = cluster->get_n_time_elements( );
@@ -199,8 +519,9 @@ void besthea::linear_algebra::block_vector::get_local_part< besthea::bem::
 }
 
 template<>
-void besthea::linear_algebra::block_vector::get_local_part< besthea::bem::
-    distributed_fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >(
+void besthea::linear_algebra::distributed_block_vector::get_local_part<
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >(
   besthea::mesh::general_spacetime_cluster * cluster,
   besthea::linear_algebra::vector & local_vector ) const {
   lo n_time_elements = cluster->get_n_time_elements( );
@@ -247,7 +568,7 @@ void besthea::linear_algebra::block_vector::get_local_part< besthea::bem::
 }
 
 template<>
-void besthea::linear_algebra::block_vector::add_local_part<
+void besthea::linear_algebra::distributed_block_vector::add_local_part<
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >(
   besthea::mesh::spacetime_cluster * cluster,
   const besthea::linear_algebra::vector & local_vector ) {
@@ -267,7 +588,7 @@ void besthea::linear_algebra::block_vector::add_local_part<
 }
 
 template<>
-void besthea::linear_algebra::block_vector::add_local_part<
+void besthea::linear_algebra::distributed_block_vector::add_local_part<
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >(
   besthea::mesh::spacetime_cluster * cluster,
   const besthea::linear_algebra::vector & local_vector ) {
@@ -288,8 +609,9 @@ void besthea::linear_algebra::block_vector::add_local_part<
 }
 
 template<>
-void besthea::linear_algebra::block_vector::add_local_part< besthea::bem::
-    distributed_fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >(
+void besthea::linear_algebra::distributed_block_vector::add_local_part<
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 > >(
   besthea::mesh::general_spacetime_cluster * cluster,
   const besthea::linear_algebra::vector & local_vector ) {
   lo n_time_elements = cluster->get_n_time_elements( );
@@ -322,8 +644,9 @@ void besthea::linear_algebra::block_vector::add_local_part< besthea::bem::
 }
 
 template<>
-void besthea::linear_algebra::block_vector::add_local_part< besthea::bem::
-    distributed_fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >(
+void besthea::linear_algebra::distributed_block_vector::add_local_part<
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >(
   besthea::mesh::general_spacetime_cluster * cluster,
   const besthea::linear_algebra::vector & local_vector ) {
   lo n_time_elements = cluster->get_n_time_elements( );
@@ -359,5 +682,12 @@ void besthea::linear_algebra::block_vector::add_local_part< besthea::bem::
       add_atomic( global_time_index, global_space_index,
         local_vector[ i_time * n_space_nodes + i_space ] );
     }
+  }
+}
+
+void besthea::linear_algebra::distributed_block_vector::print(
+  std::ostream & stream ) const {
+  for ( const vector_type & v : _data ) {
+    v.print( stream );
   }
 }

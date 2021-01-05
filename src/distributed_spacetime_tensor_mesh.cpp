@@ -282,3 +282,12 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
 
   return true;
 }
+
+std::vector< lo >
+besthea::mesh::distributed_spacetime_tensor_mesh::get_my_timesteps( ) const {
+  lo n_t_elems = _my_mesh->get_n_temporal_elements( );
+  std::vector< lo > my_timesteps( n_t_elems );
+  for ( lo i = _local_start_idx; i < _local_start_idx + n_t_elems; ++i ) {
+    my_timesteps[ i - _local_start_idx ] = i;
+  }
+}

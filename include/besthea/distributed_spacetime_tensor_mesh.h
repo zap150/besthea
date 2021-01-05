@@ -254,6 +254,11 @@ class besthea::mesh::distributed_spacetime_tensor_mesh
     return _slices;
   }
 
+  /**
+   * Returns timesteps owned by the current process.
+   */
+  std::vector< lo > get_my_timesteps( ) const;
+
  protected:
   /**
    * Loads submeshes assigned to the current rank and merges them into one mesh.
