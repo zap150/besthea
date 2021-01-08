@@ -160,11 +160,18 @@ set(besthea_SOURCES
   src/uniform_spacetime_tensor_mesh.cpp
   src/vector.cpp
 )
-include_directories(include)
+
+set(besthea_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
 add_library(besthea STATIC ${besthea_SOURCES})
+target_include_directories(besthea PUBLIC ${besthea_INCLUDE_DIRS})
+target_include_directories(besthea SYSTEM PUBLIC
+  ${Boost_INCLUDE_DIRS}
+  ${Eigen_INCLUDE_DIRS}
+  ${MKL_INCLUDE_DIRS}
+  ${MPI_INCLUDE_DIRS})
 
 install (TARGETS besthea ARCHIVE DESTINATION "${CMAKE_BINARY_DIR}/lib")
-install(FILES ${besthea_INCLUDES} 
+install(FILES ${besthea_INCLUDES}
   DESTINATION "${CMAKE_BINARY_DIR}/include/besthea")
 
 option(BUILD_EXAMPLES "Build examples using the library" OFF)

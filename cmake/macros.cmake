@@ -104,31 +104,31 @@ macro(enable_OpenMP)
 endmacro()
 
 macro(enable_Boost)
-  include_directories(SYSTEM third_party/boost/align/include)
-  include_directories(SYSTEM third_party/boost/config/include)
-  include_directories(SYSTEM third_party/boost/assert/include)
-  include_directories(SYSTEM third_party/boost/static_assert/include)
-  include_directories(SYSTEM third_party/boost/core/include)
+  set(Boost_INCLUDE_DIRS
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/boost/align/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/boost/config/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/boost/assert/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/boost/static_assert/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/boost/core/include)
 endmacro()
 
 macro(enable_Eigen)
-  include_directories(SYSTEM third_party/eigen)
+  set(Eigen_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/eigen)
 endmacro()
 
 macro(enable_MKL)
   find_package(MKL REQUIRED)
-  include_directories(SYSTEM ${MKL_INCLUDE_DIRS})
 endmacro()
 
 macro(enable_MPI)
   find_package(MPI REQUIRED)
-  include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+  set(MPI_INCLUDE_DIRS ${MPI_INCLUDE_PATH})
 endmacro()
 
 macro(enable_catch)
-  include_directories(SYSTEM third_party/catch)
+  set(catch_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/catch)
 endmacro()
 
 macro(enable_Lyra)
-  include_directories(SYSTEM third_party/Lyra/include)
+  set(Lyra_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/Lyra/include)
 endmacro()
