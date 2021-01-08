@@ -47,17 +47,6 @@ macro(setup_compiler)
   if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RelWithDebInfo)
   endif()
-
-  set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g -O3")
-
-  if (NOT DEFINED DATA_WIDTH)
-    set(DATA_WIDTH 8)
-  endif()
-
-  message(STATUS "Setting DATA_WIDTH to ${DATA_WIDTH}")
-
-  add_compile_definitions(DATA_WIDTH=${DATA_WIDTH})
 endmacro()
 
 macro(enable_filesystem)

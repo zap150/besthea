@@ -162,6 +162,12 @@ set(besthea_SOURCES
   src/vector.cpp
 )
 
+if (NOT DEFINED DATA_WIDTH)
+set(DATA_WIDTH 8)
+endif()
+
+message(STATUS "Setting DATA_WIDTH to ${DATA_WIDTH}")
+
 set(besthea_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
 add_library(besthea STATIC ${besthea_SOURCES})
 target_include_directories(besthea PUBLIC ${besthea_INCLUDE_DIRS})
@@ -174,7 +180,9 @@ target_link_libraries(besthea PUBLIC
   ${STDFS_LIBRARIES}
   ${MKL_LIBRARIES}
   ${MPI_CXX_LIBRARIES})
-target_compile_options(besthea PUBLIC "-DMKL_INT=long")
+target_compile_definitions(besthea PUBLIC
+  MKL_INT=long
+  DATA_WIDTH=${DATA_WIDTH})
 
 install (TARGETS besthea ARCHIVE DESTINATION "${CMAKE_BINARY_DIR}/lib")
 install(FILES ${besthea_INCLUDES}
