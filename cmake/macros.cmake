@@ -12,7 +12,7 @@ macro(setup_compiler)
       message(FATAL_ERROR "GCC compiler is too old, besthea can be"
         " compiled only with g++ 8.3.0 or higher")
     endif()
-    
+
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic-errors")
 
@@ -21,7 +21,7 @@ macro(setup_compiler)
       message(FATAL_ERROR "Intel compiler is too old, besthea can be"
         " compiled only with icpc 19.0.1 or higher")
     endif()
-    
+
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w3")
     # attribute appears more than once
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 2620")
@@ -123,10 +123,6 @@ endmacro()
 macro(enable_MPI)
   find_package(MPI REQUIRED)
   set(MPI_INCLUDE_DIRS ${MPI_INCLUDE_PATH})
-endmacro()
-
-macro(enable_catch)
-  set(catch_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/catch)
 endmacro()
 
 macro(enable_Lyra)
