@@ -174,6 +174,7 @@ target_link_libraries(besthea PUBLIC
   ${STDFS_LIBRARIES}
   ${MKL_LIBRARIES}
   ${MPI_CXX_LIBRARIES})
+target_compile_options(besthea PUBLIC "-DMKL_INT=long")
 
 install (TARGETS besthea ARCHIVE DESTINATION "${CMAKE_BINARY_DIR}/lib")
 install(FILES ${besthea_INCLUDES}

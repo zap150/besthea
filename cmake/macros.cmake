@@ -13,8 +13,7 @@ macro(setup_compiler)
         " compiled only with g++ 8.3.0 or higher")
     endif()
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic-errors")
+    add_compile_options(-Wall -Wextra -pedantic-errors)
 
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.0.1)
@@ -22,21 +21,21 @@ macro(setup_compiler)
         " compiled only with icpc 19.0.1 or higher")
     endif()
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w3")
+    add_compile_options(-w3)
     # attribute appears more than once
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 2620")
+    add_compile_options(-diag-disable 2620)
     # parameter was never referenced
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 869")
+    add_compile_options(-diag-disable 869)
     # declaration hides variable
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 1599")
+    add_compile_options(-diag-disable 1599)
     # value copied to temporary, reference to temporary used
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 383")
+    add_compile_options(-diag-disable 383)
     # inlining inhibited by limit max-total-size
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 11074")
+    add_compile_options(-diag-disable 11074)
     # to get full report use -qopt-report=4 -qopt-report-phase ipo
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 11076")
+    add_compile_options(-diag-disable 11076)
     # specified as both a system and non-system include directory
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -diag-disable 2547")
+    add_compile_options(-diag-disable 2547)
 
   else()
     message(FATAL_ERROR "Unknown C++ compiler: ${CMAKE_CXX_COMPILER_ID}")
@@ -88,12 +87,6 @@ macro(enable_filesystem)
     message(STATUS "Found std::filesystem: libstdc++")
   endif()
 endmacro()
-
-# also adds flag to linker, but we want to link against iomp5
-#macro(enable_OpenMP)
-#  find_package(OpenMP REQUIRED)
-#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-#endmacro()
 
 macro(enable_OpenMP)
   if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
