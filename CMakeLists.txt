@@ -171,6 +171,7 @@ target_include_directories(besthea SYSTEM PUBLIC
   ${MKL_INCLUDE_DIRS}
   ${MPI_INCLUDE_DIRS})
 target_link_libraries(besthea PUBLIC
+  ${STDFS_LIBRARIES}
   ${MKL_LIBRARIES}
   ${MPI_CXX_LIBRARIES})
 
