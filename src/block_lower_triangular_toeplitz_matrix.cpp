@@ -91,6 +91,7 @@ void besthea::linear_algebra::block_lower_triangular_toeplitz_matrix::
 void besthea::linear_algebra::block_lower_triangular_toeplitz_matrix::resize(
   lo block_dim ) {
   _data.resize( block_dim );
+  _data.shrink_to_fit( );
   _block_dim = block_dim;
 }
 

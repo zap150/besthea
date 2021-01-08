@@ -167,13 +167,12 @@ int main( int argc, char * argv[] ) {
   lo order_reg = 4;
   lo order_reg_tetra = 4;
 
-  block_lower_triangular_toeplitz_matrix * K
-    = new block_lower_triangular_toeplitz_matrix( );
+  block_lower_triangular_toeplitz_matrix K;
   spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
   uniform_spacetime_be_assembler assembler_k(
     kernel_k, space_p0, space_p1, order_sing, order_reg );
   t.reset( "K" );
-  assembler_k.assemble( *K );
+  assembler_k.assemble( K );
   t.measure( );
 
   uniform_spacetime_be_identity M( space_p0, space_p1, 1 );
@@ -192,12 +191,12 @@ int main( int argc, char * argv[] ) {
             << std::endl;
 
   block_vector neu;
-  neu.resize( K->get_block_dim( ) );
-  neu.resize_blocks( K->get_n_rows( ), true );
+  neu.resize( K.get_block_dim( ) );
+  neu.resize_blocks( K.get_n_rows( ), true );
   M.apply( dir_proj, neu, false, 0.5, 0.0 );
-  K->apply( dir_proj, neu, false, 1.0, 1.0 );
+  K.apply( dir_proj, neu, false, 1.0, 1.0 );
 
-  delete K;
+  K.clear( );
 
   vector init_proj;
   if ( cauchy_data::_shift > 0.0 ) {
@@ -209,40 +208,37 @@ int main( int argc, char * argv[] ) {
                    cauchy_data::initial, init_proj )
               << std::endl;
 
-    block_row_matrix * M0 = new block_row_matrix( );
+    block_row_matrix M0;
     spacetime_heat_initial_m0_kernel_antiderivative kernel_m0(
       cauchy_data::_alpha );
     uniform_spacetime_initial_assembler assembler_m0(
       kernel_m0, space_p0, space_p1_tetra, order_reg, order_reg_tetra );
     t.reset( "M0" );
-    assembler_m0.assemble( *M0 );
+    assembler_m0.assemble( M0 );
     t.measure( );
 
-    M0->apply( init_proj, neu, false, -1.0, 1.0 );
-
-    delete M0;
+    M0.apply( init_proj, neu, false, -1.0, 1.0 );
   }
 
-  block_lower_triangular_toeplitz_matrix * V
-    = new block_lower_triangular_toeplitz_matrix( );
+  block_lower_triangular_toeplitz_matrix V;
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
   uniform_spacetime_be_assembler assembler_v(
     kernel_v, space_p0, space_p0, order_sing, order_reg );
   t.reset( "V" );
-  assembler_v.assemble( *V );
+  assembler_v.assemble( V );
   t.measure( );
 
   t.reset( "Solving the system" );
-  // V->cholesky_decompose_solve( neu );
+  // V.cholesky_decompose_solve( neu );
   block_vector rhs( neu );
   sc gmres_prec = 1e-5;
   lo gmres_iter = 500;
-  V->mkl_fgmres_solve( rhs, neu, gmres_prec, gmres_iter, gmres_iter );
+  V.mkl_fgmres_solve( rhs, neu, gmres_prec, gmres_iter, gmres_iter );
   std::cout << "  iterations: " << gmres_iter << ", residual: " << gmres_prec
             << std::endl;
   t.measure( );
 
-  delete V;
+  V.clear( );
 
   std::cout << "Neumann L2 relative error: "
             << space_p0.L2_relative_error( cauchy_data::neumann, neu )

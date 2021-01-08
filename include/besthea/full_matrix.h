@@ -262,6 +262,7 @@ class besthea::linear_algebra::full_matrix
    */
   void resize( lo n_rows, lo n_columns ) {
     _data.resize( n_rows * n_columns );
+    _data.shrink_to_fit( );
     _n_rows = n_rows;
     _n_columns = n_columns;
   }

@@ -167,13 +167,12 @@ int main( int argc, char * argv[] ) {
   lo order_reg = 4;
   lo order_reg_tetra = 4;
 
-  block_lower_triangular_toeplitz_matrix * K
-    = new block_lower_triangular_toeplitz_matrix( );
+  block_lower_triangular_toeplitz_matrix K;
   spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
   uniform_spacetime_be_assembler assembler_k(
     kernel_k, space_p0, space_p1, order_sing, order_reg );
   t.reset( "K" );
-  assembler_k.assemble( *K );
+  assembler_k.assemble( K );
   t.measure( );
 
   uniform_spacetime_be_identity M( space_p0, space_p1, 1 );
@@ -192,12 +191,12 @@ int main( int argc, char * argv[] ) {
             << std::endl;
 
   block_vector dir;
-  dir.resize( K->get_block_dim( ) );
-  dir.resize_blocks( K->get_n_columns( ), true );
+  dir.resize( K.get_block_dim( ) );
+  dir.resize_blocks( K.get_n_columns( ), true );
   M.apply( neu_proj, dir, true, 0.5, 0.0 );
-  K->apply( neu_proj, dir, true, -1.0, 1.0 );
+  K.apply( neu_proj, dir, true, -1.0, 1.0 );
 
-  delete K;
+  K.clear( );
 
   vector init_proj;
   if ( cauchy_data::_shift > 0.0 ) {
@@ -209,36 +208,32 @@ int main( int argc, char * argv[] ) {
                    cauchy_data::initial, init_proj )
               << std::endl;
 
-    block_row_matrix * M1 = new block_row_matrix( );
+    block_row_matrix M1;
     spacetime_heat_initial_m1_kernel_antiderivative kernel_m1(
       cauchy_data::_alpha );
     uniform_spacetime_initial_assembler assembler_m1(
       kernel_m1, space_p1, space_p1_tetra, order_reg, order_reg_tetra );
     t.reset( "M1" );
-    assembler_m1.assemble( *M1 );
+    assembler_m1.assemble( M1 );
     t.measure( );
 
-    M1->apply( init_proj, dir, false, -1.0, 1.0 );
-
-    delete M1;
+    M1.apply( init_proj, dir, false, -1.0, 1.0 );
   }
 
-  block_lower_triangular_toeplitz_matrix * D
-    = new block_lower_triangular_toeplitz_matrix( );
+  block_lower_triangular_toeplitz_matrix D;
   spacetime_heat_hs_kernel_antiderivative kernel_d( cauchy_data::_alpha );
   uniform_spacetime_be_assembler assembler_d(
     kernel_d, space_p1, space_p1, order_sing, order_reg );
   t.reset( "D" );
-  assembler_d.assemble( *D );
+  assembler_d.assemble( D );
   t.measure( );
 
-  block_lower_triangular_toeplitz_matrix * V11
-    = new block_lower_triangular_toeplitz_matrix( );
+  block_lower_triangular_toeplitz_matrix V11;
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
   uniform_spacetime_be_assembler assembler_v(
     kernel_v, space_p1, space_p1, order_sing, order_reg );
   t.reset( "V11" );
-  assembler_v.assemble( *V11 );
+  assembler_v.assemble( V11 );
   t.measure( );
   uniform_spacetime_be_identity M11( space_p1, space_p1, 2 );
   t.reset( "M11" );
@@ -248,20 +243,20 @@ int main( int argc, char * argv[] ) {
   block_mkl_cg_inverse M11_inv( M11, 1e-6, 100 );
   compound_block_linear_operator preconditioner;
   preconditioner.push_back( M11_inv );
-  preconditioner.push_back( *V11 );
+  preconditioner.push_back( V11 );
   preconditioner.push_back( M11_inv );
   t.reset( "Solving the system" );
   block_vector rhs( dir );
   sc gmres_prec = 1e-5;
   lo gmres_iter = 500;
-  D->mkl_fgmres_solve(
+  D.mkl_fgmres_solve(
     preconditioner, rhs, dir, gmres_prec, gmres_iter, gmres_iter );
   std::cout << "  iterations: " << gmres_iter << ", residual: " << gmres_prec
             << std::endl;
   t.measure( );
 
-  delete D;
-  delete V11;
+  D.clear( );
+  V11.clear( );
 
   std::cout << "Dirichlet L2 relative error: "
             << space_p1.L2_relative_error( cauchy_data::dirichlet, dir )

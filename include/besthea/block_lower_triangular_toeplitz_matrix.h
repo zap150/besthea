@@ -208,6 +208,13 @@ class besthea::linear_algebra::block_lower_triangular_toeplitz_matrix
    */
   void resize( lo block_dim );
 
+  /*!
+   * Clears the data stored by the matrix.
+   */
+  void clear( ) {
+    resize( 0 );
+  }
+
  protected:
   std::vector< matrix_type > _data;  //!< Raw data.
 };

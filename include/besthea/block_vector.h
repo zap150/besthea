@@ -149,6 +149,7 @@ class besthea::linear_algebra::block_vector {
    */
   void resize( lo block_size ) {
     _data.resize( block_size );
+    _data.shrink_to_fit( );
     _block_size = block_size;
   }
 
