@@ -170,6 +170,9 @@ target_include_directories(besthea SYSTEM PUBLIC
   ${Eigen_INCLUDE_DIRS}
   ${MKL_INCLUDE_DIRS}
   ${MPI_INCLUDE_DIRS})
+target_link_libraries(besthea PUBLIC
+  ${MKL_LIBRARIES}
+  ${MPI_CXX_LIBRARIES})
 
 install (TARGETS besthea ARCHIVE DESTINATION "${CMAKE_BINARY_DIR}/lib")
 install(FILES ${besthea_INCLUDES}
