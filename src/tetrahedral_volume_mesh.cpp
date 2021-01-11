@@ -69,66 +69,70 @@ void besthea::mesh::tetrahedral_volume_mesh::print_info( ) const {
 }
 
 bool besthea::mesh::tetrahedral_volume_mesh::load( const std::string & file ) {
-  std::ifstream filestream( file.c_str( ) );
+  std::ifstream filestream;
+  filestream.exceptions( std::ifstream::failbit | std::ifstream::badbit );
 
-  if ( !filestream.is_open( ) ) {
-    std::cerr << "File could not be opened!" << std::endl;
-    return false;
-  }
+  try {
+    filestream.open( file.c_str( ) );
 
-  lo dummy;
+    lo dummy;
 
-  filestream >> dummy;  // dimension (3)
-  filestream >> dummy;  // nodes per element (4)
-  filestream >> _n_nodes;
+    filestream >> dummy;  // dimension (3)
+    filestream >> dummy;  // nodes per element (4)
+    filestream >> _n_nodes;
 
-  _nodes.resize( 3 * _n_nodes );
+    _nodes.resize( 3 * _n_nodes );
 
-  for ( lo i = 0; i < _n_nodes; ++i ) {
-    filestream >> _nodes[ 3 * i ];
-    filestream >> _nodes[ 3 * i + 1 ];
-    filestream >> _nodes[ 3 * i + 2 ];
-  }
-
-  std::string line;
-  std::stringstream linestream;
-  lo n1, n2;
-
-  filestream >> _n_surface_elements;
-  filestream.ignore( std::numeric_limits< std::streamsize >::max( ), '\n' );
-  _surface_elements.resize( _n_surface_elements * 3 );
-  _surface_orientation.first.resize( _n_surface_elements );
-  _surface_orientation.second.resize( _n_surface_elements );
-
-  for ( lo i = 0; i < _n_surface_elements; ++i ) {
-    std::getline( filestream, line );
-    linestream.clear( );
-    linestream.str( line );
-    linestream >> _surface_elements[ 3 * i ];
-    linestream >> _surface_elements[ 3 * i + 1 ];
-    linestream >> _surface_elements[ 3 * i + 2 ];
-
-    if ( linestream >> n1 >> n2 ) {
-      _surface_orientation.first[ i ] = n1;
-      _surface_orientation.second[ i ] = n2;
-    } else {
-      _surface_orientation.first[ i ] = 0;
-      _surface_orientation.second[ i ] = 1;
+    for ( lo i = 0; i < _n_nodes; ++i ) {
+      filestream >> _nodes[ 3 * i ];
+      filestream >> _nodes[ 3 * i + 1 ];
+      filestream >> _nodes[ 3 * i + 2 ];
     }
-  }
 
-  filestream >> _n_elements;
-  filestream.ignore( std::numeric_limits< std::streamsize >::max( ), '\n' );
-  _elements.resize( _n_elements * 4 );
+    std::string line;
+    std::stringstream linestream;
+    lo n1, n2;
 
-  for ( lo i = 0; i < _n_elements; ++i ) {
-    std::getline( filestream, line );
-    linestream.clear( );
-    linestream.str( line );
-    linestream >> _elements[ 4 * i ];
-    linestream >> _elements[ 4 * i + 1 ];
-    linestream >> _elements[ 4 * i + 2 ];
-    linestream >> _elements[ 4 * i + 3 ];
+    filestream >> _n_surface_elements;
+    filestream.ignore( std::numeric_limits< std::streamsize >::max( ), '\n' );
+    _surface_elements.resize( _n_surface_elements * 3 );
+    _surface_orientation.first.resize( _n_surface_elements );
+    _surface_orientation.second.resize( _n_surface_elements );
+
+    for ( lo i = 0; i < _n_surface_elements; ++i ) {
+      std::getline( filestream, line );
+      linestream.clear( );
+      linestream.str( line );
+      linestream >> _surface_elements[ 3 * i ];
+      linestream >> _surface_elements[ 3 * i + 1 ];
+      linestream >> _surface_elements[ 3 * i + 2 ];
+
+      if ( linestream >> n1 >> n2 ) {
+        _surface_orientation.first[ i ] = n1;
+        _surface_orientation.second[ i ] = n2;
+      } else {
+        _surface_orientation.first[ i ] = 0;
+        _surface_orientation.second[ i ] = 1;
+      }
+    }
+
+    filestream >> _n_elements;
+    filestream.ignore( std::numeric_limits< std::streamsize >::max( ), '\n' );
+    _elements.resize( _n_elements * 4 );
+
+    for ( lo i = 0; i < _n_elements; ++i ) {
+      std::getline( filestream, line );
+      linestream.clear( );
+      linestream.str( line );
+      linestream >> _elements[ 4 * i ];
+      linestream >> _elements[ 4 * i + 1 ];
+      linestream >> _elements[ 4 * i + 2 ];
+      linestream >> _elements[ 4 * i + 3 ];
+    }
+  } catch ( const std::ifstream::failure & e ) {
+    std::cerr << e.what( ) << std::endl;
+    throw std::runtime_error( "Cannot read from " + file + " in " + __FILE__
+      + ":" + std::to_string( __LINE__ ) );
   }
 
   filestream.close( );

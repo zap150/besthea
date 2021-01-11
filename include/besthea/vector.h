@@ -101,6 +101,7 @@ class besthea::linear_algebra::vector {
    */
   void resize( lo size, bool zero = true ) {
     _data.resize( size );
+    _data.shrink_to_fit( );
     if ( zero ) {
       fill( 0.0 );
     }

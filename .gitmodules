@@ -16,3 +16,6 @@
 [submodule "third_party/boost/align"]
 	path = third_party/boost/align
 	url = https://github.com/zap150/align.git
+[submodule "third_party/Lyra"]
+	path = third_party/Lyra
+	url = https://github.com/zap150/Lyra.git
