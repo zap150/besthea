@@ -86,7 +86,7 @@ besthea::linear_algebra::distributed_block_vector::distributed_block_vector(
 
   _my_blocks.resize( _block_size );
   for ( lo i = 0; i < _block_size; ++i ) {
-    _my_blocks.push_back( i );
+    _my_blocks[ i ] = i;
   }
 
   for ( auto & it : _owners ) {
@@ -689,5 +689,20 @@ void besthea::linear_algebra::distributed_block_vector::print(
   std::ostream & stream ) const {
   for ( const vector_type & v : _data ) {
     v.print( stream );
+  }
+}
+
+void besthea::linear_algebra::distributed_block_vector::
+  synchronize_shared_parts( ) {
+  for ( auto it : _my_blocks ) {
+    if ( am_i_primary_owner( it ) ) {
+      for ( lo i = 1; i < _owners[ it ].size( ); ++i ) {
+        MPI_Send( _data.at( it ).data( ), _size,
+          get_scalar_type< sc >::MPI_SC( ), _owners[ it ].at( i ), 0, _comm );
+      }
+    } else {
+      MPI_Recv( _data.at( it ).data( ), _size, get_scalar_type< sc >::MPI_SC( ),
+        get_primary_owner( it ), 0, _comm, MPI_STATUS_IGNORE );
+    }
   }
 }

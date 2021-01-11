@@ -285,9 +285,21 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
 
 std::vector< lo >
 besthea::mesh::distributed_spacetime_tensor_mesh::get_my_timesteps( ) const {
-  lo n_t_elems = _my_mesh->get_n_temporal_elements( );
-  std::vector< lo > my_timesteps( n_t_elems );
-  for ( lo i = _local_start_idx; i < _local_start_idx + n_t_elems; ++i ) {
-    my_timesteps[ i - _local_start_idx ] = i;
+  lo n_nearfield_elems = 0;
+  if ( _nearfield_mesh != nullptr ) {
+    n_nearfield_elems = _nearfield_mesh->get_n_temporal_elements( );
   }
+  lo n_local_elems = _my_mesh->get_n_temporal_elements( );
+  std::vector< lo > my_timesteps( n_nearfield_elems + n_local_elems );
+
+  if ( _nearfield_mesh != nullptr ) {
+    for ( lo i = _my_nearfield_start_idx;
+          i < _my_nearfield_start_idx + n_nearfield_elems; ++i ) {
+      my_timesteps[ i - _my_nearfield_start_idx ] = i;
+    }
+  }
+  for ( lo i = _local_start_idx; i < _local_start_idx + n_local_elems; ++i ) {
+    my_timesteps[ n_nearfield_elems + i - _local_start_idx ] = i;
+  }
+  return my_timesteps;
 }

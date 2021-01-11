@@ -256,6 +256,8 @@ class besthea::mesh::distributed_spacetime_tensor_mesh
 
   /**
    * Returns timesteps owned by the current process.
+   * @return std::vector of indices of global timesteps owned by the current
+   * process.
    */
   std::vector< lo > get_my_timesteps( ) const;
 

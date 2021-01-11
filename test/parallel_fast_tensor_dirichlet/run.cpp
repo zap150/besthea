@@ -146,39 +146,39 @@ int main( int argc, char * argv[] ) {
     + std::to_string( geometry_case ) + "/";
   std::filesystem::create_directory( geometry_dir );
   if ( geometry_case == 1 ) {
-    spatial_mesh_file = "./mesh_files/cube_12.txt";
+    spatial_mesh_file = "./../../test/mesh_files/cube_12.txt";
     n_timesteps = 16;
   } else if ( geometry_case == 2 ) {
-    spatial_mesh_file = "./mesh_files/icosahedron.txt";
+    spatial_mesh_file = "./../../test/mesh_files/icosahedron.txt";
     n_timesteps = 16;
   } else if ( geometry_case == 3 ) {
-    spatial_mesh_file = "./mesh_files/icosahedron.txt";
+    spatial_mesh_file = "./../../test/mesh_files/icosahedron.txt";
     n_timesteps = 20;
   } else if ( geometry_case == 4 ) {
     // Similar to Messner, Schanz, Tausch in J.Comp.Phys.
     // choose st_coeff = 4 such that first space refinement level is 6
-    spatial_mesh_file = "./mesh_files/cube_24_half_scale.txt";
+    spatial_mesh_file = "./../../test/mesh_files/cube_24_half_scale.txt";
     n_timesteps = 32;
     space_init_refine = 2;
     end_time = 0.5;
   } else if ( geometry_case == 5 ) {
     // same as 4, but considering only half of the temporal domain (to overcome
     // problems due to memory requirements)
-    spatial_mesh_file = "./mesh_files/cube_24_half_scale.txt";
+    spatial_mesh_file = "./../../test/mesh_files/cube_24_half_scale.txt";
     n_timesteps = 16;
     space_init_refine = 2;
     end_time = 0.25;
   } else if ( geometry_case == 6 ) {
     // same as 4, but considering only a quarter of the temporal domain (to
     // overcome problems due to memory requirements)
-    spatial_mesh_file = "./mesh_files/cube_24_half_scale.txt";
+    spatial_mesh_file = "./../../test/mesh_files/cube_24_half_scale.txt";
     n_timesteps = 8;
     space_init_refine = 2;
     end_time = 0.125;
   } else if ( geometry_case == 7 ) {
     // same as 5, but refined already once to allow execution with more
     // processes
-    spatial_mesh_file = "./mesh_files/cube_24_half_scale.txt";
+    spatial_mesh_file = "./../../test/mesh_files/cube_24_half_scale.txt";
     n_timesteps = 64;
     space_init_refine = 3;
     end_time = 0.25;
@@ -372,12 +372,50 @@ int main( int argc, char * argv[] ) {
       get_scalar_type< sc >::MPI_SC( ), 0, comm );
   }
   MPI_Barrier( comm );
+
+  std::vector< lo > my_blocks = distributed_mesh.get_my_timesteps( );
+  if ( myRank == 16 ) {
+    for ( auto it : my_blocks ) {
+      std::cout << it << " ";
+    }
+    std::cout << std::endl;
+  }
+  distributed_block_vector dir_proj_dist( my_blocks, dir_proj.get_block_size( ),
+    dir_proj.get_size_of_block( ), false, MPI_COMM_WORLD );
+  // distributed_block_vector dir_proj_dist(
+  //  dir_proj.get_block_size( ), dir_proj.get_size_of_block( ), true );
+
+  for ( auto it : my_blocks ) {
+    for ( lo i = 0; i < dir_proj.get_size_of_block( ); ++i ) {
+      dir_proj_dist.set( it, i, dir_proj.get( it, i ) );
+    }
+  }
+  std::vector< lo > my_blk = dir_proj_dist.get_my_blocks( );
+  distributed_block_vector neu_block_dist(
+    my_blk, dir_proj_dist.get_block_size( ), n_space_elements );
+
+  for ( auto it : my_blocks ) {
+    for ( lo i = 0; i < neu_block.get_size_of_block( ); ++i ) {
+      neu_block_dist.set( it, i, neu_block.get( it, i ) );
+    }
+  }
+
+  // K->apply( dir_proj, neu_block, false, 1.0, 1.0 );
+
+  // dir_proj_dist.print( );
+
+  // MPI_Finalize( );
+  // return;
   // apply K to dir_proj and add result to neu_block
   if ( myRank == 0 ) {
     t.reset( "application of K" );
   }
-  K->apply( dir_proj, neu_block, false, 1.0, 1.0 );
+  K->apply( dir_proj_dist, neu_block_dist, false, 1.0, 1.0 );
+
+  // K->apply( dir_proj, neu_block, false, 1.0, 1.0 );
+  // neu_block.print( );
   MPI_Barrier( comm );
+
   if ( myRank == 0 ) {
     t.measure( );
   }
@@ -403,14 +441,45 @@ int main( int argc, char * argv[] ) {
     t.reset( "solving for neumann datum" );
   }
 
-  block_vector rhs( neu_block );
+  distributed_block_vector rhs_dist( neu_block_dist );
+
+  // sc * neu_data2
+  //   = new sc[ neu_block.get_block_size( ) * neu_block.get_size_of_block( ) ];
+  // rhs_dist.copy_to_raw( neu_data2 );
+  // neu_block.copy_from_raw(
+  //   neu_block.get_block_size( ), neu_block.get_size_of_block( ), neu_data2 );
+  // if ( myRank == 0 )
+  //   neu_block.print( );
+  // MPI_Barrier( comm );
+  // return;
+
+  // block_vector rhs( neu_block );
+  // rhs.print( );
+
   sc gmres_prec = 1e-8;
   lo gmres_iter = 150;
-  V->mkl_fgmres_solve_parallel(
-    rhs, neu_block, gmres_prec, gmres_iter, gmres_iter );
+  V->gmres_solve( rhs_dist, neu_block_dist, gmres_prec, gmres_iter );
+  std::cout << gmres_iter << " " << gmres_prec << std::endl;
+  if ( myRank == 0 ) {
+    t.measure( );
+  }
+
+  // V->mkl_fgmres_solve_parallel(
+  // rhs, neu_block, gmres_prec, gmres_iter, gmres_iter );
+  MPI_Barrier( MPI_COMM_WORLD );
+  if ( myRank == 0 ) {
+    t.reset( "Postprocessing" );
+  }
+  sc * neu_data
+    = new sc[ neu_block.get_block_size( ) * neu_block.get_size_of_block( ) ];
+
+  neu_block_dist.copy_to_raw( neu_data );
+  neu_block.copy_from_raw(
+    neu_block.get_block_size( ), neu_block.get_size_of_block( ), neu_data );
 
   if ( myRank == 0 ) {
     t.measure( );
+
     std::cout << "required number of iterations: " << gmres_iter << std::endl;
     std::cout << "Neumann L2 relative error: "
               << space_p0->L2_relative_error( cauchy_data::neumann, neu_block )
@@ -420,5 +489,6 @@ int main( int argc, char * argv[] ) {
     delete space_mesh;
   }
   delete V;
+  delete[] neu_data;
   MPI_Finalize( );
 }

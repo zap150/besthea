@@ -1732,6 +1732,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     * ( _temp_order + 1 ) * ( _temp_order + 1 ) );
   // buffer matrices to store intermediate m2l results.
   lo thread_num = omp_get_thread_num( );
+
   _aux_buffer_0[ thread_num ].fill( 0.0 );
   _aux_buffer_1[ thread_num ].fill( 0.0 );
 
@@ -3523,6 +3524,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // allocate buffers for m2l computation
   _aux_buffer_0.resize( omp_get_max_threads( ) );
   _aux_buffer_1.resize( omp_get_max_threads( ) );
+
   // start the main "job scheduling" algorithm
   // the "master" thread checks for new available data, spawns tasks, and
   // removes clusters from lists
@@ -3792,8 +3794,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           case 4: {
             // nearfiel task
             n_list.erase( it_current_cluster );
-            // no dependencies, possible collisions are treated by atomic
-            // operations
+// no dependencies, possible collisions are treated by atomic
+// operations
 #pragma omp task priority( 200 )
             apply_nearfield_operations(
               current_cluster, x, trans, y_pFMM, verbose, verbose_file );
@@ -3810,7 +3812,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       }
     }
   }
-
   //############################################################################
   //### communicate the result with an Allreduce operation for each timestep ###
   // @todo: Can we do this in a less cumbersome way?! Is a global reduction even
@@ -3823,9 +3824,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // }
   // Scale the global update y_pFMM by alpha and add it to the global vector y.
   y.add( y_pFMM, alpha );
+
   // if ( _my_rank == 0 ) {
   //   std::cout << "application executed" << std::endl;
   // }
+  MPI_Barrier( _comm );
+  y.synchronize_shared_parts( );
 
   delete[] aux_dep_m;
   delete[] aux_dep_l;
@@ -4167,6 +4171,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           spacetime_elements[ i_time * n_space_elements + i_space ] ) );
       // for the spatial mesh no transformation from local 2 global is
       // necessary since there is just one global space mesh at the moment.
+
       output_vector.add_atomic( distributed_mesh->local_2_global_time(
                                   local_start_idx, local_time_index ),
         global_space_index, targets( i_time, i_space ) );

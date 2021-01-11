@@ -341,6 +341,11 @@ class besthea::linear_algebra::distributed_block_vector {
   }
 
   /*!
+   * Primary owner rank sends data to all other owners.
+   */
+  void synchronize_shared_parts( );
+
+  /*!
    * Gets local part of a block vector corresponding to dofs in a spacetime
    * cluster.
    * @param[in] cluster  Cluster determining the local dofs.
@@ -431,6 +436,16 @@ class besthea::linear_algebra::distributed_block_vector {
   }
 
   /*!
+   * Returns whether the current MPI rank is a primary owner of the given block.
+   * @param[in] block_idx Index of given block.
+   * @return True if the calling process is the primary owner of the vector
+   * block.
+   */
+  bool am_i_primary_owner( lo block_idx ) const {
+    return ( get_primary_owner( block_idx ) == _rank );
+  }
+
+  /*!
    * Sends block to a given rank
    * @param[in] block_idx Block to be sent.
    * @param[in] rank MPI rank of receiver.
@@ -439,6 +454,10 @@ class besthea::linear_algebra::distributed_block_vector {
   void send_block( lo block_idx, int rank, vector_type & data ) const;
 
   void print( std::ostream & stream = std::cout ) const;
+
+  MPI_Comm get_comm( ) const {
+    return _comm;
+  }
 
  protected:
   /*!

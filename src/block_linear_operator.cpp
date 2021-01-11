@@ -648,8 +648,6 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
       break;
     }
 
-    V[ k + 1 ].resize( block_size );
-    V[ k + 1 ].resize_blocks( size_of_blocks );
     V[ k + 1 ].copy( vs );
     V[ k + 1 ].scale( 1.0 / norm_vs );
 
@@ -712,10 +710,11 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
   distributed_block_vector_type r( rhs );
   std::vector< distributed_block_vector_type > V(
     max_it + 1 );  // orthogonalized search directions
-  distributed_block_vector_type vs( rhs.get_block_size( ),
+  std::vector< lo > my_blocks = rhs.get_my_blocks( );
+  distributed_block_vector_type vs( my_blocks, rhs.get_block_size( ),
     rhs.get_size_of_block( ),
     true );  // new search direction
-  distributed_block_vector_type vs_prec( rhs.get_block_size( ),
+  distributed_block_vector_type vs_prec( my_blocks, rhs.get_block_size( ),
     rhs.get_size_of_block( ),
     true );  // auxiliary result of preconditioning
   std::vector< std::vector< sc > > H(
@@ -724,11 +723,12 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
   std::vector< sc > c( max_it + 1 );      // coeffs of Givens rotation
   std::vector< sc > s( max_it + 1 );      // coeffs of Givens rotation
   sc norm_vs;                             // h_k+1,k
-  distributed_block_vector_type u_tilde( solution.get_block_size( ),
+  distributed_block_vector_type u_tilde( my_blocks, solution.get_block_size( ),
     solution.get_size_of_block( ), true );  // solution=prec*u_tilde
   sc gmres_eps = 1e-20;
 
   this->apply( solution, r, trans, -1.0, 1.0 );
+  // this->apply( solution, r, trans, 1.0, 1.0 );
   gamma[ 0 ] = r.norm( );
 
   if ( gamma[ 0 ] == 0.0 ) {
@@ -742,6 +742,8 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
   lo k = 0;
 
   while ( std::abs( gamma[ k ] ) > ref_error && k < max_it ) {
+    // std::cout << k << "  " << std::abs( gamma[ k ] ) << std::endl;
+
     this->apply( V[ k ], vs, trans, 1.0, 0.0 );
 
     H[ k ].resize( k + 1 );
@@ -763,8 +765,6 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
       break;
     }
 
-    V[ k + 1 ].resize( block_size );
-    V[ k + 1 ].resize_blocks( size_of_blocks );
     V[ k + 1 ].copy( vs );
     V[ k + 1 ].scale( 1.0 / norm_vs );
 
