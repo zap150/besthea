@@ -3828,7 +3828,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // if ( _my_rank == 0 ) {
   //   std::cout << "application executed" << std::endl;
   // }
-  MPI_Barrier( _comm );
+  MPI_Barrier( y.get_comm( ) );
   y.synchronize_shared_parts( );
 
   delete[] aux_dep_m;
