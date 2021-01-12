@@ -36,6 +36,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define INCLUDE_BESTHEA_SPACETIME_BE_IDENTITY_H_
 
 #include "besthea/block_matrix.h"
+#include "besthea/distributed_block_vector.h"
 #include "besthea/sparse_matrix.h"
 
 namespace besthea {
@@ -55,6 +56,9 @@ class besthea::bem::spacetime_be_identity
   using matrix_type = besthea::linear_algebra::sparse_matrix;  //!< Matrix type.
   using block_vector_type
     = besthea::linear_algebra::block_vector;  //!< Block vector type.
+  using distributed_block_vector_type
+    = besthea::linear_algebra::distributed_block_vector;  //!< Block vector
+                                                          //!< type.
 
   /**
    * Constructor.
@@ -99,6 +103,18 @@ class besthea::bem::spacetime_be_identity
    */
   void apply( const block_vector_type & x, block_vector_type & y,
     bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
+
+  /*!
+   * @brief y = beta * y + alpha * (this)^trans * x.
+   * @param[in] x
+   * @param[in,out] y
+   * @param[in] trans
+   * @param[in] alpha
+   * @param[in] beta
+   */
+  void apply( const distributed_block_vector_type & x,
+    distributed_block_vector_type & y, bool trans = false, sc alpha = 1.0,
+    sc beta = 0.0 ) const;
 
  private:
   /**

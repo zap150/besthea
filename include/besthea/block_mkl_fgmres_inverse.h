@@ -36,6 +36,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define INCLUDE_BESTHEA_BLOCK_MKL_FGMRES_INVERSE_H_
 
 #include "besthea/block_iterative_inverse.h"
+#include "besthea/distributed_block_vector.h"
 #include "besthea/settings.h"
 #include "besthea/vector.h"
 
@@ -53,6 +54,9 @@ class besthea::linear_algebra::block_mkl_fgmres_inverse
  public:
   using block_vector_type
     = besthea::linear_algebra::block_vector;  //!< Block vector type.
+  using distributed_block_vector_type
+    = besthea::linear_algebra::distributed_block_vector;  //!< Distributed block
+                                                          //!< vector type.
 
   /**
    * Constructor.
@@ -93,6 +97,19 @@ class besthea::linear_algebra::block_mkl_fgmres_inverse
    */
   virtual void apply( const block_vector_type & x, block_vector_type & y,
     [[maybe_unused]] bool trans = false, [[maybe_unused]] sc alpha = 1.0,
+    [[maybe_unused]] sc beta = 0.0 ) const override;
+
+  /*!
+   * @brief y = beta * y + alpha * (this)^trans * x.
+   * @param[in] x
+   * @param[in,out] y
+   * @param[in] trans
+   * @param[in] alpha
+   * @param[in] beta
+   */
+  virtual void apply( const distributed_block_vector_type & x,
+    distributed_block_vector_type & y, [[maybe_unused]] bool trans = false,
+    [[maybe_unused]] sc alpha = 1.0,
     [[maybe_unused]] sc beta = 0.0 ) const override;
 
  protected:

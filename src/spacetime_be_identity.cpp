@@ -165,6 +165,19 @@ void besthea::bem::spacetime_be_identity< test_space_type,
   }
 }
 
+template< class test_space_type, class trial_space_type >
+void besthea::bem::spacetime_be_identity< test_space_type,
+  trial_space_type >::apply( const distributed_block_vector_type & x,
+  distributed_block_vector_type & y, bool trans, sc alpha, sc beta ) const {
+  lo block_dim = _test_space->get_mesh( )->get_n_temporal_elements( );
+  for ( lo diag = 0; diag < block_dim; ++diag ) {
+    if ( x.am_i_owner( diag ) && y.am_i_owner( diag ) ) {
+      _data.apply( x.get_block( diag ), y.get_block( diag ), trans,
+        alpha * _timesteps[ diag ], beta );
+    }
+  }
+}
+
 template class besthea::bem::spacetime_be_identity<
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >;

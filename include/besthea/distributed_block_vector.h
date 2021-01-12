@@ -459,6 +459,14 @@ class besthea::linear_algebra::distributed_block_vector {
     return _comm;
   }
 
+  /*!
+   * @returns boolean indicating whether vector blocks are duplicated on all MPI
+   * ranks.
+   */
+  bool is_duplicated( ) const {
+    return _duplicated;
+  }
+
  protected:
   /*!
    * The method collects information about location of remote blocks.

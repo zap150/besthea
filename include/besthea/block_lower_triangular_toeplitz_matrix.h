@@ -36,6 +36,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define INCLUDE_BESTHEA_BLOCK_LOWER_TRIANGULAR_TOEPLITZ_MATRIX_H_
 
 #include "besthea/block_matrix.h"
+#include "besthea/block_vector.h"
+#include "besthea/distributed_block_vector.h"
 #include "besthea/full_matrix.h"
 
 namespace besthea {
@@ -52,8 +54,11 @@ class besthea::linear_algebra::block_lower_triangular_toeplitz_matrix
  public:
   using matrix_type = besthea::linear_algebra::full_matrix;  //!< Matrix type.
   using block_vector_type
-    = besthea::linear_algebra::block_vector;            //!< Block vector type.
-  using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
+    = besthea::linear_algebra::block_vector;  //!< Block vector type.
+  using distributed_block_vector_type
+    = besthea::linear_algebra::distributed_block_vector;  //!< Block vector
+                                                          //!< type.
+  using vector_type = besthea::linear_algebra::vector;    //!< Vector type.
 
   /**
    * Default constructor.
@@ -159,6 +164,18 @@ class besthea::linear_algebra::block_lower_triangular_toeplitz_matrix
    */
   virtual void apply( const block_vector_type & x, block_vector_type & y,
     bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
+
+  /*!
+   * @brief y = beta * y + alpha * (this)^trans * x.
+   * @param[in] x
+   * @param[in,out] y
+   * @param[in] trans
+   * @param[in] alpha
+   * @param[in] beta
+   */
+  virtual void apply( const distributed_block_vector_type & x,
+    distributed_block_vector_type & y, bool trans = false, sc alpha = 1.0,
+    sc beta = 0.0 ) const override;
 
   /*!
    * @brief In-place Cholesky decomposition of the first block and solution.

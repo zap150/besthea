@@ -696,7 +696,7 @@ void besthea::linear_algebra::distributed_block_vector::
   synchronize_shared_parts( ) {
   for ( auto it : _my_blocks ) {
     if ( am_i_primary_owner( it ) ) {
-      for ( lo i = 1; i < _owners[ it ].size( ); ++i ) {
+      for ( auto i = 1; i < (lo) _owners[ it ].size( ); ++i ) {
         MPI_Send( _data.at( it ).data( ), _size,
           get_scalar_type< sc >::MPI_SC( ), _owners[ it ].at( i ), 0, _comm );
       }

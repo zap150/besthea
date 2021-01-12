@@ -62,3 +62,13 @@ void besthea::linear_algebra::block_mkl_fgmres_inverse::apply(
   _operator->mkl_fgmres_solve( x, y, relative_residual_error, n_iterations,
     _n_iterations_until_restart, _trans );
 }
+
+void besthea::linear_algebra::block_mkl_fgmres_inverse::apply(
+  const distributed_block_vector_type & x, distributed_block_vector_type & y,
+  [[maybe_unused]] bool trans, [[maybe_unused]] sc alpha,
+  [[maybe_unused]] sc beta ) const {
+  sc relative_residual_error = _relative_residual_error;
+  lo n_iterations = _n_iterations;
+  _operator->mkl_fgmres_solve( x, y, relative_residual_error, n_iterations,
+    _n_iterations_until_restart, _trans );
+}

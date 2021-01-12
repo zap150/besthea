@@ -114,6 +114,19 @@ class besthea::linear_algebra::block_linear_operator {
     lo & n_iterations ) const;
 
   /**
+   * CG as implemented in MKL. Distributed vector is serialized!
+   * @param[in] rhs Right-hand side vector.
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on
+   * exit.
+   */
+  bool mkl_cg_solve( const distributed_block_vector_type & rhs,
+    distributed_block_vector_type & solution, sc & relative_residual_error,
+    lo & n_iterations ) const;
+
+  /**
    * Preconditioned CG as implemented in MKL.
    * @param[in] preconditioner Linear operator as a preconditioner.
    * @param[in] rhs Right-hand side vector.
@@ -126,6 +139,21 @@ class besthea::linear_algebra::block_linear_operator {
   bool mkl_cg_solve( const block_linear_operator & preconditioner,
     const block_vector_type & rhs, block_vector_type & solution,
     sc & relative_residual_error, lo & n_iterations ) const;
+
+  /**
+   * Preconditioned CG as implemented in MKL. Distributed vector is serialized!
+   * @param[in] preconditioner Linear operator as a preconditioner.
+   * @param[in] rhs Right-hand side vector.
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on
+   * exit.
+   */
+  bool mkl_cg_solve( const block_linear_operator & preconditioner,
+    const distributed_block_vector_type & rhs,
+    distributed_block_vector_type & solution, sc & relative_residual_error,
+    lo & n_iterations ) const;
 
   /**
    * FGMRES as implemented in MKL.
@@ -162,6 +190,43 @@ class besthea::linear_algebra::block_linear_operator {
     const block_vector_type & rhs, block_vector_type & solution,
     sc & relative_residual_error, lo & n_iterations,
     lo n_iterations_until_restart = 0, bool trans = false,
+    bool trans_preconditioner = false ) const;
+
+  /**
+   * FGMRES as implemented in MKL.
+   * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on
+   * exit.
+   * @param[in] n_iterations_until_restart Maximal number of iterations before
+   * restart.
+   * @param[in] trans Use transpose of this.
+   */
+  bool mkl_fgmres_solve( const distributed_block_vector_type & rhs,
+    distributed_block_vector_type & solution, sc & relative_residual_error,
+    lo & n_iterations, lo n_iterations_until_restart = 0,
+    bool trans = false ) const;
+
+  /**
+   * Preconditioned FGMRES as implemented in MKL.
+   * @param[in] preconditioner Linear operator as a preconditioner.
+   * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|, actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations, actual value on
+   * exit.
+   * @param[in] n_iterations_until_restart Maximal number of iterations before
+   * restart.
+   * @param[in] trans Use transpose of this.
+   * @param[in] trans_preconditioner Use transpose of preconditioner.
+   */
+  bool mkl_fgmres_solve( const block_linear_operator & preconditioner,
+    const distributed_block_vector_type & rhs,
+    distributed_block_vector_type & solution, sc & relative_residual_error,
+    lo & n_iterations, lo n_iterations_until_restart = 0, bool trans = false,
     bool trans_preconditioner = false ) const;
 
   /**

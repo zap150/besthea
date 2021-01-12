@@ -72,6 +72,30 @@ void besthea::linear_algebra::block_lower_triangular_toeplitz_matrix::apply(
   }
 }
 
+void besthea::linear_algebra::block_lower_triangular_toeplitz_matrix::apply(
+  const distributed_block_vector_type & x, distributed_block_vector_type & y,
+  bool trans, sc alpha, sc beta ) const {
+  if ( x.is_duplicated( ) && y.is_duplicated( ) ) {
+    const matrix_type * m;
+    const vector_type * subx;
+    vector_type * suby;
+
+    sc block_beta = beta;
+    for ( lo diag = 0; diag < _block_dim; ++diag ) {
+      m = &( _data[ diag ] );
+      for ( lo block = 0; block < _block_dim - diag; ++block ) {
+        subx = &( x.get_block( block ) );
+        suby = &( y.get_block( block + diag ) );
+        m->apply( *subx, *suby, trans, alpha, block_beta );
+      }
+      block_beta = 1.0;
+    }
+  } else {
+    std::cout << "block_lower_triangular_toeplitz_matrix: apply not "
+                 "implemented for nonduplicated vectors";
+  }
+}
+
 void besthea::linear_algebra::block_lower_triangular_toeplitz_matrix::print(
   std::ostream & stream ) const {
   for ( const matrix_type & m : _data ) {

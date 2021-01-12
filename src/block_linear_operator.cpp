@@ -108,8 +108,164 @@ bool besthea::linear_algebra::block_linear_operator::mkl_cg_solve(
 }
 
 bool besthea::linear_algebra::block_linear_operator::mkl_cg_solve(
+  const distributed_block_vector_type & rhs,
+  distributed_block_vector_type & solution, sc & relative_residual_error,
+  lo & n_iterations ) const {
+  lo size = _dim_domain * _block_dim;
+
+  if ( _dim_domain != _dim_range || size != rhs.size( )
+    || size != solution.size( ) ) {
+    std::cout << "Check dimensions!" << std::endl;
+    return false;
+  }
+
+  lo rci;
+  lo iter;
+  lo ipar[ 128 ];
+  sc dpar[ 128 ];
+  std::vector< sc > tmp( size * 3 );  // need _dim_domain * 4 for preconditioned
+  sc * tmp_data = tmp.data( );
+
+  block_vector_type tmp_1( _block_dim, _dim_domain );
+  block_vector_type tmp_2( _block_dim, _dim_domain );
+
+  vector_type rhs_contiguous( size );
+  vector_type solution_contiguous( size );
+  rhs.copy_to_vector( rhs_contiguous );
+  solution.copy_to_vector( solution_contiguous );
+
+  dcg_init( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci,
+    ipar, dpar, tmp_data );
+  if ( rci ) {
+    std::cout << "Failed to initialize MKL CG." << std::endl;
+    return false;
+  }
+
+  ipar[ 0 ] = size;          // size of the problem
+  ipar[ 4 ] = n_iterations;  // maximum number of iterations
+  ipar[ 7 ] = 1;             // perform the iteration stopping test
+  ipar[ 8 ] = 1;             // do the residual stopping test
+  ipar[ 9 ] = 0;             // do not request user stopping test
+  ipar[ 10 ] = 0;            // non-preconditioned
+
+  dpar[ 0 ] = relative_residual_error;  // relative tolerance
+
+  dcg_check( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci,
+    ipar, dpar, tmp_data );
+  if ( rci ) {
+    std::cout << "MKL parameters incorrect." << std::endl;
+    return false;
+  }
+
+  while ( true ) {
+    dcg( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci, ipar,
+      dpar, tmp_data );
+
+    if ( rci == 1 ) {  // apply operator
+      tmp_1.copy_from_raw( _block_dim, _dim_domain, tmp_data );
+      apply( tmp_1, tmp_2, false, 1.0, 0.0 );
+      tmp_2.copy_to_raw( tmp_data + size );
+      continue;
+    } else if ( rci == 0 ) {  // success
+      dcg_get( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci,
+        ipar, dpar, tmp_data, &iter );
+      solution.copy_from_vector( _block_dim, _dim_domain, solution_contiguous );
+      n_iterations = iter;
+      relative_residual_error = dpar[ 4 ] / dpar[ 2 ];
+      break;
+    } else {
+      std::cout << "Only RCI codes 0,1 supported." << std::endl;
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool besthea::linear_algebra::block_linear_operator::mkl_cg_solve(
   const block_linear_operator & preconditioner, const block_vector_type & rhs,
   block_vector_type & solution, sc & relative_residual_error,
+  lo & n_iterations ) const {
+  lo size = _dim_domain * _block_dim;
+
+  if ( _dim_domain != _dim_range || size != rhs.size( )
+    || size != solution.size( ) ) {
+    std::cout << "Check dimensions!" << std::endl;
+    return false;
+  }
+
+  lo rci;
+  lo iter;
+  lo ipar[ 128 ];
+  sc dpar[ 128 ];
+  std::vector< sc > tmp( size * 4 );
+  sc * tmp_data = tmp.data( );
+
+  block_vector_type tmp_1( _block_dim, _dim_domain );
+  block_vector_type tmp_2( _block_dim, _dim_domain );
+
+  vector_type rhs_contiguous( size );
+  vector_type solution_contiguous( size );
+  rhs.copy_to_vector( rhs_contiguous );
+  solution.copy_to_vector( solution_contiguous );
+
+  dcg_init( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci,
+    ipar, dpar, tmp_data );
+  if ( rci ) {
+    std::cout << "Failed to initialize MKL CG." << std::endl;
+    return false;
+  }
+
+  ipar[ 0 ] = size;          // size of the problem
+  ipar[ 4 ] = n_iterations;  // maximum number of iterations
+  ipar[ 7 ] = 1;             // perform the iteration stopping test
+  ipar[ 8 ] = 1;             // do the residual stopping test
+  ipar[ 9 ] = 0;             // do not request user stopping test
+  ipar[ 10 ] = 1;            // preconditioned
+
+  dpar[ 0 ] = relative_residual_error;  // relative tolerance
+
+  dcg_check( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci,
+    ipar, dpar, tmp_data );
+  if ( rci ) {
+    std::cout << "MKL parameters incorrect." << std::endl;
+    return false;
+  }
+
+  while ( true ) {
+    dcg( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci, ipar,
+      dpar, tmp_data );
+
+    if ( rci == 1 ) {  // apply operator
+      tmp_1.copy_from_raw( _block_dim, _dim_domain, tmp_data );
+      apply( tmp_1, tmp_2, false, 1.0, 0.0 );
+      tmp_2.copy_to_raw( tmp_data + size );
+      continue;
+    } else if ( rci == 3 ) {  // apply preconditioner
+      tmp_1.copy_from_raw( _block_dim, _dim_domain, tmp_data );
+      preconditioner.apply( tmp_1, tmp_2, false, 1.0, 0.0 );
+      tmp_2.copy_to_raw( tmp_data + size );
+      continue;
+    } else if ( rci == 0 ) {  // success
+      dcg_get( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci,
+        ipar, dpar, tmp_data, &iter );
+      solution.copy_from_vector( _block_dim, _dim_domain, solution_contiguous );
+      n_iterations = iter;
+      relative_residual_error = dpar[ 4 ] / dpar[ 2 ];
+      break;
+    } else {
+      std::cout << "Only RCI codes 0,1,3 supported." << std::endl;
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool besthea::linear_algebra::block_linear_operator::mkl_cg_solve(
+  const block_linear_operator & preconditioner,
+  const distributed_block_vector_type & rhs,
+  distributed_block_vector_type & solution, sc & relative_residual_error,
   lo & n_iterations ) const {
   lo size = _dim_domain * _block_dim;
 
@@ -358,6 +514,179 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
   return true;
 }
 
+bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
+  const distributed_block_vector_type & rhs,
+  distributed_block_vector_type & solution, sc & relative_residual_error,
+  lo & n_iterations, lo n_iterations_until_restart, bool trans ) const {
+  lo size = _dim_domain * _block_dim;
+
+  if ( _dim_domain != _dim_range || size != rhs.size( )
+    || size != solution.size( ) ) {
+    std::cout << "Check dimensions!" << std::endl;
+    return false;
+  }
+
+  if ( n_iterations_until_restart == 0 ) {
+    n_iterations_until_restart = n_iterations;
+  }
+
+  lo rci;
+  lo iter;
+  lo ipar[ 128 ];
+  sc dpar[ 128 ];
+  std::vector< sc > tmp( ( 2 * n_iterations_until_restart + 1 ) * size
+    + n_iterations_until_restart * ( n_iterations_until_restart + 9 ) / 2 + 1 );
+  sc * tmp_data = tmp.data( );
+
+  block_vector_type tmp_1( _block_dim, _dim_domain );
+  block_vector_type tmp_2( _block_dim, _dim_domain );
+
+  vector_type rhs_contiguous( size );
+  vector_type solution_contiguous( size );
+  rhs.copy_to_vector( rhs_contiguous );
+  solution.copy_to_vector( solution_contiguous );
+
+  dfgmres_init( &size, solution_contiguous.data( ), rhs_contiguous.data( ),
+    &rci, ipar, dpar, tmp_data );
+  if ( rci ) {
+    std::cout << "Failed to initialize MKL FGMRES." << std::endl;
+    return false;
+  }
+
+  ipar[ 0 ] = size;          // size of the problem
+  ipar[ 4 ] = n_iterations;  // maximum number of iterations
+  ipar[ 7 ] = 1;             // perform the iteration stopping test
+  ipar[ 8 ] = 1;             // do the residual stopping test
+  ipar[ 9 ] = 0;             // do not request user stopping test
+  ipar[ 10 ] = 0;            // non-preconditioned
+  ipar[ 11 ] = 1;  // perform test for zero norm of generated direction
+  ipar[ 14 ]
+    = n_iterations_until_restart;  // number of iterations before restart
+
+  dpar[ 0 ] = relative_residual_error;  // relative tolerance
+
+  dfgmres_check( &size, solution_contiguous.data( ), rhs_contiguous.data( ),
+    &rci, ipar, dpar, tmp_data );
+  if ( rci ) {
+    std::cout << "MKL parameters incorrect." << std::endl;
+    return false;
+  }
+
+  while ( true ) {
+    dfgmres( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci,
+      ipar, dpar, tmp_data );
+
+    if ( rci == 1 ) {  // apply operator
+      tmp_1.copy_from_raw( _block_dim, _dim_domain, tmp_data + ipar[ 21 ] - 1 );
+      apply( tmp_1, tmp_2, trans, 1.0, 0.0 );
+      tmp_2.copy_to_raw( tmp_data + ipar[ 22 ] - 1 );
+      continue;
+    } else if ( rci == 0 ) {  // success
+      dfgmres_get( &size, solution_contiguous.data( ), rhs_contiguous.data( ),
+        &rci, ipar, dpar, tmp_data, &iter );
+      solution.copy_from_vector( _block_dim, _dim_domain, solution_contiguous );
+      n_iterations = iter;
+      relative_residual_error = dpar[ 4 ] / dpar[ 2 ];
+      break;
+    } else {
+      std::cout << "Only RCI codes 0,1 supported." << std::endl;
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
+  const block_linear_operator & preconditioner,
+  const distributed_block_vector_type & rhs,
+  distributed_block_vector_type & solution, sc & relative_residual_error,
+  lo & n_iterations, lo n_iterations_until_restart, bool trans,
+  bool trans_preconditioner ) const {
+  lo size = _dim_domain * _block_dim;
+
+  if ( _dim_domain != _dim_range || size != rhs.size( )
+    || size != solution.size( ) ) {
+    std::cout << "Check dimensions!" << std::endl;
+    return false;
+  }
+
+  if ( n_iterations_until_restart == 0 ) {
+    n_iterations_until_restart = n_iterations;
+  }
+
+  lo rci;
+  lo iter;
+  lo ipar[ 128 ];
+  sc dpar[ 128 ];
+  std::vector< sc > tmp( ( 2 * n_iterations_until_restart + 1 ) * size
+    + n_iterations_until_restart * ( n_iterations_until_restart + 9 ) / 2 + 1 );
+  sc * tmp_data = tmp.data( );
+
+  block_vector_type tmp_1( _block_dim, _dim_domain );
+  block_vector_type tmp_2( _block_dim, _dim_domain );
+
+  vector_type rhs_contiguous( size );
+  vector_type solution_contiguous( size );
+  rhs.copy_to_vector( rhs_contiguous );
+  solution.copy_to_vector( solution_contiguous );
+
+  dfgmres_init( &size, solution_contiguous.data( ), rhs_contiguous.data( ),
+    &rci, ipar, dpar, tmp_data );
+  if ( rci ) {
+    std::cout << "Failed to initialize MKL CG." << std::endl;
+    return false;
+  }
+
+  ipar[ 0 ] = size;          // size of the problem
+  ipar[ 4 ] = n_iterations;  // maximum number of iterations
+  ipar[ 7 ] = 1;             // perform the iteration stopping test
+  ipar[ 8 ] = 1;             // do the residual stopping test
+  ipar[ 9 ] = 0;             // do not request user stopping test
+  ipar[ 10 ] = 1;            // preconditioned
+  ipar[ 11 ] = 1;  // perform test for zero norm of generated direction
+  ipar[ 14 ]
+    = n_iterations_until_restart;  // number of iterations before restart
+
+  dpar[ 0 ] = relative_residual_error;  // relative tolerance
+
+  dfgmres_check( &size, solution_contiguous.data( ), rhs_contiguous.data( ),
+    &rci, ipar, dpar, tmp_data );
+  if ( rci ) {
+    std::cout << "MKL parameters incorrect." << std::endl;
+    return false;
+  }
+
+  while ( true ) {
+    dfgmres( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci,
+      ipar, dpar, tmp_data );
+
+    if ( rci == 1 ) {  // apply operator
+      tmp_1.copy_from_raw( _block_dim, _dim_domain, tmp_data + ipar[ 21 ] - 1 );
+      apply( tmp_1, tmp_2, trans, 1.0, 0.0 );
+      tmp_2.copy_to_raw( tmp_data + ipar[ 22 ] - 1 );
+      continue;
+    } else if ( rci == 3 ) {  // apply preconditioner
+      tmp_1.copy_from_raw( _block_dim, _dim_domain, tmp_data + ipar[ 21 ] - 1 );
+      preconditioner.apply( tmp_1, tmp_2, trans_preconditioner, 1.0, 0.0 );
+      tmp_2.copy_to_raw( tmp_data + ipar[ 22 ] - 1 );
+      continue;
+    } else if ( rci == 0 ) {  // success
+      dfgmres_get( &size, solution_contiguous.data( ), rhs_contiguous.data( ),
+        &rci, ipar, dpar, tmp_data, &iter );
+      solution.copy_from_vector( _block_dim, _dim_domain, solution_contiguous );
+      n_iterations = iter;
+      relative_residual_error = dpar[ 4 ] / dpar[ 2 ];
+      break;
+    } else {
+      std::cout << "Only RCI codes 0,1,3 supported." << std::endl;
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool besthea::linear_algebra::block_linear_operator::gmres_solve(
   const block_vector_type & rhs, block_vector_type & solution,
   sc & relative_residual_error, lo & n_iterations,
@@ -444,12 +773,14 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
   }
 
   if ( k == 0 ) {
+    bool res = true;
     if ( !( std::abs( gamma[ k ] ) < ref_error ) ) {
       std::cout << "Gmres failed, stopped after " << k << " iterations!"
                 << std::endl;
+      res = false;
     }
     n_iterations = k;
-    return;
+    return res;
   }
 
   // solve minimization problem by inverting upper triangle Hessenberg matrix
@@ -469,6 +800,7 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
   prec.apply( u_tilde, solution, false, 1.0, 1.0 );
 
   n_iterations = k;
+  return true;
 }
 
 bool besthea::linear_algebra::block_linear_operator::gmres_solve(
@@ -501,7 +833,8 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
   this->apply( solution, r, trans, -1.0, 1.0 );
   gamma[ 0 ] = r.norm( );
 
-  if ( gamma[ 0 ] == 0.0 ) {
+  if ( gamma[ 0 ] < gmres_eps ) {
+    relative_residual_error = 0.0;
     return true;
   }
 
@@ -528,7 +861,7 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
     }
 
     norm_vs = vs.norm( );
-    if ( norm_vs == 0.0 ) {
+    if ( norm_vs < gmres_eps ) {
       k++;
       break;
     }
@@ -560,6 +893,7 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
       std::cout << "Gmres failed, stopped after " << k << " iterations!"
                 << std::endl;
     }
+    relative_residual_error = ref_error / gamma[ k ];
     n_iterations = k;
     return true;
   }
@@ -580,7 +914,9 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
 
   solution.add( u_tilde );
 
+  relative_residual_error = ref_error / gamma[ k ];
   n_iterations = k;
+  return true;
 }
 
 bool besthea::linear_algebra::block_linear_operator::gmres_solve(
@@ -591,8 +927,6 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
   lo max_it = n_iterations;
   n_iterations = 0;
   sc hs;
-  lo block_size = rhs.get_block_size( );
-  lo size_of_blocks = rhs.get_size_of_block( );
   distributed_block_vector_type r( rhs );
   std::vector< distributed_block_vector_type > V(
     max_it );  // orthogonalized search directions
@@ -616,6 +950,7 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
   gamma[ 0 ] = r.norm( );
 
   if ( std::abs( gamma[ 0 ] ) < gmres_eps ) {
+    relative_residual_error = 0.0;
     return true;
   }
 
@@ -669,12 +1004,15 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
   }
 
   if ( k == 0 ) {
+    bool res = true;
     if ( !( std::abs( gamma[ k ] ) < ref_error ) ) {
       std::cout << "Gmres failed, stopped after " << k << " iterations!"
                 << std::endl;
+      res = false;
     }
+    relative_residual_error = ref_error / gamma[ k ];
     n_iterations = k;
-    return;
+    return res;
   }
 
   // solve minimization problem by inverting upper triangle Hessenberg matrix
@@ -692,8 +1030,9 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
   }
 
   prec.apply( u_tilde, solution, false, 1.0, 1.0 );
-
+  relative_residual_error = ref_error / gamma[ k ];
   n_iterations = k;
+  return true;
 }
 
 bool besthea::linear_algebra::block_linear_operator::gmres_solve(
@@ -705,8 +1044,6 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
   lo max_it = n_iterations;
   n_iterations = 0;
   sc hs;
-  lo block_size = rhs.get_block_size( );
-  lo size_of_blocks = rhs.get_size_of_block( );
   distributed_block_vector_type r( rhs );
   std::vector< distributed_block_vector_type > V(
     max_it + 1 );  // orthogonalized search directions
@@ -731,7 +1068,8 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
   // this->apply( solution, r, trans, 1.0, 1.0 );
   gamma[ 0 ] = r.norm( );
 
-  if ( gamma[ 0 ] == 0.0 ) {
+  if ( abs( gamma[ 0 ] ) < gmres_eps ) {
+    relative_residual_error = 0.0;
     return true;
   }
 
@@ -760,7 +1098,7 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
     }
 
     norm_vs = vs.norm( );
-    if ( norm_vs == 0.0 ) {
+    if ( norm_vs < gmres_eps ) {
       k++;
       break;
     }
@@ -786,12 +1124,15 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
   }
 
   if ( k == 0 ) {
+    bool res = true;
     if ( !( std::abs( gamma[ k ] ) < ref_error ) ) {
       std::cout << "Gmres failed, stopped after " << k << " iterations!"
                 << std::endl;
+      res = false;
     }
     n_iterations = k;
-    return true;
+    relative_residual_error = ref_error / gamma[ k ];
+    return res;
   }
 
   // solve minimization problem by inverting upper triangle Hessenberg matrix
@@ -810,5 +1151,7 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
 
   solution.add( u_tilde );
 
+  relative_residual_error = ref_error / gamma[ k ];
   n_iterations = k;
+  return true;
 }
