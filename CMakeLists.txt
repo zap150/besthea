@@ -176,6 +176,7 @@ target_include_directories(besthea PUBLIC ${besthea_INCLUDE_DIRS})
 target_include_directories(besthea SYSTEM PUBLIC
   ${Boost_INCLUDE_DIRS}
   ${Eigen_INCLUDE_DIRS}
+  ${Lyra_INCLUDE_DIRS}
   ${MKL_INCLUDE_DIRS}
   ${MPI_INCLUDE_DIRS})
 target_link_libraries(besthea PUBLIC
