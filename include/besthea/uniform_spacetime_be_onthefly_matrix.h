@@ -89,6 +89,9 @@ public:
   virtual void apply( const block_vector_type & x, block_vector_type & y,
    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
 
+  virtual void my_apply( const block_vector_type & x, block_vector_type & y,
+   bool trans = false, sc alpha = 1.0, sc beta = 0.0 );
+
   void print( std::ostream & stream = std::cout ) const;
 
   void print_info( ) const {

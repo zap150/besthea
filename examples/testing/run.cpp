@@ -76,9 +76,11 @@ struct cauchy_data {
 int main( int argc, char * argv[] ) {
   std::string file;
 
+  srand(time(nullptr));
+
   // default values
   file = "../examples/mesh_files/cube_12.txt";
-  int refine = 2;
+  int refine = 0;
   lo n_timesteps = 8;
   sc end_time = 1.0;
 
@@ -127,18 +129,46 @@ int main( int argc, char * argv[] ) {
   uniform_spacetime_be_assembler assembler_v(
     kernel_v, space_p0, space_p0, order_sing, order_reg );
 
-  // assemble the matrix
-  t.reset( "V" );
+
+
+  std::cout << "T" << spacetime_mesh.get_n_temporal_nodes() << " S" << spacetime_mesh.get_n_nodes() << "\n";
+
+  block_vector x (spacetime_mesh.get_n_temporal_nodes(), spacetime_mesh.get_n_nodes(), false);
+  block_vector y1(spacetime_mesh.get_n_temporal_nodes(), spacetime_mesh.get_n_nodes(), false);
+  block_vector y2(spacetime_mesh.get_n_temporal_nodes(), spacetime_mesh.get_n_nodes(), false);
+  for (lo b = 0; b < x.get_block_size(); b++) {
+    for (lo i = 0; i < x.get_size_of_block(); i++) {
+      x.set(b, i, rand() / RAND_MAX);
+      y1.set(b, i, 3.14);
+      y2.set(b, i, 3.14);
+    }    
+  }
+  sc alpha = 2;
+  sc beta = 3;
+
+  t.reset( "InMemory" );
   assembler_v.assemble( *V );
+  V->apply(x, y1, false, alpha, beta);
   t.measure( );
 
+  t.reset( "OnTheFly" );
   besthea::uniform_spacetime_be_onthefly_matrix onthefly(kernel_v, space_p0, space_p0, order_sing, order_reg);
+  onthefly.my_apply(x, y2, false, alpha, beta);
+  t.measure();
 
-  if(onthefly.check_equal(*V, 1e-6))
-    std::cout << "They are the same\n";
-  else
-    std::cout << "They are different\n";
+  bool areEqual = true;
+  for (lo b = 0; b < x.get_block_size(); b++) {
+    for (lo i = 0; i < x.get_size_of_block(); i++) {
+      sc v1 = y1.get(b, i);
+      sc v2 = y2.get(b, i);
+      if( std::abs(v1 - v2) / v1 > 1e-6 ) {
+        std::cout << "Vectors dont match: B" << b << " I" << i << " " << v1 << " " << v2 << "\n";
+        areEqual = false;
+      }
+    }    
+  }
+  if(areEqual)
+    std::cout << "Vectors are equal!\n";
 
   delete V;
-  //delete onthefly;
 }

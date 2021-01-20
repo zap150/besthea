@@ -207,7 +207,7 @@ sc besthea::uniform_spacetime_be_onthefly_matrix<
     result -=     get_value(d-1, i, j);
     result += 2 * get_value(d,   i, j);
     result -=     get_value(d+1, i, j);
-  } else {
+  } else if (d == 0) {
     result +=     get_value(0,   i, j, true);
     result +=     get_value(0,   i, j);
     result -=     get_value(1,   i, j);
@@ -223,7 +223,49 @@ template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, trial_space_type>::
   apply( const block_vector_type & x, block_vector_type & y,
   bool trans, sc alpha, sc beta ) const {
+
+  return;
+
+}
+
+
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, trial_space_type>::
+  my_apply( const block_vector_type & x, block_vector_type & y,
+  bool trans, sc alpha, sc beta ) {
   
+  // y = alpha*A*x + beta*y;
+  // basic matrix-vector multiplication for now
+
+  lo rows_in_block = _n_rows;
+  lo cols_in_block = _n_columns;
+  lo blocks = _block_dim;
+
+  for (lo block_row = 0; block_row < blocks; block_row++) {
+    vector_type& y_block_data = y.get_block(block_row);
+
+    for (lo inner_row = 0; inner_row < rows_in_block; inner_row++) {
+      y_block_data[inner_row] *= beta;
+
+      for (lo block_col = 0; block_col < blocks; block_col++) {
+        const vector_type& x_block_data = x.get_block(block_col);
+
+        for (lo inner_col = 0; inner_col < cols_in_block; inner_col++) {
+          
+          sc matrix_val;
+          if(trans)
+            matrix_val = get(block_col - block_row, inner_col, inner_row);
+          else
+            matrix_val = get(block_row - block_col, inner_row, inner_col);
+
+          y_block_data[inner_row] += alpha * matrix_val * x_block_data[inner_col];
+
+        }
+      }
+    }
+  }
+
 }
 
 
