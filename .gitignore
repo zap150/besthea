@@ -27,3 +27,4 @@ test/ensight_mesh
 test/ensight_tri_mesh
 test/ensight_quad_mesh
 test/local
+workdir
