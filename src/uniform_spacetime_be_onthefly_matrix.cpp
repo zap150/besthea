@@ -225,36 +225,66 @@ void besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type,
   
   // y = alpha*A*x + beta*y;
   // basic matrix-vector multiplication for now
-
-  quadrature_wrapper_changing quadr_changing(quadr_size);
+  if(trans) {
+    std::cerr << "I dont support trans matrices\n";
+    return;
+  }
 
   lo rows_in_block = _n_rows;
   lo cols_in_block = _n_columns;
   lo blocks = _block_dim;
 
-  for (lo block_row = 0; block_row < blocks; block_row++) {
-    vector_type& y_block_data = y.get_block(block_row);
+#pragma omp parallel
+  {
+    quadrature_wrapper_changing quadr_changing(quadr_size);
 
+#pragma omp for collapse(2)
     for (lo inner_row = 0; inner_row < rows_in_block; inner_row++) {
-      y_block_data[inner_row] *= beta;
-
-      for (lo block_col = 0; block_col < blocks; block_col++) {
-        const vector_type& x_block_data = x.get_block(block_col);
+      for (lo timestep = 0; timestep < blocks; timestep++) {
+        sc y_val = 0;
 
         for (lo inner_col = 0; inner_col < cols_in_block; inner_col++) {
-          
-          sc matrix_val;
-          if(trans)
-            matrix_val = get(block_col - block_row, inner_col, inner_row, quadr_changing);
-          else
-            matrix_val = get(block_row - block_col, inner_row, inner_col, quadr_changing);
+          sc matrix_val = get(timestep, inner_row, inner_col, quadr_changing);
 
-          y_block_data[inner_row] += alpha * matrix_val * x_block_data[inner_col];
+          lo max_block = blocks - timestep;
+          for (lo block = 0; block < max_block; block++) {
+            sc x_val = x.get(block, inner_col);
 
+            y_val += alpha * matrix_val * x_val;
+          }
         }
+
+        y_val += beta * y.get(timestep, inner_row);
+        y.set(timestep, inner_row, y_val);
       }
     }
+    
   }
+
+
+  // for (lo block_row = 0; block_row < blocks; block_row++) {
+  //   vector_type& y_block_data = y.get_block(block_row);
+
+  //   for (lo inner_row = 0; inner_row < rows_in_block; inner_row++) {
+  //     y_block_data[inner_row] *= beta;
+
+  //     for (lo block_col = 0; block_col < blocks; block_col++) {
+  //       const vector_type& x_block_data = x.get_block(block_col);
+
+  //       for (lo inner_col = 0; inner_col < cols_in_block; inner_col++) {
+          
+  //         sc matrix_val;
+  //         if(trans)
+  //           matrix_val = get(block_col - block_row, inner_col, inner_row, quadr_changing);
+  //         else
+  //           matrix_val = get(block_row - block_col, inner_row, inner_col, quadr_changing);
+
+  //         y_block_data[inner_row] += alpha * matrix_val * x_block_data[inner_col];
+
+  //       }
+  //     }
+  //   }
+  // }
 
 }
 

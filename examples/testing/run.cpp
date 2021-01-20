@@ -80,7 +80,7 @@ int main( int argc, char * argv[] ) {
 
   // default values
   file = "../examples/mesh_files/cube_12.txt";
-  int refine = 0;
+  int refine = 2;
   lo n_timesteps = 8;
   sc end_time = 1.0;
 
