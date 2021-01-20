@@ -153,7 +153,7 @@ int main( int argc, char * argv[] ) {
 
   t.reset( "OnTheFly" );
   besthea::uniform_spacetime_be_onthefly_matrix onthefly(kernel_v, space_p0, space_p0, order_sing, order_reg);
-  onthefly.my_apply(x, y2, false, alpha, beta);
+  onthefly.apply(x, y2, false, alpha, beta);
   t.measure();
 
   bool areEqual = true;

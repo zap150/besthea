@@ -26,7 +26,7 @@ class besthea::uniform_spacetime_be_onthefly_matrix
   : public besthea::linear_algebra::block_matrix
 {
 private:
-  struct quadrature_wrapper {
+  struct quadrature_wrapper_readonly {
     std::array< std::vector< sc, besthea::allocator_type< sc > >, 4 >
       _x1_ref;  //!< First coordinates of quadrature nodes in (0,1)x(0,1-x1) to
                 //!< be mapped to the test element
@@ -43,7 +43,9 @@ private:
 
     std::array< std::vector< sc, besthea::allocator_type< sc > >, 4 >
       _w;  //!< Quadrature weights including transformation Jacobians
+  };
 
+  struct quadrature_wrapper_changing {
     std::vector< sc, besthea::allocator_type< sc > >
       _x1;  //!< First coordinates of quadrature nodes in the test element
     std::vector< sc, besthea::allocator_type< sc > >
@@ -62,7 +64,19 @@ private:
       _kernel_values;  //!< Buffer for storing kernel values.
     std::vector< sc, besthea::allocator_type< sc > >
       _kernel_values_2;  //!< Buffer for storing additional kernel values.
+
+    quadrature_wrapper_changing(lo size) {
+      _x1.resize( size );
+      _x2.resize( size );
+      _x3.resize( size );
+      _y1.resize( size );
+      _y2.resize( size );
+      _y3.resize( size );
+      _kernel_values.resize( size );
+      _kernel_values_2.resize( size );
+    }
   };
+  lo quadr_size;
 
 public:
   using matrix_type = besthea::linear_algebra::full_matrix;  //!< Matrix type.
@@ -84,13 +98,10 @@ public:
 
 
 
-  sc get( lo d, lo i, lo j ) ;
+  sc get( lo d, lo i, lo j, quadrature_wrapper_changing & quadr_changing ) const ;
 
   virtual void apply( const block_vector_type & x, block_vector_type & y,
    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
-
-  virtual void my_apply( const block_vector_type & x, block_vector_type & y,
-   bool trans = false, sc alpha = 1.0, sc beta = 0.0 );
 
   void print( std::ostream & stream = std::cout ) const;
 
@@ -103,7 +114,7 @@ public:
               << " x " << _dim_range << std::endl;
   }
 
-  bool check_equal(besthea::linear_algebra::block_lower_triangular_toeplitz_matrix & assembled, sc epsilon) ;
+  bool check_equal(besthea::linear_algebra::block_lower_triangular_toeplitz_matrix & assembled, sc epsilon) const ;
 
 private:
 
@@ -118,9 +129,9 @@ private:
     const linear_algebra::coordinates< 3 > & y1,
     const linear_algebra::coordinates< 3 > & y2,
     const linear_algebra::coordinates< 3 > & y3, int type_int, int rot_test,
-    int rot_trial) ;
+    int rot_trial, quadrature_wrapper_changing & quadr_changing) const ;
 
-  sc get_value(lo delta, lo i_test, lo i_trial, bool special = false) ;
+  sc get_value(lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special = false) const ;
   
   void hypercube_to_triangles( sc ksi, sc eta1, sc eta2, sc eta3,
     int n_shared_vertices, int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref,
@@ -158,7 +169,7 @@ private:
 
 private:
 
-  quadrature_wrapper my_quadrature;
+  quadrature_wrapper_readonly my_quadrature;
   kernel_type * _kernel;
   test_space_type * _test_space;
   trial_space_type * _trial_space;

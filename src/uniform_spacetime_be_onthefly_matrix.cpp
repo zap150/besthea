@@ -38,7 +38,7 @@ besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, tria
 
 template<class kernel_type, class test_space_type, class trial_space_type>
 sc besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, trial_space_type>::
-  get_value(lo delta, lo i_test, lo i_trial, bool special) {
+  get_value(lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special) const {
   
   return 0;
 
@@ -49,7 +49,7 @@ sc besthea::uniform_spacetime_be_onthefly_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  get_value(lo delta, lo i_test, lo i_trial, bool special) {
+  get_value(lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special) const {
 
   auto test_mesh = _test_space->get_mesh( );
   auto trial_mesh = _trial_space->get_mesh( );
@@ -68,12 +68,12 @@ sc besthea::uniform_spacetime_be_onthefly_matrix<
   linear_algebra::coordinates< 3 > y1, y2, y3;
 
   const sc * w = nullptr;
-  const sc * x1_mapped = my_quadrature._x1.data( );
-  const sc * x2_mapped = my_quadrature._x2.data( );
-  const sc * x3_mapped = my_quadrature._x3.data( );
-  const sc * y1_mapped = my_quadrature._y1.data( );
-  const sc * y2_mapped = my_quadrature._y2.data( );
-  const sc * y3_mapped = my_quadrature._y3.data( );
+  const sc * x1_mapped = quadr_changing._x1.data( );
+  const sc * x2_mapped = quadr_changing._x2.data( );
+  const sc * x3_mapped = quadr_changing._x3.data( );
+  const sc * y1_mapped = quadr_changing._y1.data( );
+  const sc * y2_mapped = quadr_changing._y2.data( );
+  const sc * y3_mapped = quadr_changing._y3.data( );
 
   ttau = timestep * delta;
 
@@ -91,7 +91,7 @@ sc besthea::uniform_spacetime_be_onthefly_matrix<
   trial_area = trial_mesh->spatial_area( i_trial );
 
   triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices,
-    rot_test, rot_trial );
+    rot_test, rot_trial, quadr_changing );
   w = my_quadrature._w[ n_shared_vertices ].data( );
 
   size = my_quadrature._w[ n_shared_vertices ].size( );
@@ -169,7 +169,7 @@ sc besthea::uniform_spacetime_be_onthefly_matrix<
 
 template<class kernel_type, class test_space_type, class trial_space_type>
 sc besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, trial_space_type>::
-  get(lo d, lo i, lo j) {
+  get(lo d, lo i, lo j, quadrature_wrapper_changing & quadr_changing ) const {
   
   return 0;
 
@@ -180,7 +180,7 @@ sc besthea::uniform_spacetime_be_onthefly_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  get( lo d, lo i, lo j ) {
+  get( lo d, lo i, lo j, quadrature_wrapper_changing & quadr_changing ) const {
     
   // if ( delta > 0 ) {
   //   global_matrix.add( delta - 1, i_test, i_trial, -value );
@@ -204,13 +204,13 @@ sc besthea::uniform_spacetime_be_onthefly_matrix<
   sc result = 0;
 
   if ( d > 0 ) {
-    result -=     get_value(d-1, i, j);
-    result += 2 * get_value(d,   i, j);
-    result -=     get_value(d+1, i, j);
+    result -=     get_value(d-1, i, j, quadr_changing);
+    result += 2 * get_value(d,   i, j, quadr_changing);
+    result -=     get_value(d+1, i, j, quadr_changing);
   } else if (d == 0) {
-    result +=     get_value(0,   i, j, true);
-    result +=     get_value(0,   i, j);
-    result -=     get_value(1,   i, j);
+    result +=     get_value(0,   i, j, quadr_changing, true);
+    result +=     get_value(0,   i, j, quadr_changing);
+    result -=     get_value(1,   i, j, quadr_changing);
   }
 
   return result;
@@ -218,25 +218,15 @@ sc besthea::uniform_spacetime_be_onthefly_matrix<
 
 
 
-
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, trial_space_type>::
   apply( const block_vector_type & x, block_vector_type & y,
   bool trans, sc alpha, sc beta ) const {
-
-  return;
-
-}
-
-
-
-template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, trial_space_type>::
-  my_apply( const block_vector_type & x, block_vector_type & y,
-  bool trans, sc alpha, sc beta ) {
   
   // y = alpha*A*x + beta*y;
   // basic matrix-vector multiplication for now
+
+  quadrature_wrapper_changing quadr_changing(quadr_size);
 
   lo rows_in_block = _n_rows;
   lo cols_in_block = _n_columns;
@@ -255,9 +245,9 @@ void besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type,
           
           sc matrix_val;
           if(trans)
-            matrix_val = get(block_col - block_row, inner_col, inner_row);
+            matrix_val = get(block_col - block_row, inner_col, inner_row, quadr_changing);
           else
-            matrix_val = get(block_row - block_col, inner_row, inner_col);
+            matrix_val = get(block_row - block_col, inner_row, inner_col, quadr_changing);
 
           y_block_data[inner_row] += alpha * matrix_val * x_block_data[inner_col];
 
@@ -274,11 +264,13 @@ void besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type,
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 bool besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, trial_space_type>::
-  check_equal(besthea::linear_algebra::block_lower_triangular_toeplitz_matrix & assembled, sc epsilon) {
+  check_equal(besthea::linear_algebra::block_lower_triangular_toeplitz_matrix & assembled, sc epsilon) const {
 
   lo n_timesteps = _test_space->get_mesh()->get_n_temporal_elements();
   lo n_rows = _n_rows;
   lo n_cols = _n_columns;
+
+  quadrature_wrapper_changing quadr_changing(quadr_size);
 
   if(n_timesteps != assembled.get_block_dim())
   {
@@ -305,9 +297,9 @@ bool besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type,
     {
       for(int c = 0; c < n_cols; c++)
       {
-        if(std::abs(assembled.get(d, r, c) - this->get(d, r, c)) > epsilon)
+        if(std::abs(assembled.get(d, r, c) - this->get(d, r, c, quadr_changing)) > epsilon)
         {
-          std::cerr << "Not mathing value d=" << d << " r=" << r << " c=" << c << ": " << assembled.get(d, r, c) << " X " << this->get(d, r, c) << "\n";
+          std::cerr << "Not mathing value d=" << d << " r=" << r << " c=" << c << ": " << assembled.get(d, r, c) << " X " << this->get(d, r, c, quadr_changing) << "\n";
           result = false;
         }
       }
@@ -404,14 +396,15 @@ void besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type,
   lo size = std::max( tri_size2,
     *std::max_element( n_simplices.begin( ), n_simplices.end( ) )
       * line_size4 );
-  my_quadrature._x1.resize( size );
-  my_quadrature._x2.resize( size );
-  my_quadrature._x3.resize( size );
-  my_quadrature._y1.resize( size );
-  my_quadrature._y2.resize( size );
-  my_quadrature._y3.resize( size );
-  my_quadrature._kernel_values.resize( size );
-  my_quadrature._kernel_values_2.resize( size );
+  // my_quadrature._x1.resize( size );
+  // my_quadrature._x2.resize( size );
+  // my_quadrature._x3.resize( size );
+  // my_quadrature._y1.resize( size );
+  // my_quadrature._y2.resize( size );
+  // my_quadrature._y3.resize( size );
+  // my_quadrature._kernel_values.resize( size );
+  // my_quadrature._kernel_values_2.resize( size );
+  this->quadr_size = size;
 }
 
 
@@ -423,7 +416,8 @@ void besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type,
     const linear_algebra::coordinates< 3 > & y1,
     const linear_algebra::coordinates< 3 > & y2,
     const linear_algebra::coordinates< 3 > & y3, int n_shared_vertices,
-    int rot_test, int rot_trial ) {
+    int rot_test, int rot_trial,
+    quadrature_wrapper_changing & quadr_changing ) const {
   const sc * x1rot = nullptr;
   const sc * x2rot = nullptr;
   const sc * x3rot = nullptr;
@@ -490,12 +484,12 @@ void besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type,
   const sc * y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
   const sc * y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
 
-  sc * x1_mapped = my_quadrature._x1.data( );
-  sc * x2_mapped = my_quadrature._x2.data( );
-  sc * x3_mapped = my_quadrature._x3.data( );
-  sc * y1_mapped = my_quadrature._y1.data( );
-  sc * y2_mapped = my_quadrature._y2.data( );
-  sc * y3_mapped = my_quadrature._y3.data( );
+  sc * x1_mapped = quadr_changing._x1.data( );
+  sc * x2_mapped = quadr_changing._x2.data( );
+  sc * x3_mapped = quadr_changing._x3.data( );
+  sc * y1_mapped = quadr_changing._y1.data( );
+  sc * y2_mapped = quadr_changing._y2.data( );
+  sc * y3_mapped = quadr_changing._y3.data( );
 
   lo size = my_quadrature._w[ n_shared_vertices ].size( );
 
