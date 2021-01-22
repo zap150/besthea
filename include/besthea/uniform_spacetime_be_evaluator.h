@@ -53,7 +53,8 @@ namespace besthea {
 template< class kernel_type, class space_type >
 class besthea::bem::uniform_spacetime_be_evaluator {
   using block_vector_type
-    = linear_algebra::block_vector;  //!< Block vector type.
+    = linear_algebra::block_vector;            //!< Block vector type.
+  using vector_type = linear_algebra::vector;  //!< Vector type.
 
  private:
   /**
@@ -124,7 +125,7 @@ class besthea::bem::uniform_spacetime_be_evaluator {
    * @param[out] result Result in the given points.
    */
   void evaluate( const std::vector< linear_algebra::coordinates< 4 > > & xt,
-    const block_vector_type & density, std::vector< sc > & result ) const;
+    const block_vector_type & density, vector_type & result ) const;
 
  private:
   /**

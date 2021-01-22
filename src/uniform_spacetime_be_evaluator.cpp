@@ -257,7 +257,7 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
 template< class kernel_type, class space_type >
 void besthea::bem::uniform_spacetime_be_evaluator< kernel_type, space_type >::
   evaluate( const std::vector< linear_algebra::coordinates< 4 > > & xt,
-    const block_vector_type & density, std::vector< sc > & result ) const {
+    const block_vector_type & density, vector_type & result ) const {
   auto & basis = _space->get_basis( );
   auto mesh = _space->get_mesh( );
 
@@ -266,7 +266,7 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type, space_type >::
   lo n_elements = mesh->get_n_spatial_elements( );
   lo loc_dim = basis.dimension_local( );
 
-  result.resize( n_points );
+  result.resize( n_points, false );
 
 #pragma omp parallel
   {
@@ -293,8 +293,6 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type, space_type >::
       // difference to last temporal node
       sc diff = t - k * timestep;
 
-      std::cout << dmax << " " << diff << std::endl;
-
       // adding full intervals
       for ( lo d = 0; d < k; ++d ) {
         for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
@@ -305,12 +303,21 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type, space_type >::
           triangle_to_geometry( y1, y2, y3, my_quadrature );
 
           for ( lo i_quad = 0; i_quad < size_quad; ++i_quad ) {
-            sc kernel
-              = _kernel->anti_tau_regular( x1 - my_quadrature._y1[ i_quad ],
+            sc kernel;
+            if ( d * timestep + diff > 0.0 ) {
+              kernel
+                = _kernel->anti_tau_regular( x1 - my_quadrature._y1[ i_quad ],
                   x2 - my_quadrature._y2[ i_quad ],
                   x3 - my_quadrature._y3[ i_quad ], nullptr, ny.data( ),
-                  d * timestep + diff )
-              - _kernel->anti_tau_regular( x1 - my_quadrature._y1[ i_quad ],
+                  d * timestep + diff );
+            } else {
+              kernel
+                = _kernel->anti_tau_limit( x1 - my_quadrature._y1[ i_quad ],
+                  x2 - my_quadrature._y2[ i_quad ],
+                  x3 - my_quadrature._y3[ i_quad ], nullptr, ny.data( ) );
+            }
+            kernel
+              -= _kernel->anti_tau_regular( x1 - my_quadrature._y1[ i_quad ],
                 x2 - my_quadrature._y2[ i_quad ],
                 x3 - my_quadrature._y3[ i_quad ], nullptr, ny.data( ),
                 ( d + 1 ) * timestep + diff );
