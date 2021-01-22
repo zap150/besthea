@@ -35,7 +35,7 @@ macro(setup_compiler)
     # to get full report use -qopt-report=4 -qopt-report-phase ipo
     add_compile_options("SHELL:-diag-disable 11076")
     # specified as both a system and non-system include directory
-    add_compile_options("SHELL: -diag-disable 2547")
+    add_compile_options("SHELL:-diag-disable 2547")
 
   else()
     message(FATAL_ERROR "Unknown C++ compiler: ${CMAKE_CXX_COMPILER_ID}")

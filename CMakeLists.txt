@@ -187,9 +187,9 @@ target_compile_definitions(besthea PUBLIC
   MKL_INT=long
   DATA_WIDTH=${DATA_WIDTH})
 
-install (TARGETS besthea ARCHIVE DESTINATION "${CMAKE_BINARY_DIR}/lib")
-install(FILES ${besthea_INCLUDES}
-  DESTINATION "${CMAKE_BINARY_DIR}/include/besthea")
+#install (TARGETS besthea ARCHIVE DESTINATION "${CMAKE_BINARY_DIR}/lib")
+#install(FILES ${besthea_INCLUDES}
+#  DESTINATION "${CMAKE_BINARY_DIR}/include/besthea")
 
 option(BUILD_EXAMPLES "Build examples using the library" OFF)
 

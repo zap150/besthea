@@ -80,24 +80,22 @@ class besthea::bem::spacetime_heat_sl_kernel_antiderivative
    * @param[in] ttau `t-tau`.
    */
 #pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( DATA_WIDTH )
-  sc do_anti_tau_anti_t( sc xy1, sc xy2, sc xy3, [[maybe_unused]] const sc * nx,
-    [[maybe_unused]] const sc * ny, sc ttau ) const {
+  sc do_anti_tau_anti_t(
+    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, sc ttau ) const {
     sc value;
     sc norm = std::sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
     sc sqrt_d = std::sqrt( ttau );
 
     if ( ttau > _eps ) {
       if ( norm > _eps ) {  //  ttau > 0, norm > 0
-        value = ( ttau / ( _four * _pi * _alpha * norm )
-                  + norm / ( _eight * _pi * _alpha2 ) )
-            * std::erf( norm / ( _two * sqrt_d * _sqrt_alpha ) )
-          + sqrt_d / ( _four * _pi * _alpha * _sqrt_pi * _sqrt_alpha )
-            * std::exp( -( norm * norm ) / ( _four * ttau * _alpha ) );
+        value = do_anti_tau_anti_t_regular_in_time_regular_in_space(
+          xy1, xy2, xy3, nx, ny, ttau );
       } else {  //  ttau > 0, limit for norm -> 0
         value = sqrt_d / ( _two * _pi * _alpha * _sqrt_pi * _sqrt_alpha );
       }
     } else {  // limit for ttau -> 0, assuming norm > 0
-      value = norm / ( _eight * _pi * _alpha2 );
+      value = do_anti_tau_anti_t_limit_in_time_regular_in_space(
+        xy1, xy2, xy3, nx, ny );
     }
 
     return value;
@@ -113,19 +111,15 @@ class besthea::bem::spacetime_heat_sl_kernel_antiderivative
    * @param[in] ttau `t-tau`.
    */
 #pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( DATA_WIDTH )
-  sc do_anti_tau_anti_t_regular_in_time( sc xy1, sc xy2, sc xy3,
-    [[maybe_unused]] const sc * nx, [[maybe_unused]] const sc * ny,
-    sc ttau ) const {
+  sc do_anti_tau_anti_t_regular_in_time(
+    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, sc ttau ) const {
     sc value;
     sc norm = std::sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
     sc sqrt_d = std::sqrt( ttau );
 
     if ( norm > _eps ) {  //  delta > 0, norm > 0
-      value = ( ttau / ( _four * _pi * _alpha * norm )
-                + norm / ( _eight * _pi * _alpha2 ) )
-          * std::erf( norm / ( _two * sqrt_d * _sqrt_alpha ) )
-        + sqrt_d / ( _four * _pi * _alpha * _sqrt_pi * _sqrt_alpha )
-          * std::exp( -( norm * norm ) / ( _four * ttau * _alpha ) );
+      value = do_anti_tau_anti_t_regular_in_time_regular_in_space(
+        xy1, xy2, xy3, nx, ny, ttau );
     } else {  //  delta > 0, limit for norm -> 0
       value = sqrt_d / ( _two * _pi * _alpha * _sqrt_pi * _sqrt_alpha );
     }

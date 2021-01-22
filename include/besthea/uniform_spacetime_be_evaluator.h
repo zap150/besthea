@@ -84,6 +84,9 @@ class besthea::bem::uniform_spacetime_be_evaluator {
       _x3;  //!< Third coordinates of evaluation points.
 
     std::vector< sc, besthea::allocator_type< sc > >
+      _t;  //!< Temporal coordinates of evaluation points.
+
+    std::vector< sc, besthea::allocator_type< sc > >
       _kernel_values;  //!< Buffer for storing kernel values.
   };
 
@@ -113,6 +116,15 @@ class besthea::bem::uniform_spacetime_be_evaluator {
    */
   void evaluate( const std::vector< sc > & x, const block_vector_type & density,
     block_vector_type & result ) const;
+
+  /**
+   * Returns the potential evaluated in (x,t).
+   * @param[in] xt Spacetime point coordinates.
+   * @param[in] density Density of the potential.
+   * @param[out] result Result in the given points.
+   */
+  void evaluate( const std::vector< linear_algebra::coordinates< 4 > > & xt,
+    const block_vector_type & density, std::vector< sc > & result ) const;
 
  private:
   /**
