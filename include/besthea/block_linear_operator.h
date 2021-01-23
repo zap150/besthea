@@ -30,6 +30,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /** @file block_linear_operator.h
  * @brief Parent class for block_linear operators.
+ * @note updated
  */
 
 #ifndef INCLUDE_BESTHEA_BLOCK_LINEAR_OPERATOR_H_
@@ -45,7 +46,7 @@ namespace besthea {
 }
 
 /**
- *  Class representing a linear operator.
+ *  Class representing a linear operator with block structure.
  */
 class besthea::linear_algebra::block_linear_operator {
   using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
@@ -62,6 +63,9 @@ class besthea::linear_algebra::block_linear_operator {
    * @param[in] block_dim Block dimension.
    * @param[in] dim_domain Dimension of domain per block.
    * @param[in] dim_range Dimension of range per block.
+   * @example In case of block matrices, \p block_dim is the number of blocks in
+   * each row and column, \p dim_domain the number of rows per block and
+   * \p dim_range the number of columns per block.
    */
   block_linear_operator( lo block_dim, lo dim_domain, lo dim_range )
     : _block_dim( block_dim ),
@@ -79,7 +83,8 @@ class besthea::linear_algebra::block_linear_operator {
    * @brief y = beta * y + alpha * (this)^trans * x.
    * @param[in] x
    * @param[in,out] y
-   * @param[in] trans
+   * @param[in] trans Indicates if the block linear operator is transposed or
+   * not.
    * @param[in] alpha
    * @param[in] beta
    */
@@ -87,43 +92,44 @@ class besthea::linear_algebra::block_linear_operator {
     bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const = 0;
 
   /**
-   * CG as implemented in MKL.
-   * @param[in] rhs Right-hand side vector.
-   * @param[out] solution Solution vector.
+   * CG as implemented in MKL to solve (this) * x = y.
+   * @param[in] rhs Right-hand side vector y.
+   * @param[out] solution Solution vector x.
    * @param[in,out] relative_residual_error Stopping criterion measuring
-   * decrease of |Ax-b|/|b|, actual value on exit.
-   * @param[in,out] n_iterations Maximal number of iterations, actual value on
-   * exit.
+   * decrease of |Ax-b|/|b|. Overwritten with the actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations. Overwritten with
+   * the actual number of iterations on exit.
    */
   bool mkl_cg_solve( const block_vector_type & rhs,
     block_vector_type & solution, sc & relative_residual_error,
     lo & n_iterations ) const;
 
   /**
-   * Preconditioned CG as implemented in MKL.
-   * @param[in] preconditioner Linear operator as a preconditioner.
+   * Preconditioned CG as implemented in MKL to solve (this) * x = y.
+   * @param[in] preconditioner Block linear operator used as preconditioner.
    * @param[in] rhs Right-hand side vector.
    * @param[out] solution Solution vector.
    * @param[in,out] relative_residual_error Stopping criterion measuring
-   * decrease of |Ax-b|/|b|, actual value on exit.
-   * @param[in,out] n_iterations Maximal number of iterations, actual value on
-   * exit.
+   * decrease of |Ax-b|/|b|. Overwritten with the actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations. Overwritten with
+   * the actual number of iterations on exit.
    */
   bool mkl_cg_solve( const block_linear_operator & preconditioner,
     const block_vector_type & rhs, block_vector_type & solution,
     sc & relative_residual_error, lo & n_iterations ) const;
 
   /**
-   * FGMRES as implemented in MKL.
+   * FGMRES as implemented in MKL to solve (this)^trans * x = y.
    * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
    * @param[out] solution Solution vector.
    * @param[in,out] relative_residual_error Stopping criterion measuring
-   * decrease of |Ax-b|/|b|, actual value on exit.
-   * @param[in,out] n_iterations Maximal number of iterations, actual value on
-   * exit.
+   * decrease of |Ax-b|/|b|. Overwritten with the actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations. Overwritten with
+   * the actual number of iterations on exit.
    * @param[in] n_iterations_until_restart Maximal number of iterations before
    * restart.
-   * @param[in] trans Use transpose of this.
+   * @param[in] trans Indicates if the block linear operator is transposed or
+   * not.
    */
   bool mkl_fgmres_solve( const block_vector_type & rhs,
     block_vector_type & solution, sc & relative_residual_error,
@@ -131,18 +137,20 @@ class besthea::linear_algebra::block_linear_operator {
     bool trans = false ) const;
 
   /**
-   * Preconditioned FGMRES as implemented in MKL.
+   * Preconditioned FGMRES as implemented in MKL to solve (this)^trans * x = y.
    * @param[in] preconditioner Linear operator as a preconditioner.
    * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
    * @param[out] solution Solution vector.
    * @param[in,out] relative_residual_error Stopping criterion measuring
-   * decrease of |Ax-b|/|b|, actual value on exit.
-   * @param[in,out] n_iterations Maximal number of iterations, actual value on
-   * exit.
+   * decrease of |Ax-b|/|b|. Overwritten with the actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations. Overwritten with
+   * the actual number of iterations on exit.
    * @param[in] n_iterations_until_restart Maximal number of iterations before
    * restart.
-   * @param[in] trans Use transpose of this.
-   * @param[in] trans_preconditioner Use transpose of preconditioner.
+   * @param[in] trans Indicates if the block linear operator is transposed or
+   * not.
+   * @param[in] trans_preconditioner Indicates if the block linear operator used
+   * for preconditioning is transposed or not.
    */
   bool mkl_fgmres_solve( const block_linear_operator & preconditioner,
     const block_vector_type & rhs, block_vector_type & solution,
@@ -151,28 +159,28 @@ class besthea::linear_algebra::block_linear_operator {
     bool trans_preconditioner = false ) const;
 
   /**
-   * Returns the domain dimension.
+   * Returns the dimension of the domain of each block.
    */
   lo get_dim_domain( ) const {
     return _dim_domain;
   }
 
   /**
-   * Returns the range dimension.
+   * Returns the dimension of the range of each block.
    */
   lo get_dim_range( ) const {
     return _dim_range;
   }
 
   /**
-   * Returns the block dimension.
+   * Returns the block dimension, i.e. the number of blocks per row and column.
    */
   lo get_block_dim( ) const {
     return _block_dim;
   }
 
   /**
-   * Sets the domain dimension.
+   * Sets the dimension of the domain of each block.
    * @param[in] dim_domain Domain dimension.
    */
   void set_dim_domain( lo dim_domain ) {
@@ -180,7 +188,7 @@ class besthea::linear_algebra::block_linear_operator {
   }
 
   /**
-   * Sets the range dimension.
+   * Sets the dimension of the range of each block.
    * @param[in] dim_range Range dimension.
    */
   void set_dim_range( lo dim_range ) {

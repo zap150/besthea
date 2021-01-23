@@ -75,6 +75,10 @@ struct cauchy_data {
   static constexpr sc _shift{ 0.0 };
 };
 
+/**
+ * @brief Solves the first boundary integral equation for the Neumann datum
+ * using parallel pFMM matrices V and K.
+ */
 int main( int argc, char * argv[] ) {
   // initialize MPI related parameters
   int provided;

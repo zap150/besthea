@@ -37,6 +37,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <iostream>
 #include <vector>
 
+/**
+ *  @todo delete?
+ */
 int main( int argc, char * argv[] ) {
   using b_mesh = besthea::mesh::triangular_surface_mesh;
   using b_vector = besthea::linear_algebra::vector;

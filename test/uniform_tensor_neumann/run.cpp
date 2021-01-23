@@ -75,6 +75,11 @@ struct cauchy_data {
   static constexpr sc _shift{ 0.0 };
 };
 
+/**
+ * Solves the second boundary integral equation (possibly with non-zero initial
+ * conditions) for the unknown Dirichlet datum and evaluates it in a provided
+ * set of grid points.
+ */
 int main( int argc, char * argv[] ) {
   std::string file = "./mesh_files/cube_192_vol.txt";
   int refine = 0;

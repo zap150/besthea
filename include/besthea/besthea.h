@@ -29,7 +29,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file besthea.h
- * @brief
+ * @brief Includes all header files of the besthea library.
+ * @note updated
  */
 
 #ifndef INCLUDE_BESTHEA_BESTHEA_H_

@@ -62,6 +62,11 @@ struct cauchy_data {
   static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
 };
 
+/**
+ * Solves the second boundary integral equation for the unknown Dirichlet datum
+ * using pFMM matrices D and K_adj. The matrix D is preconditioned with the pFMM
+ * matrix V (for piecewise linear basis functions in space).
+ */
 int main( int argc, char * argv[] ) {
   std::string file = "./mesh_files/cube_12.txt";
   //   int refine = 1;

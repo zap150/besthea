@@ -53,6 +53,10 @@ struct cauchy_data {
   static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
 };
 
+/**
+ * Only for debugging of 4d mesh.
+ * @todo can we delete it?
+ */
 int main( int argc, char * argv[] ) {
   std::string file = "./mesh_files/cube_12_st.txt";
   int refine = 1;

@@ -29,7 +29,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file basis_tri_p0.h
- * @brief
+ * @brief Contains a class representing p0 (piecewise constant) basis functions
+ * on a triangular surface mesh.
+ * @note updated
  */
 
 #ifndef INCLUDE_BESTHEA_BASIS_TRI_P0_H_
@@ -45,14 +47,15 @@ namespace besthea {
 }
 
 /**
- *  Class representing a constant function on a triangular mesh.
+ *  Class representing constant functions on a triangular mesh.
  */
 class besthea::bem::basis_tri_p0
   : public besthea::bem::basis_function< besthea::bem::basis_tri_p0 > {
  public:
   /**
    * Constructor.
-   * @param[in] mesh Mesh.
+   * @param[in] mesh Triangular surface mesh on which the basis functions are
+   *                 defined.
    */
   basis_tri_p0( const mesh_type & mesh );
 
@@ -62,30 +65,38 @@ class besthea::bem::basis_tri_p0
   virtual ~basis_tri_p0( );
 
   /**
-   * Returns number of basis functions supported on i_elem.
+   * Returns the number of basis functions supported on a single element.
+   *
+   * This is always 1.
    */
   virtual lo dimension_local( ) const;
 
   /**
-   * Returns number of basis functions on the whole mesh.
+   * Returns the number of basis functions on the whole mesh.
+   *
+   * This is the number of all elements in the underlying triangular surface
+   * mesh.
    */
   virtual lo dimension_global( ) const;
 
   /**
-   * Provides global indices for local contributions.
+   * Returns the global index of the element itself.
    * @param[in] i_elem Element index.
-   * @param[out] indices Global indices for local contributions.
+   * @param[out] indices Element index at position 0 of the vector.
    */
   void do_local_to_global( lo i_elem, std::vector< lo > & indices ) const;
 
   /**
-   * Provides global indices for local contributions.
+   * Returns the index of the element itself.
    * @param[in] i_elem Element index.
-   * @param[in] n_shared_vertices Number of shared vertives in currect elements
-   * (regularized quadrature).
-   * @param[in] rotation Virtual element rotation (regularized quadrature).
-   * @param[in] swap Virtual element inversion (regularized quadrature).
-   * @param[out] indices Global indices for local contributions.
+   * @param[in] n_shared_vertices Number of shared vertices in currect elements
+   *                              (regularized quadrature). This parameter is
+   *                              ignored.
+   * @param[in] rotation Virtual element rotation (regularized quadrature). This
+   *                     parameter is ignored.
+   * @param[in] swap Virtual element inversion (regularized quadrature). This
+   *                 parameter is ignored.
+   * @param[out] indices Element index at position 0 of the vector.
    */
   void do_local_to_global( lo i_elem, int n_shared_vertices, int rotation,
     bool swap, std::vector< lo > & indices ) const;
@@ -96,7 +107,10 @@ class besthea::bem::basis_tri_p0
    * @param[in] i_fun Local basis function index.
    * @param[in] x1_ref First coordinate of reference quadrature point.
    * @param[in] x2_ref Second coordinate of reference quadrature point.
-   * @param[in] n Element normal.
+   * @param[in] n Outward normal vector on the element
+   * \note By the nature of the basis functions, the result is always 1
+   * independent of the provided parameters. In particular, all parameters are
+   * ignored.
    */
 #pragma omp declare simd uniform( this, i_elem, i_fun, n ) simdlen( DATA_WIDTH )
   sc do_evaluate( [[maybe_unused]] lo i_elem, [[maybe_unused]] lo i_fun,
@@ -111,11 +125,14 @@ class besthea::bem::basis_tri_p0
    * @param[in] i_fun Local basis function index.
    * @param[in] x1_ref First coordinate of reference quadrature point.
    * @param[in] x2_ref Second coordinate of reference quadrature point.
-   * @param[in] n Element normal.
-   * @param[in] n_shared_vertices Number of shared vertives in currect elements
+   * @param[in] n Outward normal vector on the element
+   * @param[in] n_shared_vertices Number of shared vertices in currect elements
    * (regularized quadrature).
    * @param[in] rotation Virtual element rotation (regularized quadrature).
    * @param[in] swap Virtual element inversion (regularized quadrature).
+   * \note By the nature of the basis functions, the result is always 1
+   * independent of the provided parameters. In particular, all parameters are
+   * ignored.
    */
 #pragma omp declare simd uniform( this, i_elem, i_fun, n, n_shared_vertices, \
   rotation, swap ) simdlen( DATA_WIDTH )

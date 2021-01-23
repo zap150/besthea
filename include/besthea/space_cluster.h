@@ -444,7 +444,7 @@ class besthea::mesh::space_cluster {
    * In case of p0 elements only the element index is returned
    * In case of p1 elements the local vertex indices are returned
    * @param[in] i_loc_elem Element index.
-   * @param[in] n_shared_vertices Number of shared vertives in current elements
+   * @param[in] n_shared_vertices Number of shared vertices in current elements
    * (regularized quadrature).
    * @param[in] rotation Virtual element rotation (regularized quadrature).
    * @param[in] swap Virtual element inversion (regularized quadrature).

@@ -94,9 +94,9 @@ TEST_CASE( "System matrices are assembled", "[matrices]" ) {
   lo process_assignment_strategy = 1;
 
   // define paths to files
-  std::string spatial_mesh_file = "./../../test/mesh_files/cube_12.txt";
+  std::string spatial_mesh_file = "./../test/mesh_files/cube_12.txt";
   // std::string spatial_mesh_file = "./mesh_files/cube_12.txt";
-  std::string geometry_dir = "./catch/decomposition/";
+  std::string geometry_dir = ".test/catch/decomposition/";
   std::string tree_vector_file = geometry_dir + "tree_structure.bin";
   std::string cluster_bounds_file = geometry_dir + "cluster_bounds.bin";
   std::string process_assignment_file = geometry_dir + "process_assignment.bin";

@@ -75,6 +75,10 @@ struct cauchy_data {
   static constexpr sc _shift{ 0.0 };
 };
 
+/**
+ * @brief Solves the first boundary integral equation for the Neumann datum
+ * using pFMM matrices V and K.
+ */
 int main( int argc, char * argv[] ) {
   std::string file = "./mesh_files/cube_12.txt";
   //   int refine = 1;
@@ -146,13 +150,13 @@ int main( int argc, char * argv[] ) {
   std::cout << "Neumann L2 projection relative error: "
             << space_p0.L2_relative_error( cauchy_data::neumann, neu_proj )
             << std::endl;
-  // lo size_dir = dir_proj.get_block_size( ) * dir_proj.get_block_size( );
-  // lo size_neu = neu_proj.get_block_size( ) * dir_proj.get_block_size( );
+  // lo size_dir = dir_proj.get_n_blocks( ) * dir_proj.get_n_blocks( );
+  // lo size_neu = neu_proj.get_n_blocks( ) * dir_proj.get_n_blocks( );
 
   vector neu;
 
   block_vector neu_block;
-  neu_block.resize( neu_proj.get_block_size( ) );
+  neu_block.resize( neu_proj.get_n_blocks( ) );
   neu_block.resize_blocks( neu_proj.get_size_of_block( ), true );
 
   M.apply( dir_proj, neu_block, false, 0.5, 0.0 );
@@ -207,10 +211,10 @@ int main( int argc, char * argv[] ) {
 
     block_vector test_x_block( spacetime_mesh.get_n_temporal_elements( ),
       V.get_n_rows( ) / spacetime_mesh.get_n_temporal_elements( ) );
-    for ( lo i = 0; i < test_x_block.get_block_size( ); ++i ) {
+    for ( lo i = 0; i < test_x_block.get_n_blocks( ); ++i ) {
       for ( lo j = 0; j < test_x_block.get_size_of_block( ); ++j ) {
         test_x_block.set(
-          i, j, test_x.get( i * test_x_block.get_block_size( ) + j ) );
+          i, j, test_x.get( i * test_x_block.get_n_blocks( ) + j ) );
       }
     }
     V_full->apply( test_x_block, test_y_block, false, 1.0, 0 );

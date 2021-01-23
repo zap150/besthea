@@ -98,7 +98,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // @todo discuss: should the multiplication be done like this or only in a
   // local part of the result vector?
 #pragma omp parallel for schedule( static )
-  for ( lo i = 0; i < y.get_block_size( ); ++i ) {
+  for ( lo i = 0; i < y.get_n_blocks( ); ++i ) {
     for ( lo j = 0; j < y.get_size_of_block( ); ++j ) {
       y.set( i, j, y.get( i, j ) * beta );
     }
@@ -160,7 +160,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   //#### distributed pFMM ####
   // allocate a global result vector. Only the entries corresponding to clusters
   // assigned to the current process are computed.
-  block_vector y_pFMM( y.get_block_size( ), y.get_size_of_block( ), true );
+  block_vector y_pFMM( y.get_n_blocks( ), y.get_size_of_block( ), true );
 
   // auxiliary arrays for OpenMP dependencis (in OpenMP 4.5 must not be members)
   auto first = m2l_list.begin( );
@@ -477,7 +477,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   //### communicate the result with an Allreduce operation for each timestep ###
   // @todo: Can we do this in a less cumbersome way?! Is a global reduction even
   // necessary?
-  for ( lo block_idx = 0; block_idx < y_pFMM.get_block_size( ); ++block_idx ) {
+  for ( lo block_idx = 0; block_idx < y_pFMM.get_n_blocks( ); ++block_idx ) {
     MPI_Allreduce( MPI_IN_PLACE, y_pFMM.get_block( block_idx ).data( ),
       y_pFMM.get_size_of_block( ), get_scalar_type< sc >::MPI_SC( ), MPI_SUM,
       *_comm );
@@ -583,7 +583,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // entries in the second part of the receive vector
   std::sort( _receive_data_information.begin( ) + _n_moments_to_receive_upward,
     _receive_data_information.end( ),
-    [&]( const std::pair< scheduling_time_cluster *, lo > pair_one,
+    [ & ]( const std::pair< scheduling_time_cluster *, lo > pair_one,
       const std::pair< scheduling_time_cluster *, lo > pair_two ) {
       return _scheduling_tree_structure->compare_clusters_top_down_right_2_left(
         pair_one.first, pair_two.first );

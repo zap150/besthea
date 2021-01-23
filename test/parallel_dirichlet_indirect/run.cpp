@@ -55,6 +55,11 @@ struct cauchy_data {
   static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
 };
 
+/**
+ * @brief Solves the Dirichlet problem using the indirect approach with the
+ * single layer potential. A parallel FMM version of the matrix is used.
+ * Several debug test cases are implemented.
+ */
 int main( int argc, char * argv[] ) {
   // initialize MPI related parameters
   int provided;
