@@ -276,7 +276,7 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type, space_type >::
     linear_algebra::coordinates< 3 > y1, y2, y3, ny;
     std::vector< lo > l2g( loc_dim );
 
-#pragma omp for
+#pragma omp for schedule( dynamic, 8 )
     for ( lo i_point = 0; i_point < n_points; ++i_point ) {
       const auto & point = xt[ i_point ];
       const auto & x1 = point[ 0 ];
