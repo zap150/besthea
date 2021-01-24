@@ -275,6 +275,7 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type, space_type >::
     lo size_quad = my_quadrature._wy.size( );
     linear_algebra::coordinates< 3 > y1, y2, y3, ny;
     std::vector< lo > l2g( loc_dim );
+    sc density_value;
 
 #pragma omp for schedule( dynamic, 8 )
     for ( lo i_point = 0; i_point < n_points; ++i_point ) {
@@ -286,6 +287,11 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type, space_type >::
       auto & res = result[ i_point ];
       res = 0.0;
 
+      if ( t <= 0.0 ) {
+        // potential vanishes
+        continue;
+      }
+
       // last whole temporal interval to integrate over
       los dmax
         = std::floor( t / timestep - 1.0 );  // negative in first interval
@@ -294,7 +300,9 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type, space_type >::
       sc diff = t - k * timestep;
 
       // adding full intervals
-      for ( lo d = 0; d < k; ++d ) {
+      for ( lo delta = 0; delta <= k; ++delta ) {
+        sc ttau = delta * timestep + diff;
+
         for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
           mesh->get_spatial_nodes( i_elem, y1, y2, y3 );
           mesh->get_spatial_normal( i_elem, ny );
@@ -304,35 +312,38 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type, space_type >::
 
           for ( lo i_quad = 0; i_quad < size_quad; ++i_quad ) {
             sc kernel;
-            if ( d * timestep + diff > 0.0 ) {
+            if ( ttau > 0.0 ) {
               kernel
                 = _kernel->anti_tau_regular( x1 - my_quadrature._y1[ i_quad ],
                   x2 - my_quadrature._y2[ i_quad ],
-                  x3 - my_quadrature._y3[ i_quad ], nullptr, ny.data( ),
-                  d * timestep + diff );
+                  x3 - my_quadrature._y3[ i_quad ], nullptr, ny.data( ), ttau );
             } else {
               kernel
                 = _kernel->anti_tau_limit( x1 - my_quadrature._y1[ i_quad ],
                   x2 - my_quadrature._y2[ i_quad ],
                   x3 - my_quadrature._y3[ i_quad ], nullptr, ny.data( ) );
             }
-            kernel
-              -= _kernel->anti_tau_regular( x1 - my_quadrature._y1[ i_quad ],
-                x2 - my_quadrature._y2[ i_quad ],
-                x3 - my_quadrature._y3[ i_quad ], nullptr, ny.data( ),
-                ( d + 1 ) * timestep + diff );
 
             for ( lo i_loc = 0; i_loc < loc_dim; ++i_loc ) {
               sc basis_value = basis.evaluate( i_elem, i_loc,
-                my_quadrature._y1_ref[ i_quad ],
-                my_quadrature._y2_ref[ i_quad ], ny.data( ) );
-              sc density_value = density.get( k - d - 1, l2g[ i_loc ] );
-              res += my_quadrature._wy[ i_quad ] * density_value * basis_value
-                * area * kernel;
+                                 my_quadrature._y1_ref[ i_quad ],
+                                 my_quadrature._y2_ref[ i_quad ], ny.data( ) )
+                * my_quadrature._wy[ i_quad ] * area * kernel;
+
+              // adding value
+              if ( delta < k ) {
+                density_value = density.get( k - delta - 1, l2g[ i_loc ] );
+                res += density_value * basis_value;
+              }
+              // subtracting value
+              if ( delta > 0 ) {
+                density_value = density.get( k - delta, l2g[ i_loc ] );
+                res -= density_value * basis_value;
+              }
             }  // i_loc
           }    // i_quad
         }      // i_elem
-      }        // d
+      }        // delta
 
       // adding last part
       if ( diff > 0.0 ) {
