@@ -37,10 +37,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDE_BESTHEA_BLOCK_VECTOR_H_
 #define INCLUDE_BESTHEA_BLOCK_VECTOR_H_
 
-//#include "besthea/fast_spacetime_be_space.h"
 #include "besthea/settings.h"
 #include "besthea/vector.h"
 
+#include <cmath>
 #include <iostream>
 #include <vector>
 
@@ -151,6 +151,7 @@ class besthea::linear_algebra::block_vector {
    */
   void resize( lo n_blocks ) {
     _data.resize( n_blocks );
+    _data.shrink_to_fit( );
     _n_blocks = n_blocks;
   }
 
@@ -196,6 +197,12 @@ class besthea::linear_algebra::block_vector {
   void add( lo d, lo i, sc value ) {
     _data[ d ][ i ] += value;
   }
+
+  /**
+   * Copies data from another block vector.
+   * @param[in] that Vector to be copied.
+   */
+  void copy( const block_vector & that );
 
   /*!
    * @brief Copies data from a raw array.
@@ -261,7 +268,39 @@ class besthea::linear_algebra::block_vector {
   }
 
   /*!
-   * Gets a local part of a block vector corresponding to the dofs in a
+   * @brief Returns the euclidean dot product.
+   * @param[in] v Second block vector for dot product.
+   * @warning Dimension of the second block vector have to agree!
+   */
+  sc dot( block_vector const & v ) const {
+    sc val = 0.0;
+    for ( lo i = 0; i < _block_size; ++i ) {
+      val += _data[ i ].dot( v.get_block( i ) );
+    }
+
+    return val;
+  }
+
+  /*!
+   * @brief Returns the Euclidean norm of the vector.
+   * @return Euclidean norm of the vector.
+   */
+  sc norm( ) const {
+    return std::sqrt( this->dot( *this ) );
+  }
+
+  /*!
+   * @brief Scales the vector by a given scalar.
+   * @param[in] alpha Scaling factor.
+   */
+  void scale( sc alpha ) {
+    for ( auto & it : _data ) {
+      it.scale( alpha );
+    }
+  }
+
+  /*!
+   * Gets the local part of a block vector corresponding to the dofs in a
    * spacetime cluster.
    * @param[in] cluster  Cluster determining the local dofs.
    * @param[in,out] local_vector Local part of block vector.
@@ -276,8 +315,8 @@ class besthea::linear_algebra::block_vector {
     besthea::linear_algebra::vector & local_vector ) const;
 
   /*!
-   * Gets a local part of a block vector corresponding to the dofs in a general
-   * spacetime cluster.
+   * Gets the local part of a block vector corresponding to the dofs in a
+   * general spacetime cluster.
    * @param[in] cluster  Cluster determining the local dofs.
    * @param[in,out] local_vector Local part of block vector.
    * @tparam space_type  fast_spacetime_be_space representing either p0 or p1

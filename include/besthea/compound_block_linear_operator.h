@@ -37,6 +37,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/block_linear_operator.h"
 #include "besthea/block_vector.h"
+#include "besthea/distributed_block_vector.h"
 #include "besthea/settings.h"
 
 #include <vector>
@@ -55,6 +56,9 @@ class besthea::linear_algebra::compound_block_linear_operator
  public:
   using block_vector_type
     = besthea::linear_algebra::block_vector;  //!< Block vector type.
+  using distributed_block_vector_type
+    = besthea::linear_algebra::distributed_block_vector;  //!< Distributd block
+                                                          //!< vector type.
 
   /**
    * Constructor.
@@ -76,6 +80,18 @@ class besthea::linear_algebra::compound_block_linear_operator
    */
   virtual void apply( const block_vector_type & x, block_vector_type & y,
     bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
+
+  /*!
+   * @brief y = beta * y + alpha * (this)^trans * x.
+   * @param[in] x
+   * @param[in,out] y
+   * @param[in] trans
+   * @param[in] alpha
+   * @param[in] beta
+   */
+  virtual void apply( const distributed_block_vector_type & x,
+    distributed_block_vector_type & y, bool trans = false, sc alpha = 1.0,
+    sc beta = 0.0 ) const override;
 
   /**
    * Adds a linear operator to the compound.

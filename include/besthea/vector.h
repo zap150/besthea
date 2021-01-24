@@ -47,6 +47,8 @@ namespace besthea {
   }
 }
 
+// TODO: float version of cblas routines!
+
 /**
  *  Class representing a vector.
  */
@@ -99,6 +101,7 @@ class besthea::linear_algebra::vector {
    */
   void resize( lo size, bool zero = true ) {
     _data.resize( size );
+    _data.shrink_to_fit( );
     if ( zero ) {
       fill( 0.0 );
     }
@@ -213,6 +216,14 @@ class besthea::linear_algebra::vector {
   }
 
   /*!
+   * @brief Scales the vecotr's element with alpha.
+   * @param[in] alpha
+   */
+  void scale( sc alpha ) {
+    cblas_dscal( _size, alpha, _data.data( ), 1 );
+  }
+
+  /*!
    * @brief Adds atomically to a single position of a vector.
    * @param[in] i Index of an element.
    * @param[in] val Value to be added.
@@ -227,6 +238,15 @@ class besthea::linear_algebra::vector {
    */
   lo size( ) const {
     return _size;
+  }
+
+  /*!
+   * @brief Copies data from another vector.
+   * @param[in] that Reference to the vector to be copied.
+   */
+  void copy( vector const & that ) {
+    _size = that._size;
+    _data = that._data;
   }
 
  protected:

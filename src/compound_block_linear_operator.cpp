@@ -105,6 +105,72 @@ void besthea::linear_algebra::compound_block_linear_operator::apply(
   }
 }
 
+void besthea::linear_algebra::compound_block_linear_operator::apply(
+  const distributed_block_vector_type & x, distributed_block_vector_type & y,
+  bool trans, sc alpha, sc beta ) const {
+  lo size = _compound.size( );
+
+  if ( size == 0 ) {
+    return;
+  } else if ( size == 1 ) {
+    _compound[ 0 ]->apply(
+      x, y, trans != _trans[ 0 ], alpha * _alpha[ 0 ], beta );
+    return;
+  }
+
+  std::vector< distributed_block_vector_type > aux( 2 );
+  std::vector< lo > my_blocks = x.get_my_blocks( );
+  aux[ 0 ].resize( my_blocks, x.get_n_blocks( ) );
+  aux[ 1 ].resize( my_blocks, x.get_n_blocks( ) );
+  aux[ 0 ].resize_blocks( _maximal_dimension, false );
+  aux[ 1 ].resize_blocks( _maximal_dimension, false );
+  const distributed_block_vector_type * src;
+  distributed_block_vector_type * tgt;
+
+  lo i;
+  lo tgt_size;
+
+  if ( !trans ) {
+    tgt_size = ( !_trans[ 0 ] ) ? _compound[ 0 ]->get_dim_range( )
+                                : _compound[ 0 ]->get_dim_domain( );
+    tgt = &( aux[ 0 ] );
+    tgt->resize_blocks( tgt_size, true );
+    _compound[ 0 ]->apply( x, *tgt, _trans[ 0 ], alpha * _alpha[ 0 ], 0.0 );
+
+    for ( i = 1; i < size - 1; ++i ) {
+      src = &( aux[ ( i + 1 ) % 2 ] );
+      tgt_size = ( !_trans[ i ] ) ? _compound[ i ]->get_dim_range( )
+                                  : _compound[ i ]->get_dim_domain( );
+      tgt = &( aux[ i % 2 ] );
+      tgt->resize_blocks( tgt_size, true );
+      _compound[ i ]->apply( *src, *tgt, _trans[ i ], _alpha[ i ], 0.0 );
+    }
+    src = &( aux[ ( i + 1 ) % 2 ] );
+    _compound[ i ]->apply( *src, y, _trans[ i ], _alpha[ i ], beta );
+  } else {
+    tgt_size = ( !_trans[ size - 1 ] )
+      ? _compound[ size - 1 ]->get_dim_domain( )
+      : _compound[ size - 1 ]->get_dim_range( );
+    tgt = &( aux[ 0 ] );
+    tgt->resize_blocks( tgt_size, true );
+    _compound[ size - 1 ]->apply(
+      x, *tgt, !_trans[ size - 1 ], alpha * _alpha[ size - 1 ], 0.0 );
+    lo ind;
+
+    for ( i = 1; i < size - 1; ++i ) {
+      ind = size - i - 1;
+      src = &( aux[ ( i + 1 ) % 2 ] );
+      tgt_size = ( !_trans[ ind ] ) ? _compound[ ind ]->get_dim_domain( )
+                                    : _compound[ ind ]->get_dim_range( );
+      tgt = &( aux[ i % 2 ] );
+      tgt->resize_blocks( tgt_size, true );
+      _compound[ ind ]->apply( *src, *tgt, !_trans[ ind ], _alpha[ ind ], 0.0 );
+    }
+    src = &( aux[ ( i + 1 ) % 2 ] );
+    _compound[ 0 ]->apply( *src, y, !_trans[ 0 ], _alpha[ 0 ], beta );
+  }
+}
+
 void besthea::linear_algebra::compound_block_linear_operator::push_back(
   const besthea::linear_algebra::block_linear_operator & op, bool trans,
   sc alpha ) {

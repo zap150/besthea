@@ -196,6 +196,13 @@ class besthea::linear_algebra::block_row_matrix
   void resize( lo block_dim );
 
   /*!
+   * Clears the data stored by the matrix.
+   */
+  void clear( ) {
+    resize( 0 );
+  }
+
+  /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
    * @param[in] x
    * @param[in,out] y

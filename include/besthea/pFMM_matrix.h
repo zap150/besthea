@@ -39,6 +39,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/basis_tri_p1.h"
 #include "besthea/block_linear_operator.h"
 #include "besthea/chebyshev_evaluator.h"
+#include "besthea/distributed_block_vector.h"
 #include "besthea/fast_spacetime_be_space.h"
 #include "besthea/full_matrix.h"
 #include "besthea/lagrange_interpolant.h"
@@ -86,8 +87,11 @@ class besthea::linear_algebra::pFMM_matrix
   using time_cluster_type
     = besthea::mesh::time_cluster;  //!< Time cluster type.
   using block_vector_type
-    = besthea::linear_algebra::block_vector;            //!< Block vector type.
-  using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
+    = besthea::linear_algebra::block_vector;  //!< Block vector type.
+  using distributed_block_vector_type
+    = besthea::linear_algebra::distributed_block_vector;  //!< Distributed lock
+                                                          //!< vector type.
+  using vector_type = besthea::linear_algebra::vector;    //!< Vector type.
 
   /**
    * Default constructor.
@@ -156,6 +160,22 @@ class besthea::linear_algebra::pFMM_matrix
    */
   virtual void apply( const block_vector_type & x, block_vector_type & y,
     bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
+
+  /*!
+   * @brief y = beta * y + alpha * (this)^trans * x using block vectors.
+   * @param[in] x
+   * @param[in,out] y
+   * @param[in] trans Flag for transpose of individual blocks (not the whole
+   * block matrix!).
+   * @param[in] alpha
+   * @param[in] beta
+   */
+  virtual void apply( [[maybe_unused]] const distributed_block_vector_type & x,
+    [[maybe_unused]] distributed_block_vector_type & y,
+    [[maybe_unused]] bool trans = false, [[maybe_unused]] sc alpha = 1.0,
+    [[maybe_unused]] sc beta = 0.0 ) const {
+    std::cout << "pFMM_matrix: distributed apply not implemented";
+  };
 
   //  virtual void apply2( const block_vector_type & x, block_vector_type & y,
   //    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;

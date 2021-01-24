@@ -37,6 +37,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define INCLUDE_BESTHEA_BLOCK_LINEAR_OPERATOR_H_
 
 #include "besthea/block_vector.h"
+#include "besthea/distributed_block_vector.h"
 #include "besthea/settings.h"
 
 namespace besthea {
@@ -52,6 +53,9 @@ class besthea::linear_algebra::block_linear_operator {
   using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
   using block_vector_type
     = besthea::linear_algebra::block_vector;  //!< Block vector type.
+  using distributed_block_vector_type
+    = besthea::linear_algebra::distributed_block_vector;  //!< Block vector
+                                                          //!< type.
 
  public:
   block_linear_operator( )
@@ -90,7 +94,18 @@ class besthea::linear_algebra::block_linear_operator {
    */
   virtual void apply( const block_vector_type & x, block_vector_type & y,
     bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const = 0;
-
+  /*!
+   * @brief y = beta * y + alpha * (this)^trans * x.
+   * @param[in] x
+   * @param[in,out] y
+   * @param[in] trans
+   * @param[in] alpha
+   * @param[in] beta
+   */
+  virtual void apply( [[maybe_unused]] const distributed_block_vector_type & x,
+    [[maybe_unused]] distributed_block_vector_type & y,
+    [[maybe_unused]] bool trans = false, [[maybe_unused]] sc alpha = 1.0,
+    [[maybe_unused]] sc beta = 0.0 ) const { };
   /**
    * CG as implemented in MKL to solve (this) * x = y.
    * @param[in] rhs Right-hand side vector y.
@@ -102,6 +117,22 @@ class besthea::linear_algebra::block_linear_operator {
    */
   bool mkl_cg_solve( const block_vector_type & rhs,
     block_vector_type & solution, sc & relative_residual_error,
+    lo & n_iterations ) const;
+
+  /**
+   * CG as implemented in MKL to solve (this) * x = y for distributed block
+   * vectors.
+   * @param[in] rhs Right-hand side vector y.
+   * @param[out] solution Solution vector x.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|. Overwritten with the actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations. Overwritten with
+   * the actual number of iterations on exit.
+   * @warning This is not a proper parallel version of CG. The distributed
+   * vectors are serialized!
+   */
+  bool mkl_cg_solve( const distributed_block_vector_type & rhs,
+    distributed_block_vector_type & solution, sc & relative_residual_error,
     lo & n_iterations ) const;
 
   /**
@@ -117,6 +148,24 @@ class besthea::linear_algebra::block_linear_operator {
   bool mkl_cg_solve( const block_linear_operator & preconditioner,
     const block_vector_type & rhs, block_vector_type & solution,
     sc & relative_residual_error, lo & n_iterations ) const;
+
+  /**
+   * Preconditioned CG as implemented in MKL to solve (this) * x = y for
+   * distributed block vectors.
+   * @param[in] preconditioner Block linear operator used as preconditioner.
+   * @param[in] rhs Right-hand side vector.
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|. Overwritten with the actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations. Overwritten with
+   * the actual number of iterations on exit.
+   * @warning This is not a proper parallel version of preconditioned CG. The
+   * distributed vectors are serialized!
+   */
+  bool mkl_cg_solve( const block_linear_operator & preconditioner,
+    const distributed_block_vector_type & rhs,
+    distributed_block_vector_type & solution, sc & relative_residual_error,
+    lo & n_iterations ) const;
 
   /**
    * FGMRES as implemented in MKL to solve (this)^trans * x = y.
@@ -138,7 +187,7 @@ class besthea::linear_algebra::block_linear_operator {
 
   /**
    * Preconditioned FGMRES as implemented in MKL to solve (this)^trans * x = y.
-   * @param[in] preconditioner Linear operator as a preconditioner.
+   * @param[in] preconditioner Block linear operator used as preconditioner.
    * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
    * @param[out] solution Solution vector.
    * @param[in,out] relative_residual_error Stopping criterion measuring
@@ -159,7 +208,134 @@ class besthea::linear_algebra::block_linear_operator {
     bool trans_preconditioner = false ) const;
 
   /**
-   * Returns the dimension of the domain of each block.
+   * FGMRES as implemented in MKL to solve (this)^trans * x = y for distributed
+   * block vectors
+   * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|. Overwritten with the actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations. Overwritten with
+   * the actual number of iterations on exit.
+   * @param[in] n_iterations_until_restart Maximal number of iterations before
+   * restart.
+   * @param[in] trans Indicates if the block linear operator is transposed or
+   * not.
+   * @warning This is not a proper parallel version of preconditioned CG. The
+   * distributed vectors are serialized!
+   */
+  bool mkl_fgmres_solve( const distributed_block_vector_type & rhs,
+    distributed_block_vector_type & solution, sc & relative_residual_error,
+    lo & n_iterations, lo n_iterations_until_restart = 0,
+    bool trans = false ) const;
+
+  /**
+   * Preconditioned FGMRES as implemented in MKL to solve (this)^trans * x = y
+   * for distributed block vectors.
+   * @param[in] preconditioner Block linear operator used as preconditioner.
+   * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|. Overwritten with the actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations. Overwritten with
+   * the actual number of iterations on exit.
+   * @param[in] n_iterations_until_restart Maximal number of iterations before
+   * restart.
+   * @param[in] trans Indicates if the block linear operator is transposed or
+   * not.
+   * @param[in] trans_preconditioner Indicates if the block linear operator used
+   * for preconditioning is transposed or not.
+   * @warning This is not a proper parallel version of preconditioned CG. The
+   * distributed vectors are serialized!
+   */
+  bool mkl_fgmres_solve( const block_linear_operator & preconditioner,
+    const distributed_block_vector_type & rhs,
+    distributed_block_vector_type & solution, sc & relative_residual_error,
+    lo & n_iterations, lo n_iterations_until_restart = 0, bool trans = false,
+    bool trans_preconditioner = false ) const;
+
+  /**
+   * Preconditioned GMRES solver for the solution of (this)^trans * x = y.
+   * @param[in] rhs Right-hand side vector.
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|. Overwritten with the actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations. Overwritten with
+   * the actual number of iterations on exit.
+   * @param[in] prec Block linear operator used as preconditioner.
+   * @param[in] trans Indicates if the block linear operator is transposed or
+   * not.
+   * @todo Discuss new output for @p relative_residual_error.
+   * @todo Discuss: What is relative error in case that solution is not 0 at
+   * function call? Should we fill solution with 0 in the routine?
+   */
+  bool gmres_solve( const block_vector_type & rhs, block_vector_type & solution,
+    sc & relative_residual_error, lo & n_iterations,
+    const block_linear_operator & prec, bool trans = false ) const;
+
+  /**
+   * GMRES solver for the solution of (this)^trans * x = y.
+   * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|. Overwritten with the actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations. Overwritten with
+   * the actual number of iterations on exit.
+   * @param[in] trans Indicates if the block linear operator is transposed or
+   * not.
+   * @todo Discuss new output for @p relative_residual_error
+   * @todo Discuss: What is relative error in case that solution is not 0 at
+   * function call? Should we fill solution with 0 in the routine?
+   */
+  bool gmres_solve( const block_vector_type & rhs, block_vector_type & solution,
+    sc & relative_residual_error, lo & n_iterations, bool trans = false ) const;
+
+  /**
+   * Preconditioned GMRES solver for the solution of (this)^trans * x = y for
+   * distributed block vectors.
+   * @param[in] rhs Right-hand side vector.
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|. Overwritten with the actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations. Overwritten with
+   * the actual number of iterations on exit.
+   * @param[in] prec Block linear operator used as preconditioner.
+   * @param[in] trans Indicates if the block linear operator is transposed or
+   * not.
+   * @todo Currently all ranks execute the GMRES algorithm, but computations
+   * like matrix-vector products and scalar products are parallelized.
+   * @todo Discuss new output for @p relative_residual_error
+   * @todo Discuss: What is relative error in case that solution is not 0 at
+   * function call? Should we fill solution with 0 in the routine?
+   */
+  bool gmres_solve( const distributed_block_vector_type & rhs,
+    distributed_block_vector_type & solution, sc & relative_residual_error,
+    lo & n_iterations, const block_linear_operator & prec,
+    bool trans = false ) const;
+
+  /**
+   * GMRES solver for the solution of (this)^trans * x = y for distributed block
+   * vectors.
+   * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
+   * @param[out] solution Solution vector.
+   * @param[in,out] relative_residual_error Stopping criterion measuring
+   * decrease of |Ax-b|/|b|. Overwritten with the actual value on exit.
+   * @param[in,out] n_iterations Maximal number of iterations. Overwritten with
+   * the actual number of iterations on exit.
+   * @param[in] trans Indicates if the block linear operator is transposed or
+   * not.
+   * @todo Currently all ranks execute the GMRES algorithm, but
+   * computations like matrix-vector products and scalar products are
+   * parallelized.
+   * @todo Discuss new output for @p relative_residual_error
+   * @todo Discuss: What is relative error in case that solution is not 0 at
+   * function call? Should we fill solution with 0 in the routine?
+   */
+  bool gmres_solve( const distributed_block_vector_type & rhs,
+    distributed_block_vector_type & solution, sc & relative_residual_error,
+    lo & n_iterations, bool trans = false ) const;
+
+  /**
+   * * Returns the dimension of the domain of each block.
    */
   lo get_dim_domain( ) const {
     return _dim_domain;

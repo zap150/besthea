@@ -64,6 +64,7 @@ void besthea::linear_algebra::block_row_matrix::resize_blocks(
 
 void besthea::linear_algebra::block_row_matrix::resize( lo block_dim ) {
   _data.resize( block_dim );
+  _data.shrink_to_fit( );
   _block_dim = block_dim;
 }
 
