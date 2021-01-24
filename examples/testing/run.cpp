@@ -27,7 +27,7 @@
  */
 
 #include "besthea/besthea.h"
-#include "besthea/uniform_spacetime_be_onthefly_matrix.h"
+#include "besthea/uniform_spacetime_be_onthefly_matrix_cpu.h"
 
 #include <cstdlib>
 #include <filesystem>
@@ -131,20 +131,22 @@ int main( int argc, char * argv[] ) {
 
 
 
-  std::cout << "T" << spacetime_mesh.get_n_temporal_nodes() << " S" << spacetime_mesh.get_n_nodes() << "\n";
+  std::cout << "T" << spacetime_mesh.get_n_temporal_elements() << " S" << spacetime_mesh.get_n_spatial_elements() << "\n";
 
-  block_vector x (spacetime_mesh.get_n_temporal_nodes(), spacetime_mesh.get_n_nodes(), false);
-  block_vector y1(spacetime_mesh.get_n_temporal_nodes(), spacetime_mesh.get_n_nodes(), false);
-  block_vector y2(spacetime_mesh.get_n_temporal_nodes(), spacetime_mesh.get_n_nodes(), false);
+  block_vector x (spacetime_mesh.get_n_temporal_elements(), spacetime_mesh.get_n_spatial_elements(), false);
+  block_vector y1(spacetime_mesh.get_n_temporal_elements(), spacetime_mesh.get_n_spatial_elements(), false);
+  block_vector y2(spacetime_mesh.get_n_temporal_elements(), spacetime_mesh.get_n_spatial_elements(), false);
   for (lo b = 0; b < x.get_block_size(); b++) {
     for (lo i = 0; i < x.get_size_of_block(); i++) {
-      x.set(b, i, rand() / RAND_MAX);
-      y1.set(b, i, 3.14);
-      y2.set(b, i, 3.14);
+      //x.set(b, i, (double)rand() / RAND_MAX);
+      x.set(b, i, 1);
+      y1.set(b, i, 2);
+      y2.set(b, i, 2);
     }    
   }
-  sc alpha = 2;
-  sc beta = 3;
+  sc alpha = 3;
+  sc beta = 5;
+  
 
   t.reset( "InMemory" );
   assembler_v.assemble( *V );
@@ -152,7 +154,7 @@ int main( int argc, char * argv[] ) {
   t.measure( );
 
   t.reset( "OnTheFly" );
-  besthea::uniform_spacetime_be_onthefly_matrix onthefly(kernel_v, space_p0, space_p0, order_sing, order_reg);
+  besthea::uniform_spacetime_be_onthefly_matrix_cpu onthefly(kernel_v, space_p0, space_p0, order_sing, order_reg);
   onthefly.apply(x, y2, false, alpha, beta);
   t.measure();
 

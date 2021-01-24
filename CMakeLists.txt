@@ -100,7 +100,7 @@ set(besthea_INCLUDES
   include/besthea/uniform_spacetime_be_assembler.h
   include/besthea/uniform_spacetime_be_evaluator.h
   include/besthea/uniform_spacetime_be_identity.h
-  include/besthea/uniform_spacetime_be_onthefly_matrix.h
+  include/besthea/uniform_spacetime_be_onthefly_matrix_cpu.h
   include/besthea/uniform_spacetime_be_solver.h
   include/besthea/uniform_spacetime_be_space.h
   include/besthea/uniform_spacetime_initial_assembler.h
@@ -157,7 +157,7 @@ set(besthea_SOURCES
   src/uniform_spacetime_be_assembler.cpp
   src/uniform_spacetime_be_evaluator.cpp
   src/uniform_spacetime_be_identity.cpp
-  src/uniform_spacetime_be_onthefly_matrix.cpp
+  src/uniform_spacetime_be_onthefly_matrix_cpu.cpp
   src/uniform_spacetime_be_solver.cpp
   src/uniform_spacetime_be_space.cpp
   src/uniform_spacetime_initial_assembler.cpp

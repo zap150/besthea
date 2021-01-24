@@ -1,5 +1,5 @@
 
-#include "besthea/uniform_spacetime_be_onthefly_matrix.h"
+#include "besthea/uniform_spacetime_be_onthefly_matrix_cpu.h"
 
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
@@ -13,7 +13,7 @@
 
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, trial_space_type>::uniform_spacetime_be_onthefly_matrix( kernel_type & kernel,
+besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>::uniform_spacetime_be_onthefly_matrix_cpu( kernel_type & kernel,
  test_space_type & test_space, trial_space_type & trial_space,
   int order_singular, int order_regular )
   : block_matrix(test_space.get_mesh()->get_n_temporal_elements(), test_space.get_mesh()->get_n_spatial_elements(), trial_space.get_mesh()->get_n_spatial_elements()),
@@ -28,7 +28,8 @@ besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, tria
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, trial_space_type>::~uniform_spacetime_be_onthefly_matrix( ) {
+besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>::~uniform_spacetime_be_onthefly_matrix_cpu( ) {
+
 }
 
 
@@ -37,7 +38,7 @@ besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, tria
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
-sc besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, trial_space_type>::
+sc besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>::
   get_value(lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special) const {
   
   return 0;
@@ -45,7 +46,7 @@ sc besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, t
 }
 
 template<>
-sc besthea::uniform_spacetime_be_onthefly_matrix<
+sc besthea::uniform_spacetime_be_onthefly_matrix_cpu<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
@@ -168,7 +169,7 @@ sc besthea::uniform_spacetime_be_onthefly_matrix<
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
-sc besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, trial_space_type>::
+sc besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>::
   get(lo d, lo i, lo j, quadrature_wrapper_changing & quadr_changing ) const {
   
   return 0;
@@ -176,7 +177,7 @@ sc besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, t
 }
 
 template<>
-sc besthea::uniform_spacetime_be_onthefly_matrix<
+sc besthea::uniform_spacetime_be_onthefly_matrix_cpu<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
@@ -219,7 +220,7 @@ sc besthea::uniform_spacetime_be_onthefly_matrix<
 
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, trial_space_type>::
+void besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>::
   apply( const block_vector_type & x, block_vector_type & y,
   bool trans, sc alpha, sc beta ) const {
   
@@ -234,40 +235,89 @@ void besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type,
   lo cols_in_block = _n_columns;
   lo blocks = _block_dim;
 
+
+
+  y.scale(beta);
+
 #pragma omp parallel
   {
     quadrature_wrapper_changing quadr_changing(quadr_size);
 
-#pragma omp for collapse(2)
+#pragma omp for
     for (lo inner_row = 0; inner_row < rows_in_block; inner_row++) {
-      for (lo timestep = 0; timestep < blocks; timestep++) {
-        sc y_val = 0;
+      for (lo inner_col = 0; inner_col < cols_in_block; inner_col++) {
 
-        for (lo inner_col = 0; inner_col < cols_in_block; inner_col++) {
-          sc matrix_val = get(timestep, inner_row, inner_col, quadr_changing);
+        sc val_prev = get_value(0, inner_row, inner_col, quadr_changing, true);
+        sc val_curr = get_value(0, inner_row, inner_col, quadr_changing);
+        sc val_next = get_value(1, inner_row, inner_col, quadr_changing);
 
-          lo max_block = blocks - timestep;
-          for (lo block = 0; block < max_block; block++) {
-            sc x_val = x.get(block, inner_col);
-
-            y_val += alpha * matrix_val * x_val;
-          }
+        sc matrix_val = val_prev + val_curr - val_next;
+        lo max_block = blocks;
+        for (lo block = 0; block < max_block; block++) {
+          sc y_val = alpha * matrix_val * x.get(block, inner_col);
+          y.add(block, inner_row, y_val);
         }
 
-        y_val += beta * y.get(timestep, inner_row);
-        y.set(timestep, inner_row, y_val);
+        for (lo diag = 1; diag < blocks; diag++) {
+          val_prev = val_curr;
+          val_curr = val_next;
+          val_next = get_value(diag+1, inner_row, inner_col, quadr_changing);
+
+          matrix_val = -val_prev + 2*val_curr - val_next;
+
+          lo max_block = blocks - diag;
+          for (lo block = 0; block < max_block; block++) {
+            lo block_row = diag + block;
+            lo block_col = block;
+            sc x_val = x.get(block_col, inner_col);
+            sc y_val = alpha * matrix_val * x_val;
+            y.add(block_row, inner_row, y_val);
+          }
+
+        }
       }
     }
-    
   }
 
+
+
+//   y.scale(beta);
+
+// #pragma omp parallel
+//   {
+//     quadrature_wrapper_changing quadr_changing(quadr_size);
+
+// #pragma omp for
+//     for (lo inner_row = 0; inner_row < rows_in_block; inner_row++) {
+//       for (lo diag = 0; diag < blocks; diag++) {
+//         for (lo inner_col = 0; inner_col < cols_in_block; inner_col++) {
+
+//           sc matrix_val = get(diag, inner_row, inner_col, quadr_changing);
+
+//           lo max_block = blocks - diag;
+//           for (lo block = 0; block < max_block; block++) {
+//             lo block_row = diag + block;
+//             lo block_col = block;
+//             sc x_val = x.get(block_col, inner_col);
+//             sc y_val = alpha * matrix_val * x_val;
+//             y.add(block_row, inner_row, y_val);
+//           }
+//         }
+//       }
+//     }
+    
+//   }
+
+
+
+  // quadrature_wrapper_changing quadr_changing(quadr_size);
 
   // for (lo block_row = 0; block_row < blocks; block_row++) {
   //   vector_type& y_block_data = y.get_block(block_row);
 
   //   for (lo inner_row = 0; inner_row < rows_in_block; inner_row++) {
   //     y_block_data[inner_row] *= beta;
-
+      
   //     for (lo block_col = 0; block_col < blocks; block_col++) {
   //       const vector_type& x_block_data = x.get_block(block_col);
 
@@ -293,7 +343,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type,
 
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-bool besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, trial_space_type>::
+bool besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>::
   check_equal(besthea::linear_algebra::block_lower_triangular_toeplitz_matrix & assembled, sc epsilon) const {
 
   lo n_timesteps = _test_space->get_mesh()->get_n_temporal_elements();
@@ -345,7 +395,7 @@ bool besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type,
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
-void besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, trial_space_type>::init_quadrature( ) {
+void besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>::init_quadrature( ) {
   // Use triangle rules for disjoint elements
   const std::vector< sc, besthea::allocator_type< sc > > & tri_x1
     = besthea::bem::quadrature::triangle_x1( _order_regular );
@@ -440,7 +490,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type,
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
-void besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, trial_space_type>::triangles_to_geometry( const linear_algebra::coordinates< 3 > & x1,
+void besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>::triangles_to_geometry( const linear_algebra::coordinates< 3 > & x1,
     const linear_algebra::coordinates< 3 > & x2,
     const linear_algebra::coordinates< 3 > & x3,
     const linear_algebra::coordinates< 3 > & y1,
@@ -552,7 +602,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type,
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
-void besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, trial_space_type>::get_type( lo i_test, lo i_trial, int & n_shared_vertices,
+void besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>::get_type( lo i_test, lo i_trial, int & n_shared_vertices,
   int & rot_test, int & rot_trial ) const {
   // check for identical
   if ( i_test == i_trial ) {
@@ -602,7 +652,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type,
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::uniform_spacetime_be_onthefly_matrix< kernel_type, test_space_type,
+void besthea::uniform_spacetime_be_onthefly_matrix_cpu< kernel_type, test_space_type,
   trial_space_type >::hypercube_to_triangles_identical( sc ksi, sc eta1,
   sc eta2, sc eta3, int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref,
   sc & y2_ref, sc & jacobian ) const {
@@ -649,7 +699,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix< kernel_type, test_space_type
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::uniform_spacetime_be_onthefly_matrix< kernel_type, test_space_type,
+void besthea::uniform_spacetime_be_onthefly_matrix_cpu< kernel_type, test_space_type,
   trial_space_type >::hypercube_to_triangles_vertex( sc ksi, sc eta1, sc eta2,
   sc eta3, int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref, sc & y2_ref,
   sc & jacobian ) const {
@@ -672,7 +722,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix< kernel_type, test_space_type
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::uniform_spacetime_be_onthefly_matrix< kernel_type, test_space_type,
+void besthea::uniform_spacetime_be_onthefly_matrix_cpu< kernel_type, test_space_type,
   trial_space_type >::hypercube_to_triangles_edge( sc ksi, sc eta1, sc eta2,
   sc eta3, int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref, sc & y2_ref,
   sc & jacobian ) const {
@@ -719,7 +769,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix< kernel_type, test_space_type
 
 
 
-template class besthea::uniform_spacetime_be_onthefly_matrix<
+template class besthea::uniform_spacetime_be_onthefly_matrix_cpu<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;

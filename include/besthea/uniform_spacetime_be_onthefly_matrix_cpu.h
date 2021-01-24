@@ -3,8 +3,8 @@
  * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_H_
-#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_H_
+#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_CPU_H_
+#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_CPU_H_
 
 #include "besthea/block_matrix.h"
 #include "besthea/full_matrix.h"
@@ -16,13 +16,13 @@
 
 namespace besthea {
   template< class kernel_type, class test_space_type, class trial_space_type >
-  class uniform_spacetime_be_onthefly_matrix;
+  class uniform_spacetime_be_onthefly_matrix_cpu;
 }
 
 
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-class besthea::uniform_spacetime_be_onthefly_matrix
+class besthea::uniform_spacetime_be_onthefly_matrix_cpu
   : public besthea::linear_algebra::block_matrix
 {
 private:
@@ -86,15 +86,15 @@ public:
 
 
 
-  uniform_spacetime_be_onthefly_matrix( kernel_type & kernel,
+  uniform_spacetime_be_onthefly_matrix_cpu( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
     int order_singular = 4, int order_regular = 4 );
 
-  uniform_spacetime_be_onthefly_matrix(
-    const uniform_spacetime_be_onthefly_matrix & that )
+  uniform_spacetime_be_onthefly_matrix_cpu(
+    const uniform_spacetime_be_onthefly_matrix_cpu & that )
     = delete;
   
-  virtual ~uniform_spacetime_be_onthefly_matrix( );
+  virtual ~uniform_spacetime_be_onthefly_matrix_cpu( );
 
 
 
@@ -107,7 +107,7 @@ public:
 
   void print_info( ) const {
     std::cout
-      << "besthea::linear_algebra::uniform_spacetime_be_onthefly_matrix"
+      << "besthea::linear_algebra::uniform_spacetime_be_onthefly_matrix_cpu"
       << std::endl;
     std::cout << "  number of blocks: " << _block_dim << std::endl;
     std::cout << "  dimension of each block: " << _dim_domain
@@ -188,4 +188,4 @@ private:
 };
 
 
-#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_H_ */
+#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_CPU_H_ */
