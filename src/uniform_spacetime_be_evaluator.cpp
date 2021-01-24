@@ -399,7 +399,6 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
   my_quadrature._x1.resize( size_chunk );
   my_quadrature._x2.resize( size_chunk );
   my_quadrature._x3.resize( size_chunk );
-  my_quadrature._t.resize( size_chunk );
 }
 
 template< class kernel_type, class space_type >

@@ -85,9 +85,6 @@ class besthea::bem::uniform_spacetime_be_evaluator {
       _x3;  //!< Third coordinates of evaluation points.
 
     std::vector< sc, besthea::allocator_type< sc > >
-      _t;  //!< Temporal coordinates of evaluation points.
-
-    std::vector< sc, besthea::allocator_type< sc > >
       _kernel_values;  //!< Buffer for storing kernel values.
   };
 
