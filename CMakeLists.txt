@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.5)
-project(besthea)
+cmake_minimum_required(VERSION 3.8)
+project(besthea LANGUAGES CXX CUDA)
 
 include(cmake/macros.cmake)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake/Modules)
@@ -13,6 +13,7 @@ enable_MPI()
 enable_OpenMP()
 enable_Boost()
 enable_Eigen()
+enable_CUDA()
 if(BUILD_EXAMPLES)
   enable_Lyra()
 endif()
@@ -101,6 +102,7 @@ set(besthea_INCLUDES
   include/besthea/uniform_spacetime_be_evaluator.h
   include/besthea/uniform_spacetime_be_identity.h
   include/besthea/uniform_spacetime_be_onthefly_matrix_cpu.h
+  include/besthea/uniform_spacetime_be_onthefly_matrix_gpu.h
   include/besthea/uniform_spacetime_be_solver.h
   include/besthea/uniform_spacetime_be_space.h
   include/besthea/uniform_spacetime_initial_assembler.h
@@ -158,6 +160,8 @@ set(besthea_SOURCES
   src/uniform_spacetime_be_evaluator.cpp
   src/uniform_spacetime_be_identity.cpp
   src/uniform_spacetime_be_onthefly_matrix_cpu.cpp
+  src/uniform_spacetime_be_onthefly_matrix_gpu.cpp
+  src/uniform_spacetime_be_onthefly_matrix_gpu.cu
   src/uniform_spacetime_be_solver.cpp
   src/uniform_spacetime_be_space.cpp
   src/uniform_spacetime_initial_assembler.cpp

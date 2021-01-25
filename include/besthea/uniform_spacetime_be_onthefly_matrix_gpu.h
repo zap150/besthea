@@ -1,10 +1,10 @@
 
-/** @file uniform_spacetime_be_onthefly_matrix_cpu.h
+/** @file uniform_spacetime_be_onthefly_matrix_gpu.h
  * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_CPU_H_
-#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_CPU_H_
+#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_GPU_H_
+#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_GPU_H_
 
 #include "besthea/block_matrix.h"
 #include "besthea/full_matrix.h"
@@ -16,13 +16,13 @@
 
 namespace besthea {
   template< class kernel_type, class test_space_type, class trial_space_type >
-  class uniform_spacetime_be_onthefly_matrix_cpu;
+  class uniform_spacetime_be_onthefly_matrix_gpu;
 }
 
 
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-class besthea::uniform_spacetime_be_onthefly_matrix_cpu
+class besthea::uniform_spacetime_be_onthefly_matrix_gpu
   : public besthea::linear_algebra::block_matrix
 {
 private:
@@ -86,15 +86,17 @@ public:
 
 
 
-  uniform_spacetime_be_onthefly_matrix_cpu( kernel_type & kernel,
+  void hello_gpu_world(int number) const;
+
+  uniform_spacetime_be_onthefly_matrix_gpu( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
     int order_singular = 4, int order_regular = 4 );
 
-  uniform_spacetime_be_onthefly_matrix_cpu(
-    const uniform_spacetime_be_onthefly_matrix_cpu & that )
+  uniform_spacetime_be_onthefly_matrix_gpu(
+    const uniform_spacetime_be_onthefly_matrix_gpu & that )
     = delete;
   
-  virtual ~uniform_spacetime_be_onthefly_matrix_cpu( );
+  virtual ~uniform_spacetime_be_onthefly_matrix_gpu( );
 
 
 
@@ -107,7 +109,7 @@ public:
 
   void print_info( ) const {
     std::cout
-      << "besthea::linear_algebra::uniform_spacetime_be_onthefly_matrix_cpu"
+      << "besthea::linear_algebra::uniform_spacetime_be_onthefly_matrix_gpu"
       << std::endl;
     std::cout << "  number of blocks: " << _block_dim << std::endl;
     std::cout << "  dimension of each block: " << _dim_domain
@@ -188,4 +190,4 @@ private:
 };
 
 
-#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_CPU_H_ */
+#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_GPU_H_ */

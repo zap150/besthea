@@ -1,5 +1,5 @@
 
-#include "besthea/uniform_spacetime_be_onthefly_matrix_cpu.h"
+#include "besthea/uniform_spacetime_be_onthefly_matrix_gpu.h"
 
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
@@ -13,7 +13,7 @@
 
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>::uniform_spacetime_be_onthefly_matrix_cpu( kernel_type & kernel,
+besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::uniform_spacetime_be_onthefly_matrix_gpu( kernel_type & kernel,
  test_space_type & test_space, trial_space_type & trial_space,
   int order_singular, int order_regular )
   : block_matrix(test_space.get_mesh()->get_n_temporal_elements(), test_space.get_mesh()->get_n_spatial_elements(), trial_space.get_mesh()->get_n_spatial_elements()),
@@ -28,7 +28,7 @@ besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, 
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>::~uniform_spacetime_be_onthefly_matrix_cpu( ) {
+besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::~uniform_spacetime_be_onthefly_matrix_gpu( ) {
 
 }
 
@@ -38,7 +38,7 @@ besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, 
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
-sc besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>::
+sc besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
   get_value(lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special) const {
   
   return 0;
@@ -46,7 +46,7 @@ sc besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_typ
 }
 
 template<>
-sc besthea::uniform_spacetime_be_onthefly_matrix_cpu<
+sc besthea::uniform_spacetime_be_onthefly_matrix_gpu<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
@@ -169,7 +169,7 @@ sc besthea::uniform_spacetime_be_onthefly_matrix_cpu<
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
-sc besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>::
+sc besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
   get(lo d, lo i, lo j, quadrature_wrapper_changing & quadr_changing ) const {
   
   return 0;
@@ -177,7 +177,7 @@ sc besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_typ
 }
 
 template<>
-sc besthea::uniform_spacetime_be_onthefly_matrix_cpu<
+sc besthea::uniform_spacetime_be_onthefly_matrix_gpu<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
@@ -220,7 +220,7 @@ sc besthea::uniform_spacetime_be_onthefly_matrix_cpu<
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
-void besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>::
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
   apply( const block_vector_type & x, block_vector_type & y,
   bool trans, sc alpha, sc beta ) const {
 
@@ -231,10 +231,10 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_t
 
 
 template<>
-void besthea::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >>::
   apply( const block_vector_type & x, block_vector_type & y,
   bool trans, sc alpha, sc beta ) const {
   
@@ -249,7 +249,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<
   lo cols_in_block = _n_columns;
   lo blocks = _block_dim;
 
-
+  hello_gpu_world(329);
 
   y.scale(beta);
 
@@ -357,7 +357,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<
 
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-bool besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>::
+bool besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
   check_equal(besthea::linear_algebra::block_lower_triangular_toeplitz_matrix & assembled, sc epsilon) const {
 
   lo n_timesteps = _test_space->get_mesh()->get_n_temporal_elements();
@@ -409,7 +409,7 @@ bool besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_t
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
-void besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>::init_quadrature( ) {
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::init_quadrature( ) {
   // Use triangle rules for disjoint elements
   const std::vector< sc, besthea::allocator_type< sc > > & tri_x1
     = besthea::bem::quadrature::triangle_x1( _order_regular );
@@ -504,7 +504,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_t
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
-void besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>::triangles_to_geometry( const linear_algebra::coordinates< 3 > & x1,
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::triangles_to_geometry( const linear_algebra::coordinates< 3 > & x1,
     const linear_algebra::coordinates< 3 > & x2,
     const linear_algebra::coordinates< 3 > & x3,
     const linear_algebra::coordinates< 3 > & y1,
@@ -616,7 +616,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_t
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
-void besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>::get_type( lo i_test, lo i_trial, int & n_shared_vertices,
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::get_type( lo i_test, lo i_trial, int & n_shared_vertices,
   int & rot_test, int & rot_trial ) const {
   // check for identical
   if ( i_test == i_trial ) {
@@ -666,7 +666,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_t
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::uniform_spacetime_be_onthefly_matrix_cpu< kernel_type, test_space_type,
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu< kernel_type, test_space_type,
   trial_space_type >::hypercube_to_triangles_identical( sc ksi, sc eta1,
   sc eta2, sc eta3, int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref,
   sc & y2_ref, sc & jacobian ) const {
@@ -713,7 +713,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu< kernel_type, test_space_
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::uniform_spacetime_be_onthefly_matrix_cpu< kernel_type, test_space_type,
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu< kernel_type, test_space_type,
   trial_space_type >::hypercube_to_triangles_vertex( sc ksi, sc eta1, sc eta2,
   sc eta3, int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref, sc & y2_ref,
   sc & jacobian ) const {
@@ -736,7 +736,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu< kernel_type, test_space_
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::uniform_spacetime_be_onthefly_matrix_cpu< kernel_type, test_space_type,
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu< kernel_type, test_space_type,
   trial_space_type >::hypercube_to_triangles_edge( sc ksi, sc eta1, sc eta2,
   sc eta3, int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref, sc & y2_ref,
   sc & jacobian ) const {
@@ -783,7 +783,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu< kernel_type, test_space_
 
 
 
-template class besthea::uniform_spacetime_be_onthefly_matrix_cpu<
+template class besthea::uniform_spacetime_be_onthefly_matrix_gpu<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;

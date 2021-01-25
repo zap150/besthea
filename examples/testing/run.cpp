@@ -28,6 +28,7 @@
 
 #include "besthea/besthea.h"
 #include "besthea/uniform_spacetime_be_onthefly_matrix_cpu.h"
+#include "besthea/uniform_spacetime_be_onthefly_matrix_gpu.h"
 
 #include <cstdlib>
 #include <filesystem>
@@ -154,7 +155,7 @@ int main( int argc, char * argv[] ) {
   t.measure( );
 
   t.reset( "OnTheFly" );
-  besthea::uniform_spacetime_be_onthefly_matrix_cpu onthefly(kernel_v, space_p0, space_p0, order_sing, order_reg);
+  besthea::uniform_spacetime_be_onthefly_matrix_gpu onthefly(kernel_v, space_p0, space_p0, order_sing, order_reg);
   onthefly.apply(x, y2, false, alpha, beta);
   t.measure();
 
