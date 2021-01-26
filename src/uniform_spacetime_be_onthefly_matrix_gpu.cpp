@@ -171,17 +171,6 @@ sc besthea::uniform_spacetime_be_onthefly_matrix_gpu<
 template<class kernel_type, class test_space_type, class trial_space_type>
 sc besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
   get(lo d, lo i, lo j, quadrature_wrapper_changing & quadr_changing ) const {
-  
-  return 0;
-
-}
-
-template<>
-sc besthea::uniform_spacetime_be_onthefly_matrix_gpu<
-  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  get( lo d, lo i, lo j, quadrature_wrapper_changing & quadr_changing ) const {
     
   // if ( delta > 0 ) {
   //   global_matrix.add( delta - 1, i_test, i_trial, -value );
@@ -221,20 +210,6 @@ sc besthea::uniform_spacetime_be_onthefly_matrix_gpu<
 
 template<class kernel_type, class test_space_type, class trial_space_type>
 void besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
-  apply( const block_vector_type & x, block_vector_type & y,
-  bool trans, sc alpha, sc beta ) const {
-
-    return;
-
-}
-
-
-
-template<>
-void besthea::uniform_spacetime_be_onthefly_matrix_gpu<
-  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >>::
   apply( const block_vector_type & x, block_vector_type & y,
   bool trans, sc alpha, sc beta ) const {
   
@@ -292,115 +267,6 @@ void besthea::uniform_spacetime_be_onthefly_matrix_gpu<
       }
     }
   }
-
-
-
-//   y.scale(beta);
-
-// #pragma omp parallel
-//   {
-//     quadrature_wrapper_changing quadr_changing(quadr_size);
-
-// #pragma omp for
-//     for (lo inner_row = 0; inner_row < rows_in_block; inner_row++) {
-//       for (lo diag = 0; diag < blocks; diag++) {
-//         for (lo inner_col = 0; inner_col < cols_in_block; inner_col++) {
-
-//           sc matrix_val = get(diag, inner_row, inner_col, quadr_changing);
-
-//           lo max_block = blocks - diag;
-//           for (lo block = 0; block < max_block; block++) {
-//             lo block_row = diag + block;
-//             lo block_col = block;
-//             sc x_val = x.get(block_col, inner_col);
-//             sc y_val = alpha * matrix_val * x_val;
-//             y.add(block_row, inner_row, y_val);
-//           }
-//         }
-//       }
-//     }
-    
-//   }
-
-
-
-  // quadrature_wrapper_changing quadr_changing(quadr_size);
-
-  // for (lo block_row = 0; block_row < blocks; block_row++) {
-  //   vector_type& y_block_data = y.get_block(block_row);
-
-  //   for (lo inner_row = 0; inner_row < rows_in_block; inner_row++) {
-  //     y_block_data[inner_row] *= beta;
-      
-  //     for (lo block_col = 0; block_col < blocks; block_col++) {
-  //       const vector_type& x_block_data = x.get_block(block_col);
-
-  //       for (lo inner_col = 0; inner_col < cols_in_block; inner_col++) {
-          
-  //         sc matrix_val;
-  //         if(trans)
-  //           matrix_val = get(block_col - block_row, inner_col, inner_row, quadr_changing);
-  //         else
-  //           matrix_val = get(block_row - block_col, inner_row, inner_col, quadr_changing);
-
-  //         y_block_data[inner_row] += alpha * matrix_val * x_block_data[inner_col];
-
-  //       }
-  //     }
-  //   }
-  // }
-
-}
-
-
-
-
-
-template< class kernel_type, class test_space_type, class trial_space_type >
-bool besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
-  check_equal(besthea::linear_algebra::block_lower_triangular_toeplitz_matrix & assembled, sc epsilon) const {
-
-  lo n_timesteps = _test_space->get_mesh()->get_n_temporal_elements();
-  lo n_rows = _n_rows;
-  lo n_cols = _n_columns;
-
-  quadrature_wrapper_changing quadr_changing(quadr_size);
-
-  if(n_timesteps != assembled.get_block_dim())
-  {
-    std::cerr << "Not matching blockdim\n";
-    return false;
-  }
-
-  if(n_rows != assembled.get_n_rows())
-  {
-    std::cerr << "Not mathing row count\n";
-    return false;
-  }
-
-  if(n_cols != assembled.get_n_columns())
-  {
-    std::cerr << "not matching col count\n";
-    return false;
-  }
-
-  bool result = true;
-  for(int d = 0; d < n_timesteps; d++)
-  {
-    for(int r = 0; r < n_rows; r++)
-    {
-      for(int c = 0; c < n_cols; c++)
-      {
-        if(std::abs(assembled.get(d, r, c) - this->get(d, r, c, quadr_changing)) > epsilon)
-        {
-          std::cerr << "Not mathing value d=" << d << " r=" << r << " c=" << c << ": " << assembled.get(d, r, c) << " X " << this->get(d, r, c, quadr_changing) << "\n";
-          result = false;
-        }
-      }
-    }
-  }
-
-  return result;
 
 }
 

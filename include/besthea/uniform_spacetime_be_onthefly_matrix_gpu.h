@@ -116,8 +116,6 @@ public:
               << " x " << _dim_range << std::endl;
   }
 
-  bool check_equal(besthea::linear_algebra::block_lower_triangular_toeplitz_matrix & assembled, sc epsilon) const ;
-
 private:
 
   void init_quadrature();

@@ -97,7 +97,7 @@ public:
   virtual ~uniform_spacetime_be_onthefly_matrix_cpu( );
 
 
-
+  sc get( lo d, lo i, lo j ) const ; // do not use for production, only for correctness testing
   sc get( lo d, lo i, lo j, quadrature_wrapper_changing & quadr_changing ) const ;
 
   virtual void apply( const block_vector_type & x, block_vector_type & y,
@@ -114,8 +114,6 @@ public:
               << " x " << _dim_range << std::endl;
   }
 
-  bool check_equal(besthea::linear_algebra::block_lower_triangular_toeplitz_matrix & assembled, sc epsilon) const ;
-
 private:
 
   void init_quadrature();
@@ -131,7 +129,7 @@ private:
     const linear_algebra::coordinates< 3 > & y3, int type_int, int rot_test,
     int rot_trial, quadrature_wrapper_changing & quadr_changing) const ;
 
-  sc get_value(lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special = false) const ;
+  void get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special = false) const ;
   
   void hypercube_to_triangles( sc ksi, sc eta1, sc eta2, sc eta3,
     int n_shared_vertices, int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref,

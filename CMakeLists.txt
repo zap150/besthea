@@ -201,3 +201,7 @@ option(BUILD_EXAMPLES "Build examples using the library" OFF)
 if(BUILD_EXAMPLES)
   add_subdirectory(examples)
 endif()
+
+if(BUILD_EXPERIMENTS)
+  add_subdirectory(experiments)
+endif()

@@ -1,31 +1,3 @@
-/*
- * Copyright 2019, VSB - Technical University of Ostrava and Graz University of
- * Technology All rights reserved. Redistribution and use in source and binary
- * forms, with or without modification, are permitted provided that the
- * following conditions are met:
- *
- * Redistributions of source code must retain the above copyright notice, this
- * list of conditions and the following disclaimer. Redistributions in binary
- * form must reproduce the above copyright notice, this list of conditions and
- * the following disclaimer in the documentation and/or other materials provided
- * with the distribution. Neither the name of VSB - Technical University of
- * Ostrava and Graz University of Technology nor the names of its contributors
- * may be used to endorse or promote products  derived from this software
- * without specific prior written permission.
-
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL VSB - TECHNICAL UNIVERSITY OF OSTRAVA AND
- * GRAZ UNIVERSITY OF TECHNOLOGY BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-
 #include "besthea/besthea.h"
 #include "besthea/uniform_spacetime_be_onthefly_matrix_cpu.h"
 #include "besthea/uniform_spacetime_be_onthefly_matrix_gpu.h"
@@ -34,6 +6,7 @@
 #include <filesystem>
 #include <iostream>
 
+using namespace besthea;
 using namespace besthea::mesh;
 using namespace besthea::linear_algebra;
 using namespace besthea::bem;
@@ -75,9 +48,10 @@ struct cauchy_data {
 };
 
 int main( int argc, char * argv[] ) {
-  std::string file;
 
   srand(time(nullptr));
+
+  std::string file;
 
   // default values
   file = "../examples/mesh_files/cube_12.txt";
@@ -117,61 +91,62 @@ int main( int argc, char * argv[] ) {
   timer t;
 
   uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
+  uniform_spacetime_be_space< basis_tri_p1 > space_p1( spacetime_mesh );
 
   // numerical quadrature orders
-  lo order_sing
-    = 4;  // for singular integrals (adjacent or identical spatial elements)
-  lo order_reg = 4;  // disjoint spatial elements
+  lo order_sing = 4;  // for singular integrals (adjacent or identical spatial elements)
+  lo order_reg  = 4;  // disjoint spatial elements
 
   // create matrix assembler
-  block_lower_triangular_toeplitz_matrix * V
-    = new block_lower_triangular_toeplitz_matrix( );
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
-  uniform_spacetime_be_assembler assembler_v(
-    kernel_v, space_p0, space_p0, order_sing, order_reg );
-
-
-
-  std::cout << "T" << spacetime_mesh.get_n_temporal_elements() << " S" << spacetime_mesh.get_n_spatial_elements() << "\n";
+  //spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
+  block_lower_triangular_toeplitz_matrix * V_mem = new block_lower_triangular_toeplitz_matrix( );
+  //block_lower_triangular_toeplitz_matrix * K_mem = new block_lower_triangular_toeplitz_matrix( );
+  uniform_spacetime_be_onthefly_matrix_cpu V_fly(kernel_v, space_p0, space_p0, order_sing, order_reg);
+  //uniform_spacetime_be_onthefly_matrix_cpu K_fly(kernel_k, space_p0, space_p1, order_sing, order_reg);
+  uniform_spacetime_be_assembler assembler_v(kernel_v, space_p0, space_p0, order_sing, order_reg );
+  //uniform_spacetime_be_assembler assembler_k(kernel_k, space_p0, space_p1, order_sing, order_reg );
 
   block_vector x (spacetime_mesh.get_n_temporal_elements(), spacetime_mesh.get_n_spatial_elements(), false);
   block_vector y1(spacetime_mesh.get_n_temporal_elements(), spacetime_mesh.get_n_spatial_elements(), false);
   block_vector y2(spacetime_mesh.get_n_temporal_elements(), spacetime_mesh.get_n_spatial_elements(), false);
   for (lo b = 0; b < x.get_block_size(); b++) {
     for (lo i = 0; i < x.get_size_of_block(); i++) {
-      //x.set(b, i, (double)rand() / RAND_MAX);
-      x.set(b, i, 1);
+      x.set(b, i, (10.0 * rand()) / RAND_MAX);
       y1.set(b, i, 2);
       y2.set(b, i, 2);
     }    
   }
   sc alpha = 3;
   sc beta = 5;
-  
 
-  t.reset( "InMemory" );
-  assembler_v.assemble( *V );
-  V->apply(x, y1, false, alpha, beta);
+
+  t.reset( "InMemory V" );
+  assembler_v.assemble( *V_mem );
+  V_mem->apply(x, y1, false, alpha, beta);
   t.measure( );
 
-  t.reset( "OnTheFly" );
-  besthea::uniform_spacetime_be_onthefly_matrix_gpu onthefly(kernel_v, space_p0, space_p0, order_sing, order_reg);
-  onthefly.apply(x, y2, false, alpha, beta);
+  t.reset( "OnTheFly V" );
+  V_fly.apply(x, y2, false, alpha, beta);
   t.measure();
 
-  bool areEqual = true;
+  bool equal = true;
   for (lo b = 0; b < x.get_block_size(); b++) {
     for (lo i = 0; i < x.get_size_of_block(); i++) {
       sc v1 = y1.get(b, i);
       sc v2 = y2.get(b, i);
       if( std::abs(v1 - v2) / v1 > 1e-6 ) {
         std::cout << "Vectors dont match: B" << b << " I" << i << " " << v1 << " " << v2 << "\n";
-        areEqual = false;
+        equal = false;
       }
     }    
   }
-  if(areEqual)
-    std::cout << "Vectors are equal!\n";
 
-  delete V;
+  if(equal) {
+    std::cout << "Vectors are equal!\n";
+  }
+  
+
+  delete V_mem;
+  //delete K_mem;
 }

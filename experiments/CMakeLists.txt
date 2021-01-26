@@ -1,0 +1,4 @@
+
+add_subdirectory(matrix_dim_print)
+add_subdirectory(matrix_equal)
+add_subdirectory(matrix_vector_product)

@@ -1,0 +1,5 @@
+
+add_executable(matrix_vector_product matrix_vector_product.cpp)
+
+target_include_directories(matrix_vector_product PUBLIC ${besthea_INCLUDE_DIRS})
+target_link_libraries(matrix_vector_product PUBLIC besthea)
