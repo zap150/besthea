@@ -100,8 +100,8 @@ int main( int argc, char * argv[] ) {
   // create matrix assembler
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
   //spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
-  block_lower_triangular_toeplitz_matrix * V_mem = new block_lower_triangular_toeplitz_matrix( );
-  //block_lower_triangular_toeplitz_matrix * K_mem = new block_lower_triangular_toeplitz_matrix( );
+  block_lower_triangular_toeplitz_matrix V_mem;
+  //block_lower_triangular_toeplitz_matrix K_mem;
   uniform_spacetime_be_onthefly_matrix_cpu V_fly(kernel_v, space_p0, space_p0, order_sing, order_reg);
   //uniform_spacetime_be_onthefly_matrix_cpu K_fly(kernel_k, space_p0, space_p1, order_sing, order_reg);
   uniform_spacetime_be_assembler assembler_v(kernel_v, space_p0, space_p0, order_sing, order_reg );
@@ -110,15 +110,15 @@ int main( int argc, char * argv[] ) {
 
 
   t.reset( "InMemory V" );
-  assembler_v.assemble( *V_mem );
+  assembler_v.assemble( V_mem );
   t.measure( );
 
   t.reset( "OnTheFly V" );
   bool equal = true;
-  for (lo d = 0; d < V_mem->get_block_dim(); d++) {
-    for (lo c = 0; c < V_mem->get_n_columns(); c++) {
-      for (lo r = 0; r < V_mem->get_n_rows(); r++) {
-        sc val_mem = V_mem->get(d, r, c);
+  for (lo d = 0; d < V_mem.get_block_dim(); d++) {
+    for (lo c = 0; c < V_mem.get_n_columns(); c++) {
+      for (lo r = 0; r < V_mem.get_n_rows(); r++) {
+        sc val_mem = V_mem.get(d, r, c);
         sc val_fly = V_fly.get(d, r, c);
         if(std::abs((val_mem - val_fly) / val_mem) > 1e-6) {
           std::cout << "Matrices do not match, D" << d << " R" << r << " C" << c << " MEM" << val_mem << " FLY" << val_fly << "\n";
@@ -134,6 +134,6 @@ int main( int argc, char * argv[] ) {
   }
   
 
-  delete V_mem;
-  //delete K_mem;
+
+  return 0;
 }
