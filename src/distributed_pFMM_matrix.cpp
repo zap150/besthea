@@ -210,8 +210,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         }
         // check if data has been received since the last iteration
         if ( outcount != MPI_UNDEFINED ) {
-          check_for_received_data( array_of_requests, array_of_indices,
-            outcount, verbose, verbose_file );
+          check_for_received_data(
+            array_of_requests, array_of_indices, outcount );
         }
 
         // we have to do this here to spawn tasks with correct dependencies
@@ -1424,11 +1424,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // path
   if ( parent_cluster->is_active_in_upward_path( ) ) {
     if ( verbose ) {
-      std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
-      if ( outfile.is_open( ) ) {
-        outfile << "call M2M for cluster " << time_cluster->get_global_index( )
-                << std::endl;
-        outfile.close( );
+#pragma omp critical( verbose )
+      {
+        std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
+        if ( outfile.is_open( ) ) {
+          outfile << "call M2M for cluster "
+                  << time_cluster->get_global_index( ) << std::endl;
+          outfile.close( );
+        }
       }
     }
     slou configuration = time_cluster->get_configuration( );
@@ -1685,12 +1688,15 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   scheduling_time_cluster * tar_cluster, bool verbose,
   const std::string & verbose_file ) const {
   if ( verbose ) {
-    std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
-    if ( outfile.is_open( ) ) {
-      outfile << "call M2L for source " << src_cluster->get_global_index( )
-              << " and target " << tar_cluster->get_global_index( )
-              << std::endl;
-      outfile.close( );
+#pragma omp critical( verbose )
+    {
+      std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
+      if ( outfile.is_open( ) ) {
+        outfile << "call M2L for source " << src_cluster->get_global_index( )
+                << " and target " << tar_cluster->get_global_index( )
+                << std::endl;
+        outfile.close( );
+      }
     }
   }
 
@@ -1892,11 +1898,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // m2m operations are only executed if the parent is active in the upward
   // path
   if ( verbose ) {
-    std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
-    if ( outfile.is_open( ) ) {
-      outfile << "call L2L for cluster " << time_cluster->get_global_index( )
-              << std::endl;
-      outfile.close( );
+#pragma omp critical( verbose )
+    {
+      std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
+      if ( outfile.is_open( ) ) {
+        outfile << "call L2L for cluster " << time_cluster->get_global_index( )
+                << std::endl;
+        outfile.close( );
+      }
     }
   }
   slou configuration = time_cluster->get_configuration( );
@@ -2181,11 +2190,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // execute only for associated spacetime leaves
   if ( time_cluster->get_n_associated_leaves( ) > 0 ) {
     if ( verbose ) {
-      std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
-      if ( outfile.is_open( ) ) {
-        outfile << "call L2T for cluster " << time_cluster->get_global_index( )
-                << std::endl;
-        outfile.close( );
+#pragma omp critical( verbose )
+      {
+        std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
+        if ( outfile.is_open( ) ) {
+          outfile << "call L2T for cluster "
+                  << time_cluster->get_global_index( ) << std::endl;
+          outfile.close( );
+        }
       }
     }
     std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
@@ -2427,8 +2439,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space,
   source_space >::check_for_received_data( std::vector< MPI_Request > &
                                              array_of_requests,
-  std::vector< int > & array_of_indices, int & outcount, bool verbose,
-  const std::string & verbose_file ) const {
+  std::vector< int > & array_of_indices, int & outcount ) const {
   MPI_Testsome( _receive_data_information.size( ), array_of_requests.data( ),
     &outcount, array_of_indices.data( ), MPI_STATUSES_IGNORE );
 }
@@ -2500,12 +2511,15 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         ( *it )->update_ready_interaction_size( );
       } else if ( process_send_list.count( tar_process_id ) == 0 ) {
         if ( verbose ) {
-          std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
-          if ( outfile.is_open( ) ) {
-            outfile << "send for m2l: data from source "
-                    << src_cluster->get_global_index( ) << " to process "
-                    << tar_process_id << std::endl;
-            outfile.close( );
+#pragma omp critical( verbose )
+          {
+            std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
+            if ( outfile.is_open( ) ) {
+              outfile << "send for m2l: data from source "
+                      << src_cluster->get_global_index( ) << " to process "
+                      << tar_process_id << std::endl;
+              outfile.close( );
+            }
           }
         }
         lo tag = 2 * src_cluster->get_global_index( );
@@ -2539,12 +2553,15 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       parent_cluster->reduce_upward_path_counter( );
     } else if ( parent_process_id != -1 ) {
       if ( verbose ) {
-        std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
-        if ( outfile.is_open( ) ) {
-          outfile << "send upward: from source "
-                  << child_cluster->get_global_index( ) << " to process "
-                  << parent_process_id << std::endl;
-          outfile.close( );
+#pragma omp critical( verbose )
+        {
+          std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
+          if ( outfile.is_open( ) ) {
+            outfile << "send upward: from source "
+                    << child_cluster->get_global_index( ) << " to process "
+                    << parent_process_id << std::endl;
+            outfile.close( );
+          }
         }
       }
       lo tag = 2 * parent_cluster->get_global_index( );
@@ -2573,12 +2590,15 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       lo child_process_id = child->get_process_id( );
       if ( child_process_id != _my_rank ) {
         if ( verbose ) {
-          std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
-          if ( outfile.is_open( ) ) {
-            outfile << "send downward: from source "
-                    << parent_cluster->get_global_index( ) << " to process "
-                    << child_process_id << std::endl;
-            outfile.close( );
+#pragma omp critical( verbose )
+          {
+            std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
+            if ( outfile.is_open( ) ) {
+              outfile << "send downward: from source "
+                      << parent_cluster->get_global_index( ) << " to process "
+                      << child_process_id << std::endl;
+              outfile.close( );
+            }
           }
         }
         lo tag = 2 * parent_cluster->get_global_index( ) + 1;
@@ -3483,7 +3503,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   std::list< mesh::scheduling_time_cluster * > n_list = _n_list;
 
   // @todo: add appropriate verbose mode if desired
-  bool verbose = false;
+  bool verbose = true;
   // std::string verbose_file = verbose_dir + "/process_";
   std::string verbose_file = "verbose/process_";
   verbose_file += std::to_string( _my_rank );
@@ -3550,8 +3570,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         }
         // check if data has been received since the last iteration
         if ( outcount != MPI_UNDEFINED ) {
-          check_for_received_data( array_of_requests, array_of_indices,
-            outcount, verbose, verbose_file );
+          check_for_received_data(
+            array_of_requests, array_of_indices, outcount );
         }
 
         // we have to do this here to spawn tasks with correct dependencies
@@ -3561,14 +3581,17 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             scheduling_time_cluster * current_cluster
               = _receive_data_information[ current_index ].first;
             if ( verbose ) {
-              std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
-              if ( outfile.is_open( ) ) {
-                outfile << "received data of cluster "
-                        << current_cluster->get_global_index( )
-                        << " from process "
-                        << _receive_data_information[ current_index ].second
-                        << std::endl;
-                outfile.close( );
+#pragma omp critical( verbose )
+              {
+                std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
+                if ( outfile.is_open( ) ) {
+                  outfile << "received data of cluster "
+                          << current_cluster->get_global_index( )
+                          << " from process "
+                          << _receive_data_information[ current_index ].second
+                          << std::endl;
+                  outfile.close( );
+                }
               }
             }
             // distinguish which data has been received
@@ -3635,28 +3658,31 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
         // if verbose mode is chosen, write info about next operation to file
         if ( verbose && status != 0 ) {
-          std::stringstream outss;
-          outss << "executing ";
-          switch ( status ) {
-            case 1:
-              outss << "m-list operations ";
-              break;
-            case 2:
-              outss << "l-list operations ";
-              break;
-            case 3:
-              outss << "m2l-list operations ";
-              break;
-            case 4:
-              outss << "n-list operations ";
-              break;
-          }
-          outss << "for cluster "
-                << ( *it_current_cluster )->get_global_index( );
-          std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
-          if ( outfile.is_open( ) ) {
-            outfile << outss.str( ) << std::endl;
-            outfile.close( );
+#pragma omp critical( verbose )
+          {
+            std::stringstream outss;
+            outss << "executing ";
+            switch ( status ) {
+              case 1:
+                outss << "m-list operations ";
+                break;
+              case 2:
+                outss << "l-list operations ";
+                break;
+              case 3:
+                outss << "m2l-list operations ";
+                break;
+              case 4:
+                outss << "n-list operations ";
+                break;
+            }
+            outss << "for cluster "
+                  << ( *it_current_cluster )->get_global_index( );
+            std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
+            if ( outfile.is_open( ) ) {
+              outfile << outss.str( ) << std::endl;
+              outfile.close( );
+            }
           }
         }
 
@@ -3802,13 +3828,17 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             break;
           }
         }
-        if ( verbose ) {
-          std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
-          if ( outfile.is_open( ) ) {
-            outfile << std::endl;
-            outfile.close( );
-          }
-        }
+        // @todo: is the following output of a new line useful at all?
+        //         if ( verbose ) {
+        // #pragma omp critical( verbose )
+        //           {
+        //             std::ofstream outfile( verbose_file.c_str( ),
+        //             std::ios::app ); if ( outfile.is_open( ) ) {
+        //               outfile << std::endl;
+        //               outfile.close( );
+        //             }
+        //           }
+        //         }
       }
     }
   }
@@ -3875,11 +3905,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // execute only for associated spacetime leaves
   if ( time_cluster->get_n_associated_leaves( ) > 0 ) {
     if ( verbose ) {
-      std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
-      if ( outfile.is_open( ) ) {
-        outfile << "call S2M for cluster " << time_cluster->get_global_index( )
-                << std::endl;
-        outfile.close( );
+#pragma omp critical( verbose )
+      {
+        std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
+        if ( outfile.is_open( ) ) {
+          outfile << "call S2M for cluster "
+                  << time_cluster->get_global_index( ) << std::endl;
+          outfile.close( );
+        }
       }
     }
     std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
@@ -4280,10 +4313,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     distributed_block_vector & output_vector, bool verbose,
     const std::string & verbose_file ) const {
   if ( verbose ) {
-    std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
-    if ( outfile.is_open( ) ) {
-      outfile << "apply NF for cluster " << cluster->get_global_index( );
-      outfile.close( );
+#pragma omp critical( verbose )
+    {
+      std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
+      if ( outfile.is_open( ) ) {
+        outfile << "apply NF for cluster " << cluster->get_global_index( )
+                << std::endl;
+        outfile.close( );
+      }
     }
   }
   vector_type local_sources;
