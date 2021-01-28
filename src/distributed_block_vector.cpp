@@ -201,7 +201,7 @@ void besthea::linear_algebra::distributed_block_vector::communicate_owners(
 
   int * offsets = new int[ comm_size ];
   offsets[ 0 ] = 0;
-  for ( lo i = 0; i < comm_size; ++i ) {
+  for ( lo i = 1; i < comm_size; ++i ) {
     offsets[ i ] = offsets[ i - 1 ] + n_blocks_per_rank[ i - 1 ];
   }
 
@@ -388,7 +388,7 @@ void besthea::linear_algebra::distributed_block_vector::copy_to_vector(
   }
 }
 
-void besthea::linear_algebra::distributed_block_vector::send_block(
+void besthea::linear_algebra::distributed_block_vector::communicate_block(
   lo block_idx, int rank, vector_type & data ) const {
   int primary_owner = get_primary_owner( block_idx );
   if ( primary_owner == _rank ) {

@@ -178,7 +178,7 @@ class besthea::linear_algebra::distributed_block_vector {
   void resize( lo block_size );
 
   /**
-   * Resizes the block vector.
+   * Resizes the block vector, resets the owners.
    * @param[in] my_blocks Vector of blocks owned by the current process.
    * @param[in] block_size New size.
    */
@@ -451,7 +451,7 @@ class besthea::linear_algebra::distributed_block_vector {
    * @param[in] rank MPI rank of receiver.
    * @param[out] data Vector to store the received data.
    */
-  void send_block( lo block_idx, int rank, vector_type & data ) const;
+  void communicate_block( lo block_idx, int rank, vector_type & data ) const;
 
   void print( std::ostream & stream = std::cout ) const;
 
