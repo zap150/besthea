@@ -742,8 +742,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                          file.
    */
   void apply_nearfield_operations(
-    const mesh::scheduling_time_cluster * cluster, const distributed_block_vector & sources,
-    bool trans, distributed_block_vector & output_vector, bool verbose,
+    const mesh::scheduling_time_cluster * cluster,
+    const distributed_block_vector & sources, bool trans,
+    distributed_block_vector & output_vector, bool verbose,
     const std::string & verbose_file ) const;
 
   /**
@@ -755,16 +756,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                                  used as an input variable to avoid
    *                                  reallocation in each function call.
    * @param[in,out] outcount  Stores the number of Requests which are completed.
-   * @param[in] verbose If true, the process lists all the received data, and
-   *                    reports about the time needed to process it (in case
-   *                    moments in the upward path were received)
-   * @param[in] verbose_file  If @p verbose is true, this is used as output
-   *                          file.
    */
   void check_for_received_data( std::vector< MPI_Request > & array_of_requests,
-    std::vector< int > & array_of_indices, int & outcount,
-    [[maybe_unused]] bool verbose,
-    [[maybe_unused]] const std::string & verbose_file ) const;
+    std::vector< int > & array_of_indices, int & outcount ) const;
 
   /**
    * Returns an iterator pointing to the next cluster in the l-list whose
