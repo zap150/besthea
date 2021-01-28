@@ -43,6 +43,11 @@ private:
 
     std::array< std::vector< sc, besthea::allocator_type< sc > >, 4 >
       _w;  //!< Quadrature weights including transformation Jacobians
+
+    std::array< lo, 4>
+      _sizes; //!< Sizes
+    
+    lo _max_size; //!< Maximum size
   };
 
   struct quadrature_wrapper_changing {
@@ -76,7 +81,6 @@ private:
       _kernel_values_2.resize( size );
     }
   };
-  lo quadr_size;
 
 public:
   using matrix_type = besthea::linear_algebra::full_matrix;  //!< Matrix type.
@@ -95,10 +99,6 @@ public:
     = delete;
   
   virtual ~uniform_spacetime_be_onthefly_matrix_cpu( );
-
-
-  sc get( lo d, lo i, lo j ) const ; // do not use for production, only for correctness testing
-  sc get( lo d, lo i, lo j, quadrature_wrapper_changing & quadr_changing ) const ;
 
   virtual void apply( const block_vector_type & x, block_vector_type & y,
    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
@@ -130,6 +130,10 @@ private:
     int rot_trial, quadrature_wrapper_changing & quadr_changing) const ;
 
   void get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special = false) const ;
+  void get_values_delta0special(sc * values_out,           lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const;
+  void get_values_delta0       (sc * values_out,           lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const;
+  void get_values_regular      (sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const;
+  void get_values_singular     (sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const;
   
   void hypercube_to_triangles( sc ksi, sc eta1, sc eta2, sc eta3,
     int n_shared_vertices, int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref,

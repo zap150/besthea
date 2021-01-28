@@ -129,17 +129,17 @@ int main( int argc, char * argv[] ) {
 
 
 
-  std::cout << "\n";
-  for (lo d = 0; d < K_mem.get_block_dim(); d++) {
-    std::cout << "Block " << d << ":\n";
-    for (lo r = 0; r < K_mem.get_n_rows(); r++) {
-      for (lo c = 0; c < K_mem.get_n_columns(); c++) {
-        std::cout << K_mem.get(d, r, c) << " ";
-      }
-      std::cout << "\n";
-    }
-    std::cout << "\n";
-  }
+  // std::cout << "\n";
+  // for (lo d = 0; d < K_mem.get_block_dim(); d++) {
+  //   std::cout << "Block " << d << ":\n";
+  //   for (lo r = 0; r < K_mem.get_n_rows(); r++) {
+  //     for (lo c = 0; c < K_mem.get_n_columns(); c++) {
+  //       std::cout << K_mem.get(d, r, c) << " ";
+  //     }
+  //     std::cout << "\n";
+  //   }
+  //   std::cout << "\n";
+  // }
   
 
 

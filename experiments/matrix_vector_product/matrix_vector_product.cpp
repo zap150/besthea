@@ -55,7 +55,7 @@ int main( int argc, char * argv[] ) {
 
   // default values
   file = "../examples/mesh_files/cube_12.txt";
-  int refine = 1;
+  int refine = 2;
   lo n_timesteps = 8;
   sc end_time = 1.0;
 
@@ -99,41 +99,98 @@ int main( int argc, char * argv[] ) {
 
   // create matrix assembler
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
-  //spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
+  spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
   block_lower_triangular_toeplitz_matrix V_mem;
-  //block_lower_triangular_toeplitz_matrix K_mem;
+  block_lower_triangular_toeplitz_matrix K_mem;
   uniform_spacetime_be_onthefly_matrix_cpu V_fly(kernel_v, space_p0, space_p0, order_sing, order_reg);
-  //uniform_spacetime_be_onthefly_matrix_cpu K_fly(kernel_k, space_p0, space_p1, order_sing, order_reg);
+  uniform_spacetime_be_onthefly_matrix_cpu K_fly(kernel_k, space_p0, space_p1, order_sing, order_reg);
   uniform_spacetime_be_assembler assembler_v(kernel_v, space_p0, space_p0, order_sing, order_reg );
-  //uniform_spacetime_be_assembler assembler_k(kernel_k, space_p0, space_p1, order_sing, order_reg );
+  uniform_spacetime_be_assembler assembler_k(kernel_k, space_p0, space_p1, order_sing, order_reg );
 
+  block_vector xV (n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
+  block_vector yVm(n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
+  block_vector yVf(n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
+  for (lo b = 0; b < n_timesteps; b++) {
+    for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
+      xV.set(b, i, (1000.0 * rand()) / RAND_MAX);
+    }
+    for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
+      yVm.set(b, i, 2);
+      yVf.set(b, i, 2);
+    }    
+  }
+  block_vector xK (n_timesteps, spacetime_mesh.get_n_spatial_nodes(), false);
+  block_vector yKm(n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
+  block_vector yKf(n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
+  for (lo b = 0; b < n_timesteps; b++) {
+    for (lo i = 0; i < spacetime_mesh.get_n_spatial_nodes(); i++) {
+      xK.set(b, i, (1000.0 * rand()) / RAND_MAX);
+    }
+    for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
+      yKm.set(b, i, 2);
+      yKf.set(b, i, 2);
+    }    
+  }
+
+  sc alpha = 3;
+  sc beta = 5;
+
+  
 
 
   t.reset( "InMemory V" );
   assembler_v.assemble( V_mem );
+  V_mem.apply(xV, yVm, false, alpha, beta);
   t.measure( );
 
   t.reset( "OnTheFly V" );
-  bool equal = true;
-  for (lo d = 0; d < V_mem.get_block_dim(); d++) {
-    for (lo c = 0; c < V_mem.get_n_columns(); c++) {
-      for (lo r = 0; r < V_mem.get_n_rows(); r++) {
-        sc val_mem = V_mem.get(d, r, c);
-        sc val_fly = V_fly.get(d, r, c);
-        if(std::abs((val_mem - val_fly) / val_mem) > 1e-6) {
-          std::cout << "Matrices do not match, D" << d << " R" << r << " C" << c << " MEM" << val_mem << " FLY" << val_fly << "\n";
-          equal = false;
-        }
+  V_fly.apply(xV, yVf, false, alpha, beta);
+  t.measure();
+
+
+  t.reset( "InMemory K" );
+  assembler_k.assemble( K_mem );
+  K_mem.apply(xK, yKm, false, alpha, beta);
+  t.measure( );
+
+  t.reset( "OnTheFly K" );
+  K_fly.apply(xK, yKf, false, alpha, beta);
+  t.measure();
+  
+
+
+
+  bool equalV = true;
+  bool equalK = true;
+  for (lo b = 0; b < n_timesteps; b++) {
+    for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
+      sc vm = yVm.get(b, i);
+      sc vf = yVf.get(b, i);
+      if( std::abs((vm - vf) / vm) > 1e-6 ) {
+        std::cout << "Vectors V dont match: B" << b << " I" << i << " " << vm << " " << vf << "\n";
+        equalV = false;
       }
     }
   }
-  t.measure();
+  for (lo b = 0; b < n_timesteps; b++) {
+    for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
+      sc vm = yKm.get(b, i);
+      sc vf = yKf.get(b, i);
+      if( std::abs((vm - vf) / vm) > 1e-6 ) {
+        std::cout << "Vectors K dont match: B" << b << " I" << i << " " << vm << " " << vf << "\n";
+        equalK = false;
+      }
+    }    
+  }
 
-  if(equal) {
-    std::cout << "Matrices are equal!\n";
+  if(equalV) {
+    std::cout << "Vectors V are equal!\n";
+  }
+  if(equalK) {
+    std::cout << "Vectors K are equal!\n";
   }
   
-
+  
 
   return 0;
 }
