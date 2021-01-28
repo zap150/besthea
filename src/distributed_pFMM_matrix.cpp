@@ -251,7 +251,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                       ++it ) {
                   lo tar_process_id = ( *it )->get_process_id( );
                   if ( tar_process_id == _my_rank ) {
-                    lo idx_receiver = ( *it )->get_pos_in_m_list( );
+                    lo idx_receiver = ( *it )->get_pos_in_m2l_list( );
                     // task depends on previously generated m2l-list task to
                     // avoid collision when adding to ready interaction list
 #pragma omp task depend( inout                                 \
@@ -263,10 +263,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               }
             } else {
               // received data are local contributions. update dependencies.
-              lo idx_l = current_cluster->get_pos_in_l_list( );
-              // task depends on previously generated l-list tasks to prevent
-              // collision in updating status
-#pragma omp task depend( inout : aux_dep_l [idx_l:1] ) priority( 1000 )
+#pragma omp task priority( 1000 )
               current_cluster->set_downward_path_status( 2 );
             }
           }
@@ -354,7 +351,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                   break;
                 }
                 case 1: {
-                  lo idx_receiver_1 = send_list->at( 0 )->get_pos_in_m_list( );
+                  lo idx_receiver_1
+                    = send_list->at( 0 )->get_pos_in_m2l_list( );
 #pragma omp task depend( inout                                               \
                          : aux_dep_m [idx_m_parent:1], aux_dep_m [idx_m:1] ) \
   depend( inout                                                              \
@@ -363,8 +361,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                   break;
                 }
                 case 2: {
-                  lo idx_receiver_1 = send_list->at( 0 )->get_pos_in_m_list( );
-                  lo idx_receiver_2 = send_list->at( 1 )->get_pos_in_m_list( );
+                  lo idx_receiver_1
+                    = send_list->at( 0 )->get_pos_in_m2l_list( );
+                  lo idx_receiver_2
+                    = send_list->at( 1 )->get_pos_in_m2l_list( );
 
 #pragma omp task depend( inout                                               \
                          : aux_dep_m [idx_m_parent:1], aux_dep_m [idx_m:1] ) \
@@ -388,7 +388,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                   break;
                 }
                 case 1: {
-                  lo idx_receiver_1 = send_list->at( 0 )->get_pos_in_m_list( );
+                  lo idx_receiver_1
+                    = send_list->at( 0 )->get_pos_in_m2l_list( );
 #pragma omp task depend( \
   inout                  \
   : aux_dep_m2l_send [idx_receiver_1:1], aux_dep_m [idx_m:1] ) priority( 500 )
@@ -396,8 +397,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                   break;
                 }
                 case 2: {
-                  lo idx_receiver_1 = send_list->at( 0 )->get_pos_in_m_list( );
-                  lo idx_receiver_2 = send_list->at( 1 )->get_pos_in_m_list( );
+                  lo idx_receiver_1
+                    = send_list->at( 0 )->get_pos_in_m2l_list( );
+                  lo idx_receiver_2
+                    = send_list->at( 1 )->get_pos_in_m2l_list( );
 
 #pragma omp task depend(                                       \
   inout                                                        \
@@ -438,15 +441,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               // cluster is not in the L-list, have to depend only on the
               // previously generated tasks processing the same cluster in the
               // m2l list
-#pragma omp task depend( inout : aux_dep_m2l [idx_m2l:1] ) priority( 300 )
+#pragma omp task priority( 300 )
               m2l_list_task( y_pFMM, current_cluster, verbose, verbose_file );
             } else {
               // cluster depends additionally on the previously generated task
               // with the same position in the L-list
-#pragma omp task depend( inout                       \
-                         : aux_dep_m2l [idx_m2l:1] ) \
-  depend( inout                                      \
-          : aux_dep_l [idx_l:1] ) priority( 300 )
+#pragma omp task depend( inout : aux_dep_l [idx_l:1] ) priority( 300 )
               m2l_list_task( y_pFMM, current_cluster, verbose, verbose_file );
             }
             break;
@@ -1229,6 +1229,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
     std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
       = time_cluster->get_associated_spacetime_clusters( );
+    // there is an implicit taskgroup after this taskloop
 #pragma omp taskloop shared( sources )
     for ( lou i = 0; i < time_cluster->get_n_associated_leaves( ); ++i ) {
       general_spacetime_cluster * current_cluster
@@ -1439,6 +1440,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     // call the m2m operations for all non-leaf spacetime clusters which are
     // associated with the parent scheduling time cluster
 
+    // there is an implicit taskgroup after this taskloop
 #pragma omp taskloop
     for ( lou i = n_associated_leaves;
           i < associated_spacetime_clusters->size( ); ++i ) {
@@ -1701,6 +1703,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   std::vector< general_spacetime_cluster * > * associated_spacetime_targets
     = tar_cluster->get_associated_spacetime_clusters( );
+  // there is an implicit taskgroup after this taskloop
 #pragma omp taskloop
   for ( lou i = 0; i < associated_spacetime_targets->size( ); ++i ) {
     //      for ( auto spacetime_tar : *associated_spacetime_targets ) {
@@ -1903,8 +1906,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
     = parent_cluster->get_associated_spacetime_clusters( );
   lou n_associated_leaves = parent_cluster->get_n_associated_leaves( );
-// call the l2l operations for all non-leaf spacetime clusters which are
-// associated with the parent scheduling time cluster
+  // call the l2l operations for all non-leaf spacetime clusters which are
+  // associated with the parent scheduling time cluster
+  // there is an implicit taskgroup after this taskloop
 #pragma omp taskloop
   for ( lou i = n_associated_leaves; i < associated_spacetime_clusters->size( );
         ++i ) {
@@ -2163,6 +2167,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       = time_cluster->get_associated_spacetime_clusters( );
     lou i;
     lou n = time_cluster->get_n_associated_leaves( );
+    // there is an implicit taskgroup after this taskloop
 #pragma omp taskloop shared( output_vector, associated_spacetime_clusters )
     for ( i = 0; i < n; ++i ) {
       apply_l2t_operation(
@@ -2192,6 +2197,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       = time_cluster->get_associated_spacetime_clusters( );
     lou i;
     lou n = time_cluster->get_n_associated_leaves( );
+    // there is an implicit taskgroup after this taskloop
 #pragma omp taskloop shared( output_vector, associated_spacetime_clusters )
     for ( i = 0; i < n; ++i ) {
       apply_l2t_operation(
@@ -2390,6 +2396,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     associated_spacetime_targets
     = cluster->get_associated_spacetime_clusters( );
   lou n_associated_leaves = cluster->get_n_associated_leaves( );
+  // there is an implicit taskgroup after this taskloop
 #pragma omp taskloop shared( output_vector, _clusterwise_nearfield_matrices )
   for ( lou i = 0; i < n_associated_leaves; ++i ) {
     general_spacetime_cluster * current_spacetime_target
@@ -2473,8 +2480,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     std::list< mesh::scheduling_time_cluster * >::iterator & it_next_cluster,
     char & status ) const {
   it_next_cluster = m2l_list.begin( );
-  // a cluster is ready if there is a non-completed interaction ready, i.e.
-  // if the size of ready_interaction_list is greater than m2l_counter.
+  // a cluster is ready if number of ready interactions is equal to size of
+  // interaction list
   while ( status != 3 && it_next_cluster != m2l_list.end( ) ) {
     if ( ( *it_next_cluster )->get_ready_interaction_list_size( )
       == ( *it_next_cluster )->get_interaction_list( )->size( ) )
@@ -3591,7 +3598,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                       ++it ) {
                   lo tar_process_id = ( *it )->get_process_id( );
                   if ( tar_process_id == _my_rank ) {
-                    lo idx_receiver = ( *it )->get_pos_in_m_list( );
+                    // lo idx_receiver = ( *it )->get_pos_in_m_list( );
+                    lo idx_receiver = ( *it )->get_pos_in_m2l_list( );
                     // task depends on previously generated m2l-list task to
                     // avoid collision when adding to ready interaction list
 #pragma omp task depend( inout                                 \
@@ -3603,10 +3611,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               }
             } else {
               // received data are local contributions. update dependencies.
-              lo idx_l = current_cluster->get_pos_in_l_list( );
-              // task depends on previously generated l-list tasks to prevent
-              // collision in updating status
-#pragma omp task depend( inout : aux_dep_l [idx_l:1] ) priority( 1000 )
+#pragma omp task priority( 1000 )
               current_cluster->set_downward_path_status( 2 );
             }
           }
@@ -3694,7 +3699,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                   break;
                 }
                 case 1: {
-                  lo idx_receiver_1 = send_list->at( 0 )->get_pos_in_m_list( );
+                  // lo idx_receiver_1 = send_list->at( 0 )->get_pos_in_m_list(
+                  // );
+                  lo idx_receiver_1
+                    = send_list->at( 0 )->get_pos_in_m2l_list( );
 #pragma omp task depend( inout                                               \
                          : aux_dep_m [idx_m_parent:1], aux_dep_m [idx_m:1] ) \
   depend( inout                                                              \
@@ -3703,8 +3711,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                   break;
                 }
                 case 2: {
-                  lo idx_receiver_1 = send_list->at( 0 )->get_pos_in_m_list( );
-                  lo idx_receiver_2 = send_list->at( 1 )->get_pos_in_m_list( );
+                  // lo idx_receiver_1 = send_list->at( 0 )->get_pos_in_m_list(
+                  // );
+                  // lo idx_receiver_2
+                  //= send_list->at( 1 )->get_pos_in_m_list( );
+                  lo idx_receiver_1
+                    = send_list->at( 0 )->get_pos_in_m2l_list( );
+                  lo idx_receiver_2
+                    = send_list->at( 1 )->get_pos_in_m2l_list( );
 
 #pragma omp task depend( inout                                               \
                          : aux_dep_m [idx_m_parent:1], aux_dep_m [idx_m:1] ) \
@@ -3728,7 +3742,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                   break;
                 }
                 case 1: {
-                  lo idx_receiver_1 = send_list->at( 0 )->get_pos_in_m_list( );
+                  // lo idx_receiver_1 = send_list->at( 0 )->get_pos_in_m_list(
+                  // );
+                  lo idx_receiver_1
+                    = send_list->at( 0 )->get_pos_in_m2l_list( );
+
 #pragma omp task depend( \
   inout                  \
   : aux_dep_m2l_send [idx_receiver_1:1], aux_dep_m [idx_m:1] ) priority( 500 )
@@ -3736,8 +3754,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                   break;
                 }
                 case 2: {
-                  lo idx_receiver_1 = send_list->at( 0 )->get_pos_in_m_list( );
-                  lo idx_receiver_2 = send_list->at( 1 )->get_pos_in_m_list( );
+                  // lo idx_receiver_1 = send_list->at( 0 )->get_pos_in_m_list(
+                  // ); lo idx_receiver_2 = send_list->at( 1
+                  // )->get_pos_in_m_list( );
+                  lo idx_receiver_1
+                    = send_list->at( 0 )->get_pos_in_m2l_list( );
+                  lo idx_receiver_2
+                    = send_list->at( 1 )->get_pos_in_m2l_list( );
 
 #pragma omp task depend(                                       \
   inout                                                        \
@@ -3778,15 +3801,19 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               // cluster is not in the L-list, have to depend only on the
               // previously generated tasks processing the same cluster in the
               // m2l list
-#pragma omp task depend( inout : aux_dep_m2l [idx_m2l:1] ) priority( 300 )
+// #pragma omp task depend( inout : aux_dep_m2l [idx_m2l:1] ) priority( 300 )
+//               m2l_list_task( y_pFMM, current_cluster, verbose, verbose_file
+//               );
+#pragma omp task priority( 300 )
               m2l_list_task( y_pFMM, current_cluster, verbose, verbose_file );
             } else {
-              // cluster depends additionally on the previously generated task
-              // with the same position in the L-list
-#pragma omp task depend( inout                       \
-                         : aux_dep_m2l [idx_m2l:1] ) \
-  depend( inout                                      \
-          : aux_dep_l [idx_l:1] ) priority( 300 )
+// cluster depends additionally on the previously generated task
+// with the same position in the L-list
+// #pragma omp task depend( inout                       \
+//                          : aux_dep_m2l [idx_m2l:1] ) \
+//   depend( inout                                      \
+//           : aux_dep_l [idx_l:1] ) priority( 300 )
+#pragma omp task depend( inout : aux_dep_l [idx_l:1] ) priority( 300 )
               m2l_list_task( y_pFMM, current_cluster, verbose, verbose_file );
             }
             break;
@@ -3812,22 +3839,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       }
     }
   }
-  //############################################################################
-  //### communicate the result with an Allreduce operation for each timestep ###
-  // @todo: Can we do this in a less cumbersome way?! Is a global reduction even
-  // necessary?
-  // for ( lo block_idx = 0; block_idx < y_pFMM.get_block_size( ); ++block_idx )
-  // {
-  //   MPI_Allreduce( MPI_IN_PLACE, y_pFMM.get_block( block_idx ).data( ),
-  //     y_pFMM.get_size_of_block( ), get_scalar_type< sc >::MPI_SC( ), MPI_SUM,
-  //     *_comm );
-  // }
-  // Scale the global update y_pFMM by alpha and add it to the global vector y.
+
   y.add( y_pFMM, alpha );
 
-  // if ( _my_rank == 0 ) {
-  //   std::cout << "application executed" << std::endl;
-  // }
   MPI_Barrier( y.get_comm( ) );
   y.synchronize_shared_parts( );
 
@@ -3884,6 +3898,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
     std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
       = time_cluster->get_associated_spacetime_clusters( );
+    // there is an implicit taskgroup after this taskloop
 #pragma omp taskloop shared( sources )
     for ( lou i = 0; i < time_cluster->get_n_associated_leaves( ); ++i ) {
       general_spacetime_cluster * current_cluster
@@ -4291,6 +4306,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     associated_spacetime_targets
     = cluster->get_associated_spacetime_clusters( );
   lou n_associated_leaves = cluster->get_n_associated_leaves( );
+  // there is an implicit taskgroup after this taskloop
 #pragma omp taskloop shared( output_vector, _clusterwise_nearfield_matrices )
   for ( lou i = 0; i < n_associated_leaves; ++i ) {
     general_spacetime_cluster * current_spacetime_target
