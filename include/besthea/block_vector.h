@@ -202,6 +202,13 @@ class besthea::linear_algebra::block_vector {
    */
   void copy( const block_vector & that );
 
+  /**
+   * Copies data from another block vector, while switching/permuting outer and inner block dimensions and rearranging the data.
+   * @param[in] that Vector to be copied.
+   * @param[in] alpha Scaling factor.
+   */
+  void copy_permute_dims( const block_vector & that, sc alpha = 1 );
+
   /*!
    * @brief Copies data from a raw vector.
    * @param[in] block_size Number of blocks.

@@ -749,8 +749,9 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<
   lo blocks = _block_dim;
 
 
-
   y.scale(beta);
+
+  block_vector_type y_rearr;
 
 #pragma omp parallel
   {
