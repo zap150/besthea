@@ -1430,7 +1430,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
         if ( outfile.is_open( ) ) {
           outfile << "call M2M for cluster "
-                  << time_cluster->get_global_index( ) << std::endl;
+                  << time_cluster->get_global_index( ) << " at level "
+                  << time_cluster->get_level( ) << std::endl;
           outfile.close( );
         }
       }
@@ -1696,7 +1697,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       if ( outfile.is_open( ) ) {
         outfile << "call M2L for source " << src_cluster->get_global_index( )
                 << " and target " << tar_cluster->get_global_index( )
-                << std::endl;
+                << " at level " << src_cluster->get_level( ) << std::endl;
         outfile.close( );
       }
     }
@@ -1906,7 +1907,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
       if ( outfile.is_open( ) ) {
         outfile << "call L2L for cluster " << time_cluster->get_global_index( )
-                << std::endl;
+                << " at level " << time_cluster->get_level( ) << std::endl;
         outfile.close( );
       }
     }
@@ -2200,7 +2201,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
         if ( outfile.is_open( ) ) {
           outfile << "call L2T for cluster "
-                  << time_cluster->get_global_index( ) << std::endl;
+                  << time_cluster->get_global_index( ) << " at level "
+                  << time_cluster->get_level( ) << std::endl;
           outfile.close( );
         }
       }
@@ -2523,7 +2525,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
             if ( outfile.is_open( ) ) {
               outfile << "send for m2l: data from source "
-                      << src_cluster->get_global_index( ) << " to process "
+                      << src_cluster->get_global_index( ) << " at level "
+                      << src_cluster->get_level( ) << " to process "
                       << tar_process_id << std::endl;
               outfile.close( );
             }
@@ -2565,7 +2568,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
           if ( outfile.is_open( ) ) {
             outfile << "send upward: from source "
-                    << child_cluster->get_global_index( ) << " to process "
+                    << child_cluster->get_global_index( ) << " at level "
+                    << child_cluster->get_level( ) << " to process "
                     << parent_process_id << std::endl;
             outfile.close( );
           }
@@ -2602,7 +2606,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
             if ( outfile.is_open( ) ) {
               outfile << "send downward: from source "
-                      << parent_cluster->get_global_index( ) << " to process "
+                      << parent_cluster->get_global_index( ) << " at level "
+                      << parent_cluster->get_level( ) << " to process "
                       << child_process_id << std::endl;
               outfile.close( );
             }
@@ -3594,6 +3599,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                 if ( outfile.is_open( ) ) {
                   outfile << "received data of cluster "
                           << current_cluster->get_global_index( )
+                          << " at level " << current_cluster->get_level( )
                           << " from process "
                           << _receive_data_information[ current_index ].second
                           << std::endl;
@@ -3682,7 +3688,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                 break;
             }
             outss << "for cluster "
-                  << ( *it_current_cluster )->get_global_index( );
+                  << ( *it_current_cluster )->get_global_index( )
+                  << " at level " << ( *it_current_cluster )->get_level( );
             std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
             if ( outfile.is_open( ) ) {
               outfile << outss.str( ) << std::endl;
@@ -3924,7 +3931,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
         if ( outfile.is_open( ) ) {
           outfile << "call S2M for cluster "
-                  << time_cluster->get_global_index( ) << std::endl;
+                  << time_cluster->get_global_index( ) << " at level "
+                  << time_cluster->get_level( ) << std::endl;
           outfile.close( );
         }
       }
@@ -4332,8 +4340,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     {
       std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
       if ( outfile.is_open( ) ) {
-        outfile << "apply NF for cluster " << cluster->get_global_index( )
-                << std::endl;
+        outfile << "apply NF operations for cluster "
+                << cluster->get_global_index( ) << " at level "
+                << cluster->get_level( ) << std::endl;
         outfile.close( );
       }
     }
