@@ -99,41 +99,25 @@ int main( int argc, char * argv[] ) {
 
   // create matrix assembler
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
-  spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
   block_lower_triangular_toeplitz_matrix V_mem;
-  block_lower_triangular_toeplitz_matrix K_mem;
   uniform_spacetime_be_onthefly_matrix_cpu V_fly(kernel_v, space_p0, space_p0, order_sing, order_reg);
-  uniform_spacetime_be_onthefly_matrix_cpu K_fly(kernel_k, space_p0, space_p1, order_sing, order_reg);
   uniform_spacetime_be_assembler assembler_v(kernel_v, space_p0, space_p0, order_sing, order_reg );
-  uniform_spacetime_be_assembler assembler_k(kernel_k, space_p0, space_p1, order_sing, order_reg );
 
-  block_vector xV (n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
-  block_vector yVm(n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
-  block_vector yVf(n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
+  block_vector bV (n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
+  block_vector xVm(n_timesteps, spacetime_mesh.get_n_spatial_elements(), true);
+  block_vector xVf(n_timesteps, spacetime_mesh.get_n_spatial_elements(), true);
+  block_vector yVm (n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
+  block_vector yVf (n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
   for (lo b = 0; b < n_timesteps; b++) {
     for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
-      xV.set(b, i, (1000.0 * rand()) / RAND_MAX);
+      bV.set(b, i, (1000.0 * rand()) / RAND_MAX);
     }
-    for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
-      yVm.set(b, i, 2);
-      yVf.set(b, i, 2);
-    }    
-  }
-  block_vector xK (n_timesteps, spacetime_mesh.get_n_spatial_nodes(), false);
-  block_vector yKm(n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
-  block_vector yKf(n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
-  for (lo b = 0; b < n_timesteps; b++) {
-    for (lo i = 0; i < spacetime_mesh.get_n_spatial_nodes(); i++) {
-      xK.set(b, i, (1000.0 * rand()) / RAND_MAX);
-    }
-    for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
-      yKm.set(b, i, 2);
-      yKf.set(b, i, 2);
-    }    
   }
 
-  sc alpha = 3;
-  sc beta = 5;
+  sc err = 1e-10;
+  sc errVm = err, errVf = err;
+  lo iters = 10000;
+  lo itersVm = iters, itersVf = iters;
 
   
   //V_fly.hello_gpu_world(42);
@@ -141,58 +125,61 @@ int main( int argc, char * argv[] ) {
   t.reset( "InMemory V assemble" );
   assembler_v.assemble( V_mem );
   t.measure( );
-  t.reset( "InMemory V multiply" );
-  V_mem.apply(xV, yVm, false, alpha, beta);
+  t.reset( "InMemory V solve" );
+  V_mem.mkl_fgmres_solve(bV, xVm, errVm, itersVm);
   t.measure( );
 
-  t.reset( "OnTheFly V" );
-  V_fly.apply(xV, yVf, false, alpha, beta);
+  t.reset( "OnTheFly V solve" );
+  V_fly.mkl_fgmres_solve(bV, xVf, errVf, itersVf);
   t.measure();
 
-
-  t.reset( "InMemory K assemble" );
-  assembler_k.assemble( K_mem );
-  t.measure( );
-  t.reset( "InMemory K multiply" );
-  K_mem.apply(xK, yKm, false, alpha, beta);
-  t.measure( );
-
-  t.reset( "OnTheFly K" );
-  K_fly.apply(xK, yKf, false, alpha, beta);
-  t.measure();
+  V_mem.apply(xVm, yVm);
+  V_fly.apply(xVf, yVf);
   
 
 
+  std::cout << "Iters: mem " << itersVm << " fly " << itersVf << "\n";
+  std::cout << "Errors: mem " << errVm << " fly " << errVf << "\n";
 
-  bool equalV = true;
-  bool equalK = true;
+
+  bool equal_xV = true;
   for (lo b = 0; b < n_timesteps; b++) {
     for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
-      sc vm = yVm.get(b, i);
-      sc vf = yVf.get(b, i);
+      sc vm = xVm.get(b, i);
+      sc vf = xVf.get(b, i);
       if( std::abs((vm - vf) / vm) > 1e-6 ) {
-        std::cout << "Vectors V dont match: B" << b << " I" << i << " " << vm << " " << vf << "\n";
-        equalV = false;
+        std::cout << "Solutions dont match: B" << b << " I" << i << " " << vm << " " << vf << "\n";
+        equal_xV = false;
       }
     }
   }
+
+  bool equal_Vm = true;
   for (lo b = 0; b < n_timesteps; b++) {
     for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
-      sc vm = yKm.get(b, i);
-      sc vf = yKf.get(b, i);
-      if( std::abs((vm - vf) / vm) > 1e-6 ) {
-        std::cout << "Vectors K dont match: B" << b << " I" << i << " " << vm << " " << vf << "\n";
-        equalK = false;
+      sc v1 = bV.get(b, i);
+      sc v2 = yVm.get(b, i);
+      if( std::abs((v1 - v2) / v1) > 1e-6 ) {
+        std::cout << "Check multiplications mem dont match: B" << b << " I" << i << " " << v1 << " " << v2 << "\n";
+        equal_Vm = false;
       }
-    }    
+    }
+  }
+  bool equal_Vf = true;
+  for (lo b = 0; b < n_timesteps; b++) {
+    for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
+      sc v1 = bV.get(b, i);
+      sc v2 = yVf.get(b, i);
+      if( std::abs((v1 - v2) / v1) > 1e-6 ) {
+        std::cout << "Check multiplications fly dont match: B" << b << " I" << i << " " << v1 << " " << v2 << "\n";
+        equal_Vf = false;
+      }
+    }
   }
 
-  if(equalV) {
-    std::cout << "Vectors V are equal!\n";
-  }
-  if(equalK) {
-    std::cout << "Vectors K are equal!\n";
-  }
+  std::cout << "Solutions V are" << (equal_xV ? "" : " NOT") << " equal!\n";
+  std::cout << "Check multiplications mem are" << (equal_Vm ? "" : " NOT") << " equal!\n";
+  std::cout << "Check multiplications fly are" << (equal_Vf ? "" : " NOT") << " equal!\n";
   
   
 

@@ -43,6 +43,11 @@ private:
 
     std::array< std::vector< sc, besthea::allocator_type< sc > >, 4 >
       _w;  //!< Quadrature weights including transformation Jacobians
+
+    std::array< lo, 4>
+      _sizes; //!< Sizes
+    
+    lo _max_size; //!< Maximum size
   };
 
   struct quadrature_wrapper_changing {
@@ -76,7 +81,6 @@ private:
       _kernel_values_2.resize( size );
     }
   };
-  lo quadr_size;
 
 public:
   using matrix_type = besthea::linear_algebra::full_matrix;  //!< Matrix type.
@@ -85,8 +89,6 @@ public:
   using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
 
 
-
-  void hello_gpu_world(int number) const;
 
   uniform_spacetime_be_onthefly_matrix_gpu( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
@@ -97,10 +99,6 @@ public:
     = delete;
   
   virtual ~uniform_spacetime_be_onthefly_matrix_gpu( );
-
-
-
-  sc get( lo d, lo i, lo j, quadrature_wrapper_changing & quadr_changing ) const ;
 
   virtual void apply( const block_vector_type & x, block_vector_type & y,
    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
@@ -115,6 +113,8 @@ public:
     std::cout << "  dimension of each block: " << _dim_domain
               << " x " << _dim_range << std::endl;
   }
+
+  void hello_gpu_world(int number) const;
 
 private:
 
@@ -131,7 +131,11 @@ private:
     const linear_algebra::coordinates< 3 > & y3, int type_int, int rot_test,
     int rot_trial, quadrature_wrapper_changing & quadr_changing) const ;
 
-  sc get_value(lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special = false) const ;
+  void get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special = false) const ;
+  void get_values_delta0special(sc * values_out,           lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const;
+  void get_values_delta0       (sc * values_out,           lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const;
+  void get_values_regular      (sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const;
+  void get_values_singular     (sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const;
   
   void hypercube_to_triangles( sc ksi, sc eta1, sc eta2, sc eta3,
     int n_shared_vertices, int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref,

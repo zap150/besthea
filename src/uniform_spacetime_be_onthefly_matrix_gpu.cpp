@@ -16,7 +16,7 @@ template< class kernel_type, class test_space_type, class trial_space_type >
 besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::uniform_spacetime_be_onthefly_matrix_gpu( kernel_type & kernel,
  test_space_type & test_space, trial_space_type & trial_space,
   int order_singular, int order_regular )
-  : block_matrix(test_space.get_mesh()->get_n_temporal_elements(), test_space.get_mesh()->get_n_spatial_elements(), trial_space.get_mesh()->get_n_spatial_elements()),
+  : block_matrix(test_space.get_mesh()->get_n_temporal_elements(), test_space.get_basis().dimension_global(), trial_space.get_basis().dimension_global()),
     _kernel( &kernel ),
     _test_space( &test_space ),
     _trial_space( &trial_space ),
@@ -37,30 +37,78 @@ besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, 
 
 
 
-template<class kernel_type, class test_space_type, class trial_space_type>
-sc besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
-  get_value(lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special) const {
+
+
+
+
+
+
+
+
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
+  get_values_delta0special(sc * values_out,           lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const {
   
-  return 0;
+  return;
 
 }
 
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
+  get_values_delta0       (sc * values_out,           lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const {
+  
+  return;
+
+}
+
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
+  get_values_regular      (sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const {
+  
+  return;
+
+}
+
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
+  get_values_singular     (sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const {
+  
+  return;
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 template<>
-sc besthea::uniform_spacetime_be_onthefly_matrix_gpu<
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  get_value(lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special) const {
+  get_values_delta0special(sc * values_out, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const {
 
   auto test_mesh = _test_space->get_mesh( );
   auto trial_mesh = _trial_space->get_mesh( );
   
   sc timestep = test_mesh->get_timestep( );
 
-  sc ttau;
-
-  sc value, test_area, trial_area;
-  lo size;
   int n_shared_vertices = 0;
   int rot_test = 0;
   int rot_trial = 0;
@@ -68,7 +116,17 @@ sc besthea::uniform_spacetime_be_onthefly_matrix_gpu<
   linear_algebra::coordinates< 3 > x1, x2, x3;
   linear_algebra::coordinates< 3 > y1, y2, y3;
 
-  const sc * w = nullptr;
+  test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
+  trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
+
+  const sc test_area = test_mesh->spatial_area( i_test );
+  const sc trial_area = trial_mesh->spatial_area( i_trial );
+
+  get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
+
+  triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices, rot_test, rot_trial, quadr_changing );
+
+  const sc * w = my_quadrature._w[ n_shared_vertices ].data( );
   const sc * x1_mapped = quadr_changing._x1.data( );
   const sc * x2_mapped = quadr_changing._x2.data( );
   const sc * x3_mapped = quadr_changing._x3.data( );
@@ -76,91 +134,215 @@ sc besthea::uniform_spacetime_be_onthefly_matrix_gpu<
   const sc * y2_mapped = quadr_changing._y2.data( );
   const sc * y3_mapped = quadr_changing._y3.data( );
 
-  ttau = timestep * delta;
+  lo size = my_quadrature._w[ n_shared_vertices ].size( );
+
+
+  sc value = 0;
+
+#pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
+                y2_mapped, y3_mapped, w : DATA_ALIGN ) \
+    reduction( + : value ) simdlen( DATA_WIDTH )
+  for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+    value += _kernel->anti_tau_limit(
+                x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nullptr,
+                nullptr )
+      * w[ i_quad ];
+  }
+
+  value *= timestep * test_area * trial_area;
+  *values_out = value;
+  return;
+
+}
+
+
+
+template<>
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu<
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
+  get_values_delta0(sc * values_out, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const {
+
+  auto test_mesh = _test_space->get_mesh( );
+  auto trial_mesh = _trial_space->get_mesh( );
+
+  int n_shared_vertices = 0;
+  int rot_test = 0;
+  int rot_trial = 0;
+
+  linear_algebra::coordinates< 3 > x1, x2, x3;
+  linear_algebra::coordinates< 3 > y1, y2, y3;
 
   test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
-  test_area = test_mesh->spatial_area( i_test );
-
-  if ( delta == 0 ) {
-    get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
-  } else {
-    n_shared_vertices = 0;
-    rot_test = 0;
-    rot_trial = 0;
-  }
   trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
-  trial_area = trial_mesh->spatial_area( i_trial );
 
-  triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices,
-    rot_test, rot_trial, quadr_changing );
-  w = my_quadrature._w[ n_shared_vertices ].data( );
+  const sc test_area = test_mesh->spatial_area( i_test );
+  const sc trial_area = trial_mesh->spatial_area( i_trial );
 
-  size = my_quadrature._w[ n_shared_vertices ].size( );
+  get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
 
-  if ( delta == 0 && special ) {
-    value = 0.0;
+  triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices, rot_test, rot_trial, quadr_changing );
+
+  const sc * w = my_quadrature._w[ n_shared_vertices ].data( );
+  const sc * x1_mapped = quadr_changing._x1.data( );
+  const sc * x2_mapped = quadr_changing._x2.data( );
+  const sc * x3_mapped = quadr_changing._x3.data( );
+  const sc * y1_mapped = quadr_changing._y1.data( );
+  const sc * y2_mapped = quadr_changing._y2.data( );
+  const sc * y3_mapped = quadr_changing._y3.data( );
+
+  lo size = my_quadrature._w[ n_shared_vertices ].size( );
+
+
+  sc value = 0;
 
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
-                  y2_mapped, y3_mapped, w : DATA_ALIGN ) \
-      reduction( + : value ) simdlen( DATA_WIDTH )
-    for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-      value += _kernel->anti_tau_limit(
-                  x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-                  x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                  x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nullptr,
-                  nullptr )
-        * w[ i_quad ];
-    }
-
-    value *= timestep * test_area * trial_area;
-    return value;
+                y2_mapped, y3_mapped, w : DATA_ALIGN ) \
+    reduction( + : value ) simdlen( DATA_WIDTH )
+  for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+    value += _kernel->anti_tau_anti_t_limit_in_time_regular_in_space(
+                x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nullptr,
+                nullptr )
+      * w[ i_quad ];
   }
 
-  value = 0.0;
-  if ( delta == 0 ) {
+  value *= test_area * trial_area;
+  *values_out = value;
+  return;
+
+}
+
+
+
+template<>
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu<
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
+  get_values_regular(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const {
+
+  // assuming i_test != i_trial
+
+  auto test_mesh = _test_space->get_mesh( );
+  auto trial_mesh = _trial_space->get_mesh( );
+  
+  sc timestep = test_mesh->get_timestep( );
+
+  sc ttau = timestep * delta;
+
+  int n_shared_vertices = 0;
+  int rot_test = 0;
+  int rot_trial = 0;
+
+  linear_algebra::coordinates< 3 > x1, x2, x3;
+  linear_algebra::coordinates< 3 > y1, y2, y3;
+
+  test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
+  trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
+
+  const sc test_area = test_mesh->spatial_area( i_test );
+  const sc trial_area = trial_mesh->spatial_area( i_trial );
+
+  triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices, rot_test, rot_trial, quadr_changing );
+
+  const sc * w = my_quadrature._w[ n_shared_vertices ].data( );
+  const sc * x1_mapped = quadr_changing._x1.data( );
+  const sc * x2_mapped = quadr_changing._x2.data( );
+  const sc * x3_mapped = quadr_changing._x3.data( );
+  const sc * y1_mapped = quadr_changing._y1.data( );
+  const sc * y2_mapped = quadr_changing._y2.data( );
+  const sc * y3_mapped = quadr_changing._y3.data( );
+
+  lo size = my_quadrature._w[ n_shared_vertices ].size( );
+
+
+  sc value = 0;
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
-                  y2_mapped, y3_mapped, w : DATA_ALIGN ) \
-      reduction( + : value ) simdlen( DATA_WIDTH )
-    for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-      value += _kernel->anti_tau_anti_t_limit_in_time_regular_in_space(
-                  x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-                  x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                  x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nullptr,
-                  nullptr )
-        * w[ i_quad ];
-    }
-  } else {
-    if ( i_test != i_trial ) {
+              y2_mapped, y3_mapped, w : DATA_ALIGN ) \
+  reduction( + : value ) simdlen( DATA_WIDTH )
+  for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+    value
+      += _kernel->anti_tau_anti_t_regular_in_time_regular_in_space(
+            x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+            x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+            x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nullptr,
+            nullptr, ttau )
+      * w[ i_quad ];
+  }
+
+  value *= test_area * trial_area;
+  *values_out = value;
+  return;
+
+}
+
+
+
+template<>
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu<
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
+  get_values_singular(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const {
+
+  // assuming i_test = i_trial
+
+  auto test_mesh = _test_space->get_mesh( );
+  auto trial_mesh = _trial_space->get_mesh( );
+  
+  sc timestep = test_mesh->get_timestep( );
+
+  sc ttau = timestep * delta;
+
+  int n_shared_vertices = 0;
+  int rot_test = 0;
+  int rot_trial = 0;
+
+  linear_algebra::coordinates< 3 > x1, x2, x3;
+  linear_algebra::coordinates< 3 > y1, y2, y3;
+
+  test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
+  trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
+
+  const sc test_area = test_mesh->spatial_area( i_test );
+  const sc trial_area = trial_mesh->spatial_area( i_trial );
+
+  triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices, rot_test, rot_trial, quadr_changing );
+
+  const sc * w = my_quadrature._w[ n_shared_vertices ].data( );
+  const sc * x1_mapped = quadr_changing._x1.data( );
+  const sc * x2_mapped = quadr_changing._x2.data( );
+  const sc * x3_mapped = quadr_changing._x3.data( );
+  const sc * y1_mapped = quadr_changing._y1.data( );
+  const sc * y2_mapped = quadr_changing._y2.data( );
+  const sc * y3_mapped = quadr_changing._y3.data( );
+
+  lo size = my_quadrature._w[ n_shared_vertices ].size( );
+
+
+  sc value = 0;
+
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
-                  y2_mapped, y3_mapped, w : DATA_ALIGN ) \
-      reduction( + : value ) simdlen( DATA_WIDTH )
-      for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-        value
-          += _kernel->anti_tau_anti_t_regular_in_time_regular_in_space(
+              y2_mapped, y3_mapped, w : DATA_ALIGN ) \
+  reduction( + : value ) simdlen( DATA_WIDTH )
+  for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+    value += _kernel->anti_tau_anti_t_regular_in_time(
                 x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
                 x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
                 x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nullptr,
                 nullptr, ttau )
-          * w[ i_quad ];
-      }
-    } else {
-#pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
-                  y2_mapped, y3_mapped, w : DATA_ALIGN ) \
-      reduction( + : value ) simdlen( DATA_WIDTH )
-      for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-        value += _kernel->anti_tau_anti_t_regular_in_time(
-                    x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-                    x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-                    x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nullptr,
-                    nullptr, ttau )
-          * w[ i_quad ];
-      }
-    }
+      * w[ i_quad ];
   }
 
   value *= test_area * trial_area;
+  *values_out = value;
+  return;
 
-  return value;
 }
 
 
@@ -168,48 +350,390 @@ sc besthea::uniform_spacetime_be_onthefly_matrix_gpu<
 
 
 
-template<class kernel_type, class test_space_type, class trial_space_type>
-sc besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
-  get(lo d, lo i, lo j, quadrature_wrapper_changing & quadr_changing ) const {
-    
-  // if ( delta > 0 ) {
-  //   global_matrix.add( delta - 1, i_test, i_trial, -value );
-  //   if ( delta < n_timesteps ) {
-  //     global_matrix.add( delta, i_test, i_trial, 2.0 * value );
-  //   }
-  // } else {
-  //   global_matrix.add( 0, i_test, i_trial, value );
-  // }
-  //
-  // if ( delta < n_timesteps - 1 ) {
-  //   global_matrix.add( delta + 1, i_test, i_trial, -value );
-  // }
 
-  // pro n_timesteps = 4:
-  // V0:  val0  -val1
-  // V1: -val0  2val1  -val2
-  // V2:        -val1  2val2  -val3
-  // V3:               -val2  2val3  -val4
 
-  sc result = 0;
 
-  if ( d > 0 ) {
-    result -=     get_value(d-1, i, j, quadr_changing);
-    result += 2 * get_value(d,   i, j, quadr_changing);
-    result -=     get_value(d+1, i, j, quadr_changing);
-  } else if (d == 0) {
-    result +=     get_value(0,   i, j, quadr_changing, true);
-    result +=     get_value(0,   i, j, quadr_changing);
-    result -=     get_value(1,   i, j, quadr_changing);
+
+
+
+
+
+
+
+
+template<>
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
+  get_values_delta0special(sc * values_out, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const {
+
+  auto test_mesh = _test_space->get_mesh( );
+  auto trial_mesh = _trial_space->get_mesh( );
+  
+  sc timestep = test_mesh->get_timestep( );
+
+  int n_shared_vertices = 0;
+  int rot_test = 0;
+  int rot_trial = 0;
+
+  linear_algebra::coordinates< 3 > x1, x2, x3;
+  linear_algebra::coordinates< 3 > y1, y2, y3;
+  linear_algebra::coordinates< 3 > ny;
+  sc * ny_data = ny.data( );
+
+  test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
+  trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
+  trial_mesh->get_spatial_normal( i_trial, ny );
+
+  sc test_area = test_mesh->spatial_area( i_test );
+  sc trial_area = trial_mesh->spatial_area( i_trial );
+
+  get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
+
+  triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices, rot_test, rot_trial, quadr_changing );
+
+  const sc * x1_mapped = quadr_changing._x1.data( );
+  const sc * x2_mapped = quadr_changing._x2.data( );
+  const sc * x3_mapped = quadr_changing._x3.data( );
+  const sc * y1_mapped = quadr_changing._y1.data( );
+  const sc * y2_mapped = quadr_changing._y2.data( );
+  const sc * y3_mapped = quadr_changing._y3.data( );
+  
+  const sc * y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
+  const sc * y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
+  const sc * w = my_quadrature._w[ n_shared_vertices ].data( );
+
+  lo size = my_quadrature._sizes[ n_shared_vertices ];
+
+
+  sc kernel;
+  sc value1, value2, value3;
+
+  value1 = value2 = value3 = 0.0;
+
+#pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
+                        y2_mapped, y3_mapped, w : DATA_ALIGN ) \
+            private( kernel ) reduction( + : value1, value2, value3 ) \
+              simdlen( DATA_WIDTH )
+  for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+    kernel = _kernel->anti_tau_limit(
+                x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nullptr,
+                ny_data )
+      * w[ i_quad ];
+    value1 += kernel * ( (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ] );
+    value2 += kernel * y1_ref[ i_quad ];
+    value3 += kernel * y2_ref[ i_quad ];
   }
 
-  return result;
+  sc factor = timestep * test_area * trial_area;
+  values_out[0] = value1 * factor;
+  values_out[1] = value2 * factor;
+  values_out[2] = value3 * factor;
+  return;
+
 }
+
+
+
+template<>
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
+  get_values_delta0(sc * values_out, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const {
+
+  auto test_mesh = _test_space->get_mesh( );
+  auto trial_mesh = _trial_space->get_mesh( );
+
+  int n_shared_vertices = 0;
+  int rot_test = 0;
+  int rot_trial = 0;
+
+  linear_algebra::coordinates< 3 > x1, x2, x3;
+  linear_algebra::coordinates< 3 > y1, y2, y3;
+  linear_algebra::coordinates< 3 > ny;
+  sc * ny_data = ny.data( );
+
+  test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
+  trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
+  trial_mesh->get_spatial_normal( i_trial, ny );
+
+  sc test_area = test_mesh->spatial_area( i_test );
+  sc trial_area = trial_mesh->spatial_area( i_trial );
+
+  get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
+
+  triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices, rot_test, rot_trial, quadr_changing );
+
+  const sc * x1_mapped = quadr_changing._x1.data( );
+  const sc * x2_mapped = quadr_changing._x2.data( );
+  const sc * x3_mapped = quadr_changing._x3.data( );
+  const sc * y1_mapped = quadr_changing._y1.data( );
+  const sc * y2_mapped = quadr_changing._y2.data( );
+  const sc * y3_mapped = quadr_changing._y3.data( );
+  
+  const sc * y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
+  const sc * y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
+  const sc * w = my_quadrature._w[ n_shared_vertices ].data( );
+
+  lo size = my_quadrature._sizes[ n_shared_vertices ];
+
+
+  sc kernel;
+  sc value1, value2, value3;
+
+  value1 = value2 = value3 = 0.0;
+
+#pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
+                y2_mapped, y3_mapped, w : DATA_ALIGN ) \
+    private( kernel ) reduction( + : value1, value2, value3 ) \
+      simdlen( DATA_WIDTH )
+  for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+    kernel = _kernel->anti_tau_anti_t_limit_in_time_regular_in_space(
+                x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nullptr,
+                ny_data )
+      * w[ i_quad ];
+    value1 += kernel * ( (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ] );
+    value2 += kernel * y1_ref[ i_quad ];
+    value3 += kernel * y2_ref[ i_quad ];
+  }
+
+  sc factor = test_area * trial_area;
+  values_out[0] = value1 * factor;
+  values_out[1] = value2 * factor;
+  values_out[2] = value3 * factor;
+  return;
+
+}
+
+
+
+template<>
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
+  get_values_regular(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const {
+
+  auto test_mesh = _test_space->get_mesh( );
+  auto trial_mesh = _trial_space->get_mesh( );
+  
+  sc timestep = test_mesh->get_timestep( );
+
+  sc ttau = timestep * delta;
+
+  int n_shared_vertices = 0;
+  int rot_test = 0;
+  int rot_trial = 0;
+
+  linear_algebra::coordinates< 3 > x1, x2, x3;
+  linear_algebra::coordinates< 3 > y1, y2, y3;
+  linear_algebra::coordinates< 3 > ny;
+  sc * ny_data = ny.data( );
+
+  test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
+  trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
+  trial_mesh->get_spatial_normal( i_trial, ny );
+
+  sc test_area = test_mesh->spatial_area( i_test );
+  sc trial_area = trial_mesh->spatial_area( i_trial );
+
+  triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices, rot_test, rot_trial, quadr_changing );
+
+  const sc * x1_mapped = quadr_changing._x1.data( );
+  const sc * x2_mapped = quadr_changing._x2.data( );
+  const sc * x3_mapped = quadr_changing._x3.data( );
+  const sc * y1_mapped = quadr_changing._y1.data( );
+  const sc * y2_mapped = quadr_changing._y2.data( );
+  const sc * y3_mapped = quadr_changing._y3.data( );
+  
+  const sc * y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
+  const sc * y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
+  const sc * w = my_quadrature._w[ n_shared_vertices ].data( );
+
+  lo size = my_quadrature._sizes[ n_shared_vertices ];
+
+
+  sc kernel;
+  sc value1, value2, value3;
+
+  value1 = value2 = value3 = 0.0;
+
+#pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
+              y2_mapped, y3_mapped, w : DATA_ALIGN ) \
+  private( kernel ) reduction( + : value1, value2, value3 ) \
+    simdlen( DATA_WIDTH )
+  for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+    kernel
+      = _kernel->anti_tau_anti_t_regular_in_time_regular_in_space(
+          x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+          x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+          x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nullptr,
+          ny_data, ttau )
+      * w[ i_quad ];
+    value1 += kernel * ( (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ] );
+    value2 += kernel * y1_ref[ i_quad ];
+    value3 += kernel * y2_ref[ i_quad ];
+  }
+
+  sc factor = test_area * trial_area;
+  values_out[0] = value1 * factor;
+  values_out[1] = value2 * factor;
+  values_out[2] = value3 * factor;
+  return;
+
+}
+
+
+
+template<>
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
+  get_values_singular(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const {
+
+  auto test_mesh = _test_space->get_mesh( );
+  auto trial_mesh = _trial_space->get_mesh( );
+  
+  sc timestep = test_mesh->get_timestep( );
+
+  sc ttau = timestep * delta;
+
+  int n_shared_vertices = 0;
+  int rot_test = 0;
+  int rot_trial = 0;
+
+  linear_algebra::coordinates< 3 > x1, x2, x3;
+  linear_algebra::coordinates< 3 > y1, y2, y3;
+  linear_algebra::coordinates< 3 > ny;
+  sc * ny_data = ny.data( );
+
+  test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
+  trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
+  trial_mesh->get_spatial_normal( i_trial, ny );
+
+  sc test_area = test_mesh->spatial_area( i_test );
+  sc trial_area = trial_mesh->spatial_area( i_trial );
+
+  triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices, rot_test, rot_trial, quadr_changing );
+
+  const sc * x1_mapped = quadr_changing._x1.data( );
+  const sc * x2_mapped = quadr_changing._x2.data( );
+  const sc * x3_mapped = quadr_changing._x3.data( );
+  const sc * y1_mapped = quadr_changing._y1.data( );
+  const sc * y2_mapped = quadr_changing._y2.data( );
+  const sc * y3_mapped = quadr_changing._y3.data( );
+  
+  const sc * y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
+  const sc * y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
+  const sc * w = my_quadrature._w[ n_shared_vertices ].data( );
+
+  lo size = my_quadrature._sizes[ n_shared_vertices ];
+
+
+  sc kernel;
+  sc value1, value2, value3;
+
+  value1 = value2 = value3 = 0.0;
+
+#pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
+              y2_mapped, y3_mapped, w : DATA_ALIGN ) \
+  private( kernel ) reduction( + : value1, value2, value3 ) \
+    simdlen( DATA_WIDTH )
+  for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+    kernel = _kernel->anti_tau_anti_t_regular_in_time(
+                x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nullptr,
+                ny_data, ttau )
+      * w[ i_quad ];
+    value1 += kernel * ( (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ] );
+    value2 += kernel * y1_ref[ i_quad ];
+    value3 += kernel * y2_ref[ i_quad ];
+  }
+
+  sc factor = test_area * trial_area;
+  values_out[0] = value1 * factor;
+  values_out[1] = value2 * factor;
+  values_out[2] = value3 * factor;
+  return;
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
 void besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
+  get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special) const {
+
+  if(delta == 0 && special) {
+    get_values_delta0special(values_out, i_test, i_trial, quadr_changing);
+    return;
+  }
+
+  if ( delta == 0 ) {
+    get_values_delta0(values_out, i_test, i_trial, quadr_changing);
+  } else {
+    if ( i_test != i_trial ) {
+      get_values_regular(values_out, delta, i_test, i_trial, quadr_changing);
+    } else {
+      get_values_singular(values_out, delta, i_test, i_trial, quadr_changing);
+    }
+  }
+
+  return;
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+template<class kernel_type, class test_space_type, class trial_space_type>
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
+  apply( const block_vector_type & x, block_vector_type & y,
+  bool trans, sc alpha, sc beta ) const {
+
+  return;
+
+}
+
+
+
+template<>
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu<
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
   apply( const block_vector_type & x, block_vector_type & y,
   bool trans, sc alpha, sc beta ) const {
   
@@ -224,21 +748,27 @@ void besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_t
   lo cols_in_block = _n_columns;
   lo blocks = _block_dim;
 
-  hello_gpu_world(329);
+
 
   y.scale(beta);
 
 #pragma omp parallel
   {
-    quadrature_wrapper_changing quadr_changing(quadr_size);
+    quadrature_wrapper_changing quadr_changing(my_quadrature._max_size);
+    sc val_prev;
+    sc val_curr;
+    sc val_next;
 
 #pragma omp for
     for (lo inner_row = 0; inner_row < rows_in_block; inner_row++) {
       for (lo inner_col = 0; inner_col < cols_in_block; inner_col++) {
 
-        sc val_prev = get_value(0, inner_row, inner_col, quadr_changing, true);
-        sc val_curr = get_value(0, inner_row, inner_col, quadr_changing);
-        sc val_next = get_value(1, inner_row, inner_col, quadr_changing);
+        if (inner_row == inner_col)
+          continue;
+
+        get_values_delta0special(&val_prev, inner_row, inner_col, quadr_changing);
+        get_values_delta0(&val_curr, inner_row, inner_col, quadr_changing);
+        get_values_regular(&val_next, 1, inner_row, inner_col, quadr_changing);
 
         sc matrix_val = val_prev + val_curr - val_next;
         lo max_block = blocks;
@@ -250,7 +780,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_t
         for (lo diag = 1; diag < blocks; diag++) {
           val_prev = val_curr;
           val_curr = val_next;
-          val_next = get_value(diag+1, inner_row, inner_col, quadr_changing);
+          get_values_regular(&val_next, diag+1, inner_row, inner_col, quadr_changing);
 
           matrix_val = -val_prev + 2*val_curr - val_next;
 
@@ -266,6 +796,271 @@ void besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_t
         }
       }
     }
+    
+#pragma omp for
+    for (lo i = 0; i < rows_in_block; i++) {
+      lo inner_row = i;
+      lo inner_col = i;
+
+      get_values_delta0special(&val_prev, inner_row, inner_col, quadr_changing);
+      get_values_delta0(&val_curr, inner_row, inner_col, quadr_changing);
+      get_values_singular(&val_next, 1, inner_row, inner_col, quadr_changing);
+
+      sc matrix_val = val_prev + val_curr - val_next;
+      lo max_block = blocks;
+      for (lo block = 0; block < max_block; block++) {
+        sc y_val = alpha * matrix_val * x.get(block, inner_col);
+        y.add(block, inner_row, y_val);
+      }
+
+      for (lo diag = 1; diag < blocks; diag++) {
+        val_prev = val_curr;
+        val_curr = val_next;
+        get_values_singular(&val_next, diag+1, inner_row, inner_col, quadr_changing);
+
+        matrix_val = -val_prev + 2*val_curr - val_next;
+
+        lo max_block = blocks - diag;
+        for (lo block = 0; block < max_block; block++) {
+          lo block_row = diag + block;
+          lo block_col = block;
+          sc x_val = x.get(block_col, inner_col);
+          sc y_val = alpha * matrix_val * x_val;
+          y.add(block_row, inner_row, y_val);
+        }
+
+      }
+    }
+
+  }
+
+
+}
+
+
+
+template<>
+void besthea::uniform_spacetime_be_onthefly_matrix_gpu<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
+  apply( const block_vector_type & x, block_vector_type & y,
+  bool trans, sc alpha, sc beta ) const {
+  
+  // y = alpha*A*x + beta*y;
+  // basic matrix-vector multiplication for now
+  if(trans) {
+    std::cerr << "I dont support trans matrices\n";
+    return;
+  }
+
+  auto & trial_basis = _trial_space->get_basis( );
+
+  lo tst_spelems_count = _test_space->get_mesh()->get_n_spatial_elements();
+  lo trl_spelems_count = _trial_space->get_mesh()->get_n_spatial_elements();
+  lo blocks = _block_dim;
+
+
+  y.scale(beta);
+
+#pragma omp parallel
+  {
+    quadrature_wrapper_changing quadr_changing(my_quadrature._max_size);
+    sc vals_prev[3];
+    sc vals_curr[3];
+    sc vals_next[3];
+    lo row;
+    lo max_block;
+    lo block_row, block_col;
+    std::vector< lo > cols_0(3);
+    std::vector< lo > cols(3);
+    int n_shared_vertices = 0;
+    int rot_test = 0;
+    int rot_trial = 0;
+    sc matrix_vals[3];
+
+#pragma omp for
+    for (lo i_tst = 0; i_tst < tst_spelems_count; i_tst++) {
+      for (lo i_trl = 0; i_trl < trl_spelems_count; i_trl++) {
+
+        if (i_tst == i_trl)
+          continue;
+
+        row = i_tst;
+        get_type( i_tst, i_trl, n_shared_vertices, rot_test, rot_trial );
+        trial_basis.local_to_global(i_trl, n_shared_vertices, rot_trial, true, cols_0 );
+        n_shared_vertices = 0;
+        rot_test = 0;
+        rot_trial = 0;
+        trial_basis.local_to_global(i_trl, n_shared_vertices, rot_trial, true, cols );
+
+        get_values_delta0special(vals_prev, i_tst, i_trl, quadr_changing);
+        get_values_delta0(vals_curr, i_tst, i_trl, quadr_changing);
+        get_values_regular(vals_next, 1, i_tst, i_trl, quadr_changing);
+
+        matrix_vals[0] = vals_prev[0] + vals_curr[0];
+        matrix_vals[1] = vals_prev[1] + vals_curr[1];
+        matrix_vals[2] = vals_prev[2] + vals_curr[2];
+        max_block = blocks;
+        for (lo block = 0; block < max_block; block++) {
+          block_row = 0 + block;
+          block_col = block;
+          sc y_val = 0;
+          y_val += matrix_vals[0] * x.get(block_col, cols_0[0]);
+          y_val += matrix_vals[1] * x.get(block_col, cols_0[1]);
+          y_val += matrix_vals[2] * x.get(block_col, cols_0[2]);
+          y_val *= alpha;
+          y.add(block_row, row, y_val);
+        }
+
+        matrix_vals[0] = -vals_next[0];
+        matrix_vals[1] = -vals_next[1];
+        matrix_vals[2] = -vals_next[2];
+        max_block = blocks;
+        for (lo block = 0; block < max_block; block++) {
+          block_row = 0 + block;
+          block_col = block;
+          sc y_val = 0;
+          y_val += matrix_vals[0] * x.get(block_col, cols[0]);
+          y_val += matrix_vals[1] * x.get(block_col, cols[1]);
+          y_val += matrix_vals[2] * x.get(block_col, cols[2]);
+          y_val *= alpha;
+          y.add(block_row, row, y_val);
+        }
+
+        matrix_vals[0] = -vals_curr[0];
+        matrix_vals[1] = -vals_curr[1];
+        matrix_vals[2] = -vals_curr[2];
+        max_block = blocks - 1;
+        for (lo block = 0; block < max_block; block++) {
+          block_row = 1 + block;
+          block_col = block;
+          sc y_val = 0;
+          y_val += matrix_vals[0] * x.get(block_col, cols_0[0]);
+          y_val += matrix_vals[1] * x.get(block_col, cols_0[1]);
+          y_val += matrix_vals[2] * x.get(block_col, cols_0[2]);
+          y_val *= alpha;
+          y.add(block_row, row, y_val);
+        }
+
+        vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
+
+
+        for (lo diag = 1; diag < blocks; diag++) {
+          vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
+          vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
+          get_values_regular(vals_next, diag+1, i_tst, i_trl, quadr_changing);
+
+          matrix_vals[0] = -vals_prev[0] + 2*vals_curr[0] - vals_next[0];
+          matrix_vals[1] = -vals_prev[1] + 2*vals_curr[1] - vals_next[1];
+          matrix_vals[2] = -vals_prev[2] + 2*vals_curr[2] - vals_next[2];
+
+          max_block = blocks - diag;
+          for (lo block = 0; block < max_block; block++) {
+            block_row = diag + block;
+            block_col = block;
+            sc y_val = 0;
+            y_val += matrix_vals[0] * x.get(block_col, cols[0]);
+            y_val += matrix_vals[1] * x.get(block_col, cols[1]);
+            y_val += matrix_vals[2] * x.get(block_col, cols[2]);
+            y_val *= alpha;
+            y.add(block_row, row, y_val);
+          }
+
+        }
+      }
+    }
+
+#pragma omp for
+    for (lo i = 0; i < tst_spelems_count; i++) {
+      lo i_tst = i;
+      lo i_trl = i;
+
+      row = i_tst;
+      get_type( i_tst, i_trl, n_shared_vertices, rot_test, rot_trial );
+      trial_basis.local_to_global(i_trl, n_shared_vertices, rot_trial, true, cols_0 );
+      n_shared_vertices = 0;
+      rot_test = 0;
+      rot_trial = 0;
+      trial_basis.local_to_global(i_trl, n_shared_vertices, rot_trial, true, cols );
+
+      get_values_delta0special(vals_prev, i_tst, i_trl, quadr_changing);
+      get_values_delta0(vals_curr, i_tst, i_trl, quadr_changing);
+      get_values_singular(vals_next, 1, i_tst, i_trl, quadr_changing);
+
+      matrix_vals[0] = vals_prev[0] + vals_curr[0];
+      matrix_vals[1] = vals_prev[1] + vals_curr[1];
+      matrix_vals[2] = vals_prev[2] + vals_curr[2];
+      max_block = blocks;
+      for (lo block = 0; block < max_block; block++) {
+        block_row = 0 + block;
+        block_col = block;
+        sc y_val = 0;
+        y_val += matrix_vals[0] * x.get(block_col, cols_0[0]);
+        y_val += matrix_vals[1] * x.get(block_col, cols_0[1]);
+        y_val += matrix_vals[2] * x.get(block_col, cols_0[2]);
+        y_val *= alpha;
+        y.add(block_row, row, y_val);
+      }
+
+      matrix_vals[0] = -vals_next[0];
+      matrix_vals[1] = -vals_next[1];
+      matrix_vals[2] = -vals_next[2];
+      max_block = blocks;
+      for (lo block = 0; block < max_block; block++) {
+        block_row = 0 + block;
+        block_col = block;
+        sc y_val = 0;
+        y_val += matrix_vals[0] * x.get(block_col, cols[0]);
+        y_val += matrix_vals[1] * x.get(block_col, cols[1]);
+        y_val += matrix_vals[2] * x.get(block_col, cols[2]);
+        y_val *= alpha;
+        y.add(block_row, row, y_val);
+      }
+
+      matrix_vals[0] = -vals_curr[0];
+      matrix_vals[1] = -vals_curr[1];
+      matrix_vals[2] = -vals_curr[2];
+      max_block = blocks - 1;
+      for (lo block = 0; block < max_block; block++) {
+        block_row = 1 + block;
+        block_col = block;
+        sc y_val = 0;
+        y_val += matrix_vals[0] * x.get(block_col, cols_0[0]);
+        y_val += matrix_vals[1] * x.get(block_col, cols_0[1]);
+        y_val += matrix_vals[2] * x.get(block_col, cols_0[2]);
+        y_val *= alpha;
+        y.add(block_row, row, y_val);
+      }
+
+      vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
+
+
+      for (lo diag = 1; diag < blocks; diag++) {
+        vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
+        vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
+        get_values_singular(vals_next, diag+1, i_tst, i_trl, quadr_changing);
+
+        matrix_vals[0] = -vals_prev[0] + 2*vals_curr[0] - vals_next[0];
+        matrix_vals[1] = -vals_prev[1] + 2*vals_curr[1] - vals_next[1];
+        matrix_vals[2] = -vals_prev[2] + 2*vals_curr[2] - vals_next[2];
+
+        max_block = blocks - diag;
+        for (lo block = 0; block < max_block; block++) {
+          block_row = diag + block;
+          block_col = block;
+          sc y_val = 0;
+          y_val += matrix_vals[0] * x.get(block_col, cols[0]);
+          y_val += matrix_vals[1] * x.get(block_col, cols[1]);
+          y_val += matrix_vals[2] * x.get(block_col, cols[2]);
+          y_val *= alpha;
+          y.add(block_row, row, y_val);
+        }
+
+      }
+    }
+
+
   }
 
 }
@@ -286,12 +1081,14 @@ void besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_t
   lo tri_size = tri_w.size( );
   lo tri_size2 = tri_size * tri_size;
 
+  lo size = tri_size2;
   int n_shared_vertices = 0;
-  my_quadrature._x1_ref[ n_shared_vertices ].resize( tri_size2 );
-  my_quadrature._x2_ref[ n_shared_vertices ].resize( tri_size2 );
-  my_quadrature._y1_ref[ n_shared_vertices ].resize( tri_size2 );
-  my_quadrature._y2_ref[ n_shared_vertices ].resize( tri_size2 );
-  my_quadrature._w[ n_shared_vertices ].resize( tri_size2 );
+  my_quadrature._sizes[ n_shared_vertices ] = size;
+  my_quadrature._x1_ref[ n_shared_vertices ].resize( size );
+  my_quadrature._x2_ref[ n_shared_vertices ].resize( size );
+  my_quadrature._y1_ref[ n_shared_vertices ].resize( size );
+  my_quadrature._y2_ref[ n_shared_vertices ].resize( size );
+  my_quadrature._w[ n_shared_vertices ].resize( size );
 
   lo counter = 0;
   for ( lo i_x = 0; i_x < tri_size; ++i_x ) {
@@ -316,16 +1113,13 @@ void besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_t
   sc jacobian = 0.0;
 
   for ( n_shared_vertices = 1; n_shared_vertices <= 3; ++n_shared_vertices ) {
-    my_quadrature._x1_ref[ n_shared_vertices ].resize(
-      line_size4 * n_simplices[ n_shared_vertices ] );
-    my_quadrature._x2_ref[ n_shared_vertices ].resize(
-      line_size4 * n_simplices[ n_shared_vertices ] );
-    my_quadrature._y1_ref[ n_shared_vertices ].resize(
-      line_size4 * n_simplices[ n_shared_vertices ] );
-    my_quadrature._y2_ref[ n_shared_vertices ].resize(
-      line_size4 * n_simplices[ n_shared_vertices ] );
-    my_quadrature._w[ n_shared_vertices ].resize(
-      line_size4 * n_simplices[ n_shared_vertices ] );
+    size = line_size4 * n_simplices[ n_shared_vertices ];
+    my_quadrature._sizes[ n_shared_vertices ] = size;
+    my_quadrature._x1_ref[ n_shared_vertices ].resize( size );
+    my_quadrature._x2_ref[ n_shared_vertices ].resize( size );
+    my_quadrature._y1_ref[ n_shared_vertices ].resize( size );
+    my_quadrature._y2_ref[ n_shared_vertices ].resize( size );
+    my_quadrature._w[ n_shared_vertices ].resize( size );
 
     counter = 0;
     for ( int i_simplex = 0; i_simplex < n_simplices[ n_shared_vertices ];
@@ -353,18 +1147,8 @@ void besthea::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_t
     }
   }
 
-  lo size = std::max( tri_size2,
-    *std::max_element( n_simplices.begin( ), n_simplices.end( ) )
-      * line_size4 );
-  // my_quadrature._x1.resize( size );
-  // my_quadrature._x2.resize( size );
-  // my_quadrature._x3.resize( size );
-  // my_quadrature._y1.resize( size );
-  // my_quadrature._y2.resize( size );
-  // my_quadrature._y3.resize( size );
-  // my_quadrature._kernel_values.resize( size );
-  // my_quadrature._kernel_values_2.resize( size );
-  this->quadr_size = size;
+  my_quadrature._max_size = *std::max_element(my_quadrature._sizes.begin(), my_quadrature._sizes.end());
+
 }
 
 
@@ -653,4 +1437,12 @@ template class besthea::uniform_spacetime_be_onthefly_matrix_gpu<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
+  
+
+template class besthea::uniform_spacetime_be_onthefly_matrix_gpu<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+
+// TODO: add the rest of them
 

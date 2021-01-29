@@ -1069,6 +1069,17 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 template<class kernel_type, class test_space_type, class trial_space_type>
 void besthea::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>::init_quadrature( ) {
   // Use triangle rules for disjoint elements
