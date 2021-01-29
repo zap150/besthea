@@ -207,7 +207,7 @@ class besthea::linear_algebra::block_vector {
    * @param[in] that Vector to be copied.
    * @param[in] alpha Scaling factor.
    */
-  void copy_permute_dims( const block_vector & that, sc alpha = 1 );
+  void copy_permute( const block_vector & that, sc alpha = 1 );
 
   /*!
    * @brief Copies data from a raw vector.

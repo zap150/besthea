@@ -35,7 +35,7 @@ int main(int argc, char ** argv)
     block_vector v;
 
     t.reset("Permuting");
-    v.copy_permute_dims(u);
+    v.copy_permute(u,2);
     t.measure();
 
     
@@ -47,7 +47,7 @@ int main(int argc, char ** argv)
     }*/
 
     block_vector w;
-    w.copy_permute_dims(v);
+    w.copy_permute(v,0.5);
 
     bool equal = true;
     for(lo i = 0; i < u.get_block_size(); i++) {
