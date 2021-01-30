@@ -3876,21 +3876,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       }
     }
   }
-<<<<<<< HEAD
-  //############################################################################
-  //### communicate the result with an Allreduce operation for each timestep ###
-  // @todo: Can we do this in a less cumbersome way?! Is a global reduction even
-  // necessary?
-  // for ( lo block_idx = 0; block_idx < y_pFMM.get_n_blocks( ); ++block_idx )
-  // {
-  //   MPI_Allreduce( MPI_IN_PLACE, y_pFMM.get_block( block_idx ).data( ),
-  //     y_pFMM.get_size_of_block( ), get_scalar_type< sc >::MPI_SC( ), MPI_SUM,
-  //     *_comm );
-  // }
-  // Scale the global update y_pFMM by alpha and add it to the global vector y.
-=======
-
->>>>>>> develop
   y.add( y_pFMM, alpha );
 
   MPI_Barrier( y.get_comm( ) );
