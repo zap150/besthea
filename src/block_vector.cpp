@@ -82,36 +82,32 @@ void besthea::linear_algebra::block_vector::copy_permute( const block_vector & t
   lo bb_max = (that._block_size - 1) / tile_size;
   lo ii_max = (that._size - 1) / tile_size;
 
-#pragma omp parallel
-  {
-#pragma omp for nowait
-    for (lo bb = 0; bb < bb_max; bb++) {
-      lo BB = bb * tile_size;
-      for (lo ii = 0; ii < ii_max; ii++) {
-        lo II = ii * tile_size;
-        for (lo b = 0; b < tile_size; b++) {
-          lo B = BB + b;
-          for (lo i = 0; i < tile_size; i++) {
-            lo I = II + i;
-            sc val = that.get(B, I);
-            this->set(I, B, alpha * val);
-          }
-        }
-      }
-      for(lo I = tile_size * ii_max; I < that._size; I++) {
-        for (lo b = 0; b < tile_size; b++) {
-          lo B = BB + b;
+  // parallelism wos not really worth (speedup < 2 on any number of cores)
+  for (lo bb = 0; bb < bb_max; bb++) {
+    lo BB = bb * tile_size;
+    for (lo ii = 0; ii < ii_max; ii++) {
+      lo II = ii * tile_size;
+      for (lo b = 0; b < tile_size; b++) {
+        lo B = BB + b;
+        for (lo i = 0; i < tile_size; i++) {
+          lo I = II + i;
           sc val = that.get(B, I);
           this->set(I, B, alpha * val);
         }
       }
     }
-#pragma omp for
-    for (lo B = tile_size * bb_max; B < that._block_size; B++) {
-      for(lo I = 0; I < that._size; I++) {
+    for(lo I = tile_size * ii_max; I < that._size; I++) {
+      for (lo b = 0; b < tile_size; b++) {
+        lo B = BB + b;
         sc val = that.get(B, I);
         this->set(I, B, alpha * val);
       }
+    }
+  }
+  for (lo B = tile_size * bb_max; B < that._block_size; B++) {
+    for(lo I = 0; I < that._size; I++) {
+      sc val = that.get(B, I);
+      this->set(I, B, alpha * val);
     }
   }
 

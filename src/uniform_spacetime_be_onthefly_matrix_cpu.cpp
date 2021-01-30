@@ -749,9 +749,8 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<
   lo blocks = _block_dim;
 
 
-  y.scale(beta);
-
-  block_vector_type y_rearr;
+  block_vector_type y_perm;
+  y_perm.copy_permute(y, beta);
 
 #pragma omp parallel
   {
@@ -775,7 +774,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<
         lo max_block = blocks;
         for (lo block = 0; block < max_block; block++) {
           sc y_val = alpha * matrix_val * x.get(block, inner_col);
-          y.add(block, inner_row, y_val);
+          y_perm.add(inner_row, block, y_val);
         }
 
         for (lo diag = 1; diag < blocks; diag++) {
@@ -791,7 +790,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<
             lo block_col = block;
             sc x_val = x.get(block_col, inner_col);
             sc y_val = alpha * matrix_val * x_val;
-            y.add(block_row, inner_row, y_val);
+            y_perm.add(inner_row, block_row, y_val);
           }
 
         }
@@ -811,7 +810,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<
       lo max_block = blocks;
       for (lo block = 0; block < max_block; block++) {
         sc y_val = alpha * matrix_val * x.get(block, inner_col);
-        y.add(block, inner_row, y_val);
+        y_perm.add(inner_row, block, y_val);
       }
 
       for (lo diag = 1; diag < blocks; diag++) {
@@ -827,7 +826,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<
           lo block_col = block;
           sc x_val = x.get(block_col, inner_col);
           sc y_val = alpha * matrix_val * x_val;
-          y.add(block_row, inner_row, y_val);
+          y_perm.add(inner_row, block_row, y_val);
         }
 
       }
@@ -835,6 +834,8 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<
 
   }
 
+
+  y.copy_permute(y_perm);
 
 }
 
@@ -862,7 +863,8 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<
   lo blocks = _block_dim;
 
 
-  y.scale(beta);
+  block_vector_type y_perm;
+  y_perm.copy_permute(y, beta);
 
 #pragma omp parallel
   {
@@ -911,7 +913,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<
           y_val += matrix_vals[1] * x.get(block_col, cols_0[1]);
           y_val += matrix_vals[2] * x.get(block_col, cols_0[2]);
           y_val *= alpha;
-          y.add(block_row, row, y_val);
+          y_perm.add(row, block_row, y_val);
         }
 
         matrix_vals[0] = -vals_next[0];
@@ -926,7 +928,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<
           y_val += matrix_vals[1] * x.get(block_col, cols[1]);
           y_val += matrix_vals[2] * x.get(block_col, cols[2]);
           y_val *= alpha;
-          y.add(block_row, row, y_val);
+          y_perm.add(row, block_row, y_val);
         }
 
         matrix_vals[0] = -vals_curr[0];
@@ -941,7 +943,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<
           y_val += matrix_vals[1] * x.get(block_col, cols_0[1]);
           y_val += matrix_vals[2] * x.get(block_col, cols_0[2]);
           y_val *= alpha;
-          y.add(block_row, row, y_val);
+          y_perm.add(row, block_row, y_val);
         }
 
         vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
@@ -965,7 +967,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<
             y_val += matrix_vals[1] * x.get(block_col, cols[1]);
             y_val += matrix_vals[2] * x.get(block_col, cols[2]);
             y_val *= alpha;
-            y.add(block_row, row, y_val);
+            y_perm.add(row, block_row, y_val);
           }
 
         }
@@ -1001,7 +1003,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<
         y_val += matrix_vals[1] * x.get(block_col, cols_0[1]);
         y_val += matrix_vals[2] * x.get(block_col, cols_0[2]);
         y_val *= alpha;
-        y.add(block_row, row, y_val);
+        y_perm.add(row, block_row, y_val);
       }
 
       matrix_vals[0] = -vals_next[0];
@@ -1016,7 +1018,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<
         y_val += matrix_vals[1] * x.get(block_col, cols[1]);
         y_val += matrix_vals[2] * x.get(block_col, cols[2]);
         y_val *= alpha;
-        y.add(block_row, row, y_val);
+        y_perm.add(row, block_row, y_val);
       }
 
       matrix_vals[0] = -vals_curr[0];
@@ -1031,7 +1033,7 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<
         y_val += matrix_vals[1] * x.get(block_col, cols_0[1]);
         y_val += matrix_vals[2] * x.get(block_col, cols_0[2]);
         y_val *= alpha;
-        y.add(block_row, row, y_val);
+        y_perm.add(row, block_row, y_val);
       }
 
       vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
@@ -1055,14 +1057,16 @@ void besthea::uniform_spacetime_be_onthefly_matrix_cpu<
           y_val += matrix_vals[1] * x.get(block_col, cols[1]);
           y_val += matrix_vals[2] * x.get(block_col, cols[2]);
           y_val *= alpha;
-          y.add(block_row, row, y_val);
+          y_perm.add(row, block_row, y_val);
         }
 
       }
     }
 
-
   }
+
+
+  y.copy_permute(y_perm);
 
 }
 
