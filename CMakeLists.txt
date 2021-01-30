@@ -176,6 +176,7 @@ target_include_directories(besthea PUBLIC ${besthea_INCLUDE_DIRS})
 target_include_directories(besthea SYSTEM PUBLIC
   ${Boost_INCLUDE_DIRS}
   ${Eigen_INCLUDE_DIRS}
+  ${Lyra_INCLUDE_DIRS}
   ${MKL_INCLUDE_DIRS}
   ${MPI_INCLUDE_DIRS})
 target_link_libraries(besthea PUBLIC
@@ -186,9 +187,9 @@ target_compile_definitions(besthea PUBLIC
   MKL_INT=long
   DATA_WIDTH=${DATA_WIDTH})
 
-install (TARGETS besthea ARCHIVE DESTINATION "${CMAKE_BINARY_DIR}/lib")
-install(FILES ${besthea_INCLUDES}
-  DESTINATION "${CMAKE_BINARY_DIR}/include/besthea")
+#install (TARGETS besthea ARCHIVE DESTINATION "${CMAKE_BINARY_DIR}/lib")
+#install(FILES ${besthea_INCLUDES}
+#  DESTINATION "${CMAKE_BINARY_DIR}/include/besthea")
 
 option(BUILD_EXAMPLES "Build examples using the library" OFF)
 
