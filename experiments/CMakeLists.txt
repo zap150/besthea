@@ -1,5 +1,6 @@
 
 add_subdirectory(block_vector_permute)
+add_subdirectory(cuda_properties)
 add_subdirectory(matrix_dim_print)
 add_subdirectory(matrix_solve)
 add_subdirectory(matrix_vector_product)

@@ -135,6 +135,6 @@ macro(enable_Lyra)
 endmacro()
 
 macro(enable_CUDA)
-#  set(CUDA_INCLUDE_DIRS )
-  
+  find_package(CUDA REQUIRED)
+  set(CUDA_INCLUDE_DIRS ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})  
 endmacro()
