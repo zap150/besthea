@@ -168,6 +168,7 @@ void besthea::linear_algebra::distributed_block_vector::resize(
   MPI_Comm_size( _comm, &comm_size );
   _data.resize( n_blocks );
   _n_blocks = n_blocks;
+  _owners.clear( );  // @todo Discuss: This is necessary, right?
   _owners.resize( n_blocks );
 
   _my_blocks = my_blocks;
@@ -237,22 +238,7 @@ void besthea::linear_algebra::distributed_block_vector::copy(
 void besthea::linear_algebra::distributed_block_vector::copy_from_raw(
   lo n_blocks, lo size, const sc * data ) {
   if ( n_blocks != _n_blocks ) {
-    int comm_size;
-
-    MPI_Comm_size( _comm, &comm_size );
     resize( n_blocks );
-    _owners.resize( n_blocks );
-
-    // vector is duplicated on all MPI ranks:
-    std::fill( _owners.begin( ), _owners.end( ), std::vector< int >{ _rank } );
-
-    for ( auto & it : _owners ) {
-      for ( int i = 0; i < comm_size; ++i ) {
-        if ( i != _rank ) {
-          it.push_back( i );
-        }
-      }
-    }
   }
   if ( size != _size ) {
     resize_blocks( size, false );
@@ -265,17 +251,7 @@ void besthea::linear_algebra::distributed_block_vector::copy_from_raw(
 void besthea::linear_algebra::distributed_block_vector::copy_from_raw(
   std::vector< lo > & my_blocks, lo n_blocks, lo size, const sc * data ) {
   if ( n_blocks != _n_blocks ) {
-    int comm_size;
-
-    MPI_Comm_size( _comm, &comm_size );
-    resize( n_blocks );
-    _owners.resize( n_blocks, std::vector< int >{ } );
-
-    for ( auto it : my_blocks ) {
-      _owners.at( it ).push_back( _rank );
-    }
-
-    communicate_owners( my_blocks );
+    resize( my_blocks, n_blocks );
   }
   if ( size != _size ) {
     resize_blocks( size, false );
@@ -289,23 +265,23 @@ void besthea::linear_algebra::distributed_block_vector::copy_from_raw(
 
 void besthea::linear_algebra::distributed_block_vector::copy_to_raw(
   sc * data ) const {
-  for ( lo i = 0; i < _n_blocks; ++i ) {
-    // owner (the lowest rank owning the block) broadcasts the block
-    int root;
-    if ( _owners[ i ].size( ) == 1 ) {
-      root = _owners[ i ][ 0 ];
-    } else {
-      root = _owners[ i ][ 0 ] < _owners[ i ][ 1 ] ? _owners[ i ][ 0 ]
-                                                   : _owners[ i ][ 1 ];
-    }
-
-    if ( root == _rank ) {
-      MPI_Bcast( (void *) _data[ i ].data( ), _size,
-        get_scalar_type< sc >::MPI_SC( ), root, _comm );
+  if ( _duplicated ) {
+    for ( lo i = 0; i < _n_blocks; ++i ) {
       _data[ i ].copy_to_raw( data + i * _size );
-    } else {
-      MPI_Bcast( data + i * _size, _size, get_scalar_type< sc >::MPI_SC( ),
-        root, _comm );
+    }
+  } else {
+    for ( lo i = 0; i < _n_blocks; ++i ) {
+      // primary owner broadcasts the block
+      int root = get_primary_owner( i );
+      if ( root == _rank ) {
+        MPI_Bcast( (void *) _data[ i ].data( ), _size,
+          get_scalar_type< sc >::MPI_SC( ), root, _comm );
+        _data[ i ].copy_to_raw( data + i * _size );
+      } else {
+        // received data is directly written to correct position of raw array
+        MPI_Bcast( data + i * _size, _size, get_scalar_type< sc >::MPI_SC( ),
+          root, _comm );
+      }
     }
   }
 }
@@ -313,22 +289,7 @@ void besthea::linear_algebra::distributed_block_vector::copy_to_raw(
 void besthea::linear_algebra::distributed_block_vector::copy_from_vector(
   lo n_blocks, lo size, const vector_type & data ) {
   if ( n_blocks != _n_blocks ) {
-    int comm_size;
-
-    MPI_Comm_size( _comm, &comm_size );
     resize( n_blocks );
-    _owners.resize( n_blocks );
-
-    // vector is duplicated on all MPI ranks:
-    std::fill( _owners.begin( ), _owners.end( ), std::vector< int >{ _rank } );
-
-    for ( auto & it : _owners ) {
-      for ( int i = 0; i < comm_size; ++i ) {
-        if ( i != _rank ) {
-          it.push_back( i );
-        }
-      }
-    }
   }
   if ( size != _size ) {
     resize_blocks( size, false );
@@ -342,17 +303,7 @@ void besthea::linear_algebra::distributed_block_vector::copy_from_vector(
   std::vector< lo > & my_blocks, lo n_blocks, lo size,
   const vector_type & data ) {
   if ( n_blocks != _n_blocks ) {
-    int comm_size;
-
-    MPI_Comm_size( _comm, &comm_size );
-    resize( n_blocks );
-    _owners.resize( n_blocks, std::vector< int >{ } );
-
-    for ( auto it : my_blocks ) {
-      _owners.at( it ).push_back( _rank );
-    }
-
-    communicate_owners( my_blocks );
+    resize( my_blocks, n_blocks );
   }
   if ( size != _size ) {
     resize_blocks( size, false );
@@ -366,23 +317,26 @@ void besthea::linear_algebra::distributed_block_vector::copy_from_vector(
 
 void besthea::linear_algebra::distributed_block_vector::copy_to_vector(
   vector_type & data ) const {
-  for ( lo i = 0; i < _n_blocks; ++i ) {
-    // owner (the lowest rank owning the block) broadcasts the block
-    int root;
-    if ( _owners[ i ].size( ) == 1 ) {
-      root = _owners[ i ][ 0 ];
-    } else {
-      root = _owners[ i ][ 0 ] < _owners[ i ][ 1 ] ? _owners[ i ][ 0 ]
-                                                   : _owners[ i ][ 1 ];
-    }
-
-    if ( root == _rank ) {
-      MPI_Bcast( (void *) _data[ i ].data( ), _size,
-        get_scalar_type< sc >::MPI_SC( ), root, _comm );
+  if ( data.size( ) != _n_blocks * _size ) {
+    data.resize( _n_blocks * _size, false );
+  }
+  if ( _duplicated ) {
+    for ( lo i = 0; i < _n_blocks; ++i ) {
       _data[ i ].copy_to_raw( data.data( ) + i * _size );
-    } else {
-      MPI_Bcast( data.data( ) + i * _size, _size,
-        get_scalar_type< sc >::MPI_SC( ), root, _comm );
+    }
+  } else {
+    for ( lo i = 0; i < _n_blocks; ++i ) {
+      // primary owner broadcasts the block
+      int root = get_primary_owner( i );
+      if ( root == _rank ) {
+        MPI_Bcast( (void *) _data[ i ].data( ), _size,
+          get_scalar_type< sc >::MPI_SC( ), root, _comm );
+        _data[ i ].copy_to_raw( data.data( ) + i * _size );
+      } else {
+        // received data is directly written to correct position of raw vector
+        MPI_Bcast( data.data( ) + i * _size, _size,
+          get_scalar_type< sc >::MPI_SC( ), root, _comm );
+      }
     }
   }
 }
