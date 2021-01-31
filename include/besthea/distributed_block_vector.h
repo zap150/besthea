@@ -31,6 +31,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /** @file distributed_block_vector.h
  * @brief Contains a class representing a block vector, i.e. a vector of scalars
  * partitioned into blocks. The block vector is distributed among MPI ranks.
+ * @note updated documentation
  */
 
 #ifndef INCLUDE_BESTHEA_DISTRIBUTED_BLOCK_VECTOR_H_
@@ -419,8 +420,9 @@ class besthea::linear_algebra::distributed_block_vector {
    * in a spacetime cluster.
    * @param[in] cluster  Cluster determining the local dofs.
    * @param[in,out] local_vector Local part of block vector.
-   * @tparam space_type  fast_spacetime_be_space representing either p0 or p1
-   *                     basis functions. It determines the dofs.
+   * @tparam space_type  @ref besthea::bem::fast_spacetime_be_space representing
+   *                     either p0 or p1 basis functions. It determines the
+   *                     DOFs.
    * @warning The local vector must have the correct size.
    * @note The local vector is not a block vector anymore, but a contiguous
    *       vector.
@@ -437,8 +439,9 @@ class besthea::linear_algebra::distributed_block_vector {
    * in a spacetime cluster.
    * @param[in] cluster  Cluster determining the local dofs.
    * @param[in,out] local_vector Local part of block vector.
-   * @tparam space_type  fast_spacetime_be_space representing either p0 or p1
-   *                     basis functions. It determines the dofs.
+   * @tparam space_type  @ref besthea::bem::fast_spacetime_be_space representing
+   *                     either p0 or p1 basis functions. It determines the
+   *                     DOFs.
    * @warning The local vector must have the correct size.
    * @note The local vector is not a block vector anymore, but a contiguous
    *       vector.
@@ -456,8 +459,9 @@ class besthea::linear_algebra::distributed_block_vector {
    * @param[in] cluster  Cluster determining the positions in the distributed
    *                     blockvector to which the local vector is added.
    * @param[in] local_vector Local part of block vector to be added.
-   * @tparam space_type  fast_spacetime_be_space representing either p0 or p1
-   *                     basis functions. It determines the dofs.
+   * @tparam space_type  @ref besthea::bem::fast_spacetime_be_space representing
+   *                     either p0 or p1 basis functions. It determines the
+   *                     DOFs.
    * @note The entries in the local vector are ordered according to the ordering
    *       of the time elements and spatial dofs in the spacetime cluster (time
    *       step after time step).
@@ -474,8 +478,9 @@ class besthea::linear_algebra::distributed_block_vector {
    * @param[in] cluster  Cluster determining the positions in the distributed
    *                     blockvector to which the local vector is added.
    * @param[in] local_vector Local part of block vector to be added.
-   * @tparam space_type  fast_spacetime_be_space representing either p0 or p1
-   *                     basis functions. It determines the dofs.
+   * @tparam space_type  @ref besthea::bem::fast_spacetime_be_space representing
+   *                     either p0 or p1 basis functions. It determines the
+   *                     DOFs.
    * @note The entries in the local vector are ordered according to the ordering
    *       of the time elements and spatial dofs in the spacetime cluster (time
    *       step after time step).

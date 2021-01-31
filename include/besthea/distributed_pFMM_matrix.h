@@ -946,20 +946,30 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     mesh::scheduling_time_cluster * root ) const;
 
   /**
-   * Initializes quadrature structures.
+   * Initializes quadrature structures used to integrate Chebyshev polynomials
+   * on triangles.
+   *
+   * The quadrature points and weights on the reference triangle are
+   * initialized. The other structures used for integration of Chebyshev
+   * polynomials are resized appropriately.
+   *
    * @param[out] my_quadrature Wrapper holding quadrature data.
-   * @todo This is redundant! Can we restructure the code?
+   * @todo This is redundant. Can we restructure the code?
    */
   void init_quadrature_polynomials( quadrature_wrapper & my_quadrature ) const;
 
   /**
-   * Maps the quadrature nodes from the reference triangle to the actual
-   * geometry.
-   * @param[in] y1 Coordinates of the first node of the test element.
-   * @param[in] y2 Coordinates of the second node of the test element.
-   * @param[in] y3 Coordinates of the third node of the test element.
+   * Maps all quadrature nodes (integration of Chebyshev polynomials) from the
+   * reference triangle to the actual geometry.
+   *
+   * The quadrature nodes on the reference triangles have to be given in
+   * @p my_quadrature. The results are stored in this structure too.
+   *
+   * @param[in] y1 Coordinates of the first node of the triangle.
+   * @param[in] y2 Coordinates of the second node of the triangle.
+   * @param[in] y3 Coordinates of the third node of the triangle.
    * @param[in,out] my_quadrature Structure holding the quadrature nodes.
-   * @todo This is redundant! Can we restructure the code?
+   * @todo Check if documentation makes sense in this context.
    */
   void triangle_to_geometry( const linear_algebra::coordinates< 3 > & y1,
     const linear_algebra::coordinates< 3 > & y2,
@@ -967,23 +977,21 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     quadrature_wrapper & my_quadrature ) const;
 
   /**
-   * Maps from the spatial cluster to the interval [-1, 1] where the Chebyshev
-   * polynomials are defined.
-   * @param[out] my_quadrature  Structure holding mapping from the cluster
-   *                            to the interval [-1,1].
-   * @param[in] x_start Border of the space cluster for which the Chebyshev
-   *                    polynomials are evaluated.
-   * @param[in] x_end Border of the space cluster for which the Chebyshev
-   *                  polynomials are evaluated.
-   * @param[in] y_start Border of the space cluster for which the Chebyshev
-   *                    polynomials are evaluated.
-   * @param[in] y_end Border of the space cluster for which the Chebyshev
-   *                  polynomials are evaluated.
-   * @param[in] z_start Border of the space cluster for which the Chebyshev
-   *                    polynomials are evaluated.
-   * @param[in] z_end Border of the space cluster for which the Chebyshev
-   *                  polynomials are evaluated.
+   * Maps points from a given axis-parallel spatial cluster to the cube [-1,1]^3
+   * using the standard linear transformation.
+   *
+   * The points are taken from @p my_quadrature and the results are stored there
+   * too.
+   * @param[in,out] my_quadrature Structure holding the points to be mapped and
+   *                              the results.
+   * @param[in] x_start Lower border of the space cluster along x dimension.
+   * @param[in] x_end Upper border of the space cluster along x dimension.
+   * @param[in] y_start Lower border of the space cluster along y dimension.
+   * @param[in] y_end Upper border of the space cluster along y dimension.
+   * @param[in] z_start Lower border of the space cluster along z dimension.
+   * @param[in] z_end Upper border of the space cluster along z dimension.
    * @todo This is redundant! Can we restructure the code?
+   * @todo rename the routine to better describe its action?
    */
   void cluster_to_polynomials( quadrature_wrapper & my_quadrature, sc x_start,
     sc x_end, sc y_start, sc y_end, sc z_start, sc z_end ) const;

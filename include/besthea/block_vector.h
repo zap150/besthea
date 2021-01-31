@@ -307,8 +307,9 @@ class besthea::linear_algebra::block_vector {
    * spacetime cluster.
    * @param[in] cluster  Cluster determining the local dofs.
    * @param[in,out] local_vector Local part of block vector.
-   * @tparam space_type  fast_spacetime_be_space representing either p0 or p1
-   *                     basis functions. It determines the dofs.
+   * @tparam space_type  @ref besthea::bem::fast_spacetime_be_space representing
+   *                     either p0 or p1 basis functions. It determines the
+   *                     DOFs.
    * @warning The local vector must have the correct size.
    * @note The local vector is not a block vector anymore, but a contiguous
    *       vector.
@@ -322,8 +323,9 @@ class besthea::linear_algebra::block_vector {
    * general spacetime cluster.
    * @param[in] cluster  Cluster determining the local dofs.
    * @param[in,out] local_vector Local part of block vector.
-   * @tparam space_type  fast_spacetime_be_space representing either p0 or p1
-   *                     basis functions. It determines the dofs.
+   * @tparam space_type  @ref besthea::bem::fast_spacetime_be_space representing
+   *                     either p0 or p1 basis functions. It determines the
+   *                     DOFs.
    * @warning The local vector must have the correct size.
    * @note The local vector is not a block vector anymore, but a contiguous
    *       vector.
@@ -338,8 +340,9 @@ class besthea::linear_algebra::block_vector {
    * @param[in] cluster  Cluster determining the positions in the block_vector
    *                     to which the local vector is added.
    * @param[in] local_vector Local part of block vector to be added.
-   * @tparam space_type  fast_spacetime_be_space representing either p0 or p1
-   *                     basis functions. It determines the dofs.
+   * @tparam space_type  @ref besthea::bem::fast_spacetime_be_space representing
+   *                     either p0 or p1 basis functions. It determines the
+   *                     DOFs.
    * @note The elements in the local vector are ordered according to the
    * ordering of the time elements and spatial dofs in the spacetime cluster
    * (time step after time step).
@@ -354,8 +357,9 @@ class besthea::linear_algebra::block_vector {
    * @param[in] cluster  Cluster determining the positions in the block_vector
    *                     to which the local vector is added.
    * @param[in] local_vector Local part of block vector to be added.
-   * @tparam space_type  fast_spacetime_be_space representing either p0 or p1
-   *                     basis functions. It determines the dofs.
+   * @tparam space_type  @ref besthea::bem::fast_spacetime_be_space representing
+   *                     either p0 or p1 basis functions. It determines the
+   *                     DOFs.
    * @note The elements in the local vector are ordered according to the
    * ordering of the time elements and spatial dofs in the spacetime cluster
    * (time step after time step).

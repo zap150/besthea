@@ -83,40 +83,54 @@ class besthea::bem::fast_spacetime_be_assembler {
   using vector_type = besthea::linear_algebra::vector;  //!< vector type
 
   /**
-   * Wraps the mapped quadrature point so that they can be private for OpenMP
-   * threads
+   * Wrapper for the quadrature data.
+   *
+   * @note On the triangle the quadrature nodes and weights are stored in arrays
+   *       of vectors. For each spatial configuration (disjoint triangles,
+   *       shared vertex, shared edge, identical triangles) a separate array is
+   *       used.
+   * @note The idea is to initialize quadrature nodes on reference elements once
+   *       and map them to the actual geometry appropriately, whenever needed.
+   * @note Allows the data to be private for OpenMP threads.
    */
   struct quadrature_wrapper {
     std::array< std::vector< sc, besthea::allocator_type< sc > >, 4 >
-      _x1_ref;  //!< First coordinates of quadrature nodes in (0,1)x(0,1-x1) to
-                //!< be mapped to the test element
+      _x1_ref;  //!< First coordinates of quadrature nodes in test reference
+                //!< triangle (0,1)x(0,1-x1).
     std::array< std::vector< sc, besthea::allocator_type< sc > >, 4 >
-      _x2_ref;  //!< Second coordinates of quadrature nodes in (0,1)x(0,1-x1) to
-                //!< be mapped to the test element
+      _x2_ref;  //!< Second coordinates of quadrature nodes in test reference
+                //!< triangle (0,1)x(0,1-x1).
 
     std::array< std::vector< sc, besthea::allocator_type< sc > >, 4 >
-      _y1_ref;  //!< First coordinates of quadrature nodes in (0,1)x(0,1-x1) to
-                //!< be mapped to the trial element
+      _y1_ref;  //!< First coordinates of quadrature nodes in trial reference
+                //!< triangle (0,1)x(0,1-x1).
     std::array< std::vector< sc, besthea::allocator_type< sc > >, 4 >
-      _y2_ref;  //!< Second coordinates of quadrature nodes in (0,1)x(0,1-x1) to
-                //!< be mapped to the trial element
+      _y2_ref;  //!< Second coordinates of quadrature nodes in trial reference
+                //!< triangle (0,1)x(0,1-x1).
 
     std::array< std::vector< sc, besthea::allocator_type< sc > >, 4 >
-      _w;  //!< Quadrature weights including transformation Jacobians
+      _w;  //!< Quadrature weights including the Jacobians of the
+           //!< integral transformation.
 
     std::vector< sc, besthea::allocator_type< sc > >
-      _x1;  //!< First coordinates of quadrature nodes in the test element
+      _x1;  //!< First coordinates of quadrature nodes in an actual test
+            //!< element.
     std::vector< sc, besthea::allocator_type< sc > >
-      _x2;  //!< Second coordinates of quadrature nodes in the test element
+      _x2;  //!< Second coordinates of quadrature nodes in an actual test
+            //!< element.
     std::vector< sc, besthea::allocator_type< sc > >
-      _x3;  //!< Third coordinates of quadrature nodes in the test element
+      _x3;  //!< Third coordinates of quadrature nodes in an actual test
+            //!< element.
 
     std::vector< sc, besthea::allocator_type< sc > >
-      _y1;  //!< First coordinates of quadrature nodes in the trial element
+      _y1;  //!< First coordinates of quadrature nodes in an actual trial
+            //!< element.
     std::vector< sc, besthea::allocator_type< sc > >
-      _y2;  //!< Second coordinates of quadrature nodes in the trial element
+      _y2;  //!< Second coordinates of quadrature nodes in an actual trial
+            //!< element.
     std::vector< sc, besthea::allocator_type< sc > >
-      _y3;  //!< Third coordinates of quadrature nodes in the trial element
+      _y3;  //!< Third coordinates of quadrature nodes in an actual trial
+            //!< element.
 
     std::vector< sc, besthea::allocator_type< sc > >
       _kernel_values;  //!< Buffer for storing kernel values.
@@ -124,24 +138,25 @@ class besthea::bem::fast_spacetime_be_assembler {
       _kernel_values_2;  //!< Buffer for storing additional kernel values.
 
     std::vector< sc, besthea::allocator_type< sc > >
-      _y1_ref_cheb;  //!< First coordinates of quadrature nodes for the
-                     //!< Chebyshev polynomials in (0,1)x(0,1-x1) to be mapped
-                     //!< to the test element
+      _y1_ref_cheb;  //!< First coordinates of quadrature nodes in the reference
+                     //!< triangle (0,1)x(0,1-x1) used for numerical integration
+                     //!< of Chebyshev polynomials.
     std::vector< sc, besthea::allocator_type< sc > >
-      _y2_ref_cheb;  //!< Second coordinates of quadrature nodes for the
-                     //!< Chebyshev polynomials in (0,1)x(0,1-x1) to be mapped
-                     //!< to the test element
-    vector_type
-      _y1_polynomial;  //!< Coordinates for evaluation of the Chebyshev
-                       //!< polynomials in the interval [-1,1] in x direction
-    vector_type
-      _y2_polynomial;  //!< Coordinates for evaluation of the Chebyshev
-                       //!< polynomials in the interval [-1,1] in y direction
-    vector_type
-      _y3_polynomial;  //!< Coordinates for evaluation of the Chebyshev
-                       //!< polynomials in the interval [-1,1] in z direction
+      _y2_ref_cheb;  //!< Second coordinates of quadrature nodes in the
+                     //!< reference triangle (0,1)x(0,1-x1) used for numerical
+                     //!< integration of Chebyshev polynomials.
+    vector_type _y1_polynomial;  //!< Transformed coordinates for the evaluation
+                                 //!< of Chebyshev polynomials in the interval
+                                 //!< [-1,1] in x direction
+    vector_type _y2_polynomial;  //!< Transformed coordinates for the evaluation
+                                 //!< of Chebyshev polynomials in the interval
+                                 //!< [-1,1] in y direction
+    vector_type _y3_polynomial;  //!< Transformed coordinates for the evaluation
+                                 //!< of Chebyshev polynomials in the interval
+                                 //!< [-1,1] in z direction
     std::vector< sc, besthea::allocator_type< sc > >
-      _wy_cheb;  //!< Quadrature weights including
+      _wy_cheb;  //!< Quadrature weights for triangle quadrature. They do not
+                 //!< include the Jacobian of the integral transformation.
   };
 
  public:
@@ -190,7 +205,13 @@ class besthea::bem::fast_spacetime_be_assembler {
   void init_quadrature( quadrature_wrapper & my_quadrature ) const;
 
   /**
-   * Initializes quadrature structures.
+   * Initializes quadrature structures used to integrate Chebyshev polynomials
+   * on triangles.
+   *
+   * The quadrature points and weights on the reference triangle are
+   * initialized. The other structures used for integration of Chebyshev
+   * polynomials are resized appropriately.
+   *
    * @param[out] my_quadrature Wrapper holding quadrature data.
    */
   void init_quadrature_polynomials( quadrature_wrapper & my_quadrature ) const;
@@ -401,23 +422,20 @@ class besthea::bem::fast_spacetime_be_assembler {
     quadrature_wrapper & my_quadrature ) const;
 
   /**
-   * Maps from the spatial cluster to the interval [-1, 1] where the Chebyshev
-   * polynomials are defined.
-   * @param[out] my_quadrature Structure holding mapping from the cluster
-   * to the interval [-1,1].
-   * @param[in] x_start Border of the space cluster for which the Chebyshev
-   * polynomials are evaluated.
-   * @param[in] x_end Border of the space cluster for which the Chebyshev
-   * polynomials are evaluated.
-   * @param[in] y_start Border of the space cluster for which the Chebyshev
-   * polynomials are evaluated.
-   * @param[in] y_end Border of the space cluster for which the Chebyshev
-   * polynomials are evaluated.
-   * @param[in] z_start Border of the space cluster for which the Chebyshev
-   * polynomials are evaluated.
-   * @param[in] z_end Border of the space cluster for which the Chebyshev
-   * polynomials are evaluated.
+   * Maps points from a given axis-parallel spatial cluster to the cube [-1,1]^3
+   * using the standard linear transformation.
    *
+   * The points are taken from @p my_quadrature and the results are stored there
+   * too.
+   * @param[in,out] my_quadrature Structure holding the points to be mapped and
+   *                              the results.
+   * @param[in] x_start Lower border of the space cluster along x dimension.
+   * @param[in] x_end Upper border of the space cluster along x dimension.
+   * @param[in] y_start Lower border of the space cluster along y dimension.
+   * @param[in] y_end Upper border of the space cluster along y dimension.
+   * @param[in] z_start Lower border of the space cluster along z dimension.
+   * @param[in] z_end Upper border of the space cluster along z dimension.
+   * @todo rename the routine to better describe its action?
    */
   void cluster_to_polynomials( quadrature_wrapper & my_quadrature, sc x_start,
     sc x_end, sc y_start, sc y_end, sc z_start, sc z_end ) const;
