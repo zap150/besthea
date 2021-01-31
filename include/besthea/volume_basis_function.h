@@ -31,7 +31,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /** @file volume_basis_function.h
  * @brief Contains a parent class for all spatial finite element basis functions
  * defined on tetrahedral volume meshes.
- * @note updated
+ * @note updated documentation
  */
 
 #ifndef INCLUDE_BESTHEA_VOLUME_BASIS_FUNCTION_H_
@@ -101,8 +101,8 @@ class besthea::bem::volume_basis_function {
    * Provides global indices for local contributions.
    * @param[in] i_elem Element index.
    * @param[out] indices Global indices for local contributions.
-   * \example In case of p1 basis functions the global indices of the nodes of
-   * the tetrahedron with index \p i_elem are returned.
+   * @remark Example: In case of p1 basis functions the global indices of the
+   * nodes of the tetrahedron with index \p i_elem are returned.
    */
   void local_to_global( lo i_elem, std::vector< lo > & indices ) const {
     derived( )->do_local_to_global( i_elem, indices );

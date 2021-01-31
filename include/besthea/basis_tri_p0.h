@@ -31,7 +31,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /** @file basis_tri_p0.h
  * @brief Contains a class representing p0 (piecewise constant) basis functions
  * on a triangular surface mesh.
- * @note updated
+ * @note updated documentation
  */
 
 #ifndef INCLUDE_BESTHEA_BASIS_TRI_P0_H_
@@ -98,8 +98,9 @@ class besthea::bem::basis_tri_p0
    *                 parameter is ignored.
    * @param[out] indices Element index at position 0 of the vector.
    */
-  void do_local_to_global( lo i_elem, int n_shared_vertices, int rotation,
-    bool swap, std::vector< lo > & indices ) const;
+  void do_local_to_global( lo i_elem, [[maybe_unused]] int n_shared_vertices,
+    [[maybe_unused]] int rotation, [[maybe_unused]] bool swap,
+    std::vector< lo > & indices ) const;
 
   /**
    * Evaluates the basis function.

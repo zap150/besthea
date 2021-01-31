@@ -31,7 +31,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /** @file basis_tri_p1.h
  * @brief Contains a class representing p1 (piecewise linear) basis functions on
  * a triangular surface mesh.
- * @note updated
+ * @note updated documentation
  */
 
 #ifndef INCLUDE_BESTHEA_BASIS_TRI_P1_H_

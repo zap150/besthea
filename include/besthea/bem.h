@@ -31,7 +31,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /** @file bem.h
  * @brief Includes all header files of the besthea library relevant for boundary
  * element methods.
- * @note updated
+ * @note updated documentation
  */
 
 #ifndef INCLUDE_BESTHEA_BEM_H_

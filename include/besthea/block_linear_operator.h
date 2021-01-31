@@ -30,7 +30,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /** @file block_linear_operator.h
  * @brief Parent class for block_linear operators.
- * @note updated
+ * @note updated documentation
  */
 
 #ifndef INCLUDE_BESTHEA_BLOCK_LINEAR_OPERATOR_H_
@@ -67,9 +67,9 @@ class besthea::linear_algebra::block_linear_operator {
    * @param[in] block_dim Block dimension.
    * @param[in] dim_domain Dimension of domain per block.
    * @param[in] dim_range Dimension of range per block.
-   * @example In case of block matrices, \p block_dim is the number of blocks in
-   * each row and column, \p dim_domain the number of rows per block and
-   * \p dim_range the number of columns per block.
+   * @remark Example: In case of block matrices, \p block_dim is the number of
+   * blocks in each row and column, \p dim_domain the number of rows per block
+   * and \p dim_range the number of columns per block.
    */
   block_linear_operator( lo block_dim, lo dim_domain, lo dim_range )
     : _block_dim( block_dim ),

@@ -31,7 +31,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /** @file basis_tetra_p1.h
  * @brief Contains a class representing piecewise linear basis functions on a
  * tetrahedral (spatial) volume mesh.
- * @note updated
+ * @note updated documentation
  */
 
 #ifndef INCLUDE_BESTHEA_BASIS_TETRA_P1_H_

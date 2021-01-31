@@ -462,7 +462,8 @@ class besthea::bem::fast_spacetime_be_assembler {
    * @warning Only the information from \p _trial_space is used for the
    * computation (Could cause problems if test and trial space differ).
    */
-  void compute_surface_curls( space_cluster_type * cluster ) const;
+  void compute_surface_curls(
+    [[maybe_unused]] space_cluster_type * cluster ) const;
 
   /**
    * Computes various data which is needed for the application of the pFMM

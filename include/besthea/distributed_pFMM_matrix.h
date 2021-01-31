@@ -302,7 +302,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   /**
    * Fills the 4 lists used for scheduling the FMM operations by adding pointers
-   * to clusters assigned to the process with id @p _my_process_id . In addition
+   * to clusters assigned to the process with id @p _my_process_id. In addition
    * it determines all pairs of clusters and process ids from which data is
    * received, and initializes the data in the scheduling time clusters which is
    * used to check the dependencies.
@@ -862,7 +862,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in,out] array_of_requests The MPI_Requests of the non-blocking
    *                                  receive operations are stored in this
    *                                  array. It is expected to have at least
-   *                                  the size of @p receive_vector .
+   *                                  the size of @p receive_vector.
    */
   void start_receive_operations(
     std::vector< MPI_Request > & array_of_requests ) const;
@@ -1189,8 +1189,12 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     _all_poly_vals_mult_coll;  //!< summed Chebyshev nodes for collapsed loop,
                                //!< aligned
 
-  mutable std::vector< full_matrix > _aux_buffer_0;
-  mutable std::vector< full_matrix > _aux_buffer_1;
+  mutable std::vector< full_matrix >
+    _aux_buffer_0;  //!< Auxilliary vector used to store intermediate results in
+                    //!< M2L operations.
+  mutable std::vector< full_matrix >
+    _aux_buffer_1;  //!< Auxilliary vector used to store intermediate results in
+                    //!< M2L operations.
 };
 
 /** Typedef for the distributed single layer p0-p0 PFMM matrix */

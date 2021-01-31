@@ -29,9 +29,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file vector.h
- * @brief Contains a class representing a vector of scalars partitioned into
- * blocks.
- * @note updated
+ * @brief Contains a class representing a block vector, i.e. a vector of scalars
+ * partitioned into blocks.
+ * @note updated documentation
  */
 
 #ifndef INCLUDE_BESTHEA_BLOCK_VECTOR_H_
@@ -65,7 +65,8 @@ namespace besthea {
 }
 
 /**
- *  Class representing a vector of scalars partitioned into blocks.
+ * Class representing a block vector, i.e. a vector of scalars partitioned into
+ * blocks.
  */
 class besthea::linear_algebra::block_vector {
  public:
@@ -83,7 +84,8 @@ class besthea::linear_algebra::block_vector {
   block_vector( const block_vector & that );
 
   /**
-   * Constructor with an initializer list.
+   * Constructs a block vector with an initializer list. All @p n_blocks have
+   * the same size and elements as the provided list.
    * @param[in] n_blocks Number of blocks.
    * @param[in] list Initializer list for vector.
    */
@@ -115,10 +117,10 @@ class besthea::linear_algebra::block_vector {
     return _data[ d ];
   }
 
-  /*!
-   * @brief Returns the i-th entry of the d-th block.
+  /**
+   * @brief Returns the i-th element of the d-th block.
    * @param[in] d Block index.
-   * @param[in] i Index of the entry.
+   * @param[in] i Element index.
    */
   sc get( lo d, lo i ) const {
     return _data[ d ][ i ];
@@ -132,14 +134,14 @@ class besthea::linear_algebra::block_vector {
   }
 
   /**
-   * Returns the size of a single block
+   * Returns the size of a single block.
    */
   lo get_size_of_block( ) const {
     return _size;
   }
 
   /**
-   * Returns the size of the whole vector, i.e. the total number of entries.
+   * Returns the size of the whole vector, i.e. the total number of elements.
    */
   lo size( ) const {
     return _n_blocks * _size;
@@ -156,7 +158,7 @@ class besthea::linear_algebra::block_vector {
   }
 
   /**
-   * Resizes the individual vector blocks.
+   * Resizes all blocks of the block vector.
    * @param[in] size New size of each block.
    * @param[in] zero If true, all blocks are filled with zeros.
    */
@@ -168,9 +170,9 @@ class besthea::linear_algebra::block_vector {
   }
 
   /*!
-   * @brief Sets the i-th entry of the d-th block.
+   * @brief Sets the i-th element of the d-th block.
    * @param[in] d Block index.
-   * @param[in] i Index of the entry.
+   * @param[in] i Element index.
    * @param[in] value Value to be set.
    */
   void set( lo d, lo i, sc value ) {
@@ -178,9 +180,9 @@ class besthea::linear_algebra::block_vector {
   }
 
   /*!
-   * @brief Adds a value atomically(!) to a single entry of a single block.
+   * @brief Adds a value atomically(!) to a single element of a single block.
    * @param[in] d Block index.
-   * @param[in] i Index of the entry.
+   * @param[in] i Element index.
    * @param[in] value Value to be added.
    */
   void add_atomic( lo d, lo i, sc value ) {
@@ -189,9 +191,9 @@ class besthea::linear_algebra::block_vector {
   }
 
   /*!
-   * @brief Adds a value to a single entry of a single block.
+   * @brief Adds a value to a single element of a single block.
    * @param[in] d Block index.
-   * @param[in] i Index of the entry.
+   * @param[in] i Element index.
    * @param[in] value Value to be added.
    */
   void add( lo d, lo i, sc value ) {
@@ -208,20 +210,20 @@ class besthea::linear_algebra::block_vector {
    * @brief Copies data from a raw array.
    * @param[in] n_blocks Number of blocks.
    * @param[in] size Size of each block.
-   * @param[in] data Array to copy from.
+   * @param[in] data Array to copy from. Contains all elements, block by block.
    * @note If @p n_blocks and @p size are different from the member variables
-   * @p _n_blocks and @p _size , respectively, the block vector is resized
+   * @p _n_blocks and @p _size, respectively, the block vector is resized
    * appropriately.
    * @warning The source array has to contain at least @p n_blocks * @p size
-   * entries.
+   * elements.
    */
   void copy_from_raw( lo n_blocks, lo size, const sc * data );
 
   /*!
    * @brief Copies data to a raw array.
-   * @param[in] data Array to copy to.
-   * @warning The target array has to contain at least @p _n_blocks * @p _size
-   * entries.
+   * @param[in,out] data Array to copy to. Is filled with all elements, block by
+   *                     block.
+   * @warning The array's size has to be at least @p _n_blocks * @p _size.
    */
   void copy_to_raw( sc * data ) const;
 
@@ -229,20 +231,21 @@ class besthea::linear_algebra::block_vector {
    * @brief Copies data from a raw vector.
    * @param[in] n_blocks Number of blocks.
    * @param[in] size Size of each block.
-   * @param[in] data Vector to copy from.
+   * @param[in] data Vector to copy from. Contains all elements, block by block.
    * @note If @p n_blocks and @p size are different from the member variables
-   * @p _n_blocks and @p _size , respectively, the block vector is resized
+   * @p _n_blocks and @p _size, respectively, the block vector is resized
    * appropriately.
    * @warning The source vector has to contain at least @p n_blocks * @p size
-   * entries.
+   * elements.
    */
   void copy_from_vector( lo n_blocks, lo size, const vector_type & data );
 
   /*!
    * @brief Copies data to a raw vector.
-   * @param[in] data Vector to copy to.
+   * @param[in,out] data Vector to copy to. Is filled with all elements, block
+   *                     by block.
    * @warning The target vector has to contain at least
-   * @p _n_blocks * @p _size entries.
+   * @p _n_blocks * @p _size elements.
    */
   void copy_to_vector( vector_type & data ) const;
 
@@ -274,7 +277,7 @@ class besthea::linear_algebra::block_vector {
    */
   sc dot( block_vector const & v ) const {
     sc val = 0.0;
-    for ( lo i = 0; i < _block_size; ++i ) {
+    for ( lo i = 0; i < _n_blocks; ++i ) {
       val += _data[ i ].dot( v.get_block( i ) );
     }
 
@@ -337,9 +340,9 @@ class besthea::linear_algebra::block_vector {
    * @param[in] local_vector Local part of block vector to be added.
    * @tparam space_type  fast_spacetime_be_space representing either p0 or p1
    *                     basis functions. It determines the dofs.
-   * @note The entries in the local vector are ordered according to the ordering
-   *       of the time elements and spatial dofs in the spacetime cluster (time
-   *       step after time step).
+   * @note The elements in the local vector are ordered according to the
+   * ordering of the time elements and spatial dofs in the spacetime cluster
+   * (time step after time step).
    */
   template< class space_type >
   void add_local_part( besthea::mesh::spacetime_cluster * cluster,
@@ -353,9 +356,9 @@ class besthea::linear_algebra::block_vector {
    * @param[in] local_vector Local part of block vector to be added.
    * @tparam space_type  fast_spacetime_be_space representing either p0 or p1
    *                     basis functions. It determines the dofs.
-   * @note The entries in the local vector are ordered according to the ordering
-   *       of the time elements and spatial dofs in the spacetime cluster (time
-   *       step after time step).
+   * @note The elements in the local vector are ordered according to the
+   * ordering of the time elements and spatial dofs in the spacetime cluster
+   * (time step after time step).
    */
   template< class space_type >
   void add_local_part( besthea::mesh::general_spacetime_cluster * cluster,
