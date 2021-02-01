@@ -13,9 +13,7 @@ enable_MPI()
 enable_OpenMP()
 enable_Boost()
 enable_Eigen()
-if(BUILD_EXAMPLES)
-  enable_Lyra()
-endif()
+enable_Lyra()
 
 set(besthea_INCLUDES
   include/besthea/basis_function.h
