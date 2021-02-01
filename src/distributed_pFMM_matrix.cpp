@@ -429,7 +429,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           case 3: {
             // M2l-list task
 
-            lo idx_m2l = current_cluster->get_pos_in_m2l_list( );
             lo idx_l = current_cluster->get_pos_in_l_list( );
             lou ready_int_list_size
               = current_cluster->get_ready_interaction_list_size( );
@@ -3822,7 +3821,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           case 3: {
             // M2l-list task
 
-            lo idx_m2l = current_cluster->get_pos_in_m2l_list( );
             lo idx_l = current_cluster->get_pos_in_l_list( );
             lou ready_int_list_size
               = current_cluster->get_ready_interaction_list_size( );
