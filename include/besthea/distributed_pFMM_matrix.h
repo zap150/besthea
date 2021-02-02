@@ -384,7 +384,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   /*!
    * Setter for task timer during matrix-vector multiplication
-   * @param[in] v When true, measures and prints timing of individual tasks.
+   * @param[in] measure_tasks When true, measures and prints timing of
+   *                          individual tasks.
    */
   void set_task_timer( bool measure_tasks ) {
     _measure_tasks = measure_tasks;
