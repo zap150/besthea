@@ -53,9 +53,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_hs_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_sl_kernel_antiderivative.h"
+#include "besthea/timer.h"
 #include "besthea/tree_structure.h"
 #include "besthea/vector.h"
 
+#include <chrono>
 #include <list>
 #include <mpi.h>
 #include <unordered_map>
@@ -75,6 +77,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   : public besthea::linear_algebra::block_linear_operator {
  public:
   using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
+  using timer_type = besthea::tools::timer;             //!< Timer type
 
   /**
    * Wraps the mapped quadrature point so that they can be private for OpenMP
@@ -161,7 +164,18 @@ class besthea::linear_algebra::distributed_pFMM_matrix
       _cheb_nodes_sum_coll(
         ( _m2l_integration_order + 1 ) * ( _m2l_integration_order + 1 ) ),
       _all_poly_vals_mult_coll( ( _spat_order + 1 ) * ( _spat_order + 1 )
-        * ( _m2l_integration_order + 1 ) * ( _m2l_integration_order + 1 ) ) {
+        * ( _m2l_integration_order + 1 ) * ( _m2l_integration_order + 1 ) ),
+      _verbose( false ),
+      _measure_tasks( false ),
+      _non_nf_op_count( 0 ),
+      _m_task_times( omp_get_max_threads( ) ),
+      _m2l_task_times( omp_get_max_threads( ) ),
+      _l_task_times( omp_get_max_threads( ) ),
+      _n_task_times( omp_get_max_threads( ) ),
+      _m_subtask_times( omp_get_max_threads( ) ),
+      _m2l_subtask_times( omp_get_max_threads( ) ),
+      _l_subtask_times( omp_get_max_threads( ) ),
+      _n_subtask_times( omp_get_max_threads( ) ) {
   }
 
   distributed_pFMM_matrix( const distributed_pFMM_matrix & that ) = delete;
@@ -359,6 +373,22 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] root_process  Process responsible for printing the information.
    */
   void print_information( const int root_process );
+
+  /*!
+   * Setter for verbosity during matrix-vector multiplication
+   * @param[in] verbose When true, prints information to file.
+   */
+  void set_verbose( bool verbose ) {
+    _verbose = verbose;
+  }
+
+  /*!
+   * Setter for task timer during matrix-vector multiplication
+   * @param[in] v When true, measures and prints timing of individual tasks.
+   */
+  void set_task_timer( bool measure_tasks ) {
+    _measure_tasks = measure_tasks;
+  }
 
  private:
   /**
@@ -1191,6 +1221,59 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   mutable std::vector< full_matrix > _aux_buffer_0;
   mutable std::vector< full_matrix > _aux_buffer_1;
+
+  bool _verbose;  //!< print info to files during matrix-vector multiplication
+
+  bool _measure_tasks;  //!< print task time info to files during
+                        //!< matrix-vector multiplications
+
+  mutable lo _non_nf_op_count;  //!< number of schduled non-nearfield operation
+
+  /*!
+   * Increases the number of scheduled  non-nearfield operations.
+   */
+  void add_nn_operations( ) const {
+#pragma omp atomic update
+    _non_nf_op_count++;
+  }
+
+  /*!
+   * Decreases the number of scheduled non-nearfield operations.
+   */
+  void reduce_nn_operations( ) const {
+#pragma omp atomic update
+    _non_nf_op_count--;
+  }
+
+  /*!
+   * @returns the number of scheduled non-nearfield operations
+   */
+  lo get_nn_operations( ) const {
+    lo ret_val;
+#pragma omp atomic read
+    ret_val = _non_nf_op_count;
+    return ret_val;
+  }
+
+  mutable timer_type _global_timer;
+
+  // using clock_type = std::chrono::high_resolution_clock;
+  using time_type = std::chrono::microseconds;  //!< Unit type.
+
+  mutable std::vector< std::vector< time_type::rep > > _m_task_times;
+  mutable std::vector< std::vector< time_type::rep > > _m2l_task_times;
+  mutable std::vector< std::vector< time_type::rep > > _l_task_times;
+  mutable std::vector< std::vector< time_type::rep > > _n_task_times;
+
+  mutable std::vector< std::vector< time_type::rep > > _m_subtask_times;
+  mutable std::vector< std::vector< time_type::rep > > _m2l_subtask_times;
+  mutable std::vector< std::vector< time_type::rep > > _l_subtask_times;
+  mutable std::vector< std::vector< time_type::rep > > _n_subtask_times;
+
+  /*!
+   * Saves task duration measurement per thread in files (1 per MPI rank).
+   */
+  void save_times( ) const;
 };
 
 /** Typedef for the distributed single layer p0-p0 PFMM matrix */
