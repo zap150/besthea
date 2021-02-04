@@ -187,7 +187,8 @@ target_include_directories(besthea SYSTEM PUBLIC
 target_link_libraries(besthea PUBLIC
   ${STDFS_LIBRARIES}
   ${MKL_LIBRARIES}
-  ${MPI_CXX_LIBRARIES})
+  ${MPI_CXX_LIBRARIES}
+  ${CUDA_LIBRARIES})
 target_compile_definitions(besthea PUBLIC
   MKL_INT=long
   DATA_WIDTH=${DATA_WIDTH})
@@ -200,8 +201,4 @@ option(BUILD_EXAMPLES "Build examples using the library" OFF)
 
 if(BUILD_EXAMPLES)
   add_subdirectory(examples)
-endif()
-
-if(BUILD_EXPERIMENTS)
-  add_subdirectory(experiments)
 endif()

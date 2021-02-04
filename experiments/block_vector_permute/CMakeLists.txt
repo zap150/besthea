@@ -1,5 +1,0 @@
-
-add_executable(block_vector_permute block_vector_permute.cpp)
-
-target_include_directories(block_vector_permute PUBLIC ${besthea_INCLUDE_DIRS})
-target_link_libraries(block_vector_permute PUBLIC besthea)
