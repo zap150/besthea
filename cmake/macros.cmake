@@ -21,40 +21,21 @@ macro(setup_compiler)
         " compiled only with icpc 19.0.1 or higher")
     endif()
 
-    string(APPEND CMAKE_CXX_FLAGS " -w3")
-    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 2620")
-    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 869")
-    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 1599")
-    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 383")
-    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 11074")
-    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 11076")
-    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 2547")
-
-    string(APPEND CMAKE_CUDA_FLAGS " -w3")
-    string(APPEND CMAKE_CUDA_FLAGS " -diag-disable 2620")
-    string(APPEND CMAKE_CUDA_FLAGS " -diag-disable 869")
-    string(APPEND CMAKE_CUDA_FLAGS " -diag-disable 1599")
-    string(APPEND CMAKE_CUDA_FLAGS " -diag-disable 383")
-    string(APPEND CMAKE_CUDA_FLAGS " -diag-disable 11074")
-    string(APPEND CMAKE_CUDA_FLAGS " -diag-disable 11076")
-    string(APPEND CMAKE_CUDA_FLAGS " -diag-disable 2547")
-    
-
-    #add_compile_options(-w3)
+    add_compile_options(-w3)
     # attribute appears more than once
-    #add_compile_options("SHELL:-diag-disable 2620")
+    add_compile_options("SHELL:-diag-disable 2620")
     # parameter was never referenced
-    #add_compile_options("SHELL:-diag-disable 869")
+    add_compile_options("SHELL:-diag-disable 869")
     # declaration hides variable
-    #add_compile_options("SHELL:-diag-disable 1599")
+    add_compile_options("SHELL:-diag-disable 1599")
     # value copied to temporary, reference to temporary used
-    #add_compile_options("SHELL:-diag-disable 383")
+    add_compile_options("SHELL:-diag-disable 383")
     # inlining inhibited by limit max-total-size
-    #add_compile_options("SHELL:-diag-disable 11074")
+    add_compile_options("SHELL:-diag-disable 11074")
     # to get full report use -qopt-report=4 -qopt-report-phase ipo
-    #add_compile_options("SHELL:-diag-disable 11076")
+    add_compile_options("SHELL:-diag-disable 11076")
     # specified as both a system and non-system include directory
-    #add_compile_options("SHELL: -diag-disable 2547")
+    add_compile_options("SHELL: -diag-disable 2547")
 
   else()
     message(FATAL_ERROR "Unknown C++ compiler: ${CMAKE_CXX_COMPILER_ID}")
@@ -62,10 +43,10 @@ macro(setup_compiler)
 
   set(CMAKE_CXX_STANDARD 17)
   set(CMAKE_CXX_STANDARD_REQUIRED True)
+
   string(APPEND CMAKE_CUDA_FLAGS " -std=c++17")
-  #set(CMAKE_CUDA_STANDARD 17) # this only works on CMake 3.18 and later
-  #set(CMAKE_CUDA_STANDARD_REQUIRED True)
-  string(APPEND CMAKE_CUDA_FLAGS " -Xcudafe --diag_suppress=esa_on_defaulted_function_ignored")
+  # set(CMAKE_CUDA_STANDARD 17) # this only works on CMake 3.18 and later
+  # set(CMAKE_CUDA_STANDARD_REQUIRED True)
 
   if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RelWithDebInfo)
