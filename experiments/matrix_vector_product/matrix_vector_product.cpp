@@ -7,6 +7,7 @@
 #include <iostream>
 
 using namespace besthea;
+using namespace besthea::onthefly;
 using namespace besthea::mesh;
 using namespace besthea::linear_algebra;
 using namespace besthea::bem;
@@ -102,21 +103,24 @@ int main( int argc, char * argv[] ) {
   spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
   block_lower_triangular_toeplitz_matrix V_mem;
   block_lower_triangular_toeplitz_matrix K_mem;
-  uniform_spacetime_be_onthefly_matrix_cpu V_fly(kernel_v, space_p0, space_p0, order_sing, order_reg);
+  uniform_spacetime_be_onthefly_matrix_cpu V_fly_cpu(kernel_v, space_p0, space_p0, order_sing, order_reg);
+  uniform_spacetime_be_onthefly_matrix_gpu V_fly_gpu(kernel_v, space_p0, space_p0, order_sing, order_reg);
   uniform_spacetime_be_onthefly_matrix_cpu K_fly(kernel_k, space_p0, space_p1, order_sing, order_reg);
   uniform_spacetime_be_assembler assembler_v(kernel_v, space_p0, space_p0, order_sing, order_reg );
   uniform_spacetime_be_assembler assembler_k(kernel_k, space_p0, space_p1, order_sing, order_reg );
 
   block_vector xV (n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
   block_vector yVm(n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
-  block_vector yVf(n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
+  block_vector yVfc(n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
+  block_vector yVfg(n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
   for (lo b = 0; b < n_timesteps; b++) {
     for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
       xV.set(b, i, (1000.0 * rand()) / RAND_MAX);
     }
     for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
       yVm.set(b, i, 2);
-      yVf.set(b, i, 2);
+      yVfc.set(b, i, 2);
+      yVfg.set(b, i, 2);
     }    
   }
   block_vector xK (n_timesteps, spacetime_mesh.get_n_spatial_nodes(), false);
@@ -136,7 +140,6 @@ int main( int argc, char * argv[] ) {
   sc beta = 5;
 
   
-  //V_fly.hello_gpu_world(42);
 
   t.reset( "InMemory V assemble" );
   assembler_v.assemble( V_mem );
@@ -145,8 +148,11 @@ int main( int argc, char * argv[] ) {
   V_mem.apply(xV, yVm, false, alpha, beta);
   t.measure( );
 
-  t.reset( "OnTheFly V" );
-  V_fly.apply(xV, yVf, false, alpha, beta);
+  t.reset( "OnTheFly V cpu multiply" );
+  V_fly_cpu.apply(xV, yVfc, false, alpha, beta);
+  t.measure();
+  t.reset( "OnTheFly V gpu multiply" );
+  V_fly_gpu.apply(xV, yVfg, false, alpha, beta);
   t.measure();
 
 
@@ -157,22 +163,33 @@ int main( int argc, char * argv[] ) {
   K_mem.apply(xK, yKm, false, alpha, beta);
   t.measure( );
 
-  t.reset( "OnTheFly K" );
+  t.reset( "OnTheFly K multiply" );
   K_fly.apply(xK, yKf, false, alpha, beta);
   t.measure();
   
 
 
 
-  bool equalV = true;
+  bool equalVc = true;
+  bool equalVg = true;
   bool equalK = true;
   for (lo b = 0; b < n_timesteps; b++) {
     for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
       sc vm = yVm.get(b, i);
-      sc vf = yVf.get(b, i);
+      sc vf = yVfc.get(b, i);
       if( std::abs((vm - vf) / vm) > 1e-6 ) {
-        std::cout << "Vectors V dont match: B" << b << " I" << i << " " << vm << " " << vf << "\n";
-        equalV = false;
+        std::cout << "Vectors Vc dont match: B" << b << " I" << i << " " << vm << " " << vf << "\n";
+        equalVc = false;
+      }
+    }
+  }
+  for (lo b = 0; b < n_timesteps; b++) {
+    for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
+      sc vm = yVm.get(b, i);
+      sc vf = yVfg.get(b, i);
+      if( std::abs((vm - vf) / vm) > 1e-6 ) {
+        std::cout << "Vectors Vg dont match: B" << b << " I" << i << " " << vm << " " << vf << "\n";
+        equalVg = false;
       }
     }
   }
@@ -181,18 +198,30 @@ int main( int argc, char * argv[] ) {
       sc vm = yKm.get(b, i);
       sc vf = yKf.get(b, i);
       if( std::abs((vm - vf) / vm) > 1e-6 ) {
-        std::cout << "Vectors K dont match: B" << b << " I" << i << " " << vm << " " << vf << "\n";
+        std::cout << "Vectors K  dont match: B" << b << " I" << i << " " << vm << " " << vf << "\n";
         equalK = false;
       }
     }    
   }
 
-  if(equalV) {
-    std::cout << "Vectors V are equal!\n";
+  if(equalVc) {
+    std::cout << "Vectors Vc are equal!\n";
+  } else {
+    std::cout << "Vectors Vc are NOT equal!\n";
   }
+
+  if(equalVg) {
+    std::cout << "Vectors Vg are equal!\n";
+  } else {
+    std::cout << "Vectors Vg are NOT equal!\n";
+  }
+  
   if(equalK) {
-    std::cout << "Vectors K are equal!\n";
+    std::cout << "Vectors K  are equal!\n";
+  } else {
+    std::cout << "Vectors K  are NOT equal!\n";
   }
+  
   
   
 

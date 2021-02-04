@@ -7,6 +7,7 @@
 #include <iostream>
 
 using namespace besthea;
+using namespace besthea::onthefly;
 using namespace besthea::mesh;
 using namespace besthea::linear_algebra;
 using namespace besthea::bem;

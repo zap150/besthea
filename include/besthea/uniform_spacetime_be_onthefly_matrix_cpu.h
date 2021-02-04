@@ -14,7 +14,7 @@
 #include <array>
 
 
-namespace besthea {
+namespace besthea::onthefly {
   template< class kernel_type, class test_space_type, class trial_space_type >
   class uniform_spacetime_be_onthefly_matrix_cpu;
 }
@@ -22,10 +22,10 @@ namespace besthea {
 
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-class besthea::uniform_spacetime_be_onthefly_matrix_cpu
+class besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
   : public besthea::linear_algebra::block_matrix
 {
-private:
+protected:
   struct quadrature_wrapper_readonly {
     std::array< std::vector< sc, besthea::allocator_type< sc > >, 4 >
       _x1_ref;  //!< First coordinates of quadrature nodes in (0,1)x(0,1-x1) to
@@ -100,8 +100,6 @@ public:
   
   virtual ~uniform_spacetime_be_onthefly_matrix_cpu( );
 
-  void print( std::ostream & stream = std::cout ) const;
-
   void print_info( ) const {
     std::cout
       << "besthea::linear_algebra::uniform_spacetime_be_onthefly_matrix_cpu"
@@ -114,13 +112,20 @@ public:
   virtual void apply( const block_vector_type & x, block_vector_type & y,
    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
 
-private:
+  void apply_cpu( const block_vector_type & x, block_vector_type & y,
+   bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
+
+protected:
 
   void get_values_delta0special(sc * values_out,           lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const;
   void get_values_delta0       (sc * values_out,           lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const;
   void get_values_regular      (sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const;
   void get_values_singular     (sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const;
   void get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special = false) const ;
+
+  virtual void apply_regular(  const block_vector_type & x, block_vector_type & y_perm, sc alpha = 1.0 ) const;
+  virtual void apply_singular( const block_vector_type & x, block_vector_type & y_perm, sc alpha = 1.0 ) const;
+  virtual void apply_delta0(   const block_vector_type & x, block_vector_type & y_perm, sc alpha = 1.0 ) const;
 
   void init_quadrature();
 
@@ -169,7 +174,7 @@ private:
     int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref, sc & y2_ref,
     sc & jacobian ) const;
 
-private:
+protected:
 
   quadrature_wrapper_readonly my_quadrature;
   kernel_type * _kernel;

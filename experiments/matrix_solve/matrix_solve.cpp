@@ -7,6 +7,7 @@
 #include <iostream>
 
 using namespace besthea;
+using namespace besthea::onthefly;
 using namespace besthea::mesh;
 using namespace besthea::linear_algebra;
 using namespace besthea::bem;
@@ -55,7 +56,7 @@ int main( int argc, char * argv[] ) {
 
   // default values
   file = "../examples/mesh_files/cube_12.txt";
-  int refine = 2;
+  int refine = 1;
   lo n_timesteps = 8;
   sc end_time = 1.0;
 
@@ -100,14 +101,17 @@ int main( int argc, char * argv[] ) {
   // create matrix assembler
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
   block_lower_triangular_toeplitz_matrix V_mem;
-  uniform_spacetime_be_onthefly_matrix_cpu V_fly(kernel_v, space_p0, space_p0, order_sing, order_reg);
+  uniform_spacetime_be_onthefly_matrix_cpu V_fly_cpu(kernel_v, space_p0, space_p0, order_sing, order_reg);
+  uniform_spacetime_be_onthefly_matrix_gpu V_fly_gpu(kernel_v, space_p0, space_p0, order_sing, order_reg);
   uniform_spacetime_be_assembler assembler_v(kernel_v, space_p0, space_p0, order_sing, order_reg );
 
-  block_vector bV (n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
-  block_vector xVm(n_timesteps, spacetime_mesh.get_n_spatial_elements(), true);
-  block_vector xVf(n_timesteps, spacetime_mesh.get_n_spatial_elements(), true);
+  block_vector bV  (n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
+  block_vector xVm (n_timesteps, spacetime_mesh.get_n_spatial_elements(), true);
+  block_vector xVfc(n_timesteps, spacetime_mesh.get_n_spatial_elements(), true);
+  block_vector xVfg(n_timesteps, spacetime_mesh.get_n_spatial_elements(), true);
   block_vector yVm (n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
-  block_vector yVf (n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
+  block_vector yVfc(n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
+  block_vector yVfg(n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
   for (lo b = 0; b < n_timesteps; b++) {
     for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
       bV.set(b, i, (1000.0 * rand()) / RAND_MAX);
@@ -115,41 +119,56 @@ int main( int argc, char * argv[] ) {
   }
 
   sc err = 1e-10;
-  sc errVm = err, errVf = err;
+  sc errVm = err, errVfc = err, errVfg = err;
   lo iters = 10000;
-  lo itersVm = iters, itersVf = iters;
+  lo itersVm = iters, itersVfc = iters, itersVfg = iters;
 
   
-  //V_fly.hello_gpu_world(42);
 
-  t.reset( "InMemory V assemble" );
+  t.reset( "InMemory V  assemble" );
   assembler_v.assemble( V_mem );
   t.measure( );
-  t.reset( "InMemory V solve" );
+  t.reset( "InMemory V  solve" );
   V_mem.mkl_fgmres_solve(bV, xVm, errVm, itersVm);
   t.measure( );
 
-  t.reset( "OnTheFly V solve" );
-  V_fly.mkl_fgmres_solve(bV, xVf, errVf, itersVf);
+  t.reset( "OnTheFly Vc solve" );
+  V_fly_cpu.mkl_fgmres_solve(bV, xVfc, errVfc, itersVfc);
+  t.measure();
+  
+  t.reset( "OnTheFly Vg solve" );
+  V_fly_gpu.mkl_fgmres_solve(bV, xVfg, errVfg, itersVfg);
   t.measure();
 
   V_mem.apply(xVm, yVm);
-  V_fly.apply(xVf, yVf);
+  V_fly_cpu.apply(xVfc, yVfc);
+  V_fly_gpu.apply(xVfg, yVfg);
   
 
 
-  std::cout << "Iters: mem " << itersVm << " fly " << itersVf << "\n";
-  std::cout << "Errors: mem " << errVm << " fly " << errVf << "\n";
+  std::cout << "Iters:  mem " << itersVm << "\t\tfly cpu " << itersVfc << "\t\tfly gpu " << itersVfg << "\n";
+  std::cout << "Errors: mem " << errVm   << "\tfly cpu " << errVfc   << "\tfly gpu " << errVfg   << "\n";
 
 
-  bool equal_xV = true;
+  bool equal_xVc = true;
   for (lo b = 0; b < n_timesteps; b++) {
     for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
       sc vm = xVm.get(b, i);
-      sc vf = xVf.get(b, i);
+      sc vf = xVfc.get(b, i);
       if( std::abs((vm - vf) / vm) > 1e-6 ) {
-        std::cout << "Solutions dont match: B" << b << " I" << i << " " << vm << " " << vf << "\n";
-        equal_xV = false;
+        std::cout << "Solutions Vc dont match: B" << b << " I" << i << " " << vm << " " << vf << "\n";
+        equal_xVc = false;
+      }
+    }
+  }
+  bool equal_xVg = true;
+  for (lo b = 0; b < n_timesteps; b++) {
+    for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
+      sc vm = xVm.get(b, i);
+      sc vf = xVfg.get(b, i);
+      if( std::abs((vm - vf) / vm) > 1e-6 ) {
+        std::cout << "Solutions Vg dont match: B" << b << " I" << i << " " << vm << " " << vf << "\n";
+        equal_xVg = false;
       }
     }
   }
@@ -165,21 +184,34 @@ int main( int argc, char * argv[] ) {
       }
     }
   }
-  bool equal_Vf = true;
+  bool equal_Vfc = true;
   for (lo b = 0; b < n_timesteps; b++) {
     for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
       sc v1 = bV.get(b, i);
-      sc v2 = yVf.get(b, i);
+      sc v2 = yVfc.get(b, i);
       if( std::abs((v1 - v2) / v1) > 1e-6 ) {
-        std::cout << "Check multiplications fly dont match: B" << b << " I" << i << " " << v1 << " " << v2 << "\n";
-        equal_Vf = false;
+        std::cout << "Check multiplications fly cpu dont match: B" << b << " I" << i << " " << v1 << " " << v2 << "\n";
+        equal_Vfc = false;
+      }
+    }
+  }
+  bool equal_Vfg = true;
+  for (lo b = 0; b < n_timesteps; b++) {
+    for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
+      sc v1 = bV.get(b, i);
+      sc v2 = yVfg.get(b, i);
+      if( std::abs((v1 - v2) / v1) > 1e-6 ) {
+        std::cout << "Check multiplications fly gpu dont match: B" << b << " I" << i << " " << v1 << " " << v2 << "\n";
+        equal_Vfg = false;
       }
     }
   }
 
-  std::cout << "Solutions V are" << (equal_xV ? "" : " NOT") << " equal!\n";
-  std::cout << "Check multiplications mem are" << (equal_Vm ? "" : " NOT") << " equal!\n";
-  std::cout << "Check multiplications fly are" << (equal_Vf ? "" : " NOT") << " equal!\n";
+  std::cout << "Solutions Vc are" << (equal_xVc ? "" : " NOT") << " equal!\n";
+  std::cout << "Solutions Vg are" << (equal_xVg ? "" : " NOT") << " equal!\n";
+  std::cout << "Check multiplications mem     are" << (equal_Vm  ? "" : " NOT") << " equal!\n";
+  std::cout << "Check multiplications fly cpu are" << (equal_Vfc ? "" : " NOT") << " equal!\n";
+  std::cout << "Check multiplications fly gpu are" << (equal_Vfg ? "" : " NOT") << " equal!\n";
   
   
 

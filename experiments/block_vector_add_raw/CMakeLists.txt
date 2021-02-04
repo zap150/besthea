@@ -1,0 +1,5 @@
+
+add_executable(block_vector_add_raw block_vector_add_raw.cpp)
+
+target_include_directories(block_vector_add_raw PUBLIC ${besthea_INCLUDE_DIRS})
+target_link_libraries(block_vector_add_raw PUBLIC besthea)

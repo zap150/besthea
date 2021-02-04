@@ -160,7 +160,6 @@ set(besthea_SOURCES
   src/uniform_spacetime_be_evaluator.cpp
   src/uniform_spacetime_be_identity.cpp
   src/uniform_spacetime_be_onthefly_matrix_cpu.cpp
-  src/uniform_spacetime_be_onthefly_matrix_gpu.cpp
   src/uniform_spacetime_be_onthefly_matrix_gpu.cu
   src/uniform_spacetime_be_solver.cpp
   src/uniform_spacetime_be_space.cpp
@@ -183,7 +182,8 @@ target_include_directories(besthea SYSTEM PUBLIC
   ${Boost_INCLUDE_DIRS}
   ${Eigen_INCLUDE_DIRS}
   ${MKL_INCLUDE_DIRS}
-  ${MPI_INCLUDE_DIRS})
+  ${MPI_INCLUDE_DIRS}
+  ${CUDA_INCLUDE_DIRS})
 target_link_libraries(besthea PUBLIC
   ${STDFS_LIBRARIES}
   ${MKL_LIBRARIES}

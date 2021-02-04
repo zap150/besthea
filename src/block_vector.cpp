@@ -143,6 +143,80 @@ void besthea::linear_algebra::block_vector::copy_to_raw( sc * data ) const {
     _data[ i ].copy_to_raw( data + i * _size );
   }
 }
+  
+void besthea::linear_algebra::block_vector::copy_from_raw_permute( lo block_size, lo size, const sc * data, sc alpha ) {
+  resize( size );
+  resize_blocks( block_size );
+
+  constexpr lo tile_size = 128;
+  lo bb_max = (block_size - 1) / tile_size;
+  lo ii_max = (size - 1) / tile_size;
+
+  for (lo bb = 0; bb < bb_max; bb++) {
+    lo BB = bb * tile_size;
+    for (lo ii = 0; ii < ii_max; ii++) {
+      lo II = ii * tile_size;
+      for (lo b = 0; b < tile_size; b++) {
+        lo B = BB + b;
+        for (lo i = 0; i < tile_size; i++) {
+          lo I = II + i;
+          sc val = data[B * size + I];
+          this->set(I, B, alpha * val);
+        }
+      }
+    }
+    for(lo I = tile_size * ii_max; I < size; I++) {
+      for (lo b = 0; b < tile_size; b++) {
+        lo B = BB + b;
+        sc val = data[B * size + I];
+        this->set(I, B, alpha * val);
+      }
+    }
+  }
+  for (lo B = tile_size * bb_max; B < block_size; B++) {
+    for(lo I = 0; I < size; I++) {
+      sc val = data[B * size + I];
+      this->set(I, B, alpha * val);
+    }
+  }
+
+}
+
+void besthea::linear_algebra::block_vector::copy_to_raw_permute( sc * data, sc alpha ) const {
+
+  constexpr lo tile_size = 128;
+  lo bb_max = (_block_size - 1) / tile_size;
+  lo ii_max = (_size - 1) / tile_size;
+
+  for (lo bb = 0; bb < bb_max; bb++) {
+    lo BB = bb * tile_size;
+    for (lo ii = 0; ii < ii_max; ii++) {
+      lo II = ii * tile_size;
+      for (lo b = 0; b < tile_size; b++) {
+        lo B = BB + b;
+        for (lo i = 0; i < tile_size; i++) {
+          lo I = II + i;
+          sc val = get(B, I);
+          data[I * _block_size + B] = alpha * val;
+        }
+      }
+    }
+    for(lo I = tile_size * ii_max; I < _size; I++) {
+      for (lo b = 0; b < tile_size; b++) {
+        lo B = BB + b;
+        sc val = get(B, I);
+        data[I * _block_size + B] = alpha * val;
+      }
+    }
+  }
+  for (lo B = tile_size * bb_max; B < _block_size; B++) {
+    for(lo I = 0; I < _size; I++) {
+      sc val = get(B, I);
+      data[I * _block_size + B] = alpha * val;
+    }
+  }
+
+}
 
 void besthea::linear_algebra::block_vector::copy_from_vector(
   lo block_size, lo size, const vector_type & data ) {

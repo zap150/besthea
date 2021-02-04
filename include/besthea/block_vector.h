@@ -196,16 +196,16 @@ class besthea::linear_algebra::block_vector {
     _data[ d ][ i ] += value;
   }
 
-  /**
+  /*!
    * Copies data from another block vector.
    * @param[in] that Vector to be copied.
    */
   void copy( const block_vector & that );
 
-  /**
-   * Copies data from another block vector, while switching/permuting outer and inner block dimensions and rearranging the data.
+  /*!
+   * Copies data from another block vector, while permuting outer and inner block dimensions and rearranging the data.
    * @param[in] that Vector to be copied.
-   * @param[in] alpha Scaling factor.
+   * @param[in] alpha Scaling factor of data values.
    */
   void copy_permute( const block_vector & that, sc alpha = 1 );
 
@@ -222,6 +222,22 @@ class besthea::linear_algebra::block_vector {
    * @param[in] data Array to copy to.
    */
   void copy_to_raw( sc * data ) const;
+
+  /*!
+   * @brief Copies data from a raw vector while permuting outer and inner block dimensions and rearranging the data.
+   * @param[in] block_size Number of blocks in the input.
+   * @param[in] size Length of the input vector.
+   * @param[in] data Array to copy from.
+   * @param[in] alpha Scaling factor of data values.
+   */
+  void copy_from_raw_permute( lo block_size, lo size, const sc * data, sc alpha = 1.0 );
+
+  /*!
+   * @brief Copies data to a raw vector while permuting outer and inner block dimensions and rearranging the data.
+   * @param[in] data Array to copy to.
+   * @param[in] alpha Scaling factor of data values.
+   */
+  void copy_to_raw_permute( sc * data, sc alpha = 1.0 ) const;
 
   /*!
    * @brief Copies data from a raw vector.
@@ -245,6 +261,18 @@ class besthea::linear_algebra::block_vector {
   void add( block_vector const & v, sc alpha = 1.0 ) {
     for ( lo i = 0; i < _block_size; ++i ) {
       _data[ i ].add( v._data[ i ], alpha );
+    }
+  }
+
+  /*!
+   * @brief Vector addition this += alpha * v, where v is raw data.
+   * @param[in] v
+   * @param[in] alpha
+   */
+  void add_from_raw( const sc * v, sc alpha = 1.0 ) {
+    for (lo b = 0; b < _block_size; b++) {
+      const sc * v_b = v + b * _size;
+      _data[ b ].add_from_raw(v_b, alpha);
     }
   }
 
