@@ -334,8 +334,8 @@ class besthea::mesh::spacetime_cluster_tree {
   lo _start_temporal_level;  //!< auxiliary variable to determine in which level
                              //!< the spatial refinement starts
                              //!< (meaningful only if _start_spatial_level = 0)
-  sc _s_t_coeff;  //!< coefficient to determine the coupling of the spatial
-                  //!< and temporal levels
+  // sc _s_t_coeff;  //!< coefficient to determine the coupling of the spatial
+  //!< and temporal levels
   slou _spatial_nearfield_limit;  //!< number of the clusters in the vicinity to
   //!< be considered as nearfield
 

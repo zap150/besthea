@@ -46,7 +46,8 @@ besthea::bem::fe_space< basis_type >::~fe_space( ) {
 
 template< class basis_type >
 void besthea::bem::fe_space< basis_type >::interpolation(
-  sc ( *f )( sc, sc, sc ), vector_type & interpolation ) const {
+  [[maybe_unused]] sc ( *f )( sc, sc, sc ),
+  vector_type & /*interpolation*/ ) const {
   std::cout << "Only use specialized templates in descendant classes!"
             << std::endl;
 }
