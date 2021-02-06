@@ -8,6 +8,7 @@
 #include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_hs_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_sl_kernel_antiderivative.h"
+#include "besthea/timer.h"
 
 #include <iostream>
 #include <cuda_runtime.h>
@@ -686,6 +687,61 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
     return;
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+template<class kernel_type, class test_space_type, class trial_space_type>
+void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
+  apply( const block_vector_type & x, block_vector_type & y, bool trans, sc alpha, sc beta ) const {
+
+    if(trans) {
+      std::cerr << "I dont support trans matrices\n";
+      return;
+    }
+  
+    besthea::tools::timer t;
+    
+    // permuting the vector y should prevent false sharing and improve data locality
+    // permuting the vector x should improve data locality
+    block_vector_type y_perm;
+    block_vector_type x_perm;
+  
+    t.reset("permute");
+    y_perm.copy_permute(y, beta);
+    x_perm.copy_permute(x, alpha);
+    t.measure();
+  
+  
+    t.reset("regular");
+    this->apply_regular(x, y_perm, alpha);
+    t.measure();
+    t.reset("singular");
+    this->apply_singular(x_perm, y_perm);
+    t.measure();
+    t.reset("delta0");
+    this->apply_delta0(x_perm, y_perm);
+    t.measure();
+  
+  
+    t.reset("backpermute");
+    y.copy_permute(y_perm);
+    t.measure();
+
+}
+
+
 
 
 

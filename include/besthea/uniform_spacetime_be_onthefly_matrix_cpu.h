@@ -119,20 +119,13 @@ public:
     [[maybe_unused]] bool trans = false, [[maybe_unused]] sc alpha = 1.0,
     [[maybe_unused]] sc beta = 0.0 ) const override {};
 
-  void apply_cpu( const block_vector_type & x, block_vector_type & y,
-   bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
-
 protected:
 
-  void get_values_delta0special(sc * values_out,           lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const;
-  void get_values_delta0       (sc * values_out,           lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const;
-  void get_values_regular      (sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const;
-  void get_values_singular     (sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing) const;
   void get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special = false) const ;
 
-  virtual void apply_regular(  const block_vector_type & x, block_vector_type & y_perm, sc alpha = 1.0 ) const;
-  virtual void apply_singular( const block_vector_type & x, block_vector_type & y_perm, sc alpha = 1.0 ) const;
-  virtual void apply_delta0(   const block_vector_type & x, block_vector_type & y_perm, sc alpha = 1.0 ) const;
+  virtual void apply_regular(  const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
+  virtual void apply_singular( const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
+  virtual void apply_delta0(   const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
 
   void init_quadrature();
 
