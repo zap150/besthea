@@ -51,6 +51,7 @@ struct besthea::onthefly::triangluar_surface_mesh_raw {
   sc * d_element_areas;
   sc * d_node_coords; // XYZXYZXYZXYZ...
   lo * d_element_nodes; // 123123123123...
+  sc * d_element_normals; // XYZXYZXYZXYZ
   lo n_elems;
   lo n_nodes;
 };

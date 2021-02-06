@@ -1358,6 +1358,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, te
   
   // permuting the vector y should (in theory) prevent false sharing and improve data locality
   // in practice it does really work
+  // TODO: maybe also permute x?
   block_vector_type y_perm;
   y_perm.copy_permute(y, beta);
 

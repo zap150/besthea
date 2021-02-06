@@ -391,6 +391,13 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
     return _elements;
   }
 
+  /**
+   * Returns vector containing exterior normal vectors of all elements
+   */
+  const std::vector< sc > & get_all_normals() const {
+    return _normals;
+  }
+
  protected:
   /**
    * Precomputes exterior normals and areas of elements.
