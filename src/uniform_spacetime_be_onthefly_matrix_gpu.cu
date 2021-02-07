@@ -32,6 +32,8 @@ besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_sp
 
   // quadrature inited in base class constructor
 
+  // TODO: error messages when no cuda-capable gpu found
+
   besthea::mesh::triangular_surface_mesh * mesh = this->_test_space->get_mesh()->get_spatial_surface_mesh();
   mesh_raw.n_temporal_elements = this->_test_space->get_mesh()->get_n_temporal_elements();
   mesh_raw.timestep = this->_test_space->get_mesh()->get_timestep();
@@ -756,7 +758,6 @@ template class besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
-  
 
 template class besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
