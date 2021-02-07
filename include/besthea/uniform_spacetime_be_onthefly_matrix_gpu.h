@@ -24,7 +24,8 @@ namespace besthea::onthefly {
   struct quadrature_wrapper_changing_regular_raw;
   struct triangluar_surface_mesh_raw;
   struct uniform_spacetime_tensor_mesh_raw;
-  struct kernel_parameters;
+  struct heat_kernel_parameters;
+  struct apply_regular_gpu_tmp_data;
 }
 
 struct besthea::onthefly::quadrature_wrapper_readonly_regular_raw {
@@ -62,12 +63,21 @@ struct besthea::onthefly::uniform_spacetime_tensor_mesh_raw {
   sc timestep;
 };
 
-struct besthea::onthefly::kernel_parameters {
+struct besthea::onthefly::heat_kernel_parameters {
   sc alpha;
   sc sqrt_alpha;
   sc alpha_2;
   sc pi;
   sc sqrt_pi;
+};
+
+struct besthea::onthefly::apply_regular_gpu_tmp_data {
+  sc *x_raw;
+  sc *y_perm_raw;
+  sc *d_x;
+  sc *d_y_perm;
+  size_t pitch_x, pitch_y_perm; // pitch in bytes
+  lo ld_x, ld_y_perm; // leading dimension in elements
 };
 
 
@@ -115,7 +125,8 @@ public:
 
 protected:
 
-  virtual void apply_regular(  const block_vector_type & x, block_vector_type & y_perm, sc alpha = 1.0 ) const override;
+  void apply_regular_gpu_begin( const block_vector_type & x, block_vector_type & y_perm, sc alpha, apply_regular_gpu_tmp_data & tmp_data ) const;
+  void apply_regular_gpu_finish( block_vector_type & y_perm, apply_regular_gpu_tmp_data & tmp_data ) const;
 
 private:
 

@@ -126,9 +126,9 @@ protected:
 
   void get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special = false) const ;
 
-  virtual void apply_regular(  const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
-  virtual void apply_singular( const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
-  virtual void apply_delta0(   const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
+  void apply_regular(  const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
+  void apply_singular( const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
+  void apply_delta0(   const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
 
   void init_quadrature();
 

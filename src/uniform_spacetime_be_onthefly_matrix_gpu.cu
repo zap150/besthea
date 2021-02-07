@@ -17,7 +17,7 @@
 
 __constant__ __device__ besthea::onthefly::uniform_spacetime_tensor_mesh_raw c_mesh; // c for constant
 __constant__ __device__ besthea::onthefly::quadrature_wrapper_readonly_regular_raw c_my_quadrature;
-__constant__ __device__ besthea::onthefly::kernel_parameters c_kernel_params;
+__constant__ __device__ besthea::onthefly::heat_kernel_parameters c_kernel_params;
 
 
 
@@ -90,7 +90,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
 
 
 
-  besthea::onthefly::kernel_parameters kernel_params_tmp;
+  besthea::onthefly::heat_kernel_parameters kernel_params_tmp;
   sc alpha = this->_kernel->get_alpha();
   kernel_params_tmp.alpha = alpha;
   kernel_params_tmp.sqrt_alpha = std::sqrt(alpha);
@@ -190,7 +190,7 @@ __device__ sc d_sl_kernel_do_anti_tau_anti_t_regular_in_time_regular_in_space(
   sc norm = sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
   sc &sqrt_d = ttau_sqrt;
 
-  besthea::onthefly::kernel_parameters &kp = c_kernel_params;
+  besthea::onthefly::heat_kernel_parameters &kp = c_kernel_params;
   constexpr sc _two = 2.0;
   constexpr sc _four = 4.0;
   constexpr sc _eight = 8.0;
@@ -215,7 +215,7 @@ __device__ sc d_dl_kernel_do_anti_tau_anti_t_regular_in_time_regular_in_space(
   sc dot = xy1 * ny[ 0 ] + xy2 * ny[ 1 ] + xy3 * ny[ 2 ];
   sc &sqrt_d = ttau_sqrt;
 
-  besthea::onthefly::kernel_parameters &kp = c_kernel_params;
+  besthea::onthefly::heat_kernel_parameters &kp = c_kernel_params;
   constexpr sc _one = 1.0;
   constexpr sc _two = 2.0;
   constexpr sc _four = 4.0;
@@ -531,83 +531,97 @@ __global__ void apply_regular_dl_p0_p1(const sc * x, lo ld_x, sc * y_perm, lo ld
 
 
 
+template<>
+void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
+  apply_regular_gpu_begin( const block_vector_type & x, block_vector_type & y_perm, sc alpha, apply_regular_gpu_tmp_data & tmp_data ) const {
+
+  lo n_elems = mesh_raw.surf_mesh.n_elems;
+  lo n_blocks = mesh_raw.n_temporal_elements;
+  
+  sc * &x_raw = tmp_data.x_raw;
+  sc * &y_perm_raw = tmp_data.y_perm_raw;
+  sc * &d_x = tmp_data.d_x;
+  sc * &d_y_perm = tmp_data.d_y_perm;
+  size_t &pitch_x = tmp_data.pitch_x;
+  size_t &pitch_y_perm = tmp_data.pitch_y_perm;
+  lo &ld_x = tmp_data.ld_x;
+  lo &ld_y_perm = tmp_data.ld_y_perm;
+
+  int gridSize = n_elems;
+  int blockSize = 256; // number of gpu threads per block
+
+  int shmemSize = blockSize * sizeof(sc);
+
+  
+
+  cudaMallocHost(&x_raw, x.size() * sizeof(*x_raw));
+  cudaMallocHost(&y_perm_raw, y_perm.size() * sizeof(*y_perm_raw));
+
+  cudaMallocPitch(&d_x, &pitch_x, n_elems * sizeof(*d_x), n_blocks);
+  cudaMallocPitch(&d_y_perm, &pitch_y_perm, n_blocks * sizeof(*d_y_perm), n_elems);
+  ld_x = pitch_x / sizeof(*d_x); // assuming the pitch is a multiple of element size
+  ld_y_perm = pitch_y_perm / sizeof(*d_y_perm);
+
+  // TODO: test if better direct copy from block_vector to gpu
+  x.copy_to_raw(x_raw);
+
+  // TODO: async, streams
+  cudaMemcpy2D(d_x, pitch_x, x_raw, n_elems * sizeof(*x_raw), n_elems * sizeof(*x_raw), n_blocks, cudaMemcpyHostToDevice);
+  cudaMemset(d_y_perm, 0, pitch_y_perm * n_elems);
+
+
+
+  apply_regular_sl_p0_p0<<< gridSize, blockSize, shmemSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha);     
+
+}
+
+
 
 template<>
 void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  apply_regular( const block_vector_type & x, block_vector_type & y_perm, sc alpha ) const {
+  apply_regular_gpu_finish( block_vector_type & y_perm, apply_regular_gpu_tmp_data & tmp_data ) const {
 
-  lo n_elems = mesh_raw.surf_mesh.n_elems; // size of block of everything here
+  lo n_elems = mesh_raw.surf_mesh.n_elems;
   lo n_blocks = mesh_raw.n_temporal_elements;
 
+  sc * &x_raw = tmp_data.x_raw;
+  sc * &y_perm_raw = tmp_data.y_perm_raw;
+  sc * &d_x = tmp_data.d_x;
+  sc * &d_y_perm = tmp_data.d_y_perm;
+  //size_t &pitch_x = tmp_data.pitch_x;
+  size_t &pitch_y_perm = tmp_data.pitch_y_perm;
+  //lo &ld_x = tmp_data.ld_x;
+  //lo &ld_y_perm = tmp_data.ld_y_perm;
+
+  cudaDeviceSynchronize();
+
+  cudaMemcpy2D(y_perm_raw, n_blocks * sizeof(*y_perm_raw), d_y_perm, pitch_y_perm, n_blocks * sizeof(*y_perm_raw), n_elems, cudaMemcpyDeviceToHost);
   
-  sc *x_raw;
-  sc *y_perm_raw;
-  sc *d_x;
-  sc *d_y_perm;
-  size_t pitch_x, pitch_y_perm; // pitch in bytes
-  lo ld_x, ld_y_perm; // leading dimension in elements
-  int gridSize = n_elems;
-  int blockSize = 256; // number of gpu threads per block
-  int shmemSize = blockSize * sizeof(sc);
-
-#pragma omp parallel
-  {
-
-#pragma omp master
-    { // cuda computations preparation and start
-
-      cudaMallocHost(&x_raw, x.size() * sizeof(*x_raw));
-      cudaMallocHost(&y_perm_raw, y_perm.size() * sizeof(*y_perm_raw));
-
-      cudaMallocPitch(&d_x, &pitch_x, n_elems * sizeof(*d_x), n_blocks);
-      cudaMallocPitch(&d_y_perm, &pitch_y_perm, n_blocks * sizeof(*d_y_perm), n_elems);
-      ld_x = pitch_x / sizeof(*d_x); // assuming the pitch is a multiple of element size
-      ld_y_perm = pitch_y_perm / sizeof(*d_y_perm);
-
-      // TODO: test if better direct copy from block_vector to gpu
-      x.copy_to_raw(x_raw);
-
-      // TODO: async, streams
-      cudaMemcpy2D(d_x, pitch_x, x_raw, n_elems * sizeof(*x_raw), n_elems * sizeof(*x_raw), n_blocks, cudaMemcpyHostToDevice);
-      cudaMemset(d_y_perm, 0, pitch_y_perm * n_elems);
-
-      apply_regular_sl_p0_p0<<< gridSize, blockSize, shmemSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha);
-
-    }
-
-    // TODO: pute cpu computations for singular and delta0 here
-
-
-#pragma omp single
-    {
-      cudaDeviceSynchronize();
-
-      cudaMemcpy2D(y_perm_raw, n_blocks * sizeof(*y_perm_raw), d_y_perm, pitch_y_perm, n_blocks * sizeof(*y_perm_raw), n_elems, cudaMemcpyDeviceToHost);
-
-      cudaFreeHost(x_raw);
-      cudaFree(d_x);
-      cudaFree(d_y_perm);
-    }
-
-  }
-
   y_perm.add_from_raw(y_perm_raw);
 
+  cudaFree(d_x);
+  cudaFree(d_y_perm);
+  cudaFreeHost(x_raw);
   cudaFreeHost(y_perm_raw);
 
-
-  cudaError_t err = cudaGetLastError();
-  if(err != 0) {
-    std::cout << "Cuda error " << err << ": " << cudaGetErrorString(err) << "\n";
-  }
-
-
-  return;
+  // TODO: error checking
 
 }
+
+
+
+
+
+
+
+
+
 
 
 
@@ -618,75 +632,79 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
-  apply_regular( const block_vector_type & x, block_vector_type & y_perm, sc alpha ) const {
+  apply_regular_gpu_begin( const block_vector_type & x, block_vector_type & y_perm, sc alpha, apply_regular_gpu_tmp_data & tmp_data ) const {
 
-    lo n_elems = mesh_raw.surf_mesh.n_elems;
-    lo n_nodes = mesh_raw.surf_mesh.n_nodes;
-    lo n_blocks = mesh_raw.n_temporal_elements;
-    
-    sc *x_raw;
-    sc *y_perm_raw;
-    sc *d_x;
-    sc *d_y_perm;
-    size_t pitch_x, pitch_y_perm; // pitch in bytes
-    lo ld_x, ld_y_perm; // leading dimension in elements
-    int gridSize = n_elems;
-    int blockSize = 256; // number of gpu threads per block
-    int shmemSize = blockSize * sizeof(sc);
+  lo n_elems = mesh_raw.surf_mesh.n_elems;
+  lo n_nodes = mesh_raw.surf_mesh.n_nodes;
+  lo n_blocks = mesh_raw.n_temporal_elements;
   
-  #pragma omp parallel
-    {
+  sc * &x_raw = tmp_data.x_raw;
+  sc * &y_perm_raw = tmp_data.y_perm_raw;
+  sc * &d_x = tmp_data.d_x;
+  sc * &d_y_perm = tmp_data.d_y_perm;
+  size_t &pitch_x = tmp_data.pitch_x;
+  size_t &pitch_y_perm = tmp_data.pitch_y_perm;
+  lo &ld_x = tmp_data.ld_x;
+  lo &ld_y_perm = tmp_data.ld_y_perm;
+
+  int gridSize = n_elems;
+  int blockSize = 256; // number of gpu threads per block
+
+  int shmemSize = blockSize * sizeof(sc);  
+
   
-  #pragma omp master
-      { // cuda computations preparation and start
-  
-        cudaMallocHost(&x_raw, x.size() * sizeof(*x_raw));
-        cudaMallocHost(&y_perm_raw, y_perm.size() * sizeof(*y_perm_raw));
-  
-        cudaMallocPitch(&d_x, &pitch_x, n_nodes * sizeof(*d_x), n_blocks);
-        cudaMallocPitch(&d_y_perm, &pitch_y_perm, n_blocks * sizeof(*d_y_perm), n_elems);
-        ld_x = pitch_x / sizeof(*d_x); // assuming the pitch is a multiple of element size
-        ld_y_perm = pitch_y_perm / sizeof(*d_y_perm);
-  
-        // TODO: test if better direct copy from block_vector to gpu
-        x.copy_to_raw(x_raw);
-  
-        // TODO: async, streams
-        cudaMemcpy2D(d_x, pitch_x, x_raw, n_nodes * sizeof(*x_raw), n_nodes * sizeof(*x_raw), n_blocks, cudaMemcpyHostToDevice);
-        cudaMemset(d_y_perm, 0, pitch_y_perm * n_elems);
-  
-        apply_regular_dl_p0_p1<<< gridSize, blockSize, shmemSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha);
-  
-      }
-  
-      // TODO: pute cpu computations for singular and delta0 here
-  
-  
-  #pragma omp single
-      {
-        cudaDeviceSynchronize();
-  
-        cudaMemcpy2D(y_perm_raw, n_blocks * sizeof(*y_perm_raw), d_y_perm, pitch_y_perm, n_blocks * sizeof(*y_perm_raw), n_elems, cudaMemcpyDeviceToHost);
-  
-        cudaFreeHost(x_raw);
-        cudaFree(d_x);
-        cudaFree(d_y_perm);
-      }
-  
-    }
-  
-    y_perm.add_from_raw(y_perm_raw);
-  
-    cudaFreeHost(y_perm_raw);
-  
-  
-    cudaError_t err = cudaGetLastError();
-    if(err != 0) {
-      std::cout << "Cuda error " << err << ": " << cudaGetErrorString(err) << "\n";
-    }
-  
-  
-    return;
+
+  cudaMallocHost(&x_raw, x.size() * sizeof(*x_raw));
+  cudaMallocHost(&y_perm_raw, y_perm.size() * sizeof(*y_perm_raw));
+
+  cudaMallocPitch(&d_x, &pitch_x, n_nodes * sizeof(*d_x), n_blocks);
+  cudaMallocPitch(&d_y_perm, &pitch_y_perm, n_blocks * sizeof(*d_y_perm), n_elems);
+  ld_x = pitch_x / sizeof(*d_x); // assuming the pitch is a multiple of element size
+  ld_y_perm = pitch_y_perm / sizeof(*d_y_perm);
+
+  x.copy_to_raw(x_raw);
+
+  cudaMemcpy2D(d_x, pitch_x, x_raw, n_nodes * sizeof(*x_raw), n_nodes * sizeof(*x_raw), n_blocks, cudaMemcpyHostToDevice);
+  cudaMemset(d_y_perm, 0, pitch_y_perm * n_elems);
+
+
+
+  apply_regular_dl_p0_p1<<< gridSize, blockSize, shmemSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha);
+
+}
+
+
+
+template<>
+void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
+  apply_regular_gpu_finish( block_vector_type & y_perm, apply_regular_gpu_tmp_data & tmp_data ) const {
+
+  lo n_elems = mesh_raw.surf_mesh.n_elems;
+  //lo n_nodes = mesh_raw.surf_mesh.n_nodes;
+  lo n_blocks = mesh_raw.n_temporal_elements;
+
+  sc * &x_raw = tmp_data.x_raw;
+  sc * &y_perm_raw = tmp_data.y_perm_raw;
+  sc * &d_x = tmp_data.d_x;
+  sc * &d_y_perm = tmp_data.d_y_perm;
+  //size_t &pitch_x = tmp_data.pitch_x;
+  size_t &pitch_y_perm = tmp_data.pitch_y_perm;
+  //lo &ld_x = tmp_data.ld_x;
+  //lo &ld_y_perm = tmp_data.ld_y_perm;
+
+  cudaDeviceSynchronize();
+
+  cudaMemcpy2D(y_perm_raw, n_blocks * sizeof(*y_perm_raw), d_y_perm, pitch_y_perm, n_blocks * sizeof(*y_perm_raw), n_elems, cudaMemcpyDeviceToHost);
+
+  y_perm.add_from_raw(y_perm_raw);
+
+  cudaFree(d_x);
+  cudaFree(d_y_perm);
+  cudaFreeHost(x_raw);
+  cudaFreeHost(y_perm_raw);
 
 }
 
@@ -708,27 +726,30 @@ template<class kernel_type, class test_space_type, class trial_space_type>
 void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
   apply( const block_vector_type & x, block_vector_type & y, bool trans, sc alpha, sc beta ) const {
 
-    if(trans) {
-      std::cerr << "I dont support trans matrices\n";
-      return;
-    }
+  if(trans) {
+    std::cerr << "I dont support trans matrices\n";
+    return;
+  }
+
+  // TODO: try the x_perm gpu algorithm
   
-    
-    // permuting the vector y should prevent false sharing and improve data locality
-    // permuting the vector x should improve data locality
-    block_vector_type y_perm;
-    block_vector_type x_perm;
-  
-    y_perm.copy_permute(y, beta);
-    x_perm.copy_permute(x, alpha);
-  
-  
-    this->apply_regular(x, y_perm, alpha);
-    this->apply_singular(x_perm, y_perm);
-    this->apply_delta0(x_perm, y_perm);
-  
-  
-    y.copy_permute(y_perm);
+  // permuting the vector y should prevent false sharing and improve data locality
+  // permuting the vector x should improve data locality
+  block_vector_type y_perm;
+  block_vector_type x_perm;
+
+  y_perm.copy_permute(y, beta);
+  x_perm.copy_permute(x, alpha);
+
+  besthea::onthefly::apply_regular_gpu_tmp_data tmp_data;
+
+  this->apply_regular_gpu_begin(x, y_perm, alpha, tmp_data);
+  this->apply_singular(x_perm, y_perm);
+  this->apply_delta0(x_perm, y_perm);
+  this->apply_regular_gpu_finish(y_perm, tmp_data);
+
+
+  y.copy_permute(y_perm);
 
 }
 
