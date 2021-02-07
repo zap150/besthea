@@ -1311,33 +1311,22 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, te
     return;
   }
 
-  besthea::tools::timer t;
   
   // permuting the vector y should prevent false sharing and improve data locality
   // permuting the vector x should improve data locality
   block_vector_type y_perm;
   block_vector_type x_perm;
 
-  t.reset("permute");
   y_perm.copy_permute(y, beta);
   x_perm.copy_permute(x, alpha);
-  t.measure();
 
 
-  t.reset("regular");
   this->apply_regular(x_perm, y_perm);
-  t.measure();
-  t.reset("singular");
   this->apply_singular(x_perm, y_perm);
-  t.measure();
-  t.reset("delta0");
   this->apply_delta0(x_perm, y_perm);
-  t.measure();
 
 
-  t.reset("backpermute");
   y.copy_permute(y_perm);
-  t.measure();
 
 }
 

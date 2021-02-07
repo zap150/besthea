@@ -44,6 +44,7 @@ macro(setup_compiler)
   set(CMAKE_CXX_STANDARD 17)
   set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+  string(APPEND CMAKE_CUDA_FLAGS " -Xcudafe --diag_suppress=esa_on_defaulted_function_ignored")
   string(APPEND CMAKE_CUDA_FLAGS " -std=c++17")
   # set(CMAKE_CUDA_STANDARD 17) # this only works on CMake 3.18 and later
   # set(CMAKE_CUDA_STANDARD_REQUIRED True)
