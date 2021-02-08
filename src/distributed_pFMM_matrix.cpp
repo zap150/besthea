@@ -4529,12 +4529,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   std::string timer_file = "task_timer/process_";
   timer_file += std::to_string( _my_rank );
+  timer_file += ".m";
   remove( timer_file.c_str( ) );
 
   std::ofstream outfile( timer_file.c_str( ), std::ios::app );
 
-  outfile << "Total apply duration: " << total_apply_duration << " us"
-          << std::endl;
+  outfile << "% Total apply duration [us]: " << std::endl;
+  outfile << "T = " << total_apply_duration << ";" << std::endl;
 
   if ( outfile.is_open( ) ) {
     for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
@@ -4566,66 +4567,131 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       double perc_subtasks_loop
         = (double) total_time / (double) total_loop_duration;
 
-      outfile << "Thread " << i << ": " << std::endl;
+      outfile << "% Thread " << i << ": " << std::endl;
 
-      outfile << "M subtasks duration: " << us_m_sub << " us" << std::endl;
-      outfile << "M2L subtasks duration: " << us_m2l_sub << " us" << std::endl;
-      outfile << "L subtasks duration: " << us_l_sub << " us" << std::endl;
-      outfile << "N subtasks duration: " << us_n_sub << " us" << std::endl;
-      outfile << "Sum: " << us_m_sub + us_m2l_sub + us_l_sub + us_n_sub
+      outfile << "% M subtasks duration: " << us_m_sub << " us" << std::endl;
+      outfile << "% M2L subtasks duration: " << us_m2l_sub << " us"
+              << std::endl;
+      outfile << "% L subtasks duration: " << us_l_sub << " us" << std::endl;
+      outfile << "% N subtasks duration: " << us_n_sub << " us" << std::endl;
+      outfile << "% Sum: " << us_m_sub + us_m2l_sub + us_l_sub + us_n_sub
               << " us (" << perc_subtasks_loop * 100.0 << " % [loop], "
               << perc_subtasks_apply * 100.0 << " % [total])\n\n";
-      outfile << "M tasks: " << std::endl;
+
+      outfile << "% M tasks: " << std::endl;
+      outfile << "M" << i << " = [";
       auto it = _m_task_times.at( i ).begin( );
       for ( ; it != _m_task_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
+      outfile << " ];";
       outfile << std::endl;
-      outfile << "M2L tasks: " << std::endl;
+
+      outfile << "% M2L tasks: " << std::endl;
+      outfile << "M2L" << i << " = [";
       it = _m2l_task_times.at( i ).begin( );
       for ( ; it != _m2l_task_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
+      outfile << " ];";
+      outfile << std::endl;
+
       outfile << std::endl << std::endl;
-      outfile << "L tasks: " << std::endl;
+      outfile << "% L tasks: " << std::endl;
+      outfile << "L" << i << " = [";
       it = _l_task_times.at( i ).begin( );
       for ( ; it != _l_task_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
+      outfile << " ];";
       outfile << std::endl << std::endl;
-      outfile << "N tasks: " << std::endl;
+
+      outfile << "% N tasks: " << std::endl;
+      outfile << "N" << i << " = [";
       it = _n_task_times.at( i ).begin( );
       for ( ; it != _n_task_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
+      outfile << " ];";
       outfile << std::endl << std::endl;
-      outfile << "M subtasks: " << std::endl;
+
+      outfile << "% M subtasks: " << std::endl;
+      outfile << "Ms" << i << " = [";
       it = _m_subtask_times.at( i ).begin( );
       for ( ; it != _m_subtask_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
+      outfile << " ];";
       outfile << std::endl << std::endl;
-      outfile << "M2L subtasks: " << std::endl;
+
+      outfile << "% M2L subtasks: " << std::endl;
       it = _m2l_subtask_times.at( i ).begin( );
+      outfile << "M2Ls" << i << " = [";
       for ( ; it != _m2l_subtask_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
+      outfile << " ];";
       outfile << std::endl << std::endl;
-      outfile << "L subtasks: " << std::endl;
+
+      outfile << "% L subtasks: " << std::endl;
       it = _l_subtask_times.at( i ).begin( );
+      outfile << "Ls" << i << " = [";
       for ( ; it != _l_subtask_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
+      outfile << " ];";
       outfile << std::endl << std::endl;
-      outfile << "N subtasks: " << std::endl;
+
+      outfile << "% N subtasks: " << std::endl;
       it = _n_subtask_times.at( i ).begin( );
+      outfile << "Ns" << i << " = [";
       for ( ; it != _n_subtask_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
-      outfile << std::endl
-              << "====================================" << std::endl;
-      ;
+      outfile << " ];";
+      outfile << std::endl << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" << std::endl;
     }
+    outfile << "M = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "M" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "M2L = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "M2L" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "L = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "L" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "N = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "N" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+
+    outfile << "Ms = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "Ms" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "M2Ls = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "M2Ls" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "Ls = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "Ls" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "Ns = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "Ns" << i << ", ";
+    }
+    outfile << "};" << std::endl;
     outfile.close( );
   }
 }
