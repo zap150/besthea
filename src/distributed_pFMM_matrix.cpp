@@ -614,7 +614,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // entries in the second part of the receive vector
   std::sort( _receive_data_information.begin( ) + _n_moments_to_receive_upward,
     _receive_data_information.end( ),
-    [&]( const std::pair< scheduling_time_cluster *, lo > pair_one,
+    [ & ]( const std::pair< scheduling_time_cluster *, lo > pair_one,
       const std::pair< scheduling_time_cluster *, lo > pair_two ) {
       return _scheduling_tree_structure->compare_clusters_top_down_right_2_left(
         pair_one.first, pair_two.first );
@@ -4546,19 +4546,20 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       time_type::rep us_l_sub = 0;
       time_type::rep us_n_sub = 0;
       time_type::rep total_time = 0;
-      for ( lo j = 0; j < _m_subtask_times.at( i ).size( ) / 2; ++j ) {
+      for ( std::size_t j = 0; j < _m_subtask_times.at( i ).size( ) / 2; ++j ) {
         us_m_sub += _m_subtask_times.at( i ).at( 2 * j + 1 )
           - _m_subtask_times.at( i ).at( 2 * j );
       }
-      for ( lo j = 0; j < _m2l_subtask_times.at( i ).size( ) / 2; ++j ) {
+      for ( std::size_t j = 0; j < _m2l_subtask_times.at( i ).size( ) / 2;
+            ++j ) {
         us_m2l_sub += _m2l_subtask_times.at( i ).at( 2 * j + 1 )
           - _m2l_subtask_times.at( i ).at( 2 * j );
       }
-      for ( lo j = 0; j < _l_subtask_times.at( i ).size( ) / 2; ++j ) {
+      for ( std::size_t j = 0; j < _l_subtask_times.at( i ).size( ) / 2; ++j ) {
         us_l_sub += _l_subtask_times.at( i ).at( 2 * j + 1 )
           - _l_subtask_times.at( i ).at( 2 * j );
       }
-      for ( lo j = 0; j < _n_subtask_times.at( i ).size( ) / 2; ++j ) {
+      for ( std::size_t j = 0; j < _n_subtask_times.at( i ).size( ) / 2; ++j ) {
         us_n_sub += _n_subtask_times.at( i ).at( 2 * j + 1 )
           - _n_subtask_times.at( i ).at( 2 * j );
       }
