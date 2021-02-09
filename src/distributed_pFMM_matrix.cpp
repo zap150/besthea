@@ -3634,6 +3634,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // reset the number of non-nearfield ops
   _non_nf_op_count = 0;
 
+  // set loop timer start
+  time_type::rep loop_start;
+  if ( _measure_tasks ) {
+    loop_start = _global_timer.get_time_from_start< time_type >( );
+  }
+
   // start the main "job scheduling" algorithm
   // the "master" thread checks for new available data, spawns tasks, and
   // removes clusters from lists
@@ -3664,6 +3670,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           && n_list.empty( ) ) {
           break;
         }
+
         // check if data has been received since the last iteration
         if ( outcount != MPI_UNDEFINED ) {
           check_for_received_data(
@@ -3755,6 +3762,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           }
         } else {
           add_nn_operations( );
+        }
+
+        // interrupt the scheduling task if there is enough work to do so it can
+        // join the remaining tasks
+        if ( get_nn_operations( ) > 0 && status == 0 ) {
+#pragma omp taskyield
         }
 
         // if verbose mode is chosen, write info about next operation to file
@@ -3947,21 +3960,27 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       }
     }
   }
+  // set loop timer end
+  time_type::rep loop_end;
+  if ( _measure_tasks ) {
+    loop_end = _global_timer.get_time_from_start< time_type >( );
+  }
 
   y.add( y_pFMM, alpha );
 
   MPI_Barrier( y.get_comm( ) );
   y.synchronize_shared_parts( );
 
-  // print out task timing
-  if ( _measure_tasks ) {
-    save_times( );
-  }
-
   delete[] aux_dep_m;
   delete[] aux_dep_l;
   delete[] aux_dep_m2l;
   delete[] aux_dep_m2l_send;
+
+  // print out task timing
+  if ( _measure_tasks ) {
+    save_times( loop_end - loop_start,
+      _global_timer.get_time_from_start< time_type >( ) );
+  }
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -4505,68 +4524,175 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::save_times( ) const {
+  target_space, source_space >::save_times( time_type::rep total_loop_duration,
+  time_type::rep total_apply_duration ) const {
   std::filesystem::create_directory( "./task_timer/" );
 
   std::string timer_file = "task_timer/process_";
   timer_file += std::to_string( _my_rank );
+  timer_file += ".m";
   remove( timer_file.c_str( ) );
 
   std::ofstream outfile( timer_file.c_str( ), std::ios::app );
+
+  outfile << "% Total apply duration [us]: " << std::endl;
+  outfile << "T = " << total_apply_duration << ";" << std::endl;
+
   if ( outfile.is_open( ) ) {
     for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
-      outfile << "Thread " << i << ": " << std::endl;
-      outfile << "M tasks: " << std::endl;
+      // compute thread total execution time in individual tasks
+      time_type::rep us_m_sub = 0;
+      time_type::rep us_m2l_sub = 0;
+      time_type::rep us_l_sub = 0;
+      time_type::rep us_n_sub = 0;
+      time_type::rep total_time = 0;
+      for ( lo j = 0; j < _m_subtask_times.at( i ).size( ) / 2; ++j ) {
+        us_m_sub += _m_subtask_times.at( i ).at( 2 * j + 1 )
+          - _m_subtask_times.at( i ).at( 2 * j );
+      }
+      for ( lo j = 0; j < _m2l_subtask_times.at( i ).size( ) / 2; ++j ) {
+        us_m2l_sub += _m2l_subtask_times.at( i ).at( 2 * j + 1 )
+          - _m2l_subtask_times.at( i ).at( 2 * j );
+      }
+      for ( lo j = 0; j < _l_subtask_times.at( i ).size( ) / 2; ++j ) {
+        us_l_sub += _l_subtask_times.at( i ).at( 2 * j + 1 )
+          - _l_subtask_times.at( i ).at( 2 * j );
+      }
+      for ( lo j = 0; j < _n_subtask_times.at( i ).size( ) / 2; ++j ) {
+        us_n_sub += _n_subtask_times.at( i ).at( 2 * j + 1 )
+          - _n_subtask_times.at( i ).at( 2 * j );
+      }
+      total_time = us_m_sub + us_m2l_sub + us_l_sub + us_n_sub;
+      double perc_subtasks_apply
+        = (double) total_time / (double) total_apply_duration;
+      double perc_subtasks_loop
+        = (double) total_time / (double) total_loop_duration;
+
+      outfile << "% Thread " << i << ": " << std::endl;
+
+      outfile << "% M subtasks duration: " << us_m_sub << " us" << std::endl;
+      outfile << "% M2L subtasks duration: " << us_m2l_sub << " us"
+              << std::endl;
+      outfile << "% L subtasks duration: " << us_l_sub << " us" << std::endl;
+      outfile << "% N subtasks duration: " << us_n_sub << " us" << std::endl;
+      outfile << "% Sum: " << us_m_sub + us_m2l_sub + us_l_sub + us_n_sub
+              << " us (" << perc_subtasks_loop * 100.0 << " % [loop], "
+              << perc_subtasks_apply * 100.0 << " % [total])\n\n";
+
+      outfile << "% M tasks: " << std::endl;
+      outfile << "M" << i << " = [";
       auto it = _m_task_times.at( i ).begin( );
       for ( ; it != _m_task_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
+      outfile << " ];";
       outfile << std::endl;
-      outfile << "M2L tasks: " << std::endl;
+
+      outfile << "% M2L tasks: " << std::endl;
+      outfile << "M2L" << i << " = [";
       it = _m2l_task_times.at( i ).begin( );
       for ( ; it != _m2l_task_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
+      outfile << " ];";
+      outfile << std::endl;
+
       outfile << std::endl << std::endl;
-      outfile << "L tasks: " << std::endl;
+      outfile << "% L tasks: " << std::endl;
+      outfile << "L" << i << " = [";
       it = _l_task_times.at( i ).begin( );
       for ( ; it != _l_task_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
+      outfile << " ];";
       outfile << std::endl << std::endl;
-      outfile << "N tasks: " << std::endl;
+
+      outfile << "% N tasks: " << std::endl;
+      outfile << "N" << i << " = [";
       it = _n_task_times.at( i ).begin( );
       for ( ; it != _n_task_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
+      outfile << " ];";
       outfile << std::endl << std::endl;
-      outfile << "M subtasks: " << std::endl;
+
+      outfile << "% M subtasks: " << std::endl;
+      outfile << "Ms" << i << " = [";
       it = _m_subtask_times.at( i ).begin( );
       for ( ; it != _m_subtask_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
+      outfile << " ];";
       outfile << std::endl << std::endl;
-      outfile << "M2L subtasks: " << std::endl;
+
+      outfile << "% M2L subtasks: " << std::endl;
       it = _m2l_subtask_times.at( i ).begin( );
+      outfile << "M2Ls" << i << " = [";
       for ( ; it != _m2l_subtask_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
+      outfile << " ];";
       outfile << std::endl << std::endl;
-      outfile << "L subtasks: " << std::endl;
+
+      outfile << "% L subtasks: " << std::endl;
       it = _l_subtask_times.at( i ).begin( );
+      outfile << "Ls" << i << " = [";
       for ( ; it != _l_subtask_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
+      outfile << " ];";
       outfile << std::endl << std::endl;
-      outfile << "N subtasks: " << std::endl;
+
+      outfile << "% N subtasks: " << std::endl;
       it = _n_subtask_times.at( i ).begin( );
+      outfile << "Ns" << i << " = [";
       for ( ; it != _n_subtask_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
-      outfile << std::endl
-              << "====================================" << std::endl;
-      ;
+      outfile << " ];";
+      outfile << std::endl << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" << std::endl;
     }
+    outfile << "M = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "M" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "M2L = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "M2L" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "L = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "L" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "N = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "N" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+
+    outfile << "Ms = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "Ms" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "M2Ls = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "M2Ls" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "Ls = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "Ls" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "Ns = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "Ns" << i << ", ";
+    }
+    outfile << "};" << std::endl;
     outfile.close( );
   }
 }

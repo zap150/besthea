@@ -1273,7 +1273,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   /*!
    * Saves task duration measurement per thread in files (1 per MPI rank).
    */
-  void save_times( ) const;
+  void save_times( time_type::rep total_loop_duration,
+    time_type::rep total_apply_duration ) const;
 };
 
 /** Typedef for the distributed single layer p0-p0 PFMM matrix */
