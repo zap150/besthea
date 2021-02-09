@@ -15,6 +15,30 @@ macro(setup_compiler)
 
     add_compile_options(-Wall -Wextra -pedantic-errors)
 
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES AppleClang)
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12)
+      message(FATAL_ERROR "Clang compiler is too old, besthea can be"
+        " compiled only with clang++ 7 or higher")
+    endif()
+
+    add_compile_options(-Wall -Wextra -pedantic-errors)
+    # TODO: vectorise and get rid of it
+    add_compile_options(-Wno-pass-failed)
+
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang AND NOT MATCHES AppleClang)
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7)
+      message(FATAL_ERROR "Clang compiler is too old, besthea can be"
+        " compiled only with clang++ 7 or higher")
+    endif()
+
+    add_compile_options(-Wall -Wextra -pedantic-errors)
+    # TODO: vectorise and get rid of it
+    add_compile_options(-Wno-pass-failed)
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 11)
+      # TODO: get rid of this warning (don't understand it)
+      add_compile_options(-Wno-dtor-name)
+    endif()
+
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.0.1)
       message(FATAL_ERROR "Intel compiler is too old, besthea can be"
@@ -79,9 +103,14 @@ endmacro()
 
 macro(enable_OpenMP)
   if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
-    add_compile_options("-fopenmp")
+    add_compile_options(-fopenmp)
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES AppleClang)
+    #add_compile_options(-I/opt/local/include/libomp -Xclang -fopenmp)
+    add_compile_options(-Xclang -fopenmp)
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang AND NOT MATCHES AppleClang)
+    add_compile_options(-fopenmp)
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
-    add_compile_options("-qopenmp")
+    add_compile_options(-qopenmp)
   endif()
 endmacro()
 

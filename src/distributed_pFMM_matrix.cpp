@@ -45,8 +45,8 @@ using besthea::mesh::scheduling_time_cluster;
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::apply( const block_vector & x, block_vector & y,
-  bool trans, sc alpha, sc beta ) const {
+  target_space, source_space >::apply( const block_vector & /*x*/,
+  block_vector & /*y*/, bool /*trans*/, sc /*alpha*/, sc /*beta*/ ) const {
   // generic method not implemented
   std::cout << "apply: NOT IMPLEMENTED" << std::endl;
 }
@@ -614,7 +614,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // entries in the second part of the receive vector
   std::sort( _receive_data_information.begin( ) + _n_moments_to_receive_upward,
     _receive_data_information.end( ),
-    [ & ]( const std::pair< scheduling_time_cluster *, lo > pair_one,
+    [&]( const std::pair< scheduling_time_cluster *, lo > pair_one,
       const std::pair< scheduling_time_cluster *, lo > pair_two ) {
       return _scheduling_tree_structure->compare_clusters_top_down_right_2_left(
         pair_one.first, pair_two.first );
@@ -1274,8 +1274,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::apply_s2m_operation( const block_vector &
-                                                       source_vector,
-  general_spacetime_cluster * source_cluster ) const {
+  /*source_vector*/,
+  general_spacetime_cluster * /*source_cluster*/ ) const {
   std::cout << "S2M operation not implemented " << std::endl;
 }
 
@@ -2230,7 +2230,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
     std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
       = time_cluster->get_associated_spacetime_clusters( );
-    lou i;
+    lou i = 0;
     lou n = time_cluster->get_n_associated_leaves( );
     // there is an implicit taskgroup after this taskloop
 #pragma omp taskloop shared( output_vector, associated_spacetime_clusters )
@@ -2264,7 +2264,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
     std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
       = time_cluster->get_associated_spacetime_clusters( );
-    lou i;
+    lou i = 0;
     lou n = time_cluster->get_n_associated_leaves( );
     // there is an implicit taskgroup after this taskloop
 #pragma omp taskloop shared( output_vector, associated_spacetime_clusters )
@@ -2287,8 +2287,8 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space,
   source_space >::apply_l2t_operation( const mesh::general_spacetime_cluster *
-                                         cluster,
-  block_vector & output_vector ) const {
+  /*cluster*/,
+  block_vector & /*output_vector*/ ) const {
   std::cout << "L2T operation not implemented!" << std::endl;
 }
 
@@ -3041,7 +3041,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   for ( lo a = 0; a <= _temp_order; ++a ) {
     for ( lo b = 0; b <= _temp_order; ++b ) {
       sc h_delta_ab = h_alpha / ( tar_time_nodes[ a ] - src_time_nodes[ b ] );
-      lou i;
+      lou i = 0;
 #pragma omp simd aligned( cheb_nodes_sum_coll_data, buffer_for_gaussians_data \
                           : DATA_ALIGN ) simdlen( DATA_WIDTH )
       for ( i = 0; i < _cheb_nodes_sum_coll.size( ); ++i ) {
@@ -3514,8 +3514,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::apply( const distributed_block_vector & x,
-  distributed_block_vector & y, bool trans, sc alpha, sc beta ) const {
+  target_space, source_space >::apply( const distributed_block_vector & /*x*/,
+  distributed_block_vector & /*y*/, bool /*trans*/, sc /*alpha*/,
+  sc /*beta*/ ) const {
   // generic method not implemented
   std::cout << "apply: NOT IMPLEMENTED" << std::endl;
 }
@@ -4065,8 +4066,8 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space,
   source_space >::apply_s2m_operation( const distributed_block_vector &
-                                         source_vector,
-  general_spacetime_cluster * source_cluster ) const {
+  /*source_vector*/,
+  general_spacetime_cluster * /*source_cluster*/ ) const {
   std::cout << "S2M operation not implemented " << std::endl;
 }
 
@@ -4242,8 +4243,8 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space,
   source_space >::apply_l2t_operation( const mesh::general_spacetime_cluster *
-                                         cluster,
-  distributed_block_vector & output_vector ) const {
+  /*cluster*/,
+  distributed_block_vector & /*output_vector*/ ) const {
   std::cout << "L2T operation not implemented!" << std::endl;
 }
 

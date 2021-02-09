@@ -46,7 +46,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     _real_max_levels( 0 ),
     _spacetime_mesh( spacetime_mesh ),
     _local_max_space_level( 0 ),
-    _s_t_coeff( st_coeff ),
+    //_s_t_coeff( st_coeff ),
     _n_min_elems( n_min_elems ),
     _spatial_paddings( _max_levels, 0.0 ),
     _spatial_nearfield_limit( spatial_nearfield_limit ),
