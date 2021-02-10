@@ -385,7 +385,7 @@ __global__ void apply_regular_sl_p0_p0(const sc * x, lo ld_x, sc * y_perm, lo ld
   // each block handles one test element (inner row of a block matrix)
   // each thread handles one (or more if not enough threads) entry of the row (trial element), and loops through all the blocks
 
-  extern __shared__ sc shmem_y_vals[]; // requires shared memory size (in bytes) to be specified while calling this kernel
+  extern __shared__ sc shmem_y_vals[]; // requires shared memory size (in bytes) to be specified while calling this kernel. needs sizeof(sc)*blockDim.x bytes
 
   lo &n_blocks = c_mesh.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
   const unsigned int &tid = threadIdx.x;
@@ -451,7 +451,7 @@ __global__ void apply_regular_dl_p0_p1(const sc * x, lo ld_x, sc * y_perm, lo ld
   // each block handles one test element (inner row of a block matrix)
   // each thread handles one (or more if not enough threads) entry of the row (trial element), and loops through all the blocks
 
-  extern __shared__ sc shmem_y_vals[]; // requires shared memory size (in bytes) to be specified while calling this kernel
+  extern __shared__ sc shmem_y_vals[]; // requires shared memory size (in bytes) to be specified while calling this kernel. needs sizeof(sc)*blockDim.x bytes
 
   lo &n_blocks = c_mesh.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
   const unsigned int &tid = threadIdx.x;
