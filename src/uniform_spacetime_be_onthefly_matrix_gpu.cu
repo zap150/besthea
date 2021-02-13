@@ -187,13 +187,13 @@ __device__ void d_triangles_to_geometry_000( // 0 shared vertices, 0 rot_test, 0
 __device__ sc d_sl_kernel_do_anti_tau_anti_t_regular_in_time_regular_in_space(
   sc xy1, sc xy2, sc xy3, sc ttau, sc ttau_sqrt ) {
 
-  sc norm = sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
-  sc &sqrt_d = ttau_sqrt;
-
   besthea::onthefly::heat_kernel_parameters &kp = c_kernel_params;
   constexpr sc _two = 2.0;
   constexpr sc _four = 4.0;
   constexpr sc _eight = 8.0;
+
+  sc norm = sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
+  sc &sqrt_d = ttau_sqrt;
 
   //  ttau > 0, norm > 0
   sc value = ( ttau / ( _four * kp.pi * kp.alpha * norm )
@@ -210,15 +210,15 @@ __device__ sc d_sl_kernel_do_anti_tau_anti_t_regular_in_time_regular_in_space(
 __device__ sc d_dl_kernel_do_anti_tau_anti_t_regular_in_time_regular_in_space(
   sc xy1, sc xy2, sc xy3, const sc * ny, sc ttau, sc ttau_sqrt ) {
 
-  sc norm2 = xy1 * xy1 + xy2 * xy2 + xy3 * xy3;
-  sc norm = sqrt( norm2 );
-  sc dot = xy1 * ny[ 0 ] + xy2 * ny[ 1 ] + xy3 * ny[ 2 ];
-  sc &sqrt_d = ttau_sqrt;
-
   besthea::onthefly::heat_kernel_parameters &kp = c_kernel_params;
   constexpr sc _one = 1.0;
   constexpr sc _two = 2.0;
   constexpr sc _four = 4.0;
+
+  sc norm2 = xy1 * xy1 + xy2 * xy2 + xy3 * xy3;
+  sc norm = sqrt( norm2 );
+  sc dot = xy1 * ny[ 0 ] + xy2 * ny[ 1 ] + xy3 * ny[ 2 ];
+  sc &sqrt_d = ttau_sqrt;
 
   //  ttau > 0, norm > 0
   sc value = -dot / ( _four * kp.pi * norm )
@@ -228,6 +228,85 @@ __device__ sc d_dl_kernel_do_anti_tau_anti_t_regular_in_time_regular_in_space(
         * exp( -norm2 / ( _four * kp.alpha * ttau ) ) );
 
   return value;
+}
+
+
+
+__device__ void d_kernel_do_anti_tau_anti_t_and_anti_t_regular_in_time_regular_in_space(
+  sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny,
+  sc ttau, sc ttau_sqrt, sc * value1, sc * value2) {
+
+  besthea::onthefly::heat_kernel_parameters &kp = c_kernel_params;
+  constexpr sc _two = 2.0;
+  constexpr sc _four = 4.0;
+  constexpr sc _eight = 8.0;
+
+  sc dot = nx[ 0 ] * ny[ 0 ] + nx[ 1 ] * ny[ 1 ] + nx[ 2 ] * ny[ 2 ];
+  sc norm = sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
+  sc sqrt_d = ttau_sqrt;
+  sc erf_value = erf( norm / ( _two * sqrt_d * kp.sqrt_alpha ) );
+  sc four_pi_alpha_norm = _four * kp.pi * kp.alpha * norm;
+
+  //  ttau > 0, norm > 0
+  *value1 = ( ttau / four_pi_alpha_norm + norm / ( _eight * kp.pi * kp.alpha_2 ) )
+      * erf_value
+    + sqrt_d / ( _four * kp.pi * kp.alpha * kp.sqrt_pi * kp.sqrt_alpha )
+      * exp( -( norm * norm ) / ( _four * ttau * kp.alpha ) );
+
+  *value2 = erf_value / four_pi_alpha_norm;
+
+  *value1 *= kp.alpha_2;
+  *value2 *= dot * kp.alpha;
+
+}
+
+
+__device__ void d_basis_tri_p1_evaluate_curl_00(
+  lo i_elem, const sc * n, bool swap, sc * curls) {
+
+  const lo * elem_nodes = c_mesh.surf_mesh.d_element_nodes + 3 * i_elem;
+  const sc * x1rot = c_mesh.surf_mesh.d_node_coords + 3 * elem_nodes[0];
+  const sc * x2rot = c_mesh.surf_mesh.d_node_coords + 3 * elem_nodes[1];
+  const sc * x3rot = c_mesh.surf_mesh.d_node_coords + 3 * elem_nodes[2];
+
+  // first two rows of R^\trans, third is n
+  sc a11 = x2rot[ 0 ] - x1rot[ 0 ];
+  sc a12 = x2rot[ 1 ] - x1rot[ 1 ];
+  sc a13 = x2rot[ 2 ] - x1rot[ 2 ];
+  sc a21 = x3rot[ 0 ] - x1rot[ 0 ];
+  sc a22 = x3rot[ 1 ] - x1rot[ 1 ];
+  sc a23 = x3rot[ 2 ] - x1rot[ 2 ];
+
+  // determinant to invert the matrix
+  sc det = n[ 0 ] * ( a12 * a23 - a13 * a22 )
+         + n[ 1 ] * ( a13 * a21 - a11 * a23 )
+         + n[ 2 ] * ( a11 * a22 - a21 * a12 );
+
+  // gradients in actual triangle
+  // R^{-\trans} * [1;0;0]
+  sc g21 =  n[ 2 ] * a22 - n[ 1 ] * a23;
+  sc g22 = -n[ 2 ] * a21 + n[ 0 ] * a23;
+  sc g23 =  n[ 1 ] * a21 - n[ 0 ] * a22;
+  // n x gradient
+  curls[ 3 ] = ( n[ 1 ] * g23 - n[ 2 ] * g22 ) / det;
+  curls[ 4 ] = ( n[ 2 ] * g21 - n[ 0 ] * g23 ) / det;
+  curls[ 5 ] = ( n[ 0 ] * g22 - n[ 1 ] * g21 ) / det;
+
+  // R^{-\trans} * [0;1;0]
+  sc g31 = -n[ 2 ] * a12 + n[ 1 ] * a13;
+  sc g32 = n[ 2 ] * a11 - n[ 0 ] * a13;
+  sc g33 = -n[ 1 ] * a11 + n[ 0 ] * a12;
+  // n x gradient
+  curls[ 6 ] = ( n[ 1 ] * g33 - n[ 2 ] * g32 ) / det;
+  curls[ 7 ] = ( n[ 2 ] * g31 - n[ 0 ] * g33 ) / det;
+  curls[ 8 ] = ( n[ 0 ] * g32 - n[ 1 ] * g31 ) / det;
+
+  // R^{-\trans} * [-1;-1;0]
+  // n x gradient
+  curls[ 0 ] = ( -n[ 1 ] * ( g23 + g33 ) + n[ 2 ] * ( g22 + g32 ) ) / det;
+  curls[ 1 ] = ( -n[ 2 ] * ( g21 + g31 ) + n[ 0 ] * ( g23 + g33 ) ) / det;
+  curls[ 2 ] = ( -n[ 0 ] * ( g22 + g32 ) + n[ 1 ] * ( g21 + g31 ) ) / det;
+
 }
 
 
@@ -380,10 +459,115 @@ __device__ void d_get_values_regular_dl_p0_p1(sc * values_out, lo delta, lo i_te
 
 
 
+
+__device__ void d_get_values_regular_hs_p1_p1(sc * values_out, lo delta, lo i_test, lo i_trial,
+  besthea::onthefly::quadrature_wrapper_changing_regular_raw & quadr_changing) {
+    
+  sc timestep = c_mesh.timestep;
+
+  sc ttau = timestep * delta;
+  sc sqrt_ttau = sqrt(ttau);
+
+  const lo * tst_elem_nodes = c_mesh.surf_mesh.d_element_nodes + 3 * i_test;
+  const lo * trl_elem_nodes = c_mesh.surf_mesh.d_element_nodes + 3 * i_trial;
+
+  const sc * x1 = c_mesh.surf_mesh.d_node_coords + 3 * tst_elem_nodes[0];
+  const sc * x2 = c_mesh.surf_mesh.d_node_coords + 3 * tst_elem_nodes[1];
+  const sc * x3 = c_mesh.surf_mesh.d_node_coords + 3 * tst_elem_nodes[2];
+  const sc * y1 = c_mesh.surf_mesh.d_node_coords + 3 * trl_elem_nodes[0];
+  const sc * y2 = c_mesh.surf_mesh.d_node_coords + 3 * trl_elem_nodes[1];
+  const sc * y3 = c_mesh.surf_mesh.d_node_coords + 3 * trl_elem_nodes[2];
+  const sc * nx = c_mesh.surf_mesh.d_element_normals + 3 * i_test;
+  const sc * ny = c_mesh.surf_mesh.d_element_normals + 3 * i_trial;
+
+  const sc test_area = c_mesh.surf_mesh.d_element_areas[i_test];
+  const sc trial_area = c_mesh.surf_mesh.d_element_areas[i_trial];
+
+  d_triangles_to_geometry_000( x1, x2, x3, y1, y2, y3, quadr_changing );
+
+  const sc * w = c_my_quadrature._w;
+  const sc * x1_mapped = quadr_changing._x1;
+  const sc * x2_mapped = quadr_changing._x2;
+  const sc * x3_mapped = quadr_changing._x3;
+  const sc * y1_mapped = quadr_changing._y1;
+  const sc * y2_mapped = quadr_changing._y2;
+  const sc * y3_mapped = quadr_changing._y3;
+  const sc * x1_ref = c_my_quadrature._x1_ref;
+  const sc * x2_ref = c_my_quadrature._x2_ref;
+  const sc * y1_ref = c_my_quadrature._y1_ref;
+  const sc * y2_ref = c_my_quadrature._y2_ref;
+
+  lo size = c_my_quadrature._size;
+
+
+  sc test_curls[ 9 ], trial_curls[ 9 ];
+  sc phi1x, phi1y;
+  sc kernel1, kernel2;
+  lo test_curl_offset, trial_curl_offset;
+  sc curl_dot[ 9 ];
+
+  d_basis_tri_p1_evaluate_curl_00( i_test, nx, false, test_curls );
+  d_basis_tri_p1_evaluate_curl_00( i_trial, ny, true, trial_curls );
+  for ( lo i_loc_test = 0; i_loc_test < 3; ++i_loc_test ) {
+    test_curl_offset = 3 * i_loc_test;
+    for ( lo i_loc_trial = 0; i_loc_trial < 3; ++i_loc_trial ) {
+      trial_curl_offset = 3 * i_loc_trial;
+      curl_dot[ i_loc_trial * 3 + i_loc_test ]
+        = test_curls[ test_curl_offset     ] * trial_curls[ trial_curl_offset ]
+        + test_curls[ test_curl_offset + 1 ] * trial_curls[ trial_curl_offset + 1 ]
+        + test_curls[ test_curl_offset + 2 ] * trial_curls[ trial_curl_offset + 2 ];
+    }
+  }
+
+  for(lo j = 0; j < 9; j++) values_out[j] = 0;
+  sc &value11 = values_out[0];   sc &value12 = values_out[1];   sc &value13 = values_out[2];
+  sc &value21 = values_out[3];   sc &value22 = values_out[4];   sc &value23 = values_out[5];
+  sc &value31 = values_out[6];   sc &value32 = values_out[7];   sc &value33 = values_out[8];
+
+  for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+    d_kernel_do_anti_tau_anti_t_and_anti_t_regular_in_time_regular_in_space(
+      x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+      x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+      x3_mapped[ i_quad ] - y3_mapped[ i_quad ],
+      nx, ny, ttau, sqrt_ttau, &kernel1, &kernel2 );
+
+    phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
+    phi1y = (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ];
+
+    value11 += ( kernel1 * curl_dot[ 0 ] + kernel2 * phi1x            * phi1y )            * w[ i_quad ];
+    value21 += ( kernel1 * curl_dot[ 1 ] + kernel2 * x1_ref[ i_quad ] * phi1y )            * w[ i_quad ];
+    value31 += ( kernel1 * curl_dot[ 2 ] + kernel2 * x2_ref[ i_quad ] * phi1y )            * w[ i_quad ];
+    value12 += ( kernel1 * curl_dot[ 3 ] + kernel2 * phi1x            * y1_ref[ i_quad ] ) * w[ i_quad ];
+    value22 += ( kernel1 * curl_dot[ 4 ] + kernel2 * x1_ref[ i_quad ] * y1_ref[ i_quad ] ) * w[ i_quad ];
+    value32 += ( kernel1 * curl_dot[ 5 ] + kernel2 * x2_ref[ i_quad ] * y1_ref[ i_quad ] ) * w[ i_quad ];
+    value13 += ( kernel1 * curl_dot[ 6 ] + kernel2 * phi1x            * y2_ref[ i_quad ] ) * w[ i_quad ];
+    value23 += ( kernel1 * curl_dot[ 7 ] + kernel2 * x1_ref[ i_quad ] * y2_ref[ i_quad ] ) * w[ i_quad ];
+    value33 += ( kernel1 * curl_dot[ 8 ] + kernel2 * x2_ref[ i_quad ] * y2_ref[ i_quad ] ) * w[ i_quad ];
+  }
+
+  sc factor = test_area * trial_area;
+  for(lo j = 0; j < 9; j++) values_out[j] *= factor;
+  return;
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 __global__ void apply_regular_sl_p0_p0(const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha) {
 
-  // each block handles one test element (inner row of a block matrix)
-  // each thread handles one (or more if not enough threads) entry of the row (trial element), and loops through all the blocks
+  // each block handles one test element
+  // each thread handles one or more trial elements, and loops through all the blocks
 
   extern __shared__ sc shmem_y_vals[]; // requires shared memory size (in bytes) to be specified while calling this kernel. needs sizeof(sc)*blockDim.x bytes
 
@@ -408,19 +592,10 @@ __global__ void apply_regular_sl_p0_p0(const sc * x, lo ld_x, sc * y_perm, lo ld
     const lo &row = i_tst;
     const lo &col = i_trl;
 
-    val_prev = 0; // delta=0 and 0s wiil be done by the cpu
-    val_curr = 0;
-    d_get_values_regular_sl_p0_p0(&val_next, 1, i_tst, i_trl, quadr_changing);
+    val_curr = 0; // delta=0 and 0s wiil be done by the cpu
+    val_next = 0;
     
-    matrix_val = ((i_tst == i_trl) ? (0) : (val_prev + val_curr - val_next)); // singular will be done by the cpu
-
-    for (lo block = 0; block < n_blocks; block++) {
-      shmem_y_vals[tid] = matrix_val * x[ ld_x * block + col ];
-      __syncthreads();
-      d_reduce_sum(shmem_y_vals, &y_perm[row * ld_y_perm + block], alpha);
-    }
-
-    for (lo diag = 1; diag < n_blocks; diag++) {
+    for (lo diag = 0; diag < n_blocks; diag++) {
       val_prev = val_curr;
       val_curr = val_next;
       d_get_values_regular_sl_p0_p0(&val_next, diag+1, i_tst, i_trl, quadr_changing);
@@ -448,8 +623,8 @@ __global__ void apply_regular_sl_p0_p0(const sc * x, lo ld_x, sc * y_perm, lo ld
 
 __global__ void apply_regular_dl_p0_p1(const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha) {
 
-  // each block handles one test element (inner row of a block matrix)
-  // each thread handles one (or more if not enough threads) entry of the row (trial element), and loops through all the blocks
+  // each block handles one test element
+  // each thread handles one or more trial elements, and loops through all the blocks
 
   extern __shared__ sc shmem_y_vals[]; // requires shared memory size (in bytes) to be specified while calling this kernel. needs sizeof(sc)*blockDim.x bytes
 
@@ -474,23 +649,10 @@ __global__ void apply_regular_dl_p0_p1(const sc * x, lo ld_x, sc * y_perm, lo ld
     const lo &row = i_tst;
     const lo * cols = c_mesh.surf_mesh.d_element_nodes + 3 * i_trl;
 
-    vals_prev[0] = 0;   vals_prev[1] = 0;   vals_prev[2] = 0; // delta=0 and 0s wiil be done by the cpu
-    vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
-    d_get_values_regular_dl_p0_p1(vals_next, 1, i_tst, i_trl, quadr_changing);
-    
-    matrix_vals[0] = ((i_tst == i_trl) ? (0) : (-vals_next[0])); // singular will be done by the cpu
-    matrix_vals[1] = ((i_tst == i_trl) ? (0) : (-vals_next[1]));
-    matrix_vals[2] = ((i_tst == i_trl) ? (0) : (-vals_next[2]));
+    vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0; // delta=0 and 0s wiil be done by the cpu
+    vals_next[0] = 0;   vals_next[1] = 0;   vals_next[2] = 0;
 
-    for (lo block = 0; block < n_blocks; block++) {
-      shmem_y_vals[tid]  = matrix_vals[0] * x[ ld_x * block + cols[0]];
-      shmem_y_vals[tid] += matrix_vals[1] * x[ ld_x * block + cols[1]];
-      shmem_y_vals[tid] += matrix_vals[2] * x[ ld_x * block + cols[2]];
-      __syncthreads();
-      d_reduce_sum(shmem_y_vals, &y_perm[row * ld_y_perm + block], alpha);
-    }
-
-    for (lo diag = 1; diag < n_blocks; diag++) {
+    for (lo diag = 0; diag < n_blocks; diag++) {
       vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
       vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
       d_get_values_regular_dl_p0_p1(vals_next, diag+1, i_tst, i_trl, quadr_changing);
@@ -513,6 +675,64 @@ __global__ void apply_regular_dl_p0_p1(const sc * x, lo ld_x, sc * y_perm, lo ld
 
     shmem_y_vals[tid] = 0;
     __syncthreads();
+
+  }
+
+}
+
+
+
+__global__ void apply_regular_hs_p1_p1(const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha) {
+
+  // each block handles one test element
+  // each thread handles one or more trial elements, and loops through all the blocks
+
+  lo &n_blocks = c_mesh.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
+  lo &n_elems = c_mesh.surf_mesh.n_elems;
+
+  sc matrix_vals[9];
+  sc vals_prev[9];
+  sc vals_curr[9];
+  sc vals_next[9];
+  sc x_vals[3];
+  sc y_vals[3];
+
+  besthea::onthefly::quadrature_wrapper_changing_regular_raw quadr_changing;
+
+  const lo &i_tst = blockIdx.x;
+
+  for (lo i_trl = threadIdx.x; i_trl < n_elems; i_trl += blockDim.x) {
+    if(i_tst == i_trl)
+      continue;
+
+    const lo * rows = c_mesh.surf_mesh.d_element_nodes + 3 * i_tst;
+    const lo * cols = c_mesh.surf_mesh.d_element_nodes + 3 * i_trl;
+
+    for(lo j = 0; j < 9; j++) vals_curr[j] = 0; // delta=0 and 0s wiil be done by the cpu
+    for(lo j = 0; j < 9; j++) vals_next[j] = 0;
+
+    for (lo diag = 0; diag < n_blocks; diag++) {
+      for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
+      for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
+      d_get_values_regular_hs_p1_p1(vals_next, diag+1, i_tst, i_trl, quadr_changing);
+
+      for(lo j = 0; j < 9; j++) matrix_vals[j] = ((i_tst == i_trl) ? (0) : (-vals_prev[j] + 2*vals_curr[j] - vals_next[j])); // singular will be done by the cpu
+
+      lo max_block = n_blocks - diag;
+      for (lo block = 0; block < max_block; block++) {
+        lo block_row = diag + block;
+        lo block_col = block;
+        x_vals[0] = alpha * x[ ld_x * block_col + cols[0]];
+        x_vals[1] = alpha * x[ ld_x * block_col + cols[1]];
+        x_vals[2] = alpha * x[ ld_x * block_col + cols[2]];
+        y_vals[0] = y_vals[1] = y_vals[2] = 0;
+        for(lo r = 0; r < 3; r++) for(lo c = 0; c < 3; c++) y_vals[r] += matrix_vals[3*r+c] * x_vals[c]; // TODO: might use tensor unit for this
+        atomicAdd_system(&y_perm[rows[0] * ld_y_perm + block_row], y_vals[0]);
+        atomicAdd_system(&y_perm[rows[1] * ld_y_perm + block_row], y_vals[1]);
+        atomicAdd_system(&y_perm[rows[2] * ld_y_perm + block_row], y_vals[2]);
+        
+      }
+    }
 
   }
 
@@ -721,6 +941,98 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
 
 
 
+template<>
+void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
+  apply_regular_gpu_begin( const block_vector_type & x, block_vector_type & y_perm, sc alpha, apply_regular_gpu_tmp_data & tmp_data ) const {
+
+  lo n_elems = mesh_raw.surf_mesh.n_elems;
+  lo n_nodes = mesh_raw.surf_mesh.n_nodes;
+  lo n_blocks = mesh_raw.n_temporal_elements;
+  
+  sc * &x_raw = tmp_data.x_raw;
+  sc * &y_perm_raw = tmp_data.y_perm_raw;
+  sc * &d_x = tmp_data.d_x;
+  sc * &d_y_perm = tmp_data.d_y_perm;
+  size_t &pitch_x = tmp_data.pitch_x;
+  size_t &pitch_y_perm = tmp_data.pitch_y_perm;
+  lo &ld_x = tmp_data.ld_x;
+  lo &ld_y_perm = tmp_data.ld_y_perm;
+
+  int gridSize = n_elems;
+  int blockSize = 256; // number of gpu threads per block
+
+  
+
+  cudaMallocHost(&x_raw, x.size() * sizeof(*x_raw));
+  cudaMallocHost(&y_perm_raw, y_perm.size() * sizeof(*y_perm_raw));
+
+  cudaMallocPitch(&d_x, &pitch_x, n_nodes * sizeof(*d_x), n_blocks);
+  cudaMallocPitch(&d_y_perm, &pitch_y_perm, n_blocks * sizeof(*d_y_perm), n_nodes);
+  ld_x = pitch_x / sizeof(*d_x); // assuming the pitch is a multiple of element size
+  ld_y_perm = pitch_y_perm / sizeof(*d_y_perm);
+
+  x.copy_to_raw(x_raw);
+
+  cudaMemcpy2D(d_x, pitch_x, x_raw, n_nodes * sizeof(*x_raw), n_nodes * sizeof(*x_raw), n_blocks, cudaMemcpyHostToDevice);
+  cudaMemset(d_y_perm, 0, pitch_y_perm * n_nodes);
+
+
+
+  apply_regular_hs_p1_p1<<< gridSize, blockSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha);
+
+}
+
+
+
+template<>
+void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
+  apply_regular_gpu_finish( block_vector_type & y_perm, apply_regular_gpu_tmp_data & tmp_data ) const {
+
+  //lo n_elems = mesh_raw.surf_mesh.n_elems;
+  lo n_nodes = mesh_raw.surf_mesh.n_nodes;
+  lo n_blocks = mesh_raw.n_temporal_elements;
+
+  sc * &x_raw = tmp_data.x_raw;
+  sc * &y_perm_raw = tmp_data.y_perm_raw;
+  sc * &d_x = tmp_data.d_x;
+  sc * &d_y_perm = tmp_data.d_y_perm;
+  //size_t &pitch_x = tmp_data.pitch_x;
+  size_t &pitch_y_perm = tmp_data.pitch_y_perm;
+  //lo &ld_x = tmp_data.ld_x;
+  //lo &ld_y_perm = tmp_data.ld_y_perm;
+
+  cudaDeviceSynchronize();
+
+  cudaMemcpy2D(y_perm_raw, n_blocks * sizeof(*y_perm_raw), d_y_perm, pitch_y_perm, n_blocks * sizeof(*y_perm_raw), n_nodes, cudaMemcpyDeviceToHost);
+
+  y_perm.add_from_raw(y_perm_raw);
+
+  cudaFree(d_x);
+  cudaFree(d_y_perm);
+  cudaFreeHost(x_raw);
+  cudaFreeHost(y_perm_raw);
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 template<class kernel_type, class test_space_type, class trial_space_type>
 void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
@@ -773,6 +1085,11 @@ template class besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+
+  template class besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
+    besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+    besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+    besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
 
 
 

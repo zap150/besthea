@@ -48,6 +48,7 @@ macro(setup_compiler)
   string(APPEND CMAKE_CUDA_FLAGS " -std=c++17")
   # set(CMAKE_CUDA_STANDARD 17) # this only works on CMake 3.18 and later
   # set(CMAKE_CUDA_STANDARD_REQUIRED True)
+  string(APPEND CMAKE_CUDA_FLAGS " -arch=compute_60")
 
   if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RelWithDebInfo)

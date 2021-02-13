@@ -573,8 +573,6 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
   values_out[7] = value32 * factor;
   values_out[8] = value33 * factor;
 
-
-
   return;
 
 }
