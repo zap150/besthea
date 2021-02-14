@@ -54,6 +54,11 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
   get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special) const {
   
+  if(besthea::onthefly::quick_matrix_vals) {
+    values_out[0] = i_test + 2*delta + 3*i_trial;
+    return;
+  }
+
   auto test_mesh = _test_space->get_mesh( );
   auto trial_mesh = _trial_space->get_mesh( );
   
@@ -188,6 +193,11 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
   get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special) const {
+
+  if(besthea::onthefly::quick_matrix_vals) {
+    for(int j = 0; j < 3; j++) values_out[j] = (j + 1) * (i_test + 2*delta) + 3*i_trial;
+    return;
+  }
 
   auto test_mesh = _test_space->get_mesh( );
   auto trial_mesh = _trial_space->get_mesh( );
@@ -352,6 +362,11 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
   get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special) const {
+
+  if(besthea::onthefly::quick_matrix_vals) {
+    for(int j = 0; j < 9; j++) values_out[j] = (j + 1) * (i_test + 2*delta) + 3*i_trial;
+    return;
+  }
 
   auto & test_basis = _test_space->get_basis( );
   auto & trial_basis = _trial_space->get_basis( );

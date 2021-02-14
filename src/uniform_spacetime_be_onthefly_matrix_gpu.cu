@@ -324,6 +324,11 @@ __device__ void d_basis_tri_p1_evaluate_curl_00(
 
 __device__ void d_get_values_regular_sl_p0_p0(sc * values_out, lo delta, lo i_test, lo i_trial,
   besthea::onthefly::quadrature_wrapper_changing_regular_raw & quadr_changing) {
+
+  if(besthea::onthefly::quick_matrix_vals) {
+    values_out[0] = i_test + 2*delta + 3*i_trial;
+    return;
+  }
   
   sc timestep = c_mesh.timestep;
 
@@ -388,6 +393,11 @@ __device__ void d_get_values_regular_sl_p0_p0(sc * values_out, lo delta, lo i_te
 __device__ void d_get_values_regular_dl_p0_p1(sc * values_out, lo delta, lo i_test, lo i_trial,
   besthea::onthefly::quadrature_wrapper_changing_regular_raw & quadr_changing) {
     
+  if(besthea::onthefly::quick_matrix_vals) {
+    for(int j = 0; j < 3; j++) values_out[j] = (j + 1) * (i_test + 2*delta) + 3*i_trial;
+    return;
+  }
+
   sc timestep = c_mesh.timestep;
 
   sc ttau = timestep * delta;
@@ -462,7 +472,12 @@ __device__ void d_get_values_regular_dl_p0_p1(sc * values_out, lo delta, lo i_te
 
 __device__ void d_get_values_regular_hs_p1_p1(sc * values_out, lo delta, lo i_test, lo i_trial,
   besthea::onthefly::quadrature_wrapper_changing_regular_raw & quadr_changing) {
-    
+  
+  if(besthea::onthefly::quick_matrix_vals) {
+    for(int j = 0; j < 9; j++) values_out[j] = (j + 1) * (i_test + 2*delta) + 3*i_trial;
+    return;
+  }
+
   sc timestep = c_mesh.timestep;
 
   sc ttau = timestep * delta;
@@ -727,14 +742,90 @@ __global__ void apply_regular_hs_p1_p1(const sc * x, lo ld_x, sc * y_perm, lo ld
         x_vals[2] = alpha * x[ ld_x * block_col + cols[2]];
         y_vals[0] = y_vals[1] = y_vals[2] = 0;
         for(lo r = 0; r < 3; r++) for(lo c = 0; c < 3; c++) y_vals[r] += matrix_vals[3*r+c] * x_vals[c]; // TODO: might use tensor unit for this
-        atomicAdd_system(&y_perm[rows[0] * ld_y_perm + block_row], y_vals[0]);
-        atomicAdd_system(&y_perm[rows[1] * ld_y_perm + block_row], y_vals[1]);
-        atomicAdd_system(&y_perm[rows[2] * ld_y_perm + block_row], y_vals[2]);
+        atomicAdd(&y_perm[rows[0] * ld_y_perm + block_row], y_vals[0]);
+        atomicAdd(&y_perm[rows[1] * ld_y_perm + block_row], y_vals[1]);
+        atomicAdd(&y_perm[rows[2] * ld_y_perm + block_row], y_vals[2]);
         
       }
     }
 
   }
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+__global__ void apply_regular_sl_p0_p0_ver2(const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha) {
+
+  // each block handles one test element
+  // each thread handles one or more trial elements, then is assigned to a block and loops through all the deltas
+
+  extern __shared__ sc shmem[]; // requires shared memory size (in bytes) to be specified while calling this kernel. needs 4*sizeof(sc)*blockDim.x bytes
+  sc * matrix_vals = shmem + 0 * blockDim.x;
+  sc * vals_prev = shmem + 1 * blockDim.x;
+  sc * vals_curr = shmem + 2 * blockDim.x;
+  sc * vals_next = shmem + 3 * blockDim.x;
+
+  lo &n_blocks = c_mesh.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
+  lo &n_elems = c_mesh.surf_mesh.n_elems;
+  const unsigned int &tid = threadIdx.x;
+
+  besthea::onthefly::quadrature_wrapper_changing_regular_raw quadr_changing;
+
+  const lo &i_tst = blockIdx.x;
+  const lo &row = i_tst;
+
+  for(lo i = threadIdx.x; i < n_elems; i += blockDim.x) {
+    vals_curr[tid] = 0;
+    vals_next[tid] = 0;
+    __syncthreads();
+
+    lo curr_active_threads = (i >= (n_elems / blockDim.x) * blockDim.x) ? (n_elems % blockDim.x) : blockDim.x;
+
+    for(lo diag = 0; diag < n_blocks; diag++) {
+      // each thread calculates value corresponding to its col
+      {
+        lo &i_trl = i;
+        vals_prev[tid] = vals_curr[tid];
+        vals_curr[tid] = vals_next[tid];
+        d_get_values_regular_sl_p0_p0(&vals_next[tid], diag+1, i_tst, i_trl, quadr_changing);
+        matrix_vals[tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[tid] + 2*vals_curr[tid] - vals_next[tid])); // singular will be done by the cpu
+        __syncthreads();
+      }
+
+      // now the thread logic is changed, each thread takes one (or more) blocks in this diag and loops through all of the current trial elements (columns)
+      {
+        lo max_block = n_blocks - diag;
+        for(lo block = threadIdx.x; block < max_block; block += curr_active_threads) {
+          lo block_row = diag + block;
+          lo block_col = block;
+          sc y_val = 0;
+          for(lo j = 0; j < curr_active_threads; j++) {
+            lo col = (i / blockDim.x) * blockDim.x + j;
+            sc x_val = x[block_col * ld_x + col];
+            y_val += matrix_vals[j] * x_val;
+          }
+          y_val *= alpha;
+          y_perm[row * ld_y_perm + block_row] += y_val;
+        }
+        __syncthreads();
+      }
+
+    }
+
+  }
+  
 
 }
 
@@ -794,7 +885,8 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
 
 
 
-  apply_regular_sl_p0_p0<<< gridSize, blockSize, shmemSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha);     
+  apply_regular_sl_p0_p0<<< gridSize, blockSize, shmemSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha);
+  //apply_regular_sl_p0_p0_ver2<<< gridSize, blockSize, 4*shmemSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha);
 
 }
 

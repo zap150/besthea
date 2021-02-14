@@ -17,6 +17,8 @@
 namespace besthea::onthefly {
   template< class kernel_type, class test_space_type, class trial_space_type >
   class uniform_spacetime_be_onthefly_matrix_cpu;
+
+  constexpr bool quick_matrix_vals = false; // for performance testing purposes. if true, then matrix values are not calculated the correct time-consuming way, but quickly (and wrongly)
 }
 
 
