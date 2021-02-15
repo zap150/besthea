@@ -1231,6 +1231,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
   besthea::onthefly::apply_regular_gpu_tmp_data tmp_data;
   tmp_data.per_gpu_data.resize(n_gpus);
 
+  
   this->apply_regular_gpu_begin(x, y_perm, alpha, tmp_data);
   this->apply_singular(x_perm, y_perm);
   this->apply_delta0(x_perm, y_perm);
