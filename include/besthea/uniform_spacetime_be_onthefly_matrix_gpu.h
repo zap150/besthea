@@ -22,9 +22,10 @@ namespace besthea::onthefly {
   // TODO: think and move these to a more sensible location
   struct quadrature_wrapper_readonly_regular_raw;
   struct quadrature_wrapper_changing_regular_raw;
-  struct triangluar_surface_mesh_raw;
-  struct uniform_spacetime_tensor_mesh_raw;
+  struct mesh_raw_data;
+  struct mesh_raw_metadata;
   struct heat_kernel_parameters;
+  struct apply_regular_gpu_tmp_data_per_gpu;
   struct apply_regular_gpu_tmp_data;
 }
 
@@ -48,19 +49,18 @@ struct besthea::onthefly::quadrature_wrapper_changing_regular_raw {
   sc _kernel_values_2[64];
 };
 
-struct besthea::onthefly::triangluar_surface_mesh_raw {
+struct besthea::onthefly::mesh_raw_data {
   sc * d_element_areas;
   sc * d_node_coords; // XYZXYZXYZXYZ...
   lo * d_element_nodes; // 123123123123...
   sc * d_element_normals; // XYZXYZXYZXYZ
-  lo n_elems;
-  lo n_nodes;
 };
 
-struct besthea::onthefly::uniform_spacetime_tensor_mesh_raw {
-  triangluar_surface_mesh_raw surf_mesh;
-  lo n_temporal_elements; // outer block dimension of the block matrix
+struct besthea::onthefly::mesh_raw_metadata {
   sc timestep;
+  lo n_temporal_elements;
+  lo n_elems;
+  lo n_nodes;
 };
 
 struct besthea::onthefly::heat_kernel_parameters {
@@ -71,13 +71,17 @@ struct besthea::onthefly::heat_kernel_parameters {
   sc sqrt_pi;
 };
 
-struct besthea::onthefly::apply_regular_gpu_tmp_data {
-  sc *x_raw;
-  sc *y_perm_raw;
+struct besthea::onthefly::apply_regular_gpu_tmp_data_per_gpu {
   sc *d_x;
   sc *d_y_perm;
   size_t pitch_x, pitch_y_perm; // pitch in bytes
   lo ld_x, ld_y_perm; // leading dimension in elements
+};
+
+struct besthea::onthefly::apply_regular_gpu_tmp_data {
+  sc *x_raw;
+  sc *y_perm_raw;
+  std::vector<besthea::onthefly::apply_regular_gpu_tmp_data_per_gpu> per_gpu_data;
 };
 
 
@@ -135,7 +139,9 @@ private:
   void init_gpu_constant_memory() const;
 
 private:
-  uniform_spacetime_tensor_mesh_raw mesh_raw;
+  mesh_raw_metadata mesh_metadata;
+  std::vector<mesh_raw_data> per_gpu_mesh_data;
+  int n_gpus;
   
 
 };

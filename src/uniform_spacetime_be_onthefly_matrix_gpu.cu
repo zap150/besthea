@@ -15,7 +15,8 @@
 
 
 
-__constant__ __device__ besthea::onthefly::uniform_spacetime_tensor_mesh_raw c_mesh; // c for constant
+__constant__ __device__ besthea::onthefly::mesh_raw_metadata c_mesh_metadata; // c for constant
+__constant__ __device__ besthea::onthefly::mesh_raw_data c_mesh_data;
 __constant__ __device__ besthea::onthefly::quadrature_wrapper_readonly_regular_raw c_my_quadrature;
 __constant__ __device__ besthea::onthefly::heat_kernel_parameters c_kernel_params;
 
@@ -32,24 +33,34 @@ besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_sp
 
   // quadrature inited in base class constructor
 
+  cudaGetDeviceCount(&n_gpus);
+
   // TODO: error messages when no cuda-capable gpu found
 
   besthea::mesh::triangular_surface_mesh * mesh = this->_test_space->get_mesh()->get_spatial_surface_mesh();
-  mesh_raw.n_temporal_elements = this->_test_space->get_mesh()->get_n_temporal_elements();
-  mesh_raw.timestep = this->_test_space->get_mesh()->get_timestep();
-  mesh_raw.surf_mesh.n_elems = mesh->get_n_elements();
-  mesh_raw.surf_mesh.n_nodes = mesh->get_n_nodes();
+  mesh_metadata.timestep = this->_test_space->get_mesh()->get_timestep();
+  mesh_metadata.n_temporal_elements = this->_test_space->get_mesh()->get_n_temporal_elements();
+  mesh_metadata.n_elems = mesh->get_n_elements();
+  mesh_metadata.n_nodes = mesh->get_n_nodes();
 
-  cudaMalloc(&mesh_raw.surf_mesh.d_element_areas,       mesh_raw.surf_mesh.n_elems * sizeof(*mesh_raw.surf_mesh.d_element_areas));
-  cudaMalloc(&mesh_raw.surf_mesh.d_node_coords,     3 * mesh_raw.surf_mesh.n_nodes * sizeof(*mesh_raw.surf_mesh.d_node_coords));
-  cudaMalloc(&mesh_raw.surf_mesh.d_element_nodes,   3 * mesh_raw.surf_mesh.n_elems * sizeof(*mesh_raw.surf_mesh.d_element_nodes));
-  cudaMalloc(&mesh_raw.surf_mesh.d_element_normals, 3 * mesh_raw.surf_mesh.n_elems * sizeof(*mesh_raw.surf_mesh.d_element_normals));
+  per_gpu_mesh_data.resize(n_gpus);
+  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
 
-  cudaMemcpy(mesh_raw.surf_mesh.d_element_areas,   mesh->get_all_areas().data(),        mesh_raw.surf_mesh.n_elems * sizeof(*mesh_raw.surf_mesh.d_element_areas), cudaMemcpyHostToDevice);
-  cudaMemcpy(mesh_raw.surf_mesh.d_node_coords,     mesh->get_all_nodes().data(),    3 * mesh_raw.surf_mesh.n_nodes * sizeof(*mesh_raw.surf_mesh.d_node_coords),   cudaMemcpyHostToDevice);
-  cudaMemcpy(mesh_raw.surf_mesh.d_element_nodes,   mesh->get_all_elements().data(), 3 * mesh_raw.surf_mesh.n_elems * sizeof(*mesh_raw.surf_mesh.d_element_nodes), cudaMemcpyHostToDevice);
-  cudaMemcpy(mesh_raw.surf_mesh.d_element_normals, mesh->get_all_normals().data(),  3 * mesh_raw.surf_mesh.n_elems * sizeof(*mesh_raw.surf_mesh.d_element_normals), cudaMemcpyHostToDevice);
+    cudaSetDevice(gpu_idx);
 
+    mesh_raw_data &gpu_mesh_data = per_gpu_mesh_data[gpu_idx];
+
+    cudaMalloc(&gpu_mesh_data.d_element_areas,       mesh_metadata.n_elems * sizeof(*gpu_mesh_data.d_element_areas));
+    cudaMalloc(&gpu_mesh_data.d_node_coords,     3 * mesh_metadata.n_nodes * sizeof(*gpu_mesh_data.d_node_coords));
+    cudaMalloc(&gpu_mesh_data.d_element_nodes,   3 * mesh_metadata.n_elems * sizeof(*gpu_mesh_data.d_element_nodes));
+    cudaMalloc(&gpu_mesh_data.d_element_normals, 3 * mesh_metadata.n_elems * sizeof(*gpu_mesh_data.d_element_normals));
+
+    cudaMemcpy(gpu_mesh_data.d_element_areas,   mesh->get_all_areas().data(),        mesh_metadata.n_elems * sizeof(*gpu_mesh_data.d_element_areas), cudaMemcpyHostToDevice);
+    cudaMemcpy(gpu_mesh_data.d_node_coords,     mesh->get_all_nodes().data(),    3 * mesh_metadata.n_nodes * sizeof(*gpu_mesh_data.d_node_coords),   cudaMemcpyHostToDevice);
+    cudaMemcpy(gpu_mesh_data.d_element_nodes,   mesh->get_all_elements().data(), 3 * mesh_metadata.n_elems * sizeof(*gpu_mesh_data.d_element_nodes), cudaMemcpyHostToDevice);
+    cudaMemcpy(gpu_mesh_data.d_element_normals, mesh->get_all_normals().data(),  3 * mesh_metadata.n_elems * sizeof(*gpu_mesh_data.d_element_normals), cudaMemcpyHostToDevice);
+  }
+  
   init_gpu_constant_memory();
 
 }
@@ -57,10 +68,17 @@ besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_sp
 template< class kernel_type, class test_space_type, class trial_space_type >
 besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::~uniform_spacetime_be_onthefly_matrix_gpu( ) {
 
-  cudaFree(mesh_raw.surf_mesh.d_element_areas);
-  cudaFree(mesh_raw.surf_mesh.d_node_coords);
-  cudaFree(mesh_raw.surf_mesh.d_element_nodes);
-  cudaFree(mesh_raw.surf_mesh.d_element_normals);
+  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+
+    cudaSetDevice(gpu_idx);
+
+    mesh_raw_data &gpu_mesh_data = per_gpu_mesh_data[gpu_idx];
+
+    cudaFree(gpu_mesh_data.d_element_areas);
+    cudaFree(gpu_mesh_data.d_node_coords);
+    cudaFree(gpu_mesh_data.d_element_nodes);
+    cudaFree(gpu_mesh_data.d_element_normals);
+  }
 
 }
 
@@ -82,13 +100,6 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
   std::copy(this->my_quadrature._y2_ref[0].begin(), this->my_quadrature._y2_ref[0].end(), my_quadr_tmp._y2_ref);
   std::copy(this->my_quadrature._w[0].begin(), this->my_quadrature._w[0].end(), my_quadr_tmp._w);
   my_quadr_tmp._size = this->my_quadrature._sizes[0];
-  cudaMemcpyToSymbol(c_my_quadrature, &my_quadr_tmp, sizeof(my_quadr_tmp));
-
-
-
-  cudaMemcpyToSymbol(c_mesh, &this->mesh_raw, sizeof(this->mesh_raw));
-
-
 
   besthea::onthefly::heat_kernel_parameters kernel_params_tmp;
   sc alpha = this->_kernel->get_alpha();
@@ -97,7 +108,15 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
   kernel_params_tmp.alpha_2 = alpha * alpha;
   kernel_params_tmp.pi = M_PI;
   kernel_params_tmp.sqrt_pi = std::sqrt(M_PI);
+
+
+  cudaMemcpyToSymbol(c_mesh_metadata, &mesh_metadata, sizeof(mesh_metadata));
+  cudaMemcpyToSymbol(c_my_quadrature, &my_quadr_tmp, sizeof(my_quadr_tmp));
   cudaMemcpyToSymbol(c_kernel_params, &kernel_params_tmp, sizeof(kernel_params_tmp));
+  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+    cudaSetDevice(gpu_idx);
+    cudaMemcpyToSymbol(c_mesh_data, &per_gpu_mesh_data[gpu_idx], sizeof(per_gpu_mesh_data[gpu_idx]));
+  }
 
 }
 
@@ -264,10 +283,10 @@ __device__ void d_kernel_do_anti_tau_anti_t_and_anti_t_regular_in_time_regular_i
 __device__ void d_basis_tri_p1_evaluate_curl_00(
   lo i_elem, const sc * n, bool swap, sc * curls) {
 
-  const lo * elem_nodes = c_mesh.surf_mesh.d_element_nodes + 3 * i_elem;
-  const sc * x1rot = c_mesh.surf_mesh.d_node_coords + 3 * elem_nodes[0];
-  const sc * x2rot = c_mesh.surf_mesh.d_node_coords + 3 * elem_nodes[1];
-  const sc * x3rot = c_mesh.surf_mesh.d_node_coords + 3 * elem_nodes[2];
+  const lo * elem_nodes = c_mesh_data.d_element_nodes + 3 * i_elem;
+  const sc * x1rot = c_mesh_data.d_node_coords + 3 * elem_nodes[0];
+  const sc * x2rot = c_mesh_data.d_node_coords + 3 * elem_nodes[1];
+  const sc * x3rot = c_mesh_data.d_node_coords + 3 * elem_nodes[2];
 
   // first two rows of R^\trans, third is n
   sc a11 = x2rot[ 0 ] - x1rot[ 0 ];
@@ -330,23 +349,23 @@ __device__ void d_get_values_regular_sl_p0_p0(sc * values_out, lo delta, lo i_te
     return;
   }
   
-  sc timestep = c_mesh.timestep;
+  sc timestep = c_mesh_metadata.timestep;
 
   sc ttau = timestep * delta;
   sc sqrt_ttau = sqrt(ttau);
 
-  const lo * tst_elem_nodes = c_mesh.surf_mesh.d_element_nodes + 3 * i_test;
-  const lo * trl_elem_nodes = c_mesh.surf_mesh.d_element_nodes + 3 * i_trial;
+  const lo * tst_elem_nodes = c_mesh_data.d_element_nodes + 3 * i_test;
+  const lo * trl_elem_nodes = c_mesh_data.d_element_nodes + 3 * i_trial;
 
-  const sc * x1 = c_mesh.surf_mesh.d_node_coords + 3 * tst_elem_nodes[0];
-  const sc * x2 = c_mesh.surf_mesh.d_node_coords + 3 * tst_elem_nodes[1];
-  const sc * x3 = c_mesh.surf_mesh.d_node_coords + 3 * tst_elem_nodes[2];
-  const sc * y1 = c_mesh.surf_mesh.d_node_coords + 3 * trl_elem_nodes[0];
-  const sc * y2 = c_mesh.surf_mesh.d_node_coords + 3 * trl_elem_nodes[1];
-  const sc * y3 = c_mesh.surf_mesh.d_node_coords + 3 * trl_elem_nodes[2];
+  const sc * x1 = c_mesh_data.d_node_coords + 3 * tst_elem_nodes[0];
+  const sc * x2 = c_mesh_data.d_node_coords + 3 * tst_elem_nodes[1];
+  const sc * x3 = c_mesh_data.d_node_coords + 3 * tst_elem_nodes[2];
+  const sc * y1 = c_mesh_data.d_node_coords + 3 * trl_elem_nodes[0];
+  const sc * y2 = c_mesh_data.d_node_coords + 3 * trl_elem_nodes[1];
+  const sc * y3 = c_mesh_data.d_node_coords + 3 * trl_elem_nodes[2];
 
-  const sc test_area = c_mesh.surf_mesh.d_element_areas[i_test];
-  const sc trial_area = c_mesh.surf_mesh.d_element_areas[i_trial];
+  const sc test_area = c_mesh_data.d_element_areas[i_test];
+  const sc trial_area = c_mesh_data.d_element_areas[i_trial];
 
   d_triangles_to_geometry_000( x1, x2, x3, y1, y2, y3, quadr_changing );
 
@@ -398,24 +417,24 @@ __device__ void d_get_values_regular_dl_p0_p1(sc * values_out, lo delta, lo i_te
     return;
   }
 
-  sc timestep = c_mesh.timestep;
+  sc timestep = c_mesh_metadata.timestep;
 
   sc ttau = timestep * delta;
   sc sqrt_ttau = sqrt(ttau);
 
-  const lo * tst_elem_nodes = c_mesh.surf_mesh.d_element_nodes + 3 * i_test;
-  const lo * trl_elem_nodes = c_mesh.surf_mesh.d_element_nodes + 3 * i_trial;
+  const lo * tst_elem_nodes = c_mesh_data.d_element_nodes + 3 * i_test;
+  const lo * trl_elem_nodes = c_mesh_data.d_element_nodes + 3 * i_trial;
 
-  const sc * x1 = c_mesh.surf_mesh.d_node_coords + 3 * tst_elem_nodes[0];
-  const sc * x2 = c_mesh.surf_mesh.d_node_coords + 3 * tst_elem_nodes[1];
-  const sc * x3 = c_mesh.surf_mesh.d_node_coords + 3 * tst_elem_nodes[2];
-  const sc * y1 = c_mesh.surf_mesh.d_node_coords + 3 * trl_elem_nodes[0];
-  const sc * y2 = c_mesh.surf_mesh.d_node_coords + 3 * trl_elem_nodes[1];
-  const sc * y3 = c_mesh.surf_mesh.d_node_coords + 3 * trl_elem_nodes[2];
-  const sc * ny = c_mesh.surf_mesh.d_element_normals + 3 * i_trial;
+  const sc * x1 = c_mesh_data.d_node_coords + 3 * tst_elem_nodes[0];
+  const sc * x2 = c_mesh_data.d_node_coords + 3 * tst_elem_nodes[1];
+  const sc * x3 = c_mesh_data.d_node_coords + 3 * tst_elem_nodes[2];
+  const sc * y1 = c_mesh_data.d_node_coords + 3 * trl_elem_nodes[0];
+  const sc * y2 = c_mesh_data.d_node_coords + 3 * trl_elem_nodes[1];
+  const sc * y3 = c_mesh_data.d_node_coords + 3 * trl_elem_nodes[2];
+  const sc * ny = c_mesh_data.d_element_normals + 3 * i_trial;
 
-  const sc test_area = c_mesh.surf_mesh.d_element_areas[i_test];
-  const sc trial_area = c_mesh.surf_mesh.d_element_areas[i_trial];
+  const sc test_area = c_mesh_data.d_element_areas[i_test];
+  const sc trial_area = c_mesh_data.d_element_areas[i_trial];
 
   d_triangles_to_geometry_000( x1, x2, x3, y1, y2, y3, quadr_changing );
 
@@ -478,25 +497,25 @@ __device__ void d_get_values_regular_hs_p1_p1(sc * values_out, lo delta, lo i_te
     return;
   }
 
-  sc timestep = c_mesh.timestep;
+  sc timestep = c_mesh_metadata.timestep;
 
   sc ttau = timestep * delta;
   sc sqrt_ttau = sqrt(ttau);
 
-  const lo * tst_elem_nodes = c_mesh.surf_mesh.d_element_nodes + 3 * i_test;
-  const lo * trl_elem_nodes = c_mesh.surf_mesh.d_element_nodes + 3 * i_trial;
+  const lo * tst_elem_nodes = c_mesh_data.d_element_nodes + 3 * i_test;
+  const lo * trl_elem_nodes = c_mesh_data.d_element_nodes + 3 * i_trial;
 
-  const sc * x1 = c_mesh.surf_mesh.d_node_coords + 3 * tst_elem_nodes[0];
-  const sc * x2 = c_mesh.surf_mesh.d_node_coords + 3 * tst_elem_nodes[1];
-  const sc * x3 = c_mesh.surf_mesh.d_node_coords + 3 * tst_elem_nodes[2];
-  const sc * y1 = c_mesh.surf_mesh.d_node_coords + 3 * trl_elem_nodes[0];
-  const sc * y2 = c_mesh.surf_mesh.d_node_coords + 3 * trl_elem_nodes[1];
-  const sc * y3 = c_mesh.surf_mesh.d_node_coords + 3 * trl_elem_nodes[2];
-  const sc * nx = c_mesh.surf_mesh.d_element_normals + 3 * i_test;
-  const sc * ny = c_mesh.surf_mesh.d_element_normals + 3 * i_trial;
+  const sc * x1 = c_mesh_data.d_node_coords + 3 * tst_elem_nodes[0];
+  const sc * x2 = c_mesh_data.d_node_coords + 3 * tst_elem_nodes[1];
+  const sc * x3 = c_mesh_data.d_node_coords + 3 * tst_elem_nodes[2];
+  const sc * y1 = c_mesh_data.d_node_coords + 3 * trl_elem_nodes[0];
+  const sc * y2 = c_mesh_data.d_node_coords + 3 * trl_elem_nodes[1];
+  const sc * y3 = c_mesh_data.d_node_coords + 3 * trl_elem_nodes[2];
+  const sc * nx = c_mesh_data.d_element_normals + 3 * i_test;
+  const sc * ny = c_mesh_data.d_element_normals + 3 * i_trial;
 
-  const sc test_area = c_mesh.surf_mesh.d_element_areas[i_test];
-  const sc trial_area = c_mesh.surf_mesh.d_element_areas[i_trial];
+  const sc test_area = c_mesh_data.d_element_areas[i_test];
+  const sc trial_area = c_mesh_data.d_element_areas[i_trial];
 
   d_triangles_to_geometry_000( x1, x2, x3, y1, y2, y3, quadr_changing );
 
@@ -579,16 +598,16 @@ __device__ void d_get_values_regular_hs_p1_p1(sc * values_out, lo delta, lo i_te
 
 
 
-__global__ void apply_regular_sl_p0_p0(const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha) {
+__global__ void apply_regular_sl_p0_p0(const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin) {
 
   // each block handles one test element
   // each thread handles one or more trial elements, and loops through all the blocks
 
   extern __shared__ sc shmem_y_vals[]; // requires shared memory size (in bytes) to be specified while calling this kernel. needs sizeof(sc)*blockDim.x bytes
 
-  lo &n_blocks = c_mesh.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
+  lo &n_blocks = c_mesh_metadata.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
   const unsigned int &tid = threadIdx.x;
-  lo &n_elems = c_mesh.surf_mesh.n_elems;
+  lo &n_elems = c_mesh_metadata.n_elems;
 
   shmem_y_vals[tid] = 0;
   __syncthreads();
@@ -600,7 +619,7 @@ __global__ void apply_regular_sl_p0_p0(const sc * x, lo ld_x, sc * y_perm, lo ld
 
   besthea::onthefly::quadrature_wrapper_changing_regular_raw quadr_changing;
 
-  const lo &i_tst = blockIdx.x;
+  const lo &i_tst = i_tst_begin + blockIdx.x;
 
   for (lo i_trl = threadIdx.x; i_trl < n_elems; i_trl += blockDim.x) {
 
@@ -636,16 +655,16 @@ __global__ void apply_regular_sl_p0_p0(const sc * x, lo ld_x, sc * y_perm, lo ld
 
 
 
-__global__ void apply_regular_dl_p0_p1(const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha) {
+__global__ void apply_regular_dl_p0_p1(const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin) {
 
   // each block handles one test element
   // each thread handles one or more trial elements, and loops through all the blocks
 
   extern __shared__ sc shmem_y_vals[]; // requires shared memory size (in bytes) to be specified while calling this kernel. needs sizeof(sc)*blockDim.x bytes
 
-  lo &n_blocks = c_mesh.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
+  lo &n_blocks = c_mesh_metadata.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
   const unsigned int &tid = threadIdx.x;
-  lo &n_elems = c_mesh.surf_mesh.n_elems;
+  lo &n_elems = c_mesh_metadata.n_elems;
 
   shmem_y_vals[tid] = 0;
   __syncthreads();
@@ -657,12 +676,12 @@ __global__ void apply_regular_dl_p0_p1(const sc * x, lo ld_x, sc * y_perm, lo ld
 
   besthea::onthefly::quadrature_wrapper_changing_regular_raw quadr_changing;
 
-  const lo &i_tst = blockIdx.x;
+  const lo &i_tst = i_tst_begin + blockIdx.x;
 
   for (lo i_trl = threadIdx.x; i_trl < n_elems; i_trl += blockDim.x) {
 
     const lo &row = i_tst;
-    const lo * cols = c_mesh.surf_mesh.d_element_nodes + 3 * i_trl;
+    const lo * cols = c_mesh_data.d_element_nodes + 3 * i_trl;
 
     vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0; // delta=0 and 0s wiil be done by the cpu
     vals_next[0] = 0;   vals_next[1] = 0;   vals_next[2] = 0;
@@ -697,13 +716,13 @@ __global__ void apply_regular_dl_p0_p1(const sc * x, lo ld_x, sc * y_perm, lo ld
 
 
 
-__global__ void apply_regular_hs_p1_p1(const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha) {
+__global__ void apply_regular_hs_p1_p1(const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin) {
 
   // each block handles one test element
   // each thread handles one or more trial elements, and loops through all the blocks
 
-  lo &n_blocks = c_mesh.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
-  lo &n_elems = c_mesh.surf_mesh.n_elems;
+  lo &n_blocks = c_mesh_metadata.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
+  lo &n_elems = c_mesh_metadata.n_elems;
 
   sc matrix_vals[9];
   sc vals_prev[9];
@@ -714,14 +733,14 @@ __global__ void apply_regular_hs_p1_p1(const sc * x, lo ld_x, sc * y_perm, lo ld
 
   besthea::onthefly::quadrature_wrapper_changing_regular_raw quadr_changing;
 
-  const lo &i_tst = blockIdx.x;
+  const lo &i_tst = i_tst_begin + blockIdx.x;
 
   for (lo i_trl = threadIdx.x; i_trl < n_elems; i_trl += blockDim.x) {
     if(i_tst == i_trl)
       continue;
 
-    const lo * rows = c_mesh.surf_mesh.d_element_nodes + 3 * i_tst;
-    const lo * cols = c_mesh.surf_mesh.d_element_nodes + 3 * i_trl;
+    const lo * rows = c_mesh_data.d_element_nodes + 3 * i_tst;
+    const lo * cols = c_mesh_data.d_element_nodes + 3 * i_trl;
 
     for(lo j = 0; j < 9; j++) vals_curr[j] = 0; // delta=0 and 0s wiil be done by the cpu
     for(lo j = 0; j < 9; j++) vals_next[j] = 0;
@@ -766,7 +785,7 @@ __global__ void apply_regular_hs_p1_p1(const sc * x, lo ld_x, sc * y_perm, lo ld
 
 
 
-__global__ void apply_regular_sl_p0_p0_ver2(const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha) {
+__global__ void apply_regular_sl_p0_p0_ver2(const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin) {
 
   // each block handles one test element
   // each thread handles one or more trial elements, then is assigned to a block and loops through all the deltas
@@ -777,13 +796,13 @@ __global__ void apply_regular_sl_p0_p0_ver2(const sc * x, lo ld_x, sc * y_perm, 
   sc * vals_curr = shmem + 2 * blockDim.x;
   sc * vals_next = shmem + 3 * blockDim.x;
 
-  lo &n_blocks = c_mesh.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
-  lo &n_elems = c_mesh.surf_mesh.n_elems;
+  lo &n_blocks = c_mesh_metadata.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
+  lo &n_elems = c_mesh_metadata.n_elems;
   const unsigned int &tid = threadIdx.x;
 
   besthea::onthefly::quadrature_wrapper_changing_regular_raw quadr_changing;
 
-  const lo &i_tst = blockIdx.x;
+  const lo &i_tst = i_tst_begin + blockIdx.x;
   const lo &row = i_tst;
 
   for(lo i = threadIdx.x; i < n_elems; i += blockDim.x) {
@@ -849,44 +868,58 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
   apply_regular_gpu_begin( const block_vector_type & x, block_vector_type & y_perm, sc alpha, apply_regular_gpu_tmp_data & tmp_data ) const {
 
-  lo n_elems = mesh_raw.surf_mesh.n_elems;
-  lo n_blocks = mesh_raw.n_temporal_elements;
+  lo n_elems = mesh_metadata.n_elems;
+  lo n_blocks = mesh_metadata.n_temporal_elements;
   
   sc * &x_raw = tmp_data.x_raw;
   sc * &y_perm_raw = tmp_data.y_perm_raw;
-  sc * &d_x = tmp_data.d_x;
-  sc * &d_y_perm = tmp_data.d_y_perm;
-  size_t &pitch_x = tmp_data.pitch_x;
-  size_t &pitch_y_perm = tmp_data.pitch_y_perm;
-  lo &ld_x = tmp_data.ld_x;
-  lo &ld_y_perm = tmp_data.ld_y_perm;
 
-  int gridSize = n_elems;
-  int blockSize = 256; // number of gpu threads per block
+  std::vector<lo> gpu_i_tst_begins(n_gpus+1);
+  for(int gpu_idx = 0; gpu_idx <= n_gpus; gpu_idx++) {
+    gpu_i_tst_begins[gpu_idx] = (n_elems * gpu_idx) / n_gpus;
+  }
+  std::vector<lo> gpu_n_tst_elems(n_gpus);
+  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+    gpu_n_tst_elems[gpu_idx] = gpu_i_tst_begins[gpu_idx+1] - gpu_i_tst_begins[gpu_idx];
+  }
+    
 
-  int shmemSize = blockSize * sizeof(sc);
-
-  
 
   cudaMallocHost(&x_raw, x.size() * sizeof(*x_raw));
   cudaMallocHost(&y_perm_raw, y_perm.size() * sizeof(*y_perm_raw));
-
-  cudaMallocPitch(&d_x, &pitch_x, n_elems * sizeof(*d_x), n_blocks);
-  cudaMallocPitch(&d_y_perm, &pitch_y_perm, n_blocks * sizeof(*d_y_perm), n_elems);
-  ld_x = pitch_x / sizeof(*d_x); // assuming the pitch is a multiple of element size
-  ld_y_perm = pitch_y_perm / sizeof(*d_y_perm);
-
   // TODO: test if better direct copy from block_vector to gpu
   x.copy_to_raw(x_raw);
+  
+  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+    
+    sc * &d_x = tmp_data.per_gpu_data[gpu_idx].d_x;
+    sc * &d_y_perm = tmp_data.per_gpu_data[gpu_idx].d_y_perm;
+    size_t &pitch_x = tmp_data.per_gpu_data[gpu_idx].pitch_x;
+    size_t &pitch_y_perm = tmp_data.per_gpu_data[gpu_idx].pitch_y_perm;
+    lo &ld_x = tmp_data.per_gpu_data[gpu_idx].ld_x;
+    lo &ld_y_perm = tmp_data.per_gpu_data[gpu_idx].ld_y_perm;
 
-  // TODO: async, streams
-  cudaMemcpy2D(d_x, pitch_x, x_raw, n_elems * sizeof(*x_raw), n_elems * sizeof(*x_raw), n_blocks, cudaMemcpyHostToDevice);
-  cudaMemset(d_y_perm, 0, pitch_y_perm * n_elems);
+    cudaSetDevice(gpu_idx);
+
+    cudaMallocPitch(&d_x, &pitch_x, n_elems * sizeof(*d_x), n_blocks);
+    cudaMallocPitch(&d_y_perm, &pitch_y_perm, n_blocks * sizeof(*d_y_perm), n_elems);
+    ld_x = pitch_x / sizeof(*d_x); // assuming the pitch is a multiple of element size
+    ld_y_perm = pitch_y_perm / sizeof(*d_y_perm);
+
+    // TODO: async, streams
+    cudaMemcpy2D(d_x, pitch_x, x_raw, n_elems * sizeof(*x_raw), n_elems * sizeof(*x_raw), n_blocks, cudaMemcpyHostToDevice);
+    cudaMemset(d_y_perm, 0, pitch_y_perm * n_elems);
 
 
 
-  apply_regular_sl_p0_p0<<< gridSize, blockSize, shmemSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha);
-  //apply_regular_sl_p0_p0_ver2<<< gridSize, blockSize, 4*shmemSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha);
+    int gridSize = gpu_n_tst_elems[gpu_idx];
+    int blockSize = 256; // number of gpu threads per block
+    int shmemSize = blockSize * sizeof(sc);
+
+    apply_regular_sl_p0_p0<<< gridSize, blockSize, shmemSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha, gpu_i_tst_begins[gpu_idx]);
+    //apply_regular_sl_p0_p0_ver2<<< gridSize, blockSize, 4*shmemSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha, gpu_i_tst_begins[gpu_idx]);
+
+  }
 
 }
 
@@ -899,28 +932,34 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
   apply_regular_gpu_finish( block_vector_type & y_perm, apply_regular_gpu_tmp_data & tmp_data ) const {
 
-  lo n_elems = mesh_raw.surf_mesh.n_elems;
-  lo n_blocks = mesh_raw.n_temporal_elements;
+  lo n_elems = mesh_metadata.n_elems;
+  lo n_blocks = mesh_metadata.n_temporal_elements;
 
   sc * &x_raw = tmp_data.x_raw;
   sc * &y_perm_raw = tmp_data.y_perm_raw;
-  sc * &d_x = tmp_data.d_x;
-  sc * &d_y_perm = tmp_data.d_y_perm;
-  //size_t &pitch_x = tmp_data.pitch_x;
-  size_t &pitch_y_perm = tmp_data.pitch_y_perm;
-  //lo &ld_x = tmp_data.ld_x;
-  //lo &ld_y_perm = tmp_data.ld_y_perm;
 
-  cudaDeviceSynchronize();
+  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+    
+    sc * &d_x = tmp_data.per_gpu_data[gpu_idx].d_x;
+    sc * &d_y_perm = tmp_data.per_gpu_data[gpu_idx].d_y_perm;
+    //size_t &pitch_x = tmp_data.per_gpu_data[gpu_idx].pitch_x;
+    size_t &pitch_y_perm = tmp_data.per_gpu_data[gpu_idx].pitch_y_perm;
+    //lo &ld_x = tmp_data.per_gpu_data[gpu_idx].ld_x;
+    //lo &ld_y_perm = tmp_data.per_gpu_data[gpu_idx].ld_y_perm;
 
-  cudaMemcpy2D(y_perm_raw, n_blocks * sizeof(*y_perm_raw), d_y_perm, pitch_y_perm, n_blocks * sizeof(*y_perm_raw), n_elems, cudaMemcpyDeviceToHost);
-  
-  y_perm.add_from_raw(y_perm_raw);
+    cudaSetDevice(gpu_idx);
 
-  cudaFree(d_x);
-  cudaFree(d_y_perm);
-  cudaFreeHost(x_raw);
-  cudaFreeHost(y_perm_raw);
+    cudaDeviceSynchronize();
+
+    cudaMemcpy2D(y_perm_raw, n_blocks * sizeof(*y_perm_raw), d_y_perm, pitch_y_perm, n_blocks * sizeof(*y_perm_raw), n_elems, cudaMemcpyDeviceToHost);
+    
+    y_perm.add_from_raw(y_perm_raw);
+
+    cudaFree(d_x);
+    cudaFree(d_y_perm);
+    cudaFreeHost(x_raw);
+    cudaFreeHost(y_perm_raw);
+  }
 
   // TODO: error checking
 
@@ -946,42 +985,56 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
   apply_regular_gpu_begin( const block_vector_type & x, block_vector_type & y_perm, sc alpha, apply_regular_gpu_tmp_data & tmp_data ) const {
 
-  lo n_elems = mesh_raw.surf_mesh.n_elems;
-  lo n_nodes = mesh_raw.surf_mesh.n_nodes;
-  lo n_blocks = mesh_raw.n_temporal_elements;
+  lo n_elems = mesh_metadata.n_elems;
+  lo n_nodes = mesh_metadata.n_nodes;
+  lo n_blocks = mesh_metadata.n_temporal_elements;
   
   sc * &x_raw = tmp_data.x_raw;
   sc * &y_perm_raw = tmp_data.y_perm_raw;
-  sc * &d_x = tmp_data.d_x;
-  sc * &d_y_perm = tmp_data.d_y_perm;
-  size_t &pitch_x = tmp_data.pitch_x;
-  size_t &pitch_y_perm = tmp_data.pitch_y_perm;
-  lo &ld_x = tmp_data.ld_x;
-  lo &ld_y_perm = tmp_data.ld_y_perm;
 
-  int gridSize = n_elems;
-  int blockSize = 256; // number of gpu threads per block
-
-  int shmemSize = blockSize * sizeof(sc);  
-
-  
-
-  cudaMallocHost(&x_raw, x.size() * sizeof(*x_raw));
-  cudaMallocHost(&y_perm_raw, y_perm.size() * sizeof(*y_perm_raw));
-
-  cudaMallocPitch(&d_x, &pitch_x, n_nodes * sizeof(*d_x), n_blocks);
-  cudaMallocPitch(&d_y_perm, &pitch_y_perm, n_blocks * sizeof(*d_y_perm), n_elems);
-  ld_x = pitch_x / sizeof(*d_x); // assuming the pitch is a multiple of element size
-  ld_y_perm = pitch_y_perm / sizeof(*d_y_perm);
-
-  x.copy_to_raw(x_raw);
-
-  cudaMemcpy2D(d_x, pitch_x, x_raw, n_nodes * sizeof(*x_raw), n_nodes * sizeof(*x_raw), n_blocks, cudaMemcpyHostToDevice);
-  cudaMemset(d_y_perm, 0, pitch_y_perm * n_elems);
+  std::vector<lo> gpu_i_tst_begins(n_gpus+1);
+  for(int gpu_idx = 0; gpu_idx <= n_gpus; gpu_idx++) {
+    gpu_i_tst_begins[gpu_idx] = (n_elems * gpu_idx) / n_gpus;
+  }
+  std::vector<lo> gpu_n_tst_elems(n_gpus);
+  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+    gpu_n_tst_elems[gpu_idx] = gpu_i_tst_begins[gpu_idx+1] - gpu_i_tst_begins[gpu_idx];
+  }
 
 
 
-  apply_regular_dl_p0_p1<<< gridSize, blockSize, shmemSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha);
+  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+    
+    sc * &d_x = tmp_data.per_gpu_data[gpu_idx].d_x;
+    sc * &d_y_perm = tmp_data.per_gpu_data[gpu_idx].d_y_perm;
+    size_t &pitch_x = tmp_data.per_gpu_data[gpu_idx].pitch_x;
+    size_t &pitch_y_perm = tmp_data.per_gpu_data[gpu_idx].pitch_y_perm;
+    lo &ld_x = tmp_data.per_gpu_data[gpu_idx].ld_x;
+    lo &ld_y_perm = tmp_data.per_gpu_data[gpu_idx].ld_y_perm;
+
+    cudaSetDevice(gpu_idx);
+
+    cudaMallocHost(&x_raw, x.size() * sizeof(*x_raw));
+    cudaMallocHost(&y_perm_raw, y_perm.size() * sizeof(*y_perm_raw));
+
+    cudaMallocPitch(&d_x, &pitch_x, n_nodes * sizeof(*d_x), n_blocks);
+    cudaMallocPitch(&d_y_perm, &pitch_y_perm, n_blocks * sizeof(*d_y_perm), n_elems);
+    ld_x = pitch_x / sizeof(*d_x); // assuming the pitch is a multiple of element size
+    ld_y_perm = pitch_y_perm / sizeof(*d_y_perm);
+
+    x.copy_to_raw(x_raw);
+
+    cudaMemcpy2D(d_x, pitch_x, x_raw, n_nodes * sizeof(*x_raw), n_nodes * sizeof(*x_raw), n_blocks, cudaMemcpyHostToDevice);
+    cudaMemset(d_y_perm, 0, pitch_y_perm * n_elems);
+
+
+      
+    int gridSize = gpu_n_tst_elems[gpu_idx];
+    int blockSize = 256; // number of gpu threads per block
+    int shmemSize = blockSize * sizeof(sc);  
+
+    apply_regular_dl_p0_p1<<< gridSize, blockSize, shmemSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha, gpu_i_tst_begins[gpu_idx]);
+  }
 
 }
 
@@ -994,29 +1047,35 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
   apply_regular_gpu_finish( block_vector_type & y_perm, apply_regular_gpu_tmp_data & tmp_data ) const {
 
-  lo n_elems = mesh_raw.surf_mesh.n_elems;
-  //lo n_nodes = mesh_raw.surf_mesh.n_nodes;
-  lo n_blocks = mesh_raw.n_temporal_elements;
+  lo n_elems = mesh_metadata.n_elems;
+  //lo n_nodes = mesh_metadata.n_nodes;
+  lo n_blocks = mesh_metadata.n_temporal_elements;
 
   sc * &x_raw = tmp_data.x_raw;
   sc * &y_perm_raw = tmp_data.y_perm_raw;
-  sc * &d_x = tmp_data.d_x;
-  sc * &d_y_perm = tmp_data.d_y_perm;
-  //size_t &pitch_x = tmp_data.pitch_x;
-  size_t &pitch_y_perm = tmp_data.pitch_y_perm;
-  //lo &ld_x = tmp_data.ld_x;
-  //lo &ld_y_perm = tmp_data.ld_y_perm;
 
-  cudaDeviceSynchronize();
+  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+    
+    sc * &d_x = tmp_data.per_gpu_data[gpu_idx].d_x;
+    sc * &d_y_perm = tmp_data.per_gpu_data[gpu_idx].d_y_perm;
+    //size_t &pitch_x = tmp_data.per_gpu_data[gpu_idx].pitch_x;
+    size_t &pitch_y_perm = tmp_data.per_gpu_data[gpu_idx].pitch_y_perm;
+    //lo &ld_x = tmp_data.per_gpu_data[gpu_idx].ld_x;
+    //lo &ld_y_perm = tmp_data.per_gpu_data[gpu_idx].ld_y_perm;
 
-  cudaMemcpy2D(y_perm_raw, n_blocks * sizeof(*y_perm_raw), d_y_perm, pitch_y_perm, n_blocks * sizeof(*y_perm_raw), n_elems, cudaMemcpyDeviceToHost);
+    cudaSetDevice(gpu_idx);
 
-  y_perm.add_from_raw(y_perm_raw);
+    cudaDeviceSynchronize();
 
-  cudaFree(d_x);
-  cudaFree(d_y_perm);
-  cudaFreeHost(x_raw);
-  cudaFreeHost(y_perm_raw);
+    cudaMemcpy2D(y_perm_raw, n_blocks * sizeof(*y_perm_raw), d_y_perm, pitch_y_perm, n_blocks * sizeof(*y_perm_raw), n_elems, cudaMemcpyDeviceToHost);
+
+    y_perm.add_from_raw(y_perm_raw);
+
+    cudaFree(d_x);
+    cudaFree(d_y_perm);
+    cudaFreeHost(x_raw);
+    cudaFreeHost(y_perm_raw);
+  }
 
 }
 
@@ -1040,40 +1099,55 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
   apply_regular_gpu_begin( const block_vector_type & x, block_vector_type & y_perm, sc alpha, apply_regular_gpu_tmp_data & tmp_data ) const {
 
-  lo n_elems = mesh_raw.surf_mesh.n_elems;
-  lo n_nodes = mesh_raw.surf_mesh.n_nodes;
-  lo n_blocks = mesh_raw.n_temporal_elements;
+  lo n_elems = mesh_metadata.n_elems;
+  lo n_nodes = mesh_metadata.n_nodes;
+  lo n_blocks = mesh_metadata.n_temporal_elements;
   
   sc * &x_raw = tmp_data.x_raw;
   sc * &y_perm_raw = tmp_data.y_perm_raw;
-  sc * &d_x = tmp_data.d_x;
-  sc * &d_y_perm = tmp_data.d_y_perm;
-  size_t &pitch_x = tmp_data.pitch_x;
-  size_t &pitch_y_perm = tmp_data.pitch_y_perm;
-  lo &ld_x = tmp_data.ld_x;
-  lo &ld_y_perm = tmp_data.ld_y_perm;
 
-  int gridSize = n_elems;
-  int blockSize = 256; // number of gpu threads per block
-
-  
-
-  cudaMallocHost(&x_raw, x.size() * sizeof(*x_raw));
-  cudaMallocHost(&y_perm_raw, y_perm.size() * sizeof(*y_perm_raw));
-
-  cudaMallocPitch(&d_x, &pitch_x, n_nodes * sizeof(*d_x), n_blocks);
-  cudaMallocPitch(&d_y_perm, &pitch_y_perm, n_blocks * sizeof(*d_y_perm), n_nodes);
-  ld_x = pitch_x / sizeof(*d_x); // assuming the pitch is a multiple of element size
-  ld_y_perm = pitch_y_perm / sizeof(*d_y_perm);
-
-  x.copy_to_raw(x_raw);
-
-  cudaMemcpy2D(d_x, pitch_x, x_raw, n_nodes * sizeof(*x_raw), n_nodes * sizeof(*x_raw), n_blocks, cudaMemcpyHostToDevice);
-  cudaMemset(d_y_perm, 0, pitch_y_perm * n_nodes);
+  std::vector<lo> gpu_i_tst_begins(n_gpus+1);
+  for(int gpu_idx = 0; gpu_idx <= n_gpus; gpu_idx++) {
+    gpu_i_tst_begins[gpu_idx] = (n_elems * gpu_idx) / n_gpus;
+  }
+  std::vector<lo> gpu_n_tst_elems(n_gpus);
+  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+    gpu_n_tst_elems[gpu_idx] = gpu_i_tst_begins[gpu_idx+1] - gpu_i_tst_begins[gpu_idx];
+  }
 
 
 
-  apply_regular_hs_p1_p1<<< gridSize, blockSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha);
+  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+    
+    sc * &d_x = tmp_data.per_gpu_data[gpu_idx].d_x;
+    sc * &d_y_perm = tmp_data.per_gpu_data[gpu_idx].d_y_perm;
+    size_t &pitch_x = tmp_data.per_gpu_data[gpu_idx].pitch_x;
+    size_t &pitch_y_perm = tmp_data.per_gpu_data[gpu_idx].pitch_y_perm;
+    lo &ld_x = tmp_data.per_gpu_data[gpu_idx].ld_x;
+    lo &ld_y_perm = tmp_data.per_gpu_data[gpu_idx].ld_y_perm;
+
+    cudaSetDevice(gpu_idx);
+
+    cudaMallocHost(&x_raw, x.size() * sizeof(*x_raw));
+    cudaMallocHost(&y_perm_raw, y_perm.size() * sizeof(*y_perm_raw));
+
+    cudaMallocPitch(&d_x, &pitch_x, n_nodes * sizeof(*d_x), n_blocks);
+    cudaMallocPitch(&d_y_perm, &pitch_y_perm, n_blocks * sizeof(*d_y_perm), n_nodes);
+    ld_x = pitch_x / sizeof(*d_x); // assuming the pitch is a multiple of element size
+    ld_y_perm = pitch_y_perm / sizeof(*d_y_perm);
+
+    x.copy_to_raw(x_raw);
+
+    cudaMemcpy2D(d_x, pitch_x, x_raw, n_nodes * sizeof(*x_raw), n_nodes * sizeof(*x_raw), n_blocks, cudaMemcpyHostToDevice);
+    cudaMemset(d_y_perm, 0, pitch_y_perm * n_nodes);
+
+
+
+    int gridSize = gpu_n_tst_elems[gpu_idx];
+    int blockSize = 256; // number of gpu threads per block
+
+    apply_regular_hs_p1_p1<<< gridSize, blockSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha, gpu_i_tst_begins[gpu_idx]);
+  }
 
 }
 
@@ -1086,29 +1160,35 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
   apply_regular_gpu_finish( block_vector_type & y_perm, apply_regular_gpu_tmp_data & tmp_data ) const {
 
-  //lo n_elems = mesh_raw.surf_mesh.n_elems;
-  lo n_nodes = mesh_raw.surf_mesh.n_nodes;
-  lo n_blocks = mesh_raw.n_temporal_elements;
+  //lo n_elems = mesh_metadata.n_elems;
+  lo n_nodes = mesh_metadata.n_nodes;
+  lo n_blocks = mesh_metadata.n_temporal_elements;
 
   sc * &x_raw = tmp_data.x_raw;
   sc * &y_perm_raw = tmp_data.y_perm_raw;
-  sc * &d_x = tmp_data.d_x;
-  sc * &d_y_perm = tmp_data.d_y_perm;
-  //size_t &pitch_x = tmp_data.pitch_x;
-  size_t &pitch_y_perm = tmp_data.pitch_y_perm;
-  //lo &ld_x = tmp_data.ld_x;
-  //lo &ld_y_perm = tmp_data.ld_y_perm;
 
-  cudaDeviceSynchronize();
+  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+    
+    sc * &d_x = tmp_data.per_gpu_data[gpu_idx].d_x;
+    sc * &d_y_perm = tmp_data.per_gpu_data[gpu_idx].d_y_perm;
+    //size_t &pitch_x = tmp_data.per_gpu_data[gpu_idx].pitch_x;
+    size_t &pitch_y_perm = tmp_data.per_gpu_data[gpu_idx].pitch_y_perm;
+    //lo &ld_x = tmp_data.per_gpu_data[gpu_idx].ld_x;
+    //lo &ld_y_perm = tmp_data.per_gpu_data[gpu_idx].ld_y_perm;
 
-  cudaMemcpy2D(y_perm_raw, n_blocks * sizeof(*y_perm_raw), d_y_perm, pitch_y_perm, n_blocks * sizeof(*y_perm_raw), n_nodes, cudaMemcpyDeviceToHost);
+    cudaSetDevice(gpu_idx);
 
-  y_perm.add_from_raw(y_perm_raw);
+    cudaDeviceSynchronize();
 
-  cudaFree(d_x);
-  cudaFree(d_y_perm);
-  cudaFreeHost(x_raw);
-  cudaFreeHost(y_perm_raw);
+    cudaMemcpy2D(y_perm_raw, n_blocks * sizeof(*y_perm_raw), d_y_perm, pitch_y_perm, n_blocks * sizeof(*y_perm_raw), n_nodes, cudaMemcpyDeviceToHost);
+
+    y_perm.add_from_raw(y_perm_raw);
+
+    cudaFree(d_x);
+    cudaFree(d_y_perm);
+    cudaFreeHost(x_raw);
+    cudaFreeHost(y_perm_raw);
+  }
 
 }
 
@@ -1146,6 +1226,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
   x_perm.copy_permute(x, alpha);
 
   besthea::onthefly::apply_regular_gpu_tmp_data tmp_data;
+  tmp_data.per_gpu_data.resize(n_gpus);
 
   this->apply_regular_gpu_begin(x, y_perm, alpha, tmp_data);
   this->apply_singular(x_perm, y_perm);
