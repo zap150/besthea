@@ -345,7 +345,7 @@ __device__ void d_get_values_regular_sl_p0_p0(sc * values_out, lo delta, lo i_te
   besthea::onthefly::quadrature_wrapper_changing_regular_raw & quadr_changing) {
 
   if(besthea::onthefly::quick_matrix_vals) {
-    values_out[0] = i_test + 2*delta + 3*i_trial;
+    values_out[0] = (sc)(i_test + 2*delta + 3*i_trial);
     return;
   }
   
@@ -413,7 +413,7 @@ __device__ void d_get_values_regular_dl_p0_p1(sc * values_out, lo delta, lo i_te
   besthea::onthefly::quadrature_wrapper_changing_regular_raw & quadr_changing) {
     
   if(besthea::onthefly::quick_matrix_vals) {
-    for(int j = 0; j < 3; j++) values_out[j] = (j + 1) * (i_test + 2*delta) + 3*i_trial;
+    for(int j = 0; j < 3; j++) values_out[j] = (sc)((j + 1) * (i_test + 2*delta) + 3*i_trial);
     return;
   }
 
@@ -493,7 +493,7 @@ __device__ void d_get_values_regular_hs_p1_p1(sc * values_out, lo delta, lo i_te
   besthea::onthefly::quadrature_wrapper_changing_regular_raw & quadr_changing) {
   
   if(besthea::onthefly::quick_matrix_vals) {
-    for(int j = 0; j < 9; j++) values_out[j] = (j + 1) * (i_test + 2*delta) + 3*i_trial;
+    for(int j = 0; j < 9; j++) values_out[j] = (sc)((j + 1) * (i_test + 2*delta) + 3*i_trial);
     return;
   }
 
@@ -957,9 +957,10 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
 
     cudaFree(d_x);
     cudaFree(d_y_perm);
-    cudaFreeHost(x_raw);
-    cudaFreeHost(y_perm_raw);
   }
+
+  cudaFreeHost(x_raw);
+  cudaFreeHost(y_perm_raw);
 
   // TODO: error checking
 
@@ -1073,9 +1074,10 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
 
     cudaFree(d_x);
     cudaFree(d_y_perm);
-    cudaFreeHost(x_raw);
-    cudaFreeHost(y_perm_raw);
   }
+
+  cudaFreeHost(x_raw);
+  cudaFreeHost(y_perm_raw);
 
 }
 
@@ -1186,9 +1188,10 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
 
     cudaFree(d_x);
     cudaFree(d_y_perm);
-    cudaFreeHost(x_raw);
-    cudaFreeHost(y_perm_raw);
   }
+  
+  cudaFreeHost(x_raw);
+  cudaFreeHost(y_perm_raw);
 
 }
 

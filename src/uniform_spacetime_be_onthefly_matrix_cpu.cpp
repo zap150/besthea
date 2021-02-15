@@ -55,7 +55,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
   get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special) const {
   
   if(besthea::onthefly::quick_matrix_vals) {
-    values_out[0] = i_test + 2*delta + 3*i_trial;
+    values_out[0] = (sc)(i_test + 2*delta + 3*i_trial);
     return;
   }
 
@@ -195,7 +195,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
   get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special) const {
 
   if(besthea::onthefly::quick_matrix_vals) {
-    for(int j = 0; j < 3; j++) values_out[j] = (j + 1) * (i_test + 2*delta) + 3*i_trial;
+    for(int j = 0; j < 3; j++) values_out[j] = (sc)((j + 1) * (i_test + 2*delta) + 3*i_trial);
     return;
   }
 
@@ -364,7 +364,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
   get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special) const {
 
   if(besthea::onthefly::quick_matrix_vals) {
-    for(int j = 0; j < 9; j++) values_out[j] = (j + 1) * (i_test + 2*delta) + 3*i_trial;
+    for(int j = 0; j < 9; j++) values_out[j] = (sc)((j + 1) * (i_test + 2*delta) + 3*i_trial);
     return;
   }
 
