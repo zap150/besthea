@@ -110,12 +110,12 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
   kernel_params_tmp.sqrt_pi = std::sqrt(M_PI);
 
 
-  cudaMemcpyToSymbol(c_mesh_metadata, &mesh_metadata, sizeof(mesh_metadata));
-  cudaMemcpyToSymbol(c_my_quadrature, &my_quadr_tmp, sizeof(my_quadr_tmp));
-  cudaMemcpyToSymbol(c_kernel_params, &kernel_params_tmp, sizeof(kernel_params_tmp));
   for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
     cudaSetDevice(gpu_idx);
-    cudaMemcpyToSymbol(c_mesh_data, &per_gpu_mesh_data[gpu_idx], sizeof(per_gpu_mesh_data[gpu_idx]));
+    cudaMemcpyToSymbol(c_mesh_metadata, &mesh_metadata, sizeof(mesh_metadata));
+    cudaMemcpyToSymbol(c_my_quadrature, &my_quadr_tmp, sizeof(my_quadr_tmp));
+    cudaMemcpyToSymbol(c_kernel_params, &kernel_params_tmp, sizeof(kernel_params_tmp));
+    cudaMemcpyToSymbol(c_mesh_data, &per_gpu_mesh_data[gpu_idx], sizeof(per_gpu_mesh_data[gpu_idx])); // copying the pointers
   }
 
 }
