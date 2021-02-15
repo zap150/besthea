@@ -29,7 +29,7 @@ template< class kernel_type, class test_space_type, class trial_space_type >
 besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
   uniform_spacetime_be_onthefly_matrix_gpu( kernel_type & kernel,
   test_space_type & test_space, trial_space_type & trial_space,
-  int order_singular, int order_regular )
+  int order_singular, int order_regular, int gpu_kernel_version )
   : uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>(kernel, test_space, trial_space, order_singular, order_regular) {
 
   // quadrature inited in base class constructor
@@ -63,6 +63,8 @@ besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_sp
   }
   
   init_gpu_constant_memory();
+
+  this->gpu_kernel_version = gpu_kernel_version;
 
 }
 
@@ -609,7 +611,7 @@ __global__ void g_apply_regular<
   // each block handles one test element
   // each thread handles one or more trial elements, and loops through all the blocks
 
-  extern __shared__ sc shmem_y_vals[]; // requires shared memory size (in bytes) to be specified while calling this kernel. needs sizeof(sc)*blockDim.x bytes
+  __shared__ sc shmem_y_vals[besthea::onthefly::gpu_threads_per_block];
 
   lo &n_blocks = c_mesh_metadata.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
   const unsigned int &tid = threadIdx.x;
@@ -671,7 +673,7 @@ __global__ void g_apply_regular<
   // each block handles one test element
   // each thread handles one or more trial elements, and loops through all the blocks
 
-  extern __shared__ sc shmem_y_vals[]; // requires shared memory size (in bytes) to be specified while calling this kernel. needs sizeof(sc)*blockDim.x bytes
+  __shared__ sc shmem_y_vals[besthea::onthefly::gpu_threads_per_block];
 
   lo &n_blocks = c_mesh_metadata.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
   const unsigned int &tid = threadIdx.x;
@@ -801,12 +803,23 @@ __global__ void g_apply_regular<
 
 
 
-__global__ void apply_regular_ver2(const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin) {
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+__global__ void g_apply_regular_ver2(const sc * x_perm, lo ld_x_perm, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin);
+
+
+
+template<>
+__global__ void g_apply_regular_ver2<
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >
+  (const sc * x_perm, lo ld_x_perm, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin) {
 
   // each block handles one test element
   // each thread handles one or more trial elements, then is assigned to a block and loops through all the trial elements
 
-  extern __shared__ sc shmem_matrix_vals[]; // requires shared memory size (in bytes) to be specified while calling this kernel. needs sizeof(sc)*blockDim.x bytes
+  __shared__ sc shmem_matrix_vals[besthea::onthefly::gpu_threads_per_block];
   
   lo &n_blocks = c_mesh_metadata.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
   lo &n_elems = c_mesh_metadata.n_elems;
@@ -824,7 +837,6 @@ __global__ void apply_regular_ver2(const sc * x, lo ld_x, sc * y_perm, lo ld_y_p
   for(lo i = threadIdx.x; i < n_elems; i += blockDim.x) {
     val_curr = 0;
     val_next = 0;
-    __syncthreads();
 
     lo curr_active_threads = (i >= (n_elems / blockDim.x) * blockDim.x) ? (n_elems % blockDim.x) : blockDim.x;
 
@@ -848,7 +860,7 @@ __global__ void apply_regular_ver2(const sc * x, lo ld_x, sc * y_perm, lo ld_y_p
           sc y_val = 0;
           for(lo j = 0; j < curr_active_threads; j++) {
             lo col = (i / blockDim.x) * blockDim.x + j;
-            sc x_val = x[block_col * ld_x + col];
+            sc x_val = x_perm[col * ld_x_perm + block_col];
             y_val += shmem_matrix_vals[j] * x_val;
           }
           y_val *= alpha;
@@ -861,6 +873,160 @@ __global__ void apply_regular_ver2(const sc * x, lo ld_x, sc * y_perm, lo ld_y_p
 
   }
   
+
+}
+
+
+
+template<>
+__global__ void g_apply_regular_ver2<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >
+  (const sc * x_perm, lo ld_x_perm, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin) {
+
+  // each block handles one test element
+  // each thread handles one or more trial elements, then is assigned to a block and loops through all the trial elements
+
+  __shared__ sc shmem_matrix_vals_data[3*besthea::onthefly::gpu_threads_per_block];
+  sc * shmem_matrix_vals[3];
+  shmem_matrix_vals[0] = shmem_matrix_vals_data + 0 * blockDim.x;
+  shmem_matrix_vals[1] = shmem_matrix_vals_data + 1 * blockDim.x;
+  shmem_matrix_vals[2] = shmem_matrix_vals_data + 2 * blockDim.x;
+  
+  lo &n_blocks = c_mesh_metadata.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
+  lo &n_elems = c_mesh_metadata.n_elems;
+  const unsigned int &tid = threadIdx.x;
+
+  besthea::onthefly::quadrature_wrapper_changing_regular_raw quadr_changing;
+
+  const lo &i_tst = i_tst_begin + blockIdx.x;
+  const lo &row = i_tst;
+
+  sc vals_prev[3];
+  sc vals_curr[3];
+  sc vals_next[3];
+
+  for(lo i = threadIdx.x; i < n_elems; i += blockDim.x) {
+    vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
+    vals_next[0] = 0;   vals_next[1] = 0;   vals_next[2] = 0;
+
+    lo curr_active_threads = (i >= (n_elems / blockDim.x) * blockDim.x) ? (n_elems % blockDim.x) : blockDim.x;
+
+    for(lo diag = 0; diag < n_blocks; diag++) {
+      // each thread calculates value corresponding to its i (i_trl)
+      {
+        lo &i_trl = i;
+        vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
+        vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
+        d_get_values_regular_dl_p0_p1(vals_next, diag+1, i_tst, i_trl, quadr_changing);
+        shmem_matrix_vals[0][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0])); // singular will be done by the cpu
+        shmem_matrix_vals[1][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
+        shmem_matrix_vals[2][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[2] + 2*vals_curr[2] - vals_next[2]));
+        __syncthreads();
+      }
+
+      // now the thread logic is changed, each thread takes one (or more) blocks in this diag and loops through all of the current trial elements (columns)
+      {
+        lo max_block = n_blocks - diag;
+        for(lo block = threadIdx.x; block < max_block; block += curr_active_threads) {
+          lo block_row = diag + block;
+          lo block_col = block;
+          sc y_val = 0;
+          for(lo j = 0; j < curr_active_threads; j++) {
+            lo i_trl = (i / blockDim.x) * blockDim.x + j;
+            lo * cols = c_mesh_data.d_element_nodes + 3 * i_trl;
+            y_val += shmem_matrix_vals[0][j] * x_perm[cols[0] * ld_x_perm + block_col];
+            y_val += shmem_matrix_vals[1][j] * x_perm[cols[1] * ld_x_perm + block_col];
+            y_val += shmem_matrix_vals[2][j] * x_perm[cols[2] * ld_x_perm + block_col];
+          }
+          y_val *= alpha;
+          y_perm[row * ld_y_perm + block_row] += y_val;
+        }
+        __syncthreads();
+      }
+
+    }
+
+  }
+
+}
+
+
+
+template<>
+__global__ void g_apply_regular_ver2<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >
+  (const sc * x_perm, lo ld_x_perm, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin) {
+
+  // each block handles one test element
+  // each thread handles one or more trial elements, then is assigned to a block and loops through all the trial elements
+
+  __shared__ sc shmem_matrix_vals_data[9*besthea::onthefly::gpu_threads_per_block];
+  sc * shmem_matrix_vals[9];
+  for(lo j = 0; j < 9; j++) shmem_matrix_vals[j] = shmem_matrix_vals_data + j * blockDim.x;
+  
+  lo &n_blocks = c_mesh_metadata.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
+  lo &n_elems = c_mesh_metadata.n_elems;
+  const unsigned int &tid = threadIdx.x;
+
+  besthea::onthefly::quadrature_wrapper_changing_regular_raw quadr_changing;
+
+  const lo &i_tst = i_tst_begin + blockIdx.x;
+  const lo * rows = c_mesh_data.d_element_nodes + 3 * i_tst;
+
+  sc vals_prev[9];
+  sc vals_curr[9];
+  sc vals_next[9];
+
+  for(lo i = threadIdx.x; i < n_elems; i += blockDim.x) {
+    for(lo j = 0; j < 9; j++) vals_curr[j] = 0;
+    for(lo j = 0; j < 9; j++) vals_next[j] = 0;
+
+    lo curr_active_threads = (i >= (n_elems / blockDim.x) * blockDim.x) ? (n_elems % blockDim.x) : blockDim.x;
+
+    for(lo diag = 0; diag < n_blocks; diag++) {
+      // each thread calculates value corresponding to its i (i_trl)
+      {
+        lo &i_trl = i;
+        for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
+        for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
+        d_get_values_regular_hs_p1_p1(vals_next, diag+1, i_tst, i_trl, quadr_changing);
+        for(lo j = 0; j < 9; j++) shmem_matrix_vals[j][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[j] + 2*vals_curr[j] - vals_next[j])); // singular will be done by the cpu
+        __syncthreads();
+      }
+
+      // now the thread logic is changed, each thread takes one (or more) blocks in this diag and loops through all of the current trial elements (columns)
+      {
+        lo max_block = n_blocks - diag;
+        for(lo block = threadIdx.x; block < max_block; block += curr_active_threads) {
+          lo block_row = diag + block;
+          lo block_col = block;
+          sc y_vals[3] = {0,0,0};
+          for(lo j = 0; j < curr_active_threads; j++) {
+            lo i_trl = (i / blockDim.x) * blockDim.x + j;
+            lo * cols = c_mesh_data.d_element_nodes + 3 * i_trl;
+            sc x_vals[3];
+            x_vals[0] = x_perm[cols[0] * ld_x_perm + block_col];
+            x_vals[1] = x_perm[cols[1] * ld_x_perm + block_col];
+            x_vals[2] = x_perm[cols[2] * ld_x_perm + block_col];
+            for(lo r = 0; r < 3; r++) for(lo c = 0; c < 3; c++) y_vals[r] += shmem_matrix_vals[3*r+c][j] * x_vals[c];
+          }
+          y_vals[0] *= alpha;
+          y_vals[1] *= alpha;
+          y_vals[2] *= alpha;
+          atomicAdd(&y_perm[rows[0] * ld_y_perm + block_row],  y_vals[0]);
+          atomicAdd(&y_perm[rows[1] * ld_y_perm + block_row],  y_vals[1]);
+          atomicAdd(&y_perm[rows[2] * ld_y_perm + block_row],  y_vals[2]);
+        }
+        __syncthreads();
+      }
+
+    }
+
+  }
 
 }
 
@@ -879,7 +1045,11 @@ __global__ void apply_regular_ver2(const sc * x, lo ld_x, sc * y_perm, lo ld_y_p
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
-  apply_regular_gpu_begin( const block_vector_type & x, const block_vector_type & y_perm, sc alpha, std::vector<apply_regular_gpu_tmp_data> & tmp_data ) const {
+  apply_regular_gpu_begin( const block_vector_type & x, const block_vector_type & y, sc alpha, std::vector<apply_regular_gpu_tmp_data> & tmp_data ) const {
+
+  // permuted vectors or not, the data are copied in the same way
+  // for gpu_kernel_version 1, x must NOT be permuted, y must be permuted
+  // for gpu_kernel_version 2, both x and y must be permuted
 
   std::vector<lo> gpu_i_tst_begins(n_gpus+1);
   for(int gpu_idx = 0; gpu_idx <= n_gpus; gpu_idx++) {
@@ -900,33 +1070,36 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
   for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
     
     sc * &d_x = tmp_data[gpu_idx].d_x;
-    sc * &d_y_perm = tmp_data[gpu_idx].d_y_perm;
+    sc * &d_y = tmp_data[gpu_idx].d_y;
     size_t &pitch_x = tmp_data[gpu_idx].pitch_x;
-    size_t &pitch_y_perm = tmp_data[gpu_idx].pitch_y_perm;
+    size_t &pitch_y = tmp_data[gpu_idx].pitch_y;
     lo &ld_x = tmp_data[gpu_idx].ld_x;
-    lo &ld_y_perm = tmp_data[gpu_idx].ld_y_perm;
+    lo &ld_y = tmp_data[gpu_idx].ld_y;
 
     cudaSetDevice(gpu_idx);
 
     cudaMallocPitch(&d_x, &pitch_x, x.get_size_of_block() * sizeof(*d_x), x.get_block_size());
-    cudaMallocPitch(&d_y_perm, &pitch_y_perm, y_perm.get_size_of_block() * sizeof(*d_y_perm), y_perm.get_block_size());
+    cudaMallocPitch(&d_y, &pitch_y, y.get_size_of_block() * sizeof(*d_y), y.get_block_size());
     ld_x = pitch_x / sizeof(*d_x); // assuming the pitch is a multiple of element size
-    ld_y_perm = pitch_y_perm / sizeof(*d_y_perm);
+    ld_y = pitch_y / sizeof(*d_y);
 
     // TODO: async, streams
     cudaMemcpy2D(d_x, pitch_x, x_raw, x.get_size_of_block() * sizeof(*x_raw), x.get_size_of_block() * sizeof(*x_raw), x.get_block_size(), cudaMemcpyHostToDevice);
-    cudaMemset(d_y_perm, 0, pitch_y_perm * y_perm.get_block_size());
-
-
+    cudaMemset(d_y, 0, pitch_y * y.get_block_size());
 
     int gridSize = gpu_n_tst_elems[gpu_idx];
     int blockSize = 256; // number of gpu threads per block
-    int shmemSize = blockSize * sizeof(sc);
 
-    g_apply_regular<kernel_type, test_space_type, trial_space_type>
-      <<< gridSize, blockSize, shmemSize >>>
-      (d_x, ld_x, d_y_perm, ld_y_perm, alpha, gpu_i_tst_begins[gpu_idx]);
-    //apply_regular_ver2<<< gridSize, blockSize, shmemSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha, gpu_i_tst_begins[gpu_idx]);
+    if(gpu_kernel_version == 1) {
+      g_apply_regular<kernel_type, test_space_type, trial_space_type>
+        <<< gridSize, blockSize >>>
+        (d_x, ld_x, d_y, ld_y, alpha, gpu_i_tst_begins[gpu_idx]);
+    }
+    else if(gpu_kernel_version == 2) {
+      g_apply_regular_ver2<kernel_type, test_space_type, trial_space_type>
+        <<< gridSize, blockSize >>>
+        (d_x, ld_x, d_y, ld_y, alpha, gpu_i_tst_begins[gpu_idx]);
+    }
 
   }
 
@@ -936,48 +1109,35 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
-  apply_regular_gpu_finish( block_vector_type & y_perm, std::vector<apply_regular_gpu_tmp_data> & tmp_data ) const {
+  apply_regular_gpu_finish( block_vector_type & y, std::vector<apply_regular_gpu_tmp_data> & tmp_data ) const {
 
-  sc * y_perm_raw;
-  cudaMallocHost(&y_perm_raw, y_perm.size() * sizeof(*y_perm_raw));
+  sc * y_raw;
+  cudaMallocHost(&y_raw, y.size() * sizeof(*y_raw));
 
   for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
     
     sc * &d_x = tmp_data[gpu_idx].d_x;
-    sc * &d_y_perm = tmp_data[gpu_idx].d_y_perm;
+    sc * &d_y = tmp_data[gpu_idx].d_y;
     //size_t &pitch_x = tmp_data[gpu_idx].pitch_x;
-    size_t &pitch_y_perm = tmp_data[gpu_idx].pitch_y_perm;
+    size_t &pitch_y = tmp_data[gpu_idx].pitch_y;
     //lo &ld_x = tmp_data[gpu_idx].ld_x;
-    //lo &ld_y_perm = tmp_data[gpu_idx].ld_y_perm;
+    //lo &ld_y = tmp_data[gpu_idx].ld_y;
 
     cudaSetDevice(gpu_idx);
 
     cudaDeviceSynchronize();
 
-    cudaMemcpy2D(y_perm_raw, y_perm.get_size_of_block() * sizeof(*y_perm_raw), d_y_perm, pitch_y_perm, y_perm.get_size_of_block() * sizeof(*y_perm_raw), y_perm.get_block_size(), cudaMemcpyDeviceToHost);
+    cudaMemcpy2D(y_raw, y.get_size_of_block() * sizeof(*y_raw), d_y, pitch_y, y.get_size_of_block() * sizeof(*y_raw), y.get_block_size(), cudaMemcpyDeviceToHost);
     
-    y_perm.add_from_raw(y_perm_raw);
+    y.add_from_raw(y_raw);
 
     cudaFree(d_x);
-    cudaFree(d_y_perm);
+    cudaFree(d_y);
   }
 
-  cudaFreeHost(y_perm_raw);
+  cudaFreeHost(y_raw);
 
   // TODO: error checking
 
@@ -1005,11 +1165,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
     std::cerr << "I dont support trans matrices\n";
     return;
   }
-
-  // TODO: try the x_perm gpu algorithm
   
-  // permuting the vector y should prevent false sharing and improve data locality
-  // permuting the vector x should improve data locality
   block_vector_type y_perm;
   block_vector_type x_perm;
 
@@ -1018,8 +1174,11 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
 
   std::vector<besthea::onthefly::apply_regular_gpu_tmp_data> tmp_data;
 
-
-  this->apply_regular_gpu_begin(x, y_perm, alpha, tmp_data);
+  if(gpu_kernel_version == 1)
+    this->apply_regular_gpu_begin(x, y_perm, alpha, tmp_data);
+  else if(gpu_kernel_version == 2)
+    this->apply_regular_gpu_begin(x_perm, y_perm, 1, tmp_data);
+  
   this->apply_singular(x_perm, y_perm);
   this->apply_delta0(x_perm, y_perm);
   this->apply_regular_gpu_finish(y_perm, tmp_data);
