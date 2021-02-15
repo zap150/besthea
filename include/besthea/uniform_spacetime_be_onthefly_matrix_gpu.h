@@ -25,7 +25,6 @@ namespace besthea::onthefly {
   struct mesh_raw_data;
   struct mesh_raw_metadata;
   struct heat_kernel_parameters;
-  struct apply_regular_gpu_tmp_data_per_gpu;
   struct apply_regular_gpu_tmp_data;
 }
 
@@ -71,17 +70,11 @@ struct besthea::onthefly::heat_kernel_parameters {
   sc sqrt_pi;
 };
 
-struct besthea::onthefly::apply_regular_gpu_tmp_data_per_gpu {
+struct besthea::onthefly::apply_regular_gpu_tmp_data {
   sc *d_x;
   sc *d_y_perm;
   size_t pitch_x, pitch_y_perm; // pitch in bytes
   lo ld_x, ld_y_perm; // leading dimension in elements
-};
-
-struct besthea::onthefly::apply_regular_gpu_tmp_data {
-  sc *x_raw;
-  sc *y_perm_raw;
-  std::vector<besthea::onthefly::apply_regular_gpu_tmp_data_per_gpu> per_gpu_data;
 };
 
 
@@ -129,8 +122,8 @@ public:
 
 protected:
 
-  void apply_regular_gpu_begin( const block_vector_type & x, block_vector_type & y_perm, sc alpha, apply_regular_gpu_tmp_data & tmp_data ) const;
-  void apply_regular_gpu_finish( block_vector_type & y_perm, apply_regular_gpu_tmp_data & tmp_data ) const;
+  void apply_regular_gpu_begin( const block_vector_type & x, const block_vector_type & y_perm, sc alpha, std::vector<apply_regular_gpu_tmp_data> & tmp_data ) const;
+  void apply_regular_gpu_finish( block_vector_type & y_perm, std::vector<apply_regular_gpu_tmp_data> & tmp_data ) const;
 
 private:
 

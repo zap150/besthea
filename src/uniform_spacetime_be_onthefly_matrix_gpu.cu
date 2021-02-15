@@ -11,6 +11,7 @@
 #include "besthea/timer.h"
 
 #include <iostream>
+#include <vector>
 #include <cuda_runtime.h>
 
 
@@ -593,12 +594,17 @@ __device__ void d_get_values_regular_hs_p1_p1(sc * values_out, lo delta, lo i_te
 
 
 
+template< class kernel_type, class test_space_type, class trial_space_type >
+__global__ void g_apply_regular(const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin);
 
 
 
-
-
-__global__ void apply_regular_sl_p0_p0(const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin) {
+template<>
+__global__ void g_apply_regular<
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >
+  (const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin) {
 
   // each block handles one test element
   // each thread handles one or more trial elements, and loops through all the blocks
@@ -655,7 +661,12 @@ __global__ void apply_regular_sl_p0_p0(const sc * x, lo ld_x, sc * y_perm, lo ld
 
 
 
-__global__ void apply_regular_dl_p0_p1(const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin) {
+template<>
+__global__ void g_apply_regular<
+  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >
+  (const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin) {
 
   // each block handles one test element
   // each thread handles one or more trial elements, and loops through all the blocks
@@ -716,7 +727,12 @@ __global__ void apply_regular_dl_p0_p1(const sc * x, lo ld_x, sc * y_perm, lo ld
 
 
 
-__global__ void apply_regular_hs_p1_p1(const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin) {
+template<>
+__global__ void g_apply_regular<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >
+  (const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin) {
 
   // each block handles one test element
   // each thread handles one or more trial elements, and loops through all the blocks
@@ -785,17 +801,13 @@ __global__ void apply_regular_hs_p1_p1(const sc * x, lo ld_x, sc * y_perm, lo ld
 
 
 
-__global__ void apply_regular_sl_p0_p0_ver2(const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin) {
+__global__ void apply_regular_ver2(const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin) {
 
   // each block handles one test element
-  // each thread handles one or more trial elements, then is assigned to a block and loops through all the deltas
+  // each thread handles one or more trial elements, then is assigned to a block and loops through all the trial elements
 
-  extern __shared__ sc shmem[]; // requires shared memory size (in bytes) to be specified while calling this kernel. needs 4*sizeof(sc)*blockDim.x bytes
-  sc * matrix_vals = shmem + 0 * blockDim.x;
-  sc * vals_prev = shmem + 1 * blockDim.x;
-  sc * vals_curr = shmem + 2 * blockDim.x;
-  sc * vals_next = shmem + 3 * blockDim.x;
-
+  extern __shared__ sc shmem_matrix_vals[]; // requires shared memory size (in bytes) to be specified while calling this kernel. needs sizeof(sc)*blockDim.x bytes
+  
   lo &n_blocks = c_mesh_metadata.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
   lo &n_elems = c_mesh_metadata.n_elems;
   const unsigned int &tid = threadIdx.x;
@@ -805,21 +817,25 @@ __global__ void apply_regular_sl_p0_p0_ver2(const sc * x, lo ld_x, sc * y_perm, 
   const lo &i_tst = i_tst_begin + blockIdx.x;
   const lo &row = i_tst;
 
+  sc val_prev;
+  sc val_curr;
+  sc val_next;
+
   for(lo i = threadIdx.x; i < n_elems; i += blockDim.x) {
-    vals_curr[tid] = 0;
-    vals_next[tid] = 0;
+    val_curr = 0;
+    val_next = 0;
     __syncthreads();
 
     lo curr_active_threads = (i >= (n_elems / blockDim.x) * blockDim.x) ? (n_elems % blockDim.x) : blockDim.x;
 
     for(lo diag = 0; diag < n_blocks; diag++) {
-      // each thread calculates value corresponding to its col
+      // each thread calculates value corresponding to its i (i_trl)
       {
         lo &i_trl = i;
-        vals_prev[tid] = vals_curr[tid];
-        vals_curr[tid] = vals_next[tid];
-        d_get_values_regular_sl_p0_p0(&vals_next[tid], diag+1, i_tst, i_trl, quadr_changing);
-        matrix_vals[tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[tid] + 2*vals_curr[tid] - vals_next[tid])); // singular will be done by the cpu
+        val_prev = val_curr;
+        val_curr = val_next;
+        d_get_values_regular_sl_p0_p0(&val_next, diag+1, i_tst, i_trl, quadr_changing);
+        shmem_matrix_vals[tid] = ((i_tst == i_trl) ? (0) : (-val_prev + 2*val_curr - val_next)); // singular will be done by the cpu
         __syncthreads();
       }
 
@@ -833,7 +849,7 @@ __global__ void apply_regular_sl_p0_p0_ver2(const sc * x, lo ld_x, sc * y_perm, 
           for(lo j = 0; j < curr_active_threads; j++) {
             lo col = (i / blockDim.x) * blockDim.x + j;
             sc x_val = x[block_col * ld_x + col];
-            y_val += matrix_vals[j] * x_val;
+            y_val += shmem_matrix_vals[j] * x_val;
           }
           y_val *= alpha;
           y_perm[row * ld_y_perm + block_row] += y_val;
@@ -861,54 +877,45 @@ __global__ void apply_regular_sl_p0_p0_ver2(const sc * x, lo ld_x, sc * y_perm, 
 
 
 
-template<>
-void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
-  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  apply_regular_gpu_begin( const block_vector_type & x, block_vector_type & y_perm, sc alpha, apply_regular_gpu_tmp_data & tmp_data ) const {
-
-  lo n_elems = mesh_metadata.n_elems;
-  lo n_blocks = mesh_metadata.n_temporal_elements;
-  
-  sc * &x_raw = tmp_data.x_raw;
-  sc * &y_perm_raw = tmp_data.y_perm_raw;
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
+  apply_regular_gpu_begin( const block_vector_type & x, const block_vector_type & y_perm, sc alpha, std::vector<apply_regular_gpu_tmp_data> & tmp_data ) const {
 
   std::vector<lo> gpu_i_tst_begins(n_gpus+1);
   for(int gpu_idx = 0; gpu_idx <= n_gpus; gpu_idx++) {
-    gpu_i_tst_begins[gpu_idx] = (n_elems * gpu_idx) / n_gpus;
+    gpu_i_tst_begins[gpu_idx] = (mesh_metadata.n_elems * gpu_idx) / n_gpus;
   }
   std::vector<lo> gpu_n_tst_elems(n_gpus);
   for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
     gpu_n_tst_elems[gpu_idx] = gpu_i_tst_begins[gpu_idx+1] - gpu_i_tst_begins[gpu_idx];
   }
     
+  tmp_data.resize(n_gpus);
 
-
-  cudaMallocHost(&x_raw, x.size() * sizeof(*x_raw));
-  cudaMallocHost(&y_perm_raw, y_perm.size() * sizeof(*y_perm_raw));
   // TODO: test if better direct copy from block_vector to gpu
+  sc * x_raw;
+  cudaMallocHost(&x_raw, x.size() * sizeof(*x_raw));
   x.copy_to_raw(x_raw);
   
   for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
     
-    sc * &d_x = tmp_data.per_gpu_data[gpu_idx].d_x;
-    sc * &d_y_perm = tmp_data.per_gpu_data[gpu_idx].d_y_perm;
-    size_t &pitch_x = tmp_data.per_gpu_data[gpu_idx].pitch_x;
-    size_t &pitch_y_perm = tmp_data.per_gpu_data[gpu_idx].pitch_y_perm;
-    lo &ld_x = tmp_data.per_gpu_data[gpu_idx].ld_x;
-    lo &ld_y_perm = tmp_data.per_gpu_data[gpu_idx].ld_y_perm;
+    sc * &d_x = tmp_data[gpu_idx].d_x;
+    sc * &d_y_perm = tmp_data[gpu_idx].d_y_perm;
+    size_t &pitch_x = tmp_data[gpu_idx].pitch_x;
+    size_t &pitch_y_perm = tmp_data[gpu_idx].pitch_y_perm;
+    lo &ld_x = tmp_data[gpu_idx].ld_x;
+    lo &ld_y_perm = tmp_data[gpu_idx].ld_y_perm;
 
     cudaSetDevice(gpu_idx);
 
-    cudaMallocPitch(&d_x, &pitch_x, n_elems * sizeof(*d_x), n_blocks);
-    cudaMallocPitch(&d_y_perm, &pitch_y_perm, n_blocks * sizeof(*d_y_perm), n_elems);
+    cudaMallocPitch(&d_x, &pitch_x, x.get_size_of_block() * sizeof(*d_x), x.get_block_size());
+    cudaMallocPitch(&d_y_perm, &pitch_y_perm, y_perm.get_size_of_block() * sizeof(*d_y_perm), y_perm.get_block_size());
     ld_x = pitch_x / sizeof(*d_x); // assuming the pitch is a multiple of element size
     ld_y_perm = pitch_y_perm / sizeof(*d_y_perm);
 
     // TODO: async, streams
-    cudaMemcpy2D(d_x, pitch_x, x_raw, n_elems * sizeof(*x_raw), n_elems * sizeof(*x_raw), n_blocks, cudaMemcpyHostToDevice);
-    cudaMemset(d_y_perm, 0, pitch_y_perm * n_elems);
+    cudaMemcpy2D(d_x, pitch_x, x_raw, x.get_size_of_block() * sizeof(*x_raw), x.get_size_of_block() * sizeof(*x_raw), x.get_block_size(), cudaMemcpyHostToDevice);
+    cudaMemset(d_y_perm, 0, pitch_y_perm * y_perm.get_block_size());
 
 
 
@@ -916,42 +923,53 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
     int blockSize = 256; // number of gpu threads per block
     int shmemSize = blockSize * sizeof(sc);
 
-    apply_regular_sl_p0_p0<<< gridSize, blockSize, shmemSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha, gpu_i_tst_begins[gpu_idx]);
-    //apply_regular_sl_p0_p0_ver2<<< gridSize, blockSize, 4*shmemSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha, gpu_i_tst_begins[gpu_idx]);
+    g_apply_regular<kernel_type, test_space_type, trial_space_type>
+      <<< gridSize, blockSize, shmemSize >>>
+      (d_x, ld_x, d_y_perm, ld_y_perm, alpha, gpu_i_tst_begins[gpu_idx]);
+    //apply_regular_ver2<<< gridSize, blockSize, shmemSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha, gpu_i_tst_begins[gpu_idx]);
 
   }
+
+  cudaFreeHost(x_raw);
 
 }
 
 
 
-template<>
-void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
-  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  apply_regular_gpu_finish( block_vector_type & y_perm, apply_regular_gpu_tmp_data & tmp_data ) const {
 
-  lo n_elems = mesh_metadata.n_elems;
-  lo n_blocks = mesh_metadata.n_temporal_elements;
 
-  sc * &x_raw = tmp_data.x_raw;
-  sc * &y_perm_raw = tmp_data.y_perm_raw;
+
+
+
+
+
+
+
+
+
+
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
+  apply_regular_gpu_finish( block_vector_type & y_perm, std::vector<apply_regular_gpu_tmp_data> & tmp_data ) const {
+
+  sc * y_perm_raw;
+  cudaMallocHost(&y_perm_raw, y_perm.size() * sizeof(*y_perm_raw));
 
   for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
     
-    sc * &d_x = tmp_data.per_gpu_data[gpu_idx].d_x;
-    sc * &d_y_perm = tmp_data.per_gpu_data[gpu_idx].d_y_perm;
-    //size_t &pitch_x = tmp_data.per_gpu_data[gpu_idx].pitch_x;
-    size_t &pitch_y_perm = tmp_data.per_gpu_data[gpu_idx].pitch_y_perm;
-    //lo &ld_x = tmp_data.per_gpu_data[gpu_idx].ld_x;
-    //lo &ld_y_perm = tmp_data.per_gpu_data[gpu_idx].ld_y_perm;
+    sc * &d_x = tmp_data[gpu_idx].d_x;
+    sc * &d_y_perm = tmp_data[gpu_idx].d_y_perm;
+    //size_t &pitch_x = tmp_data[gpu_idx].pitch_x;
+    size_t &pitch_y_perm = tmp_data[gpu_idx].pitch_y_perm;
+    //lo &ld_x = tmp_data[gpu_idx].ld_x;
+    //lo &ld_y_perm = tmp_data[gpu_idx].ld_y_perm;
 
     cudaSetDevice(gpu_idx);
 
     cudaDeviceSynchronize();
 
-    cudaMemcpy2D(y_perm_raw, n_blocks * sizeof(*y_perm_raw), d_y_perm, pitch_y_perm, n_blocks * sizeof(*y_perm_raw), n_elems, cudaMemcpyDeviceToHost);
+    cudaMemcpy2D(y_perm_raw, y_perm.get_size_of_block() * sizeof(*y_perm_raw), d_y_perm, pitch_y_perm, y_perm.get_size_of_block() * sizeof(*y_perm_raw), y_perm.get_block_size(), cudaMemcpyDeviceToHost);
     
     y_perm.add_from_raw(y_perm_raw);
 
@@ -959,239 +977,9 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
     cudaFree(d_y_perm);
   }
 
-  cudaFreeHost(x_raw);
   cudaFreeHost(y_perm_raw);
 
   // TODO: error checking
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-template<>
-void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
-  apply_regular_gpu_begin( const block_vector_type & x, block_vector_type & y_perm, sc alpha, apply_regular_gpu_tmp_data & tmp_data ) const {
-
-  lo n_elems = mesh_metadata.n_elems;
-  lo n_nodes = mesh_metadata.n_nodes;
-  lo n_blocks = mesh_metadata.n_temporal_elements;
-  
-  sc * &x_raw = tmp_data.x_raw;
-  sc * &y_perm_raw = tmp_data.y_perm_raw;
-
-  std::vector<lo> gpu_i_tst_begins(n_gpus+1);
-  for(int gpu_idx = 0; gpu_idx <= n_gpus; gpu_idx++) {
-    gpu_i_tst_begins[gpu_idx] = (n_elems * gpu_idx) / n_gpus;
-  }
-  std::vector<lo> gpu_n_tst_elems(n_gpus);
-  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
-    gpu_n_tst_elems[gpu_idx] = gpu_i_tst_begins[gpu_idx+1] - gpu_i_tst_begins[gpu_idx];
-  }
-
-
-
-  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
-    
-    sc * &d_x = tmp_data.per_gpu_data[gpu_idx].d_x;
-    sc * &d_y_perm = tmp_data.per_gpu_data[gpu_idx].d_y_perm;
-    size_t &pitch_x = tmp_data.per_gpu_data[gpu_idx].pitch_x;
-    size_t &pitch_y_perm = tmp_data.per_gpu_data[gpu_idx].pitch_y_perm;
-    lo &ld_x = tmp_data.per_gpu_data[gpu_idx].ld_x;
-    lo &ld_y_perm = tmp_data.per_gpu_data[gpu_idx].ld_y_perm;
-
-    cudaSetDevice(gpu_idx);
-
-    cudaMallocHost(&x_raw, x.size() * sizeof(*x_raw));
-    cudaMallocHost(&y_perm_raw, y_perm.size() * sizeof(*y_perm_raw));
-
-    cudaMallocPitch(&d_x, &pitch_x, n_nodes * sizeof(*d_x), n_blocks);
-    cudaMallocPitch(&d_y_perm, &pitch_y_perm, n_blocks * sizeof(*d_y_perm), n_elems);
-    ld_x = pitch_x / sizeof(*d_x); // assuming the pitch is a multiple of element size
-    ld_y_perm = pitch_y_perm / sizeof(*d_y_perm);
-
-    x.copy_to_raw(x_raw);
-
-    cudaMemcpy2D(d_x, pitch_x, x_raw, n_nodes * sizeof(*x_raw), n_nodes * sizeof(*x_raw), n_blocks, cudaMemcpyHostToDevice);
-    cudaMemset(d_y_perm, 0, pitch_y_perm * n_elems);
-
-
-      
-    int gridSize = gpu_n_tst_elems[gpu_idx];
-    int blockSize = 256; // number of gpu threads per block
-    int shmemSize = blockSize * sizeof(sc);  
-
-    apply_regular_dl_p0_p1<<< gridSize, blockSize, shmemSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha, gpu_i_tst_begins[gpu_idx]);
-  }
-
-}
-
-
-
-template<>
-void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
-  apply_regular_gpu_finish( block_vector_type & y_perm, apply_regular_gpu_tmp_data & tmp_data ) const {
-
-  lo n_elems = mesh_metadata.n_elems;
-  //lo n_nodes = mesh_metadata.n_nodes;
-  lo n_blocks = mesh_metadata.n_temporal_elements;
-
-  sc * &x_raw = tmp_data.x_raw;
-  sc * &y_perm_raw = tmp_data.y_perm_raw;
-
-  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
-    
-    sc * &d_x = tmp_data.per_gpu_data[gpu_idx].d_x;
-    sc * &d_y_perm = tmp_data.per_gpu_data[gpu_idx].d_y_perm;
-    //size_t &pitch_x = tmp_data.per_gpu_data[gpu_idx].pitch_x;
-    size_t &pitch_y_perm = tmp_data.per_gpu_data[gpu_idx].pitch_y_perm;
-    //lo &ld_x = tmp_data.per_gpu_data[gpu_idx].ld_x;
-    //lo &ld_y_perm = tmp_data.per_gpu_data[gpu_idx].ld_y_perm;
-
-    cudaSetDevice(gpu_idx);
-
-    cudaDeviceSynchronize();
-
-    cudaMemcpy2D(y_perm_raw, n_blocks * sizeof(*y_perm_raw), d_y_perm, pitch_y_perm, n_blocks * sizeof(*y_perm_raw), n_elems, cudaMemcpyDeviceToHost);
-
-    y_perm.add_from_raw(y_perm_raw);
-
-    cudaFree(d_x);
-    cudaFree(d_y_perm);
-  }
-
-  cudaFreeHost(x_raw);
-  cudaFreeHost(y_perm_raw);
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-template<>
-void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
-  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
-  apply_regular_gpu_begin( const block_vector_type & x, block_vector_type & y_perm, sc alpha, apply_regular_gpu_tmp_data & tmp_data ) const {
-
-  lo n_elems = mesh_metadata.n_elems;
-  lo n_nodes = mesh_metadata.n_nodes;
-  lo n_blocks = mesh_metadata.n_temporal_elements;
-  
-  sc * &x_raw = tmp_data.x_raw;
-  sc * &y_perm_raw = tmp_data.y_perm_raw;
-
-  std::vector<lo> gpu_i_tst_begins(n_gpus+1);
-  for(int gpu_idx = 0; gpu_idx <= n_gpus; gpu_idx++) {
-    gpu_i_tst_begins[gpu_idx] = (n_elems * gpu_idx) / n_gpus;
-  }
-  std::vector<lo> gpu_n_tst_elems(n_gpus);
-  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
-    gpu_n_tst_elems[gpu_idx] = gpu_i_tst_begins[gpu_idx+1] - gpu_i_tst_begins[gpu_idx];
-  }
-
-
-
-  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
-    
-    sc * &d_x = tmp_data.per_gpu_data[gpu_idx].d_x;
-    sc * &d_y_perm = tmp_data.per_gpu_data[gpu_idx].d_y_perm;
-    size_t &pitch_x = tmp_data.per_gpu_data[gpu_idx].pitch_x;
-    size_t &pitch_y_perm = tmp_data.per_gpu_data[gpu_idx].pitch_y_perm;
-    lo &ld_x = tmp_data.per_gpu_data[gpu_idx].ld_x;
-    lo &ld_y_perm = tmp_data.per_gpu_data[gpu_idx].ld_y_perm;
-
-    cudaSetDevice(gpu_idx);
-
-    cudaMallocHost(&x_raw, x.size() * sizeof(*x_raw));
-    cudaMallocHost(&y_perm_raw, y_perm.size() * sizeof(*y_perm_raw));
-
-    cudaMallocPitch(&d_x, &pitch_x, n_nodes * sizeof(*d_x), n_blocks);
-    cudaMallocPitch(&d_y_perm, &pitch_y_perm, n_blocks * sizeof(*d_y_perm), n_nodes);
-    ld_x = pitch_x / sizeof(*d_x); // assuming the pitch is a multiple of element size
-    ld_y_perm = pitch_y_perm / sizeof(*d_y_perm);
-
-    x.copy_to_raw(x_raw);
-
-    cudaMemcpy2D(d_x, pitch_x, x_raw, n_nodes * sizeof(*x_raw), n_nodes * sizeof(*x_raw), n_blocks, cudaMemcpyHostToDevice);
-    cudaMemset(d_y_perm, 0, pitch_y_perm * n_nodes);
-
-
-
-    int gridSize = gpu_n_tst_elems[gpu_idx];
-    int blockSize = 256; // number of gpu threads per block
-
-    apply_regular_hs_p1_p1<<< gridSize, blockSize >>>(d_x, ld_x, d_y_perm, ld_y_perm, alpha, gpu_i_tst_begins[gpu_idx]);
-  }
-
-}
-
-
-
-template<>
-void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
-  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
-  apply_regular_gpu_finish( block_vector_type & y_perm, apply_regular_gpu_tmp_data & tmp_data ) const {
-
-  //lo n_elems = mesh_metadata.n_elems;
-  lo n_nodes = mesh_metadata.n_nodes;
-  lo n_blocks = mesh_metadata.n_temporal_elements;
-
-  sc * &x_raw = tmp_data.x_raw;
-  sc * &y_perm_raw = tmp_data.y_perm_raw;
-
-  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
-    
-    sc * &d_x = tmp_data.per_gpu_data[gpu_idx].d_x;
-    sc * &d_y_perm = tmp_data.per_gpu_data[gpu_idx].d_y_perm;
-    //size_t &pitch_x = tmp_data.per_gpu_data[gpu_idx].pitch_x;
-    size_t &pitch_y_perm = tmp_data.per_gpu_data[gpu_idx].pitch_y_perm;
-    //lo &ld_x = tmp_data.per_gpu_data[gpu_idx].ld_x;
-    //lo &ld_y_perm = tmp_data.per_gpu_data[gpu_idx].ld_y_perm;
-
-    cudaSetDevice(gpu_idx);
-
-    cudaDeviceSynchronize();
-
-    cudaMemcpy2D(y_perm_raw, n_blocks * sizeof(*y_perm_raw), d_y_perm, pitch_y_perm, n_blocks * sizeof(*y_perm_raw), n_nodes, cudaMemcpyDeviceToHost);
-
-    y_perm.add_from_raw(y_perm_raw);
-
-    cudaFree(d_x);
-    cudaFree(d_y_perm);
-  }
-  
-  cudaFreeHost(x_raw);
-  cudaFreeHost(y_perm_raw);
 
 }
 
@@ -1228,10 +1016,9 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
   y_perm.copy_permute(y, beta);
   x_perm.copy_permute(x, alpha);
 
-  besthea::onthefly::apply_regular_gpu_tmp_data tmp_data;
-  tmp_data.per_gpu_data.resize(n_gpus);
+  std::vector<besthea::onthefly::apply_regular_gpu_tmp_data> tmp_data;
 
-  
+
   this->apply_regular_gpu_begin(x, y_perm, alpha, tmp_data);
   this->apply_singular(x_perm, y_perm);
   this->apply_delta0(x_perm, y_perm);
