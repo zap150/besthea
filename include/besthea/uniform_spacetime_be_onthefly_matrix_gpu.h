@@ -11,6 +11,7 @@
 #include "besthea/block_lower_triangular_toeplitz_matrix.h"
 #include "besthea/uniform_spacetime_be_space.h"
 #include "besthea/uniform_spacetime_be_onthefly_matrix_cpu.h"
+#include "besthea/gpu_onthefly_helper_structs.h"
 
 #include <array>
 
@@ -19,65 +20,11 @@ namespace besthea::onthefly {
   template< class kernel_type, class test_space_type, class trial_space_type >
   class uniform_spacetime_be_onthefly_matrix_gpu;
 
-  // TODO: think and move these to a more sensible location
-  struct quadrature_wrapper_readonly_regular_raw;
-  struct quadrature_wrapper_changing_regular_raw;
-  struct mesh_raw_data;
-  struct mesh_raw_metadata;
-  struct heat_kernel_parameters;
-  struct apply_regular_gpu_tmp_data;
-
   constexpr int gpu_threads_per_block = 256;
 }
 
-struct besthea::onthefly::quadrature_wrapper_readonly_regular_raw {
-  sc _x1_ref[64];
-  sc _x2_ref[64];
-  sc _y1_ref[64];
-  sc _y2_ref[64];
-  sc _w[64];
-  lo _size; // actual size
-};
 
-struct besthea::onthefly::quadrature_wrapper_changing_regular_raw {
-  sc _x1[64];
-  sc _x2[64];
-  sc _x3[64];
-  sc _y1[64];
-  sc _y2[64];
-  sc _y3[64];
-  sc _kernel_values[64];
-  sc _kernel_values_2[64];
-};
 
-struct besthea::onthefly::mesh_raw_data {
-  sc * d_element_areas;
-  sc * d_node_coords; // XYZXYZXYZXYZ...
-  lo * d_element_nodes; // 123123123123...
-  sc * d_element_normals; // XYZXYZXYZXYZ
-};
-
-struct besthea::onthefly::mesh_raw_metadata {
-  sc timestep;
-  lo n_temporal_elements;
-  lo n_elems;
-  lo n_nodes;
-};
-
-struct besthea::onthefly::heat_kernel_parameters {
-  sc alpha;
-  sc sqrt_alpha;
-  sc alpha_2;
-  sc pi;
-  sc sqrt_pi;
-};
-
-struct besthea::onthefly::apply_regular_gpu_tmp_data {
-  sc *d_x;
-  sc *d_y;
-  size_t pitch_x, pitch_y; // pitch in bytes
-  lo ld_x, ld_y; // leading dimension in elements
-};
 
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -97,8 +44,9 @@ public:
 
   uniform_spacetime_be_onthefly_matrix_gpu( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
-    int order_singular = 4, int order_regular = 4,
-    int gpu_kernel_version = 1 );
+    int order_singular, int order_regular,
+    const besthea::onthefly::gpu_uniform_spacetime_tensor_mesh & gpu_mesh,
+    int gpu_kernel_version = 2 );
 
   uniform_spacetime_be_onthefly_matrix_gpu(
     const uniform_spacetime_be_onthefly_matrix_gpu & that )
@@ -135,8 +83,7 @@ private:
   void init_gpu_constant_memory() const;
 
 private:
-  mesh_raw_metadata mesh_metadata;
-  std::vector<mesh_raw_data> per_gpu_mesh_data;
+  const gpu_uniform_spacetime_tensor_mesh * gpu_mesh;
   int n_gpus;
   int gpu_kernel_version;  
   
