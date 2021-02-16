@@ -175,7 +175,13 @@ class besthea::linear_algebra::distributed_pFMM_matrix
       _m_subtask_times( omp_get_max_threads( ) ),
       _m2l_subtask_times( omp_get_max_threads( ) ),
       _l_subtask_times( omp_get_max_threads( ) ),
-      _n_subtask_times( omp_get_max_threads( ) ) {
+      _n_subtask_times( omp_get_max_threads( ) ),
+      _mpi_send_m2l( omp_get_max_threads( ) ),
+      _mpi_send_m_parent( omp_get_max_threads( ) ),
+      _mpi_send_l_children( omp_get_max_threads( ) ),
+      _mpi_recv_m2l( omp_get_max_threads( ) ),
+      _mpi_recv_m_parent( omp_get_max_threads( ) ),
+      _mpi_recv_l_children( omp_get_max_threads( ) ) {
   }
 
   distributed_pFMM_matrix( const distributed_pFMM_matrix & that ) = delete;
@@ -1269,6 +1275,14 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   mutable std::vector< std::vector< time_type::rep > > _m2l_subtask_times;
   mutable std::vector< std::vector< time_type::rep > > _l_subtask_times;
   mutable std::vector< std::vector< time_type::rep > > _n_subtask_times;
+
+  mutable std::vector< std::vector< time_type::rep > > _mpi_send_m2l;
+  mutable std::vector< std::vector< time_type::rep > > _mpi_send_m_parent;
+  mutable std::vector< std::vector< time_type::rep > > _mpi_send_l_children;
+
+  mutable std::vector< std::vector< time_type::rep > > _mpi_recv_m2l;
+  mutable std::vector< std::vector< time_type::rep > > _mpi_recv_m_parent;
+  mutable std::vector< std::vector< time_type::rep > > _mpi_recv_l_children;
 
   /*!
    * Saves task duration measurement per thread in files (1 per MPI rank).

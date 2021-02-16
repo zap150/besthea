@@ -555,6 +555,24 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   for ( auto & it : _n_subtask_times ) {
     it.reserve( 4 * _n_list.size( ) );
   }
+  for ( auto & it : _mpi_send_m2l ) {
+    it.reserve( _m2l_list.size( ) );
+  }
+  for ( auto & it : _mpi_send_m_parent ) {
+    it.reserve( _m_list.size( ) );
+  }
+  for ( auto & it : _mpi_send_l_children ) {
+    it.reserve( _l_list.size( ) );
+  }
+  for ( auto & it : _mpi_recv_m2l ) {
+    it.reserve( _m2l_list.size( ) );
+  }
+  for ( auto & it : _mpi_recv_m_parent ) {
+    it.reserve( _m_list.size( ) );
+  }
+  for ( auto & it : _mpi_recv_l_children ) {
+    it.reserve( _l_list.size( ) );
+  }
 
   // set the positions of clusters in the lists
   lo counter = 0;
@@ -2600,6 +2618,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         int buffer_size
           = src_cluster->get_associated_spacetime_clusters( )->size( )
           * _contribution_size;
+
+        if ( _measure_tasks ) {
+          _mpi_send_m2l.at( omp_get_thread_num( ) )
+            .push_back( _global_timer.get_time_from_start< time_type >( ) );
+        }
         MPI_Request req;
         MPI_Isend( moment_buffer, buffer_size, get_scalar_type< sc >::MPI_SC( ),
           tar_process_id, tag, *_comm, &req );
@@ -2643,6 +2666,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       int buffer_size
         = parent_cluster->get_associated_spacetime_clusters( )->size( )
         * _contribution_size;
+
+      if ( _measure_tasks ) {
+        _mpi_send_m_parent.at( omp_get_thread_num( ) )
+          .push_back( _global_timer.get_time_from_start< time_type >( ) );
+      }
+
       MPI_Request req;
       MPI_Isend( moment_buffer, buffer_size, get_scalar_type< sc >::MPI_SC( ),
         parent_process_id, tag, *_comm, &req );
@@ -2682,6 +2711,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         int buffer_size
           = parent_cluster->get_associated_spacetime_clusters( )->size( )
           * _contribution_size;
+
+        if ( _measure_tasks ) {
+          _mpi_send_l_children.at( omp_get_thread_num( ) )
+            .push_back( _global_timer.get_time_from_start< time_type >( ) );
+        }
+
         MPI_Request req;
         MPI_Isend( local_contribution_buffer, buffer_size,
           get_scalar_type< sc >::MPI_SC( ), child_process_id, tag, *_comm,
@@ -3658,6 +3693,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     _m2l_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
     _l_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
     _n_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
+    _mpi_send_m2l.at( omp_get_thread_num( ) ).resize( 0 );
+    _mpi_send_m_parent.at( omp_get_thread_num( ) ).resize( 0 );
+    _mpi_send_l_children.at( omp_get_thread_num( ) ).resize( 0 );
+    _mpi_recv_m2l.at( omp_get_thread_num( ) ).resize( 0 );
+    _mpi_recv_m_parent.at( omp_get_thread_num( ) ).resize( 0 );
+    _mpi_recv_l_children.at( omp_get_thread_num( ) ).resize( 0 );
 
 #pragma omp single
     {
@@ -3700,6 +3741,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             }
             // distinguish which data has been received
             if ( current_index < _n_moments_to_receive_upward ) {
+              if ( _measure_tasks ) {
+                _mpi_recv_m_parent.at( omp_get_thread_num( ) )
+                  .push_back(
+                    _global_timer.get_time_from_start< time_type >( ) );
+              }
+
               // received data are moments in the upward path. add up
               // moments and update dependencies.
               lo idx = current_cluster->get_pos_in_m_list( );
@@ -3710,6 +3757,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               upward_path_task( current_index, current_cluster );
             } else if ( current_index
               < _n_moments_to_receive_upward + _n_moments_to_receive_m2l ) {
+              if ( _measure_tasks ) {
+                _mpi_recv_m2l.at( omp_get_thread_num( ) )
+                  .push_back(
+                    _global_timer.get_time_from_start< time_type >( ) );
+              }
               // received data are moments for m2l. update dependencies.
               std::vector< scheduling_time_cluster * > * send_list
                 = current_cluster->get_send_list( );
@@ -3730,6 +3782,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                 }
               }
             } else {
+              if ( _measure_tasks ) {
+                _mpi_recv_l_children.at( omp_get_thread_num( ) )
+                  .push_back(
+                    _global_timer.get_time_from_start< time_type >( ) );
+              }
               // received data are local contributions. update dependencies.
 #pragma omp task priority( 1000 )
               current_cluster->set_downward_path_status( 2 );
@@ -4580,6 +4637,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               << " us (" << perc_subtasks_loop * 100.0 << " % [loop], "
               << perc_subtasks_apply * 100.0 << " % [total])\n\n";
 
+      // output main tasks
       outfile << "% M tasks: " << std::endl;
       outfile << "M" << i << " = [";
       auto it = _m_task_times.at( i ).begin( );
@@ -4617,6 +4675,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       outfile << " ];";
       outfile << std::endl << std::endl;
 
+      // output subtasks
       outfile << "% M subtasks: " << std::endl;
       outfile << "Ms" << i << " = [";
       it = _m_subtask_times.at( i ).begin( );
@@ -4649,6 +4708,61 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       outfile << "Ns" << i << " = [";
       for ( ; it != _n_subtask_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      // output MPI communication
+      outfile << "% M2L send: " << std::endl;
+      it = _mpi_send_m2l.at( i ).begin( );
+      outfile << "M2L_send" << i << " = [";
+      for ( ; it != _mpi_send_m2l.at( i ).end( ); ++it ) {
+        outfile << *it << ", ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      outfile << "% parent send: " << std::endl;
+      it = _mpi_send_m_parent.at( i ).begin( );
+      outfile << "parent_send" << i << " = [";
+      for ( ; it != _mpi_send_m_parent.at( i ).end( ); ++it ) {
+        outfile << *it << ", ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      outfile << "% local send: " << std::endl;
+      it = _mpi_send_l_children.at( i ).begin( );
+      outfile << "local_send" << i << " = [";
+      for ( ; it != _mpi_send_l_children.at( i ).end( ); ++it ) {
+        outfile << *it << ", ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      outfile << "% M2L receive: " << std::endl;
+      it = _mpi_recv_m2l.at( i ).begin( );
+      outfile << "M2L_recv" << i << " = [";
+      for ( ; it != _mpi_recv_m2l.at( i ).end( ); ++it ) {
+        outfile << *it << ", ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      outfile << "% parent receive: " << std::endl;
+      it = _mpi_recv_m_parent.at( i ).begin( );
+      outfile << "parent_recv" << i << " = [";
+      for ( ; it != _mpi_recv_m_parent.at( i ).end( ); ++it ) {
+        outfile << *it << ", ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      outfile << "% local receive: " << std::endl;
+      it = _mpi_recv_l_children.at( i ).begin( );
+      outfile << "local_recv" << i << " = [";
+      for ( ; it != _mpi_recv_l_children.at( i ).end( ); ++it ) {
+        outfile << *it << ", ";
       }
       outfile << " ];";
       outfile << std::endl << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" << std::endl;
@@ -4694,6 +4808,37 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       outfile << "Ns" << i << ", ";
     }
     outfile << "};" << std::endl;
+    outfile << "M2L_send = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "M2L_send" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "parent_send = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "parent_send" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "local_send = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "local_send" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "M2L_recv = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "M2L_recv" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "parent_recv = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "parent_recv" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "local_recv = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "local_recv" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+
     outfile.close( );
   }
 }
