@@ -1,10 +1,10 @@
 
-/** @file uniform_spacetime_be_onthefly_matrix.h
+/** @file uniform_spacetime_be_onthefly_matrix_cpu.h
  * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_H_
-#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_H_
+#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_CPU_H_
+#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_CPU_H_
 
 #include "besthea/block_matrix.h"
 #include "besthea/full_matrix.h"
@@ -12,83 +12,19 @@
 #include "besthea/uniform_spacetime_be_space.h"
 
 #include <array>
-#include <vector>
-#include <limits>
-
 
 
 namespace besthea::onthefly {
   template< class kernel_type, class test_space_type, class trial_space_type >
-  class uniform_spacetime_be_onthefly_matrix;
+  class uniform_spacetime_be_onthefly_matrix_cpu;
 
-  // TODO: think and move these to a more sensible location
-  struct quadrature_wrapper_readonly_regular_raw;
-  struct quadrature_wrapper_changing_regular_raw;
-  struct mesh_raw_data;
-  struct mesh_raw_metadata;
-  struct heat_kernel_parameters;
-  struct apply_regular_gpu_tmp_data;
-
-  constexpr int gpu_threads_per_block = 256;
   constexpr bool quick_matrix_vals = false; // for performance testing purposes. if true, then matrix values are not calculated the correct time-consuming way, but quickly (and wrongly)
 }
 
 
 
-struct besthea::onthefly::quadrature_wrapper_readonly_regular_raw {
-  sc _x1_ref[64];
-  sc _x2_ref[64];
-  sc _y1_ref[64];
-  sc _y2_ref[64];
-  sc _w[64];
-  lo _size; // actual size
-};
-
-struct besthea::onthefly::quadrature_wrapper_changing_regular_raw {
-  sc _x1[64];
-  sc _x2[64];
-  sc _x3[64];
-  sc _y1[64];
-  sc _y2[64];
-  sc _y3[64];
-  sc _kernel_values[64];
-  sc _kernel_values_2[64];
-};
-
-struct besthea::onthefly::mesh_raw_data {
-  sc * d_element_areas;
-  sc * d_node_coords; // XYZXYZXYZXYZ...
-  lo * d_element_nodes; // 123123123123...
-  sc * d_element_normals; // XYZXYZXYZXYZ
-};
-
-struct besthea::onthefly::mesh_raw_metadata {
-  sc timestep;
-  lo n_temporal_elements;
-  lo n_elems;
-  lo n_nodes;
-};
-
-struct besthea::onthefly::heat_kernel_parameters {
-  sc alpha;
-  sc sqrt_alpha;
-  sc alpha_2;
-  sc pi;
-  sc sqrt_pi;
-};
-
-struct besthea::onthefly::apply_regular_gpu_tmp_data {
-  sc *d_x;
-  sc *d_y;
-  size_t pitch_x, pitch_y; // pitch in bytes
-  lo ld_x, ld_y; // leading dimension in elements
-};
-
-
-
-
 template< class kernel_type, class test_space_type, class trial_space_type >
-class besthea::onthefly::uniform_spacetime_be_onthefly_matrix
+class besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
   : public besthea::linear_algebra::block_matrix
 {
 protected:
@@ -158,21 +94,19 @@ public:
 
 
 
-  uniform_spacetime_be_onthefly_matrix( kernel_type & kernel,
+  uniform_spacetime_be_onthefly_matrix_cpu( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
-    int order_singular = 4, int order_regular = 4,
-    [[maybe_unused]] int max_n_gpus = std::numeric_limits<int>::max(),
-    [[maybe_unused]] int gpu_kernel_version = 1 );
+    int order_singular = 4, int order_regular = 4 );
 
-  uniform_spacetime_be_onthefly_matrix(
-    const uniform_spacetime_be_onthefly_matrix & that )
+  uniform_spacetime_be_onthefly_matrix_cpu(
+    const uniform_spacetime_be_onthefly_matrix_cpu & that )
     = delete;
   
-  virtual ~uniform_spacetime_be_onthefly_matrix( );
+  virtual ~uniform_spacetime_be_onthefly_matrix_cpu( );
 
   void print_info( ) const {
     std::cout
-      << "besthea::linear_algebra::uniform_spacetime_be_onthefly_matrix"
+      << "besthea::linear_algebra::uniform_spacetime_be_onthefly_matrix_cpu"
       << std::endl;
     std::cout << "  number of blocks: " << _block_dim << std::endl;
     std::cout << "  dimension of each block: " << _dim_domain
@@ -186,20 +120,17 @@ public:
     [[maybe_unused]] distributed_block_vector_type & y,
     [[maybe_unused]] bool trans = false, [[maybe_unused]] sc alpha = 1.0,
     [[maybe_unused]] sc beta = 0.0 ) const override {};
+    
+  void apply_cpu( const block_vector_type & x, block_vector_type & y,
+   bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
 
-private:
+protected:
 
-  void get_values_cpu(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special = false) const ;
+  void get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special = false) const ;
 
-  void apply_delta0_cpu(   const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
-  void apply_singular_cpu( const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
-  void apply_regular_cpu(  const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
-  
-#ifdef BESTHEA_USE_CUDA
-  void apply_regular_gpu_begin( const block_vector_type & x, const block_vector_type & y, sc alpha, std::vector<apply_regular_gpu_tmp_data> & tmp_data ) const;
-  void apply_regular_gpu_finish( block_vector_type & y, std::vector<apply_regular_gpu_tmp_data> & tmp_data ) const;
-  void init_gpu_data();
-#endif
+  void apply_regular(  const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
+  void apply_singular( const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
+  void apply_delta0(   const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
 
   void init_quadrature();
 
@@ -257,10 +188,6 @@ protected:
   int _order_singular;
   int _order_regular;
   
-  std::vector<mesh_raw_data> per_gpu_mesh_data;
-  int n_gpus;
-  int gpu_kernel_version;
-  
 
   static constexpr std::array< int, 5 > map{ 0, 1, 2, 0,
     1 };  //!< Auxiliary array for mapping DOFs under
@@ -273,4 +200,4 @@ protected:
 };
 
 
-#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_H_ */
+#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_CPU_H_ */

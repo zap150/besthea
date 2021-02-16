@@ -1,5 +1,5 @@
 
-#include "besthea/uniform_spacetime_be_onthefly_matrix.h"
+#include "besthea/uniform_spacetime_be_onthefly_matrix_gpu.h"
 
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
@@ -25,18 +25,76 @@ __constant__ __device__ besthea::onthefly::heat_kernel_parameters c_kernel_param
 
 
 
+template< class kernel_type, class test_space_type, class trial_space_type >
+besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
+  uniform_spacetime_be_onthefly_matrix_gpu( kernel_type & kernel,
+  test_space_type & test_space, trial_space_type & trial_space,
+  int order_singular, int order_regular, int gpu_kernel_version )
+  : uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>(kernel, test_space, trial_space, order_singular, order_regular) {
+
+  // quadrature inited in base class constructor
+
+  cudaGetDeviceCount(&n_gpus);
+
+  // TODO: error messages when no cuda-capable gpu found
+
+  besthea::mesh::triangular_surface_mesh * mesh = this->_test_space->get_mesh()->get_spatial_surface_mesh();
+  mesh_metadata.timestep = this->_test_space->get_mesh()->get_timestep();
+  mesh_metadata.n_temporal_elements = this->_test_space->get_mesh()->get_n_temporal_elements();
+  mesh_metadata.n_elems = mesh->get_n_elements();
+  mesh_metadata.n_nodes = mesh->get_n_nodes();
+
+  per_gpu_mesh_data.resize(n_gpus);
+  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+
+    cudaSetDevice(gpu_idx);
+
+    mesh_raw_data &gpu_mesh_data = per_gpu_mesh_data[gpu_idx];
+
+    cudaMalloc(&gpu_mesh_data.d_element_areas,       mesh_metadata.n_elems * sizeof(*gpu_mesh_data.d_element_areas));
+    cudaMalloc(&gpu_mesh_data.d_node_coords,     3 * mesh_metadata.n_nodes * sizeof(*gpu_mesh_data.d_node_coords));
+    cudaMalloc(&gpu_mesh_data.d_element_nodes,   3 * mesh_metadata.n_elems * sizeof(*gpu_mesh_data.d_element_nodes));
+    cudaMalloc(&gpu_mesh_data.d_element_normals, 3 * mesh_metadata.n_elems * sizeof(*gpu_mesh_data.d_element_normals));
+
+    cudaMemcpy(gpu_mesh_data.d_element_areas,   mesh->get_all_areas().data(),        mesh_metadata.n_elems * sizeof(*gpu_mesh_data.d_element_areas), cudaMemcpyHostToDevice);
+    cudaMemcpy(gpu_mesh_data.d_node_coords,     mesh->get_all_nodes().data(),    3 * mesh_metadata.n_nodes * sizeof(*gpu_mesh_data.d_node_coords),   cudaMemcpyHostToDevice);
+    cudaMemcpy(gpu_mesh_data.d_element_nodes,   mesh->get_all_elements().data(), 3 * mesh_metadata.n_elems * sizeof(*gpu_mesh_data.d_element_nodes), cudaMemcpyHostToDevice);
+    cudaMemcpy(gpu_mesh_data.d_element_normals, mesh->get_all_normals().data(),  3 * mesh_metadata.n_elems * sizeof(*gpu_mesh_data.d_element_normals), cudaMemcpyHostToDevice);
+  }
+  
+  init_gpu_constant_memory();
+
+  this->gpu_kernel_version = gpu_kernel_version;
+
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::~uniform_spacetime_be_onthefly_matrix_gpu( ) {
+
+  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+
+    cudaSetDevice(gpu_idx);
+
+    mesh_raw_data &gpu_mesh_data = per_gpu_mesh_data[gpu_idx];
+
+    cudaFree(gpu_mesh_data.d_element_areas);
+    cudaFree(gpu_mesh_data.d_node_coords);
+    cudaFree(gpu_mesh_data.d_element_nodes);
+    cudaFree(gpu_mesh_data.d_element_normals);
+  }
+
+}
+
+
+
+
+
 
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
-void besthea::onthefly::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, trial_space_type>::
-  init_gpu_data() {
-
-  besthea::mesh::triangular_surface_mesh * mesh = this->_test_space->get_mesh()->get_spatial_surface_mesh();
-  lo n_elems = mesh->get_n_elements();
-  lo n_nodes = mesh->get_n_nodes();
-
-  
+void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
+  init_gpu_constant_memory() const {
 
   besthea::onthefly::quadrature_wrapper_readonly_regular_raw my_quadr_tmp;
   std::copy(this->my_quadrature._x1_ref[0].begin(), this->my_quadrature._x1_ref[0].end(), my_quadr_tmp._x1_ref);
@@ -54,35 +112,13 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix<kernel_type, test_s
   kernel_params_tmp.pi = M_PI;
   kernel_params_tmp.sqrt_pi = std::sqrt(M_PI);
 
-  besthea::onthefly::mesh_raw_metadata mesh_metadata;
-  mesh_metadata.timestep = this->_test_space->get_mesh()->get_timestep();
-  mesh_metadata.n_temporal_elements = this->_test_space->get_mesh()->get_n_temporal_elements();
-  mesh_metadata.n_elems = mesh->get_n_elements();
-  mesh_metadata.n_nodes = mesh->get_n_nodes();
 
-
-
-  per_gpu_mesh_data.resize(n_gpus);
   for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
-
     cudaSetDevice(gpu_idx);
-
-    besthea::onthefly::mesh_raw_data &curr_gpu_mesh_data = per_gpu_mesh_data[gpu_idx];
-
-    cudaMalloc(&curr_gpu_mesh_data.d_element_areas,       n_elems * sizeof(*curr_gpu_mesh_data.d_element_areas));
-    cudaMalloc(&curr_gpu_mesh_data.d_node_coords,     3 * n_nodes * sizeof(*curr_gpu_mesh_data.d_node_coords));
-    cudaMalloc(&curr_gpu_mesh_data.d_element_nodes,   3 * n_elems * sizeof(*curr_gpu_mesh_data.d_element_nodes));
-    cudaMalloc(&curr_gpu_mesh_data.d_element_normals, 3 * n_elems * sizeof(*curr_gpu_mesh_data.d_element_normals));
-
-    cudaMemcpy(curr_gpu_mesh_data.d_element_areas,   mesh->get_all_areas().data(),        n_elems * sizeof(*curr_gpu_mesh_data.d_element_areas), cudaMemcpyHostToDevice);
-    cudaMemcpy(curr_gpu_mesh_data.d_node_coords,     mesh->get_all_nodes().data(),    3 * n_nodes * sizeof(*curr_gpu_mesh_data.d_node_coords),   cudaMemcpyHostToDevice);
-    cudaMemcpy(curr_gpu_mesh_data.d_element_nodes,   mesh->get_all_elements().data(), 3 * n_elems * sizeof(*curr_gpu_mesh_data.d_element_nodes), cudaMemcpyHostToDevice);
-    cudaMemcpy(curr_gpu_mesh_data.d_element_normals, mesh->get_all_normals().data(),  3 * n_elems * sizeof(*curr_gpu_mesh_data.d_element_normals), cudaMemcpyHostToDevice);
-    
+    cudaMemcpyToSymbol(c_mesh_metadata, &mesh_metadata, sizeof(mesh_metadata));
     cudaMemcpyToSymbol(c_my_quadrature, &my_quadr_tmp, sizeof(my_quadr_tmp));
     cudaMemcpyToSymbol(c_kernel_params, &kernel_params_tmp, sizeof(kernel_params_tmp));
-    cudaMemcpyToSymbol(c_mesh_metadata, &mesh_metadata, sizeof(mesh_metadata));
-    cudaMemcpyToSymbol(c_mesh_data, &curr_gpu_mesh_data, sizeof(curr_gpu_mesh_data)); // copying the pointers
+    cudaMemcpyToSymbol(c_mesh_data, &per_gpu_mesh_data[gpu_idx], sizeof(per_gpu_mesh_data[gpu_idx])); // copying the pointers
   }
 
 }
@@ -560,14 +596,6 @@ __device__ void d_get_values_regular_hs_p1_p1(sc * values_out, lo delta, lo i_te
 
 
 
-
-
-
-
-
-
-
-
 template< class kernel_type, class test_space_type, class trial_space_type >
 __global__ void g_apply_regular(const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin);
 
@@ -1016,18 +1044,16 @@ __global__ void g_apply_regular_ver2<
 
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::onthefly::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, trial_space_type>::
+void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
   apply_regular_gpu_begin( const block_vector_type & x, const block_vector_type & y, sc alpha, std::vector<apply_regular_gpu_tmp_data> & tmp_data ) const {
 
   // permuted vectors or not, the data are copied in the same way
   // for gpu_kernel_version 1, x must NOT be permuted, y must be permuted
   // for gpu_kernel_version 2, both x and y must be permuted
 
-  lo n_elems = this->_test_space->get_mesh()->get_spatial_surface_mesh()->get_n_elements();
-
   std::vector<lo> gpu_i_tst_begins(n_gpus+1);
   for(int gpu_idx = 0; gpu_idx <= n_gpus; gpu_idx++) {
-    gpu_i_tst_begins[gpu_idx] = (n_elems * gpu_idx) / n_gpus;
+    gpu_i_tst_begins[gpu_idx] = (mesh_metadata.n_elems * gpu_idx) / n_gpus;
   }
   std::vector<lo> gpu_n_tst_elems(n_gpus);
   for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
@@ -1084,7 +1110,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix<kernel_type, test_s
 
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::onthefly::uniform_spacetime_be_onthefly_matrix<kernel_type, test_space_type, trial_space_type>::
+void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
   apply_regular_gpu_finish( block_vector_type & y, std::vector<apply_regular_gpu_tmp_data> & tmp_data ) const {
 
   sc * y_raw;
@@ -1130,17 +1156,60 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix<kernel_type, test_s
 
 
 
-template class besthea::onthefly::uniform_spacetime_be_onthefly_matrix<
+
+template<class kernel_type, class test_space_type, class trial_space_type>
+void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
+  apply( const block_vector_type & x, block_vector_type & y, bool trans, sc alpha, sc beta ) const {
+
+  if(trans) {
+    std::cerr << "I dont support trans matrices\n";
+    return;
+  }
+  
+  block_vector_type y_perm;
+  block_vector_type x_perm;
+
+  y_perm.copy_permute(y, beta);
+  x_perm.copy_permute(x, alpha);
+
+  std::vector<besthea::onthefly::apply_regular_gpu_tmp_data> tmp_data;
+
+  if(gpu_kernel_version == 1)
+    this->apply_regular_gpu_begin(x, y_perm, alpha, tmp_data);
+  else if(gpu_kernel_version == 2)
+    this->apply_regular_gpu_begin(x_perm, y_perm, 1, tmp_data);
+  
+  this->apply_singular(x_perm, y_perm);
+  this->apply_delta0(x_perm, y_perm);
+  this->apply_regular_gpu_finish(y_perm, tmp_data);
+
+
+  y.copy_permute(y_perm);
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+template class besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
 
-template class besthea::onthefly::uniform_spacetime_be_onthefly_matrix<
+template class besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
 
-  template class besthea::onthefly::uniform_spacetime_be_onthefly_matrix<
+  template class besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<
     besthea::bem::spacetime_heat_hs_kernel_antiderivative,
     besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
     besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;

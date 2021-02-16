@@ -1,10 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-
-if(BESTHEA_USE_CUDA)
-  project(besthea LANGUAGES CXX CUDA)
-else()
-  project(besthea LANGUAGES CXX)
-endif()
+project(besthea LANGUAGES CXX CUDA)
 
 include(cmake/macros.cmake)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake/Modules)
@@ -18,9 +13,7 @@ enable_MPI()
 enable_OpenMP()
 enable_Boost()
 enable_Eigen()
-if(BESTHEA_USE_CUDA)
-  enable_CUDA()
-endif()
+enable_CUDA()
 if(BUILD_EXAMPLES)
   enable_Lyra()
 endif()
@@ -108,7 +101,8 @@ set(besthea_INCLUDES
   include/besthea/uniform_spacetime_be_assembler.h
   include/besthea/uniform_spacetime_be_evaluator.h
   include/besthea/uniform_spacetime_be_identity.h
-  include/besthea/uniform_spacetime_be_onthefly_matrix.h
+  include/besthea/uniform_spacetime_be_onthefly_matrix_cpu.h
+  include/besthea/uniform_spacetime_be_onthefly_matrix_gpu.h
   include/besthea/uniform_spacetime_be_solver.h
   include/besthea/uniform_spacetime_be_space.h
   include/besthea/uniform_spacetime_initial_assembler.h
@@ -165,8 +159,8 @@ set(besthea_SOURCES
   src/uniform_spacetime_be_assembler.cpp
   src/uniform_spacetime_be_evaluator.cpp
   src/uniform_spacetime_be_identity.cpp
-  src/uniform_spacetime_be_onthefly_matrix.cpp
-  src/uniform_spacetime_be_onthefly_matrix.cu
+  src/uniform_spacetime_be_onthefly_matrix_cpu.cpp
+  src/uniform_spacetime_be_onthefly_matrix_gpu.cu
   src/uniform_spacetime_be_solver.cpp
   src/uniform_spacetime_be_space.cpp
   src/uniform_spacetime_initial_assembler.cpp
@@ -174,12 +168,6 @@ set(besthea_SOURCES
   src/uniform_spacetime_tensor_mesh.cpp
   src/vector.cpp
 )
-if(BESTHEA_USE_CUDA)
-  set(besthea_SOURCES
-    ${besthea_SOURCES}
-    src/uniform_spacetime_be_onthefly_matrix.cu
-  )
-endif()
 
 if (NOT DEFINED DATA_WIDTH)
 set(DATA_WIDTH 8)
@@ -204,10 +192,6 @@ target_link_libraries(besthea PUBLIC
 target_compile_definitions(besthea PUBLIC
   MKL_INT=long
   DATA_WIDTH=${DATA_WIDTH})
-
-if(BESTHEA_USE_CUDA)
-  target_compile_definitions(besthea PUBLIC BESTHEA_USE_CUDA)
-endif()
 
 install (TARGETS besthea ARCHIVE DESTINATION "${CMAKE_BINARY_DIR}/lib")
 install(FILES ${besthea_INCLUDES}
