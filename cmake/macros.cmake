@@ -8,44 +8,58 @@ endmacro()
 
 macro(setup_compiler)
   if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
+    message(STATUS "Using GNU ${CMAKE_CXX_COMPILER_VERSION} toolchain")
+
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8.3)
       message(FATAL_ERROR "GCC compiler is too old, besthea can be"
         " compiled only with g++ 8.3.0 or higher")
     endif()
 
     add_compile_options(-Wall -Wextra -pedantic-errors)
+    # GNU cannot vectorise complicated loops
+    #add_compile_options(-fopt-info-omp-vec-optimized-missed)
 
   elseif (CMAKE_CXX_COMPILER_ID MATCHES AppleClang)
+    message(STATUS "Using AppleClang ${CMAKE_CXX_COMPILER_VERSION} toolchain")
+
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12)
       message(FATAL_ERROR "Clang compiler is too old, besthea can be"
-        " compiled only with clang++ 7 or higher")
+        " compiled only with AppleClang 12 or higher")
     endif()
 
     add_compile_options(-Wall -Wextra -pedantic-errors)
-    # TODO: vectorise and get rid of it
+    # Clang cannot vectorise complicated loops
     add_compile_options(-Wno-pass-failed)
 
-  elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang AND NOT MATCHES AppleClang)
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang
+    AND NOT CMAKE_CXX_COMPILER_ID MATCHES AppleClang)
+    message(STATUS "Using Clang ${CMAKE_CXX_COMPILER_VERSION} toolchain")
+
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7)
       message(FATAL_ERROR "Clang compiler is too old, besthea can be"
         " compiled only with clang++ 7 or higher")
     endif()
 
     add_compile_options(-Wall -Wextra -pedantic-errors)
-    # TODO: vectorise and get rid of it
+    # Clang cannot vectorise complicated loops
     add_compile_options(-Wno-pass-failed)
+    #add_compile_options(
+    #  -Rpass="vect" -Rpass-missed="vect" -Rpass-analysis="vect")
     if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 11)
       # TODO: get rid of this warning (don't understand it)
       add_compile_options(-Wno-dtor-name)
     endif()
 
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
+    message(STATUS "Using Intel ${CMAKE_CXX_COMPILER_VERSION} toolchain")
+
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.0.1)
       message(FATAL_ERROR "Intel compiler is too old, besthea can be"
         " compiled only with icpc 19.0.1 or higher")
     endif()
 
     add_compile_options(-w3)
+    #add_compile_options(-qopt-report=5 -qopt-report-phase=vec)
     # attribute appears more than once
     add_compile_options("SHELL:-diag-disable 2620")
     # parameter was never referenced
@@ -107,7 +121,8 @@ macro(enable_OpenMP)
   elseif (CMAKE_CXX_COMPILER_ID MATCHES AppleClang)
     #add_compile_options(-I/opt/local/include/libomp -Xclang -fopenmp)
     add_compile_options(-Xclang -fopenmp)
-  elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang AND NOT MATCHES AppleClang)
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang
+    AND NOT CMAKE_CXX_COMPILER_ID MATCHES AppleClang)
     add_compile_options(-fopenmp)
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
     add_compile_options(-qopenmp)
