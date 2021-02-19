@@ -632,7 +632,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // entries in the second part of the receive vector
   std::sort( _receive_data_information.begin( ) + _n_moments_to_receive_upward,
     _receive_data_information.end( ),
-    [ & ]( const std::pair< scheduling_time_cluster *, lo > pair_one,
+    [&]( const std::pair< scheduling_time_cluster *, lo > pair_one,
       const std::pair< scheduling_time_cluster *, lo > pair_two ) {
       return _scheduling_tree_structure->compare_clusters_top_down_right_2_left(
         pair_one.first, pair_two.first );
@@ -3670,7 +3670,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   _non_nf_op_count = 0;
 
   // set loop timer start
-  time_type::rep loop_start;
+  time_type::rep loop_start = 0;
   if ( _measure_tasks ) {
     loop_start = _global_timer.get_time_from_start< time_type >( );
   }
@@ -4018,7 +4018,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
   }
   // set loop timer end
-  time_type::rep loop_end;
+  time_type::rep loop_end = 0;
   if ( _measure_tasks ) {
     loop_end = _global_timer.get_time_from_start< time_type >( );
   }
