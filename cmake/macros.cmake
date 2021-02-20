@@ -21,7 +21,9 @@ macro(setup_compiler)
         " compiled only with icpc 19.0.1 or higher")
     endif()
 
-    string(APPEND CMAKE_CXX_FLAGS "-w3")
+    # cant use add_compile_options, because cmake adds
+
+    string(APPEND CMAKE_CXX_FLAGS " -w3")
     # attribute appears more than once
     string(APPEND CMAKE_CXX_FLAGS " -diag-disable 2620")
     # parameter was never referenced
@@ -36,6 +38,8 @@ macro(setup_compiler)
     string(APPEND CMAKE_CXX_FLAGS " -diag-disable 11076")
     # specified as both a system and non-system include directory
     string(APPEND CMAKE_CXX_FLAGS " -diag-disable 2547")
+    # unrecognised GCC pragma
+    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 2282")
 
   else()
     message(FATAL_ERROR "Unknown C++ compiler: ${CMAKE_CXX_COMPILER_ID}")
@@ -43,12 +47,6 @@ macro(setup_compiler)
 
   set(CMAKE_CXX_STANDARD 17)
   set(CMAKE_CXX_STANDARD_REQUIRED True)
-
-  string(APPEND CMAKE_CUDA_FLAGS " -Xcudafe --diag_suppress=esa_on_defaulted_function_ignored")
-  string(APPEND CMAKE_CUDA_FLAGS " -std=c++17")
-  # set(CMAKE_CUDA_STANDARD 17) # this only works on CMake 3.18 and later
-  # set(CMAKE_CUDA_STANDARD_REQUIRED True)
-  string(APPEND CMAKE_CUDA_FLAGS " -arch=compute_60")
 
   if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RelWithDebInfo)
@@ -118,6 +116,23 @@ macro(enable_Lyra)
 endmacro()
 
 macro(enable_CUDA)
+  if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.12.0")
+    cmake_policy(SET CMP0074 NEW)
+  endif()
+
   find_package(CUDA REQUIRED)
-  set(CUDA_INCLUDE_DIRS ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+
+  if(${CMAKE_VERSION} VERSION_LESS "3.18.0")
+    string(APPEND CMAKE_CUDA_FLAGS " -std=c++17")
+  else()
+    set(CMAKE_CUDA_STANDARD 17)
+    set(CMAKE_CUDA_STANDARD_REQUIRED True)
+  endif()
+
+  if(${CMAKE_VERSION} VERSION_LESS "3.18.0")
+    string(APPEND CMAKE_CUDA_FLAGS " -arch=compute_60")      
+  else()
+    cmake_policy(SET CMP0104 NEW)
+    set(CMAKE_CUDA_ARCHITECTURES 60-virtual)
+  endif()
 endmacro()

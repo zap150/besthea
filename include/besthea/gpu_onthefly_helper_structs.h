@@ -67,10 +67,10 @@ struct besthea::onthefly::heat_kernel_parameters {
   sc alpha_2;
   sc pi;
   sc sqrt_pi;
-  heat_kernel_parameters(sc alpha) {
-    this->alpha = alpha;
-    sqrt_alpha = std::sqrt(alpha);
-    alpha_2 = alpha * alpha;
+  heat_kernel_parameters(sc alpha_) {
+    this->alpha = alpha_;
+    sqrt_alpha = std::sqrt(alpha_);
+    alpha_2 = alpha_ * alpha_;
     pi = M_PI;
     sqrt_pi = std::sqrt(M_PI);
   }
