@@ -16,7 +16,7 @@
 
 
 
-__constant__ __device__ besthea::onthefly::quadrature_wrapper_readonly_regular_raw c_my_quadrature;
+__constant__ __device__ besthea::onthefly::quadrature_reference_raw c_quadr_reference;
 
 
 
@@ -60,17 +60,17 @@ template<class kernel_type, class test_space_type, class trial_space_type>
 void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
   init_gpu_constant_memory() const {
 
-  besthea::onthefly::quadrature_wrapper_readonly_regular_raw my_quadr_tmp;
-  std::copy(this->my_quadrature._x1_ref[0].begin(), this->my_quadrature._x1_ref[0].end(), my_quadr_tmp._x1_ref);
-  std::copy(this->my_quadrature._x2_ref[0].begin(), this->my_quadrature._x2_ref[0].end(), my_quadr_tmp._x2_ref);
-  std::copy(this->my_quadrature._y1_ref[0].begin(), this->my_quadrature._y1_ref[0].end(), my_quadr_tmp._y1_ref);
-  std::copy(this->my_quadrature._y2_ref[0].begin(), this->my_quadrature._y2_ref[0].end(), my_quadr_tmp._y2_ref);
-  std::copy(this->my_quadrature._w[0].begin(), this->my_quadrature._w[0].end(), my_quadr_tmp._w);
-  my_quadr_tmp._size = this->my_quadrature._sizes[0];
+  besthea::onthefly::quadrature_reference_raw my_quadr_tmp;
+  std::copy(this->quadr_reference._x1_ref[0].begin(), this->quadr_reference._x1_ref[0].end(), my_quadr_tmp._x1_ref);
+  std::copy(this->quadr_reference._x2_ref[0].begin(), this->quadr_reference._x2_ref[0].end(), my_quadr_tmp._x2_ref);
+  std::copy(this->quadr_reference._y1_ref[0].begin(), this->quadr_reference._y1_ref[0].end(), my_quadr_tmp._y1_ref);
+  std::copy(this->quadr_reference._y2_ref[0].begin(), this->quadr_reference._y2_ref[0].end(), my_quadr_tmp._y2_ref);
+  std::copy(this->quadr_reference._w[0].begin(), this->quadr_reference._w[0].end(), my_quadr_tmp._w);
+  my_quadr_tmp._size = this->quadr_reference._sizes[0];
 
   for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
     cudaSetDevice(gpu_idx);
-    cudaMemcpyToSymbol(c_my_quadrature, &my_quadr_tmp, sizeof(my_quadr_tmp));
+    cudaMemcpyToSymbol(c_quadr_reference, &my_quadr_tmp, sizeof(my_quadr_tmp));
   }
 
 }
@@ -125,33 +125,54 @@ __device__ void d_reduce_sum(volatile sc * shmem_vals, sc * add_result_to, sc ou
 
 
 
-__device__ void d_triangles_to_geometry_000( // 0 shared vertices, 0 rot_test, 0 rot_trial
-    const sc * x1, const sc * x2, const sc * x3,
-    const sc * y1, const sc * y2, const sc * y3,
-    besthea::onthefly::quadrature_wrapper_changing_regular_raw & quadr_changing ) {
+__device__ void d_triangles_to_geometry_000_tst_shmem( // 0 shared vertices, 0 rot_test, 0 rot_trial
+    lo i_tst, const besthea::onthefly::mesh_raw_data & mesh_data,
+    besthea::onthefly::quadrature_nodes_raw & shmem_quadr_nodes_tst ) {
+  
+  const lo * tst_elem_nodes = mesh_data.d_element_nodes + 3 * i_tst;
 
-  const sc * x1_ref = c_my_quadrature._x1_ref;
-  const sc * x2_ref = c_my_quadrature._x2_ref;
-  const sc * y1_ref = c_my_quadrature._y1_ref;
-  const sc * y2_ref = c_my_quadrature._y2_ref;
+  const sc * x1 = mesh_data.d_node_coords + 3 * tst_elem_nodes[0];
+  const sc * x2 = mesh_data.d_node_coords + 3 * tst_elem_nodes[1];
+  const sc * x3 = mesh_data.d_node_coords + 3 * tst_elem_nodes[2];
 
-  lo size = c_my_quadrature._size;
+  const sc * x1_ref = c_quadr_reference._x1_ref;
+  const sc * x2_ref = c_quadr_reference._x2_ref;
 
-  for ( lo i = 0; i < size; ++i ) {
-    quadr_changing._x1[ i ] = x1[ 0 ] + ( x2[ 0 ] - x1[ 0 ] ) * x1_ref[ i ]
-                                      + ( x3[ 0 ] - x1[ 0 ] ) * x2_ref[ i ];
-    quadr_changing._x2[ i ] = x1[ 1 ] + ( x2[ 1 ] - x1[ 1 ] ) * x1_ref[ i ]
-                                      + ( x3[ 1 ] - x1[ 1 ] ) * x2_ref[ i ];
-    quadr_changing._x3[ i ] = x1[ 2 ] + ( x2[ 2 ] - x1[ 2 ] ) * x1_ref[ i ]
-                                      + ( x3[ 2 ] - x1[ 2 ] ) * x2_ref[ i ];
+  lo size = c_quadr_reference._size;
+
+  for ( lo i = threadIdx.x; i < size; i += blockDim.x ) {
+    shmem_quadr_nodes_tst.xs[ i ] = x1[ 0 ] + ( x2[ 0 ] - x1[ 0 ] ) * x1_ref[ i ]
+                                            + ( x3[ 0 ] - x1[ 0 ] ) * x2_ref[ i ];
+    shmem_quadr_nodes_tst.ys[ i ] = x1[ 1 ] + ( x2[ 1 ] - x1[ 1 ] ) * x1_ref[ i ]
+                                            + ( x3[ 1 ] - x1[ 1 ] ) * x2_ref[ i ];
+    shmem_quadr_nodes_tst.zs[ i ] = x1[ 2 ] + ( x2[ 2 ] - x1[ 2 ] ) * x1_ref[ i ]
+                                            + ( x3[ 2 ] - x1[ 2 ] ) * x2_ref[ i ];
   }
+}
+
+
+
+__device__ void d_triangles_to_geometry_000_trl( // 0 shared vertices, 0 rot_test, 0 rot_trial
+    lo i_trl, const besthea::onthefly::mesh_raw_data & mesh_data,
+    besthea::onthefly::quadrature_nodes_raw & quadr_nodes_trl ) {
+
+  const lo * trl_elem_nodes = mesh_data.d_element_nodes + 3 * i_trl;
+
+  const sc * y1 = mesh_data.d_node_coords + 3 * trl_elem_nodes[0];
+  const sc * y2 = mesh_data.d_node_coords + 3 * trl_elem_nodes[1];
+  const sc * y3 = mesh_data.d_node_coords + 3 * trl_elem_nodes[2];
+
+  const sc * y1_ref = c_quadr_reference._y1_ref;
+  const sc * y2_ref = c_quadr_reference._y2_ref;
+
+  lo size = c_quadr_reference._size;
 
   for ( lo i = 0; i < size; ++i ) {
-    quadr_changing._y1[ i ] = y1[ 0 ] + ( y2[ 0 ] - y1[ 0 ] ) * y1_ref[ i ]
+    quadr_nodes_trl.xs[ i ] = y1[ 0 ] + ( y2[ 0 ] - y1[ 0 ] ) * y1_ref[ i ]
                                       + ( y3[ 0 ] - y1[ 0 ] ) * y2_ref[ i ];
-    quadr_changing._y2[ i ] = y1[ 1 ] + ( y2[ 1 ] - y1[ 1 ] ) * y1_ref[ i ]
+    quadr_nodes_trl.ys[ i ] = y1[ 1 ] + ( y2[ 1 ] - y1[ 1 ] ) * y1_ref[ i ]
                                       + ( y3[ 1 ] - y1[ 1 ] ) * y2_ref[ i ];
-    quadr_changing._y3[ i ] = y1[ 2 ] + ( y2[ 2 ] - y1[ 2 ] ) * y1_ref[ i ]
+    quadr_nodes_trl.zs[ i ] = y1[ 2 ] + ( y2[ 2 ] - y1[ 2 ] ) * y1_ref[ i ]
                                       + ( y3[ 2 ] - y1[ 2 ] ) * y2_ref[ i ];
   }
 }
@@ -298,7 +319,8 @@ __device__ void d_basis_tri_p1_evaluate_curl_00(
 
 
 __device__ void d_get_values_regular_sl_p0_p0(sc * values_out, lo delta, lo i_test, lo i_trial,
-  besthea::onthefly::quadrature_wrapper_changing_regular_raw & quadr_changing,
+  const besthea::onthefly::quadrature_nodes_raw & quadr_nodes_tst,
+  besthea::onthefly::quadrature_nodes_raw & quadr_nodes_trl,
   const besthea::onthefly::mesh_raw_metadata & mesh_metadata,
   const besthea::onthefly::mesh_raw_data & mesh_data,
   const besthea::onthefly::heat_kernel_parameters & kp) {
@@ -313,39 +335,23 @@ __device__ void d_get_values_regular_sl_p0_p0(sc * values_out, lo delta, lo i_te
   sc ttau = timestep * delta;
   sc sqrt_ttau = sqrt(ttau);
 
-  const lo * tst_elem_nodes = mesh_data.d_element_nodes + 3 * i_test;
-  const lo * trl_elem_nodes = mesh_data.d_element_nodes + 3 * i_trial;
-
-  const sc * x1 = mesh_data.d_node_coords + 3 * tst_elem_nodes[0];
-  const sc * x2 = mesh_data.d_node_coords + 3 * tst_elem_nodes[1];
-  const sc * x3 = mesh_data.d_node_coords + 3 * tst_elem_nodes[2];
-  const sc * y1 = mesh_data.d_node_coords + 3 * trl_elem_nodes[0];
-  const sc * y2 = mesh_data.d_node_coords + 3 * trl_elem_nodes[1];
-  const sc * y3 = mesh_data.d_node_coords + 3 * trl_elem_nodes[2];
-
   const sc test_area = mesh_data.d_element_areas[i_test];
   const sc trial_area = mesh_data.d_element_areas[i_trial];
 
-  d_triangles_to_geometry_000( x1, x2, x3, y1, y2, y3, quadr_changing );
+  d_triangles_to_geometry_000_trl( i_trial, mesh_data, quadr_nodes_trl );
 
-  const sc * w = c_my_quadrature._w;
-  const sc * x1_mapped = quadr_changing._x1;
-  const sc * x2_mapped = quadr_changing._x2;
-  const sc * x3_mapped = quadr_changing._x3;
-  const sc * y1_mapped = quadr_changing._y1;
-  const sc * y2_mapped = quadr_changing._y2;
-  const sc * y3_mapped = quadr_changing._y3;
+  const sc * w = c_quadr_reference._w;
 
-  lo size = c_my_quadrature._size;
+  lo size = c_quadr_reference._size;
 
 
   sc value = 0;
   for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
     value += d_sl_kernel_do_anti_tau_anti_t_regular_in_time_regular_in_space(
-            x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-            x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-            x3_mapped[ i_quad ] - y3_mapped[ i_quad ], 
-            ttau, sqrt_ttau, kp ) * w[ i_quad ];
+      quadr_nodes_tst.xs[ i_quad ] - quadr_nodes_trl.xs[ i_quad ],
+      quadr_nodes_tst.ys[ i_quad ] - quadr_nodes_trl.ys[ i_quad ],
+      quadr_nodes_tst.zs[ i_quad ] - quadr_nodes_trl.zs[ i_quad ], 
+      ttau, sqrt_ttau, kp ) * w[ i_quad ];
   }
 
   value *= test_area * trial_area;
@@ -369,7 +375,8 @@ __device__ void d_get_values_regular_sl_p0_p0(sc * values_out, lo delta, lo i_te
 
 
 __device__ void d_get_values_regular_dl_p0_p1(sc * values_out, lo delta, lo i_test, lo i_trial,
-  besthea::onthefly::quadrature_wrapper_changing_regular_raw & quadr_changing,
+  const besthea::onthefly::quadrature_nodes_raw & quadr_nodes_tst,
+  besthea::onthefly::quadrature_nodes_raw & quadr_nodes_trl,
   const besthea::onthefly::mesh_raw_metadata & mesh_metadata,
   const besthea::onthefly::mesh_raw_data & mesh_data,
   const besthea::onthefly::heat_kernel_parameters & kp) {
@@ -384,33 +391,18 @@ __device__ void d_get_values_regular_dl_p0_p1(sc * values_out, lo delta, lo i_te
   sc ttau = timestep * delta;
   sc sqrt_ttau = sqrt(ttau);
 
-  const lo * tst_elem_nodes = mesh_data.d_element_nodes + 3 * i_test;
-  const lo * trl_elem_nodes = mesh_data.d_element_nodes + 3 * i_trial;
-
-  const sc * x1 = mesh_data.d_node_coords + 3 * tst_elem_nodes[0];
-  const sc * x2 = mesh_data.d_node_coords + 3 * tst_elem_nodes[1];
-  const sc * x3 = mesh_data.d_node_coords + 3 * tst_elem_nodes[2];
-  const sc * y1 = mesh_data.d_node_coords + 3 * trl_elem_nodes[0];
-  const sc * y2 = mesh_data.d_node_coords + 3 * trl_elem_nodes[1];
-  const sc * y3 = mesh_data.d_node_coords + 3 * trl_elem_nodes[2];
   const sc * ny = mesh_data.d_element_normals + 3 * i_trial;
 
   const sc test_area = mesh_data.d_element_areas[i_test];
   const sc trial_area = mesh_data.d_element_areas[i_trial];
 
-  d_triangles_to_geometry_000( x1, x2, x3, y1, y2, y3, quadr_changing );
+  d_triangles_to_geometry_000_trl( i_trial, mesh_data, quadr_nodes_trl );
 
-  const sc * w = c_my_quadrature._w;
-  const sc * x1_mapped = quadr_changing._x1;
-  const sc * x2_mapped = quadr_changing._x2;
-  const sc * x3_mapped = quadr_changing._x3;
-  const sc * y1_mapped = quadr_changing._y1;
-  const sc * y2_mapped = quadr_changing._y2;
-  const sc * y3_mapped = quadr_changing._y3;
-  const sc * y1_ref = c_my_quadrature._y1_ref;
-  const sc * y2_ref = c_my_quadrature._y2_ref;
+  const sc * w = c_quadr_reference._w;
+  const sc * y1_ref = c_quadr_reference._y1_ref;
+  const sc * y2_ref = c_quadr_reference._y2_ref;
 
-  lo size = c_my_quadrature._size;
+  lo size = c_quadr_reference._size;
 
 
   sc kernel;
@@ -420,10 +412,10 @@ __device__ void d_get_values_regular_dl_p0_p1(sc * values_out, lo delta, lo i_te
 
   for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
     kernel = d_dl_kernel_do_anti_tau_anti_t_regular_in_time_regular_in_space(
-          x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-          x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-          x3_mapped[ i_quad ] - y3_mapped[ i_quad ],
-          ny, ttau, sqrt_ttau, kp ) * w[ i_quad ];
+      quadr_nodes_tst.xs[ i_quad ] - quadr_nodes_trl.xs[ i_quad ],
+      quadr_nodes_tst.ys[ i_quad ] - quadr_nodes_trl.ys[ i_quad ],
+      quadr_nodes_tst.zs[ i_quad ] - quadr_nodes_trl.zs[ i_quad ], 
+      ny, ttau, sqrt_ttau, kp ) * w[ i_quad ];
     value1 += kernel * ( (sc) 1.0 - y1_ref[ i_quad ] - y2_ref[ i_quad ] );
     value2 += kernel * y1_ref[ i_quad ];
     value3 += kernel * y2_ref[ i_quad ];
@@ -452,7 +444,8 @@ __device__ void d_get_values_regular_dl_p0_p1(sc * values_out, lo delta, lo i_te
 
 
 __device__ void d_get_values_regular_hs_p1_p1(sc * values_out, lo delta, lo i_test, lo i_trial,
-  besthea::onthefly::quadrature_wrapper_changing_regular_raw & quadr_changing,
+  const besthea::onthefly::quadrature_nodes_raw & quadr_nodes_tst,
+  besthea::onthefly::quadrature_nodes_raw & quadr_nodes_trl,
   const besthea::onthefly::mesh_raw_metadata & mesh_metadata,
   const besthea::onthefly::mesh_raw_data & mesh_data,
   const besthea::onthefly::heat_kernel_parameters & kp) {
@@ -466,37 +459,22 @@ __device__ void d_get_values_regular_hs_p1_p1(sc * values_out, lo delta, lo i_te
 
   sc ttau = timestep * delta;
   sc sqrt_ttau = sqrt(ttau);
-
-  const lo * tst_elem_nodes = mesh_data.d_element_nodes + 3 * i_test;
-  const lo * trl_elem_nodes = mesh_data.d_element_nodes + 3 * i_trial;
-
-  const sc * x1 = mesh_data.d_node_coords + 3 * tst_elem_nodes[0];
-  const sc * x2 = mesh_data.d_node_coords + 3 * tst_elem_nodes[1];
-  const sc * x3 = mesh_data.d_node_coords + 3 * tst_elem_nodes[2];
-  const sc * y1 = mesh_data.d_node_coords + 3 * trl_elem_nodes[0];
-  const sc * y2 = mesh_data.d_node_coords + 3 * trl_elem_nodes[1];
-  const sc * y3 = mesh_data.d_node_coords + 3 * trl_elem_nodes[2];
+  
   const sc * nx = mesh_data.d_element_normals + 3 * i_test;
   const sc * ny = mesh_data.d_element_normals + 3 * i_trial;
 
   const sc test_area = mesh_data.d_element_areas[i_test];
   const sc trial_area = mesh_data.d_element_areas[i_trial];
 
-  d_triangles_to_geometry_000( x1, x2, x3, y1, y2, y3, quadr_changing );
+  d_triangles_to_geometry_000_trl( i_trial, mesh_data, quadr_nodes_trl );
 
-  const sc * w = c_my_quadrature._w;
-  const sc * x1_mapped = quadr_changing._x1;
-  const sc * x2_mapped = quadr_changing._x2;
-  const sc * x3_mapped = quadr_changing._x3;
-  const sc * y1_mapped = quadr_changing._y1;
-  const sc * y2_mapped = quadr_changing._y2;
-  const sc * y3_mapped = quadr_changing._y3;
-  const sc * x1_ref = c_my_quadrature._x1_ref;
-  const sc * x2_ref = c_my_quadrature._x2_ref;
-  const sc * y1_ref = c_my_quadrature._y1_ref;
-  const sc * y2_ref = c_my_quadrature._y2_ref;
+  const sc * w = c_quadr_reference._w;
+  const sc * x1_ref = c_quadr_reference._x1_ref;
+  const sc * x2_ref = c_quadr_reference._x2_ref;
+  const sc * y1_ref = c_quadr_reference._y1_ref;
+  const sc * y2_ref = c_quadr_reference._y2_ref;
 
-  lo size = c_my_quadrature._size;
+  lo size = c_quadr_reference._size;
 
 
   sc test_curls[ 9 ], trial_curls[ 9 ];
@@ -525,9 +503,9 @@ __device__ void d_get_values_regular_hs_p1_p1(sc * values_out, lo delta, lo i_te
 
   for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
     d_kernel_do_anti_tau_anti_t_and_anti_t_regular_in_time_regular_in_space(
-      x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
-      x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
-      x3_mapped[ i_quad ] - y3_mapped[ i_quad ],
+      quadr_nodes_tst.xs[ i_quad ] - quadr_nodes_trl.xs[ i_quad ],
+      quadr_nodes_tst.ys[ i_quad ] - quadr_nodes_trl.ys[ i_quad ],
+      quadr_nodes_tst.zs[ i_quad ] - quadr_nodes_trl.zs[ i_quad ], 
       nx, ny, ttau, sqrt_ttau, &kernel1, &kernel2, kp );
 
     phi1x = (sc) 1.0 - x1_ref[ i_quad ] - x2_ref[ i_quad ];
@@ -579,13 +557,16 @@ __global__ void g_apply_regular<
   // each block handles one test element
   // each thread handles one or more trial elements, and loops through all the blocks
 
+  __shared__ besthea::onthefly::quadrature_nodes_raw shmem_quadr_nodes_tst;
   __shared__ sc shmem_y_vals[besthea::onthefly::gpu_threads_per_block];
 
   const lo &n_blocks = mesh_metadata.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
   const unsigned int &tid = threadIdx.x;
   const lo &n_elems = mesh_metadata.n_elems;
+  const lo &i_tst = i_tst_begin + blockIdx.x;
 
   shmem_y_vals[tid] = 0;
+  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_data, shmem_quadr_nodes_tst);
   __syncthreads();
 
   sc matrix_val;
@@ -593,9 +574,8 @@ __global__ void g_apply_regular<
   sc val_curr;
   sc val_next;
 
-  besthea::onthefly::quadrature_wrapper_changing_regular_raw quadr_changing;
+  besthea::onthefly::quadrature_nodes_raw quadr_nodes_trl;
 
-  const lo &i_tst = i_tst_begin + blockIdx.x;
 
   for (lo i_trl = threadIdx.x; i_trl < n_elems; i_trl += blockDim.x) {
 
@@ -608,7 +588,7 @@ __global__ void g_apply_regular<
     for (lo diag = 0; diag < n_blocks; diag++) {
       val_prev = val_curr;
       val_curr = val_next;
-      d_get_values_regular_sl_p0_p0(&val_next, diag+1, i_tst, i_trl, quadr_changing, mesh_metadata, mesh_data, kp);
+      d_get_values_regular_sl_p0_p0(&val_next, diag+1, i_tst, i_trl, shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
 
       matrix_val = ((i_tst == i_trl) ? (0) : (-val_prev + 2*val_curr - val_next)); // singular will be done by the cpu
 
@@ -644,13 +624,16 @@ __global__ void g_apply_regular<
   // each block handles one test element
   // each thread handles one or more trial elements, and loops through all the blocks
 
+  __shared__ besthea::onthefly::quadrature_nodes_raw shmem_quadr_nodes_tst;
   __shared__ sc shmem_y_vals[besthea::onthefly::gpu_threads_per_block];
 
   const lo &n_blocks = mesh_metadata.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
   const unsigned int &tid = threadIdx.x;
   const lo &n_elems = mesh_metadata.n_elems;
+  const lo &i_tst = i_tst_begin + blockIdx.x;
 
   shmem_y_vals[tid] = 0;
+  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_data, shmem_quadr_nodes_tst);
   __syncthreads();
 
   sc matrix_vals[3] = {0,0,0};
@@ -658,9 +641,8 @@ __global__ void g_apply_regular<
   sc vals_curr[3];
   sc vals_next[3];
 
-  besthea::onthefly::quadrature_wrapper_changing_regular_raw quadr_changing;
+  besthea::onthefly::quadrature_nodes_raw quadr_nodes_trl;
 
-  const lo &i_tst = i_tst_begin + blockIdx.x;
 
   for (lo i_trl = threadIdx.x; i_trl < n_elems; i_trl += blockDim.x) {
 
@@ -673,7 +655,7 @@ __global__ void g_apply_regular<
     for (lo diag = 0; diag < n_blocks; diag++) {
       vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
       vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-      d_get_values_regular_dl_p0_p1(vals_next, diag+1, i_tst, i_trl, quadr_changing, mesh_metadata, mesh_data, kp);
+      d_get_values_regular_dl_p0_p1(vals_next, diag+1, i_tst, i_trl, shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
 
       matrix_vals[0] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0])); // singular will be done by the cpu
       matrix_vals[1] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
@@ -713,8 +695,14 @@ __global__ void g_apply_regular<
   // each block handles one test element
   // each thread handles one or more trial elements, and loops through all the blocks
 
+  __shared__ besthea::onthefly::quadrature_nodes_raw shmem_quadr_nodes_tst;
+
   const lo &n_blocks = mesh_metadata.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
   const lo &n_elems = mesh_metadata.n_elems;
+  const lo &i_tst = i_tst_begin + blockIdx.x;
+
+  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_data, shmem_quadr_nodes_tst);
+  __syncthreads();
 
   sc matrix_vals[9];
   sc vals_prev[9];
@@ -723,9 +711,8 @@ __global__ void g_apply_regular<
   sc x_vals[3];
   sc y_vals[3];
 
-  besthea::onthefly::quadrature_wrapper_changing_regular_raw quadr_changing;
+  besthea::onthefly::quadrature_nodes_raw quadr_nodes_trl;
 
-  const lo &i_tst = i_tst_begin + blockIdx.x;
 
   for (lo i_trl = threadIdx.x; i_trl < n_elems; i_trl += blockDim.x) {
     if(i_tst == i_trl)
@@ -740,7 +727,7 @@ __global__ void g_apply_regular<
     for (lo diag = 0; diag < n_blocks; diag++) {
       for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
       for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
-      d_get_values_regular_hs_p1_p1(vals_next, diag+1, i_tst, i_trl, quadr_changing, mesh_metadata, mesh_data, kp);
+      d_get_values_regular_hs_p1_p1(vals_next, diag+1, i_tst, i_trl, shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
 
       for(lo j = 0; j < 9; j++) matrix_vals[j] = ((i_tst == i_trl) ? (0) : (-vals_prev[j] + 2*vals_curr[j] - vals_next[j])); // singular will be done by the cpu
 
@@ -798,17 +785,21 @@ __global__ void g_apply_regular_ver2<
 
   // each block handles one test element
   // each thread handles one or more trial elements, then is assigned to a block and loops through all the trial elements
-
+                      
+  __shared__ besthea::onthefly::quadrature_nodes_raw shmem_quadr_nodes_tst;
   __shared__ sc shmem_matrix_vals[besthea::onthefly::gpu_threads_per_block];
   
   const lo &n_blocks = mesh_metadata.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
   const lo &n_elems = mesh_metadata.n_elems;
   const unsigned int &tid = threadIdx.x;
-
-  besthea::onthefly::quadrature_wrapper_changing_regular_raw quadr_changing;
-
   const lo &i_tst = i_tst_begin + blockIdx.x;
   const lo &row = i_tst;
+
+  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_data, shmem_quadr_nodes_tst);
+  __syncthreads();
+
+  besthea::onthefly::quadrature_nodes_raw quadr_nodes_trl;
+
 
   sc val_prev;
   sc val_curr;
@@ -826,7 +817,7 @@ __global__ void g_apply_regular_ver2<
         lo &i_trl = i;
         val_prev = val_curr;
         val_curr = val_next;
-        d_get_values_regular_sl_p0_p0(&val_next, diag+1, i_tst, i_trl, quadr_changing, mesh_metadata, mesh_data, kp);
+        d_get_values_regular_sl_p0_p0(&val_next, diag+1, i_tst, i_trl, shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
         shmem_matrix_vals[tid] = ((i_tst == i_trl) ? (0) : (-val_prev + 2*val_curr - val_next)); // singular will be done by the cpu
         __syncthreads();
       }
@@ -871,7 +862,8 @@ __global__ void g_apply_regular_ver2<
   // each block handles one test element
   // each thread handles one or more trial elements, then is assigned to a block and loops through all the trial elements
 
-  __shared__ sc shmem_matrix_vals_data[3*besthea::onthefly::gpu_threads_per_block];
+  __shared__ besthea::onthefly::quadrature_nodes_raw shmem_quadr_nodes_tst;
+  __shared__ sc shmem_matrix_vals_data[3 * besthea::onthefly::gpu_threads_per_block];
   sc * shmem_matrix_vals[3];
   shmem_matrix_vals[0] = shmem_matrix_vals_data + 0 * blockDim.x;
   shmem_matrix_vals[1] = shmem_matrix_vals_data + 1 * blockDim.x;
@@ -880,11 +872,14 @@ __global__ void g_apply_regular_ver2<
   const lo &n_blocks = mesh_metadata.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
   const lo &n_elems = mesh_metadata.n_elems;
   const unsigned int &tid = threadIdx.x;
-
-  besthea::onthefly::quadrature_wrapper_changing_regular_raw quadr_changing;
-
   const lo &i_tst = i_tst_begin + blockIdx.x;
   const lo &row = i_tst;
+
+  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_data, shmem_quadr_nodes_tst);
+  __syncthreads();
+
+  besthea::onthefly::quadrature_nodes_raw quadr_nodes_trl;
+
 
   sc vals_prev[3];
   sc vals_curr[3];
@@ -902,7 +897,7 @@ __global__ void g_apply_regular_ver2<
         lo &i_trl = i;
         vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
         vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-        d_get_values_regular_dl_p0_p1(vals_next, diag+1, i_tst, i_trl, quadr_changing, mesh_metadata, mesh_data, kp);
+        d_get_values_regular_dl_p0_p1(vals_next, diag+1, i_tst, i_trl, shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
         shmem_matrix_vals[0][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0])); // singular will be done by the cpu
         shmem_matrix_vals[1][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
         shmem_matrix_vals[2][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[2] + 2*vals_curr[2] - vals_next[2]));
@@ -950,18 +945,22 @@ __global__ void g_apply_regular_ver2<
   // each block handles one test element
   // each thread handles one or more trial elements, then is assigned to a block and loops through all the trial elements
 
-  __shared__ sc shmem_matrix_vals_data[9*besthea::onthefly::gpu_threads_per_block];
+  __shared__ besthea::onthefly::quadrature_nodes_raw shmem_quadr_nodes_tst;
+  __shared__ sc shmem_matrix_vals_data[9 * besthea::onthefly::gpu_threads_per_block];
   sc * shmem_matrix_vals[9];
   for(lo j = 0; j < 9; j++) shmem_matrix_vals[j] = shmem_matrix_vals_data + j * blockDim.x;
   
   const lo &n_blocks = mesh_metadata.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
   const lo &n_elems = mesh_metadata.n_elems;
   const unsigned int &tid = threadIdx.x;
-
-  besthea::onthefly::quadrature_wrapper_changing_regular_raw quadr_changing;
-
   const lo &i_tst = i_tst_begin + blockIdx.x;
   const lo * rows = mesh_data.d_element_nodes + 3 * i_tst;
+
+  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_data, shmem_quadr_nodes_tst);
+  __syncthreads();
+
+  besthea::onthefly::quadrature_nodes_raw quadr_nodes_trl;
+
 
   sc vals_prev[9];
   sc vals_curr[9];
@@ -979,7 +978,7 @@ __global__ void g_apply_regular_ver2<
         lo &i_trl = i;
         for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
         for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
-        d_get_values_regular_hs_p1_p1(vals_next, diag+1, i_tst, i_trl, quadr_changing, mesh_metadata, mesh_data, kp);
+        d_get_values_regular_hs_p1_p1(vals_next, diag+1, i_tst, i_trl, shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
         for(lo j = 0; j < 9; j++) shmem_matrix_vals[j][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[j] + 2*vals_curr[j] - vals_next[j])); // singular will be done by the cpu
         __syncthreads();
       }

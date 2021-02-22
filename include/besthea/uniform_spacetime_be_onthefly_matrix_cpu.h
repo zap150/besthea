@@ -28,7 +28,7 @@ class besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
   : public besthea::linear_algebra::block_matrix
 {
 protected:
-  struct quadrature_wrapper_readonly {
+  struct quadrature_reference {
     std::array< std::vector< sc, besthea::allocator_type< sc > >, 4 >
       _x1_ref;  //!< First coordinates of quadrature nodes in (0,1)x(0,1-x1) to
                 //!< be mapped to the test element
@@ -52,7 +52,7 @@ protected:
     lo _max_size; //!< Maximum size
   };
 
-  struct quadrature_wrapper_changing {
+  struct quadrature_nodes {
     std::vector< sc, besthea::allocator_type< sc > >
       _x1;  //!< First coordinates of quadrature nodes in the test element
     std::vector< sc, besthea::allocator_type< sc > >
@@ -67,20 +67,13 @@ protected:
     std::vector< sc, besthea::allocator_type< sc > >
       _y3;  //!< Third coordinates of quadrature nodes in the trial element
 
-    std::vector< sc, besthea::allocator_type< sc > >
-      _kernel_values;  //!< Buffer for storing kernel values.
-    std::vector< sc, besthea::allocator_type< sc > >
-      _kernel_values_2;  //!< Buffer for storing additional kernel values.
-
-    quadrature_wrapper_changing(lo size) {
+    quadrature_nodes(lo size) {
       _x1.resize( size );
       _x2.resize( size );
       _x3.resize( size );
       _y1.resize( size );
       _y2.resize( size );
       _y3.resize( size );
-      _kernel_values.resize( size );
-      _kernel_values_2.resize( size );
     }
   };
 
@@ -126,7 +119,7 @@ public:
 
 protected:
 
-  void get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special = false) const ;
+  void get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_nodes & quadr_nodes, bool special = false) const ;
 
   void apply_regular(  const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
   void apply_singular( const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
@@ -143,7 +136,7 @@ protected:
     const linear_algebra::coordinates< 3 > & y1,
     const linear_algebra::coordinates< 3 > & y2,
     const linear_algebra::coordinates< 3 > & y3, int type_int, int rot_test,
-    int rot_trial, quadrature_wrapper_changing & quadr_changing) const ;
+    int rot_trial, quadrature_nodes & quadr_nodes) const ;
   
   void hypercube_to_triangles( sc ksi, sc eta1, sc eta2, sc eta3,
     int n_shared_vertices, int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref,
@@ -181,7 +174,7 @@ protected:
 
 protected:
 
-  quadrature_wrapper_readonly my_quadrature;
+  quadrature_reference quadr_reference;
   kernel_type * _kernel;
   test_space_type * _test_space;
   trial_space_type * _trial_space;

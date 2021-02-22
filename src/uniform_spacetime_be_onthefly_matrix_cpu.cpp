@@ -52,7 +52,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special) const {
+  get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_nodes & quadr_nodes, bool special) const {
   
   if(besthea::onthefly::quick_matrix_vals) {
     values_out[0] = (sc)(i_test + 2*delta + 3*i_trial);
@@ -74,12 +74,12 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
   const sc test_area = test_mesh->spatial_area( i_test );
   const sc trial_area = trial_mesh->spatial_area( i_trial );
 
-  sc * x1_mapped = quadr_changing._x1.data( );
-  sc * x2_mapped = quadr_changing._x2.data( );
-  sc * x3_mapped = quadr_changing._x3.data( );
-  sc * y1_mapped = quadr_changing._y1.data( );
-  sc * y2_mapped = quadr_changing._y2.data( );
-  sc * y3_mapped = quadr_changing._y3.data( );
+  sc * x1_mapped = quadr_nodes._x1.data( );
+  sc * x2_mapped = quadr_nodes._x2.data( );
+  sc * x3_mapped = quadr_nodes._x3.data( );
+  sc * y1_mapped = quadr_nodes._y1.data( );
+  sc * y2_mapped = quadr_nodes._y2.data( );
+  sc * y3_mapped = quadr_nodes._y3.data( );
 
   sc value = 0;
   sc factor = test_area * trial_area;
@@ -90,9 +90,9 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
     constexpr int n_shared_vertices = 0;
     constexpr int rot_test = 0;
     constexpr int rot_trial = 0;
-    triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices, rot_test, rot_trial, quadr_changing );
-    lo size = my_quadrature._sizes[ n_shared_vertices ];
-    const sc * w = my_quadrature._w[ n_shared_vertices ].data( );
+    triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices, rot_test, rot_trial, quadr_nodes );
+    lo size = quadr_reference._sizes[ n_shared_vertices ];
+    const sc * w = quadr_reference._w[ n_shared_vertices ].data( );
 
     if( i_test != i_trial ) {
 
@@ -128,9 +128,9 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
     int rot_test = 0;
     int rot_trial = 0;
     get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
-    triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices, rot_test, rot_trial, quadr_changing );
-    lo size = my_quadrature._sizes[ n_shared_vertices ];
-    const sc * w = my_quadrature._w[ n_shared_vertices ].data( );
+    triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices, rot_test, rot_trial, quadr_nodes );
+    lo size = quadr_reference._sizes[ n_shared_vertices ];
+    const sc * w = quadr_reference._w[ n_shared_vertices ].data( );
 
     if(special) {
 
@@ -192,7 +192,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
-  get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special) const {
+  get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_nodes & quadr_nodes, bool special) const {
 
   if(besthea::onthefly::quick_matrix_vals) {
     for(int j = 0; j < 3; j++) values_out[j] = (sc)((j + 1) * (i_test + 2*delta) + 3*i_trial);
@@ -217,12 +217,12 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
   sc test_area = test_mesh->spatial_area( i_test );
   sc trial_area = trial_mesh->spatial_area( i_trial );
 
-  sc * x1_mapped = quadr_changing._x1.data( );
-  sc * x2_mapped = quadr_changing._x2.data( );
-  sc * x3_mapped = quadr_changing._x3.data( );
-  sc * y1_mapped = quadr_changing._y1.data( );
-  sc * y2_mapped = quadr_changing._y2.data( );
-  sc * y3_mapped = quadr_changing._y3.data( );
+  sc * x1_mapped = quadr_nodes._x1.data( );
+  sc * x2_mapped = quadr_nodes._x2.data( );
+  sc * x3_mapped = quadr_nodes._x3.data( );
+  sc * y1_mapped = quadr_nodes._y1.data( );
+  sc * y2_mapped = quadr_nodes._y2.data( );
+  sc * y3_mapped = quadr_nodes._y3.data( );
 
   sc kernel;
   sc value1, value2, value3;
@@ -235,11 +235,11 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
     constexpr int n_shared_vertices = 0;
     constexpr int rot_test = 0;
     constexpr int rot_trial = 0;
-    triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices, rot_test, rot_trial, quadr_changing );
-    const sc * y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
-    const sc * y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
-    const sc * w = my_quadrature._w[ n_shared_vertices ].data( );
-    lo size = my_quadrature._sizes[ n_shared_vertices ];
+    triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices, rot_test, rot_trial, quadr_nodes );
+    const sc * y1_ref = quadr_reference._y1_ref[ n_shared_vertices ].data( );
+    const sc * y2_ref = quadr_reference._y2_ref[ n_shared_vertices ].data( );
+    const sc * w = quadr_reference._w[ n_shared_vertices ].data( );
+    lo size = quadr_reference._sizes[ n_shared_vertices ];
 
     if( i_test != i_trial ) {
 
@@ -285,11 +285,11 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
     int rot_test = 0;
     int rot_trial = 0;
     get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
-    triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices, rot_test, rot_trial, quadr_changing );
-    const sc * y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
-    const sc * y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
-    const sc * w = my_quadrature._w[ n_shared_vertices ].data( );
-    lo size = my_quadrature._sizes[ n_shared_vertices ];
+    triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices, rot_test, rot_trial, quadr_nodes );
+    const sc * y1_ref = quadr_reference._y1_ref[ n_shared_vertices ].data( );
+    const sc * y2_ref = quadr_reference._y2_ref[ n_shared_vertices ].data( );
+    const sc * w = quadr_reference._w[ n_shared_vertices ].data( );
+    lo size = quadr_reference._sizes[ n_shared_vertices ];
 
     if(special) {
 
@@ -361,7 +361,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
   besthea::bem::spacetime_heat_hs_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
-  get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_wrapper_changing & quadr_changing, bool special) const {
+  get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_nodes & quadr_nodes, bool special) const {
 
   if(besthea::onthefly::quick_matrix_vals) {
     for(int j = 0; j < 9; j++) values_out[j] = (sc)((j + 1) * (i_test + 2*delta) + 3*i_trial);
@@ -390,12 +390,12 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
   const sc test_area = test_mesh->spatial_area( i_test );
   const sc trial_area = trial_mesh->spatial_area( i_trial );
 
-  sc * x1_mapped = quadr_changing._x1.data( );
-  sc * x2_mapped = quadr_changing._x2.data( );
-  sc * x3_mapped = quadr_changing._x3.data( );
-  sc * y1_mapped = quadr_changing._y1.data( );
-  sc * y2_mapped = quadr_changing._y2.data( );
-  sc * y3_mapped = quadr_changing._y3.data( );
+  sc * x1_mapped = quadr_nodes._x1.data( );
+  sc * x2_mapped = quadr_nodes._x2.data( );
+  sc * x3_mapped = quadr_nodes._x3.data( );
+  sc * y1_mapped = quadr_nodes._y1.data( );
+  sc * y2_mapped = quadr_nodes._y2.data( );
+  sc * y3_mapped = quadr_nodes._y3.data( );
 
   sc test_curls[ 9 ], trial_curls[ 9 ];
   sc phi1x, phi1y;
@@ -417,13 +417,13 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
     constexpr int n_shared_vertices = 0;
     constexpr int rot_test = 0;
     constexpr int rot_trial = 0;
-    triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices, rot_test, rot_trial, quadr_changing );
-    const sc * x1_ref = my_quadrature._x1_ref[ n_shared_vertices ].data( );
-    const sc * x2_ref = my_quadrature._x2_ref[ n_shared_vertices ].data( );
-    const sc * y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
-    const sc * y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
-    const sc * w = my_quadrature._w[ n_shared_vertices ].data( );
-    lo size = my_quadrature._sizes[ n_shared_vertices ];
+    triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices, rot_test, rot_trial, quadr_nodes );
+    const sc * x1_ref = quadr_reference._x1_ref[ n_shared_vertices ].data( );
+    const sc * x2_ref = quadr_reference._x2_ref[ n_shared_vertices ].data( );
+    const sc * y1_ref = quadr_reference._y1_ref[ n_shared_vertices ].data( );
+    const sc * y2_ref = quadr_reference._y2_ref[ n_shared_vertices ].data( );
+    const sc * w = quadr_reference._w[ n_shared_vertices ].data( );
+    lo size = quadr_reference._sizes[ n_shared_vertices ];
     test_basis.evaluate_curl( i_test, nx, n_shared_vertices, rot_test, false, test_curls );
     trial_basis.evaluate_curl( i_trial, ny, n_shared_vertices, rot_trial, true, trial_curls );
     for ( lo i_loc_test = 0; i_loc_test < 3; ++i_loc_test ) {
@@ -505,13 +505,13 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
     int rot_test = 0;
     int rot_trial = 0;
     get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
-    triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices, rot_test, rot_trial, quadr_changing );
-    const sc * x1_ref = my_quadrature._x1_ref[ n_shared_vertices ].data( );
-    const sc * x2_ref = my_quadrature._x2_ref[ n_shared_vertices ].data( );
-    const sc * y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
-    const sc * y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
-    const sc * w = my_quadrature._w[ n_shared_vertices ].data( );
-    lo size = my_quadrature._sizes[ n_shared_vertices ];
+    triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices, rot_test, rot_trial, quadr_nodes );
+    const sc * x1_ref = quadr_reference._x1_ref[ n_shared_vertices ].data( );
+    const sc * x2_ref = quadr_reference._x2_ref[ n_shared_vertices ].data( );
+    const sc * y1_ref = quadr_reference._y1_ref[ n_shared_vertices ].data( );
+    const sc * y2_ref = quadr_reference._y2_ref[ n_shared_vertices ].data( );
+    const sc * w = quadr_reference._w[ n_shared_vertices ].data( );
+    lo size = quadr_reference._sizes[ n_shared_vertices ];
     test_basis.evaluate_curl( i_test, nx, n_shared_vertices, rot_test, false, test_curls );
     trial_basis.evaluate_curl( i_trial, ny, n_shared_vertices, rot_trial, true, trial_curls );
     for ( lo i_loc_test = 0; i_loc_test < 3; ++i_loc_test ) {
@@ -619,7 +619,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
 
 #pragma omp parallel
   {
-    quadrature_wrapper_changing quadr_changing(my_quadrature._max_size);
+    quadrature_nodes quadr_nodes(quadr_reference._max_size);
     sc val_prev;
     sc val_curr;
     sc val_next;
@@ -637,7 +637,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
           for (lo diag = 0; diag < n_blocks; diag++) {
             val_prev = val_curr;
             val_curr = val_next;
-            get_values(&val_next, diag+1, inner_row, inner_col, quadr_changing);
+            get_values(&val_next, diag+1, inner_row, inner_col, quadr_nodes);
 
             matrix_val = -val_prev + 2*val_curr - val_next;
             
@@ -674,7 +674,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
 
 #pragma omp parallel
   {
-    quadrature_wrapper_changing quadr_changing(my_quadrature._max_size);
+    quadrature_nodes quadr_nodes(quadr_reference._max_size);
     sc val_prev;
     sc val_curr;
     sc val_next;
@@ -692,7 +692,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
       for (lo diag = 0; diag < n_blocks; diag++) {
         val_prev = val_curr;
         val_curr = val_next;
-        get_values(&val_next, diag+1, inner_row, inner_col, quadr_changing);
+        get_values(&val_next, diag+1, inner_row, inner_col, quadr_nodes);
 
         matrix_val = -val_prev + 2*val_curr - val_next;
 
@@ -728,7 +728,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
 
 #pragma omp parallel
   {
-    quadrature_wrapper_changing quadr_changing(my_quadrature._max_size);
+    quadrature_nodes quadr_nodes(quadr_reference._max_size);
     sc val_prev;
     sc val_curr;
 
@@ -736,8 +736,8 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
     for (lo inner_row = 0; inner_row < rows_in_block; inner_row++) {
       for (lo inner_col = 0; inner_col < cols_in_block; inner_col++) {
 
-        get_values(&val_prev, 0, inner_row, inner_col, quadr_changing, true);
-        get_values(&val_curr, 0, inner_row, inner_col, quadr_changing);
+        get_values(&val_prev, 0, inner_row, inner_col, quadr_nodes, true);
+        get_values(&val_curr, 0, inner_row, inner_col, quadr_nodes);
 
         sc matrix_val = val_prev + val_curr;
         lo max_block = blocks;
@@ -794,7 +794,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
 
 #pragma omp parallel
   {
-    quadrature_wrapper_changing quadr_changing(my_quadrature._max_size);
+    quadrature_nodes quadr_nodes(quadr_reference._max_size);
     sc vals_prev[3];
     sc vals_curr[3];
     sc vals_next[3];
@@ -822,7 +822,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
           for (lo diag = 0; diag < n_blocks; diag++) {
             vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
             vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-            get_values(vals_next, diag+1, i_tst, i_trl, quadr_changing);
+            get_values(vals_next, diag+1, i_tst, i_trl, quadr_nodes);
 
             matrix_vals[0] = -vals_prev[0] + 2*vals_curr[0] - vals_next[0];
             matrix_vals[1] = -vals_prev[1] + 2*vals_curr[1] - vals_next[1];
@@ -867,7 +867,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
 
 #pragma omp parallel
   {
-    quadrature_wrapper_changing quadr_changing(my_quadrature._max_size);
+    quadrature_nodes quadr_nodes(quadr_reference._max_size);
     sc vals_prev[3];
     sc vals_curr[3];
     sc vals_next[3];
@@ -895,7 +895,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
       for (lo diag = 0; diag < n_blocks; diag++) {
         vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
         vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-        get_values(vals_next, diag+1, i_tst, i_trl, quadr_changing);
+        get_values(vals_next, diag+1, i_tst, i_trl, quadr_nodes);
 
         matrix_vals[0] = -vals_prev[0] + 2*vals_curr[0] - vals_next[0];
         matrix_vals[1] = -vals_prev[1] + 2*vals_curr[1] - vals_next[1];
@@ -939,7 +939,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
 
 #pragma omp parallel
   {
-    quadrature_wrapper_changing quadr_changing(my_quadrature._max_size);
+    quadrature_nodes quadr_nodes(quadr_reference._max_size);
     sc vals_prev[3];
     sc vals_curr[3];
     lo row;
@@ -959,8 +959,8 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
         get_type( i_tst, i_trl, n_shared_vertices, rot_test, rot_trial );
         trial_basis.local_to_global(i_trl, n_shared_vertices, rot_trial, true, cols_0 );
 
-        get_values(vals_prev, 0, i_tst, i_trl, quadr_changing, true);
-        get_values(vals_curr, 0, i_tst, i_trl, quadr_changing);
+        get_values(vals_prev, 0, i_tst, i_trl, quadr_nodes, true);
+        get_values(vals_curr, 0, i_tst, i_trl, quadr_nodes);
 
         matrix_vals[0] = vals_prev[0] + vals_curr[0];
         matrix_vals[1] = vals_prev[1] + vals_curr[1];
@@ -1040,7 +1040,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
     y_perm_private.resize_blocks(y_perm.get_size_of_block());
     y_perm_private.fill(0);
 
-    quadrature_wrapper_changing quadr_changing(my_quadrature._max_size);
+    quadrature_nodes quadr_nodes(quadr_reference._max_size);
     sc vals_prev[9];
     sc vals_curr[9];
     sc vals_next[9];
@@ -1069,7 +1069,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
           for (lo diag = 0; diag < n_blocks; diag++) {
             for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
             for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
-            get_values(vals_next, diag+1, i_tst, i_trl, quadr_changing);
+            get_values(vals_next, diag+1, i_tst, i_trl, quadr_nodes);
 
             for(lo j = 0; j < 9; j++) matrix_vals[j] = -vals_prev[j] + 2*vals_curr[j] - vals_next[j];
 
@@ -1134,7 +1134,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
     y_perm_private.resize_blocks(y_perm.get_size_of_block());
     y_perm_private.fill(0);
 
-    quadrature_wrapper_changing quadr_changing(my_quadrature._max_size);
+    quadrature_nodes quadr_nodes(quadr_reference._max_size);
     sc vals_prev[9];
     sc vals_curr[9];
     sc vals_next[9];
@@ -1163,7 +1163,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
       for (lo diag = 0; diag < n_blocks; diag++) {
         for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
         for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
-        get_values(vals_next, diag+1, i_tst, i_trl, quadr_changing);
+        get_values(vals_next, diag+1, i_tst, i_trl, quadr_nodes);
 
         for(lo j = 0; j < 9; j++) matrix_vals[j] = -vals_prev[j] + 2*vals_curr[j] - vals_next[j];
 
@@ -1228,7 +1228,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
     y_perm_private.resize_blocks(y_perm.get_size_of_block());
     y_perm_private.fill(0);
 
-    quadrature_wrapper_changing quadr_changing(my_quadrature._max_size);
+    quadrature_nodes quadr_nodes(quadr_reference._max_size);
     sc vals_prev[9];
     sc vals_curr[9];
     lo max_block;
@@ -1250,8 +1250,8 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
         test_basis.local_to_global(i_tst, n_shared_vertices, rot_test, false, rows_0 );
         trial_basis.local_to_global(i_trl, n_shared_vertices, rot_trial, true, cols_0 );
 
-        get_values(vals_prev, 0, i_tst, i_trl, quadr_changing, true);
-        get_values(vals_curr, 0, i_tst, i_trl, quadr_changing);
+        get_values(vals_prev, 0, i_tst, i_trl, quadr_nodes, true);
+        get_values(vals_curr, 0, i_tst, i_trl, quadr_nodes);
 
         for(lo j = 0; j < 9; j++) matrix_vals[j] = vals_prev[j] + vals_curr[j];
         max_block = n_blocks;
@@ -1372,21 +1372,21 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, te
 
   lo size = tri_size2;
   int n_shared_vertices = 0;
-  my_quadrature._sizes[ n_shared_vertices ] = size;
-  my_quadrature._x1_ref[ n_shared_vertices ].resize( size );
-  my_quadrature._x2_ref[ n_shared_vertices ].resize( size );
-  my_quadrature._y1_ref[ n_shared_vertices ].resize( size );
-  my_quadrature._y2_ref[ n_shared_vertices ].resize( size );
-  my_quadrature._w[ n_shared_vertices ].resize( size );
+  quadr_reference._sizes[ n_shared_vertices ] = size;
+  quadr_reference._x1_ref[ n_shared_vertices ].resize( size );
+  quadr_reference._x2_ref[ n_shared_vertices ].resize( size );
+  quadr_reference._y1_ref[ n_shared_vertices ].resize( size );
+  quadr_reference._y2_ref[ n_shared_vertices ].resize( size );
+  quadr_reference._w[ n_shared_vertices ].resize( size );
 
   lo counter = 0;
   for ( lo i_x = 0; i_x < tri_size; ++i_x ) {
     for ( lo i_y = 0; i_y < tri_size; ++i_y ) {
-      my_quadrature._x1_ref[ n_shared_vertices ][ counter ] = tri_x1[ i_x ];
-      my_quadrature._x2_ref[ n_shared_vertices ][ counter ] = tri_x2[ i_x ];
-      my_quadrature._y1_ref[ n_shared_vertices ][ counter ] = tri_x1[ i_y ];
-      my_quadrature._y2_ref[ n_shared_vertices ][ counter ] = tri_x2[ i_y ];
-      my_quadrature._w[ n_shared_vertices ][ counter ]
+      quadr_reference._x1_ref[ n_shared_vertices ][ counter ] = tri_x1[ i_x ];
+      quadr_reference._x2_ref[ n_shared_vertices ][ counter ] = tri_x2[ i_x ];
+      quadr_reference._y1_ref[ n_shared_vertices ][ counter ] = tri_x1[ i_y ];
+      quadr_reference._y2_ref[ n_shared_vertices ][ counter ] = tri_x2[ i_y ];
+      quadr_reference._w[ n_shared_vertices ][ counter ]
         = tri_w[ i_x ] * tri_w[ i_y ];
       ++counter;
     }
@@ -1403,12 +1403,12 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, te
 
   for ( n_shared_vertices = 1; n_shared_vertices <= 3; ++n_shared_vertices ) {
     size = line_size4 * n_simplices[ n_shared_vertices ];
-    my_quadrature._sizes[ n_shared_vertices ] = size;
-    my_quadrature._x1_ref[ n_shared_vertices ].resize( size );
-    my_quadrature._x2_ref[ n_shared_vertices ].resize( size );
-    my_quadrature._y1_ref[ n_shared_vertices ].resize( size );
-    my_quadrature._y2_ref[ n_shared_vertices ].resize( size );
-    my_quadrature._w[ n_shared_vertices ].resize( size );
+    quadr_reference._sizes[ n_shared_vertices ] = size;
+    quadr_reference._x1_ref[ n_shared_vertices ].resize( size );
+    quadr_reference._x2_ref[ n_shared_vertices ].resize( size );
+    quadr_reference._y1_ref[ n_shared_vertices ].resize( size );
+    quadr_reference._y2_ref[ n_shared_vertices ].resize( size );
+    quadr_reference._w[ n_shared_vertices ].resize( size );
 
     counter = 0;
     for ( int i_simplex = 0; i_simplex < n_simplices[ n_shared_vertices ];
@@ -1420,12 +1420,12 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, te
               hypercube_to_triangles( line_x[ i_ksi ], line_x[ i_eta1 ],
                 line_x[ i_eta2 ], line_x[ i_eta3 ], n_shared_vertices,
                 i_simplex,
-                my_quadrature._x1_ref[ n_shared_vertices ][ counter ],
-                my_quadrature._x2_ref[ n_shared_vertices ][ counter ],
-                my_quadrature._y1_ref[ n_shared_vertices ][ counter ],
-                my_quadrature._y2_ref[ n_shared_vertices ][ counter ],
+                quadr_reference._x1_ref[ n_shared_vertices ][ counter ],
+                quadr_reference._x2_ref[ n_shared_vertices ][ counter ],
+                quadr_reference._y1_ref[ n_shared_vertices ][ counter ],
+                quadr_reference._y2_ref[ n_shared_vertices ][ counter ],
                 jacobian );
-              my_quadrature._w[ n_shared_vertices ][ counter ] = 4.0 * jacobian
+              quadr_reference._w[ n_shared_vertices ][ counter ] = 4.0 * jacobian
                 * line_w[ i_ksi ] * line_w[ i_eta1 ] * line_w[ i_eta2 ]
                 * line_w[ i_eta3 ];
               ++counter;
@@ -1436,7 +1436,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, te
     }
   }
 
-  my_quadrature._max_size = *std::max_element(my_quadrature._sizes.begin(), my_quadrature._sizes.end());
+  quadr_reference._max_size = *std::max_element(quadr_reference._sizes.begin(), quadr_reference._sizes.end());
 
 }
 
@@ -1450,7 +1450,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, te
     const linear_algebra::coordinates< 3 > & y2,
     const linear_algebra::coordinates< 3 > & y3, int n_shared_vertices,
     int rot_test, int rot_trial,
-    quadrature_wrapper_changing & quadr_changing ) const {
+    quadrature_nodes & quadr_nodes ) const {
   const sc * x1rot = nullptr;
   const sc * x2rot = nullptr;
   const sc * x3rot = nullptr;
@@ -1512,19 +1512,19 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, te
       break;
   }
 
-  const sc * x1_ref = my_quadrature._x1_ref[ n_shared_vertices ].data( );
-  const sc * x2_ref = my_quadrature._x2_ref[ n_shared_vertices ].data( );
-  const sc * y1_ref = my_quadrature._y1_ref[ n_shared_vertices ].data( );
-  const sc * y2_ref = my_quadrature._y2_ref[ n_shared_vertices ].data( );
+  const sc * x1_ref = quadr_reference._x1_ref[ n_shared_vertices ].data( );
+  const sc * x2_ref = quadr_reference._x2_ref[ n_shared_vertices ].data( );
+  const sc * y1_ref = quadr_reference._y1_ref[ n_shared_vertices ].data( );
+  const sc * y2_ref = quadr_reference._y2_ref[ n_shared_vertices ].data( );
 
-  sc * x1_mapped = quadr_changing._x1.data( );
-  sc * x2_mapped = quadr_changing._x2.data( );
-  sc * x3_mapped = quadr_changing._x3.data( );
-  sc * y1_mapped = quadr_changing._y1.data( );
-  sc * y2_mapped = quadr_changing._y2.data( );
-  sc * y3_mapped = quadr_changing._y3.data( );
+  sc * x1_mapped = quadr_nodes._x1.data( );
+  sc * x2_mapped = quadr_nodes._x2.data( );
+  sc * x3_mapped = quadr_nodes._x3.data( );
+  sc * y1_mapped = quadr_nodes._y1.data( );
+  sc * y2_mapped = quadr_nodes._y2.data( );
+  sc * y3_mapped = quadr_nodes._y3.data( );
 
-  lo size = my_quadrature._w[ n_shared_vertices ].size( );
+  lo size = quadr_reference._w[ n_shared_vertices ].size( );
 
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped        \
                           : DATA_ALIGN ) aligned( x1_ref, x2_ref \

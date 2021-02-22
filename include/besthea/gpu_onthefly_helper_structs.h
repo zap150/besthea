@@ -14,8 +14,8 @@
 
 
 namespace besthea::onthefly {
-  struct quadrature_wrapper_readonly_regular_raw;
-  struct quadrature_wrapper_changing_regular_raw;
+  struct quadrature_reference_raw;
+  struct quadrature_nodes_raw;
   struct mesh_raw_data;
   struct mesh_raw_metadata;
   struct heat_kernel_parameters;
@@ -27,7 +27,7 @@ namespace besthea::onthefly {
 
 
 
-struct besthea::onthefly::quadrature_wrapper_readonly_regular_raw {
+struct besthea::onthefly::quadrature_reference_raw {
   sc _x1_ref[64];
   sc _x2_ref[64];
   sc _y1_ref[64];
@@ -36,15 +36,10 @@ struct besthea::onthefly::quadrature_wrapper_readonly_regular_raw {
   lo _size; // actual size
 };
 
-struct besthea::onthefly::quadrature_wrapper_changing_regular_raw {
-  sc _x1[64];
-  sc _x2[64];
-  sc _x3[64];
-  sc _y1[64];
-  sc _y2[64];
-  sc _y3[64];
-  sc _kernel_values[64];
-  sc _kernel_values_2[64];
+struct besthea::onthefly::quadrature_nodes_raw {
+  sc xs[64];
+  sc ys[64];
+  sc zs[64];
 };
 
 struct besthea::onthefly::mesh_raw_data {
