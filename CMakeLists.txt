@@ -121,7 +121,7 @@ set(besthea_INCLUDES
 if(BESTHEA_USE_CUDA)
   set(besthea_INCLUDES
     ${besthea_INCLUDES}
-    include/besthea/gpu_onthefly_helper_structs.h
+    include/besthea/gpu_onthefly_helpers.h
     include/besthea/uniform_spacetime_be_onthefly_matrix_gpu.h
   )
 endif()
@@ -185,7 +185,7 @@ set(besthea_SOURCES
 if(BESTHEA_USE_CUDA)
   set(besthea_SOURCES
     ${besthea_SOURCES}
-    src/gpu_onthefly_helper_structs.cpp
+    src/gpu_onthefly_helpers.cpp
     src/uniform_spacetime_be_onthefly_matrix_gpu.cu
   )
 endif()

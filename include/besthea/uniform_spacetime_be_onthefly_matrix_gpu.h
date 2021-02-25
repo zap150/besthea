@@ -11,7 +11,7 @@
 #include "besthea/block_lower_triangular_toeplitz_matrix.h"
 #include "besthea/uniform_spacetime_be_space.h"
 #include "besthea/uniform_spacetime_be_onthefly_matrix_cpu.h"
-#include "besthea/gpu_onthefly_helper_structs.h"
+#include "besthea/gpu_onthefly_helpers.h"
 
 #include <array>
 
@@ -78,9 +78,8 @@ protected:
 
 private:
 
-  void copy_mesh_data_to_gpu();
-
-  void init_gpu_constant_memory() const;
+  template<int quadr_order>
+  void init_gpu_quadrature_memory() const;
 
 private:
   const gpu_uniform_spacetime_tensor_mesh * gpu_mesh;

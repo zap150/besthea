@@ -1,10 +1,10 @@
 
-/** @file gpu_onthefly_helper_structs.h
+/** @file gpu_onthefly_helpers.h
  * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_GPU_ONTHEFLY_HELPER_STRUCTS_H_
-#define INCLUDE_BESTHEA_GPU_ONTHEFLY_HELPER_STRUCTS_H_
+#ifndef INCLUDE_BESTHEA_GPU_ONTHEFLY_HELPERS_H_
+#define INCLUDE_BESTHEA_GPU_ONTHEFLY_HELPERS_H_
 
 #include <cmath>
 
@@ -14,33 +14,73 @@
 
 
 namespace besthea::onthefly {
+  template<int quadr_order>
   struct quadrature_reference_raw;
+
+  template<int quadr_order>
   struct quadrature_nodes_raw;
+
   struct mesh_raw_data;
+
   struct mesh_raw_metadata;
+  
   struct heat_kernel_parameters;
+
   struct apply_regular_gpu_tmp_data;
+
   class gpu_uniform_spacetime_tensor_mesh;
+  
+#ifdef __NVCC__
+  __host__ __device__
+#endif
+  constexpr int qo2qs(int quadr_order) {
+    switch(quadr_order) {
+      case 5:
+        return 49;
+      case 4:
+        return 36;
+      case 2:
+        return 9;
+      case 1:
+      default:
+        return 1;
+    }
+  }
+
+  extern bool is_gpu_quadr_order5_initialized;
+  extern bool is_gpu_quadr_order4_initialized;
+  extern bool is_gpu_quadr_order2_initialized;
+  extern bool is_gpu_quadr_order1_initialized;
+
 }
 
 
 
 
 
+template<int quadr_order>
 struct besthea::onthefly::quadrature_reference_raw {
-  sc _x1_ref[64];
-  sc _x2_ref[64];
-  sc _y1_ref[64];
-  sc _y2_ref[64];
-  sc _w[64];
-  lo _size; // actual size
+  sc _x1_ref[qo2qs(quadr_order)];
+  sc _x2_ref[qo2qs(quadr_order)];
+  sc _y1_ref[qo2qs(quadr_order)];
+  sc _y2_ref[qo2qs(quadr_order)];
+  sc _w[qo2qs(quadr_order)];
 };
 
+
+
+
+
+template<int quadr_order>
 struct besthea::onthefly::quadrature_nodes_raw {
-  sc xs[64];
-  sc ys[64];
-  sc zs[64];
+  sc xs[qo2qs(quadr_order)];
+  sc ys[qo2qs(quadr_order)];
+  sc zs[qo2qs(quadr_order)];
 };
+
+
+
+
 
 struct besthea::onthefly::mesh_raw_data {
   sc * d_element_areas;
@@ -49,12 +89,20 @@ struct besthea::onthefly::mesh_raw_data {
   sc * d_element_normals; // XYZXYZXYZXYZ
 };
 
+
+
+
+
 struct besthea::onthefly::mesh_raw_metadata {
   sc timestep;
   lo n_temporal_elements;
   lo n_elems;
   lo n_nodes;
 };
+
+
+
+
 
 struct besthea::onthefly::heat_kernel_parameters {
   sc alpha;
@@ -71,12 +119,20 @@ struct besthea::onthefly::heat_kernel_parameters {
   }
 };
 
+
+
+
+
 struct besthea::onthefly::apply_regular_gpu_tmp_data {
   sc *d_x;
   sc *d_y;
   size_t pitch_x, pitch_y; // pitch in bytes
   lo ld_x, ld_y; // leading dimension in elements
 };
+
+
+
+
 
 class besthea::onthefly::gpu_uniform_spacetime_tensor_mesh {
 private:
@@ -94,4 +150,4 @@ public:
 
 
 
-#endif /* INCLUDE_BESTHEA_GPU_ONTHEFLY_HELPER_STRUCTS_H_ */
+#endif /* INCLUDE_BESTHEA_GPU_ONTHEFLY_HELPERS_H_ */

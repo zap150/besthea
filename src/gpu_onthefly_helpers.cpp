@@ -1,7 +1,27 @@
 
-#include "besthea/gpu_onthefly_helper_structs.h"
+#include "besthea/gpu_onthefly_helpers.h"
 
 #include <cuda_runtime.h>
+
+
+
+
+
+bool besthea::onthefly::is_gpu_quadr_order5_initialized = false;
+bool besthea::onthefly::is_gpu_quadr_order4_initialized = false;
+bool besthea::onthefly::is_gpu_quadr_order2_initialized = false;
+bool besthea::onthefly::is_gpu_quadr_order1_initialized = false;
+
+
+
+
+
+
+
+
+
+
+
 
 
 besthea::onthefly::gpu_uniform_spacetime_tensor_mesh::gpu_uniform_spacetime_tensor_mesh(const besthea::mesh::uniform_spacetime_tensor_mesh & orig_mesh) {
@@ -51,3 +71,4 @@ besthea::onthefly::gpu_uniform_spacetime_tensor_mesh::~gpu_uniform_spacetime_ten
   }
 
 }
+
