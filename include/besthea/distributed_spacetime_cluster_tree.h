@@ -58,6 +58,7 @@ namespace besthea {
 
 /**
  * Class representing spacetime cluster tree distributed among MPI processes
+ * @todo temporal paddings might be necessary for general space-time meshes.
  */
 class besthea::mesh::distributed_spacetime_cluster_tree {
  public:
