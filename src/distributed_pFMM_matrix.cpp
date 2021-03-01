@@ -2050,7 +2050,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     for ( int i = 0; i < ( _temp_order + 1 ) * _spat_contribution_size; ++i ) {
       buffer_array[ i ] = 0.0;
     }
-    apply_temporal_m2m_operation(
+    apply_temporal_l2l_operation(
       parent_local_contribution, temporal_l2l_matrix, buffer_array.data( ) );
 
     for ( auto child : *children ) {
@@ -2242,6 +2242,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 }
 
 template< class kernel_type, class target_space, class source_space >
+template< slou run_count >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space,
   source_space >::call_l2t_operations( mesh::scheduling_time_cluster *
@@ -2273,7 +2274,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         _l_subtask_times.at( omp_get_thread_num( ) )
           .push_back( _global_timer.get_time_from_start< time_type >( ) );
       }
-      apply_l2t_operation(
+      apply_l2t_operation< run_count >(
         ( *associated_spacetime_clusters )[ i ], output_vector );
       if ( _measure_tasks ) {
         _l_subtask_times.at( omp_get_thread_num( ) )
@@ -3456,6 +3457,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 }
 
 template< class kernel_type, class target_space, class source_space >
+template< slou run_count >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::l_list_task( distributed_block_vector & y_pFMM,
   besthea::mesh::scheduling_time_cluster * current_cluster, bool verbose,
@@ -3471,7 +3473,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       == current_cluster->get_interaction_list( )->size( ) ) {
     // set status of parent's local contributions to completed
     current_cluster->set_downward_path_status( 2 );
-    call_l2t_operations( current_cluster, y_pFMM, verbose, verbose_file );
+    call_l2t_operations< run_count >(
+      current_cluster, y_pFMM, verbose, verbose_file );
     provide_local_contributions_to_children(
       current_cluster, verbose, verbose_file );
   } else {
@@ -3529,7 +3532,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 > >::apply( const distributed_block_vector & x,
   distributed_block_vector & y, bool trans, sc alpha, sc beta ) const {
-  apply_sl_dl( x, y, trans, alpha, beta );
+  apply_sl_dl< 0 >( x, y, trans, alpha, beta );
 }
 
 //! template specialization for double layer p0p1 matrix
@@ -3541,7 +3544,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p1 > >::apply( const distributed_block_vector & x,
   distributed_block_vector & y, bool trans, sc alpha, sc beta ) const {
-  apply_sl_dl( x, y, trans, alpha, beta );
+  apply_sl_dl< 0 >( x, y, trans, alpha, beta );
 }
 
 //! template specialization for double layer p1p0 matrix
@@ -3553,10 +3556,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 > >::apply( const distributed_block_vector & x,
   distributed_block_vector & y, bool trans, sc alpha, sc beta ) const {
-  apply_sl_dl( x, y, trans, alpha, beta );
+  apply_sl_dl< 0 >( x, y, trans, alpha, beta );
 }
 
 template< class kernel_type, class target_space, class source_space >
+template< slou run_count >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::apply_sl_dl( const distributed_block_vector & x,
   distributed_block_vector & y, bool trans, sc alpha, sc beta ) const {
@@ -3566,6 +3570,27 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   //#### multiply the global result vector by beta ####
   y.scale( beta );
 
+  // allocate a global result vector to store the result of the pFMM procedure.
+  std::vector< lo > my_blocks = y.get_my_blocks( );
+  distributed_block_vector y_pFMM( my_blocks, y.get_block_size( ),
+    y.get_size_of_block( ), true, MPI_COMM_WORLD );
+
+  // apply pFMM procedure
+  apply_pFMM_procedure< run_count >( x, y_pFMM, trans );
+
+  y.add( y_pFMM, alpha );
+
+  MPI_Barrier( y.get_comm( ) );
+  y.synchronize_shared_parts( );
+}
+
+template< class kernel_type, class target_space, class source_space >
+template< slou run_count >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space,
+  source_space >::apply_pFMM_procedure( const distributed_block_vector & x,
+  distributed_block_vector & y_pFMM, bool trans ) const {
+  //#### distributed pFMM ####
   //############################################################################
   //#### setup phase ####
   // reset the contributions of all clusters to zero
@@ -3597,16 +3622,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     // remove existing verbose file and write to new one
     remove( verbose_file.c_str( ) );
   }
-
-  //############################################################################
-  //#### distributed pFMM ####
-  // allocate a global result vector. Only the entries corresponding to clusters
-  // assigned to the current process are computed.
-  std::vector< lo > my_blocks = y.get_my_blocks( );
-  distributed_block_vector y_pFMM( my_blocks, y.get_block_size( ),
-    y.get_size_of_block( ), true, MPI_COMM_WORLD );
-
-  // auxiliary arrays for OpenMP dependencis (in OpenMP 4.5 must not be members)
+  // auxiliary arrays for OpenMP dependencies
+  // (must not be members in OpenMP 4.5)
   auto first = m2l_list.begin( );
   auto last = m2l_list.end( );
   char * aux_dep_m2l = new char[ std::distance( first, last ) ];
@@ -3654,7 +3671,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
 #pragma omp single
     {
-      // start the receive operationss
+      // start the receive operations
       std::vector< MPI_Request > array_of_requests(
         _receive_data_information.size( ) );
       start_receive_operations( array_of_requests );
@@ -3669,6 +3686,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             array_of_requests, array_of_indices, outcount );
         }
 
+        // processing of received data
         // we have to do this here to spawn tasks with correct dependencies
         if ( outcount != MPI_UNDEFINED && outcount > 0 ) {
           for ( lo i = 0; i < outcount; ++i ) {
@@ -3817,7 +3835,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 #pragma omp task depend( inout                                               \
                          : aux_dep_m [idx_m_parent:1], aux_dep_m [idx_m:1] ) \
   priority( 500 )
-                  m_list_task( x, current_cluster, _verbose, verbose_file );
+                  m_list_task< run_count >(
+                    x, current_cluster, _verbose, verbose_file );
                   break;
                 }
                 case 1: {
@@ -3827,7 +3846,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                          : aux_dep_m [idx_m_parent:1], aux_dep_m [idx_m:1] ) \
   depend( inout                                                              \
           : aux_dep_m2l_send [idx_receiver_1:1] ) priority( 500 )
-                  m_list_task( x, current_cluster, _verbose, verbose_file );
+                  m_list_task< run_count >(
+                    x, current_cluster, _verbose, verbose_file );
                   break;
                 }
                 case 2: {
@@ -3842,7 +3862,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           : aux_dep_m2l_send [idx_receiver_1:1] )                            \
     depend( inout                                                            \
             : aux_dep_m2l_send[ idx_receiver_2 ] ) priority( 500 )
-                  m_list_task( x, current_cluster, _verbose, verbose_file );
+                  m_list_task< run_count >(
+                    x, current_cluster, _verbose, verbose_file );
                   break;
                 }
               }
@@ -3854,7 +3875,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                 // operations do not collide)
                 case 0: {
 #pragma omp task depend( inout : aux_dep_m [idx_m:1] ) priority( 500 )
-                  m_list_task( x, current_cluster, _verbose, verbose_file );
+                  m_list_task< run_count >(
+                    x, current_cluster, _verbose, verbose_file );
                   break;
                 }
                 case 1: {
@@ -3864,7 +3886,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 #pragma omp task depend( \
   inout                  \
   : aux_dep_m2l_send [idx_receiver_1:1], aux_dep_m [idx_m:1] ) priority( 500 )
-                  m_list_task( x, current_cluster, _verbose, verbose_file );
+                  m_list_task< run_count >(
+                    x, current_cluster, _verbose, verbose_file );
                   break;
                 }
                 case 2: {
@@ -3878,7 +3901,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   : aux_dep_m2l_send [idx_receiver_1:1], aux_dep_m [idx_m:1] ) \
   depend( inout                                                \
           : aux_dep_m2l_send [idx_receiver_2:1] ) priority( 500 )
-                  m_list_task( x, current_cluster, _verbose, verbose_file );
+                  m_list_task< run_count >(
+                    x, current_cluster, _verbose, verbose_file );
                   break;
                 }
               }
@@ -3894,7 +3918,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             // the same cluster in the l-list (to prevent collision with m2l
             // tasks)
 #pragma omp task depend( inout : aux_dep_l [idx_l:1] ) priority( 400 )
-            l_list_task( y_pFMM, current_cluster, _verbose, verbose_file );
+            l_list_task< run_count >(
+              y_pFMM, current_cluster, _verbose, verbose_file );
             break;
           }
           case 3: {
@@ -3912,17 +3937,19 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               // previously generated tasks processing the same cluster in the
               // m2l list
 #pragma omp task priority( 300 )
-              m2l_list_task( y_pFMM, current_cluster, _verbose, verbose_file );
+              m2l_list_task< run_count >(
+                y_pFMM, current_cluster, _verbose, verbose_file );
             } else {
 // cluster depends additionally on the previously generated task
 // with the same position in the L-list
 #pragma omp task depend( inout : aux_dep_l [idx_l:1] ) priority( 300 )
-              m2l_list_task( y_pFMM, current_cluster, _verbose, verbose_file );
+              m2l_list_task< run_count >(
+                y_pFMM, current_cluster, _verbose, verbose_file );
             }
             break;
           }
           case 4: {
-            // nearfiel task
+            // nearfield task
             n_list.erase( it_current_cluster );
 // no dependencies, possible collisions are treated by atomic
 // operations
@@ -3932,31 +3959,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             break;
           }
         }
-        // @todo: is the following output of a new line useful at all?
-        //         if ( verbose ) {
-        // #pragma omp critical( verbose )
-        //           {
-        //             std::ofstream outfile( verbose_file.c_str( ),
-        //             std::ios::app ); if ( outfile.is_open( ) ) {
-        //               outfile << std::endl;
-        //               outfile.close( );
-        //             }
-        //           }
-        //         }
       }
     }
   }
-
-  y.add( y_pFMM, alpha );
-
-  MPI_Barrier( y.get_comm( ) );
-  y.synchronize_shared_parts( );
-
   // print out task timing
   if ( _measure_tasks ) {
     save_times( );
   }
-
   delete[] aux_dep_m;
   delete[] aux_dep_l;
   delete[] aux_dep_m2l;
@@ -3981,6 +3990,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 }
 
 template< class kernel_type, class target_space, class source_space >
+template< slou run_count >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::m_list_task( const distributed_block_vector & x,
   besthea::mesh::scheduling_time_cluster * current_cluster, bool verbose,
@@ -3989,7 +3999,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     _m_task_times.at( omp_get_thread_num( ) )
       .push_back( _global_timer.get_time_from_start< time_type >( ) );
   }
-  call_s2m_operations( x, current_cluster, verbose, verbose_file );
+  call_s2m_operations< run_count >( x, current_cluster, verbose, verbose_file );
   provide_moments_for_m2l( current_cluster, verbose, verbose_file );
   call_m2m_operations( current_cluster, verbose, verbose_file );
 
@@ -4002,6 +4012,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 }
 
 template< class kernel_type, class target_space, class source_space >
+template< slou run_count >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space,
   source_space >::call_s2m_operations( const distributed_block_vector & sources,
@@ -4033,7 +4044,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       general_spacetime_cluster * current_cluster
         = ( *associated_spacetime_clusters )[ i ];
 
-      apply_s2m_operation( sources, current_cluster );
+      apply_s2m_operation< run_count >( sources, current_cluster );
       if ( _measure_tasks ) {
         _m_subtask_times.at( omp_get_thread_num( ) )
           .push_back( _global_timer.get_time_from_start< time_type >( ) );
@@ -4043,6 +4054,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 }
 
 template< class kernel_type, class target_space, class source_space >
+template< slou run_count >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space,
   source_space >::apply_s2m_operation( const distributed_block_vector &
@@ -4053,18 +4065,20 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
 //! template specialization for single layer p0p0 matrix
 template<>
+template<>
 void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 >,
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 > >::
-  apply_s2m_operation( const distributed_block_vector & source_vector,
+  apply_s2m_operation< 0 >( const distributed_block_vector & source_vector,
     general_spacetime_cluster * source_cluster ) const {
   apply_s2m_operation_p0( source_vector, source_cluster );
 }
 
 //! template specialization for double layer p0p1 matrix
+template<>
 template<>
 void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
@@ -4072,12 +4086,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
     besthea::bem::basis_tri_p0 >,
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p1 > >::
-  apply_s2m_operation( const distributed_block_vector & source_vector,
+  apply_s2m_operation< 0 >( const distributed_block_vector & source_vector,
     general_spacetime_cluster * source_cluster ) const {
   apply_s2m_operations_p1_normal_drv( source_vector, source_cluster );
 }
 
 //! template specialization for adjoint double layer p1p0 matrix
+template<>
 template<>
 void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_adl_kernel_antiderivative,
@@ -4085,7 +4100,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
     besthea::bem::basis_tri_p1 >,
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 > >::
-  apply_s2m_operation( const distributed_block_vector & source_vector,
+  apply_s2m_operation< 0 >( const distributed_block_vector & source_vector,
     general_spacetime_cluster * source_cluster ) const {
   apply_s2m_operation_p0( source_vector, source_cluster );
 }
@@ -4220,6 +4235,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 }
 
 template< class kernel_type, class target_space, class source_space >
+template< slou run_count >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space,
   source_space >::apply_l2t_operation( const mesh::general_spacetime_cluster *
@@ -4230,18 +4246,20 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
 //! template specialization for single layer p0p0 matrix
 template<>
+template<>
 void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 >,
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 > >::
-  apply_l2t_operation( const mesh::general_spacetime_cluster * cluster,
+  apply_l2t_operation< 0 >( const mesh::general_spacetime_cluster * cluster,
     distributed_block_vector & output_vector ) const {
   apply_l2t_operation_p0( cluster, output_vector );
 }
 
 //! template specialization for double layer p0p1 matrix
+template<>
 template<>
 void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
@@ -4249,12 +4267,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
     besthea::bem::basis_tri_p0 >,
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p1 > >::
-  apply_l2t_operation( const mesh::general_spacetime_cluster * cluster,
+  apply_l2t_operation< 0 >( const mesh::general_spacetime_cluster * cluster,
     distributed_block_vector & output_vector ) const {
   apply_l2t_operation_p0( cluster, output_vector );
 }
 
 //! template specialization for adjoint double layer p1p0 matrix
+template<>
 template<>
 void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_adl_kernel_antiderivative,
@@ -4262,7 +4281,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
     besthea::bem::basis_tri_p1 >,
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 > >::
-  apply_l2t_operation( const mesh::general_spacetime_cluster * cluster,
+  apply_l2t_operation< 0 >( const mesh::general_spacetime_cluster * cluster,
     distributed_block_vector & output_vector ) const {
   apply_l2t_operation_p1_normal_drv( cluster, output_vector );
 }
@@ -4393,6 +4412,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 }
 
 template< class kernel_type, class target_space, class source_space >
+template< slou run_count >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::m2l_list_task( distributed_block_vector &
                                                  y_pFMM,
@@ -4417,7 +4437,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     if ( current_cluster->get_downward_path_status( ) == 1 ) {
       // set status of parent's local contributions to completed
       current_cluster->set_downward_path_status( 2 );
-      call_l2t_operations( current_cluster, y_pFMM, verbose, verbose_file );
+      call_l2t_operations< run_count >(
+        current_cluster, y_pFMM, verbose, verbose_file );
       provide_local_contributions_to_children(
         current_cluster, verbose, verbose_file );
     }

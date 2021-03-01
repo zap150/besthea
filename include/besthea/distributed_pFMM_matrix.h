@@ -241,9 +241,20 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * block matrix!).
    * @param[in] alpha
    * @param[in] beta
+   * @todo we should disable trans somehow, since it is not implemented
+   * correctly.
    */
+  template< slou run_count >
   void apply_sl_dl( const distributed_block_vector & x,
     distributed_block_vector & y, bool trans, sc alpha, sc beta ) const;
+
+  /**
+   * @todo we should disable trans somehow, since it is not implemented
+   * correctly.
+   * */
+  template< slou run_count >
+  void apply_pFMM_procedure( const distributed_block_vector & x,
+    distributed_block_vector & y_pFMM, bool trans ) const;
 
   /**
    * Sets the MPI communicator associated with the distributed pFMM matrix and
@@ -452,6 +463,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
    */
+  template< slou run_count >
   void call_s2m_operations( const distributed_block_vector & sources,
     mesh::scheduling_time_cluster * time_cluster, bool verbose,
     const std::string & verbose_file ) const;
@@ -463,6 +475,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                          S2M operation.
    * @param[in] source_cluster  Considered spacetime cluster.
    */
+  template< slou run_count >
   void apply_s2m_operation( const distributed_block_vector & source_vector,
     mesh::general_spacetime_cluster * source_cluster ) const;
 
@@ -640,6 +653,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
    */
+  template< slou run_count >
   void call_l2t_operations( mesh::scheduling_time_cluster * time_cluster,
     distributed_block_vector & output_vector, bool verbose,
     const std::string & verbose_file ) const;
@@ -703,6 +717,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @todo Store the quadratures of Chebyshev polynomials in space and Lagrange
    * polynomials in time again?
    */
+  template< slou run_count >
   void apply_l2t_operation( const mesh::general_spacetime_cluster * cluster,
     distributed_block_vector & output_vector ) const;
 
@@ -1068,6 +1083,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
    */
+  template< slou run_count >
   void m_list_task( const distributed_block_vector & x,
     mesh::scheduling_time_cluster * time_cluster, bool verbose,
     const std::string & verbose_file ) const;
@@ -1092,6 +1108,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
    */
+  template< slou run_count >
   void l_list_task( distributed_block_vector & y_pFMM,
     mesh::scheduling_time_cluster * time_cluster, bool verbose,
     const std::string & verbose_file ) const;
@@ -1116,6 +1133,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
    */
+  template< slou run_count >
   void m2l_list_task( distributed_block_vector & y_pFMM,
     mesh::scheduling_time_cluster * time_cluster, bool verbose,
     const std::string & verbose_file ) const;
