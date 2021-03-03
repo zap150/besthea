@@ -244,8 +244,10 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @todo we should disable trans somehow, since it is not implemented
    * correctly.
    */
-  template< slou run_count >
   void apply_sl_dl( const distributed_block_vector & x,
+    distributed_block_vector & y, bool trans, sc alpha, sc beta ) const;
+
+  void apply_hs( const distributed_block_vector & x,
     distributed_block_vector & y, bool trans, sc alpha, sc beta ) const;
 
   /**
@@ -509,6 +511,16 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     const distributed_block_vector & source_vector,
     mesh::general_spacetime_cluster * source_cluster ) const;
 
+  template< slou dim >
+  void apply_s2m_operation_curl_p1_hs(
+    const distributed_block_vector & source_vector,
+    mesh::general_spacetime_cluster * source_cluster ) const;
+
+  void apply_s2m_operation_p1_normal_hs(
+    const distributed_block_vector & source_vector,
+    mesh::general_spacetime_cluster * source_cluster,
+    const slou dimension ) const;
+
   /**
    * Calls all M2M operations associated with a given scheduling time cluster.
    * @param[in] time_cluster  Considered scheduling time cluster.
@@ -753,6 +765,15 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     const mesh::general_spacetime_cluster * cluster,
     distributed_block_vector & output_vector ) const;
 
+  template< slou dim >
+  void apply_l2t_operation_curl_p1_hs(
+    const mesh::general_spacetime_cluster * cluster,
+    distributed_block_vector & output_vector ) const;
+
+  void apply_l2t_operation_p1_normal_hs(
+    const mesh::general_spacetime_cluster * cluster, const slou dimension,
+    distributed_block_vector & output_vector ) const;
+
   /**
    * Executes all nearfield operations associated with a given scheduling time
    * cluster.
@@ -930,13 +951,17 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * times p1 basis functions for the spatial part of a spacetime cluster.
    * @param[in] source_cluster  Cluster for whose spatial component the
    *                            quadratures are computed.
-   * @param[out] T_drv  Full matrix where the quadratures are stored. The nodes
-   *                    of the cluster vary along the rows, the order of the
-   *                    polynomial along the columns of the matrix.
+   * @param[out] T_drv  Full matrix where the quadratures are stored. The
+   * nodes of the cluster vary along the rows, the order of the polynomial
+   * along the columns of the matrix.
    */
   void compute_normal_drv_chebyshev_quadrature_p1(
     const mesh::general_spacetime_cluster * source_cluster,
     full_matrix & T_drv ) const;
+
+  void compute_chebyshev_times_normal_quadrature_p1(
+    const mesh::general_spacetime_cluster * source_cluster, const slou dim,
+    full_matrix & T_normal_along_dim ) const;
 
   /**
    * Compute quadrature of the Lagrange polynomials and p0 basis functions for
@@ -962,7 +987,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                      dimension for which the coefficients are computed.
    * @param[in] center_diff The appropriate component of the difference vector
    *                        (target_center - source_center).
-   * @param[in] buffer_for_gaussians  Vector with size >= ( _spat_order + 1 )^2
+   * @param[in] buffer_for_gaussians  Vector with size >= ( _spat_order + 1
+   * )^2
    *                                  * ( _temp_order + 1 )^2 to store
    *                                  intermediate results in the computation
    *                                  of the m2l coefficients.
@@ -1312,7 +1338,17 @@ typedef besthea::linear_algebra::distributed_pFMM_matrix<
     besthea::bem::basis_tri_p1 > >
   distributed_pFMM_matrix_heat_dl_p0p1;
 
-/** Typedef for the spatially adjoint double layer p1-p0 PFMM matrix */
+/** Typedef for the distributed spatially adjoint double layer p1-p0 PFMM matrix
+ */
+typedef besthea::linear_algebra::distributed_pFMM_matrix<
+  besthea::bem::spacetime_heat_adl_kernel_antiderivative,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 > >
+  distributed_pFMM_matrix_heat_adl_p1p0;
+
+/** Typedef for the distributed hypersingular p1-p1 PFMM matrix */
 typedef besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_adl_kernel_antiderivative,
   besthea::bem::distributed_fast_spacetime_be_space<
