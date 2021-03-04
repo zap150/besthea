@@ -1064,7 +1064,7 @@ template<>
 inline void besthea::mesh::general_spacetime_cluster::
   compute_surface_curls_p1_along_dim< 0 >(
     std::vector< sc > & surface_curls_along_dim ) const {
-  surface_curls_along_dim.resize( 3 * _n_space_nodes );
+  surface_curls_along_dim.resize( 3 * _n_space_elements );
 
   const spacetime_tensor_mesh * local_mesh = _mesh.get_local_mesh( );
   linear_algebra::indices< 3 > space_element;
@@ -1115,7 +1115,7 @@ template<>
 inline void besthea::mesh::general_spacetime_cluster::
   compute_surface_curls_p1_along_dim< 1 >(
     std::vector< sc > & surface_curls_along_dim ) const {
-  surface_curls_along_dim.resize( 3 * _n_space_nodes );
+  surface_curls_along_dim.resize( 3 * _n_space_elements );
 
   const spacetime_tensor_mesh * local_mesh = _mesh.get_local_mesh( );
   linear_algebra::indices< 3 > space_element;
@@ -1166,7 +1166,7 @@ template<>
 inline void besthea::mesh::general_spacetime_cluster::
   compute_surface_curls_p1_along_dim< 2 >(
     std::vector< sc > & surface_curls_along_dim ) const {
-  surface_curls_along_dim.resize( 3 * _n_space_nodes );
+  surface_curls_along_dim.resize( 3 * _n_space_elements );
 
   const spacetime_tensor_mesh * local_mesh = _mesh.get_local_mesh( );
   linear_algebra::indices< 3 > space_element;

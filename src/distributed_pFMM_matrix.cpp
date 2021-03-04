@@ -2967,6 +2967,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   lo n_space_elems = source_cluster->get_n_space_elements( );
   lo n_space_nodes = source_cluster->get_n_space_nodes( );
   T_normal_along_dim.resize( n_space_nodes, _spat_contribution_size );
+  T_normal_along_dim.fill( 0.0 );
   // get some info on the current cluster
   vector_type cluster_center_space( 3 );
   vector_type cluster_half_space( 3 );
@@ -3032,12 +3033,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           sc value2 = 0.0;
           sc value3 = 0.0;
           for ( lo j = 0; j < size_quad; ++j ) {
-            sc weigth_poly = cheb_dim_0[ beta0 * size_quad + j ]
+            sc weight_poly = cheb_dim_0[ beta0 * size_quad + j ]
               * cheb_dim_1[ beta1 * size_quad + j ]
               * cheb_dim_2[ beta2 * size_quad + j ] * wy[ j ] * elem_area;
-            value1 += weigth_poly * ( (sc) 1.0 - y1_ref[ j ] - y2_ref[ j ] );
-            value2 += weigth_poly * y1_ref[ j ];
-            value3 += weigth_poly * y2_ref[ j ];
+            value1 += weight_poly * ( (sc) 1.0 - y1_ref[ j ] - y2_ref[ j ] );
+            value2 += weight_poly * y1_ref[ j ];
+            value3 += weight_poly * y2_ref[ j ];
           }
           T_normal_along_dim.add_atomic(
             source_cluster->local_spacetime_node_idx_2_local_space_node_idx(
@@ -3045,12 +3046,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             current_index, value1 * normal[ dim ] );
           T_normal_along_dim.add_atomic(
             source_cluster->local_spacetime_node_idx_2_local_space_node_idx(
-              elems_2_local_nodes[ 6 * i ] ),
+              elems_2_local_nodes[ 6 * i + 1 ] ),
             current_index, value2 * normal[ dim ] );
           T_normal_along_dim.add_atomic(
             source_cluster->local_spacetime_node_idx_2_local_space_node_idx(
-              elems_2_local_nodes[ 6 * i ] ),
+              elems_2_local_nodes[ 6 * i + 2 ] ),
             current_index, value3 * normal[ dim ] );
+          ++current_index;
         }
       }
     }
@@ -3120,6 +3122,60 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       }
       quad *= elem_size;
       L.set( j, i, quad );
+    }
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::
+  compute_lagrange_drv_quadrature(
+    const mesh::general_spacetime_cluster * source_cluster,
+    full_matrix & L_drv ) const {
+  lo n_temp_elems = source_cluster->get_n_time_elements( );
+  lo n_spat_elems = source_cluster->get_n_space_elements( );
+  L_drv.resize( _temp_order + 1, n_temp_elems );
+
+  vector_type eval_points( 2 );
+  vector_type evaluation( 2 );
+
+  sc cluster_t_start = source_cluster->get_time_center( )
+    - source_cluster->get_time_half_size( );
+  sc cluster_t_end = source_cluster->get_time_center( )
+    + source_cluster->get_time_half_size( );
+  sc cluster_size = cluster_t_end - cluster_t_start;
+
+  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
+    = source_cluster->get_mesh( );
+  // this function should only be called for clusters which are local, i.e.
+  // whose elemnts are in the local mesh
+  const mesh::spacetime_tensor_mesh * local_mesh
+    = distributed_mesh->get_local_mesh( );
+  lo local_start_idx = distributed_mesh->get_local_start_idx( );
+
+  linear_algebra::coordinates< 1 > elem_t_start;
+  linear_algebra::coordinates< 1 > elem_t_end;
+  for ( lo i = 0; i < n_temp_elems; ++i ) {
+    // we use that the elements in the cluster are tensor products of spatial
+    // elements and timesteps, and are sorted w.r.t. the timesteps. In
+    // particular we get all temporal elements in the cluster by considering
+    // every n_spat_elems spacetime element.
+    lo local_elem_idx = distributed_mesh->global_2_local(
+      local_start_idx, source_cluster->get_element( i * n_spat_elems ) );
+    lo local_elem_idx_time = local_mesh->get_time_element( local_elem_idx );
+
+    local_mesh->get_temporal_nodes(
+      local_elem_idx_time, elem_t_start, elem_t_end );
+    // compute the end points of the current element in relative
+    // coordinates with respect to the time cluster and transform them to
+    // [-1,1]
+    eval_points[ 0 ]
+      = -1.0 + 2.0 * ( elem_t_start[ 0 ] - cluster_t_start ) / cluster_size;
+    eval_points[ 1 ]
+      = -1.0 + 2.0 * ( elem_t_end[ 0 ] - cluster_t_start ) / cluster_size;
+    for ( lo j = 0; j <= _temp_order; ++j ) {
+      _lagrange.evaluate( j, eval_points, evaluation );
+      L_drv.set( j, i, evaluation[ 1 ] - evaluation[ 0 ] );
     }
   }
 }
@@ -3711,7 +3767,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // allocate a global result vector to store the result of the pFMM procedure.
   std::vector< lo > my_blocks = y.get_my_blocks( );
   distributed_block_vector y_pFMM( my_blocks, y.get_block_size( ),
-    y.get_size_of_block( ), true, MPI_COMM_WORLD );
+    y.get_size_of_block( ), true, y.get_comm( ) );
 
   // apply pFMM procedure
   // We use barriers between pFMM procedures to be on the safe side. The problem
@@ -3725,7 +3781,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   apply_pFMM_procedure< 2 >( x, y_pFMM, trans );
   MPI_Barrier( y.get_comm( ) );
   // add scaled result to y, before overwriting y_pFMM and starting next 3 runs
-  y.add( y_pFMM, alpha * _alpha * _alpha );
+  y.add( y_pFMM, alpha );
   y_pFMM.fill( 0.0 );
   apply_pFMM_procedure< 3 >( x, y_pFMM, trans );
   MPI_Barrier( y.get_comm( ) );
@@ -3734,7 +3790,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   apply_pFMM_procedure< 5 >( x, y_pFMM, trans );
   MPI_Barrier( y.get_comm( ) );
   // add scaled result to y and synchronize y
-  y.add( y_pFMM, -alpha * _alpha );
+  y.add( y_pFMM, -alpha );
   MPI_Barrier( y.get_comm( ) );
   y.synchronize_shared_parts( );
 }
@@ -3772,7 +3828,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // the first run. All nearfield operations are executed in this run. for all
   // other operators run_count equals zero by default, so the list is filled.
   if ( run_count == 0 ) {
-    n_list == _n_list;
+    n_list = _n_list;
   }
 
   // std::string verbose_file = verbose_dir + "/process_";
@@ -4533,7 +4589,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   full_matrix L;
   compute_lagrange_quadrature( source_cluster, L );
-  full_matrix T_curl( 3 * n_space_nodes, _spat_contribution_size, false );
+  full_matrix T_curl( n_space_nodes, _spat_contribution_size, false );
   full_matrix T;
   compute_chebyshev_quadrature_p0( source_cluster, T );
   std::vector< sc > surf_curls_curr_dim;
@@ -4541,7 +4597,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   source_cluster->compute_surface_curls_p1_along_dim< dim >(
     surf_curls_curr_dim );
   // compute T_curl from T and surface_curls
-
+  // NOTE: T_curl already contains the factor _alpha which appears in the
+  // integration by parts formula of the bilinearform of the hypersingular op
   const std::vector< lo > & elems_2_local_nodes
     = source_cluster->get_elems_2_local_nodes( );
 
@@ -4551,19 +4608,20 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         source_cluster->local_spacetime_node_idx_2_local_space_node_idx(
           elems_2_local_nodes[ 6 * i_space_el ] ),
         i_beta,
-        surf_curls_curr_dim[ 3 * i_space_el ] * T.get( i_space_el, i_beta ) );
+        surf_curls_curr_dim[ 3 * i_space_el ] * T.get( i_space_el, i_beta )
+          * _alpha );
       T_curl.add_atomic(
         source_cluster->local_spacetime_node_idx_2_local_space_node_idx(
           elems_2_local_nodes[ 6 * i_space_el + 1 ] ),
         i_beta,
-        surf_curls_curr_dim[ 3 * i_space_el + 1 ]
-          * T.get( i_space_el, i_beta ) );
+        surf_curls_curr_dim[ 3 * i_space_el + 1 ] * T.get( i_space_el, i_beta )
+          * _alpha );
       T_curl.add_atomic(
         source_cluster->local_spacetime_node_idx_2_local_space_node_idx(
           elems_2_local_nodes[ 6 * i_space_el + 2 ] ),
         i_beta,
-        surf_curls_curr_dim[ 3 * i_space_el + 2 ]
-          * T.get( i_space_el, i_beta ) );
+        surf_curls_curr_dim[ 3 * i_space_el + 2 ] * T.get( i_space_el, i_beta )
+          * _alpha );
     }
   }
 
@@ -4632,24 +4690,24 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // get references of current moment and all required matrices
   sc * moment = source_cluster->get_pointer_to_moment( );
 
-  full_matrix L;
-  compute_lagrange_quadrature( source_cluster, L );
+  full_matrix L_drv;
+  compute_lagrange_drv_quadrature( source_cluster, L_drv );
   full_matrix T_normal_dim;
   compute_chebyshev_times_normal_quadrature_p1(
     source_cluster, dimension, T_normal_dim );
 
-  // compute D = Q * T_normal_dim and then the moment mu = L * D
+  // compute D = Q * T_normal_dim and then the moment mu = _alpha * L_drv * D
   aux_matrix.multiply( sources, T_normal_dim );
-  // mu = L * D with explicit cblas routine call
-  lo n_rows_lagrange = L.get_n_rows( );
+  // mu = _alpha * L_drv * D with explicit cblas routine call
+  lo n_rows_lagrange = L_drv.get_n_rows( );
   lo n_cols_aux_matrix = aux_matrix.get_n_columns( );
   lo n_rows_aux_matrix = aux_matrix.get_n_rows( );
   lo lda = n_rows_lagrange;
   lo ldb = n_rows_aux_matrix;
-  sc alpha = 1.0;
+  sc alpha = _alpha;  // heat capacity constant
   sc beta = 0.0;
   cblas_dgemm( CblasColMajor, CblasNoTrans, CblasNoTrans, n_rows_lagrange,
-    n_cols_aux_matrix, n_rows_aux_matrix, alpha, L.data( ), lda,
+    n_cols_aux_matrix, n_rows_aux_matrix, alpha, L_drv.data( ), lda,
     aux_matrix.data( ), ldb, beta, moment, n_rows_lagrange );
 }
 
@@ -4888,7 +4946,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   const std::vector< lo > & spacetime_elements = cluster->get_all_elements( );
   const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
     = cluster->get_mesh( );
-  // a cluster for which an S2M operation is executed is always local!
+  // a cluster for which an L2T operation is executed is always local!
   const mesh::spacetime_tensor_mesh * local_mesh
     = distributed_mesh->get_local_mesh( );
   lo local_start_idx = distributed_mesh->get_local_start_idx( );
@@ -4933,7 +4991,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   // TODO: move computation of T_curl to separate function to avoid redundant
   // code
-  full_matrix T_curl( 3 * n_space_nodes, _spat_contribution_size, false );
+  full_matrix T_curl( n_space_nodes, _spat_contribution_size, false );
   full_matrix T;
   compute_chebyshev_quadrature_p0( cluster, T );
   full_matrix L;
@@ -4941,8 +4999,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   std::vector< sc > surf_curls_curr_dim;
   cluster->compute_surface_curls_p1_along_dim< dim >( surf_curls_curr_dim );
-  // compute T_curl from T and surface_curls
 
+  // compute T_curl from T and surface_curls
+  // NOTE: T_curl already contains the factor _alpha which appears in the
+  // integration by parts formula of the bilinearform of the hypersingular op
   const std::vector< lo > & elems_2_local_nodes
     = cluster->get_elems_2_local_nodes( );
 
@@ -4952,19 +5012,20 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         cluster->local_spacetime_node_idx_2_local_space_node_idx(
           elems_2_local_nodes[ 6 * i_space_el ] ),
         i_beta,
-        surf_curls_curr_dim[ 3 * i_space_el ] * T.get( i_space_el, i_beta ) );
+        surf_curls_curr_dim[ 3 * i_space_el ] * T.get( i_space_el, i_beta )
+          * _alpha );
       T_curl.add_atomic(
         cluster->local_spacetime_node_idx_2_local_space_node_idx(
           elems_2_local_nodes[ 6 * i_space_el + 1 ] ),
         i_beta,
-        surf_curls_curr_dim[ 3 * i_space_el + 1 ]
-          * T.get( i_space_el, i_beta ) );
+        surf_curls_curr_dim[ 3 * i_space_el + 1 ] * T.get( i_space_el, i_beta )
+          * _alpha );
       T_curl.add_atomic(
         cluster->local_spacetime_node_idx_2_local_space_node_idx(
           elems_2_local_nodes[ 6 * i_space_el + 2 ] ),
         i_beta,
-        surf_curls_curr_dim[ 3 * i_space_el + 2 ]
-          * T.get( i_space_el, i_beta ) );
+        surf_curls_curr_dim[ 3 * i_space_el + 2 ] * T.get( i_space_el, i_beta )
+          * _alpha );
     }
   }
 
@@ -4987,7 +5048,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   const std::vector< lo > & spacetime_elements = cluster->get_all_elements( );
   const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
     = cluster->get_mesh( );
-  // a cluster for which an S2M operation is executed is always local!
+  // a cluster for which an L2T operation is executed is always local!
   const mesh::spacetime_tensor_mesh * local_mesh
     = distributed_mesh->get_local_mesh( );
   lo local_start_idx = distributed_mesh->get_local_start_idx( );

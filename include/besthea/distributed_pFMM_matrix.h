@@ -976,6 +976,10 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     const mesh::general_spacetime_cluster * source_cluster,
     full_matrix & L ) const;
 
+  void compute_lagrange_drv_quadrature(
+    const mesh::general_spacetime_cluster * source_cluster,
+    full_matrix & L_drv ) const;
+
   /*!
    * Computes coupling coefficients for the spacetime m2l operation for one of
    * the three space dimensions implicitly given.
@@ -1350,11 +1354,11 @@ typedef besthea::linear_algebra::distributed_pFMM_matrix<
 
 /** Typedef for the distributed hypersingular p1-p1 PFMM matrix */
 typedef besthea::linear_algebra::distributed_pFMM_matrix<
-  besthea::bem::spacetime_heat_adl_kernel_antiderivative,
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p1 >,
   besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p0 > >
-  distributed_pFMM_matrix_heat_adl_p1p0;
+    besthea::bem::basis_tri_p1 > >
+  distributed_pFMM_matrix_heat_hs_p1p1;
 
 #endif /* INCLUDE_BESTHEA_DISTRIBUTED_PFMM_MATRIX_H_ */
