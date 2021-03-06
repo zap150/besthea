@@ -54,26 +54,16 @@ protected:
 
   struct quadrature_nodes {
     std::vector< sc, besthea::allocator_type< sc > >
-      _x1;  //!< First coordinates of quadrature nodes in the test element
+      _xs;  //!< First coordinates of quadrature nodes
     std::vector< sc, besthea::allocator_type< sc > >
-      _x2;  //!< Second coordinates of quadrature nodes in the test element
+      _ys;  //!< Second coordinates of quadrature nodes
     std::vector< sc, besthea::allocator_type< sc > >
-      _x3;  //!< Third coordinates of quadrature nodes in the test element
-
-    std::vector< sc, besthea::allocator_type< sc > >
-      _y1;  //!< First coordinates of quadrature nodes in the trial element
-    std::vector< sc, besthea::allocator_type< sc > >
-      _y2;  //!< Second coordinates of quadrature nodes in the trial element
-    std::vector< sc, besthea::allocator_type< sc > >
-      _y3;  //!< Third coordinates of quadrature nodes in the trial element
+      _zs;  //!< Third coordinates of quadrature nodes
 
     quadrature_nodes(lo size) {
-      _x1.resize( size );
-      _x2.resize( size );
-      _x3.resize( size );
-      _y1.resize( size );
-      _y2.resize( size );
-      _y3.resize( size );
+      _xs.resize( size );
+      _ys.resize( size );
+      _zs.resize( size );
     }
   };
 
@@ -119,7 +109,14 @@ public:
 
 protected:
 
-  void get_values(sc * values_out, lo delta, lo i_test, lo i_trial, quadrature_nodes & quadr_nodes, bool special = false) const ;
+  void get_values_regular      (sc * values_out, lo delta, lo i_test, lo i_trial,
+    const quadrature_nodes & quadr_nodes_tst, const quadrature_nodes & quadr_nodes_trl) const;
+  void get_values_singular     (sc * values_out, lo delta, lo i_test, lo i_trial,
+    const quadrature_nodes & quadr_nodes_tst, const quadrature_nodes & quadr_nodes_trl) const;
+  void get_values_delta0       (sc * values_out,           lo i_test, lo i_trial, int n_shared_vertices, int rot_test, int rot_trial,
+    const quadrature_nodes & quadr_nodes_tst, const quadrature_nodes & quadr_nodes_trl) const;
+  void get_values_delta0special(sc * values_out,           lo i_test, lo i_trial, int n_shared_vertices, int rot_test, int rot_trial,
+    const quadrature_nodes & quadr_nodes_tst, const quadrature_nodes & quadr_nodes_trl) const;
 
   void apply_regular(  const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
   void apply_singular( const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
@@ -127,16 +124,13 @@ protected:
 
   void init_quadrature();
 
-  void get_type( lo i_test, lo i_trial, int & type_int, int & rot_test,
+  void get_type( lo i_test, lo i_trial, int & n_shared_vertices, int & rot_test,
     int & rot_trial ) const;
 
-  void triangles_to_geometry( const linear_algebra::coordinates< 3 > & x1,
-    const linear_algebra::coordinates< 3 > & x2,
-    const linear_algebra::coordinates< 3 > & x3,
-    const linear_algebra::coordinates< 3 > & y1,
-    const linear_algebra::coordinates< 3 > & y2,
-    const linear_algebra::coordinates< 3 > & y3, int type_int, int rot_test,
-    int rot_trial, quadrature_nodes & quadr_nodes) const ;
+  void triangles_to_geometry_tst( lo i_tst, int n_shared_vertices, int rot_test,
+    quadrature_nodes & quadr_nodes_tst) const ;
+  void triangles_to_geometry_trl( lo i_trl, int n_shared_vertices, int rot_trial,
+    quadrature_nodes & quadr_nodes_trl) const ;
   
   void hypercube_to_triangles( sc ksi, sc eta1, sc eta2, sc eta3,
     int n_shared_vertices, int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref,

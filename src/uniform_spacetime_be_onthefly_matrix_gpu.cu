@@ -423,8 +423,8 @@ __device__ void d_get_values_regular_sl_p0_p0(sc * values_out, lo delta, lo i_te
       ttau, sqrt_ttau, kp ) * w[ i_quad ];
   }
 
-  value *= test_area * trial_area;
-  *values_out = value;
+  sc multiplier = test_area * trial_area;
+  *values_out = value * multiplier;
   return;
 
 }
@@ -490,10 +490,10 @@ __device__ void d_get_values_regular_dl_p0_p1(sc * values_out, lo delta, lo i_te
     value3 += kernel * y2_ref[ i_quad ];
   }
 
-  sc factor = test_area * trial_area;
-  values_out[0] = value1 * factor;
-  values_out[1] = value2 * factor;
-  values_out[2] = value3 * factor;
+  sc multiplier = test_area * trial_area;
+  values_out[0] = value1 * multiplier;
+  values_out[1] = value2 * multiplier;
+  values_out[2] = value3 * multiplier;
   return;
 
 }
@@ -591,8 +591,8 @@ __device__ void d_get_values_regular_hs_p1_p1(sc * values_out, lo delta, lo i_te
     value33 += ( kernel1 * curl_dot[ 8 ] + kernel2 * x2_ref[ i_quad ] * y2_ref[ i_quad ] ) * w[ i_quad ];
   }
 
-  sc factor = test_area * trial_area;
-  for(lo j = 0; j < 9; j++) values_out[j] *= factor;
+  sc multiplier = test_area * trial_area;
+  for(lo j = 0; j < 9; j++) values_out[j] *= multiplier;
   return;
 
 }
