@@ -76,11 +76,11 @@ private:
   void apply_with_gpu(const block_vector_type & x, const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha, sc beta) const;
 
   void apply_with_gpu(const block_vector_type & x, const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha, sc beta,
-    const apply_regular_gpu_tmp_data & tmp_data) const;
+    const apply_regular_gpu_tmp_data & tmp_data, apply_load_distribution & load_distr, timer_collection & timers) const;
 
   void apply_regular_gpu_begin( const block_vector_type & x, const block_vector_type & y, sc alpha,
-    const apply_regular_gpu_tmp_data & tmp_data ) const;
-  void apply_regular_gpu_finish( block_vector_type & y, const apply_regular_gpu_tmp_data & tmp_data ) const;
+    const apply_regular_gpu_tmp_data & tmp_data, const apply_load_distribution & load_distr, timer_collection & timers ) const;
+  void apply_regular_gpu_finalize( block_vector_type & y, const apply_regular_gpu_tmp_data & tmp_data ) const;
 
   template<int quadr_order>
   void init_gpu_quadrature_memory() const;

@@ -165,6 +165,26 @@ class besthea::linear_algebra::block_vector {
     _size = size;
   }
 
+  /**
+   * Resizes this block vector and its blocks to match the dimensions of the original vector.
+   * @param[in] other The original block vector with target dimensions.
+   * @param[in] zero Initialize to 0 if true.
+   */
+  void resize_match( const block_vector & original, bool zero = true ) {
+    resize(original.get_block_size());
+    resize_blocks(original.get_size_of_block(), zero);
+  }
+
+  /**
+   * Resizes this block vector and its blocks to match the permuted dimensions of the original vector.
+   * @param[in] other The original block vector with permuted target dimensions.
+   * @param[in] zero Initialize to 0 if true.
+   */
+  void resize_match_perm( const block_vector & original, bool zero = true ) {
+    resize(original.get_size_of_block());
+    resize_blocks(original.get_block_size(), zero);
+  }
+
   /*!
    * @brief Sets the i-th element of the d-th block.
    * @param[in] d Block index.

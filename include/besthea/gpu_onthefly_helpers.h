@@ -7,9 +7,12 @@
 #define INCLUDE_BESTHEA_GPU_ONTHEFLY_HELPERS_H_
 
 #include <cmath>
+#include <vector>
 
 #include "besthea/settings.h"
 #include "besthea/uniform_spacetime_tensor_mesh.h"
+#include "besthea/time_measurer.h"
+#include "besthea/time_measurer_cuda.h"
 
 
 
@@ -29,6 +32,10 @@ namespace besthea::onthefly {
   struct apply_regular_gpu_tmp_data;
 
   class gpu_uniform_spacetime_tensor_mesh;
+
+  class apply_load_distribution;
+
+  struct timer_collection;
   
 #ifdef __NVCC__
   __host__ __device__
@@ -129,13 +136,13 @@ struct besthea::onthefly::apply_regular_gpu_tmp_data {
   std::vector<sc*> d_x, d_y; // raw data on device
   std::vector<size_t> pitch_x, pitch_y; // pitch in bytes
   std::vector<lo> ld_x, ld_y; // leading dimension in elements
-  std::vector<lo> gpu_i_tst_begins;
   
   apply_regular_gpu_tmp_data();
   apply_regular_gpu_tmp_data(const apply_regular_gpu_tmp_data & that) = delete;
   ~apply_regular_gpu_tmp_data();
-  void allocate(int n_gpus, lo x_block_count, lo x_size_of_block, lo y_block_count, lo y_size_of_block, lo n_elems);
+  void allocate(int n_gpus, lo x_block_count, lo x_size_of_block, lo y_block_count, lo y_size_of_block);
   void free();
+  void print_times() const;
 };
 
 
@@ -155,6 +162,52 @@ public:
   int get_n_gpus() const { return n_gpus; }
 
 };
+
+
+
+
+
+class besthea::onthefly::apply_load_distribution {
+private:
+  lo cpu_n_tst_elems;
+  double cpu_n_tst_elems_target;
+  std::vector<lo> gpu_i_tst_begins;
+  int n_gpus;
+  lo n_elems;
+public:
+  apply_load_distribution(int n_gpus, lo n_elems, lo init_cpu_n_tst_elems);
+  void update_gpu_begins();
+  void adapt(double cpu_time_sing_del0, double cpu_time_reg, double gpu_time, lo cpu_chunk_size, double inertia);
+  lo get_cpu_begin() const { return 0; }
+  lo get_cpu_end() const { return cpu_n_tst_elems; }
+  lo get_cpu_count() const { return cpu_n_tst_elems; }
+  lo get_gpu_begin(int gpu_idx) const { return gpu_i_tst_begins[gpu_idx]; }
+  lo get_gpu_end(int gpu_idx) const { return gpu_i_tst_begins[gpu_idx+1]; }
+  lo get_gpu_count(int gpu_idx) const { return get_gpu_end(gpu_idx) - get_gpu_begin(gpu_idx); }
+};
+
+
+
+
+
+struct besthea::onthefly::timer_collection {
+  std::vector<besthea::tools::time_measurer_cuda> gpu_all;
+  std::vector<besthea::tools::time_measurer_cuda> gpu_copyin;
+  std::vector<besthea::tools::time_measurer_cuda> gpu_compute;
+  std::vector<besthea::tools::time_measurer_cuda> gpu_copyout;
+  besthea::tools::time_measurer cpu_scalein;
+  besthea::tools::time_measurer cpu_regular;
+  besthea::tools::time_measurer cpu_singular;
+  besthea::tools::time_measurer cpu_delta0;
+  besthea::tools::time_measurer cpu_all;
+  besthea::tools::time_measurer combined;
+  timer_collection(int n_gpus);
+  void print_all();
+  void print_one(std::vector<besthea::tools::time_measurer_cuda> & timers);
+  double get_gpu_all_time();
+};
+
+
 
 
 

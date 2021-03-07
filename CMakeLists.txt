@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-if(BESTHEA_USE_CUDA)
+if(USE_CUDA)
   project(besthea LANGUAGES CXX CUDA)
 else()
   project(besthea LANGUAGES CXX)
@@ -18,7 +18,7 @@ enable_MPI()
 enable_OpenMP()
 enable_Boost()
 enable_Eigen()
-if(BESTHEA_USE_CUDA)
+if(USE_CUDA)
   enable_CUDA()
 endif()
 if(BUILD_EXAMPLES)
@@ -101,6 +101,7 @@ set(besthea_INCLUDES
   include/besthea/tetrahedral_volume_mesh.h
   include/besthea/time_cluster.h
   include/besthea/time_cluster_tree.h
+  include/besthea/time_measurer.h
   include/besthea/timer.h
   include/besthea/tools.h
   include/besthea/tree_structure.h
@@ -118,10 +119,11 @@ set(besthea_INCLUDES
   include/besthea/volume_basis_function.h
 )
 
-if(BESTHEA_USE_CUDA)
+if(USE_CUDA)
   set(besthea_INCLUDES
     ${besthea_INCLUDES}
     include/besthea/gpu_onthefly_helpers.h
+    include/besthea/time_measurer_cuda.h
     include/besthea/uniform_spacetime_be_onthefly_matrix_gpu.h
   )
 endif()
@@ -182,7 +184,7 @@ set(besthea_SOURCES
   src/vector.cpp
 )
 
-if(BESTHEA_USE_CUDA)
+if(USE_CUDA)
   set(besthea_SOURCES
     ${besthea_SOURCES}
     src/gpu_onthefly_helpers.cpp

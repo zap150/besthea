@@ -75,8 +75,7 @@ void besthea::linear_algebra::block_vector::copy( block_vector const & that ) {
 }
 
 void besthea::linear_algebra::block_vector::copy_permute( const block_vector & that, sc alpha ) {
-  resize( that.get_size_of_block( ) );
-  resize_blocks( that.get_block_size( ) );
+  resize_match_perm(that, false);
 
   constexpr lo tile_size = 128; // chosen experimentally, the best for double on 1 thread on Barbora
   lo bb_max = (that._block_size - 1) / tile_size;
@@ -126,7 +125,7 @@ void besthea::linear_algebra::block_vector::copy_permute( const block_vector & t
 }
 
 void besthea::linear_algebra::block_vector::copy_from_raw(
-  lo block_size, lo size, const sc * data ) {
+    lo block_size, lo size, const sc * data ) {
   if ( block_size != _block_size ) {
     resize( block_size );
   }
@@ -144,7 +143,8 @@ void besthea::linear_algebra::block_vector::copy_to_raw( sc * data ) const {
   }
 }
   
-void besthea::linear_algebra::block_vector::copy_from_raw_permute( lo block_size, lo size, const sc * data, sc alpha ) {
+void besthea::linear_algebra::block_vector::copy_from_raw_permute(
+    lo block_size, lo size, const sc * data, sc alpha ) {
   resize( size );
   resize_blocks( block_size );
 
