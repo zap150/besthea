@@ -82,7 +82,6 @@ void besthea::linear_algebra::block_vector::copy_permute( const block_vector & t
   lo bb_max = (that._block_size - 1) / tile_size;
   lo ii_max = (that._size - 1) / tile_size;
 
-  // parallelism wos not really worth (speedup < 2 on any number of cores)
   for (lo bb = 0; bb < bb_max; bb++) {
     lo BB = bb * tile_size;
     for (lo ii = 0; ii < ii_max; ii++) {
@@ -114,6 +113,7 @@ void besthea::linear_algebra::block_vector::copy_permute( const block_vector & t
 
 
   // performance benefit of using mkl_domatcopy is very small and comsumes much more memory because of the required buffers
+  // if the data in this class were stored in one contiguous buffer, mkl_domatcopy should be a much better option
 
   // sc * raw_data_in = new sc[_size * _block_size];
   // sc * raw_data_out = new sc[_size * _block_size];

@@ -1088,6 +1088,229 @@ __global__ void g_apply_regular_ver2
 
 
 
+
+template<class kernel_type, class test_space_type, class trial_space_type>
+void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
+  apply( const block_vector_type & x, block_vector_type & y, bool trans, sc alpha, sc beta ) const {
+
+  if(trans) {
+    std::cerr << "Transposed matrices are not supported\n";
+    return;
+  }
+  
+  block_vector_type y_perm;
+  block_vector_type x_perm;
+
+  y_perm.copy_permute(y);
+  x_perm.copy_permute(x);
+
+
+  apply_with_gpu(x, x_perm, y_perm, alpha, beta);
+
+
+  y.copy_permute(y_perm);
+
+}
+
+
+
+
+
+template<class kernel_type, class test_space_type, class trial_space_type>
+void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
+  apply_with_gpu(const block_vector_type & x, const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha, sc beta) const {
+
+    apply_regular_gpu_tmp_data tmp_data;
+    lo n_elems = gpu_mesh->get_metadata().n_elems;
+    switch(gpu_kernel_version) {
+      case 1:
+        tmp_data.allocate(n_gpus, x.get_block_size(), x.get_size_of_block(), y_perm.get_block_size(), y_perm.get_size_of_block(), n_elems);
+        break;
+      case 2:
+      default:
+        tmp_data.allocate(n_gpus, x_perm.get_block_size(), x_perm.get_size_of_block(), y_perm.get_block_size(), y_perm.get_size_of_block(), n_elems);
+        break;
+    }
+    
+
+    apply_with_gpu(x, x_perm, y_perm, alpha, beta, tmp_data);
+
+      
+    tmp_data.free();
+}
+
+
+
+
+
+template<class kernel_type, class test_space_type, class trial_space_type>
+void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
+  apply_with_gpu(const block_vector_type & x, const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha, sc beta,
+    const apply_regular_gpu_tmp_data & tmp_data) const {
+
+  y_perm.scale(beta);
+
+  switch(gpu_kernel_version) {
+    case 1:
+      this->apply_regular_gpu_begin(x, y_perm, alpha, tmp_data);
+      break;
+    case 2:
+    default:
+      this->apply_regular_gpu_begin(x_perm, y_perm, alpha, tmp_data);
+      break;
+  }
+  
+  this->apply_singular(x_perm, y_perm, alpha);
+  this->apply_delta0(x_perm, y_perm, alpha);
+
+  this->apply_regular_gpu_finish(y_perm, tmp_data);
+
+}
+
+
+
+
+
+template<class kernel_type, class test_space_type, class trial_space_type>
+void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
+  apply_regular_gpu_begin( const block_vector_type & x, const block_vector_type & y, sc alpha,
+    const apply_regular_gpu_tmp_data & tmp_data ) const {
+  // this function does not really care if x or y are permuted or not
+
+  x.copy_to_raw(tmp_data.h_x);
+
+
+
+  // just submit all the work to the gpus, it will be executed asynchronously
+
+  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+    cudaSetDevice(gpu_idx);
+
+    cudaMemcpy2DAsync(tmp_data.d_x[gpu_idx], tmp_data.pitch_x[gpu_idx], tmp_data.h_x, x.get_size_of_block() * sizeof(sc), x.get_size_of_block() * sizeof(sc), x.get_block_size(), cudaMemcpyHostToDevice);
+    cudaMemsetAsync(tmp_data.d_y[gpu_idx], 0, tmp_data.pitch_y[gpu_idx] * y.get_block_size());
+  }
+
+
+
+  heat_kernel_parameters kp(this->_kernel->get_alpha());
+
+  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+    cudaSetDevice(gpu_idx);
+    
+    int gpu_i_tst_begin = tmp_data.gpu_i_tst_begins[gpu_idx];
+    int gpu_n_tst_elems = tmp_data.gpu_i_tst_begins[gpu_idx+1] - tmp_data.gpu_i_tst_begins[gpu_idx];
+    int gridSize = gpu_n_tst_elems;
+    int blockSize = besthea::onthefly::gpu_threads_per_block; // number of gpu threads per block
+
+    switch(gpu_kernel_version) {
+      case 1:
+        switch(this->_order_regular) {
+          case 5:
+            g_apply_regular <5> <<< gridSize, blockSize, 0, 0 >>>
+              (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_i_tst_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
+            break;
+          case 4:
+            g_apply_regular <4> <<< gridSize, blockSize, 0, 0 >>>
+              (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_i_tst_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
+            break;
+          case 2:
+            g_apply_regular <2> <<< gridSize, blockSize, 0, 0 >>>
+              (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_i_tst_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
+            break;
+          case 1:
+          default:
+            g_apply_regular <1> <<< gridSize, blockSize, 0, 0 >>>
+              (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_i_tst_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
+            break;
+        }
+        break;
+
+      case 2:
+      default:
+        switch(this->_order_regular) {
+          case 5:
+            g_apply_regular_ver2 <5> <<< gridSize, blockSize, 0, 0 >>>
+              (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_i_tst_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
+            break;
+          case 4:
+            g_apply_regular_ver2 <4> <<< gridSize, blockSize, 0, 0 >>>
+              (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_i_tst_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
+            break;
+          case 2:
+            g_apply_regular_ver2 <2> <<< gridSize, blockSize, 0, 0 >>>
+              (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_i_tst_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
+            break;
+          case 1:
+          default:
+            g_apply_regular_ver2 <1> <<< gridSize, blockSize, 0, 0 >>>
+              (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_i_tst_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
+            break;
+        }
+        break;
+
+    }
+
+  }
+
+
+
+  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+    cudaSetDevice(gpu_idx);
+
+    cudaMemcpy2DAsync(tmp_data.h_y[gpu_idx], y.get_size_of_block() * sizeof(sc), tmp_data.d_y[gpu_idx], tmp_data.pitch_y[gpu_idx], y.get_size_of_block() * sizeof(sc), y.get_block_size(), cudaMemcpyDeviceToHost);
+  }
+
+}
+
+
+
+
+
+template<class kernel_type, class test_space_type, class trial_space_type>
+void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
+  apply_regular_gpu_finish( block_vector_type & y, const apply_regular_gpu_tmp_data & tmp_data ) const {
+
+  // wait for all submitted work to finish
+  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+    cudaSetDevice(gpu_idx);
+    cudaDeviceSynchronize();
+  }
+
+#pragma omp parallel for
+  for(lo b = 0; b < y.get_block_size(); b++) {
+    vector_type &y_block = y.get_block(b);
+
+    for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+      const sc * h_y_block = tmp_data.h_y[gpu_idx] + b * y.get_size_of_block();
+      y_block.add_from_raw(h_y_block, 1.0);
+    }
+  }
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
   apply_regular_gpu_begin( const block_vector_type & x, const block_vector_type & y, sc alpha, std::vector<apply_regular_gpu_tmp_data> & tmp_data ) const {
@@ -1189,10 +1412,10 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
 
   cudaFreeHost(x_raw);
 
-}
+}*/
 
 
-
+/*
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
   apply_regular_gpu_finish( block_vector_type & y, std::vector<apply_regular_gpu_tmp_data> & tmp_data ) const {
@@ -1225,7 +1448,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
 
   // TODO: error checking
 
-}
+}*/
 
 
 
@@ -1241,6 +1464,18 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+/*
 template<class kernel_type, class test_space_type, class trial_space_type>
 void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
   apply( const block_vector_type & x, block_vector_type & y, bool trans, sc alpha, sc beta ) const {
@@ -1270,7 +1505,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
 
   y.copy_permute(y_perm);
 
-}
+}*/
 
 
 

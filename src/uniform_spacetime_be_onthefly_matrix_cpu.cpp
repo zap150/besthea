@@ -1697,7 +1697,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, te
   apply( const block_vector_type & x, block_vector_type & y, bool trans, sc alpha, sc beta ) const {
 
   if(trans) {
-    std::cerr << "I dont support trans matrices\n";
+    std::cerr << "Transposed matrices are not supported\n";
     return;
   }
 
@@ -1995,6 +1995,8 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, te
   rot_trial = 0;
 }
 
+
+
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu< kernel_type, test_space_type,
   trial_space_type >::hypercube_to_triangles_identical( sc ksi, sc eta1,
@@ -2041,6 +2043,8 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu< kernel_type, t
       break;
   }
 }
+
+
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu< kernel_type, test_space_type,
@@ -2109,6 +2113,15 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu< kernel_type, t
       break;
   }
 }
+
+
+
+
+
+
+
+
+
 
 
 

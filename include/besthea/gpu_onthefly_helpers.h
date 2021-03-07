@@ -124,10 +124,18 @@ struct besthea::onthefly::heat_kernel_parameters {
 
 
 struct besthea::onthefly::apply_regular_gpu_tmp_data {
-  sc *d_x;
-  sc *d_y;
-  size_t pitch_x, pitch_y; // pitch in bytes
-  lo ld_x, ld_y; // leading dimension in elements
+  sc * h_x; // raw data on host
+  std::vector<sc*> h_y; // raw data on host
+  std::vector<sc*> d_x, d_y; // raw data on device
+  std::vector<size_t> pitch_x, pitch_y; // pitch in bytes
+  std::vector<lo> ld_x, ld_y; // leading dimension in elements
+  std::vector<lo> gpu_i_tst_begins;
+  
+  apply_regular_gpu_tmp_data();
+  apply_regular_gpu_tmp_data(const apply_regular_gpu_tmp_data & that) = delete;
+  ~apply_regular_gpu_tmp_data();
+  void allocate(int n_gpus, lo x_block_count, lo x_size_of_block, lo y_block_count, lo y_size_of_block, lo n_elems);
+  void free();
 };
 
 

@@ -24,6 +24,84 @@ bool besthea::onthefly::is_gpu_quadr_order1_initialized = false;
 
 
 
+
+
+besthea::onthefly::apply_regular_gpu_tmp_data::apply_regular_gpu_tmp_data() :
+  h_x(nullptr) {
+}
+
+
+
+besthea::onthefly::apply_regular_gpu_tmp_data::~apply_regular_gpu_tmp_data() {
+  free();
+}
+
+
+
+void besthea::onthefly::apply_regular_gpu_tmp_data::allocate(int n_gpus, lo x_block_count, lo x_size_of_block, lo y_block_count, lo y_size_of_block, lo n_elems) {
+
+  h_y.resize(n_gpus);
+  d_x.resize(n_gpus);
+  d_y.resize(n_gpus);
+  pitch_x.resize(n_gpus);
+  pitch_y.resize(n_gpus);
+  ld_x.resize(n_gpus);
+  ld_y.resize(n_gpus);
+
+  cudaMallocHost(&h_x, x_block_count * x_size_of_block * sizeof(sc));
+
+  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+    cudaMallocHost(&h_y[gpu_idx], y_block_count * y_size_of_block * sizeof(sc));
+
+    cudaMallocPitch(&d_x[gpu_idx], &pitch_x[gpu_idx], x_size_of_block * sizeof(sc), x_block_count);
+    cudaMallocPitch(&d_y[gpu_idx], &pitch_y[gpu_idx], y_size_of_block * sizeof(sc), y_block_count);
+    
+    ld_x[gpu_idx] = pitch_x[gpu_idx] / sizeof(sc);
+    ld_y[gpu_idx] = pitch_y[gpu_idx] / sizeof(sc);
+  }
+
+
+  gpu_i_tst_begins.resize(n_gpus+1);
+  for(int gpu_idx = 0; gpu_idx <= n_gpus; gpu_idx++) {
+    gpu_i_tst_begins[gpu_idx] = (n_elems * gpu_idx) / n_gpus;
+  }
+
+}
+
+
+void besthea::onthefly::apply_regular_gpu_tmp_data::free() {
+
+  if(h_x != nullptr) cudaFreeHost(h_x);
+  for(unsigned int i = 0; i < h_y.size(); i++) cudaFreeHost(h_y[i]);
+  for(unsigned int i = 0; i < d_x.size(); i++) cudaFree(d_x[i]);
+  for(unsigned int i = 0; i < d_y.size(); i++) cudaFree(d_y[i]);
+
+  h_x = nullptr;
+  h_y.clear();
+  d_x.clear();
+  d_y.clear();
+  pitch_x.clear();
+  pitch_y.clear();
+  ld_x.clear();
+  ld_y.clear();
+  gpu_i_tst_begins.clear();
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 besthea::onthefly::gpu_uniform_spacetime_tensor_mesh::gpu_uniform_spacetime_tensor_mesh(const besthea::mesh::uniform_spacetime_tensor_mesh & orig_mesh) {
 
   cudaGetDeviceCount(&n_gpus);

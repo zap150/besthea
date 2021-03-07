@@ -64,19 +64,23 @@ public:
   }
 
   virtual void apply( const block_vector_type & x, block_vector_type & y,
-   bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
+    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
 
   virtual void apply( [[maybe_unused]] const distributed_block_vector_type & x,
     [[maybe_unused]] distributed_block_vector_type & y,
     [[maybe_unused]] bool trans = false, [[maybe_unused]] sc alpha = 1.0,
     [[maybe_unused]] sc beta = 0.0 ) const override {};
 
-protected:
-
-  void apply_regular_gpu_begin( const block_vector_type & x, const block_vector_type & y, sc alpha, std::vector<apply_regular_gpu_tmp_data> & tmp_data ) const;
-  void apply_regular_gpu_finish( block_vector_type & y, std::vector<apply_regular_gpu_tmp_data> & tmp_data ) const;
-
 private:
+
+  void apply_with_gpu(const block_vector_type & x, const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha, sc beta) const;
+
+  void apply_with_gpu(const block_vector_type & x, const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha, sc beta,
+    const apply_regular_gpu_tmp_data & tmp_data) const;
+
+  void apply_regular_gpu_begin( const block_vector_type & x, const block_vector_type & y, sc alpha,
+    const apply_regular_gpu_tmp_data & tmp_data ) const;
+  void apply_regular_gpu_finish( block_vector_type & y, const apply_regular_gpu_tmp_data & tmp_data ) const;
 
   template<int quadr_order>
   void init_gpu_quadrature_memory() const;
@@ -84,7 +88,7 @@ private:
 private:
   const gpu_uniform_spacetime_tensor_mesh * gpu_mesh;
   int n_gpus;
-  int gpu_kernel_version;  
+  int gpu_kernel_version;
   
 
 };
