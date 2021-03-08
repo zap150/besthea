@@ -1164,7 +1164,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
   apply_with_gpu(const block_vector_type & x, const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha, sc beta,
     const apply_regular_gpu_tmp_data & tmp_data, apply_load_distribution & load_distr, timer_collection & timers ) const {
 
-  for(int k = 0; k < 20; k++) { // just temporary loop for testing purposes
+  for(int k = 0; k < 10; k++) { // just temporary loop for testing purposes
     printf("I %d\n", k);
     timers.combined.start();
 
