@@ -21,7 +21,7 @@ macro(setup_compiler)
         " compiled only with icpc 19.0.1 or higher")
     endif()
 
-    # cant use add_compile_options, because cmake adds
+    # cant use add_compile_options, because cmake adds the options to cuda compiler as well, which does not understand them
 
     string(APPEND CMAKE_CXX_FLAGS " -w3")
     # attribute appears more than once
@@ -40,6 +40,10 @@ macro(setup_compiler)
     string(APPEND CMAKE_CXX_FLAGS " -diag-disable 2547")
     # unrecognised GCC pragma
     string(APPEND CMAKE_CXX_FLAGS " -diag-disable 2282")
+    # floating-point equality and inequality comparisons
+    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 1572")
+    # external function definition with no prior declaration
+    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 1418")
 
   else()
     message(FATAL_ERROR "Unknown C++ compiler: ${CMAKE_CXX_COMPILER_ID}")
@@ -115,7 +119,13 @@ macro(enable_Lyra)
   set(Lyra_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/Lyra/include)
 endmacro()
 
+
+
 macro(enable_CUDA)
+  #set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
+  enable_language(CUDA)
+  message(STATUS "Using CUDA host compiler ${CMAKE_CUDA_HOST_COMPILER}")
+
   if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.12.0")
     cmake_policy(SET CMP0074 NEW)
   endif()

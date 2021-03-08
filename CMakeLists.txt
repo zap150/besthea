@@ -1,10 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-
-if(USE_CUDA)
-  project(besthea LANGUAGES CXX CUDA)
-else()
-  project(besthea LANGUAGES CXX)
-endif()
+project(besthea)
 
 include(cmake/macros.cmake)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake/Modules)

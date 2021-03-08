@@ -1144,8 +1144,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
     }
     
     lo n_elems = gpu_mesh->get_metadata().n_elems;
-    lo cpu_n_tst_elems = omp_get_max_threads();
-    apply_load_distribution load_distr(n_gpus, n_elems, cpu_n_tst_elems);
+    apply_load_distribution load_distr(n_gpus, n_elems);
 
     timer_collection timers(n_gpus);
 
@@ -1204,8 +1203,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
       timers.cpu_singular.get_time() + timers.cpu_delta0.get_time(),
       timers.cpu_regular.get_time(),
       timers.get_gpu_all_time(),
-      omp_get_max_threads(),
-      0.5
+      0.0
     );
   }
 
@@ -1234,7 +1232,7 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
 
     timers.gpu_copyin[gpu_idx].start_submit();
     cudaMemcpy2DAsync(tmp_data.d_x[gpu_idx], tmp_data.pitch_x[gpu_idx], tmp_data.h_x, x.get_size_of_block() * sizeof(sc), x.get_size_of_block() * sizeof(sc), x.get_block_size(), cudaMemcpyHostToDevice);
-    cudaMemsetAsync(tmp_data.d_y[gpu_idx], 0, tmp_data.pitch_y[gpu_idx] * y.get_block_size());
+    cudaMemset2DAsync(tmp_data.d_y[gpu_idx], tmp_data.pitch_y[gpu_idx], 0, y.get_size_of_block() * sizeof(sc), y.get_block_size());
     timers.gpu_copyin[gpu_idx].stop_submit();
   }
 
@@ -1245,8 +1243,8 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
   for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
     cudaSetDevice(gpu_idx);
     
-    int gpu_tst_elem_begin = load_distr.get_gpu_begin(gpu_idx);
-    int gpu_tst_elem_count = load_distr.get_gpu_count(gpu_idx);
+    lo gpu_tst_elem_begin = load_distr.get_gpu_begin(gpu_idx);
+    lo gpu_tst_elem_count = load_distr.get_gpu_count(gpu_idx);
     int gridSize = gpu_tst_elem_count;
     int blockSize = besthea::onthefly::gpu_threads_per_block;
 

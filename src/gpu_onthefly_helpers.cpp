@@ -52,6 +52,8 @@ void besthea::onthefly::apply_regular_gpu_tmp_data::allocate(int n_gpus,
   cudaMallocHost(&h_x, x_block_count * x_size_of_block * sizeof(sc));
 
   for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+    cudaSetDevice(gpu_idx);
+
     cudaMallocHost(&h_y[gpu_idx], y_block_count * y_size_of_block * sizeof(sc));
 
     cudaMallocPitch(&d_x[gpu_idx], &pitch_x[gpu_idx], x_size_of_block * sizeof(sc), x_block_count);
@@ -158,14 +160,18 @@ besthea::onthefly::gpu_uniform_spacetime_tensor_mesh::~gpu_uniform_spacetime_ten
 
 
 
-besthea::onthefly::apply_load_distribution::apply_load_distribution(int n_gpus_, lo n_elems_, lo init_cpu_n_tst_elems) {
+besthea::onthefly::apply_load_distribution::apply_load_distribution(int n_gpus_, lo n_elems_) {
 
   this->n_gpus = n_gpus_;
   this->n_elems = n_elems_;
-
-  gpu_i_tst_begins.resize(n_gpus+1);
+  this->cpu_chunk_size = omp_get_max_threads();
+  this->min_cpu_n_tst_elems = omp_get_max_threads(); // it cant be zero and less than num_threads does not make sense
+  this->min_gpu_n_tst_elems = 4 * n_gpus;
   
-  this->cpu_n_tst_elems = init_cpu_n_tst_elems;
+  this->cpu_n_tst_elems = adjust_cpu_count((double)omp_get_max_threads());
+  this->cpu_n_tst_elems_target = (double)this->cpu_n_tst_elems;
+
+  this->gpu_i_tst_begins.resize(n_gpus+1);
   update_gpu_begins();
 
 }
@@ -184,7 +190,7 @@ void besthea::onthefly::apply_load_distribution::update_gpu_begins() {
 
 
 void besthea::onthefly::apply_load_distribution::adapt(
-  double cpu_time_sing_del0, double cpu_time_reg, double gpu_time, lo cpu_chunk_size, double inertia) {
+  double cpu_time_sing_del0, double cpu_time_reg, double gpu_time, double inertia) {
 
   printf("Before adapt: %6ld %12.6f\n", cpu_n_tst_elems, cpu_n_tst_elems_target);
 
@@ -197,9 +203,9 @@ void besthea::onthefly::apply_load_distribution::adapt(
       /
       (time_per_elem_cpu + time_per_elem_gpu);
     
-  cpu_n_tst_elems_target = cpu_n_tst_elems_target * inertia + cpu_n_elems_ideal * (1 - inertia);
+  this->cpu_n_tst_elems_target = cpu_n_tst_elems_target * inertia + cpu_n_elems_ideal * (1 - inertia);
 
-  cpu_n_tst_elems = std::max((lo)0, ((lo)cpu_n_tst_elems_target / cpu_chunk_size) * cpu_chunk_size);
+  this->cpu_n_tst_elems = adjust_cpu_count(cpu_n_tst_elems_target);
 
   this->update_gpu_begins();
 
@@ -207,6 +213,16 @@ void besthea::onthefly::apply_load_distribution::adapt(
 
 }
 
+
+
+lo besthea::onthefly::apply_load_distribution::adjust_cpu_count(double suggested) const {
+
+  if(min_cpu_n_tst_elems + min_gpu_n_tst_elems > n_elems) // if very few elements
+    return n_elems / 2;
+
+  lo chunked = ((lo)cpu_n_tst_elems_target / cpu_chunk_size) * cpu_chunk_size;
+  return std::clamp(chunked, min_cpu_n_tst_elems, n_elems - min_gpu_n_tst_elems);
+}
 
 
 
