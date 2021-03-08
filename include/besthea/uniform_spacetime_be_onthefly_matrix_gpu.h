@@ -6,10 +6,6 @@
 #ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_GPU_H_
 #define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_GPU_H_
 
-#include "besthea/block_matrix.h"
-#include "besthea/full_matrix.h"
-#include "besthea/block_lower_triangular_toeplitz_matrix.h"
-#include "besthea/uniform_spacetime_be_space.h"
 #include "besthea/uniform_spacetime_be_onthefly_matrix_cpu.h"
 #include "besthea/gpu_onthefly_helpers.h"
 
@@ -33,7 +29,6 @@ class besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu
 {
 
 public:
-  using matrix_type = besthea::linear_algebra::full_matrix;  //!< Matrix type.
   using block_vector_type
     = besthea::linear_algebra::block_vector;            //!< Block vector type.
   using vector_type = besthea::linear_algebra::vector;  //!< Vector type.

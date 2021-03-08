@@ -122,9 +122,13 @@ endmacro()
 
 
 macro(enable_CUDA)
-  #set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
+  # intel host compiler in combination with eigen causes problems
+  # host compiler is on linux g++ by default and we dont change that default
+  # set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
+
   enable_language(CUDA)
-  message(STATUS "Using CUDA host compiler ${CMAKE_CUDA_HOST_COMPILER}")
+
+  # message(STATUS "Using CUDA host compiler ${CMAKE_CUDA_HOST_COMPILER}")
 
   if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.12.0")
     cmake_policy(SET CMP0074 NEW)
@@ -140,9 +144,11 @@ macro(enable_CUDA)
   endif()
 
   if(${CMAKE_VERSION} VERSION_LESS "3.18.0")
-    string(APPEND CMAKE_CUDA_FLAGS " -arch=compute_60")      
+    string(APPEND CMAKE_CUDA_FLAGS " -arch=compute_60")
   else()
     cmake_policy(SET CMP0104 NEW)
     set(CMAKE_CUDA_ARCHITECTURES 60-virtual)
-  endif()
+  endif()  
+
+  string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -fopenmp")
 endmacro()
