@@ -74,7 +74,7 @@ besthea::linear_algebra::distributed_block_vector::distributed_block_vector(
     _size( size ),
     _data( block_size, vector_type( size, zero ) ),
     _owners( block_size ),
-    _my_blocks( std::vector< lo >{ } ),
+    _my_blocks( std::vector< lo >{} ),
     _comm( comm ),
     _duplicated( true ) {
   int comm_size;
@@ -270,7 +270,7 @@ void besthea::linear_algebra::distributed_block_vector::copy_from_raw(
 
     MPI_Comm_size( _comm, &comm_size );
     resize( block_size );
-    _owners.resize( block_size, std::vector< int >{ } );
+    _owners.resize( block_size, std::vector< int >{} );
 
     for ( auto it : my_blocks ) {
       _owners.at( it ).push_back( _rank );
@@ -347,7 +347,7 @@ void besthea::linear_algebra::distributed_block_vector::copy_from_vector(
 
     MPI_Comm_size( _comm, &comm_size );
     resize( block_size );
-    _owners.resize( block_size, std::vector< int >{ } );
+    _owners.resize( block_size, std::vector< int >{} );
 
     for ( auto it : my_blocks ) {
       _owners.at( it ).push_back( _rank );

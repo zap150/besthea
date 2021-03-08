@@ -1819,8 +1819,9 @@ void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::fast_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::compute_required_data( std::set< time_cluster_type * > &
-                                               time_clusters_spacetime_leaves,
-  std::set< space_cluster_type * > & space_clusters_spacetime_leaves ) const {
+  /*time_clusters_spacetime_leaves*/,
+  std::set< space_cluster_type * > & /*space_clusters_spacetime_leaves*/ )
+  const {
   std::cout << "compute_required_data NOT IMPLEMENTED" << std::endl;
 }
 

@@ -42,7 +42,7 @@ besthea::mesh::spacetime_cluster_tree::spacetime_cluster_tree(
     _spacetime_mesh( spacetime_mesh ),
     _space_mesh( *( spacetime_mesh.get_spatial_surface_mesh( ) ) ),
     _time_mesh( *( spacetime_mesh.get_temporal_mesh( ) ) ),
-    _s_t_coeff( st_coeff ),
+    //_s_t_coeff( st_coeff ),
     _spatial_nearfield_limit( spatial_nearfield_limit ) {
   // first, we create the temporal and spatial trees
 

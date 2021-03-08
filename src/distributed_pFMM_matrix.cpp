@@ -45,9 +45,8 @@ using besthea::mesh::scheduling_time_cluster;
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::apply( [[maybe_unused]] const block_vector & x,
-  [[maybe_unused]] block_vector & y, [[maybe_unused]] bool trans,
-  [[maybe_unused]] sc alpha, [[maybe_unused]] sc beta ) const {
+  target_space, source_space >::apply( const block_vector & /*x*/,
+  block_vector & /*y*/, bool /*trans*/, sc /*alpha*/, sc /*beta*/ ) const {
   // generic method not implemented
   std::cout << "apply: NOT IMPLEMENTED" << std::endl;
 }
@@ -555,6 +554,24 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   }
   for ( auto & it : _n_subtask_times ) {
     it.reserve( 4 * _n_list.size( ) );
+  }
+  for ( auto & it : _mpi_send_m2l ) {
+    it.reserve( _m2l_list.size( ) );
+  }
+  for ( auto & it : _mpi_send_m_parent ) {
+    it.reserve( _m_list.size( ) );
+  }
+  for ( auto & it : _mpi_send_l_children ) {
+    it.reserve( _l_list.size( ) );
+  }
+  for ( auto & it : _mpi_recv_m2l ) {
+    it.reserve( _m2l_list.size( ) );
+  }
+  for ( auto & it : _mpi_recv_m_parent ) {
+    it.reserve( _m_list.size( ) );
+  }
+  for ( auto & it : _mpi_recv_l_children ) {
+    it.reserve( _l_list.size( ) );
   }
 
   // set the positions of clusters in the lists
@@ -1274,10 +1291,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space,
-  source_space >::apply_s2m_operation( [[maybe_unused]] const block_vector &
-                                         source_vector,
-  [[maybe_unused]] general_spacetime_cluster * source_cluster ) const {
+  target_space, source_space >::apply_s2m_operation( const block_vector &
+  /*source_vector*/,
+  general_spacetime_cluster * /*source_cluster*/ ) const {
   std::cout << "S2M operation not implemented " << std::endl;
 }
 
@@ -2232,7 +2248,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
     std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
       = time_cluster->get_associated_spacetime_clusters( );
-    lou i;
+    lou i = 0;
     lou n = time_cluster->get_n_associated_leaves( );
     // there is an implicit taskgroup after this taskloop
 #pragma omp taskloop shared( output_vector, associated_spacetime_clusters )
@@ -2267,7 +2283,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
     std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
       = time_cluster->get_associated_spacetime_clusters( );
-    lou i;
+    lou i = 0;
     lou n = time_cluster->get_n_associated_leaves( );
     // there is an implicit taskgroup after this taskloop
 #pragma omp taskloop shared( output_vector, associated_spacetime_clusters )
@@ -2288,10 +2304,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::
-  apply_l2t_operation(
-    [[maybe_unused]] const mesh::general_spacetime_cluster * cluster,
-    [[maybe_unused]] block_vector & output_vector ) const {
+  target_space,
+  source_space >::apply_l2t_operation( const mesh::general_spacetime_cluster *
+  /*cluster*/,
+  block_vector & /*output_vector*/ ) const {
   std::cout << "L2T operation not implemented!" << std::endl;
 }
 
@@ -2603,6 +2619,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         int buffer_size
           = src_cluster->get_associated_spacetime_clusters( )->size( )
           * _contribution_size;
+
+        if ( _measure_tasks ) {
+          _mpi_send_m2l.at( omp_get_thread_num( ) )
+            .push_back( _global_timer.get_time_from_start< time_type >( ) );
+        }
         MPI_Request req;
         MPI_Isend( moment_buffer, buffer_size, get_scalar_type< sc >::MPI_SC( ),
           tar_process_id, tag, *_comm, &req );
@@ -2646,6 +2667,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       int buffer_size
         = parent_cluster->get_associated_spacetime_clusters( )->size( )
         * _contribution_size;
+
+      if ( _measure_tasks ) {
+        _mpi_send_m_parent.at( omp_get_thread_num( ) )
+          .push_back( _global_timer.get_time_from_start< time_type >( ) );
+      }
+
       MPI_Request req;
       MPI_Isend( moment_buffer, buffer_size, get_scalar_type< sc >::MPI_SC( ),
         parent_process_id, tag, *_comm, &req );
@@ -2685,6 +2712,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         int buffer_size
           = parent_cluster->get_associated_spacetime_clusters( )->size( )
           * _contribution_size;
+
+        if ( _measure_tasks ) {
+          _mpi_send_l_children.at( omp_get_thread_num( ) )
+            .push_back( _global_timer.get_time_from_start< time_type >( ) );
+        }
+
         MPI_Request req;
         MPI_Isend( local_contribution_buffer, buffer_size,
           get_scalar_type< sc >::MPI_SC( ), child_process_id, tag, *_comm,
@@ -3243,7 +3276,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   for ( lo a = 0; a <= _temp_order; ++a ) {
     for ( lo b = 0; b <= _temp_order; ++b ) {
       sc h_delta_ab = h_alpha / ( tar_time_nodes[ a ] - src_time_nodes[ b ] );
-      lou i;
+      lou i = 0;
 #pragma omp simd aligned( cheb_nodes_sum_coll_data, buffer_for_gaussians_data \
                           : DATA_ALIGN ) simdlen( DATA_WIDTH )
       for ( i = 0; i < _cheb_nodes_sum_coll.size( ); ++i ) {
@@ -3718,10 +3751,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space,
-  source_space >::apply( [[maybe_unused]] const distributed_block_vector & x,
-  [[maybe_unused]] distributed_block_vector & y, [[maybe_unused]] bool trans,
-  [[maybe_unused]] sc alpha, [[maybe_unused]] sc beta ) const {
+  target_space, source_space >::apply( const distributed_block_vector & /*x*/,
+  distributed_block_vector & /*y*/, bool /*trans*/, sc /*alpha*/,
+  sc /*beta*/ ) const {
   // generic method not implemented
   std::cout << "apply: NOT IMPLEMENTED" << std::endl;
 }
@@ -3911,6 +3943,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // reset the number of non-nearfield ops
   _non_nf_op_count = 0;
 
+  // set loop timer start
+  time_type::rep loop_start = 0;
+  if ( _measure_tasks ) {
+    loop_start = _global_timer.get_time_from_start< time_type >( );
+  }
+
   // start the main "job scheduling" algorithm
   // the "master" thread checks for new available data, spawns tasks, and
   // removes clusters from lists
@@ -3929,6 +3967,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     _m2l_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
     _l_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
     _n_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
+    _mpi_send_m2l.at( omp_get_thread_num( ) ).resize( 0 );
+    _mpi_send_m_parent.at( omp_get_thread_num( ) ).resize( 0 );
+    _mpi_send_l_children.at( omp_get_thread_num( ) ).resize( 0 );
+    _mpi_recv_m2l.at( omp_get_thread_num( ) ).resize( 0 );
+    _mpi_recv_m_parent.at( omp_get_thread_num( ) ).resize( 0 );
+    _mpi_recv_l_children.at( omp_get_thread_num( ) ).resize( 0 );
 
 #pragma omp single
     {
@@ -3941,6 +3985,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           && n_list.empty( ) ) {
           break;
         }
+
         // check if data has been received since the last iteration
         if ( outcount != MPI_UNDEFINED ) {
           check_for_received_data(
@@ -3971,6 +4016,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             }
             // distinguish which data has been received
             if ( current_index < _n_moments_to_receive_upward ) {
+              if ( _measure_tasks ) {
+                _mpi_recv_m_parent.at( omp_get_thread_num( ) )
+                  .push_back(
+                    _global_timer.get_time_from_start< time_type >( ) );
+              }
+
               // received data are moments in the upward path. add up
               // moments and update dependencies.
               lo idx = current_cluster->get_pos_in_m_list( );
@@ -3981,6 +4032,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               upward_path_task( current_index, current_cluster );
             } else if ( current_index
               < _n_moments_to_receive_upward + _n_moments_to_receive_m2l ) {
+              if ( _measure_tasks ) {
+                _mpi_recv_m2l.at( omp_get_thread_num( ) )
+                  .push_back(
+                    _global_timer.get_time_from_start< time_type >( ) );
+              }
               // received data are moments for m2l. update dependencies.
               std::vector< scheduling_time_cluster * > * send_list
                 = current_cluster->get_send_list( );
@@ -4001,6 +4057,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                 }
               }
             } else {
+              if ( _measure_tasks ) {
+                _mpi_recv_l_children.at( omp_get_thread_num( ) )
+                  .push_back(
+                    _global_timer.get_time_from_start< time_type >( ) );
+              }
               // received data are local contributions. update dependencies.
 #pragma omp task priority( 1000 )
               current_cluster->set_downward_path_status( 2 );
@@ -4033,6 +4094,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           }
         } else {
           add_nn_operations( );
+        }
+
+        // interrupt the scheduling task if there is enough work to do so it can
+        // join the remaining tasks
+        if ( get_nn_operations( ) > 0 && status == 0 ) {
+#pragma omp taskyield
         }
 
         // if verbose mode is chosen, write info about next operation to file
@@ -4223,14 +4290,21 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       }
     }
   }
-  // print out task timing
+  // set loop timer end
+  time_type::rep loop_end = 0;
   if ( _measure_tasks ) {
-    save_times( );
+    loop_end = _global_timer.get_time_from_start< time_type >( );
   }
   delete[] aux_dep_m;
   delete[] aux_dep_l;
   delete[] aux_dep_m2l;
   delete[] aux_dep_m2l_send;
+
+  // print out task timing
+  if ( _measure_tasks ) {
+    save_times( loop_end - loop_start,
+      _global_timer.get_time_from_start< time_type >( ) );
+  }
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -4317,10 +4391,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 template< class kernel_type, class target_space, class source_space >
 template< slou run_count >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::
-  apply_s2m_operation(
-    [[maybe_unused]] const distributed_block_vector & source_vector,
-    [[maybe_unused]] general_spacetime_cluster * source_cluster ) const {
+  target_space,
+  source_space >::apply_s2m_operation( const distributed_block_vector &
+  /*source_vector*/,
+  general_spacetime_cluster * /*source_cluster*/ ) const {
   std::cout << "S2M operation not implemented " << std::endl;
 }
 
@@ -4598,10 +4672,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 template< class kernel_type, class target_space, class source_space >
 template< slou run_count >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::
-  apply_l2t_operation(
-    [[maybe_unused]] const mesh::general_spacetime_cluster * cluster,
-    [[maybe_unused]] distributed_block_vector & output_vector ) const {
+  target_space,
+  source_space >::apply_l2t_operation( const mesh::general_spacetime_cluster *
+  /*cluster*/,
+  distributed_block_vector & /*output_vector*/ ) const {
   std::cout << "L2T operation not implemented!" << std::endl;
 }
 
@@ -5000,68 +5074,264 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::save_times( ) const {
+  target_space, source_space >::save_times( time_type::rep total_loop_duration,
+  time_type::rep total_apply_duration ) const {
   std::filesystem::create_directory( "./task_timer/" );
 
   std::string timer_file = "task_timer/process_";
   timer_file += std::to_string( _my_rank );
+  timer_file += ".m";
   remove( timer_file.c_str( ) );
 
   std::ofstream outfile( timer_file.c_str( ), std::ios::app );
+
+  outfile << "% Total apply duration [us]: " << std::endl;
+  outfile << "T = " << total_apply_duration << ";" << std::endl;
+
   if ( outfile.is_open( ) ) {
     for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
-      outfile << "Thread " << i << ": " << std::endl;
-      outfile << "M tasks: " << std::endl;
+      // compute thread total execution time in individual tasks
+      time_type::rep us_m_sub = 0;
+      time_type::rep us_m2l_sub = 0;
+      time_type::rep us_l_sub = 0;
+      time_type::rep us_n_sub = 0;
+      time_type::rep total_time = 0;
+      for ( std::size_t j = 0; j < _m_subtask_times.at( i ).size( ) / 2; ++j ) {
+        us_m_sub += _m_subtask_times.at( i ).at( 2 * j + 1 )
+          - _m_subtask_times.at( i ).at( 2 * j );
+      }
+      for ( std::size_t j = 0; j < _m2l_subtask_times.at( i ).size( ) / 2;
+            ++j ) {
+        us_m2l_sub += _m2l_subtask_times.at( i ).at( 2 * j + 1 )
+          - _m2l_subtask_times.at( i ).at( 2 * j );
+      }
+      for ( std::size_t j = 0; j < _l_subtask_times.at( i ).size( ) / 2; ++j ) {
+        us_l_sub += _l_subtask_times.at( i ).at( 2 * j + 1 )
+          - _l_subtask_times.at( i ).at( 2 * j );
+      }
+      for ( std::size_t j = 0; j < _n_subtask_times.at( i ).size( ) / 2; ++j ) {
+        us_n_sub += _n_subtask_times.at( i ).at( 2 * j + 1 )
+          - _n_subtask_times.at( i ).at( 2 * j );
+      }
+      total_time = us_m_sub + us_m2l_sub + us_l_sub + us_n_sub;
+      double perc_subtasks_apply
+        = (double) total_time / (double) total_apply_duration;
+      double perc_subtasks_loop
+        = (double) total_time / (double) total_loop_duration;
+
+      outfile << "% Thread " << i << ": " << std::endl;
+
+      outfile << "% M subtasks duration: " << us_m_sub << " us" << std::endl;
+      outfile << "% M2L subtasks duration: " << us_m2l_sub << " us"
+              << std::endl;
+      outfile << "% L subtasks duration: " << us_l_sub << " us" << std::endl;
+      outfile << "% N subtasks duration: " << us_n_sub << " us" << std::endl;
+      outfile << "% Sum: " << us_m_sub + us_m2l_sub + us_l_sub + us_n_sub
+              << " us (" << perc_subtasks_loop * 100.0 << " % [loop], "
+              << perc_subtasks_apply * 100.0 << " % [total])\n\n";
+
+      // output main tasks
+      outfile << "% M tasks: " << std::endl;
+      outfile << "M" << i << " = [";
       auto it = _m_task_times.at( i ).begin( );
       for ( ; it != _m_task_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
+      outfile << " ];";
       outfile << std::endl;
-      outfile << "M2L tasks: " << std::endl;
+
+      outfile << "% M2L tasks: " << std::endl;
+      outfile << "M2L" << i << " = [";
       it = _m2l_task_times.at( i ).begin( );
       for ( ; it != _m2l_task_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
+      outfile << " ];";
+      outfile << std::endl;
+
       outfile << std::endl << std::endl;
-      outfile << "L tasks: " << std::endl;
+      outfile << "% L tasks: " << std::endl;
+      outfile << "L" << i << " = [";
       it = _l_task_times.at( i ).begin( );
       for ( ; it != _l_task_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
+      outfile << " ];";
       outfile << std::endl << std::endl;
-      outfile << "N tasks: " << std::endl;
+
+      outfile << "% N tasks: " << std::endl;
+      outfile << "N" << i << " = [";
       it = _n_task_times.at( i ).begin( );
       for ( ; it != _n_task_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
+      outfile << " ];";
       outfile << std::endl << std::endl;
-      outfile << "M subtasks: " << std::endl;
+
+      // output subtasks
+      outfile << "% M subtasks: " << std::endl;
+      outfile << "Ms" << i << " = [";
       it = _m_subtask_times.at( i ).begin( );
       for ( ; it != _m_subtask_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
+      outfile << " ];";
       outfile << std::endl << std::endl;
-      outfile << "M2L subtasks: " << std::endl;
+
+      outfile << "% M2L subtasks: " << std::endl;
       it = _m2l_subtask_times.at( i ).begin( );
+      outfile << "M2Ls" << i << " = [";
       for ( ; it != _m2l_subtask_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
+      outfile << " ];";
       outfile << std::endl << std::endl;
-      outfile << "L subtasks: " << std::endl;
+
+      outfile << "% L subtasks: " << std::endl;
       it = _l_subtask_times.at( i ).begin( );
+      outfile << "Ls" << i << " = [";
       for ( ; it != _l_subtask_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
+      outfile << " ];";
       outfile << std::endl << std::endl;
-      outfile << "N subtasks: " << std::endl;
+
+      outfile << "% N subtasks: " << std::endl;
       it = _n_subtask_times.at( i ).begin( );
+      outfile << "Ns" << i << " = [";
       for ( ; it != _n_subtask_times.at( i ).end( ); ++it ) {
         outfile << *it << ", " << *( ++it ) << "; ";
       }
-      outfile << std::endl
-              << "====================================" << std::endl;
-      ;
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      // output MPI communication
+      outfile << "% M2L send: " << std::endl;
+      it = _mpi_send_m2l.at( i ).begin( );
+      outfile << "M2L_send" << i << " = [";
+      for ( ; it != _mpi_send_m2l.at( i ).end( ); ++it ) {
+        outfile << *it << ", ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      outfile << "% parent send: " << std::endl;
+      it = _mpi_send_m_parent.at( i ).begin( );
+      outfile << "parent_send" << i << " = [";
+      for ( ; it != _mpi_send_m_parent.at( i ).end( ); ++it ) {
+        outfile << *it << ", ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      outfile << "% local send: " << std::endl;
+      it = _mpi_send_l_children.at( i ).begin( );
+      outfile << "local_send" << i << " = [";
+      for ( ; it != _mpi_send_l_children.at( i ).end( ); ++it ) {
+        outfile << *it << ", ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      outfile << "% M2L receive: " << std::endl;
+      it = _mpi_recv_m2l.at( i ).begin( );
+      outfile << "M2L_recv" << i << " = [";
+      for ( ; it != _mpi_recv_m2l.at( i ).end( ); ++it ) {
+        outfile << *it << ", ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      outfile << "% parent receive: " << std::endl;
+      it = _mpi_recv_m_parent.at( i ).begin( );
+      outfile << "parent_recv" << i << " = [";
+      for ( ; it != _mpi_recv_m_parent.at( i ).end( ); ++it ) {
+        outfile << *it << ", ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      outfile << "% local receive: " << std::endl;
+      it = _mpi_recv_l_children.at( i ).begin( );
+      outfile << "local_recv" << i << " = [";
+      for ( ; it != _mpi_recv_l_children.at( i ).end( ); ++it ) {
+        outfile << *it << ", ";
+      }
+      outfile << " ];";
+      outfile << std::endl << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" << std::endl;
     }
+    outfile << "M = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "M" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "M2L = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "M2L" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "L = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "L" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "N = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "N" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+
+    outfile << "Ms = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "Ms" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "M2Ls = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "M2Ls" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "Ls = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "Ls" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "Ns = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "Ns" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "M2L_send = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "M2L_send" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "parent_send = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "parent_send" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "local_send = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "local_send" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "M2L_recv = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "M2L_recv" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "parent_recv = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "parent_recv" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "local_recv = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "local_recv" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+
     outfile.close( );
   }
 }
