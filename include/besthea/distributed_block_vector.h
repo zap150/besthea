@@ -36,6 +36,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDE_BESTHEA_DISTRIBUTED_BLOCK_VECTOR_H_
 #define INCLUDE_BESTHEA_DISTRIBUTED_BLOCK_VECTOR_H_
 
+#include "besthea/full_matrix.h"
 #include "besthea/settings.h"
 #include "besthea/vector.h"
 
@@ -376,6 +377,19 @@ class besthea::linear_algebra::distributed_block_vector {
     besthea::linear_algebra::vector & local_vector ) const;
 
   /*!
+   * Gets local part of a block vector corresponding to dofs in a spacetime
+   * cluster and stores it in full matrix format.
+   * @param[in] cluster  Cluster determining the local dofs.
+   * @param[in,out] local_part  Local part of block vector.
+   * @tparam space_type distributed_fast_spacetime_be_space representing either
+   *                    p0 or p1 basis functions. It determines the dofs.
+   * @note Rows of the output matrix correspond to time, columns to space.
+   */
+  template< class space_type >
+  void get_local_part( besthea::mesh::general_spacetime_cluster * cluster,
+    besthea::linear_algebra::full_matrix & local_part ) const;
+
+  /*!
    * Adds local vector to appropriate positions of a block vector. The positions
    * are determined by the dofs in a spacetime cluster.
    * @param[in] cluster  Cluster determining the positions in the
@@ -406,8 +420,24 @@ class besthea::linear_algebra::distributed_block_vector {
    *        cluster (time step after time step).
    */
   template< class space_type >
-  void add_local_part( besthea::mesh::general_spacetime_cluster * cluster,
+  void add_local_part( const besthea::mesh::general_spacetime_cluster * cluster,
     const besthea::linear_algebra::vector & local_vector );
+
+  /*!
+   * Adds local part stored in full matrix format to appropriate positions of a
+   * block vector. The positions are determined by the dofs in a spacetime
+   * cluster.
+   * @param[in] cluster Cluster determining the positions in the
+                        block_vector to which the local vector is added.
+   * @param[in] local_part  Local part to be added. It is stored in matrix
+                            format, where rows correspond to time and columns to
+                            space.
+   * @tparam space_type  fast_spacetime_be_space representing either p0 or p1
+   *                     basis functions. It determines the dofs.
+   */
+  template< class space_type >
+  void add_local_part( const besthea::mesh::general_spacetime_cluster * cluster,
+    const besthea::linear_algebra::full_matrix & local_part );
 
   /*!
    * @brief Returns reference to the vector of vector of MPI ranks owning
