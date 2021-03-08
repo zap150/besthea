@@ -220,7 +220,7 @@ lo besthea::onthefly::apply_load_distribution::adjust_cpu_count(double suggested
   if(min_cpu_n_tst_elems + min_gpu_n_tst_elems > n_elems) // if very few elements
     return n_elems / 2;
 
-  lo chunked = ((lo)cpu_n_tst_elems_target / cpu_chunk_size) * cpu_chunk_size;
+  lo chunked = ((lo)suggested / cpu_chunk_size) * cpu_chunk_size;
   return std::clamp(chunked, min_cpu_n_tst_elems, n_elems - min_gpu_n_tst_elems);
 }
 
