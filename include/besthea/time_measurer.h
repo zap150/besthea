@@ -20,7 +20,7 @@ namespace besthea {
 
 class besthea::tools::time_measurer {
 private:
-  constexpr static double tick_time = ((double)std::chrono::steady_clock::period::num) / std::chrono::steady_clock::period::den;
+  static constexpr double tick_time = ((double)std::chrono::steady_clock::period::num) / std::chrono::steady_clock::period::den;
   std::chrono::steady_clock::duration elapsed_time;
   std::chrono::steady_clock::time_point start_time;
 

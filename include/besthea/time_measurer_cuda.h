@@ -20,6 +20,7 @@ namespace besthea {
 
 class besthea::tools::time_measurer_cuda {
 private:
+  int gpu_idx;
   cudaStream_t stream;
 	cudaEvent_t start_event;
 	cudaEvent_t stop_event;
@@ -30,28 +31,32 @@ public:
   time_measurer_cuda() {
   }
 
-  explicit time_measurer_cuda(cudaStream_t stream) {
-    this->init(stream);
+  time_measurer_cuda(int gpu_idx_, cudaStream_t stream_) {
+    this->init(gpu_idx_, stream_);
   }
 
   ~time_measurer_cuda() {
     cudaEventDestroy(start_event);
-    cudaEventDestroy(stop_event);        
+    cudaEventDestroy(stop_event);
   }
   
-  void init(cudaStream_t stream) {
-    this->stream = stream;
+  void init(int gpu_idx_, cudaStream_t stream_) {
+    this->gpu_idx = gpu_idx_;
+    this->stream = stream_;
+    cudaSetDevice(gpu_idx);
     cudaEventCreate(&start_event);
     cudaEventCreate(&stop_event);
     reset();
   }
 
   void start_submit() {
-		cudaEventRecord(start_event, stream);
+    cudaSetDevice(gpu_idx);
+    cudaEventRecord(start_event, stream);
   }
 
   void stop_submit() {
-		cudaEventRecord(stop_event, stream);
+    cudaSetDevice(gpu_idx);
+    cudaEventRecord(stop_event, stream);
     this->was_time_collected = false;
   }
 
@@ -72,6 +77,7 @@ public:
 private:
   void collect_time() {
     float dur;
+    cudaSetDevice(gpu_idx);
     cudaEventSynchronize(stop_event);
     cudaEventElapsedTime(&dur, start_event, stop_event);
     this->elapsed_time = dur / 1000.0;
