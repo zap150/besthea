@@ -285,6 +285,13 @@ class besthea::linear_algebra::block_vector {
   }
 
   /*!
+   * @brief Vector addition this += alpha * v, where v is permuted.
+   * @param[in] v
+   * @param[in] alpha
+   */
+  void add_permute( block_vector const & v, sc alpha = 1.0 );
+
+  /*!
    * @brief Vector addition this += alpha * v, where v is raw data.
    * @param[in] v
    * @param[in] alpha

@@ -48,9 +48,9 @@ besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_sp
     std::cerr << "BESTHEA Warning: using gpu onthefly class but no cuda-capable devices were found\n";
   }
 
-  if(gpu_kernel_version < 1 || gpu_kernel_version > 2) {
-    std::cerr << "BESTHEA Warning: invalid value of gpu_kernel_version=" << gpu_kernel_version << ", using default gpu_kernel_version=2\n";
-    this->gpu_kernel_version = 2;
+  if(gpu_kernel_version < 1 || gpu_kernel_version > 3) {
+    std::cerr << "BESTHEA Warning: invalid value of gpu_kernel_version=" << gpu_kernel_version << ", using default gpu_kernel_version=1\n";
+    this->gpu_kernel_version = 1;
   }
   
   if(n_gpus > 0) {
@@ -153,8 +153,6 @@ __device__ void d_reduce_sum(volatile sc * shmem_vals, sc * add_result_to, sc ou
   // assuming 1D block
   // assuming number of values is equal to blockDim
 
-  // TODO: optimize better, maybe use only one warp
-
   int thread_count = blockDim.x / 2;
   int tid = threadIdx.x;
   
@@ -184,6 +182,37 @@ __device__ void d_reduce_sum(volatile sc * shmem_vals, sc * add_result_to, sc ou
 
 
 
+__device__ void d_reduce_sum_2d_y(volatile sc * shmem_vals) {
+  // sums the values along the y dimension
+  // assuming blockDim.y is power of 2
+
+  int curr_count = blockDim.y / 2;
+  int tid = threadIdx.y * blockDim.x + threadIdx.x;
+
+  while(curr_count > 0) {
+    if(threadIdx.y < curr_count)
+      shmem_vals[tid] += shmem_vals[tid + curr_count * blockDim.x];
+    curr_count /= 2;
+    __syncthreads();
+  }
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 template<int quadr_order>
 __device__ void d_triangles_to_geometry_000_tst_shmem( // 0 shared vertices, 0 rot_test, 0 rot_trial
     lo i_tst, const besthea::onthefly::mesh_raw_data & mesh_data,
@@ -200,6 +229,33 @@ __device__ void d_triangles_to_geometry_000_tst_shmem( // 0 shared vertices, 0 r
 
   constexpr int quadr_size = besthea::onthefly::qo2qs(quadr_order);
   for ( lo i = threadIdx.x; i < quadr_size; i += blockDim.x ) {
+    shmem_quadr_nodes_tst.xs[ i ] = x1[ 0 ] + ( x2[ 0 ] - x1[ 0 ] ) * x1_ref[ i ]
+                                            + ( x3[ 0 ] - x1[ 0 ] ) * x2_ref[ i ];
+    shmem_quadr_nodes_tst.ys[ i ] = x1[ 1 ] + ( x2[ 1 ] - x1[ 1 ] ) * x1_ref[ i ]
+                                            + ( x3[ 1 ] - x1[ 1 ] ) * x2_ref[ i ];
+    shmem_quadr_nodes_tst.zs[ i ] = x1[ 2 ] + ( x2[ 2 ] - x1[ 2 ] ) * x1_ref[ i ]
+                                            + ( x3[ 2 ] - x1[ 2 ] ) * x2_ref[ i ];
+  }
+}
+
+
+
+template<int quadr_order>
+__device__ void d_triangles_to_geometry_000_tst( // 0 shared vertices, 0 rot_test, 0 rot_trial
+    lo i_tst, const besthea::onthefly::mesh_raw_data & mesh_data,
+    besthea::onthefly::quadrature_nodes_raw<quadr_order> & shmem_quadr_nodes_tst ) {
+  
+  const lo * tst_elem_nodes = mesh_data.d_element_nodes + 3 * i_tst;
+
+  const sc * x1 = mesh_data.d_node_coords + 3 * tst_elem_nodes[0];
+  const sc * x2 = mesh_data.d_node_coords + 3 * tst_elem_nodes[1];
+  const sc * x3 = mesh_data.d_node_coords + 3 * tst_elem_nodes[2];
+
+  const sc * x1_ref = c_get_quadr_reference<quadr_order>()._x1_ref;
+  const sc * x2_ref = c_get_quadr_reference<quadr_order>()._x2_ref;
+
+  constexpr int quadr_size = besthea::onthefly::qo2qs(quadr_order);
+  for ( lo i = 0; i < quadr_size; ++i ) {
     shmem_quadr_nodes_tst.xs[ i ] = x1[ 0 ] + ( x2[ 0 ] - x1[ 0 ] ) * x1_ref[ i ]
                                             + ( x3[ 0 ] - x1[ 0 ] ) * x2_ref[ i ];
     shmem_quadr_nodes_tst.ys[ i ] = x1[ 1 ] + ( x2[ 1 ] - x1[ 1 ] ) * x1_ref[ i ]
@@ -397,7 +453,7 @@ __device__ void d_basis_tri_p1_evaluate_curl_00(
 template<int quadr_order>
 __device__ void d_get_values_regular_sl_p0_p0(sc * values_out, lo delta, lo i_test, lo i_trial,
   const besthea::onthefly::quadrature_nodes_raw<quadr_order> & quadr_nodes_tst,
-  besthea::onthefly::quadrature_nodes_raw<quadr_order> & quadr_nodes_trl,
+  const besthea::onthefly::quadrature_nodes_raw<quadr_order> & quadr_nodes_trl,
   const besthea::onthefly::mesh_raw_metadata & mesh_metadata,
   const besthea::onthefly::mesh_raw_data & mesh_data,
   const besthea::onthefly::heat_kernel_parameters & kp) {
@@ -414,8 +470,6 @@ __device__ void d_get_values_regular_sl_p0_p0(sc * values_out, lo delta, lo i_te
 
   const sc test_area = mesh_data.d_element_areas[i_test];
   const sc trial_area = mesh_data.d_element_areas[i_trial];
-
-  d_triangles_to_geometry_000_trl( i_trial, mesh_data, quadr_nodes_trl );
 
   const sc * w = c_get_quadr_reference<quadr_order>()._w;
 
@@ -632,7 +686,7 @@ __global__ void g_apply_regular
   // each thread handles one or more trial elements, and loops through all the blocks
 
   __shared__ besthea::onthefly::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
-  __shared__ sc shmem_y_vals[besthea::onthefly::gpu_threads_per_block];
+  __shared__ sc shmem_y_vals[besthea::onthefly::gpu_threads_per_block_ver1];
 
   const lo &n_blocks = mesh_metadata.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
   const unsigned int &tid = threadIdx.x;
@@ -652,11 +706,12 @@ __global__ void g_apply_regular
 
 
   for (lo i_trl = threadIdx.x; i_trl < n_elems; i_trl += blockDim.x) {
+    d_triangles_to_geometry_000_trl(i_trl, mesh_data, quadr_nodes_trl);
 
     const lo &row = i_tst;
     const lo &col = i_trl;
 
-    val_curr = 0; // delta=0 and 0s wiil be done by the cpu
+    val_curr = 0;
     val_next = 0;
     
     for (lo diag = 0; diag < n_blocks; diag++) {
@@ -699,7 +754,7 @@ __global__ void g_apply_regular
   // each thread handles one or more trial elements, and loops through all the blocks
 
   __shared__ besthea::onthefly::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
-  __shared__ sc shmem_y_vals[besthea::onthefly::gpu_threads_per_block];
+  __shared__ sc shmem_y_vals[besthea::onthefly::gpu_threads_per_block_ver1];
 
   const lo &n_blocks = mesh_metadata.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
   const unsigned int &tid = threadIdx.x;
@@ -719,11 +774,12 @@ __global__ void g_apply_regular
 
 
   for (lo i_trl = threadIdx.x; i_trl < n_elems; i_trl += blockDim.x) {
+    d_triangles_to_geometry_000_trl(i_trl, mesh_data, quadr_nodes_trl);
 
     const lo &row = i_tst;
     const lo * cols = mesh_data.d_element_nodes + 3 * i_trl;
 
-    vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0; // delta=0 and 0s wiil be done by the cpu
+    vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
     vals_next[0] = 0;   vals_next[1] = 0;   vals_next[2] = 0;
 
     for (lo diag = 0; diag < n_blocks; diag++) {
@@ -792,10 +848,12 @@ __global__ void g_apply_regular
     if(i_tst == i_trl)
       continue;
 
+    d_triangles_to_geometry_000_trl(i_trl, mesh_data, quadr_nodes_trl);
+
     const lo * rows = mesh_data.d_element_nodes + 3 * i_tst;
     const lo * cols = mesh_data.d_element_nodes + 3 * i_trl;
 
-    for(lo j = 0; j < 9; j++) vals_curr[j] = 0; // delta=0 and 0s wiil be done by the cpu
+    for(lo j = 0; j < 9; j++) vals_curr[j] = 0;
     for(lo j = 0; j < 9; j++) vals_next[j] = 0;
 
     for (lo diag = 0; diag < n_blocks; diag++) {
@@ -854,7 +912,7 @@ __global__ void g_apply_regular_ver2
   // each thread handles one or more trial elements, then is assigned to a block and loops through all the trial elements
                       
   __shared__ besthea::onthefly::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
-  __shared__ sc shmem_matrix_vals[besthea::onthefly::gpu_threads_per_block];
+  __shared__ sc shmem_matrix_vals[besthea::onthefly::gpu_threads_per_block_ver2];
   
   const lo &n_blocks = mesh_metadata.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
   const lo &n_elems = mesh_metadata.n_elems;
@@ -873,6 +931,9 @@ __global__ void g_apply_regular_ver2
   sc val_next;
 
   for(lo i = threadIdx.x; i < n_elems; i += blockDim.x) {
+    lo &i_trl = i;
+    d_triangles_to_geometry_000_trl(i_trl, mesh_data, quadr_nodes_trl);
+
     val_curr = 0;
     val_next = 0;
 
@@ -881,7 +942,6 @@ __global__ void g_apply_regular_ver2
     for(lo diag = 0; diag < n_blocks; diag++) {
       // each thread calculates value corresponding to its i (i_trl)
       {
-        lo &i_trl = i;
         val_prev = val_curr;
         val_curr = val_next;
         d_get_values_regular_sl_p0_p0(&val_next, diag+1, i_tst, i_trl, shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
@@ -930,7 +990,7 @@ __global__ void g_apply_regular_ver2
   // each thread handles one or more trial elements, then is assigned to a block and loops through all the trial elements
 
   __shared__ besthea::onthefly::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
-  __shared__ sc shmem_matrix_vals_data[3 * besthea::onthefly::gpu_threads_per_block];
+  __shared__ sc shmem_matrix_vals_data[3 * besthea::onthefly::gpu_threads_per_block_ver2];
   sc * shmem_matrix_vals[3];
   shmem_matrix_vals[0] = shmem_matrix_vals_data + 0 * blockDim.x;
   shmem_matrix_vals[1] = shmem_matrix_vals_data + 1 * blockDim.x;
@@ -953,6 +1013,9 @@ __global__ void g_apply_regular_ver2
   sc vals_next[3];
 
   for(lo i = threadIdx.x; i < n_elems; i += blockDim.x) {
+    lo &i_trl = i;
+    d_triangles_to_geometry_000_trl(i_trl, mesh_data, quadr_nodes_trl);
+
     vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
     vals_next[0] = 0;   vals_next[1] = 0;   vals_next[2] = 0;
 
@@ -961,7 +1024,6 @@ __global__ void g_apply_regular_ver2
     for(lo diag = 0; diag < n_blocks; diag++) {
       // each thread calculates value corresponding to its i (i_trl)
       {
-        lo &i_trl = i;
         vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
         vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
         d_get_values_regular_dl_p0_p1(vals_next, diag+1, i_tst, i_trl, shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
@@ -1013,7 +1075,7 @@ __global__ void g_apply_regular_ver2
   // each thread handles one or more trial elements, then is assigned to a block and loops through all the trial elements
 
   __shared__ besthea::onthefly::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
-  __shared__ sc shmem_matrix_vals_data[9 * besthea::onthefly::gpu_threads_per_block];
+  __shared__ sc shmem_matrix_vals_data[9 * besthea::onthefly::gpu_threads_per_block_ver2];
   sc * shmem_matrix_vals[9];
   for(lo j = 0; j < 9; j++) shmem_matrix_vals[j] = shmem_matrix_vals_data + j * blockDim.x;
   
@@ -1034,6 +1096,9 @@ __global__ void g_apply_regular_ver2
   sc vals_next[9];
 
   for(lo i = threadIdx.x; i < n_elems; i += blockDim.x) {
+    lo &i_trl = i;
+    d_triangles_to_geometry_000_trl(i_trl, mesh_data, quadr_nodes_trl);
+
     for(lo j = 0; j < 9; j++) vals_curr[j] = 0;
     for(lo j = 0; j < 9; j++) vals_next[j] = 0;
 
@@ -1042,7 +1107,6 @@ __global__ void g_apply_regular_ver2
     for(lo diag = 0; diag < n_blocks; diag++) {
       // each thread calculates value corresponding to its i (i_trl)
       {
-        lo &i_trl = i;
         for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
         for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
         d_get_values_regular_hs_p1_p1(vals_next, diag+1, i_tst, i_trl, shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
@@ -1095,6 +1159,106 @@ __global__ void g_apply_regular_ver2
 
 
 
+template< int quadr_order >
+__global__ void g_apply_regular_ver3
+  ( [[maybe_unused]] besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
+    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
+    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
+    const sc * x, lo ld_x, sc * y, lo ld_y, sc alpha, lo i_tst_begin, lo i_tst_count,
+    const besthea::onthefly::mesh_raw_metadata mesh_metadata,
+    const besthea::onthefly::mesh_raw_data mesh_data,
+    const besthea::onthefly::heat_kernel_parameters kp) {
+  
+  __shared__ besthea::onthefly::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[besthea::onthefly::gpu_threads_per_block_ver3_tst];
+  __shared__ besthea::onthefly::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[besthea::onthefly::gpu_threads_per_block_ver3_trl];
+  __shared__ sc shmem_y_vals[besthea::onthefly::gpu_threads_per_block_ver3_trl * besthea::onthefly::gpu_threads_per_block_ver3_tst];
+
+  const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+  const lo &n_blocks = mesh_metadata.n_temporal_elements; // number of blocks of matrix, not gpu threadblocks
+  const lo &n_elems = mesh_metadata.n_elems;
+  const lo i_tst = i_tst_begin + blockIdx.x * blockDim.x + threadIdx.x;
+  const lo i_trl = blockIdx.y * blockDim.y + threadIdx.y;
+  const lo &row = i_tst;
+  const lo &col = i_trl;
+
+  shmem_y_vals[tid] = 0;
+
+  if(tid < besthea::onthefly::gpu_threads_per_block_ver3_tst && i_tst < i_tst_begin + i_tst_count)
+    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_data, shmem_quadr_nodes_tst[tid]);
+  if(tid < besthea::onthefly::gpu_threads_per_block_ver3_trl && i_trl < n_elems)
+    d_triangles_to_geometry_000_trl(blockIdx.y * blockDim.y + tid, mesh_data, shmem_quadr_nodes_trl[tid]);
+    
+  if(i_tst >= i_tst_begin + i_tst_count || i_trl >= n_elems)
+    return;
+    
+  __syncthreads();
+  
+  sc val_prev = 0;
+  sc val_curr = 0;
+  sc val_next = 0;
+  sc matrix_val;
+  for(lo diag = 0; diag < n_blocks; diag++) {
+    val_prev = val_curr;
+    val_curr = val_next;
+    d_get_values_regular_sl_p0_p0(&val_next, diag+1, i_tst, i_trl, shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
+    matrix_val = ((i_tst == i_trl) ? (0) : (-val_prev + 2*val_curr - val_next)); // singular will be done by the cpu
+    
+    lo max_block = n_blocks - diag;
+    for(lo block = 0; block < max_block; block++) {
+      lo block_row = diag + block;
+      lo block_col = block;
+      shmem_y_vals[tid] = matrix_val * x[block_col * ld_x + col];
+      __syncthreads();
+      d_reduce_sum_2d_y(shmem_y_vals);
+      if(tid < blockDim.x)
+        atomicAdd(&y[block_row * ld_y + row], alpha * shmem_y_vals[tid]);
+    }
+
+  }
+      
+}
+
+
+
+template< int quadr_order >
+__global__ void g_apply_regular_ver3
+  ( [[maybe_unused]] besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
+    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
+    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+    const sc * x, lo ld_x, sc * y, lo ld_y, sc alpha, lo i_tst_begin, lo i_tst_count,
+    const besthea::onthefly::mesh_raw_metadata mesh_metadata,
+    const besthea::onthefly::mesh_raw_data mesh_data,
+    const besthea::onthefly::heat_kernel_parameters kp) {
+
+}
+
+
+
+template< int quadr_order >
+__global__ void g_apply_regular_ver3
+  ( [[maybe_unused]] besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
+    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
+    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+    const sc * x, lo ld_x, sc * y, lo ld_y, sc alpha, lo i_tst_begin, lo i_tst_count,
+    const besthea::onthefly::mesh_raw_metadata mesh_metadata,
+    const besthea::onthefly::mesh_raw_data mesh_data,
+    const besthea::onthefly::heat_kernel_parameters kp) {
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 template<class kernel_type, class test_space_type, class trial_space_type>
 void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
@@ -1109,75 +1273,68 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
     std::cerr << "Transposed matrices are not supported\n";
     return;
   }
+
+
+
+  apply_regular_gpu_tmp_data tmp_data;
+  switch(gpu_kernel_version) {
+    case 3:
+      // x, y
+      tmp_data.allocate(n_gpus, x.get_block_size(), x.get_size_of_block(), y.get_block_size(), y.get_size_of_block());
+      break;
+    case 2:
+      // x_perm, y_perm
+      tmp_data.allocate(n_gpus, x.get_size_of_block(), x.get_block_size(), y.get_size_of_block(), y.get_block_size());
+      break;
+    case 1:
+    default:
+      // x, y_perm
+      tmp_data.allocate(n_gpus, x.get_block_size(), x.get_size_of_block(), y.get_size_of_block(), y.get_block_size());
+      break;
+  }
   
+  apply_load_distribution load_distr(n_gpus, gpu_mesh->get_metadata().n_elems);
+  timer_collection timers(n_gpus);
+
+  apply_with_gpu(x, y, alpha, beta, tmp_data, load_distr, timers);
+    
+  tmp_data.free();
+
+
+}
+
+
+
+
+
+template<class kernel_type, class test_space_type, class trial_space_type>
+void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
+  apply_with_gpu(const block_vector_type & x, block_vector_type & y, sc alpha, sc beta,
+    const apply_regular_gpu_tmp_data & tmp_data, apply_load_distribution & load_distr, timer_collection & timers ) const {
+
   block_vector_type y_perm;
   block_vector_type x_perm;
 
-  y_perm.copy_permute(y);
-  x_perm.copy_permute(x);
-
-
-  apply_with_gpu(x, x_perm, y_perm, alpha, beta);
-
-
-  y.copy_permute(y_perm);
-
-}
-
-
-
-
-
-template<class kernel_type, class test_space_type, class trial_space_type>
-void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
-  apply_with_gpu(const block_vector_type & x, const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha, sc beta) const {
-
-    apply_regular_gpu_tmp_data tmp_data;
-    switch(gpu_kernel_version) {
-      case 1:
-        tmp_data.allocate(n_gpus, x.get_block_size(), x.get_size_of_block(), y_perm.get_block_size(), y_perm.get_size_of_block());
-        break;
-      case 2:
-      default:
-        tmp_data.allocate(n_gpus, x_perm.get_block_size(), x_perm.get_size_of_block(), y_perm.get_block_size(), y_perm.get_size_of_block());
-        break;
-    }
-    
-    lo n_elems = gpu_mesh->get_metadata().n_elems;
-    apply_load_distribution load_distr(n_gpus, n_elems);
-
-    timer_collection timers(n_gpus);
-
-    apply_with_gpu(x, x_perm, y_perm, alpha, beta, tmp_data, load_distr, timers);
-
-      
-    tmp_data.free();
-}
-
-
-
-
-
-template<class kernel_type, class test_space_type, class trial_space_type>
-void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_space_type, trial_space_type>::
-  apply_with_gpu(const block_vector_type & x, const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha, sc beta,
-    const apply_regular_gpu_tmp_data & tmp_data, apply_load_distribution & load_distr, timer_collection & timers ) const {
-
-  for(int k = 0; k < 10; k++) { // just temporary loop for testing purposes
-    printf("I %d\n", k);
+  //for(int k = 0; k < 10; k++) { // just temporary loop for testing purposes
+    //printf("I %d\n", k);
     timers.combined.start();
 
     timers.cpu_scalein.start();
-    y_perm.scale(beta);
+    x_perm.copy_permute(x);
+    y_perm.resize_match_perm(y, true);
+    y.scale(beta);
     timers.cpu_scalein.stop();
 
     switch(gpu_kernel_version) {
-      case 1:
-        this->apply_regular_gpu_begin(x, y_perm, alpha, tmp_data, load_distr, timers);
+      case 3:
+        this->apply_regular_gpu_begin(x, y, alpha, tmp_data, load_distr, timers);
         break;
       case 2:
-      default:
         this->apply_regular_gpu_begin(x_perm, y_perm, alpha, tmp_data, load_distr, timers);
+        break;
+      case 1:
+      default:
+        this->apply_regular_gpu_begin(x, y_perm, alpha, tmp_data, load_distr, timers);
         break;
     }
     
@@ -1193,7 +1350,18 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
     timers.cpu_delta0.stop();
     timers.cpu_all.stop();
 
-    this->apply_regular_gpu_finalize(y_perm, tmp_data);
+    switch(gpu_kernel_version) {
+      case 3:
+        this->apply_regular_gpu_finalize(y, tmp_data);
+        break;
+      case 2:
+        this->apply_regular_gpu_finalize(y_perm, tmp_data);
+        break;
+      case 1:
+      default:
+        this->apply_regular_gpu_finalize(y_perm, tmp_data);
+        break;
+    }
     
     timers.combined.stop();
 
@@ -1206,7 +1374,9 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
       timers.get_gpu_time_scaling()
     );
 
-  }
+  //}
+
+  y.add_permute(y_perm);
 
 }
 
@@ -1246,59 +1416,88 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
     
     lo gpu_tst_elem_begin = load_distr.get_gpu_begin(gpu_idx);
     lo gpu_tst_elem_count = load_distr.get_gpu_count(gpu_idx);
-    int gridSize = gpu_tst_elem_count;
-    int blockSize = besthea::onthefly::gpu_threads_per_block;
 
     timers.gpu_compute[gpu_idx].start_submit();
     switch(gpu_kernel_version) {
-      case 1:
+      case 3: {
+        lo n_elems = gpu_mesh->get_metadata().n_elems;
+        dim3 blockSize(gpu_threads_per_block_ver3_tst, gpu_threads_per_block_ver3_trl);
+        dim3 gridSize((gpu_tst_elem_count - 1 ) / blockSize.x + 1, (n_elems - 1) / blockSize.y + 1);
         switch(this->_order_regular) {
           case 5:
-            g_apply_regular <5> <<< gridSize, blockSize, 0, 0 >>>
-              (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
+            g_apply_regular_ver3 <5> <<< gridSize, blockSize >>>
+              (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_tst_elem_count, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
           case 4:
-            g_apply_regular <4> <<< gridSize, blockSize, 0, 0 >>>
-              (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
+            g_apply_regular_ver3 <4> <<< gridSize, blockSize >>>
+              (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_tst_elem_count, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
           case 2:
-            g_apply_regular <2> <<< gridSize, blockSize, 0, 0 >>>
-              (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
+            g_apply_regular_ver3 <2> <<< gridSize, blockSize >>>
+              (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_tst_elem_count, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
           case 1:
           default:
-            g_apply_regular <1> <<< gridSize, blockSize, 0, 0 >>>
-              (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
+            g_apply_regular_ver3 <1> <<< gridSize, blockSize >>>
+              (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_tst_elem_count, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
         }
         break;
+      }
 
-      case 2:
-      default:
+      case 2: {
+        int blockSize = besthea::onthefly::gpu_threads_per_block_ver2;
+        int gridSize = gpu_tst_elem_count;
         switch(this->_order_regular) {
           case 5:
-            g_apply_regular_ver2 <5> <<< gridSize, blockSize, 0, 0 >>>
+            g_apply_regular_ver2 <5> <<< gridSize, blockSize >>>
               (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
           case 4:
-            g_apply_regular_ver2 <4> <<< gridSize, blockSize, 0, 0 >>>
+            g_apply_regular_ver2 <4> <<< gridSize, blockSize >>>
               (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
           case 2:
-            g_apply_regular_ver2 <2> <<< gridSize, blockSize, 0, 0 >>>
+            g_apply_regular_ver2 <2> <<< gridSize, blockSize >>>
               (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
           case 1:
           default:
-            g_apply_regular_ver2 <1> <<< gridSize, blockSize, 0, 0 >>>
+            g_apply_regular_ver2 <1> <<< gridSize, blockSize >>>
               (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
         }
         break;
+      }
+
+      case 1:
+      default: {
+        int blockSize = besthea::onthefly::gpu_threads_per_block_ver1;
+        int gridSize = gpu_tst_elem_count;
+        switch(this->_order_regular) {
+          case 5:
+            g_apply_regular <5> <<< gridSize, blockSize >>>
+              (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
+            break;
+          case 4:
+            g_apply_regular <4> <<< gridSize, blockSize >>>
+              (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
+            break;
+          case 2:
+            g_apply_regular <2> <<< gridSize, blockSize >>>
+              (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
+            break;
+          case 1:
+          default:
+            g_apply_regular <1> <<< gridSize, blockSize >>>
+              (this->_kernel, this->_test_space, this->_trial_space, tmp_data.d_x[gpu_idx], tmp_data.ld_x[gpu_idx], tmp_data.d_y[gpu_idx], tmp_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
+            break;
+        }
+        break;
+      }
 
     }
     timers.gpu_compute[gpu_idx].stop_submit();
-
   }
 
 

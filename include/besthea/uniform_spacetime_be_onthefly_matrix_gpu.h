@@ -16,7 +16,10 @@ namespace besthea::onthefly {
   template< class kernel_type, class test_space_type, class trial_space_type >
   class uniform_spacetime_be_onthefly_matrix_gpu;
 
-  constexpr int gpu_threads_per_block = 256;
+  constexpr int gpu_threads_per_block_ver1 = 256;
+  constexpr int gpu_threads_per_block_ver2 = 256;
+  constexpr int gpu_threads_per_block_ver3_tst = 32;
+  constexpr int gpu_threads_per_block_ver3_trl = 8;
 }
 
 
@@ -68,9 +71,7 @@ public:
 
 private:
 
-  void apply_with_gpu(const block_vector_type & x, const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha, sc beta) const;
-
-  void apply_with_gpu(const block_vector_type & x, const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha, sc beta,
+  void apply_with_gpu(const block_vector_type & x, block_vector_type & y, sc alpha, sc beta,
     const apply_regular_gpu_tmp_data & tmp_data, apply_load_distribution & load_distr, timer_collection & timers) const;
 
   void apply_regular_gpu_begin( const block_vector_type & x, const block_vector_type & y, sc alpha,

@@ -241,6 +241,41 @@ void besthea::linear_algebra::block_vector::copy_to_vector(
   }
 }
 
+void besthea::linear_algebra::block_vector::add_permute( const block_vector & that, sc alpha ) {
+  constexpr lo tile_size = 128; // chosen experimentally, the best for double on 1 thread on Barbora
+  lo bb_max = (that._block_size - 1) / tile_size;
+  lo ii_max = (that._size - 1) / tile_size;
+
+  for (lo bb = 0; bb < bb_max; bb++) {
+    lo BB = bb * tile_size;
+    for (lo ii = 0; ii < ii_max; ii++) {
+      lo II = ii * tile_size;
+      for (lo b = 0; b < tile_size; b++) {
+        lo B = BB + b;
+        for (lo i = 0; i < tile_size; i++) {
+          lo I = II + i;
+          sc val = that.get(B, I);
+          this->add(I, B, alpha * val);
+        }
+      }
+    }
+    for(lo I = tile_size * ii_max; I < that._size; I++) {
+      for (lo b = 0; b < tile_size; b++) {
+        lo B = BB + b;
+        sc val = that.get(B, I);
+        this->add(I, B, alpha * val);
+      }
+    }
+  }
+  for (lo B = tile_size * bb_max; B < that._block_size; B++) {
+    for(lo I = 0; I < that._size; I++) {
+      sc val = that.get(B, I);
+      this->add(I, B, alpha * val);
+    }
+  }
+
+}
+
 template<>
 void besthea::linear_algebra::block_vector::get_local_part<
   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >(
