@@ -122,7 +122,8 @@ endmacro()
 
 
 macro(enable_CUDA)
-  # intel host compiler in combination with eigen causes problems
+  # intel host compiler in combination with eigen 3.3.90 causes problems
+  # specifically https://gitlab.com/libeigen/eigen/-/issues/2180
   # host compiler is on linux g++ by default and we dont change that default
   # set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
 

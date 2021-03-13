@@ -188,18 +188,20 @@ void besthea::onthefly::apply_load_distribution::update_gpu_begins() {
 }
 
 
-
+/*
 void besthea::onthefly::apply_load_distribution::adapt(
-  double cpu_time_sing_del0, double cpu_time_reg, double gpu_time, double inertia) {
+  double cpu_time_sing_del0, double cpu_time_reg, double gpu_time, double inertia) {*/
+void besthea::onthefly::apply_load_distribution::adapt(
+  double cpu_time_const, double cpu_time_scaling, double gpu_time_const, double gpu_time_scaling, double inertia) {
 
   printf("Before adapt: %6ld %12.6f\n", cpu_n_tst_elems, cpu_n_tst_elems_target);
 
   lo gpu_n_elems = n_elems - cpu_n_tst_elems;
-  double time_per_elem_gpu = gpu_time / gpu_n_elems;
-  double time_per_elem_cpu = cpu_time_reg / cpu_n_tst_elems;
+  double time_per_elem_gpu = gpu_time_scaling / gpu_n_elems;
+  double time_per_elem_cpu = cpu_time_scaling / cpu_n_tst_elems;
 
   double cpu_n_elems_ideal =
-      (n_elems * time_per_elem_gpu - cpu_time_sing_del0)
+      (n_elems * time_per_elem_gpu - cpu_time_const + gpu_time_const)
       /
       (time_per_elem_cpu + time_per_elem_gpu);
     
@@ -257,25 +259,25 @@ besthea::onthefly::timer_collection::timer_collection(int n_gpus) {
 
 void besthea::onthefly::timer_collection::print_all() {
   printf("gpu_copyin:   ");
-  print_one(gpu_copyin);
+  print_timers(gpu_copyin);
   printf("gpu_compute:  ");
-  print_one(gpu_compute);
+  print_timers(gpu_compute);
   printf("gpu_copyout:  ");
-  print_one(gpu_copyout);
+  print_timers(gpu_copyout);
   printf("gpu_all:      ");
-  print_one(gpu_all);
+  print_timers(gpu_all);
   printf("cpu_scalein:  %10.6f\n", cpu_scalein.get_time());
   printf("cpu_regular:  %10.6f\n", cpu_regular.get_time());
   printf("cpu_singular: %10.6f\n", cpu_singular.get_time());
   printf("cpu_delta0:   %10.6f\n", cpu_delta0.get_time());
   printf("cpu_all:      %10.6f\n", cpu_all.get_time());
-  printf("gpu_max:      %10.6f\n", get_gpu_all_time());
+  printf("gpu_max:      %10.6f\n", get_gpu_time_all());
   printf("combined:     %10.6f\n", combined.get_time());
 }
 
 
 
-void besthea::onthefly::timer_collection::print_one(std::vector<besthea::tools::time_measurer_cuda> & timers) {
+void besthea::onthefly::timer_collection::print_timers(std::vector<besthea::tools::time_measurer_cuda> & timers) {
   for(unsigned int i = 0; i < timers.size(); i++) {
     printf("%10.6f  ", timers[i].get_time());
   }
@@ -284,16 +286,41 @@ void besthea::onthefly::timer_collection::print_one(std::vector<besthea::tools::
 
 
 
-double besthea::onthefly::timer_collection::get_gpu_all_time() {
-  double max_time = -1;
-
-  for(unsigned int i = 0; i < gpu_all.size(); i++) {
-    max_time = std::max(max_time, gpu_all[i].get_time());
-  }
-
-  return max_time;
+double besthea::onthefly::timer_collection::get_cpu_time_const() {
+  return cpu_singular.get_time() + cpu_delta0.get_time();
 }
 
+double besthea::onthefly::timer_collection::get_cpu_time_scaling() {
+  return cpu_regular.get_time();
+}
+
+double besthea::onthefly::timer_collection::get_gpu_time_const() {
+  double max_time_copyin = -1;
+  for(unsigned int i = 0; i < gpu_copyin.size(); i++) {
+    max_time_copyin = std::max(max_time_copyin, gpu_copyin[i].get_time());
+  }
+  double max_time_copyout = -1;
+  for(unsigned int i = 0; i < gpu_copyout.size(); i++) {
+    max_time_copyout = std::max(max_time_copyout, gpu_copyout[i].get_time());
+  }
+  return max_time_copyin + max_time_copyout;
+}
+
+double besthea::onthefly::timer_collection::get_gpu_time_scaling() {
+  double max_time_compute = -1;
+  for(unsigned int i = 0; i < gpu_compute.size(); i++) {
+    max_time_compute = std::max(max_time_compute, gpu_compute[i].get_time());
+  }
+  return max_time_compute;
+}
+
+double besthea::onthefly::timer_collection::get_gpu_time_all() {
+  double max_time_gpu_all = -1;
+  for(unsigned int i = 0; i < gpu_all.size(); i++) {
+    max_time_gpu_all = std::max(max_time_gpu_all, gpu_all[i].get_time());
+  }
+  return max_time_gpu_all;
+}
 
 
 

@@ -1200,11 +1200,12 @@ void besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, te
     timers.print_all();
 
     load_distr.adapt(
-      timers.cpu_singular.get_time() + timers.cpu_delta0.get_time(),
-      timers.cpu_regular.get_time(),
-      timers.get_gpu_all_time(),
-      0.0
+      timers.get_cpu_time_const(),
+      timers.get_cpu_time_scaling(),
+      timers.get_gpu_time_const(),
+      timers.get_gpu_time_scaling()
     );
+
   }
 
 }

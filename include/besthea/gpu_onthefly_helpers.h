@@ -180,7 +180,7 @@ private:
 public:
   apply_load_distribution(int n_gpus, lo n_elems);
   void update_gpu_begins();
-  void adapt(double cpu_time_sing_del0, double cpu_time_reg, double gpu_time, double inertia);
+  void adapt(double cpu_time_const, double cpu_time_scaling, double gpu_time_const, double gpu_time_scaling, double inertia = 0.0);
   lo get_cpu_begin() const { return 0; }
   lo get_cpu_end() const { return cpu_n_tst_elems; }
   lo get_cpu_count() const { return cpu_n_tst_elems; }
@@ -208,8 +208,12 @@ struct besthea::onthefly::timer_collection {
   besthea::tools::time_measurer combined;
   timer_collection(int n_gpus);
   void print_all();
-  void print_one(std::vector<besthea::tools::time_measurer_cuda> & timers);
-  double get_gpu_all_time();
+  void print_timers(std::vector<besthea::tools::time_measurer_cuda> & timers);
+  double get_cpu_time_const();
+  double get_cpu_time_scaling();
+  double get_gpu_time_const();
+  double get_gpu_time_scaling();
+  double get_gpu_time_all();
 };
 
 
