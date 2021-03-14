@@ -18,8 +18,10 @@ namespace besthea::onthefly {
 
   constexpr int gpu_threads_per_block_ver1 = 256;
   constexpr int gpu_threads_per_block_ver2 = 256;
-  constexpr int gpu_threads_per_block_ver3_tst = 32;
-  constexpr int gpu_threads_per_block_ver3_trl = 8;
+  constexpr int gpu_threads_per_block_ver3_tst = 16;
+  constexpr int gpu_threads_per_block_ver3_trl = 16;
+  constexpr int gpu_threads_per_block_ver4_tst = 16;
+  constexpr int gpu_threads_per_block_ver4_trl = 16;
 }
 
 
