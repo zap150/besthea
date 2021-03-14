@@ -207,7 +207,7 @@ void besthea::onthefly::apply_load_distribution::adapt(
         (time_per_elem_cpu + time_per_elem_gpu);
   }
   else {
-    cpu_n_elems_ideal = n_elems;
+    cpu_n_elems_ideal = (double)n_elems;
   }
     
   this->cpu_n_tst_elems_target = cpu_n_tst_elems_target * inertia + cpu_n_elems_ideal * (1 - inertia);
