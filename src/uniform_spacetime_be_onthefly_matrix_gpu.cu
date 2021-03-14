@@ -850,9 +850,6 @@ __global__ void g_apply_regular
 
 
   for (lo i_trl = threadIdx.x; i_trl < n_elems; i_trl += blockDim.x) {
-    if(i_tst == i_trl)
-      continue;
-
     d_triangles_to_geometry_000_trl(i_trl, mesh_data, quadr_nodes_trl);
 
     const lo * rows = mesh_data.d_element_nodes + 3 * i_tst;
@@ -936,8 +933,7 @@ __global__ void g_apply_regular_ver2
   sc val_next;
 
   for(lo i = threadIdx.x; i < n_elems; i += blockDim.x) {
-    lo &i_trl = i;
-    d_triangles_to_geometry_000_trl(i_trl, mesh_data, quadr_nodes_trl);
+    d_triangles_to_geometry_000_trl(i, mesh_data, quadr_nodes_trl);
 
     val_curr = 0;
     val_next = 0;
@@ -947,6 +943,7 @@ __global__ void g_apply_regular_ver2
     for(lo diag = 0; diag < n_blocks; diag++) {
       // each thread calculates value corresponding to its i (i_trl)
       {
+        lo &i_trl = i;
         val_prev = val_curr;
         val_curr = val_next;
         d_get_values_regular_sl_p0_p0(&val_next, diag+1, i_tst, i_trl, shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
@@ -962,7 +959,8 @@ __global__ void g_apply_regular_ver2
           lo block_col = block;
           sc y_val = 0;
           for(lo j = 0; j < curr_active_threads; j++) {
-            lo col = (i / blockDim.x) * blockDim.x + j;
+            lo i_trl = (i / blockDim.x) * blockDim.x + j;
+            lo &col = i_trl;
             sc x_val = x_perm[col * ld_x_perm + block_col];
             y_val += shmem_matrix_vals[j] * x_val;
           }
@@ -1018,8 +1016,7 @@ __global__ void g_apply_regular_ver2
   sc vals_next[3];
 
   for(lo i = threadIdx.x; i < n_elems; i += blockDim.x) {
-    lo &i_trl = i;
-    d_triangles_to_geometry_000_trl(i_trl, mesh_data, quadr_nodes_trl);
+    d_triangles_to_geometry_000_trl(i, mesh_data, quadr_nodes_trl);
 
     vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
     vals_next[0] = 0;   vals_next[1] = 0;   vals_next[2] = 0;
@@ -1029,6 +1026,7 @@ __global__ void g_apply_regular_ver2
     for(lo diag = 0; diag < n_blocks; diag++) {
       // each thread calculates value corresponding to its i (i_trl)
       {
+        lo &i_trl = i;
         vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
         vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
         d_get_values_regular_dl_p0_p1(vals_next, diag+1, i_tst, i_trl, shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
@@ -1101,8 +1099,7 @@ __global__ void g_apply_regular_ver2
   sc vals_next[9];
 
   for(lo i = threadIdx.x; i < n_elems; i += blockDim.x) {
-    lo &i_trl = i;
-    d_triangles_to_geometry_000_trl(i_trl, mesh_data, quadr_nodes_trl);
+    d_triangles_to_geometry_000_trl(i, mesh_data, quadr_nodes_trl);
 
     for(lo j = 0; j < 9; j++) vals_curr[j] = 0;
     for(lo j = 0; j < 9; j++) vals_next[j] = 0;
@@ -1112,6 +1109,7 @@ __global__ void g_apply_regular_ver2
     for(lo diag = 0; diag < n_blocks; diag++) {
       // each thread calculates value corresponding to its i (i_trl)
       {
+        lo &i_trl = i;
         for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
         for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
         d_get_values_regular_hs_p1_p1(vals_next, diag+1, i_tst, i_trl, shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
@@ -1239,6 +1237,8 @@ __global__ void g_apply_regular_ver3
     const besthea::onthefly::mesh_raw_metadata mesh_metadata,
     const besthea::onthefly::mesh_raw_data mesh_data,
     const besthea::onthefly::heat_kernel_parameters kp) {
+
+  
 
 }
 
