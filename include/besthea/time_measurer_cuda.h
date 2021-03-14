@@ -29,6 +29,7 @@ private:
 
 public:
   time_measurer_cuda() {
+    reset();
   }
 
   time_measurer_cuda(int gpu_idx_, cudaStream_t stream_) {

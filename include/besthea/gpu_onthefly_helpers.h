@@ -174,11 +174,10 @@ private:
   std::vector<lo> gpu_i_tst_begins;
   int n_gpus;
   lo n_elems;
-  lo cpu_chunk_size;
-  lo min_cpu_n_tst_elems;
-  lo min_gpu_n_tst_elems;
+  lo gpu_chunk_size;
+  lo min_cpu_tst_elems;
 public:
-  apply_load_distribution(int n_gpus, lo n_elems);
+  apply_load_distribution(int n_gpus, lo n_elems, lo gpu_chunk_size);
   void update_gpu_begins();
   void adapt(double cpu_time_const, double cpu_time_scaling, double gpu_time_const, double gpu_time_scaling, double inertia = 0.0);
   lo get_cpu_begin() const { return 0; }
@@ -187,6 +186,8 @@ public:
   lo get_gpu_begin(int gpu_idx) const { return gpu_i_tst_begins[gpu_idx]; }
   lo get_gpu_end(int gpu_idx) const { return gpu_i_tst_begins[gpu_idx+1]; }
   lo get_gpu_count(int gpu_idx) const { return get_gpu_end(gpu_idx) - get_gpu_begin(gpu_idx); }
+  lo get_gpu_count_total() const { return n_elems - cpu_n_tst_elems; }
+  void print();
 private:
   lo adjust_cpu_count(double suggested) const;
 };
