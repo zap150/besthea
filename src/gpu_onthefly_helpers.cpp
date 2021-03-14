@@ -182,7 +182,7 @@ void besthea::onthefly::apply_load_distribution::update_gpu_begins() {
   lo gpus_n_tst_elems = n_elems - cpu_n_tst_elems;
 
   for(int gpu_idx = 0; gpu_idx <= n_gpus; gpu_idx++) {
-    gpu_i_tst_begins[gpu_idx] = cpu_n_tst_elems + (gpus_n_tst_elems * gpu_idx) / n_gpus;
+    gpu_i_tst_begins[gpu_idx] = (gpus_n_tst_elems * gpu_idx) / n_gpus;
   }
 
 }

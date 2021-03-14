@@ -180,8 +180,8 @@ public:
   apply_load_distribution(int n_gpus, lo n_elems, lo gpu_chunk_size);
   void update_gpu_begins();
   void adapt(double cpu_time_const, double cpu_time_scaling, double gpu_time_const, double gpu_time_scaling, double inertia = 0.0);
-  lo get_cpu_begin() const { return 0; }
-  lo get_cpu_end() const { return cpu_n_tst_elems; }
+  lo get_cpu_begin() const { return n_elems - cpu_n_tst_elems; }
+  lo get_cpu_end() const { return n_elems; }
   lo get_cpu_count() const { return cpu_n_tst_elems; }
   lo get_gpu_begin(int gpu_idx) const { return gpu_i_tst_begins[gpu_idx]; }
   lo get_gpu_end(int gpu_idx) const { return gpu_i_tst_begins[gpu_idx+1]; }
