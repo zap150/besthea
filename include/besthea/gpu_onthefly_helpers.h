@@ -30,7 +30,7 @@ namespace besthea::onthefly {
   
   struct heat_kernel_parameters;
 
-  struct apply_regular_gpu_tmp_data;
+  struct gpu_apply_vectors_data;
 
   class gpu_uniform_spacetime_tensor_mesh;
 
@@ -133,16 +133,16 @@ struct besthea::onthefly::heat_kernel_parameters {
 
 
 
-struct besthea::onthefly::apply_regular_gpu_tmp_data {
+struct besthea::onthefly::gpu_apply_vectors_data {
   sc * h_x; // raw data on host
   std::vector<sc*> h_y; // raw data on host
   std::vector<sc*> d_x, d_y; // raw data on device
   std::vector<size_t> pitch_x, pitch_y; // pitch in bytes
   std::vector<lo> ld_x, ld_y; // leading dimension in elements
   
-  apply_regular_gpu_tmp_data();
-  apply_regular_gpu_tmp_data(const apply_regular_gpu_tmp_data & that) = delete;
-  ~apply_regular_gpu_tmp_data();
+  gpu_apply_vectors_data();
+  gpu_apply_vectors_data(const gpu_apply_vectors_data & that) = delete;
+  ~gpu_apply_vectors_data();
   void allocate(int n_gpus, lo x_block_count, lo x_size_of_block, lo y_block_count, lo y_size_of_block);
   void free();
   void print_times() const;

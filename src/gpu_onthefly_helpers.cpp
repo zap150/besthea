@@ -25,20 +25,19 @@ bool besthea::onthefly::is_gpu_quadr_order1_initialized = false;
 
 
 
-
-besthea::onthefly::apply_regular_gpu_tmp_data::apply_regular_gpu_tmp_data() :
+besthea::onthefly::gpu_apply_vectors_data::gpu_apply_vectors_data() :
   h_x(nullptr) {
 }
 
 
 
-besthea::onthefly::apply_regular_gpu_tmp_data::~apply_regular_gpu_tmp_data() {
+besthea::onthefly::gpu_apply_vectors_data::~gpu_apply_vectors_data() {
   free();
 }
 
 
 
-void besthea::onthefly::apply_regular_gpu_tmp_data::allocate(int n_gpus,
+void besthea::onthefly::gpu_apply_vectors_data::allocate(int n_gpus,
   lo x_block_count, lo x_size_of_block, lo y_block_count, lo y_size_of_block) {
 
   h_y.resize(n_gpus);
@@ -66,7 +65,7 @@ void besthea::onthefly::apply_regular_gpu_tmp_data::allocate(int n_gpus,
 }
 
 
-void besthea::onthefly::apply_regular_gpu_tmp_data::free() {
+void besthea::onthefly::gpu_apply_vectors_data::free() {
 
   if(h_x != nullptr) cudaFreeHost(h_x);
   for(unsigned int i = 0; i < h_y.size(); i++) cudaFreeHost(h_y[i]);

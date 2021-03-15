@@ -66,21 +66,21 @@ public:
 
 private:
 
-  void apply_with_gpu(const block_vector_type & x, block_vector_type & y, sc alpha, sc beta,
-    const apply_regular_gpu_tmp_data & tmp_data, apply_load_distribution & load_distr, timer_collection & timers) const;
-
-  void apply_regular_gpu_begin( const block_vector_type & x, const block_vector_type & y, sc alpha,
-    const apply_regular_gpu_tmp_data & tmp_data, const apply_load_distribution & load_distr, timer_collection & timers ) const;
-  void apply_regular_gpu_finalize( block_vector_type & y, const apply_regular_gpu_tmp_data & tmp_data ) const;
+  void init_gpu_data();
 
   template<int quadr_order>
   void init_gpu_quadrature_memory() const;
+
+  void apply_regular_gpu_begin( const block_vector_type & x, const block_vector_type & y, sc alpha, timer_collection & timers ) const;
+  void apply_regular_gpu_finalize( block_vector_type & y ) const;
 
 private:
   const gpu_uniform_spacetime_tensor_mesh * gpu_mesh;
   int n_gpus;
   int gpu_kernel_version;
   
+  gpu_apply_vectors_data vectors_data;
+  apply_load_distribution * load_distr;
 
 };
 
