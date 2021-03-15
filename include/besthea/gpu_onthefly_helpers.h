@@ -8,6 +8,7 @@
 
 #include <cmath>
 #include <vector>
+#include <cuda_runtime.h>
 
 #include "besthea/settings.h"
 #include "besthea/uniform_spacetime_tensor_mesh.h"
@@ -36,6 +37,8 @@ namespace besthea::onthefly {
   class apply_load_distribution;
 
   struct timer_collection;
+
+  struct gpu_threads_per_block;
   
 #ifdef __NVCC__
   __host__ __device__
@@ -217,6 +220,31 @@ struct besthea::onthefly::timer_collection {
   double get_gpu_time_all();
 };
 
+
+
+
+
+struct besthea::onthefly::gpu_threads_per_block {
+  dim3 tpb_qo1;
+  dim3 tpb_qo2;
+  dim3 tpb_qo4;
+  dim3 tpb_qo5;
+  constexpr gpu_threads_per_block(int x1, int y1, int x2, int y2, int x4, int y4, int x5, int y5)
+    : tpb_qo1(x1,y1), tpb_qo2(x2,y2), tpb_qo4(x4,y4), tpb_qo5(x5,y5) { }
+  __host__ __device__ constexpr const dim3 & get(int quadr_order) const {
+    switch(quadr_order) {
+      case 5:
+        return tpb_qo5;
+      case 4:
+        return tpb_qo4;
+      case 2:
+        return tpb_qo2;
+      case 1:
+      default:
+        return tpb_qo1;
+    }
+  }
+};
 
 
 
