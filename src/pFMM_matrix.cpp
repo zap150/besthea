@@ -168,8 +168,8 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
   source_space >::apply_sl_dl( const block_vector_type & x,
   block_vector_type & y, bool trans, sc alpha, sc beta ) const {
-  // Specialization for the single and double layer operators
-  // #pragma omp parallel for schedule( static )
+// Specialization for the single and double layer operators
+#pragma omp parallel for schedule( static )
   for ( lo i = 0; i < y.get_block_size( ); ++i ) {
     for ( lo j = 0; j < y.get_size_of_block( ); ++j ) {
       y.set( i, j, y.get( i, j ) * beta );

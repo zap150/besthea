@@ -131,6 +131,7 @@ set(besthea_SOURCES
   src/fe_identity.cpp
   src/fe_space.cpp
   src/full_matrix.cpp
+  src/general_spacetime_cluster.cpp
   src/indices.cpp
   src/io_routines.cpp
   src/linear_operator.cpp
