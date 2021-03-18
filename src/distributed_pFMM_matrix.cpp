@@ -3304,7 +3304,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             = alpha * ( _spat_order + 1 ) * _cheb_nodes_sum_coll.size( )
             + beta * _cheb_nodes_sum_coll.size( );
           const sc * curr_ptr = all_poly_vals_mult_coll_data;  // + start_idx;
-          lo idx;
+          lou idx;
 #pragma omp simd aligned( buffer_for_gaussians_data,curr_ptr : DATA_ALIGN ) reduction( + : val ) simdlen( DATA_WIDTH )
           for ( idx = 0; idx < _cheb_nodes_sum_coll.size( ); ++idx ) {
             val += buffer_for_gaussians_data[ index_gaussian + idx ]
@@ -3819,7 +3819,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   // allocate a global result vector to store the result of the pFMM procedure.
   std::vector< lo > my_blocks = y.get_my_blocks( );
-  distributed_block_vector y_pFMM( my_blocks, y.get_block_size( ),
+  distributed_block_vector y_pFMM( my_blocks, y.get_n_blocks( ),
     y.get_size_of_block( ), true, MPI_COMM_WORLD );
 
   // apply pFMM procedure
@@ -3843,8 +3843,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   // allocate a global result vector to store the result of the pFMM procedure.
   std::vector< lo > my_blocks = y.get_my_blocks( );
-  distributed_block_vector y_pFMM( my_blocks, y.get_block_size( ),
-    y.get_size_of_block( ), true, y.get_comm( ) );
+  distributed_block_vector y_pFMM(
+    my_blocks, y.get_n_blocks( ), y.get_size_of_block( ), true, y.get_comm( ) );
 
   // apply pFMM procedure
   // We use barriers between pFMM procedures to be on the safe side. The problem
@@ -3916,21 +3916,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     // remove existing verbose file and write to new one
     remove( verbose_file.c_str( ) );
   }
-<<<<<<< HEAD
-
-  //############################################################################
-  //#### distributed pFMM ####
-  // allocate a global result vector. Only the entries corresponding to clusters
-  // assigned to the current process are computed.
-  std::vector< lo > my_blocks = y.get_my_blocks( );
-  distributed_block_vector y_pFMM( my_blocks, y.get_n_blocks( ),
-    y.get_size_of_block( ), true, MPI_COMM_WORLD );
-
-  // auxiliary arrays for OpenMP dependencis (in OpenMP 4.5 must not be members)
-=======
   // auxiliary arrays for OpenMP dependencies
   // (must not be members in OpenMP 4.5)
->>>>>>> develop
   auto first = m2l_list.begin( );
   auto last = m2l_list.end( );
   char * aux_dep_m2l = new char[ std::distance( first, last ) ];
@@ -4304,17 +4291,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       }
     }
   }
-<<<<<<< HEAD
-  y.add( y_pFMM, alpha );
-
-  MPI_Barrier( y.get_comm( ) );
-  y.synchronize_shared_parts( );
-
-  // print out task timing
-=======
   // set loop timer end
   time_type::rep loop_end = 0;
->>>>>>> develop
   if ( _measure_tasks ) {
     loop_end = _global_timer.get_time_from_start< time_type >( );
   }

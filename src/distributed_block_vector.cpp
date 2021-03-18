@@ -72,15 +72,9 @@ besthea::linear_algebra::distributed_block_vector::distributed_block_vector(
   lo n_blocks, lo size, bool zero, MPI_Comm comm )
   : _n_blocks( n_blocks ),
     _size( size ),
-<<<<<<< HEAD
     _data( n_blocks, vector_type( size, zero ) ),
     _owners( n_blocks ),
     _my_blocks( std::vector< lo >{ } ),
-=======
-    _data( block_size, vector_type( size, zero ) ),
-    _owners( block_size ),
-    _my_blocks( std::vector< lo >{} ),
->>>>>>> develop
     _comm( comm ),
     _duplicated( true ) {
   int comm_size;
@@ -255,25 +249,9 @@ void besthea::linear_algebra::distributed_block_vector::copy_from_raw(
 }
 
 void besthea::linear_algebra::distributed_block_vector::copy_from_raw(
-<<<<<<< HEAD
   std::vector< lo > & my_blocks, lo n_blocks, lo size, const sc * data ) {
   if ( n_blocks != _n_blocks ) {
     resize( my_blocks, n_blocks );
-=======
-  std::vector< lo > & my_blocks, lo block_size, lo size, const sc * data ) {
-  if ( block_size != _block_size ) {
-    int comm_size;
-
-    MPI_Comm_size( _comm, &comm_size );
-    resize( block_size );
-    _owners.resize( block_size, std::vector< int >{} );
-
-    for ( auto it : my_blocks ) {
-      _owners.at( it ).push_back( _rank );
-    }
-
-    communicate_owners( my_blocks );
->>>>>>> develop
   }
   if ( size != _size ) {
     resize_blocks( size, false );
@@ -324,23 +302,8 @@ void besthea::linear_algebra::distributed_block_vector::copy_from_vector(
 void besthea::linear_algebra::distributed_block_vector::copy_from_vector(
   std::vector< lo > & my_blocks, lo n_blocks, lo size,
   const vector_type & data ) {
-<<<<<<< HEAD
   if ( n_blocks != _n_blocks ) {
     resize( my_blocks, n_blocks );
-=======
-  if ( block_size != _block_size ) {
-    int comm_size;
-
-    MPI_Comm_size( _comm, &comm_size );
-    resize( block_size );
-    _owners.resize( block_size, std::vector< int >{} );
-
-    for ( auto it : my_blocks ) {
-      _owners.at( it ).push_back( _rank );
-    }
-
-    communicate_owners( my_blocks );
->>>>>>> develop
   }
   if ( size != _size ) {
     resize_blocks( size, false );
