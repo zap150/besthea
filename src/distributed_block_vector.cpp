@@ -72,9 +72,15 @@ besthea::linear_algebra::distributed_block_vector::distributed_block_vector(
   lo n_blocks, lo size, bool zero, MPI_Comm comm )
   : _n_blocks( n_blocks ),
     _size( size ),
+<<<<<<< HEAD
     _data( n_blocks, vector_type( size, zero ) ),
     _owners( n_blocks ),
     _my_blocks( std::vector< lo >{ } ),
+=======
+    _data( block_size, vector_type( size, zero ) ),
+    _owners( block_size ),
+    _my_blocks( std::vector< lo >{} ),
+>>>>>>> develop
     _comm( comm ),
     _duplicated( true ) {
   int comm_size;
@@ -249,9 +255,25 @@ void besthea::linear_algebra::distributed_block_vector::copy_from_raw(
 }
 
 void besthea::linear_algebra::distributed_block_vector::copy_from_raw(
+<<<<<<< HEAD
   std::vector< lo > & my_blocks, lo n_blocks, lo size, const sc * data ) {
   if ( n_blocks != _n_blocks ) {
     resize( my_blocks, n_blocks );
+=======
+  std::vector< lo > & my_blocks, lo block_size, lo size, const sc * data ) {
+  if ( block_size != _block_size ) {
+    int comm_size;
+
+    MPI_Comm_size( _comm, &comm_size );
+    resize( block_size );
+    _owners.resize( block_size, std::vector< int >{} );
+
+    for ( auto it : my_blocks ) {
+      _owners.at( it ).push_back( _rank );
+    }
+
+    communicate_owners( my_blocks );
+>>>>>>> develop
   }
   if ( size != _size ) {
     resize_blocks( size, false );
@@ -302,8 +324,23 @@ void besthea::linear_algebra::distributed_block_vector::copy_from_vector(
 void besthea::linear_algebra::distributed_block_vector::copy_from_vector(
   std::vector< lo > & my_blocks, lo n_blocks, lo size,
   const vector_type & data ) {
+<<<<<<< HEAD
   if ( n_blocks != _n_blocks ) {
     resize( my_blocks, n_blocks );
+=======
+  if ( block_size != _block_size ) {
+    int comm_size;
+
+    MPI_Comm_size( _comm, &comm_size );
+    resize( block_size );
+    _owners.resize( block_size, std::vector< int >{} );
+
+    for ( auto it : my_blocks ) {
+      _owners.at( it ).push_back( _rank );
+    }
+
+    communicate_owners( my_blocks );
+>>>>>>> develop
   }
   if ( size != _size ) {
     resize_blocks( size, false );
@@ -565,7 +602,7 @@ template<>
 void besthea::linear_algebra::distributed_block_vector::add_local_part<
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 > >(
-  besthea::mesh::general_spacetime_cluster * cluster,
+  const besthea::mesh::general_spacetime_cluster * cluster,
   const besthea::linear_algebra::vector & local_vector ) {
   lo n_time_elements = cluster->get_n_time_elements( );
   lo n_space_elements = cluster->get_n_space_elements( );
@@ -600,7 +637,7 @@ template<>
 void besthea::linear_algebra::distributed_block_vector::add_local_part<
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p1 > >(
-  besthea::mesh::general_spacetime_cluster * cluster,
+  const besthea::mesh::general_spacetime_cluster * cluster,
   const besthea::linear_algebra::vector & local_vector ) {
   lo n_time_elements = cluster->get_n_time_elements( );
   lo n_space_elements = cluster->get_n_space_elements( );
@@ -634,6 +671,211 @@ void besthea::linear_algebra::distributed_block_vector::add_local_part<
       // necessary since there is just one global space mesh at the moment.
       add_atomic( global_time_index, global_space_index,
         local_vector[ i_time * n_space_nodes + i_space ] );
+    }
+  }
+}
+
+template<>
+void besthea::linear_algebra::distributed_block_vector::get_local_part<
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 > >(
+  besthea::mesh::general_spacetime_cluster * cluster,
+  besthea::linear_algebra::full_matrix & local_part ) const {
+  lo n_time_elements = cluster->get_n_time_elements( );
+  lo n_space_elements = cluster->get_n_space_elements( );
+  const std::vector< lo > & spacetime_elements = cluster->get_all_elements( );
+  // resize the output matrix
+  local_part.resize( n_time_elements, n_space_elements );
+  // select the correct mesh associated with the cluster
+  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
+    = cluster->get_mesh( );
+  const mesh::spacetime_tensor_mesh * cluster_mesh;
+  lo mesh_start_idx;
+  if ( cluster->get_elements_are_local( ) ) {
+    cluster_mesh = distributed_mesh->get_local_mesh( );
+    mesh_start_idx = distributed_mesh->get_local_start_idx( );
+  } else {
+    cluster_mesh = distributed_mesh->get_nearfield_mesh( );
+    mesh_start_idx = distributed_mesh->get_nearfield_start_idx( );
+  }
+  // precompute time indices
+  std::vector< lo > global_time_indices( n_time_elements );
+  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
+    // use that the spacetime elements are sorted in time, i.e. a consecutive
+    // group of n_space_elements elements has the same temporal component to
+    // determine the local time index only once
+    lo local_time_index
+      = cluster_mesh->get_time_element( distributed_mesh->global_2_local(
+        mesh_start_idx, spacetime_elements[ i_time * n_space_elements ] ) );
+    global_time_indices[ i_time ] = distributed_mesh->local_2_global_time(
+      mesh_start_idx, local_time_index );
+  }
+
+  for ( lo i_space = 0; i_space < n_space_elements; ++i_space ) {
+    // use again that spacetime elements are sorted in time and their tensor
+    // product structure to get the global space indices
+    lo global_space_index
+      = cluster_mesh->get_space_element( distributed_mesh->global_2_local(
+        mesh_start_idx, spacetime_elements[ i_space ] ) );
+    for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
+      local_part.set( i_time, i_space,
+        get( global_time_indices[ i_time ], global_space_index ) );
+    }
+  }
+}
+
+template<>
+void besthea::linear_algebra::distributed_block_vector::get_local_part<
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >(
+  besthea::mesh::general_spacetime_cluster * cluster,
+  besthea::linear_algebra::full_matrix & local_part ) const {
+  lo n_time_elements = cluster->get_n_time_elements( );
+  lo n_space_elements = cluster->get_n_space_elements( );
+  lo n_space_nodes = cluster->get_n_space_nodes( );
+  const std::vector< lo > & spacetime_elements = cluster->get_all_elements( );
+  const std::vector< lo > & local_2_global_nodes
+    = cluster->get_local_2_global_nodes( );
+  // resize the output matrix
+  local_part.resize( n_time_elements, n_space_nodes );
+  // select the correct mesh associated with the cluster
+  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
+    = cluster->get_mesh( );
+  const mesh::spacetime_tensor_mesh * cluster_mesh;
+  lo mesh_start_idx;
+  if ( cluster->get_elements_are_local( ) ) {
+    cluster_mesh = distributed_mesh->get_local_mesh( );
+    mesh_start_idx = distributed_mesh->get_local_start_idx( );
+  } else {
+    cluster_mesh = distributed_mesh->get_nearfield_mesh( );
+    mesh_start_idx = distributed_mesh->get_nearfield_start_idx( );
+  }
+
+  // precompute time indices
+  std::vector< lo > global_time_indices( n_time_elements );
+  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
+    // use that the spacetime elements are sorted in time, i.e. a consecutive
+    // group of n_space_elements elements has the same temporal component to
+    // determine the local time index only once
+    lo local_time_index
+      = cluster_mesh->get_time_element( distributed_mesh->global_2_local(
+        mesh_start_idx, spacetime_elements[ i_time * n_space_elements ] ) );
+    global_time_indices[ i_time ] = distributed_mesh->local_2_global_time(
+      mesh_start_idx, local_time_index );
+  }
+
+  for ( lo i_space = 0; i_space < n_space_nodes; ++i_space ) {
+    lo global_space_index
+      = local_2_global_nodes[ i_space ] % cluster_mesh->get_n_spatial_nodes( );
+    // local_2_global_nodes gives the indices of the spacetime nodes. take
+    // the rest from division by the number of global spatial nodes to get
+    // the spatial node index
+    // here it is used again that the spacetime elements are sorted in time and
+    // that they have a tensor product structure
+    for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
+      local_part.set( i_time, i_space,
+        get( global_time_indices[ i_time ], global_space_index ) );
+    }
+  }
+}
+
+template<>
+void besthea::linear_algebra::distributed_block_vector::add_local_part<
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 > >(
+  const besthea::mesh::general_spacetime_cluster * cluster,
+  const besthea::linear_algebra::full_matrix & local_part ) {
+  lo n_time_elements = cluster->get_n_time_elements( );
+  lo n_space_elements = cluster->get_n_space_elements( );
+  const std::vector< lo > & spacetime_elements = cluster->get_all_elements( );
+
+  // select the correct mesh associated with the cluster
+  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
+    = cluster->get_mesh( );
+  const mesh::spacetime_tensor_mesh * cluster_mesh;
+  lo mesh_start_idx;
+  if ( cluster->get_elements_are_local( ) ) {
+    cluster_mesh = distributed_mesh->get_local_mesh( );
+    mesh_start_idx = distributed_mesh->get_local_start_idx( );
+  } else {
+    cluster_mesh = distributed_mesh->get_nearfield_mesh( );
+    mesh_start_idx = distributed_mesh->get_nearfield_start_idx( );
+  }
+
+  // precompute time indices
+  std::vector< lo > global_time_indices( n_time_elements );
+  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
+    // use that the spacetime elements are sorted in time, i.e. a consecutive
+    // group of n_space_elements elements has the same temporal component to
+    // determine the local time index only once
+    lo local_time_index
+      = cluster_mesh->get_time_element( distributed_mesh->global_2_local(
+        mesh_start_idx, spacetime_elements[ i_time * n_space_elements ] ) );
+    global_time_indices[ i_time ] = distributed_mesh->local_2_global_time(
+      mesh_start_idx, local_time_index );
+  }
+
+  for ( lo i_space = 0; i_space < n_space_elements; ++i_space ) {
+    // use again that spacetime elements are sorted in time and their tensor
+    // product structure to get the global space indices
+    lo global_space_index
+      = cluster_mesh->get_space_element( distributed_mesh->global_2_local(
+        mesh_start_idx, spacetime_elements[ i_space ] ) );
+    for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
+      add_atomic( global_time_indices[ i_time ], global_space_index,
+        local_part( i_time, i_space ) );
+    }
+  }
+}
+
+template<>
+void besthea::linear_algebra::distributed_block_vector::add_local_part<
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >(
+  const besthea::mesh::general_spacetime_cluster * cluster,
+  const besthea::linear_algebra::full_matrix & local_part ) {
+  lo n_time_elements = cluster->get_n_time_elements( );
+  lo n_space_elements = cluster->get_n_space_elements( );
+  lo n_space_nodes = cluster->get_n_space_nodes( );
+  const std::vector< lo > & spacetime_elements = cluster->get_all_elements( );
+  const std::vector< lo > & local_2_global_nodes
+    = cluster->get_local_2_global_nodes( );
+  // select the correct mesh associated with the cluster
+  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
+    = cluster->get_mesh( );
+  const mesh::spacetime_tensor_mesh * cluster_mesh;
+  lo mesh_start_idx;
+  if ( cluster->get_elements_are_local( ) ) {
+    cluster_mesh = distributed_mesh->get_local_mesh( );
+    mesh_start_idx = distributed_mesh->get_local_start_idx( );
+  } else {
+    cluster_mesh = distributed_mesh->get_nearfield_mesh( );
+    mesh_start_idx = distributed_mesh->get_nearfield_start_idx( );
+  }
+  // precompute time indices
+  std::vector< lo > global_time_indices( n_time_elements );
+  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
+    // use that the spacetime elements are sorted in time, i.e. a consecutive
+    // group of n_space_elements elements has the same temporal component to
+    // determine the local time index only once
+    lo local_time_index
+      = cluster_mesh->get_time_element( distributed_mesh->global_2_local(
+        mesh_start_idx, spacetime_elements[ i_time * n_space_elements ] ) );
+    global_time_indices[ i_time ] = distributed_mesh->local_2_global_time(
+      mesh_start_idx, local_time_index );
+  }
+
+  for ( lo i_space = 0; i_space < n_space_nodes; ++i_space ) {
+    lo global_space_index
+      = local_2_global_nodes[ i_space ] % cluster_mesh->get_n_spatial_nodes( );
+    // local_2_global_nodes gives the indices of the spacetime nodes. take
+    // the rest from division by the number of global spatial nodes to get
+    // the spatial node index
+    // here it is used again that the spacetime elements are sorted in time and
+    // that they have a tensor product structure
+    for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
+      add_atomic( global_time_indices[ i_time ], global_space_index,
+        local_part( i_time, i_space ) );
     }
   }
 }

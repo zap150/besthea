@@ -597,8 +597,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
                                  //!< refinements in the local part of the
                                  //!< distributed tree.
 
-  sc _s_t_coeff;    //!< coefficient to determine the coupling of the spatial
-                    //!< and temporal levels
+  // sc _s_t_coeff;  //!< coefficient to determine the coupling of the spatial
+  //!< and temporal levels
   lo _n_min_elems;  //!< minimum number of elements so that cluster can be split
   std::vector< sc >
     _spatial_paddings;            //!< vector of spatial paddings on each level

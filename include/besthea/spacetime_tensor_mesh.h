@@ -577,6 +577,7 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * Returns the index of the space element corresponding to the given
    * spacetime element
    * @param[in] i_element Index of the spacetime element.
+   * @todo rename: hard to distinguish get_spatial_element and get_space_element
    */
   lo get_space_element( lo i_element ) const {
     return i_element % get_n_spatial_elements( );
