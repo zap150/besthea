@@ -3304,12 +3304,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             = alpha * ( _spat_order + 1 ) * _cheb_nodes_sum_coll.size( )
             + beta * _cheb_nodes_sum_coll.size( );
           const sc * curr_ptr = all_poly_vals_mult_coll_data;  // + start_idx;
-#pragma omp simd aligned( buffer_for_gaussians_data,curr_ptr : DATA_ALIGN ) reduction( + : val )
-          for ( lou idx = 0; idx < _cheb_nodes_sum_coll.size( ); ++idx ) {
-            val += buffer_for_gaussians_data[ index_gaussian ]
+          lo idx;
+#pragma omp simd aligned( buffer_for_gaussians_data,curr_ptr : DATA_ALIGN ) reduction( + : val ) simdlen( DATA_WIDTH )
+          for ( idx = 0; idx < _cheb_nodes_sum_coll.size( ); ++idx ) {
+            val += buffer_for_gaussians_data[ index_gaussian + idx ]
               * curr_ptr[ start_idx + idx ];
-            ++index_gaussian;
           }
+          index_gaussian += idx;
           coupling_coeffs[ index_integral ] += val;
 
           sc mul_factor_ab = mul_factor
