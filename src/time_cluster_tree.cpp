@@ -434,22 +434,38 @@ void besthea::mesh::time_cluster_tree::build_tree(
   lo n_right = 0;
   lo elem_idx = 0;
 
-  // count the number of elements in each subcluster
+  // count the number of elements in each subcluster and compute the splitting
+  // point
+  sc temporal_splitting_point = center;
+  linear_algebra::coordinates< 1 > node1;
+  linear_algebra::coordinates< 1 > node2;
   for ( lo i = 0; i < root_n_elems; ++i ) {
     elem_idx = root.get_element( i );
     el_centroid = _mesh.get_centroid( elem_idx );
+    _mesh.get_nodes( elem_idx, node1, node2 );
     if ( el_centroid <= center ) {
       ++n_left;
+      if ( node2[ 0 ] > center ) {
+        temporal_splitting_point = node2[ 0 ];
+      }
     } else {
       ++n_right;
+      if ( node1[ 0 ] < center ) {
+        temporal_splitting_point = node1[ 0 ];
+      }
     }
   }
 
+  sc left_center = ( center - half_size + temporal_splitting_point ) / 2.0;
+  sc left_half_size = ( temporal_splitting_point - center + half_size ) / 2.0;
+  sc right_center = ( center + half_size + temporal_splitting_point ) / 2.0;
+  sc right_half_size = ( center + half_size - temporal_splitting_point ) / 2.0;
+
   time_cluster * left_cluster = new time_cluster(
-    center - half_size / 2, half_size / 2, n_left, &root, level, _mesh );
+    left_center, left_half_size, n_left, &root, level, _mesh );
 
   time_cluster * right_cluster = new time_cluster(
-    center + half_size / 2, half_size / 2, n_right, &root, level, _mesh );
+    right_center, right_half_size, n_right, &root, level, _mesh );
 
   // add elements to each subcluster
   for ( lo i = 0; i < root_n_elems; ++i ) {
