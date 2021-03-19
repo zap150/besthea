@@ -46,7 +46,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     _real_max_levels( 0 ),
     _spacetime_mesh( spacetime_mesh ),
     _local_max_space_level( 0 ),
-    _s_t_coeff( st_coeff ),
+    //_s_t_coeff( st_coeff ),
     _n_min_elems( n_min_elems ),
     _spatial_paddings( _max_levels, 0.0 ),
     _spatial_nearfield_limit( spatial_nearfield_limit ),
@@ -98,6 +98,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     delta *= 0.5;
     _start_space_refinement += 1;
   }
+
   // like this it is guaranteed that max_halfsize <= st_coeff * sqrt( delta )
   // on all levels of the tree
 
@@ -124,6 +125,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   build_tree( _root );
 
   _max_levels = std::min( _max_levels, _real_max_levels );
+
   // note: _real_max_levels is global, since communication takes place in build
   // tree routine
   _spatial_paddings.resize( _max_levels );

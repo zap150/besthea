@@ -103,8 +103,8 @@ besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
-  source_space >::apply( const block_vector_type & x, block_vector_type & y,
-  bool trans, sc alpha, sc beta ) const {
+  source_space >::apply( const block_vector_type & /*x*/,
+  block_vector_type & /*y*/, bool /*trans*/, sc /*alpha*/, sc /*beta*/ ) const {
   // generic method not implemented
   std::cout << "apply: NOT IMPLEMENTED" << std::endl;
 }
@@ -945,8 +945,8 @@ void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
-  source_space >::apply_s2m_operations( block_vector_type const & x,
-  bool trans ) const {
+  source_space >::apply_s2m_operations( block_vector_type const & /*x*/,
+  bool /*trans*/ ) const {
   std::cout << "apply_s2m_operations: NOT IMPLEMENTED" << std::endl;
 }
 
@@ -1550,8 +1550,8 @@ void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
-  source_space >::apply_l2t_operations( block_vector_type & y,
-  bool trans ) const {
+  source_space >::apply_l2t_operations( block_vector_type & /*y*/,
+  bool /*trans*/ ) const {
   std::cout << "apply_l2t_operations: NOT IMPLEMENTED" << std::endl;
 }
 
