@@ -34,26 +34,26 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/spacetime_cluster.h"
 
 besthea::linear_algebra::block_vector::block_vector( )
-  : _block_size( 0 ), _size( 0 ), _data( ) {
+  : _n_blocks( 0 ), _size( 0 ), _data( ) {
 }
 
 besthea::linear_algebra::block_vector::block_vector(
-  lo block_size, std::initializer_list< sc > list )
-  : _block_size( block_size ),
+  lo n_blocks, std::initializer_list< sc > list )
+  : _n_blocks( n_blocks ),
     _size( list.size( ) ),
-    //    _data( block_size, list ) { // Why does this work??
-    _data( block_size, vector_type( list ) ) {
+    //    _data( n_blocks, list ) { // Why does this work??
+    _data( n_blocks, vector_type( list ) ) {
 }
 
 besthea::linear_algebra::block_vector::block_vector(
-  lo block_size, lo size, bool zero )
-  : _block_size( block_size ),
+  lo n_blocks, lo size, bool zero )
+  : _n_blocks( n_blocks ),
     _size( size ),
-    _data( block_size, vector_type( size, zero ) ) {
+    _data( n_blocks, vector_type( size, zero ) ) {
 }
 
 besthea::linear_algebra::block_vector::block_vector( const block_vector & that )
-  : _block_size( that._block_size ), _size( that._size ), _data( that._data ) {
+  : _n_blocks( that._n_blocks ), _size( that._size ), _data( that._data ) {
 }
 
 besthea::linear_algebra::block_vector::~block_vector( ) {
@@ -67,51 +67,51 @@ void besthea::linear_algebra::block_vector::print(
 }
 
 void besthea::linear_algebra::block_vector::copy( block_vector const & that ) {
-  resize( that.get_block_size( ) );
+  resize( that.get_n_blocks( ) );
   resize_blocks( that.get_size_of_block( ) );
-  for ( lo i = 0; i < _block_size; ++i ) {
+  for ( lo i = 0; i < _n_blocks; ++i ) {
     _data[ i ].copy( that._data[ i ] );
   }
 }
 
 void besthea::linear_algebra::block_vector::copy_from_raw(
-  lo block_size, lo size, const sc * data ) {
-  if ( block_size != _block_size ) {
-    resize( block_size );
+  lo n_blocks, lo size, const sc * data ) {
+  if ( n_blocks != _n_blocks ) {
+    resize( n_blocks );
   }
   if ( size != _size ) {
     resize_blocks( size, false );
   }
-  for ( lo i = 0; i < block_size; ++i ) {
+  for ( lo i = 0; i < n_blocks; ++i ) {
     _data[ i ].copy_from_raw( size, data + i * size );
   }
 }
 
 void besthea::linear_algebra::block_vector::copy_to_raw( sc * data ) const {
-  for ( lo i = 0; i < _block_size; ++i ) {
+  for ( lo i = 0; i < _n_blocks; ++i ) {
     _data[ i ].copy_to_raw( data + i * _size );
   }
 }
 
 void besthea::linear_algebra::block_vector::copy_from_vector(
-  lo block_size, lo size, const vector_type & data ) {
-  if ( block_size != _block_size ) {
-    resize( block_size );
+  lo n_blocks, lo size, const vector_type & data ) {
+  if ( n_blocks != _n_blocks ) {
+    resize( n_blocks );
   }
   if ( size != _size ) {
     resize_blocks( size, false );
   }
-  for ( lo i = 0; i < block_size; ++i ) {
+  for ( lo i = 0; i < n_blocks; ++i ) {
     _data[ i ].copy_from_raw( size, data.data( ) + i * size );
   }
 }
 
 void besthea::linear_algebra::block_vector::copy_to_vector(
   vector_type & data ) const {
-  if ( data.size( ) != _block_size * _size ) {
-    data.resize( _block_size * _size, false );
+  if ( data.size( ) != _n_blocks * _size ) {
+    data.resize( _n_blocks * _size, false );
   }
-  for ( lo i = 0; i < _block_size; ++i ) {
+  for ( lo i = 0; i < _n_blocks; ++i ) {
     _data[ i ].copy_to_raw( data.data( ) + i * _size );
   }
 }

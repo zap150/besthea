@@ -29,7 +29,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file basis_tetra_p1.h
- * @brief
+ * @brief Contains a class representing piecewise linear basis functions on a
+ * tetrahedral (spatial) volume mesh.
+ * @note updated documentation
  */
 
 #ifndef INCLUDE_BESTHEA_BASIS_TETRA_P1_H_
@@ -45,14 +47,15 @@ namespace besthea {
 }
 
 /**
- *  Class representing a piecewise linear function on a triangular mesh.
+ *  Class representing a piecewise linear function on a tetrahedral mesh.
  */
 class besthea::bem::basis_tetra_p1
   : public besthea::bem::volume_basis_function< besthea::bem::basis_tetra_p1 > {
  public:
   /**
    * Constructor.
-   * @param[in] mesh Mesh.
+   * @param[in] mesh Tetrahedral volume mesh on which the basis functions are
+   *                 defined.
    */
   basis_tetra_p1( const mesh_type & mesh );
 
@@ -62,25 +65,32 @@ class besthea::bem::basis_tetra_p1
   virtual ~basis_tetra_p1( );
 
   /**
-   * Returns number of basis functions supported on i_elem.
+   * Returns the number of basis functions supported on a single tetrahedron.
+   *
+   * This is always 4.
    */
   virtual lo dimension_local( ) const;
 
   /**
-   * Returns number of basis functions on the whole mesh.
+   * Returns the number of basis functions on the whole mesh.
+   *
+   * This is the number of all nodes in the underlying tetrahedral volume mesh.
    */
   virtual lo dimension_global( ) const;
 
   /**
-   * Provides global indices for local contributions.
-   * @param[in] i_elem Element index.
-   * @param[out] indices Global indices for local contributions.
+   * Provides the global indices of the 4 nodes of the tetrahedron with given
+   * index.
+   * @param[in] i_elem Index of the tetrahedron.
+   * @param[out] indices Global indices of the nodes of the tetrahedron.
    */
   void do_local_to_global( lo i_elem, std::vector< lo > & indices ) const;
 
   /**
-   * Evaluates the basis function.
-   * @param[in] i_elem Element index.
+   * Evaluates a basis function in a point in a tetrahedron. The point is given
+   * by coordinates in the reference tetrahedron
+   * (\f$ (x_1,x_2,x_3) \in (0,1)\times(0,1-x_1)\times(0,1-x_1-x_2) \f$).
+   * @param[in] i_elem Index of the tetrahedron.
    * @param[in] i_fun Local basis function index.
    * @param[in] x1_ref First coordinate of reference quadrature point.
    * @param[in] x2_ref Second coordinate of reference quadrature point.

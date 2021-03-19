@@ -361,7 +361,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   /**
    * Fills the 4 lists used for scheduling the FMM operations by adding pointers
-   * to clusters assigned to the process with id @p _my_process_id . In addition
+   * to clusters assigned to the process with id @p _my_process_id. In addition
    * it determines all pairs of clusters and process ids from which data is
    * received, and initializes the data in the scheduling time clusters which is
    * used to check the dependencies.
@@ -429,7 +429,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   /*!
    * Setter for task timer during matrix-vector multiplication
-   * @param[in] v When true, measures and prints timing of individual tasks.
+   * @param[in] measure_tasks When true, measures and prints timing of
+   *                          individual tasks.
    */
   void set_task_timer( bool measure_tasks ) {
     _measure_tasks = measure_tasks;
@@ -1021,7 +1022,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in,out] array_of_requests The MPI_Requests of the non-blocking
    *                                  receive operations are stored in this
    *                                  array. It is expected to have at least
-   *                                  the size of @p receive_vector .
+   *                                  the size of @p receive_vector.
    */
   void start_receive_operations(
     std::vector< MPI_Request > & array_of_requests ) const;
@@ -1153,20 +1154,30 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     mesh::scheduling_time_cluster * root ) const;
 
   /**
-   * Initializes quadrature structures.
+   * Initializes quadrature structures used to integrate Chebyshev polynomials
+   * on triangles.
+   *
+   * The quadrature points and weights on the reference triangle are
+   * initialized. The other structures used for integration of Chebyshev
+   * polynomials are resized appropriately.
+   *
    * @param[out] my_quadrature Wrapper holding quadrature data.
-   * @todo This is redundant! Can we restructure the code?
+   * @todo This is redundant. Can we restructure the code?
    */
   void init_quadrature_polynomials( quadrature_wrapper & my_quadrature ) const;
 
   /**
-   * Maps the quadrature nodes from the reference triangle to the actual
-   * geometry.
-   * @param[in] y1 Coordinates of the first node of the test element.
-   * @param[in] y2 Coordinates of the second node of the test element.
-   * @param[in] y3 Coordinates of the third node of the test element.
+   * Maps all quadrature nodes (integration of Chebyshev polynomials) from the
+   * reference triangle to the actual geometry.
+   *
+   * The quadrature nodes on the reference triangles have to be given in
+   * @p my_quadrature. The results are stored in this structure too.
+   *
+   * @param[in] y1 Coordinates of the first node of the triangle.
+   * @param[in] y2 Coordinates of the second node of the triangle.
+   * @param[in] y3 Coordinates of the third node of the triangle.
    * @param[in,out] my_quadrature Structure holding the quadrature nodes.
-   * @todo This is redundant! Can we restructure the code?
+   * @todo Check if documentation makes sense in this context.
    */
   void triangle_to_geometry( const linear_algebra::coordinates< 3 > & y1,
     const linear_algebra::coordinates< 3 > & y2,
@@ -1174,23 +1185,21 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     quadrature_wrapper & my_quadrature ) const;
 
   /**
-   * Maps from the spatial cluster to the interval [-1, 1] where the Chebyshev
-   * polynomials are defined.
-   * @param[out] my_quadrature  Structure holding mapping from the cluster
-   *                            to the interval [-1,1].
-   * @param[in] x_start Border of the space cluster for which the Chebyshev
-   *                    polynomials are evaluated.
-   * @param[in] x_end Border of the space cluster for which the Chebyshev
-   *                  polynomials are evaluated.
-   * @param[in] y_start Border of the space cluster for which the Chebyshev
-   *                    polynomials are evaluated.
-   * @param[in] y_end Border of the space cluster for which the Chebyshev
-   *                  polynomials are evaluated.
-   * @param[in] z_start Border of the space cluster for which the Chebyshev
-   *                    polynomials are evaluated.
-   * @param[in] z_end Border of the space cluster for which the Chebyshev
-   *                  polynomials are evaluated.
+   * Maps points from a given axis-parallel spatial cluster to the cube [-1,1]^3
+   * using the standard linear transformation.
+   *
+   * The points are taken from @p my_quadrature and the results are stored there
+   * too.
+   * @param[in,out] my_quadrature Structure holding the points to be mapped and
+   *                              the results.
+   * @param[in] x_start Lower border of the space cluster along x dimension.
+   * @param[in] x_end Upper border of the space cluster along x dimension.
+   * @param[in] y_start Lower border of the space cluster along y dimension.
+   * @param[in] y_end Upper border of the space cluster along y dimension.
+   * @param[in] z_start Lower border of the space cluster along z dimension.
+   * @param[in] z_end Upper border of the space cluster along z dimension.
    * @todo This is redundant! Can we restructure the code?
+   * @todo rename the routine to better describe its action?
    */
   void cluster_to_polynomials( quadrature_wrapper & my_quadrature, sc x_start,
     sc x_end, sc y_start, sc y_end, sc z_start, sc z_end ) const;
@@ -1408,18 +1417,23 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     _all_poly_vals_mult_coll;  //!< summed Chebyshev nodes for collapsed loop,
                                //!< aligned
 
-  mutable std::vector< full_matrix > _aux_buffer_0;
-  mutable std::vector< full_matrix > _aux_buffer_1;
+  mutable std::vector< full_matrix >
+    _aux_buffer_0;  //!< Auxilliary vector used to store intermediate results in
+                    //!< M2L operations.
+  mutable std::vector< full_matrix >
+    _aux_buffer_1;  //!< Auxilliary vector used to store intermediate results in
+                    //!< M2L operations.
 
   bool _verbose;  //!< print info to files during matrix-vector multiplication
 
   bool _measure_tasks;  //!< print task time info to files during
                         //!< matrix-vector multiplications
 
-  mutable lo _non_nf_op_count;  //!< number of schduled non-nearfield operation
+  mutable lo _non_nf_op_count;  //!< counter to keep track of the number of
+                                //!< scheduled non-nearfield operations
 
   /*!
-   * Increases the number of scheduled  non-nearfield operations.
+   * Increases @ref _non_nf_op_count.
    */
   void add_nn_operations( ) const {
 #pragma omp atomic update
@@ -1427,7 +1441,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   }
 
   /*!
-   * Decreases the number of scheduled non-nearfield operations.
+   * Decreases @ref _non_nf_op_count.
    */
   void reduce_nn_operations( ) const {
 #pragma omp atomic update
@@ -1435,7 +1449,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   }
 
   /*!
-   * @returns the number of scheduled non-nearfield operations
+   * @returns the value of @ref _non_nf_op_count
    */
   lo get_nn_operations( ) const {
     lo ret_val;
@@ -1444,20 +1458,38 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     return ret_val;
   }
 
-  mutable timer_type _global_timer;
+  mutable timer_type _global_timer;  //!< structure for time measurements.
 
   // using clock_type = std::chrono::high_resolution_clock;
   using time_type = std::chrono::microseconds;  //!< Unit type.
 
-  mutable std::vector< std::vector< time_type::rep > > _m_task_times;
-  mutable std::vector< std::vector< time_type::rep > > _m2l_task_times;
-  mutable std::vector< std::vector< time_type::rep > > _l_task_times;
-  mutable std::vector< std::vector< time_type::rep > > _n_task_times;
+  mutable std::vector< std::vector< time_type::rep > >
+    _m_task_times;  //!< Contains a vector for each thread in which the
+                    //!< beginning and end times of primary m-list tasks which
+                    //!< this thread executed are stored.
+  mutable std::vector< std::vector< time_type::rep > >
+    _m2l_task_times;  //!< Same as @ref _m_task_times for primary m2l-list
+                      //!< tasks.
+  mutable std::vector< std::vector< time_type::rep > >
+    _l_task_times;  //!< Same as @ref _m_task_times for primary l-list
+                    //!< tasks.
+  mutable std::vector< std::vector< time_type::rep > >
+    _n_task_times;  //!< Same as @ref _m_task_times for primary n-list
+                    //!< tasks.
 
-  mutable std::vector< std::vector< time_type::rep > > _m_subtask_times;
-  mutable std::vector< std::vector< time_type::rep > > _m2l_subtask_times;
-  mutable std::vector< std::vector< time_type::rep > > _l_subtask_times;
-  mutable std::vector< std::vector< time_type::rep > > _n_subtask_times;
+  mutable std::vector< std::vector< time_type::rep > >
+    _m_subtask_times;  //!< Contains a vector for each thread in which the
+                       //!< beginning and end times of the subtasks in the
+                       //!< m-list which this thread executed are stored.
+  mutable std::vector< std::vector< time_type::rep > >
+    _m2l_subtask_times;  //!< Same as @ref _m_subtask_times for m2l-list
+                         //!< subtasks.
+  mutable std::vector< std::vector< time_type::rep > >
+    _l_subtask_times;  //!< Same as @ref _m_subtask_times for l-list
+                       //!< subtasks.
+  mutable std::vector< std::vector< time_type::rep > >
+    _n_subtask_times;  //!< Same as @ref _m_subtask_times for n-list
+                       //!< subtasks.
 
   mutable std::vector< std::vector< time_type::rep > > _mpi_send_m2l;
   mutable std::vector< std::vector< time_type::rep > > _mpi_send_m_parent;

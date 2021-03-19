@@ -146,6 +146,9 @@ struct get_index_type< long > {
   }
 };
 
+/**
+ * Returns indexing MPI datatype based on the template C++ type.
+ */
 template<>
 struct get_index_type< unsigned long > {
   /**

@@ -48,6 +48,9 @@ namespace besthea {
 
 /**
  *  Class providing quadrature rules.
+ * @todo Discuss: For triangles @p order indicates that the corresponding
+ * quadrature rule integrates polynomials with degree up to @p order exactly.
+ * Instead for lines @p order indicates the number of quadrature points.
  */
 class besthea::bem::quadrature {
  public:

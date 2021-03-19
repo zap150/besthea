@@ -278,7 +278,7 @@ class besthea::mesh::time_cluster_tree {
    *                                  which was last assigned.
    * @param[in,out] process_assignment  Vector of process assignments in the
    *                                    tree structure format.
-   * @note This method is solely used by @ref compute_process_assignments .
+   * @note This method is solely used by @ref compute_process_assignments.
    */
   void convert_assignment_vector_2_tree_format( const time_cluster & root,
     const std::vector< lo > & levelwise_assignment, const lo thresh_level,
