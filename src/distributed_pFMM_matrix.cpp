@@ -3916,13 +3916,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     // remove existing verbose file and write to new one
     remove( verbose_file.c_str( ) );
   }
-
-  //############################################################################
-  //#### distributed pFMM ####
-  // allocate a global result vector. Only the entries corresponding to clusters
-  // assigned to the current process are computed.
-
-  // auxiliary arrays for OpenMP dependencis (in OpenMP 4.5 must not be members)
+  // auxiliary arrays for OpenMP dependencies
+  // (must not be members in OpenMP 4.5)
   auto first = m2l_list.begin( );
   auto last = m2l_list.end( );
   char * aux_dep_m2l = new char[ std::distance( first, last ) ];

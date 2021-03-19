@@ -455,12 +455,13 @@ class besthea::linear_algebra::distributed_block_vector {
     besthea::linear_algebra::vector & local_vector ) const;
 
   /*!
-   * Gets local part of a block vector corresponding to dofs in a spacetime
-   * cluster and stores it in full matrix format.
+   * Gets the local part of a distributed block vector corresponding to the dofs
+   * in a spacetime cluster and stores it in full matrix format.
    * @param[in] cluster  Cluster determining the local dofs.
    * @param[in,out] local_part  Local part of block vector.
-   * @tparam space_type distributed_fast_spacetime_be_space representing either
-   *                    p0 or p1 basis functions. It determines the dofs.
+   * @tparam space_type @ref besthea::bem::fast_spacetime_be_space representing
+   *                     either p0 or p1 basis functions. It determines the
+   *                     DOFs.
    * @note Rows of the output matrix correspond to time, columns to space.
    */
   template< class space_type >
@@ -468,11 +469,10 @@ class besthea::linear_algebra::distributed_block_vector {
     besthea::linear_algebra::full_matrix & local_part ) const;
 
   /*!
-   * Adds local vector to appropriate positions of a block vector. The positions
-   * are determined by the dofs in a spacetime cluster.
-   * @param[in] cluster  Cluster determining the positions in the
-   block_vector
-   * to which the local vector is added.
+   * Adds a local vector to the appropriate positions of a distributed block
+   * vector. The positions are determined by the dofs in a spacetime cluster.
+   * @param[in] cluster  Cluster determining the positions in the distributed
+   *                     blockvector to which the local vector is added.
    * @param[in] local_vector Local part of block vector to be added.
    * @tparam space_type  @ref besthea::bem::fast_spacetime_be_space representing
    *                     either p0 or p1 basis functions. It determines the
@@ -507,16 +507,17 @@ class besthea::linear_algebra::distributed_block_vector {
     const besthea::linear_algebra::vector & local_vector );
 
   /*!
-   * Adds local part stored in full matrix format to appropriate positions of a
-   * block vector. The positions are determined by the dofs in a spacetime
-   * cluster.
-   * @param[in] cluster Cluster determining the positions in the
-                        block_vector to which the local vector is added.
-   * @param[in] local_part  Local part to be added. It is stored in matrix
-                            format, where rows correspond to time and columns to
-                            space.
-   * @tparam space_type  fast_spacetime_be_space representing either p0 or p1
-   *                     basis functions. It determines the dofs.
+   * Adds local part stored in full matrix format to the appropriate positions
+   * of a distributed block vector. The positions are determined by the dofs in
+   * a spacetime cluster.
+   * @param[in] cluster  Cluster determining the positions in the distributed
+   *                     blockvector to which the local vector is added.
+   * @param[in] local_part  Local part of block vector to be added. It is stored
+                            in matrix format, where rows correspond to time and
+                            columns to space.
+   * @tparam space_type  @ref besthea::bem::fast_spacetime_be_space representing
+   *                     either p0 or p1 basis functions. It determines the
+   *                     DOFs.
    */
   template< class space_type >
   void add_local_part( const besthea::mesh::general_spacetime_cluster * cluster,
