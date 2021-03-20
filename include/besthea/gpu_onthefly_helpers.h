@@ -1,3 +1,32 @@
+/*
+Copyright (c) 2020, VSB - Technical University of Ostrava and Graz University of
+Technology
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+* Redistributions in binary form must reproduce the above copyright notice, this
+  list of conditions and the following disclaimer in the documentation and/or
+  other materials provided with the distribution.
+* Neither the names of VSB - Technical University of  Ostrava and Graz
+  University of Technology nor the names of its contributors may be used to
+  endorse or promote products derived from this software without specific prior
+  written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL VSB - TECHNICAL UNIVERSITY OF OSTRAVA AND
+GRAZ UNIVERSITY OF TECHNOLOGY BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 /** @file gpu_onthefly_helpers.h
  * @brief
@@ -40,6 +69,9 @@ namespace besthea::onthefly {
 
   struct gpu_threads_per_block;
   
+  /*
+   * Translates quadrature order to quadrature size - number of quadrature nodes.
+   */
 #ifdef __NVCC__
   __host__ __device__
 #endif
@@ -68,6 +100,9 @@ namespace besthea::onthefly {
 
 
 
+/**
+ *  Struct containing reference quadrature nodes and quadrature weights as raw data.
+ */
 template<int quadr_order>
 struct besthea::onthefly::quadrature_reference_raw {
   sc _x1_ref[qo2qs(quadr_order)];
@@ -81,6 +116,9 @@ struct besthea::onthefly::quadrature_reference_raw {
 
 
 
+/**
+ *  Struct containing mapped quadrature nodes as raw data.
+ */
 template<int quadr_order>
 struct besthea::onthefly::quadrature_nodes_raw {
   sc xs[qo2qs(quadr_order)];
@@ -92,6 +130,9 @@ struct besthea::onthefly::quadrature_nodes_raw {
 
 
 
+/**
+ *  Struct containing GPU-resident space mesh raw data.
+ */
 struct besthea::onthefly::mesh_raw_data {
   sc * d_element_areas;
   sc * d_node_coords; // XYZXYZXYZXYZ...
@@ -104,6 +145,9 @@ struct besthea::onthefly::mesh_raw_data {
 
 
 
+/**
+ *  Struct containing spacetime mesh metadata.
+ */
 struct besthea::onthefly::mesh_raw_metadata {
   sc timestep;
   lo n_temporal_elements;
@@ -115,6 +159,9 @@ struct besthea::onthefly::mesh_raw_metadata {
 
 
 
+/**
+ *  Struct containing parameters of heat kernel and other auxiliary variables.
+ */
 struct besthea::onthefly::heat_kernel_parameters {
   sc alpha;
   sc sqrt_alpha;
@@ -134,6 +181,9 @@ struct besthea::onthefly::heat_kernel_parameters {
 
 
 
+/**
+ *  Struct containing CPU and GPU resident vectors data.
+ */
 struct besthea::onthefly::gpu_apply_vectors_data {
   sc * h_x; // raw data on host
   std::vector<sc*> h_y; // raw data on host
@@ -153,11 +203,14 @@ struct besthea::onthefly::gpu_apply_vectors_data {
 
 
 
+/**
+ *  Class representing spacetime mesh resident in the GPU memory.
+ */
 class besthea::onthefly::gpu_uniform_spacetime_tensor_mesh {
 private:
   mesh_raw_metadata metadata;
   std::vector<mesh_raw_data> per_gpu_data;
-  int n_gpus; // < 0 means error
+  int n_gpus;
 public:
   gpu_uniform_spacetime_tensor_mesh(const besthea::mesh::uniform_spacetime_tensor_mesh & orig_mesh);
   ~gpu_uniform_spacetime_tensor_mesh();
@@ -172,6 +225,9 @@ private:
 
 
 
+/**
+ *  Class taking care of CPU-GPU load distribution
+ */
 class besthea::onthefly::apply_load_distribution {
 private:
   lo cpu_n_tst_elems;
@@ -201,6 +257,9 @@ private:
 
 
 
+/**
+ *  Struct containing several timers used in GPU onthefly matrix apply.
+ */
 struct besthea::onthefly::timer_collection {
   std::vector<besthea::tools::time_measurer_cuda> gpu_all;
   std::vector<besthea::tools::time_measurer_cuda> gpu_copyin;
