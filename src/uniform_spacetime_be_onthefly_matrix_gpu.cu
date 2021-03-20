@@ -58,16 +58,13 @@ besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kernel_type, test_sp
   : uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>(kernel, test_space, trial_space, order_singular, order_regular),
     gpu_mesh(&gpu_mesh),
     n_gpus(gpu_mesh.get_n_gpus()),
-    gpu_kernel_version(gpu_kernel_version) {
+    gpu_kernel_version(gpu_kernel_version),
+    load_distr(nullptr) {
 
   // quadrature inited in base class constructor
 
-  if(n_gpus == 0) {
-    std::cerr << "BESTHEA Warning: using gpu onthefly class but no cuda-capable devices were found\n";
-  }
-
   if(gpu_kernel_version < 1 || gpu_kernel_version > 4) {
-    std::cerr << "BESTHEA Warning: invalid value of gpu_kernel_version=" << gpu_kernel_version << ", using default gpu_kernel_version=1\n";
+    std::cerr << "BESTHEA Warning: invalid value of gpu_kernel_version=" << gpu_kernel_version << ", using default gpu_kernel_version=1.\n";
     this->gpu_kernel_version = 1;
   }
   

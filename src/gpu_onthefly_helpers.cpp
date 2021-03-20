@@ -67,10 +67,16 @@ void besthea::onthefly::gpu_apply_vectors_data::allocate(int n_gpus,
 
 void besthea::onthefly::gpu_apply_vectors_data::free() {
 
-  if(h_x != nullptr) cudaFreeHost(h_x);
-  for(unsigned int i = 0; i < h_y.size(); i++) cudaFreeHost(h_y[i]);
-  for(unsigned int i = 0; i < d_x.size(); i++) cudaFree(d_x[i]);
-  for(unsigned int i = 0; i < d_y.size(); i++) cudaFree(d_y[i]);
+  if(h_x != nullptr) {
+    cudaFreeHost(h_x);
+  }
+  for(unsigned int i = 0; i < h_y.size(); i++) {
+    cudaSetDevice(i);
+
+    cudaFreeHost(h_y[i]);
+    cudaFree(d_x[i]);
+    cudaFree(d_y[i]);
+  }
 
   h_x = nullptr;
   h_y.clear();
@@ -99,8 +105,21 @@ void besthea::onthefly::gpu_apply_vectors_data::free() {
 
 besthea::onthefly::gpu_uniform_spacetime_tensor_mesh::gpu_uniform_spacetime_tensor_mesh(const besthea::mesh::uniform_spacetime_tensor_mesh & orig_mesh) {
 
+  n_gpus = 0;
   cudaGetDeviceCount(&n_gpus);
-  // TODO: error messages when no cuda-capable gpu found
+
+  if(n_gpus == 0 || cudaGetLastError() == cudaErrorNoDevice) {
+    std::cerr << "BESTHEA Warning: using gpu version of onthefly matrix class, but no cuda-capable devices were found. Reverting to using cpu-only version.\n";
+    n_gpus = 0;
+  }
+
+  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+    int ccVerMajor;
+    cudaDeviceGetAttribute(&ccVerMajor, cudaDevAttrComputeCapabilityMajor, gpu_idx);
+    if(ccVerMajor < 6) {
+      std::cerr << "BESTHEA Warning: gpu with index " << gpu_idx << " has insufficient compute capability. Compute capability >= 6.0 is required. Another error will probably occur.\n";
+    }
+  }
   
   metadata.timestep = orig_mesh.get_timestep();
   metadata.n_temporal_elements = orig_mesh.get_n_temporal_elements();
@@ -125,13 +144,27 @@ besthea::onthefly::gpu_uniform_spacetime_tensor_mesh::gpu_uniform_spacetime_tens
     cudaMemcpy(curr_gpu_data.d_element_normals, orig_mesh.get_spatial_surface_mesh()->get_all_normals().data(),  3 * metadata.n_elems * sizeof(*curr_gpu_data.d_element_normals), cudaMemcpyHostToDevice);
   }
 
+  // cudaError_t err = cudaPeekAtLastError();
+  // if(err != cudaSuccess) {
+  //   std::cerr << "BESTHEA Error: detected cuda error " << err << ": " << cudaGetErrorString(err) << ".\n";
+  //   std::cerr << "    In function " << __func__ << "\n";
+  //   free();
+  //   throw err;
+  // }
+
 }
 
 
 
 besthea::onthefly::gpu_uniform_spacetime_tensor_mesh::~gpu_uniform_spacetime_tensor_mesh() {
+  free();
+}
 
-  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
+
+
+void besthea::onthefly::gpu_uniform_spacetime_tensor_mesh::free() {
+
+  for(unsigned int gpu_idx = 0; gpu_idx < per_gpu_data.size(); gpu_idx++) {
 
     cudaSetDevice(gpu_idx);
 
@@ -142,6 +175,7 @@ besthea::onthefly::gpu_uniform_spacetime_tensor_mesh::~gpu_uniform_spacetime_ten
     cudaFree(curr_gpu_data.d_element_nodes);
     cudaFree(curr_gpu_data.d_element_normals);
   }
+  per_gpu_data.clear();
 
 }
 

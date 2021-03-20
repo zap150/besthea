@@ -97,6 +97,7 @@ struct besthea::onthefly::mesh_raw_data {
   sc * d_node_coords; // XYZXYZXYZXYZ...
   lo * d_element_nodes; // 123123123123...
   sc * d_element_normals; // XYZXYZXYZXYZ
+  mesh_raw_data() : d_element_areas(nullptr), d_node_coords(nullptr), d_element_nodes(nullptr), d_element_normals(nullptr) { }
 };
 
 
@@ -156,14 +157,15 @@ class besthea::onthefly::gpu_uniform_spacetime_tensor_mesh {
 private:
   mesh_raw_metadata metadata;
   std::vector<mesh_raw_data> per_gpu_data;
-  int n_gpus;
+  int n_gpus; // < 0 means error
 public:
   gpu_uniform_spacetime_tensor_mesh(const besthea::mesh::uniform_spacetime_tensor_mesh & orig_mesh);
   ~gpu_uniform_spacetime_tensor_mesh();
   const mesh_raw_metadata & get_metadata() const { return metadata; }
   const std::vector<mesh_raw_data> & get_per_gpu_data() const { return per_gpu_data; }
   int get_n_gpus() const { return n_gpus; }
-
+private:
+  void free();
 };
 
 
