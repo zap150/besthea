@@ -29,7 +29,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file uniform_spacetime_tensor_mesh_gpu.h
- * @brief
+ * @brief Uniform spacetime tensor mesh resident in GPU memory.
  */
 
 #ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_TENSOR_MESH_GPU_H_

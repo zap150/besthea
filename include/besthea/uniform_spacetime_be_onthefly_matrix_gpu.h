@@ -29,7 +29,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file uniform_spacetime_be_onthefly_matrix_gpu.h
- * @brief
+ * @brief GPU version of onthefly boudary element matrix.
  */
 
 #ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_GPU_H_

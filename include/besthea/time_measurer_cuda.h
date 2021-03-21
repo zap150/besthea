@@ -1,6 +1,35 @@
+/*
+Copyright (c) 2020, VSB - Technical University of Ostrava and Graz University of
+Technology
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+* Redistributions in binary form must reproduce the above copyright notice, this
+  list of conditions and the following disclaimer in the documentation and/or
+  other materials provided with the distribution.
+* Neither the names of VSB - Technical University of  Ostrava and Graz
+  University of Technology nor the names of its contributors may be used to
+  endorse or promote products derived from this software without specific prior
+  written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL VSB - TECHNICAL UNIVERSITY OF OSTRAVA AND
+GRAZ UNIVERSITY OF TECHNOLOGY BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 /** @file time_measurer_cuda.h
- * @brief Measuring elapsed time between events on cuda device.
+ * @brief Measuring elapsed time between events on a cuda device.
  */
 
 #ifndef INCLUDE_BESTHEA_TIME_MEASURER_CUDA_H_
@@ -18,29 +47,42 @@ namespace besthea {
 
 
 
+/**
+ * Class measuring elapsed time between events on a cuda device
+ */
 class besthea::tools::time_measurer_cuda {
-private:
-  int gpu_idx;
-  cudaStream_t stream;
-	cudaEvent_t start_event;
-	cudaEvent_t stop_event;
-  double elapsed_time;
-  bool was_time_collected;
 
 public:
+
+  /**
+   * Default constructor. If this is used, the init method must then be called.
+   */
   time_measurer_cuda() {
     reset();
   }
 
+  /**
+   * Constructor.
+   * @param[in] gpu_idx_ Index of the watched cuda device.
+   * @param[in] stream_ Cuda stream to place the events in.
+   */
   time_measurer_cuda(int gpu_idx_, cudaStream_t stream_) {
     this->init(gpu_idx_, stream_);
   }
 
+  /**
+   * Destructor.
+   */
   ~time_measurer_cuda() {
     cudaEventDestroy(start_event);
     cudaEventDestroy(stop_event);
   }
   
+  /**
+   * Initialization method.
+   * @param[in] gpu_idx_ Index of the used cuda device.
+   * @param[in] stream_ Cuda stream to place the events in.
+   */
   void init(int gpu_idx_, cudaStream_t stream_) {
     int curr_gpu_idx;
     cudaGetDevice(&curr_gpu_idx);
@@ -58,6 +100,9 @@ public:
     reset();
   }
 
+  /**
+   * Submits a cuda event marking the start of the measured timespan.
+   */
   void start_submit() {
     int curr_gpu_idx;
     cudaGetDevice(&curr_gpu_idx);
@@ -68,6 +113,9 @@ public:
     cudaEventRecord(start_event, stream);
   }
 
+  /**
+   * Submits a cuda event marking the end of the measured timespan.
+   */
   void stop_submit() {
     int curr_gpu_idx;
     cudaGetDevice(&curr_gpu_idx);
@@ -79,11 +127,17 @@ public:
     this->was_time_collected = false;
   }
 
+  /**
+   * Resets the timer.
+   */
   void reset() {
     this->elapsed_time = 0.0;
     this->was_time_collected = true;
   }
 
+  /**
+   * Synchronizes with stop event and returns elapsed time
+   */
   double get_time() {
     if(!was_time_collected) {
       collect_time();
@@ -94,6 +148,10 @@ public:
   }
 
 private:
+
+  /**
+   * Synchronizes with end event and computes elapsed time.
+   */
   void collect_time() {
     int orig_gpu_idx;
     cudaGetDevice(&orig_gpu_idx);
@@ -106,6 +164,16 @@ private:
     
     cudaSetDevice(orig_gpu_idx);
   }
+
+private:
+
+  int gpu_idx; //!< Index of the used GPU
+  cudaStream_t stream; //!< Used cuda stream
+	cudaEvent_t start_event; //!< Event marking the start of measured period
+	cudaEvent_t stop_event; //!< Event marking the end of the measured period
+  double elapsed_time; //!< Elapsed time in seconds
+  bool was_time_collected; //!< True if the stop event has been synchronized with.
+  
 };
 
 

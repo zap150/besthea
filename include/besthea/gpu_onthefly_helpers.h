@@ -29,7 +29,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file gpu_onthefly_helpers.h
- * @brief
+ * @brief Helper structs for onthefly classes.
  */
 
 #ifndef INCLUDE_BESTHEA_GPU_ONTHEFLY_HELPERS_H_
