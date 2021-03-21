@@ -40,11 +40,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <array>
 
 
-namespace besthea::onthefly {
+namespace besthea::linear_algebra::onthefly {
   template< class kernel_type, class test_space_type, class trial_space_type >
   class uniform_spacetime_be_onthefly_matrix_cpu;
-
-  constexpr bool quick_matrix_vals = false; // for performance testing purposes. if true, then matrix values are not calculated the correct time-consuming way, but quickly (and wrongly)
 }
 
 
@@ -54,7 +52,7 @@ namespace besthea::onthefly {
  *  during multiplication on the fly, on the CPU.
  */
 template< class kernel_type, class test_space_type, class trial_space_type >
-class besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
+class besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
   : public besthea::linear_algebra::block_matrix
 {
 protected:
@@ -169,6 +167,8 @@ public:
     [[maybe_unused]] sc beta = 0.0 ) const override {};
 
 protected:
+
+  void apply_cpu( const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha, sc beta ) const;
 
   void get_values_regular      (sc * values_out, lo delta, lo i_test, lo i_trial,
     const quadrature_nodes & quadr_nodes_tst, const quadrature_nodes & quadr_nodes_trl) const;

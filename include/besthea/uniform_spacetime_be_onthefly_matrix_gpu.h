@@ -36,12 +36,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_GPU_H_
 
 #include "besthea/uniform_spacetime_be_onthefly_matrix_cpu.h"
+#include "besthea/uniform_spacetime_tensor_mesh_gpu.h"
 #include "besthea/gpu_onthefly_helpers.h"
 
 #include <array>
 
 
-namespace besthea::onthefly {
+namespace besthea::linear_algebra::onthefly {
   template< class kernel_type, class test_space_type, class trial_space_type >
   class uniform_spacetime_be_onthefly_matrix_gpu;
 }
@@ -55,8 +56,8 @@ namespace besthea::onthefly {
  *  during multiplication on the fly, on the GPU.
  */
 template< class kernel_type, class test_space_type, class trial_space_type >
-class besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu
-  : public besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu< kernel_type, test_space_type, trial_space_type >
+class besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_gpu
+  : public besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu< kernel_type, test_space_type, trial_space_type >
 {
 
 public:
@@ -81,7 +82,7 @@ public:
   uniform_spacetime_be_onthefly_matrix_gpu( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
     int order_singular, int order_regular,
-    const besthea::onthefly::gpu_uniform_spacetime_tensor_mesh & gpu_mesh,
+    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu & gpu_mesh,
     int gpu_kernel_version = 2 );
 
   uniform_spacetime_be_onthefly_matrix_gpu(
@@ -150,7 +151,7 @@ private:
    * @param[in] alpha Scaling factor of vector x
    * @param[in] timers Timers for measuring elapsed time
    */
-  void apply_regular_gpu_begin( const block_vector_type & x, const block_vector_type & y, sc alpha, timer_collection & timers ) const;
+  void apply_regular_gpu_begin( const block_vector_type & x, const block_vector_type & y, sc alpha, besthea::linear_algebra::onthefly::helpers::timer_collection & timers ) const;
   
   /**
    * Waits for all GPU tasks to finish and copies vector y back to CPU memory.
@@ -159,12 +160,12 @@ private:
   void apply_regular_gpu_finalize( block_vector_type & y ) const;
 
 private:
-  const gpu_uniform_spacetime_tensor_mesh * gpu_mesh; //!< GPU-resident mesh
+  const besthea::mesh::uniform_spacetime_tensor_mesh_gpu * gpu_mesh; //!< GPU-resident mesh
   int n_gpus; //!< Number of GPUs to use
   int gpu_kernel_version; //!< Version of GPU multiplication algorithm
   
-  gpu_apply_vectors_data vectors_data; //!< GPU-resident vectors
-  apply_load_distribution * load_distr; //!< Object handling CPU-GPU load distribution
+  besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data vectors_data; //!< GPU-resident vectors
+  besthea::linear_algebra::onthefly::helpers::apply_load_distribution * load_distr; //!< Object handling CPU-GPU load distribution
 
 };
 

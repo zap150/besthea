@@ -120,6 +120,7 @@ if(USE_CUDA)
     include/besthea/gpu_onthefly_helpers.h
     include/besthea/time_measurer_cuda.h
     include/besthea/uniform_spacetime_be_onthefly_matrix_gpu.h
+    include/besthea/uniform_spacetime_tensor_mesh_gpu.h
   )
 endif()
 
@@ -184,6 +185,7 @@ if(USE_CUDA)
     ${besthea_SOURCES}
     src/gpu_onthefly_helpers.cpp
     src/uniform_spacetime_be_onthefly_matrix_gpu.cu
+    src/uniform_spacetime_tensor_mesh_gpu.cpp
   )
 endif()
 

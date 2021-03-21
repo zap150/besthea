@@ -46,22 +46,16 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-namespace besthea::onthefly {
+namespace besthea::linear_algebra::onthefly::helpers {
   template<int quadr_order>
   struct quadrature_reference_raw;
 
   template<int quadr_order>
   struct quadrature_nodes_raw;
-
-  struct mesh_raw_data;
-
-  struct mesh_raw_metadata;
   
   struct heat_kernel_parameters;
 
   struct gpu_apply_vectors_data;
-
-  class gpu_uniform_spacetime_tensor_mesh;
 
   class apply_load_distribution;
 
@@ -104,7 +98,7 @@ namespace besthea::onthefly {
  *  Struct containing reference quadrature nodes and quadrature weights as raw data.
  */
 template<int quadr_order>
-struct besthea::onthefly::quadrature_reference_raw {
+struct besthea::linear_algebra::onthefly::helpers::quadrature_reference_raw {
   sc _x1_ref[qo2qs(quadr_order)];
   sc _x2_ref[qo2qs(quadr_order)];
   sc _y1_ref[qo2qs(quadr_order)];
@@ -120,7 +114,7 @@ struct besthea::onthefly::quadrature_reference_raw {
  *  Struct containing mapped quadrature nodes as raw data.
  */
 template<int quadr_order>
-struct besthea::onthefly::quadrature_nodes_raw {
+struct besthea::linear_algebra::onthefly::helpers::quadrature_nodes_raw {
   sc xs[qo2qs(quadr_order)];
   sc ys[qo2qs(quadr_order)];
   sc zs[qo2qs(quadr_order)];
@@ -131,38 +125,9 @@ struct besthea::onthefly::quadrature_nodes_raw {
 
 
 /**
- *  Struct containing GPU-resident space mesh raw data.
- */
-struct besthea::onthefly::mesh_raw_data {
-  sc * d_element_areas;
-  sc * d_node_coords; // XYZXYZXYZXYZ...
-  lo * d_element_nodes; // 123123123123...
-  sc * d_element_normals; // XYZXYZXYZXYZ
-  mesh_raw_data() : d_element_areas(nullptr), d_node_coords(nullptr), d_element_nodes(nullptr), d_element_normals(nullptr) { }
-};
-
-
-
-
-
-/**
- *  Struct containing spacetime mesh metadata.
- */
-struct besthea::onthefly::mesh_raw_metadata {
-  sc timestep;
-  lo n_temporal_elements;
-  lo n_elems;
-  lo n_nodes;
-};
-
-
-
-
-
-/**
  *  Struct containing parameters of heat kernel and other auxiliary variables.
  */
-struct besthea::onthefly::heat_kernel_parameters {
+struct besthea::linear_algebra::onthefly::helpers::heat_kernel_parameters {
   sc alpha;
   sc sqrt_alpha;
   sc alpha_2;
@@ -184,7 +149,7 @@ struct besthea::onthefly::heat_kernel_parameters {
 /**
  *  Struct containing CPU and GPU resident vectors data.
  */
-struct besthea::onthefly::gpu_apply_vectors_data {
+struct besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data {
   sc * h_x; // raw data on host
   std::vector<sc*> h_y; // raw data on host
   std::vector<sc*> d_x, d_y; // raw data on device
@@ -204,31 +169,9 @@ struct besthea::onthefly::gpu_apply_vectors_data {
 
 
 /**
- *  Class representing spacetime mesh resident in the GPU memory.
- */
-class besthea::onthefly::gpu_uniform_spacetime_tensor_mesh {
-private:
-  mesh_raw_metadata metadata;
-  std::vector<mesh_raw_data> per_gpu_data;
-  int n_gpus;
-public:
-  gpu_uniform_spacetime_tensor_mesh(const besthea::mesh::uniform_spacetime_tensor_mesh & orig_mesh);
-  ~gpu_uniform_spacetime_tensor_mesh();
-  const mesh_raw_metadata & get_metadata() const { return metadata; }
-  const std::vector<mesh_raw_data> & get_per_gpu_data() const { return per_gpu_data; }
-  int get_n_gpus() const { return n_gpus; }
-private:
-  void free();
-};
-
-
-
-
-
-/**
  *  Class taking care of CPU-GPU load distribution
  */
-class besthea::onthefly::apply_load_distribution {
+class besthea::linear_algebra::onthefly::helpers::apply_load_distribution {
 private:
   lo cpu_n_tst_elems;
   double cpu_n_tst_elems_target;
@@ -260,7 +203,7 @@ private:
 /**
  *  Struct containing several timers used in GPU onthefly matrix apply.
  */
-struct besthea::onthefly::timer_collection {
+struct besthea::linear_algebra::onthefly::helpers::timer_collection {
   std::vector<besthea::tools::time_measurer_cuda> gpu_all;
   std::vector<besthea::tools::time_measurer_cuda> gpu_copyin;
   std::vector<besthea::tools::time_measurer_cuda> gpu_compute;
@@ -285,7 +228,7 @@ struct besthea::onthefly::timer_collection {
 
 
 
-struct besthea::onthefly::gpu_threads_per_block {
+struct besthea::linear_algebra::onthefly::helpers::gpu_threads_per_block {
   dim3 tpb_qo1;
   dim3 tpb_qo2;
   dim3 tpb_qo4;

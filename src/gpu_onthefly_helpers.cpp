@@ -36,10 +36,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-bool besthea::onthefly::is_gpu_quadr_order5_initialized = false;
-bool besthea::onthefly::is_gpu_quadr_order4_initialized = false;
-bool besthea::onthefly::is_gpu_quadr_order2_initialized = false;
-bool besthea::onthefly::is_gpu_quadr_order1_initialized = false;
+bool besthea::linear_algebra::onthefly::helpers::is_gpu_quadr_order5_initialized = false;
+bool besthea::linear_algebra::onthefly::helpers::is_gpu_quadr_order4_initialized = false;
+bool besthea::linear_algebra::onthefly::helpers::is_gpu_quadr_order2_initialized = false;
+bool besthea::linear_algebra::onthefly::helpers::is_gpu_quadr_order1_initialized = false;
 
 
 
@@ -54,19 +54,19 @@ bool besthea::onthefly::is_gpu_quadr_order1_initialized = false;
 
 
 
-besthea::onthefly::gpu_apply_vectors_data::gpu_apply_vectors_data() :
+besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data::gpu_apply_vectors_data() :
   h_x(nullptr) {
 }
 
 
 
-besthea::onthefly::gpu_apply_vectors_data::~gpu_apply_vectors_data() {
+besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data::~gpu_apply_vectors_data() {
   free();
 }
 
 
 
-void besthea::onthefly::gpu_apply_vectors_data::allocate(int n_gpus,
+void besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data::allocate(int n_gpus,
   lo x_block_count, lo x_size_of_block, lo y_block_count, lo y_size_of_block) {
 
   h_y.resize(n_gpus);
@@ -94,7 +94,7 @@ void besthea::onthefly::gpu_apply_vectors_data::allocate(int n_gpus,
 }
 
 
-void besthea::onthefly::gpu_apply_vectors_data::free() {
+void besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data::free() {
 
   if(h_x != nullptr) {
     cudaFreeHost(h_x);
@@ -132,97 +132,7 @@ void besthea::onthefly::gpu_apply_vectors_data::free() {
 
 
 
-besthea::onthefly::gpu_uniform_spacetime_tensor_mesh::gpu_uniform_spacetime_tensor_mesh(const besthea::mesh::uniform_spacetime_tensor_mesh & orig_mesh) {
-
-  n_gpus = 0;
-  cudaGetDeviceCount(&n_gpus);
-
-  if(n_gpus == 0 || cudaGetLastError() == cudaErrorNoDevice) {
-    std::cerr << "BESTHEA Warning: using gpu version of onthefly matrix class, but no cuda-capable devices were found. Reverting to using cpu-only version.\n";
-    n_gpus = 0;
-  }
-
-  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
-    int ccVerMajor;
-    cudaDeviceGetAttribute(&ccVerMajor, cudaDevAttrComputeCapabilityMajor, gpu_idx);
-    if(ccVerMajor < 6) {
-      std::cerr << "BESTHEA Warning: gpu with index " << gpu_idx << " has insufficient compute capability. Compute capability >= 6.0 is required. Another error will probably occur.\n";
-    }
-  }
-  
-  metadata.timestep = orig_mesh.get_timestep();
-  metadata.n_temporal_elements = orig_mesh.get_n_temporal_elements();
-  metadata.n_elems = orig_mesh.get_spatial_surface_mesh()->get_n_elements();
-  metadata.n_nodes = orig_mesh.get_spatial_surface_mesh()->get_n_nodes();
-
-  per_gpu_data.resize(n_gpus);
-  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
-
-    cudaSetDevice(gpu_idx);
-
-    mesh_raw_data &curr_gpu_data = per_gpu_data[gpu_idx];
-
-    cudaMalloc(&curr_gpu_data.d_element_areas,       metadata.n_elems * sizeof(*curr_gpu_data.d_element_areas));
-    cudaMalloc(&curr_gpu_data.d_node_coords,     3 * metadata.n_nodes * sizeof(*curr_gpu_data.d_node_coords));
-    cudaMalloc(&curr_gpu_data.d_element_nodes,   3 * metadata.n_elems * sizeof(*curr_gpu_data.d_element_nodes));
-    cudaMalloc(&curr_gpu_data.d_element_normals, 3 * metadata.n_elems * sizeof(*curr_gpu_data.d_element_normals));
-
-    cudaMemcpy(curr_gpu_data.d_element_areas,   orig_mesh.get_spatial_surface_mesh()->get_all_areas().data(),        metadata.n_elems * sizeof(*curr_gpu_data.d_element_areas), cudaMemcpyHostToDevice);
-    cudaMemcpy(curr_gpu_data.d_node_coords,     orig_mesh.get_spatial_surface_mesh()->get_all_nodes().data(),    3 * metadata.n_nodes * sizeof(*curr_gpu_data.d_node_coords),   cudaMemcpyHostToDevice);
-    cudaMemcpy(curr_gpu_data.d_element_nodes,   orig_mesh.get_spatial_surface_mesh()->get_all_elements().data(), 3 * metadata.n_elems * sizeof(*curr_gpu_data.d_element_nodes), cudaMemcpyHostToDevice);
-    cudaMemcpy(curr_gpu_data.d_element_normals, orig_mesh.get_spatial_surface_mesh()->get_all_normals().data(),  3 * metadata.n_elems * sizeof(*curr_gpu_data.d_element_normals), cudaMemcpyHostToDevice);
-  }
-
-  // cudaError_t err = cudaPeekAtLastError();
-  // if(err != cudaSuccess) {
-  //   std::cerr << "BESTHEA Error: detected cuda error " << err << ": " << cudaGetErrorString(err) << ".\n";
-  //   std::cerr << "    In function " << __func__ << "\n";
-  //   free();
-  //   throw err;
-  // }
-
-}
-
-
-
-besthea::onthefly::gpu_uniform_spacetime_tensor_mesh::~gpu_uniform_spacetime_tensor_mesh() {
-  free();
-}
-
-
-
-void besthea::onthefly::gpu_uniform_spacetime_tensor_mesh::free() {
-
-  for(unsigned int gpu_idx = 0; gpu_idx < per_gpu_data.size(); gpu_idx++) {
-
-    cudaSetDevice(gpu_idx);
-
-    mesh_raw_data &curr_gpu_data = per_gpu_data[gpu_idx];
-
-    cudaFree(curr_gpu_data.d_element_areas);
-    cudaFree(curr_gpu_data.d_node_coords);
-    cudaFree(curr_gpu_data.d_element_nodes);
-    cudaFree(curr_gpu_data.d_element_normals);
-  }
-  per_gpu_data.clear();
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-besthea::onthefly::apply_load_distribution::apply_load_distribution(int n_gpus_, lo n_elems_, lo gpu_chunk_size_) {
+besthea::linear_algebra::onthefly::helpers::apply_load_distribution::apply_load_distribution(int n_gpus_, lo n_elems_, lo gpu_chunk_size_) {
 
   this->n_gpus = n_gpus_;
   this->n_elems = n_elems_;
@@ -239,7 +149,7 @@ besthea::onthefly::apply_load_distribution::apply_load_distribution(int n_gpus_,
 
 
 
-void besthea::onthefly::apply_load_distribution::update_gpu_begins() {
+void besthea::linear_algebra::onthefly::helpers::apply_load_distribution::update_gpu_begins() {
 
   lo gpus_n_tst_elems = n_elems - cpu_n_tst_elems;
 
@@ -251,7 +161,7 @@ void besthea::onthefly::apply_load_distribution::update_gpu_begins() {
 
 
 
-void besthea::onthefly::apply_load_distribution::adapt(
+void besthea::linear_algebra::onthefly::helpers::apply_load_distribution::adapt(
   double cpu_time_const, double cpu_time_scaling, double gpu_time_const, double gpu_time_scaling, double inertia) {
 
   printf("Before adapt: %6ld %12.6f\n", cpu_n_tst_elems, cpu_n_tst_elems_target);
@@ -285,7 +195,7 @@ void besthea::onthefly::apply_load_distribution::adapt(
 
 
 
-lo besthea::onthefly::apply_load_distribution::adjust_cpu_count(double suggested) const {  
+lo besthea::linear_algebra::onthefly::helpers::apply_load_distribution::adjust_cpu_count(double suggested) const {  
   suggested = std::max(suggested, 0.0);
 
   lo suggested_gpu_elems = (lo)std::ceil(n_elems - suggested);
@@ -301,7 +211,7 @@ lo besthea::onthefly::apply_load_distribution::adjust_cpu_count(double suggested
 
 
 
-void besthea::onthefly::apply_load_distribution::print() {
+void besthea::linear_algebra::onthefly::helpers::apply_load_distribution::print() {
   printf("Total %ld CPU %ld GPU %ld:", n_elems, get_cpu_count(), get_gpu_count_total());
   for(unsigned int i = 0; i < gpu_i_tst_begins.size(); i++)
     printf(" %3ld", gpu_i_tst_begins[i]);
@@ -323,7 +233,7 @@ void besthea::onthefly::apply_load_distribution::print() {
 
 
 
-besthea::onthefly::timer_collection::timer_collection(int n_gpus) {
+besthea::linear_algebra::onthefly::helpers::timer_collection::timer_collection(int n_gpus) {
   gpu_all.resize(n_gpus);
   gpu_copyin.resize(n_gpus);
   gpu_compute.resize(n_gpus);
@@ -340,7 +250,7 @@ besthea::onthefly::timer_collection::timer_collection(int n_gpus) {
 
 
 
-void besthea::onthefly::timer_collection::print_all() {
+void besthea::linear_algebra::onthefly::helpers::timer_collection::print_all() {
   printf("gpu_copyin:   ");
   print_timers(gpu_copyin);
   printf("gpu_compute:  ");
@@ -360,7 +270,7 @@ void besthea::onthefly::timer_collection::print_all() {
 
 
 
-void besthea::onthefly::timer_collection::print_timers(std::vector<besthea::tools::time_measurer_cuda> & timers) {
+void besthea::linear_algebra::onthefly::helpers::timer_collection::print_timers(std::vector<besthea::tools::time_measurer_cuda> & timers) {
   for(unsigned int i = 0; i < timers.size(); i++) {
     printf("%10.6f  ", timers[i].get_time());
   }
@@ -369,15 +279,15 @@ void besthea::onthefly::timer_collection::print_timers(std::vector<besthea::tool
 
 
 
-double besthea::onthefly::timer_collection::get_cpu_time_const() {
+double besthea::linear_algebra::onthefly::helpers::timer_collection::get_cpu_time_const() {
   return cpu_singular.get_time() + cpu_delta0.get_time();
 }
 
-double besthea::onthefly::timer_collection::get_cpu_time_scaling() {
+double besthea::linear_algebra::onthefly::helpers::timer_collection::get_cpu_time_scaling() {
   return cpu_regular.get_time();
 }
 
-double besthea::onthefly::timer_collection::get_gpu_time_const() {
+double besthea::linear_algebra::onthefly::helpers::timer_collection::get_gpu_time_const() {
   double max_time_copyin = -1;
   for(unsigned int i = 0; i < gpu_copyin.size(); i++) {
     max_time_copyin = std::max(max_time_copyin, gpu_copyin[i].get_time());
@@ -389,7 +299,7 @@ double besthea::onthefly::timer_collection::get_gpu_time_const() {
   return max_time_copyin + max_time_copyout;
 }
 
-double besthea::onthefly::timer_collection::get_gpu_time_scaling() {
+double besthea::linear_algebra::onthefly::helpers::timer_collection::get_gpu_time_scaling() {
   double max_time_compute = -1;
   for(unsigned int i = 0; i < gpu_compute.size(); i++) {
     max_time_compute = std::max(max_time_compute, gpu_compute[i].get_time());
@@ -397,7 +307,7 @@ double besthea::onthefly::timer_collection::get_gpu_time_scaling() {
   return max_time_compute;
 }
 
-double besthea::onthefly::timer_collection::get_gpu_time_all() {
+double besthea::linear_algebra::onthefly::helpers::timer_collection::get_gpu_time_all() {
   double max_time_gpu_all = -1;
   for(unsigned int i = 0; i < gpu_all.size(); i++) {
     max_time_gpu_all = std::max(max_time_gpu_all, gpu_all[i].get_time());
