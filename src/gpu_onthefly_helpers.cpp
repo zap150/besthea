@@ -154,7 +154,7 @@ void besthea::linear_algebra::onthefly::helpers::apply_load_distribution::update
   lo gpus_n_tst_elems = n_elems - cpu_n_tst_elems;
 
   for(int gpu_idx = 0; gpu_idx <= n_gpus; gpu_idx++) {
-    gpu_i_tst_begins[gpu_idx] = (gpus_n_tst_elems * gpu_idx) / n_gpus;
+    gpu_i_tst_begins[gpu_idx] = (((gpus_n_tst_elems * gpu_idx) / n_gpus) / gpu_chunk_size) * gpu_chunk_size;
   }
 
 }
@@ -200,11 +200,10 @@ lo besthea::linear_algebra::onthefly::helpers::apply_load_distribution::adjust_c
 
   lo suggested_gpu_elems = (lo)std::ceil(n_elems - suggested);
 
-  lo chunk = gpu_chunk_size * n_gpus;
-  lo chunked_gpu_elems = ((suggested_gpu_elems - 1) / chunk + 1) * chunk;
+  lo chunked_gpu_elems = ((suggested_gpu_elems - 1) / gpu_chunk_size + 1) * gpu_chunk_size;
   
   if( chunked_gpu_elems > n_elems - min_cpu_tst_elems)
-    chunked_gpu_elems = ((n_elems - min_cpu_tst_elems) / chunk) * chunk;
+    chunked_gpu_elems = ((n_elems - min_cpu_tst_elems) / gpu_chunk_size) * gpu_chunk_size;
   
   return n_elems - chunked_gpu_elems;
 }
