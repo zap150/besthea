@@ -314,8 +314,14 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
     get_index_type< lo >::MPI_LO( ), MPI_MAX, *_comm );
 
   if ( _real_max_levels < get_distribution_tree( )->get_levels( ) ) {
-    std::cout << "Warning: Depth of local spacetime tree is less than depth of"
-              << " local distribution tree!" << std::endl;
+    if ( _my_rank == 0 ) {
+      std::cout
+        << "Warning: Depth of local spacetime tree is less than depth of"
+        << " local distribution tree!" << std::endl;
+      std::cout << "depth spacetime tree: " << _real_max_levels
+                << ", distribution tree :"
+                << get_distribution_tree( )->get_levels( ) << std::endl;
+    }
     assert( _real_max_levels >= get_distribution_tree( )->get_levels( ) );
   }
 }
@@ -2072,9 +2078,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::print_information(
   if ( _my_rank == root_process ) {
     std::cout << "#############################################################"
               << "###########################" << std::endl;
-    std::cout << "number of levels = " << _max_levels << std::endl;
-    std::cout << "initial space level = " << _initial_space_refinement
-              << std::endl;
+    std::cout << "number of spacetime levels = " << _max_levels << std::endl;
+    std::cout << "initial space refinement level = "
+              << _initial_space_refinement << std::endl;
     std::cout << "first space refinement level = " << _start_space_refinement
               << std::endl;
   }
@@ -2084,6 +2090,31 @@ void besthea::mesh::distributed_spacetime_cluster_tree::print_information(
   if ( _my_rank == root_process ) {
     std::cout << "maximal space level = " << global_max_space_level
               << std::endl;
+    // compute and print half sizes of spatial boxes in each level
+    std::cout << "half sizes of spatial boxes in each spatial level: "
+              << std::endl;
+    std::vector< sc > box_size = _bounding_box_size;
+    sc initial_scaling_factor = ( sc )( 1 << _initial_space_refinement );
+    for ( lou box_dim = 0; box_dim < 3; ++box_dim ) {
+      box_size[ box_dim ] /= initial_scaling_factor;
+    }
+    for ( lo i = 0; i <= global_max_space_level; ++i ) {
+      // find a spacetime level where the spatial components of boxes are on the
+      // current spatial level
+      lo spacetime_level;
+      if ( i == 0 ) {
+        spacetime_level = 0;
+      } else {
+        spacetime_level = _start_space_refinement + 2 * ( i - 1 );
+      }
+      std::cout << "spatial level " << i << ": ( " << box_size[ 0 ] << ", "
+                << box_size[ 1 ] << ", " << box_size[ 2 ]
+                << "), padding = " << _spatial_paddings[ spacetime_level ]
+                << std::endl;
+      for ( lou box_dim = 0; box_dim < 3; ++box_dim ) {
+        box_size[ box_dim ] /= 2.0;
+      }
+    }
   }
   // determine levelwise number of leaves:
   std::vector< lou > n_leaves_levelwise( _max_levels, 0 );

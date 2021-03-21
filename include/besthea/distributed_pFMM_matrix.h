@@ -417,7 +417,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * and the operations which have to be applied.
    * @param[in] root_process  Process responsible for printing the information.
    */
-  void print_information( const int root_process );
+  void print_information(
+    const int root_process, const bool print_tree_information = false );
 
   /*!
    * Setter for verbosity during matrix-vector multiplication
