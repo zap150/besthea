@@ -48,12 +48,12 @@ namespace besthea::mesh {
 
 
 
-/**
+/*!
  *  Class representing uniform spacetime mesh resident in the GPU memory.
  */
 class besthea::mesh::uniform_spacetime_tensor_mesh_gpu {
 public:
-  /**
+  /*!
    *  Struct containing GPU-resident space mesh raw data.
    */
   struct mesh_raw_data {
@@ -64,7 +64,7 @@ public:
     mesh_raw_data() : d_element_areas(nullptr), d_node_coords(nullptr), d_element_nodes(nullptr), d_element_normals(nullptr) { }
   };
 
-  /**
+  /*!
    *  Struct containing spacetime mesh metadata.
    */
   struct mesh_raw_metadata {
@@ -75,34 +75,34 @@ public:
   };
 
 public:
-  /**
+  /*!
    * Constructor. Creates this instance and copies necessary data tu GPU memory.
    * @param[in] orig_mesh The original mesh.
    */
   uniform_spacetime_tensor_mesh_gpu(const besthea::mesh::uniform_spacetime_tensor_mesh & orig_mesh);
   
-  /**
+  /*!
    * Destructor.
    */
   ~uniform_spacetime_tensor_mesh_gpu();
   
-  /**
+  /*!
    * Returns metadata structure holding information about this mesh.
    */
   const mesh_raw_metadata & get_metadata() const { return metadata; }
   
-  /**
+  /*!
    * Returns vector of structures holding pointers to data on GPUs.
    */
   const std::vector<mesh_raw_data> & get_per_gpu_data() const { return per_gpu_data; }
   
-  /**
+  /*!
    * Returns the used number of GPUs.
    */
   int get_n_gpus() const { return n_gpus; }
 
 private:
-  /**
+  /*!
    * Frees the allocated GPU memory.
    */
   void free();  

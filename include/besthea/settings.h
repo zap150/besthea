@@ -88,7 +88,7 @@ namespace besthea::settings {
 }
 
 /**
- * Struct holding info about output verbosity
+ * Struct holding settings regarding output verbosity
  */
 struct besthea::settings::verbose_levels {
   int warnings; //!< 0 for no warnings, 1 warnings are on

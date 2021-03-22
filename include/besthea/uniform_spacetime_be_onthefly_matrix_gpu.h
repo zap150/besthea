@@ -51,7 +51,7 @@ namespace besthea::linear_algebra::onthefly {
 
 
 
-/**
+/*!
  *  Class representing a boundary element matrix, whose elements are computed
  *  during multiplication on the fly, on the GPU.
  */
@@ -69,7 +69,7 @@ public:
 
 public:
 
-  /**
+  /*!
    * Constructor.
    * @param[in] kernel Spacetime kernel antiderivative object.
    * @param[in] test_space Test boundary element space.
@@ -89,12 +89,12 @@ public:
     const uniform_spacetime_be_onthefly_matrix_gpu & that )
     = delete;
   
-  /**
+  /*!
    * Destructor.
    */
   virtual ~uniform_spacetime_be_onthefly_matrix_gpu( );
 
-  /**
+  /*!
    * Prints info on the object.
    */
   void print_info( ) const {
@@ -144,7 +144,7 @@ private:
   template<int quadr_order>
   void init_gpu_quadrature_memory() const;
 
-  /**
+  /*!
    * Asynchronously launches memory transfers and matrix multiplication kernel.
    * @param[in] x
    * @param[in] y
@@ -153,7 +153,7 @@ private:
    */
   void apply_regular_gpu_begin( const block_vector_type & x, const block_vector_type & y, sc alpha, besthea::linear_algebra::onthefly::helpers::timer_collection & timers ) const;
   
-  /**
+  /*!
    * Waits for all GPU tasks to finish and copies vector y back to CPU memory.
    * @param[out] y
    */

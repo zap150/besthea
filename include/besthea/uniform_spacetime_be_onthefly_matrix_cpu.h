@@ -47,7 +47,7 @@ namespace besthea::linear_algebra::onthefly {
 
 
 
-/**
+/*!
  *  Class representing a boundary element matrix, whose elements are computed
  *  during multiplication on the fly, on the CPU.
  */
@@ -56,7 +56,7 @@ class besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cp
   : public besthea::linear_algebra::block_matrix
 {
 protected:
-  /**
+  /*!
    *  Stores quadrature nodes for reference element
    */
   struct quadrature_reference {
@@ -83,7 +83,7 @@ protected:
     lo _max_size; //!< Maximum size
   };
 
-  /**
+  /*!
    *  Stores quadrature nodes mapped to specific element
    */
   struct quadrature_nodes {
@@ -108,7 +108,7 @@ public:
   using distributed_block_vector_type
     = besthea::linear_algebra::distributed_block_vector;  //!< Block vector type.
 
-  /**
+  /*!
    * Constructor.
    * @param[in] kernel Spacetime kernel antiderivative object.
    * @param[in] test_space Test boundary element space.
@@ -124,12 +124,12 @@ public:
     const uniform_spacetime_be_onthefly_matrix_cpu & that )
     = delete;
   
-  /**
+  /*!
    * Destructor.
    */
   virtual ~uniform_spacetime_be_onthefly_matrix_cpu( );
 
-  /**
+  /*!
    * Prints info on the object.
    */
   void print_info( ) const {
@@ -184,12 +184,12 @@ protected:
   void apply_singular_cpu( const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
   void apply_delta0_cpu(   const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
 
-  /**
+  /*!
    * Initializes the quadrature reference structure.
    */
   void init_quadrature();
 
-  /**
+  /*!
    * Determines the configuration of two triangular elements.
    * @param[in] i_test Index of the test element.
    * @param[in] i_trial Index of the trial element.
@@ -200,7 +200,7 @@ protected:
   void get_type( lo i_test, lo i_trial, int & n_shared_vertices, int & rot_test,
     int & rot_trial ) const;
 
-  /**
+  /*!
    * Maps the quadrature nodes from reference triangle to specified
    * test element.
    * @param[in] i_tst Index of the test element triangle to map nodes to.
@@ -212,7 +212,7 @@ protected:
   void triangles_to_geometry_tst( lo i_tst, int n_shared_vertices, int rot_test,
     quadrature_nodes & quadr_nodes_tst) const ;
     
-  /**
+  /*!
    * Maps the quadrature nodes from reference triangle to specified
    * trial element.
    * @param[in] i_trl Index of the trial element triangle to map nodes to.
@@ -224,7 +224,7 @@ protected:
   void triangles_to_geometry_trl( lo i_trl, int n_shared_vertices, int rot_trial,
     quadrature_nodes & quadr_nodes_trl) const ;
   
-  /**
+  /*!
    * Maps quadratures nodes from hypercube to triangles
    * @param[in] ksi ksi variable in (0,1).
    * @param[in] eta1 eta_1 variable in (0,1).
@@ -264,7 +264,7 @@ protected:
     }
   }
   
-  /**
+  /*!
    * Maps quadratures nodes from hypercube to triangles (shared vertex case)
    * @param[in] ksi ksi variable in (0,1).
    * @param[in] eta1 eta_1 variable in (0,1).
@@ -306,7 +306,7 @@ protected:
     int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref, sc & y2_ref,
     sc & jacobian ) const;
 
-  /**
+  /*!
    * Maps quadratures nodes from hypercube to triangles (identical case)
    * @param[in] ksi ksi variable in (0,1).
    * @param[in] eta1 eta_1 variable in (0,1).

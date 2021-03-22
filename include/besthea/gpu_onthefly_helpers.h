@@ -63,7 +63,7 @@ namespace besthea::linear_algebra::onthefly::helpers {
 
   struct gpu_threads_per_block;
   
-  /*
+  /*!
    * Translates quadrature order to quadrature size -- number of quadrature nodes.
    */
 #ifdef __NVCC__
@@ -94,7 +94,7 @@ namespace besthea::linear_algebra::onthefly::helpers {
 
 
 
-/**
+/*!
  *  Struct containing reference quadrature nodes and quadrature weights as raw data.
  */
 template<int quadr_order>
@@ -110,7 +110,7 @@ struct besthea::linear_algebra::onthefly::helpers::quadrature_reference_raw {
 
 
 
-/**
+/*!
  *  Struct containing mapped quadrature nodes as raw data.
  */
 template<int quadr_order>
@@ -124,7 +124,7 @@ struct besthea::linear_algebra::onthefly::helpers::quadrature_nodes_raw {
 
 
 
-/**
+/*!
  *  Struct containing parameters of heat kernel and other auxiliary variables.
  */
 struct besthea::linear_algebra::onthefly::helpers::heat_kernel_parameters {
@@ -146,7 +146,7 @@ struct besthea::linear_algebra::onthefly::helpers::heat_kernel_parameters {
 
 
 
-/**
+/*!
  *  Struct containing CPU and GPU resident vectors data.
  */
 struct besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data {
@@ -168,7 +168,7 @@ struct besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data {
 
 
 
-/**
+/*!
  *  Class taking care of CPU-GPU load distribution
  */
 class besthea::linear_algebra::onthefly::helpers::apply_load_distribution {
@@ -200,7 +200,7 @@ private:
 
 
 
-/**
+/*!
  *  Struct containing several timers used in GPU onthefly matrix apply.
  */
 struct besthea::linear_algebra::onthefly::helpers::timer_collection {
@@ -228,6 +228,9 @@ struct besthea::linear_algebra::onthefly::helpers::timer_collection {
 
 
 
+/*!
+ *  Struct containing GPU kernel launch settings.
+ */
 struct besthea::linear_algebra::onthefly::helpers::gpu_threads_per_block {
   dim3 tpb_qo1;
   dim3 tpb_qo2;
