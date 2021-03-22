@@ -30,5 +30,4 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/settings.h"
 
-
 besthea::settings::verbose_levels besthea::settings::output_verbosity;

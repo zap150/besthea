@@ -80,7 +80,6 @@ using lou = besthea::index_unsigned;         //!< Unsigned indexing type.
 using slos = besthea::short_index;           //!< Short signed indexing type.
 using slou = besthea::short_index_unsigned;  //!< Short unsigned indexing type.
 
-
 namespace besthea::settings {
   struct verbose_levels;
 
@@ -91,16 +90,12 @@ namespace besthea::settings {
  * Struct holding settings regarding output verbosity
  */
 struct besthea::settings::verbose_levels {
-  int warnings; //!< 0 for no warnings, 1 warnings are on
-  int timers; //!< 0=off, 1=basic, 2=all available
-  int onthefly_loadbalance; //!< 0=off, 1=before apply, 2=adapt info
-  verbose_levels() :
-    warnings(1),
-    timers(0),
-    onthefly_loadbalance(0) { }
+  int warnings;              //!< 0 for no warnings, 1 warnings are on
+  int timers;                //!< 0=off, 1=basic, 2=all available
+  int onthefly_loadbalance;  //!< 0=off, 1=before apply, 2=adapt info
+  verbose_levels( ) : warnings( 1 ), timers( 0 ), onthefly_loadbalance( 0 ) {
+  }
 };
-
-
 
 // structures to deduce MPI datatypes
 

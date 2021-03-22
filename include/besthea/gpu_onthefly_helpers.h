@@ -35,24 +35,22 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDE_BESTHEA_GPU_ONTHEFLY_HELPERS_H_
 #define INCLUDE_BESTHEA_GPU_ONTHEFLY_HELPERS_H_
 
-#include <cmath>
-#include <vector>
-#include <cuda_runtime.h>
-
 #include "besthea/settings.h"
-#include "besthea/uniform_spacetime_tensor_mesh.h"
 #include "besthea/time_measurer.h"
 #include "besthea/time_measurer_cuda.h"
+#include "besthea/uniform_spacetime_tensor_mesh.h"
 
-
+#include <cmath>
+#include <cuda_runtime.h>
+#include <vector>
 
 namespace besthea::linear_algebra::onthefly::helpers {
-  template<int quadr_order>
+  template< int quadr_order >
   struct quadrature_reference_raw;
 
-  template<int quadr_order>
+  template< int quadr_order >
   struct quadrature_nodes_raw;
-  
+
   struct heat_kernel_parameters;
 
   struct gpu_apply_vectors_data;
@@ -62,15 +60,17 @@ namespace besthea::linear_algebra::onthefly::helpers {
   struct timer_collection;
 
   struct gpu_threads_per_block;
-  
+
   /*!
-   * Translates quadrature order to quadrature size -- number of quadrature nodes.
+   * Translates quadrature order to quadrature size -- number of quadrature
+   * nodes.
    */
 #ifdef __NVCC__
   __host__ __device__
 #endif
-  constexpr int qo2qs(int quadr_order) {
-    switch(quadr_order) {
+    constexpr int
+    qo2qs( int quadr_order ) {
+    switch ( quadr_order ) {
       case 5:
         return 49;
       case 4:
@@ -90,39 +90,28 @@ namespace besthea::linear_algebra::onthefly::helpers {
 
 }
 
-
-
-
-
 /*!
- *  Struct containing reference quadrature nodes and quadrature weights as raw data.
+ *  Struct containing reference quadrature nodes and quadrature weights as raw
+ * data.
  */
-template<int quadr_order>
+template< int quadr_order >
 struct besthea::linear_algebra::onthefly::helpers::quadrature_reference_raw {
-  sc _x1_ref[qo2qs(quadr_order)];
-  sc _x2_ref[qo2qs(quadr_order)];
-  sc _y1_ref[qo2qs(quadr_order)];
-  sc _y2_ref[qo2qs(quadr_order)];
-  sc _w[qo2qs(quadr_order)];
+  sc _x1_ref[ qo2qs( quadr_order ) ];
+  sc _x2_ref[ qo2qs( quadr_order ) ];
+  sc _y1_ref[ qo2qs( quadr_order ) ];
+  sc _y2_ref[ qo2qs( quadr_order ) ];
+  sc _w[ qo2qs( quadr_order ) ];
 };
-
-
-
-
 
 /*!
  *  Struct containing mapped quadrature nodes as raw data.
  */
-template<int quadr_order>
+template< int quadr_order >
 struct besthea::linear_algebra::onthefly::helpers::quadrature_nodes_raw {
-  sc xs[qo2qs(quadr_order)];
-  sc ys[qo2qs(quadr_order)];
-  sc zs[qo2qs(quadr_order)];
+  sc xs[ qo2qs( quadr_order ) ];
+  sc ys[ qo2qs( quadr_order ) ];
+  sc zs[ qo2qs( quadr_order ) ];
 };
-
-
-
-
 
 /*!
  *  Struct containing parameters of heat kernel and other auxiliary variables.
@@ -133,100 +122,104 @@ struct besthea::linear_algebra::onthefly::helpers::heat_kernel_parameters {
   sc alpha_2;
   sc pi;
   sc sqrt_pi;
-  heat_kernel_parameters(sc alpha_) {
+  heat_kernel_parameters( sc alpha_ ) {
     this->alpha = alpha_;
-    sqrt_alpha = std::sqrt(alpha_);
+    sqrt_alpha = std::sqrt( alpha_ );
     alpha_2 = alpha_ * alpha_;
     pi = M_PI;
-    sqrt_pi = std::sqrt(M_PI);
+    sqrt_pi = std::sqrt( M_PI );
   }
 };
-
-
-
-
 
 /*!
  *  Struct containing CPU and GPU resident vectors data.
  */
 struct besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data {
-  sc * h_x; // raw data on host
-  std::vector<sc*> h_y; // raw data on host
-  std::vector<sc*> d_x, d_y; // raw data on device
-  std::vector<size_t> pitch_x, pitch_y; // pitch in bytes
-  std::vector<lo> ld_x, ld_y; // leading dimension in elements
-  
-  gpu_apply_vectors_data();
-  gpu_apply_vectors_data(const gpu_apply_vectors_data & that) = delete;
-  ~gpu_apply_vectors_data();
-  void allocate(int n_gpus, lo x_block_count, lo x_size_of_block, lo y_block_count, lo y_size_of_block);
-  void free();
-  void print_times() const;
+  sc * h_x;                                // raw data on host
+  std::vector< sc * > h_y;                 // raw data on host
+  std::vector< sc * > d_x, d_y;            // raw data on device
+  std::vector< size_t > pitch_x, pitch_y;  // pitch in bytes
+  std::vector< lo > ld_x, ld_y;            // leading dimension in elements
+
+  gpu_apply_vectors_data( );
+  gpu_apply_vectors_data( const gpu_apply_vectors_data & that ) = delete;
+  ~gpu_apply_vectors_data( );
+  void allocate( int n_gpus, lo x_block_count, lo x_size_of_block,
+    lo y_block_count, lo y_size_of_block );
+  void free( );
+  void print_times( ) const;
 };
-
-
-
-
 
 /*!
  *  Class taking care of CPU-GPU load distribution
  */
 class besthea::linear_algebra::onthefly::helpers::apply_load_distribution {
-private:
+ private:
   lo cpu_n_tst_elems;
   double cpu_n_tst_elems_target;
-  std::vector<lo> gpu_i_tst_begins;
+  std::vector< lo > gpu_i_tst_begins;
   int n_gpus;
   lo n_elems;
   lo gpu_chunk_size;
   lo min_cpu_tst_elems;
-public:
-  apply_load_distribution(int n_gpus, lo n_elems, lo gpu_chunk_size);
-  void update_gpu_begins();
-  void adapt(double cpu_time_const, double cpu_time_scaling, double gpu_time_const, double gpu_time_scaling, double inertia = 0.0);
-  lo get_cpu_begin() const { return n_elems - cpu_n_tst_elems; }
-  lo get_cpu_end() const { return n_elems; }
-  lo get_cpu_count() const { return cpu_n_tst_elems; }
-  lo get_gpu_begin(int gpu_idx) const { return gpu_i_tst_begins[gpu_idx]; }
-  lo get_gpu_end(int gpu_idx) const { return gpu_i_tst_begins[gpu_idx+1]; }
-  lo get_gpu_count(int gpu_idx) const { return get_gpu_end(gpu_idx) - get_gpu_begin(gpu_idx); }
-  lo get_gpu_count_total() const { return n_elems - cpu_n_tst_elems; }
-  void print();
-private:
-  lo adjust_cpu_count(double suggested) const;
+
+ public:
+  apply_load_distribution( int n_gpus, lo n_elems, lo gpu_chunk_size );
+  void update_gpu_begins( );
+  void adapt( double cpu_time_const, double cpu_time_scaling,
+    double gpu_time_const, double gpu_time_scaling, double inertia = 0.0 );
+  lo get_cpu_begin( ) const {
+    return n_elems - cpu_n_tst_elems;
+  }
+  lo get_cpu_end( ) const {
+    return n_elems;
+  }
+  lo get_cpu_count( ) const {
+    return cpu_n_tst_elems;
+  }
+  lo get_gpu_begin( int gpu_idx ) const {
+    return gpu_i_tst_begins[ gpu_idx ];
+  }
+  lo get_gpu_end( int gpu_idx ) const {
+    return gpu_i_tst_begins[ gpu_idx + 1 ];
+  }
+  lo get_gpu_count( int gpu_idx ) const {
+    return get_gpu_end( gpu_idx ) - get_gpu_begin( gpu_idx );
+  }
+  lo get_gpu_count_total( ) const {
+    return n_elems - cpu_n_tst_elems;
+  }
+  void print( );
+
+ private:
+  lo adjust_cpu_count( double suggested ) const;
 };
-
-
-
-
 
 /*!
  *  Struct containing several timers used in GPU onthefly matrix apply.
  */
 struct besthea::linear_algebra::onthefly::helpers::timer_collection {
-  std::vector<besthea::tools::time_measurer_cuda> gpu_all;
-  std::vector<besthea::tools::time_measurer_cuda> gpu_copyin;
-  std::vector<besthea::tools::time_measurer_cuda> gpu_compute;
-  std::vector<besthea::tools::time_measurer_cuda> gpu_copyout;
+  std::vector< besthea::tools::time_measurer_cuda > gpu_all;
+  std::vector< besthea::tools::time_measurer_cuda > gpu_copyin;
+  std::vector< besthea::tools::time_measurer_cuda > gpu_compute;
+  std::vector< besthea::tools::time_measurer_cuda > gpu_copyout;
   besthea::tools::time_measurer cpu_scalein;
   besthea::tools::time_measurer cpu_regular;
   besthea::tools::time_measurer cpu_singular;
   besthea::tools::time_measurer cpu_delta0;
   besthea::tools::time_measurer cpu_all;
   besthea::tools::time_measurer combined;
-  timer_collection(int n_gpus);
-  void print_all();
-  void print_timers(std::vector<besthea::tools::time_measurer_cuda> & timers);
-  double get_cpu_time_const();
-  double get_cpu_time_scaling();
-  double get_gpu_time_const();
-  double get_gpu_time_scaling();
-  double get_gpu_time_all();
+
+  timer_collection( int n_gpus );
+  void print_all( );
+  void print_timers(
+    std::vector< besthea::tools::time_measurer_cuda > & timers );
+  double get_cpu_time_const( );
+  double get_cpu_time_scaling( );
+  double get_gpu_time_const( );
+  double get_gpu_time_scaling( );
+  double get_gpu_time_all( );
 };
-
-
-
-
 
 /*!
  *  Struct containing GPU kernel launch settings.
@@ -236,10 +229,17 @@ struct besthea::linear_algebra::onthefly::helpers::gpu_threads_per_block {
   dim3 tpb_qo2;
   dim3 tpb_qo4;
   dim3 tpb_qo5;
-  constexpr gpu_threads_per_block(int x1, int y1, int x2, int y2, int x4, int y4, int x5, int y5)
-    : tpb_qo1(x1,y1), tpb_qo2(x2,y2), tpb_qo4(x4,y4), tpb_qo5(x5,y5) { }
-  __host__ __device__ constexpr const dim3 & get(int quadr_order) const {
-    switch(quadr_order) {
+
+  constexpr gpu_threads_per_block(
+    int x1, int y1, int x2, int y2, int x4, int y4, int x5, int y5 )
+    : tpb_qo1( x1, y1 ),
+      tpb_qo2( x2, y2 ),
+      tpb_qo4( x4, y4 ),
+      tpb_qo5( x5, y5 ) {
+  }
+
+  __host__ __device__ constexpr const dim3 & get( int quadr_order ) const {
+    switch ( quadr_order ) {
       case 5:
         return tpb_qo5;
       case 4:
@@ -252,8 +252,5 @@ struct besthea::linear_algebra::onthefly::helpers::gpu_threads_per_block {
     }
   }
 };
-
-
-
 
 #endif /* INCLUDE_BESTHEA_GPU_ONTHEFLY_HELPERS_H_ */

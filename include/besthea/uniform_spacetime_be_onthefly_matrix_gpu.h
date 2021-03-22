@@ -35,40 +35,36 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_GPU_H_
 #define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_GPU_H_
 
+#include "besthea/gpu_onthefly_helpers.h"
 #include "besthea/uniform_spacetime_be_onthefly_matrix_cpu.h"
 #include "besthea/uniform_spacetime_tensor_mesh_gpu.h"
-#include "besthea/gpu_onthefly_helpers.h"
 
 #include <array>
-
 
 namespace besthea::linear_algebra::onthefly {
   template< class kernel_type, class test_space_type, class trial_space_type >
   class uniform_spacetime_be_onthefly_matrix_gpu;
 }
 
-
-
-
-
 /*!
  *  Class representing a boundary element matrix, whose elements are computed
  *  during multiplication on the fly, on the GPU.
  */
 template< class kernel_type, class test_space_type, class trial_space_type >
-class besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_gpu
-  : public besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu< kernel_type, test_space_type, trial_space_type >
-{
-
-public:
+class besthea::linear_algebra::onthefly::
+  uniform_spacetime_be_onthefly_matrix_gpu
+  : public besthea::linear_algebra::onthefly::
+      uniform_spacetime_be_onthefly_matrix_cpu< kernel_type, test_space_type,
+        trial_space_type > {
+ public:
   using block_vector_type
     = besthea::linear_algebra::block_vector;            //!< Block vector type.
   using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
   using distributed_block_vector_type
-    = besthea::linear_algebra::distributed_block_vector;  //!< Block vector type.
+    = besthea::linear_algebra::distributed_block_vector;  //!< Block vector
+                                                          //!< type.
 
-public:
-
+ public:
   /*!
    * Constructor.
    * @param[in] kernel Spacetime kernel antiderivative object.
@@ -88,7 +84,7 @@ public:
   uniform_spacetime_be_onthefly_matrix_gpu(
     const uniform_spacetime_be_onthefly_matrix_gpu & that )
     = delete;
-  
+
   /*!
    * Destructor.
    */
@@ -98,12 +94,11 @@ public:
    * Prints info on the object.
    */
   void print_info( ) const {
-    std::cout
-      << "besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu"
-      << std::endl;
+    std::cout << "besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu"
+              << std::endl;
     std::cout << "  number of blocks: " << this->_block_dim << std::endl;
-    std::cout << "  dimension of each block: " << this->_dim_domain
-              << " x " << this->_dim_range << std::endl;
+    std::cout << "  dimension of each block: " << this->_dim_domain << " x "
+              << this->_dim_range << std::endl;
   }
 
   /*!
@@ -129,20 +124,19 @@ public:
   virtual void apply( [[maybe_unused]] const distributed_block_vector_type & x,
     [[maybe_unused]] distributed_block_vector_type & y,
     [[maybe_unused]] bool trans = false, [[maybe_unused]] sc alpha = 1.0,
-    [[maybe_unused]] sc beta = 0.0 ) const override {};
+    [[maybe_unused]] sc beta = 0.0 ) const override{ };
 
-private:
-
+ private:
   /*!
    * Allocates GPU vectors, load distrubution and initializes GPU qudrature.
    */
-  void init_gpu_data();
+  void init_gpu_data( );
 
   /*!
    * Copies regular quadrature reference nodes to GPU constant memory/
    */
-  template<int quadr_order>
-  void init_gpu_quadrature_memory() const;
+  template< int quadr_order >
+  void init_gpu_quadrature_memory( ) const;
 
   /*!
    * Asynchronously launches memory transfers and matrix multiplication kernel.
@@ -151,23 +145,27 @@ private:
    * @param[in] alpha Scaling factor of vector x
    * @param[in] timers Timers for measuring elapsed time
    */
-  void apply_regular_gpu_begin( const block_vector_type & x, const block_vector_type & y, sc alpha, besthea::linear_algebra::onthefly::helpers::timer_collection & timers ) const;
-  
+  void apply_regular_gpu_begin( const block_vector_type & x,
+    const block_vector_type & y, sc alpha,
+    besthea::linear_algebra::onthefly::helpers::timer_collection & timers )
+    const;
+
   /*!
    * Waits for all GPU tasks to finish and copies vector y back to CPU memory.
    * @param[out] y
    */
   void apply_regular_gpu_finalize( block_vector_type & y ) const;
 
-private:
-  const besthea::mesh::uniform_spacetime_tensor_mesh_gpu * gpu_mesh; //!< GPU-resident mesh
-  int n_gpus; //!< Number of GPUs to use
-  int gpu_kernel_version; //!< Version of GPU multiplication algorithm
-  
-  besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data vectors_data; //!< GPU-resident vectors
-  besthea::linear_algebra::onthefly::helpers::apply_load_distribution * load_distr; //!< Object handling CPU-GPU load distribution
+ private:
+  const besthea::mesh::uniform_spacetime_tensor_mesh_gpu *
+    gpu_mesh;              //!< GPU-resident mesh
+  int n_gpus;              //!< Number of GPUs to use
+  int gpu_kernel_version;  //!< Version of GPU multiplication algorithm
 
+  besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data
+    vectors_data;  //!< GPU-resident vectors
+  besthea::linear_algebra::onthefly::helpers::apply_load_distribution *
+    load_distr;  //!< Object handling CPU-GPU load distribution
 };
-
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_GPU_H_ */

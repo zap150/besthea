@@ -37,14 +37,17 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-besthea::mesh::uniform_spacetime_tensor_mesh_gpu::uniform_spacetime_tensor_mesh_gpu(const besthea::mesh::uniform_spacetime_tensor_mesh & orig_mesh) {
+besthea::mesh::uniform_spacetime_tensor_mesh_gpu::
+  uniform_spacetime_tensor_mesh_gpu(
+    const besthea::mesh::uniform_spacetime_tensor_mesh & orig_mesh) {
 
   n_gpus = 0;
   cudaGetDeviceCount(&n_gpus);
   
   if(n_gpus == 0 || cudaGetLastError() == cudaErrorNoDevice) {
     if(besthea::settings::output_verbosity.warnings >= 1) {
-      std::cerr << "BESTHEA Warning: Constructing GPU mesh, but no cuda-capable GPUs were detected.\n";
+      std::cerr << "BESTHEA Warning: Constructing GPU mesh, "
+        "but no cuda-capable GPUs were detected.\n";
     }
     n_gpus = 0;
   }
@@ -75,7 +78,8 @@ besthea::mesh::uniform_spacetime_tensor_mesh_gpu::uniform_spacetime_tensor_mesh_
   if(n_gpus > 0) {
     cudaError_t err = cudaGetLastError();
     if(err != cudaSuccess) {
-      std::cerr << "BESTHEA Error: gpu mesh init, detected cuda error " << err << ": " << cudaGetErrorString(err) << ".\n";
+      std::cerr << "BESTHEA Error: gpu mesh init, detected cuda error "
+        << err << ": " << cudaGetErrorString(err) << ".\n";
       free();
       throw std::runtime_error("BESTHEA Exception: cuda error");
     }
@@ -85,7 +89,9 @@ besthea::mesh::uniform_spacetime_tensor_mesh_gpu::uniform_spacetime_tensor_mesh_
 
 
 
-besthea::mesh::uniform_spacetime_tensor_mesh_gpu::~uniform_spacetime_tensor_mesh_gpu() {
+besthea::mesh::uniform_spacetime_tensor_mesh_gpu::
+  ~uniform_spacetime_tensor_mesh_gpu() {
+
   free();
 }
 
@@ -109,7 +115,8 @@ void besthea::mesh::uniform_spacetime_tensor_mesh_gpu::free() {
   if(n_gpus > 0) {
     cudaError_t err = cudaGetLastError();
     if(err != cudaSuccess) {
-      std::cerr << "BESTHEA Error: gpu mesh free, detected cuda error " << err << ": " << cudaGetErrorString(err) << ".\n";
+      std::cerr << "BESTHEA Error: gpu mesh free, detected cuda error "
+        << err << ": " << cudaGetErrorString(err) << ".\n";
       throw std::runtime_error("BESTHEA Exception: cuda error");
     }
   }

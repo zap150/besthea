@@ -168,21 +168,39 @@ public:
 
 protected:
 
-  void apply_cpu( const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha, sc beta ) const;
+  void apply_cpu( const block_vector_type & x_perm, block_vector_type & y_perm,
+    sc alpha, sc beta ) const;
 
-  void get_values_regular      (sc * values_out, lo delta, lo i_test, lo i_trial,
-    const quadrature_nodes & quadr_nodes_tst, const quadrature_nodes & quadr_nodes_trl) const;
-  void get_values_singular     (sc * values_out, lo delta, lo i_test, lo i_trial,
-    const quadrature_nodes & quadr_nodes_tst, const quadrature_nodes & quadr_nodes_trl) const;
-  void get_values_delta0       (sc * values_out,           lo i_test, lo i_trial, int n_shared_vertices, int rot_test, int rot_trial,
-    const quadrature_nodes & quadr_nodes_tst, const quadrature_nodes & quadr_nodes_trl) const;
-  void get_values_delta0special(sc * values_out,           lo i_test, lo i_trial, int n_shared_vertices, int rot_test, int rot_trial,
-    const quadrature_nodes & quadr_nodes_tst, const quadrature_nodes & quadr_nodes_trl) const;
+  void get_values_regular      (sc * values_out,lo delta, lo i_test, lo i_trial,
+    const quadrature_nodes & quadr_nodes_tst,
+    const quadrature_nodes & quadr_nodes_trl) const;
 
-  void apply_regular_cpu(  const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
-  void apply_regular_cpu(  const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha, lo tst_elem_start, lo tst_elem_end ) const;
-  void apply_singular_cpu( const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
-  void apply_delta0_cpu(   const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha = 1.0 ) const;
+  void get_values_singular     (sc * values_out,lo delta, lo i_test, lo i_trial,
+    const quadrature_nodes & quadr_nodes_tst,
+    const quadrature_nodes & quadr_nodes_trl) const;
+
+  void get_values_delta0       (sc * values_out,          lo i_test, lo i_trial,
+    int n_shared_vertices, int rot_test, int rot_trial,
+    const quadrature_nodes & quadr_nodes_tst,
+    const quadrature_nodes & quadr_nodes_trl) const;
+
+  void get_values_delta0special(sc * values_out,          lo i_test, lo i_trial,
+    int n_shared_vertices, int rot_test, int rot_trial,
+    const quadrature_nodes & quadr_nodes_tst,
+    const quadrature_nodes & quadr_nodes_trl) const;
+
+  void apply_regular_cpu(  const block_vector_type & x_perm,
+    block_vector_type & y_perm, sc alpha = 1.0 ) const;
+    
+  void apply_regular_cpu(  const block_vector_type & x_perm,
+    block_vector_type & y_perm, sc alpha,
+    lo tst_elem_start, lo tst_elem_end ) const;
+
+  void apply_singular_cpu( const block_vector_type & x_perm,
+    block_vector_type & y_perm, sc alpha = 1.0 ) const;
+
+  void apply_delta0_cpu(   const block_vector_type & x_perm,
+    block_vector_type & y_perm, sc alpha = 1.0 ) const;
 
   /*!
    * Initializes the quadrature reference structure.

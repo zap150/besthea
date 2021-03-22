@@ -54,19 +54,23 @@ bool besthea::linear_algebra::onthefly::helpers::is_gpu_quadr_order1_initialized
 
 
 
-besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data::gpu_apply_vectors_data() :
-  h_x(nullptr) {
+besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data::
+  gpu_apply_vectors_data()
+  : h_x(nullptr) {
 }
 
 
 
-besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data::~gpu_apply_vectors_data() {
+besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data::
+  ~gpu_apply_vectors_data() {
+
   free();
 }
 
 
 
-void besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data::allocate(int n_gpus,
+void besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data::
+  allocate(int n_gpus,
   lo x_block_count, lo x_size_of_block, lo y_block_count, lo y_size_of_block) {
 
   h_y.resize(n_gpus);
@@ -84,8 +88,10 @@ void besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data::allocat
 
     cudaMallocHost(&h_y[gpu_idx], y_block_count * y_size_of_block * sizeof(sc));
 
-    cudaMallocPitch(&d_x[gpu_idx], &pitch_x[gpu_idx], x_size_of_block * sizeof(sc), x_block_count);
-    cudaMallocPitch(&d_y[gpu_idx], &pitch_y[gpu_idx], y_size_of_block * sizeof(sc), y_block_count);
+    cudaMallocPitch(&d_x[gpu_idx], &pitch_x[gpu_idx],
+      x_size_of_block * sizeof(sc), x_block_count);
+    cudaMallocPitch(&d_y[gpu_idx], &pitch_y[gpu_idx],
+      y_size_of_block * sizeof(sc), y_block_count);
     
     ld_x[gpu_idx] = pitch_x[gpu_idx] / sizeof(sc);
     ld_y[gpu_idx] = pitch_y[gpu_idx] / sizeof(sc);
@@ -132,7 +138,8 @@ void besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data::free() 
 
 
 
-besthea::linear_algebra::onthefly::helpers::apply_load_distribution::apply_load_distribution(int n_gpus_, lo n_elems_, lo gpu_chunk_size_) {
+besthea::linear_algebra::onthefly::helpers::apply_load_distribution::
+  apply_load_distribution(int n_gpus_, lo n_elems_, lo gpu_chunk_size_) {
 
   this->n_gpus = n_gpus_;
   this->n_elems = n_elems_;
@@ -149,12 +156,14 @@ besthea::linear_algebra::onthefly::helpers::apply_load_distribution::apply_load_
 
 
 
-void besthea::linear_algebra::onthefly::helpers::apply_load_distribution::update_gpu_begins() {
+void besthea::linear_algebra::onthefly::helpers::apply_load_distribution::
+  update_gpu_begins() {
 
   lo gpus_n_tst_elems = n_elems - cpu_n_tst_elems;
 
   for(int gpu_idx = 0; gpu_idx <= n_gpus; gpu_idx++) {
-    gpu_i_tst_begins[gpu_idx] = (((gpus_n_tst_elems * gpu_idx) / n_gpus) / gpu_chunk_size) * gpu_chunk_size;
+    gpu_i_tst_begins[gpu_idx] =
+      (((gpus_n_tst_elems * gpu_idx) / n_gpus) / gpu_chunk_size) * gpu_chunk_size;
   }
 
 }
@@ -162,10 +171,12 @@ void besthea::linear_algebra::onthefly::helpers::apply_load_distribution::update
 
 
 void besthea::linear_algebra::onthefly::helpers::apply_load_distribution::adapt(
-  double cpu_time_const, double cpu_time_scaling, double gpu_time_const, double gpu_time_scaling, double inertia) {
+  double cpu_time_const, double cpu_time_scaling,
+  double gpu_time_const, double gpu_time_scaling, double inertia) {
 
   if(besthea::settings::output_verbosity.onthefly_loadbalance >= 2) {
-    printf("BESTHEA Info: onthefly load balancing: before adapt: %6ld %12.6f\n", cpu_n_tst_elems, cpu_n_tst_elems_target);
+    printf("BESTHEA Info: onthefly load balancing: before adapt: %6ld %12.6f\n",
+      cpu_n_tst_elems, cpu_n_tst_elems_target);
   }
 
   lo gpu_n_tst_elems = n_elems - cpu_n_tst_elems;
@@ -184,29 +195,34 @@ void besthea::linear_algebra::onthefly::helpers::apply_load_distribution::adapt(
     cpu_n_elems_ideal = (double)n_elems;
   }
     
-  this->cpu_n_tst_elems_target = cpu_n_tst_elems_target * inertia + cpu_n_elems_ideal * (1 - inertia);
+  this->cpu_n_tst_elems_target =
+    cpu_n_tst_elems_target * inertia + cpu_n_elems_ideal * (1 - inertia);
 
   this->cpu_n_tst_elems = adjust_cpu_count(cpu_n_tst_elems_target);
 
   this->update_gpu_begins();
 
   if(besthea::settings::output_verbosity.onthefly_loadbalance >= 2) {
-    printf("BESTHEA Info: onthefly load balancing: after adapt:  %6ld %12.6f\n", cpu_n_tst_elems, cpu_n_tst_elems_target);
+    printf("BESTHEA Info: onthefly load balancing: after adapt:  %6ld %12.6f\n",
+      cpu_n_tst_elems, cpu_n_tst_elems_target);
   }
 
 }
 
 
 
-lo besthea::linear_algebra::onthefly::helpers::apply_load_distribution::adjust_cpu_count(double suggested) const {  
+lo besthea::linear_algebra::onthefly::helpers::apply_load_distribution::
+  adjust_cpu_count(double suggested) const {  
   suggested = std::max(suggested, 0.0);
 
   lo suggested_gpu_elems = (lo)std::ceil(n_elems - suggested);
 
-  lo chunked_gpu_elems = ((suggested_gpu_elems - 1) / gpu_chunk_size + 1) * gpu_chunk_size;
+  lo chunked_gpu_elems = 
+    ((suggested_gpu_elems - 1) / gpu_chunk_size + 1) * gpu_chunk_size;
   
   if( chunked_gpu_elems > n_elems - min_cpu_tst_elems)
-    chunked_gpu_elems = ((n_elems - min_cpu_tst_elems) / gpu_chunk_size) * gpu_chunk_size;
+    chunked_gpu_elems =
+      ((n_elems - min_cpu_tst_elems) / gpu_chunk_size) * gpu_chunk_size;
   
   return n_elems - chunked_gpu_elems;
 }
@@ -214,7 +230,8 @@ lo besthea::linear_algebra::onthefly::helpers::apply_load_distribution::adjust_c
 
 
 void besthea::linear_algebra::onthefly::helpers::apply_load_distribution::print() {
-  printf("BESTHEA Info: onthefly load balancing: total %ld CPU %ld GPU %ld:", n_elems, get_cpu_count(), get_gpu_count_total());
+  printf("BESTHEA Info: onthefly load balancing: total %ld CPU %ld GPU %ld:",
+    n_elems, get_cpu_count(), get_gpu_count_total());
   for(unsigned int i = 0; i < gpu_i_tst_begins.size(); i++)
     printf(" %ld", gpu_i_tst_begins[i]);
   printf("\n");
@@ -235,7 +252,9 @@ void besthea::linear_algebra::onthefly::helpers::apply_load_distribution::print(
 
 
 
-besthea::linear_algebra::onthefly::helpers::timer_collection::timer_collection(int n_gpus) {
+besthea::linear_algebra::onthefly::helpers::timer_collection::
+  timer_collection(int n_gpus) {
+
   gpu_all.resize(n_gpus);
   gpu_copyin.resize(n_gpus);
   gpu_compute.resize(n_gpus);
@@ -272,7 +291,8 @@ void besthea::linear_algebra::onthefly::helpers::timer_collection::print_all() {
 
 
 
-void besthea::linear_algebra::onthefly::helpers::timer_collection::print_timers(std::vector<besthea::tools::time_measurer_cuda> & timers) {
+void besthea::linear_algebra::onthefly::helpers::timer_collection::
+  print_timers(std::vector<besthea::tools::time_measurer_cuda> & timers) {
   for(unsigned int i = 0; i < timers.size(); i++) {
     printf("%10.6f  ", timers[i].get_time());
   }
@@ -281,15 +301,19 @@ void besthea::linear_algebra::onthefly::helpers::timer_collection::print_timers(
 
 
 
-double besthea::linear_algebra::onthefly::helpers::timer_collection::get_cpu_time_const() {
+double besthea::linear_algebra::onthefly::helpers::timer_collection::
+  get_cpu_time_const() {
   return cpu_singular.get_time() + cpu_delta0.get_time();
 }
 
-double besthea::linear_algebra::onthefly::helpers::timer_collection::get_cpu_time_scaling() {
+double besthea::linear_algebra::onthefly::helpers::timer_collection::
+  get_cpu_time_scaling() {
   return cpu_regular.get_time();
 }
 
-double besthea::linear_algebra::onthefly::helpers::timer_collection::get_gpu_time_const() {
+double besthea::linear_algebra::onthefly::helpers::timer_collection::
+  get_gpu_time_const() {
+
   double max_time_copyin = -1;
   for(unsigned int i = 0; i < gpu_copyin.size(); i++) {
     max_time_copyin = std::max(max_time_copyin, gpu_copyin[i].get_time());
@@ -301,7 +325,9 @@ double besthea::linear_algebra::onthefly::helpers::timer_collection::get_gpu_tim
   return max_time_copyin + max_time_copyout;
 }
 
-double besthea::linear_algebra::onthefly::helpers::timer_collection::get_gpu_time_scaling() {
+double besthea::linear_algebra::onthefly::helpers::timer_collection::
+  get_gpu_time_scaling() {
+
   double max_time_compute = -1;
   for(unsigned int i = 0; i < gpu_compute.size(); i++) {
     max_time_compute = std::max(max_time_compute, gpu_compute[i].get_time());
@@ -309,7 +335,9 @@ double besthea::linear_algebra::onthefly::helpers::timer_collection::get_gpu_tim
   return max_time_compute;
 }
 
-double besthea::linear_algebra::onthefly::helpers::timer_collection::get_gpu_time_all() {
+double besthea::linear_algebra::onthefly::helpers::timer_collection::
+  get_gpu_time_all() {
+    
   double max_time_gpu_all = -1;
   for(unsigned int i = 0; i < gpu_all.size(); i++) {
     max_time_gpu_all = std::max(max_time_gpu_all, gpu_all[i].get_time());

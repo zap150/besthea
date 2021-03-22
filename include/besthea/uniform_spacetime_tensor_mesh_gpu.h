@@ -35,33 +35,34 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_TENSOR_MESH_GPU_H_
 #define INCLUDE_BESTHEA_UNIFORM_SPACETIME_TENSOR_MESH_GPU_H_
 
-#include <vector>
-
 #include "besthea/settings.h"
 #include "besthea/uniform_spacetime_tensor_mesh.h"
 
-
+#include <vector>
 
 namespace besthea::mesh {
   class uniform_spacetime_tensor_mesh_gpu;
 }
 
-
-
 /*!
  *  Class representing uniform spacetime mesh resident in the GPU memory.
  */
 class besthea::mesh::uniform_spacetime_tensor_mesh_gpu {
-public:
+ public:
   /*!
    *  Struct containing GPU-resident space mesh raw data.
    */
   struct mesh_raw_data {
     sc * d_element_areas;
-    sc * d_node_coords; // XYZXYZXYZXYZ...
-    lo * d_element_nodes; // 123123123123...
-    sc * d_element_normals; // XYZXYZXYZXYZ
-    mesh_raw_data() : d_element_areas(nullptr), d_node_coords(nullptr), d_element_nodes(nullptr), d_element_normals(nullptr) { }
+    sc * d_node_coords;      // XYZXYZXYZXYZ...
+    lo * d_element_nodes;    // 123123123123...
+    sc * d_element_normals;  // XYZXYZXYZXYZ
+    mesh_raw_data( )
+      : d_element_areas( nullptr ),
+        d_node_coords( nullptr ),
+        d_element_nodes( nullptr ),
+        d_element_normals( nullptr ) {
+    }
   };
 
   /*!
@@ -74,46 +75,51 @@ public:
     lo n_nodes;
   };
 
-public:
+ public:
   /*!
    * Constructor. Creates this instance and copies necessary data tu GPU memory.
    * @param[in] orig_mesh The original mesh.
    */
-  uniform_spacetime_tensor_mesh_gpu(const besthea::mesh::uniform_spacetime_tensor_mesh & orig_mesh);
-  
+  uniform_spacetime_tensor_mesh_gpu(
+    const besthea::mesh::uniform_spacetime_tensor_mesh & orig_mesh );
+
   /*!
    * Destructor.
    */
-  ~uniform_spacetime_tensor_mesh_gpu();
-  
+  ~uniform_spacetime_tensor_mesh_gpu( );
+
   /*!
    * Returns metadata structure holding information about this mesh.
    */
-  const mesh_raw_metadata & get_metadata() const { return metadata; }
-  
+  const mesh_raw_metadata & get_metadata( ) const {
+    return metadata;
+  }
+
   /*!
    * Returns vector of structures holding pointers to data on GPUs.
    */
-  const std::vector<mesh_raw_data> & get_per_gpu_data() const { return per_gpu_data; }
-  
+  const std::vector< mesh_raw_data > & get_per_gpu_data( ) const {
+    return per_gpu_data;
+  }
+
   /*!
    * Returns the used number of GPUs.
    */
-  int get_n_gpus() const { return n_gpus; }
+  int get_n_gpus( ) const {
+    return n_gpus;
+  }
 
-private:
+ private:
   /*!
    * Frees the allocated GPU memory.
    */
-  void free();  
-    
-private:
-  mesh_raw_metadata metadata; //!< Metadata about this mesh.
-  std::vector<mesh_raw_data> per_gpu_data; //!< Pointers to GPU-resident data.
-  int n_gpus; //!< Number of used GPUs.
+  void free( );
+
+ private:
+  mesh_raw_metadata metadata;  //!< Metadata about this mesh.
+  std::vector< mesh_raw_data >
+    per_gpu_data;  //!< Pointers to GPU-resident data.
+  int n_gpus;      //!< Number of used GPUs.
 };
-
-
-
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_TENSOR_MESH_GPU_H_ */
