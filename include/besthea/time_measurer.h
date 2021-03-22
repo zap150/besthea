@@ -74,7 +74,7 @@ public:
   void stop() {
     std::chrono::steady_clock::time_point stop_time = std::chrono::steady_clock::now();
     std::chrono::steady_clock::duration dur = stop_time - start_time;
-    this->elapsed_time = dur;
+    this->elapsed_time += dur;
   }
 
   /**

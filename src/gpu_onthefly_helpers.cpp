@@ -164,7 +164,9 @@ void besthea::linear_algebra::onthefly::helpers::apply_load_distribution::update
 void besthea::linear_algebra::onthefly::helpers::apply_load_distribution::adapt(
   double cpu_time_const, double cpu_time_scaling, double gpu_time_const, double gpu_time_scaling, double inertia) {
 
-  printf("Before adapt: %6ld %12.6f\n", cpu_n_tst_elems, cpu_n_tst_elems_target);
+  if(besthea::settings::output_verbosity.onthefly_loadbalance >= 2) {
+    printf("BESTHEA Info: onthefly load balancing: before adapt: %6ld %12.6f\n", cpu_n_tst_elems, cpu_n_tst_elems_target);
+  }
 
   lo gpu_n_tst_elems = n_elems - cpu_n_tst_elems;
   double cpu_n_elems_ideal;
@@ -188,8 +190,9 @@ void besthea::linear_algebra::onthefly::helpers::apply_load_distribution::adapt(
 
   this->update_gpu_begins();
 
-  printf("After adapt:  %6ld %12.6f\n", cpu_n_tst_elems, cpu_n_tst_elems_target);
-  print();
+  if(besthea::settings::output_verbosity.onthefly_loadbalance >= 2) {
+    printf("BESTHEA Info: onthefly load balancing: after adapt:  %6ld %12.6f\n", cpu_n_tst_elems, cpu_n_tst_elems_target);
+  }
 
 }
 
@@ -211,9 +214,9 @@ lo besthea::linear_algebra::onthefly::helpers::apply_load_distribution::adjust_c
 
 
 void besthea::linear_algebra::onthefly::helpers::apply_load_distribution::print() {
-  printf("Total %ld CPU %ld GPU %ld:", n_elems, get_cpu_count(), get_gpu_count_total());
+  printf("BESTHEA Info: onthefly load balancing: total %ld CPU %ld GPU %ld:", n_elems, get_cpu_count(), get_gpu_count_total());
   for(unsigned int i = 0; i < gpu_i_tst_begins.size(); i++)
-    printf(" %3ld", gpu_i_tst_begins[i]);
+    printf(" %ld", gpu_i_tst_begins[i]);
   printf("\n");
 }
 
@@ -250,21 +253,21 @@ besthea::linear_algebra::onthefly::helpers::timer_collection::timer_collection(i
 
 
 void besthea::linear_algebra::onthefly::helpers::timer_collection::print_all() {
-  printf("gpu_copyin:   ");
+  printf("BESTHEA Info: time gpu_copyin:   ");
   print_timers(gpu_copyin);
-  printf("gpu_compute:  ");
+  printf("BESTHEA Info: time gpu_compute:  ");
   print_timers(gpu_compute);
-  printf("gpu_copyout:  ");
+  printf("BESTHEA Info: time gpu_copyout:  ");
   print_timers(gpu_copyout);
-  printf("gpu_all:      ");
+  printf("BESTHEA Info: time gpu_all:      ");
   print_timers(gpu_all);
-  printf("cpu_scalein:  %10.6f\n", cpu_scalein.get_time());
-  printf("cpu_regular:  %10.6f\n", cpu_regular.get_time());
-  printf("cpu_singular: %10.6f\n", cpu_singular.get_time());
-  printf("cpu_delta0:   %10.6f\n", cpu_delta0.get_time());
-  printf("cpu_all:      %10.6f\n", cpu_all.get_time());
-  printf("gpu_max:      %10.6f\n", get_gpu_time_all());
-  printf("combined:     %10.6f\n", combined.get_time());
+  printf("BESTHEA Info: time cpu_scalein:  %10.6f\n", cpu_scalein.get_time());
+  printf("BESTHEA Info: time cpu_regular:  %10.6f\n", cpu_regular.get_time());
+  printf("BESTHEA Info: time cpu_singular: %10.6f\n", cpu_singular.get_time());
+  printf("BESTHEA Info: time cpu_delta0:   %10.6f\n", cpu_delta0.get_time());
+  printf("BESTHEA Info: time cpu_all:      %10.6f\n", cpu_all.get_time());
+  printf("BESTHEA Info: time gpu_max:      %10.6f\n", get_gpu_time_all());
+  printf("BESTHEA Info: time combined:     %10.6f\n", combined.get_time());
 }
 
 

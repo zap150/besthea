@@ -95,19 +95,23 @@ besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kern
   // quadrature inited in base class constructor
 
   if(n_gpus == 0) {
-    std::cerr << "BESTHEA Warning: Trying to use gpu version of onthefly matrix class, but no cuda-capable devices were found. Using cpu-only version.\n";
+    if(besthea::settings::output_verbosity.warnings >= 1) {
+      std::cerr << "BESTHEA Warning: Trying to use gpu version of onthefly matrix class, but no cuda-capable devices were found. Using cpu-only version.\n";
+    }
   }
 
   for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
     int ccVerMajor;
     cudaDeviceGetAttribute(&ccVerMajor, cudaDevAttrComputeCapabilityMajor, gpu_idx);
     if(ccVerMajor < 6) {
-      std::cerr << "BESTHEA Warning: gpu with index " << gpu_idx << " has insufficient compute capability. Compute capability >= 6.0 is required. Another error will probably occur.\n";
+      std::cerr << "BESTHEA Error: gpu with index " << gpu_idx << " has insufficient compute capability. Compute capability >= 6.0 is required. Another error will probably occur.\n";
     }
   }
 
   if(gpu_kernel_version < 1 || gpu_kernel_version > 4) {
-    std::cerr << "BESTHEA Warning: invalid value of gpu_kernel_version=" << gpu_kernel_version << ", using default gpu_kernel_version=1.\n";
+    if(besthea::settings::output_verbosity.warnings >= 1) {
+      std::cerr << "BESTHEA Warning: invalid value of gpu_kernel_version=" << gpu_kernel_version << ", using default gpu_kernel_version=1.\n";
+    }
     this->gpu_kernel_version = 1;
   }
   
@@ -1820,18 +1824,18 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_gpu
   }
 
   if(trans) {
-    std::cerr << "Transposed matrices are not supported\n";
+    std::cerr << "BESTHEA Error: transposed matrices are not supported.\n";
     return;
   }
   
   ns_gpu_helpers::timer_collection timers(n_gpus);
 
+  timers.combined.start();
+
 
 
   block_vector_type y_perm;
   block_vector_type x_perm;
-
-  timers.combined.start();
 
   timers.cpu_scalein.start();
   x_perm.copy_permute(x);
@@ -1839,7 +1843,9 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_gpu
   y.scale(beta);
   timers.cpu_scalein.stop();
 
-  load_distr->print();
+  if(besthea::settings::output_verbosity.onthefly_loadbalance >= 1) {
+    load_distr->print();
+  }
 
   if(load_distr->get_gpu_count_total() > 0) {
     switch(gpu_kernel_version) {
@@ -1890,10 +1896,18 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_gpu
   }
 
   y.add_permute(y_perm);
+
+  
   
   timers.combined.stop();
   
-  timers.print_all();
+  if(besthea::settings::output_verbosity.timers >= 1) {    
+    if(besthea::settings::output_verbosity.timers >= 2) {
+      timers.print_all();
+    }
+    std::cout << "BESTHEA Info: apply elapsed time = " << timers.combined.get_time() << " seconds\n";
+  }
+
 
   load_distr->adapt(
     timers.get_cpu_time_const(),
@@ -1939,7 +1953,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_gpu
     
     lo gpu_tst_elem_begin = load_distr->get_gpu_begin(gpu_idx);
     lo gpu_tst_elem_count = load_distr->get_gpu_count(gpu_idx);
-    
+
     if(gpu_tst_elem_count == 0)
       continue;
 
@@ -2076,9 +2090,11 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_gpu
 
   // wait for all submitted work to finish
   for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
-    cudaSetDevice(gpu_idx);
+    cudaSetDevice(gpu_idx);    
     cudaError_t err = cudaDeviceSynchronize();
-    printf("dev %d err %d: %s\n", gpu_idx, err, cudaGetErrorString(err));
+    if(err != cudaSuccess) {
+      std::cerr << "BESTHEA Error: on GPU index " << gpu_idx << " detected cuda error " << err << ": " << cudaGetErrorString(err) << "\n";
+    }
   }
 
 #pragma omp parallel for

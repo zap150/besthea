@@ -160,7 +160,7 @@ private:
     float dur;
     cudaEventSynchronize(stop_event);
     cudaEventElapsedTime(&dur, start_event, stop_event);
-    this->elapsed_time = dur / 1000.0;
+    this->elapsed_time += dur / 1000.0;
     
     cudaSetDevice(orig_gpu_idx);
   }

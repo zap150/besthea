@@ -155,6 +155,7 @@ set(besthea_SOURCES
   src/mkl_fgmres_inverse.cpp
   src/pFMM_matrix.cpp
   src/quadrature.cpp
+  src/settings.cpp
   src/space_cluster_tree.cpp
   src/spacetime_be_identity.cpp
   src/spacetime_be_space.cpp

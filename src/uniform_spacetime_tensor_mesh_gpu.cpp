@@ -42,7 +42,9 @@ besthea::mesh::uniform_spacetime_tensor_mesh_gpu::uniform_spacetime_tensor_mesh_
   cudaGetDeviceCount(&n_gpus);
   
   if(n_gpus == 0 || cudaGetLastError() == cudaErrorNoDevice) {
-    std::cerr << "BESTHEA Warning: Constructing GPU mesh, but no cuda-capable GPUs were detected.\n";
+    if(besthea::settings::output_verbosity.warnings >= 1) {
+      std::cerr << "BESTHEA Warning: Constructing GPU mesh, but no cuda-capable GPUs were detected.\n";
+    }
     n_gpus = 0;
   }
   

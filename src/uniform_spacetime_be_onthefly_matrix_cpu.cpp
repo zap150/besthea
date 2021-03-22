@@ -38,6 +38,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/spacetime_heat_hs_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_sl_kernel_antiderivative.h"
 #include "besthea/uniform_spacetime_be_space.h"
+#include "besthea/time_measurer.h"
 
 #include <iostream>
 
@@ -1688,16 +1689,19 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
   apply( const block_vector_type & x, block_vector_type & y, bool trans, sc alpha, sc beta ) const {
 
   if(trans) {
-    std::cerr << "Transposed matrices are not supported\n";
+    std::cerr << "BESTHEA Error: transposed matrices are not supported.\n";
     return;
   }
 
+  besthea::tools::time_measurer tm_combined, tm_perm, tm_apply;
+  tm_combined.start();
   
   // permuting the vector x should improve data locality
   // permuting the vector y should prevent false sharing and improve data locality
   block_vector_type x_perm;
   block_vector_type y_perm;
 
+  tm_perm.start();
   x_perm.copy_permute(x, alpha);
 
   if(beta == 0.0) {
@@ -1707,12 +1711,26 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
   } else {
     y_perm.copy_permute(y, beta);
   }
+  tm_perm.stop();
 
-
+  tm_apply.start();
   apply_cpu(x_perm, y_perm, 1.0, 1.0);
+  tm_apply.stop();
 
 
+  tm_perm.start();
   y.copy_permute(y_perm);
+  tm_perm.stop();
+  
+  tm_combined.stop();
+
+  if(besthea::settings::output_verbosity.timers >= 1) {
+    if(besthea::settings::output_verbosity.timers >= 2) {
+      std::cout << "BESTHEA Info: apply, vector permutation elapsed time = " << tm_perm.get_time() << " seconds\n";
+      std::cout << "BESTHEA Info: apply, apply itself elapsed time = " << tm_apply.get_time() << " seconds\n";
+    }
+    std::cout << "BESTHEA Info: apply elapsed time = " << tm_combined.get_time() << " seconds\n";
+  }
 
 }
 
@@ -1722,15 +1740,34 @@ template<class kernel_type, class test_space_type, class trial_space_type>
 void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<kernel_type, test_space_type, trial_space_type>::
   apply_cpu( const block_vector_type & x_perm, block_vector_type & y_perm, sc alpha, sc beta ) const {
 
+  besthea::tools::time_measurer tm_scale, tm_reg, tm_sing, tm_d0;
+
+  tm_scale.start();
   if(beta == 0.0) {
     y_perm.fill(0);
   } else if(beta != 1.0) {
     y_perm.scale(beta);
   }
+  tm_scale.stop();
 
+  tm_reg.start();
   this->apply_regular_cpu(x_perm, y_perm, alpha);
+  tm_reg.stop();
+  tm_sing.start();
   this->apply_singular_cpu(x_perm, y_perm, alpha);
+  tm_sing.stop();
+  tm_d0.start();
   this->apply_delta0_cpu(x_perm, y_perm, alpha);
+  tm_d0.stop();
+  
+
+
+  if(besthea::settings::output_verbosity.timers >= 2) {
+    std::cout << "BESTHEA Info: apply, scalein elapsed time = " << tm_scale.get_time() << " seconds\n";
+    std::cout << "BESTHEA Info: apply, regular elapsed time = " << tm_reg.get_time() << " seconds\n";
+    std::cout << "BESTHEA Info: apply, singular elapsed time = " << tm_sing.get_time() << " seconds\n";
+    std::cout << "BESTHEA Info: apply, delta0 elapsed time = " << tm_d0.get_time() << " seconds\n";
+  }
 
 }
 
