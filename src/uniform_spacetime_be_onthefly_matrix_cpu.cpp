@@ -1717,7 +1717,9 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
   apply( const block_vector_type & x, block_vector_type & y, bool trans, sc alpha, sc beta ) const {
 
   if(trans) {
-    std::cerr << "BESTHEA Error: transposed matrices are not supported. Apply operation will not be performed.\n";
+    if(besthea::settings::output_verbosity.warnings >= 1) {
+      std::cerr << "BESTHEA Warning: transposed matrices are not supported. Apply operation will not be performed.\n";
+    }
     return;
   }
 

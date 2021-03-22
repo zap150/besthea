@@ -1836,7 +1836,9 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_gpu
   }
 
   if(trans) {
-    std::cerr << "BESTHEA Error: transposed matrices are not supported. Apply operation will not be performed.\n";
+    if(besthea::settings::output_verbosity.warnings >= 1) {
+      std::cerr << "BESTHEA Warning: transposed matrices are not supported. Apply operation will not be performed.\n";
+    }
     return;
   }
 

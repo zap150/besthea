@@ -30,6 +30,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/uniform_spacetime_tensor_mesh_gpu.h"
 
+#include <exception>
 #include <cuda_runtime.h>
 
 
@@ -71,13 +72,14 @@ besthea::mesh::uniform_spacetime_tensor_mesh_gpu::uniform_spacetime_tensor_mesh_
     cudaMemcpy(curr_gpu_data.d_element_normals, orig_mesh.get_spatial_surface_mesh()->get_all_normals().data(),  3 * metadata.n_elems * sizeof(*curr_gpu_data.d_element_normals), cudaMemcpyHostToDevice);
   }
 
-  // cudaError_t err = cudaPeekAtLastError();
-  // if(err != cudaSuccess) {
-  //   std::cerr << "BESTHEA Error: detected cuda error " << err << ": " << cudaGetErrorString(err) << ".\n";
-  //   std::cerr << "    In function " << __func__ << "\n";
-  //   free();
-  //   throw err;
-  // }
+  if(n_gpus > 0) {
+    cudaError_t err = cudaGetLastError();
+    if(err != cudaSuccess) {
+      std::cerr << "BESTHEA Error: gpu mesh init, detected cuda error " << err << ": " << cudaGetErrorString(err) << ".\n";
+      free();
+      throw std::runtime_error("BESTHEA Exception: cuda error");
+    }
+  }
 
 }
 
@@ -103,6 +105,14 @@ void besthea::mesh::uniform_spacetime_tensor_mesh_gpu::free() {
     cudaFree(curr_gpu_data.d_element_normals);
   }
   per_gpu_data.clear();
+
+  if(n_gpus > 0) {
+    cudaError_t err = cudaGetLastError();
+    if(err != cudaSuccess) {
+      std::cerr << "BESTHEA Error: gpu mesh free, detected cuda error " << err << ": " << cudaGetErrorString(err) << ".\n";
+      throw std::runtime_error("BESTHEA Exception: cuda error");
+    }
+  }
 
 }
 
