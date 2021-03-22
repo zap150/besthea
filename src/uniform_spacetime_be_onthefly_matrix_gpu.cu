@@ -2024,7 +2024,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_gpu
 
 template<class kernel_type, class test_space_type, class trial_space_type>
 void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_gpu
-  kernel_type, test_space_type, trial_space_type>::
+  <kernel_type, test_space_type, trial_space_type>::
   apply_regular_gpu_begin( const block_vector_type & x,
     const block_vector_type & y, sc alpha,
     ns_gpu_helpers::timer_collection & timers ) const {
