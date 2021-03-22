@@ -83,7 +83,7 @@ public:
     test_space_type & test_space, trial_space_type & trial_space,
     int order_singular, int order_regular,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu & gpu_mesh,
-    int gpu_kernel_version = 2 );
+    int gpu_kernel_version = 1 );
 
   uniform_spacetime_be_onthefly_matrix_gpu(
     const uniform_spacetime_be_onthefly_matrix_gpu & that )

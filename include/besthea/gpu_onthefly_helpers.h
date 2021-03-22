@@ -64,7 +64,7 @@ namespace besthea::linear_algebra::onthefly::helpers {
   struct gpu_threads_per_block;
   
   /*
-   * Translates quadrature order to quadrature size - number of quadrature nodes.
+   * Translates quadrature order to quadrature size -- number of quadrature nodes.
    */
 #ifdef __NVCC__
   __host__ __device__

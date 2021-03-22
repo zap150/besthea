@@ -54,6 +54,34 @@ besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<kern
     _order_singular( order_singular ),
     _order_regular( order_regular ) {
 
+  switch(_order_singular) {
+    case 1:
+    case 2:
+    case 4:
+    case 5:
+      break;
+    default:
+      if(besthea::settings::output_verbosity.warnings >= 1) {
+        std::cerr << "BESTHEA Warning: quadrature_order_singular " << _order_singular << " not available. Using default quadrature_order_singular=1.\n";
+      }
+      _order_singular = 1;
+      break;
+  }
+
+  switch(_order_regular) {
+    case 1:
+    case 2:
+    case 4:
+    case 5:
+      break;
+    default:
+      if(besthea::settings::output_verbosity.warnings >= 1) {
+        std::cerr << "BESTHEA Warning: quadrature_order_regular " << _order_regular << " not available. Using default quadrature_order_regular=1.\n";
+      }
+      _order_regular = 1;
+      break;
+  }
+
   init_quadrature();
 
 }
@@ -1689,7 +1717,21 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
   apply( const block_vector_type & x, block_vector_type & y, bool trans, sc alpha, sc beta ) const {
 
   if(trans) {
-    std::cerr << "BESTHEA Error: transposed matrices are not supported.\n";
+    std::cerr << "BESTHEA Error: transposed matrices are not supported. Apply operation will not be performed.\n";
+    return;
+  }
+
+  if(x.get_block_size() != this->get_block_dim() || x.get_size_of_block() != this->get_dim_domain()) {
+    if(besthea::settings::output_verbosity.warnings >= 1) {
+      std::cerr << "BESTHEA Warning: x block vector dimension (" << x.get_block_size() << "*" << x.get_size_of_block() << ") does not match block matrix domain dimension (" << this->get_block_dim() << "*" << this->get_dim_domain() << "). Apply will not be performed.\n";
+    }
+    return;
+  }
+
+  if(y.get_block_size() != this->get_block_dim() || y.get_size_of_block() != this->get_dim_range()) {
+    if(besthea::settings::output_verbosity.warnings >= 1) {
+      std::cerr << "BESTHEA Warning: y block vector dimension (" << y.get_block_size() << "*" << y.get_size_of_block() << ") does not match block matrix range dimension (" << this->get_block_dim() << "*" << this->get_dim_range() << "). Apply will not be performed.\n";
+    }
     return;
   }
 

@@ -41,6 +41,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <iostream>
 #include <vector>
+#include <exception>
 #include <cuda_runtime.h>
 #include <omp.h>
 
@@ -100,12 +101,18 @@ besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kern
     }
   }
 
+  bool isCcOk = true;
   for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
-    int ccVerMajor;
+    int ccVerMajor, ccVerMinor;
     cudaDeviceGetAttribute(&ccVerMajor, cudaDevAttrComputeCapabilityMajor, gpu_idx);
     if(ccVerMajor < 6) {
-      std::cerr << "BESTHEA Error: gpu with index " << gpu_idx << " has insufficient compute capability. Compute capability >= 6.0 is required. Another error will probably occur.\n";
+      cudaDeviceGetAttribute(&ccVerMinor, cudaDevAttrComputeCapabilityMinor, gpu_idx);
+      std::cerr << "BESTHEA Error: gpu with index " << gpu_idx << " has insufficient compute capability (" << ccVerMajor << "." << ccVerMinor << "). Compute capability >= 6.0 is required.\n";
+      isCcOk = false;
     }
+  }
+  if(!isCcOk) {
+    throw std::runtime_error("BESTHEA Exception: insufficient gpu compute capability");
   }
 
   if(gpu_kernel_version < 1 || gpu_kernel_version > 4) {
@@ -117,6 +124,11 @@ besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_gpu<kern
   
   if(n_gpus > 0) {
     init_gpu_data();
+    cudaError_t err = cudaGetLastError();
+    if(err != cudaSuccess) {
+      std::cerr << "BESTHEA Error: gpu data initialization, detected cuda error " << err << ": " << cudaGetErrorString(err) << "\n";
+      throw std::runtime_error("BESTHEA Exception: cuda error");
+    }
   }
 
 }
@@ -1824,7 +1836,21 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_gpu
   }
 
   if(trans) {
-    std::cerr << "BESTHEA Error: transposed matrices are not supported.\n";
+    std::cerr << "BESTHEA Error: transposed matrices are not supported. Apply operation will not be performed.\n";
+    return;
+  }
+
+  if(x.get_block_size() != this->get_block_dim() || x.get_size_of_block() != this->get_dim_domain()) {
+    if(besthea::settings::output_verbosity.warnings >= 1) {
+      std::cerr << "BESTHEA Warning: x block vector dimension (" << x.get_block_size() << "*" << x.get_size_of_block() << ") does not match block matrix domain dimension (" << this->get_block_dim() << "*" << this->get_dim_domain() << "). Apply will not be performed.\n";
+    }
+    return;
+  }
+
+  if(y.get_block_size() != this->get_block_dim() || y.get_size_of_block() != this->get_dim_range()) {
+    if(besthea::settings::output_verbosity.warnings >= 1) {
+      std::cerr << "BESTHEA Warning: y block vector dimension (" << y.get_block_size() << "*" << y.get_size_of_block() << ") does not match block matrix range dimension (" << this->get_block_dim() << "*" << this->get_dim_range() << "). Apply will not be performed.\n";
+    }
     return;
   }
   
@@ -1897,11 +1923,17 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_gpu
 
   y.add_permute(y_perm);
 
-  
+
   
   timers.combined.stop();
+
+  cudaError_t err = cudaGetLastError();
+  if(err != cudaSuccess) {
+    std::cerr << "BESTHEA Error: gpu apply, detected cuda error " << err << ": " << cudaGetErrorString(err) << "\n";
+    throw std::runtime_error("BESTHEA Exception: cuda error");
+  }
   
-  if(besthea::settings::output_verbosity.timers >= 1) {    
+  if(besthea::settings::output_verbosity.timers >= 1) {
     if(besthea::settings::output_verbosity.timers >= 2) {
       timers.print_all();
     }
@@ -1929,6 +1961,8 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_gpu
 
   x.copy_to_raw(vectors_data.h_x);
 
+  bool isOk = true;
+
   
 
   // just submit all the work to the gpus, it will be executed asynchronously
@@ -1942,6 +1976,15 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_gpu
     cudaMemcpy2DAsync(vectors_data.d_x[gpu_idx], vectors_data.pitch_x[gpu_idx], vectors_data.h_x, x.get_size_of_block() * sizeof(sc), x.get_size_of_block() * sizeof(sc), x.get_block_size(), cudaMemcpyHostToDevice);
     cudaMemset2DAsync(vectors_data.d_y[gpu_idx], vectors_data.pitch_y[gpu_idx], 0, y.get_size_of_block() * sizeof(sc), y.get_block_size());
     timers.gpu_copyin[gpu_idx].stop_submit();
+
+    cudaError_t err = cudaGetLastError();
+    if(err != cudaSuccess) {
+      std::cerr << "BESTHEA Error: gpu apply copyin, GPU index " << gpu_idx << ", detected cuda error " << err << ": " << cudaGetErrorString(err) << "\n";
+      isOk = false;
+    }
+  }
+  if(!isOk) {
+    throw std::runtime_error("BESTHEA Exception: cuda error");
   }
 
 
@@ -2063,6 +2106,15 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_gpu
     }
 
     timers.gpu_compute[gpu_idx].stop_submit();
+
+    cudaError_t err = cudaGetLastError();
+    if(err != cudaSuccess) {
+      std::cerr << "BESTHEA Error: gpu apply kernel launch, GPU index " << gpu_idx << ", detected cuda error " << err << ": " << cudaGetErrorString(err) << "\n";
+      isOk = false;
+    }
+  }
+  if(!isOk) {
+    throw std::runtime_error("BESTHEA Exception: cuda error");
   }
 
 
@@ -2075,6 +2127,15 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_gpu
     timers.gpu_copyout[gpu_idx].stop_submit();
 
     timers.gpu_all[gpu_idx].stop_submit();
+
+    cudaError_t err = cudaGetLastError();
+    if(err != cudaSuccess) {
+      std::cerr << "BESTHEA Error: gpu apply copyout, GPU index " << gpu_idx << ", detected cuda error " << err << ": " << cudaGetErrorString(err) << "\n";
+      isOk = false;
+    }
+  }
+  if(!isOk) {
+    throw std::runtime_error("BESTHEA Exception: cuda error");
   }
 
 }
@@ -2088,13 +2149,19 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_gpu
   apply_regular_gpu_finalize( block_vector_type & y ) const {
   // this function does not really care if y is permuted or not
 
+  bool isOk = true;
+
   // wait for all submitted work to finish
   for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
     cudaSetDevice(gpu_idx);    
     cudaError_t err = cudaDeviceSynchronize();
     if(err != cudaSuccess) {
-      std::cerr << "BESTHEA Error: on GPU index " << gpu_idx << " detected cuda error " << err << ": " << cudaGetErrorString(err) << "\n";
+      std::cerr << "BESTHEA Error: apply finalize, GPU index " << gpu_idx << ", detected cuda error " << err << ": " << cudaGetErrorString(err) << "\n";
+      isOk = false;
     }
+  }
+  if(!isOk) {
+    throw std::runtime_error("BESTHEA Exception: cuda error");
   }
 
 #pragma omp parallel for
