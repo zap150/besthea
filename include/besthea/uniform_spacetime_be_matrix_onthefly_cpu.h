@@ -28,12 +28,12 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file uniform_spacetime_be_onthefly_matrix_cpu.h
+/** @file uniform_spacetime_be_matrix_onthefly_cpu.h
  * @brief CPU version of onthefly boudary element matrix.
  */
 
-#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_CPU_H_
-#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_CPU_H_
+#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_MATRIX_ONTHEFLY_CPU_H_
+#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_MATRIX_ONTHEFLY_CPU_H_
 
 #include "besthea/block_matrix.h"
 
@@ -42,7 +42,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace besthea::linear_algebra::onthefly {
   template< class kernel_type, class test_space_type, class trial_space_type >
-  class uniform_spacetime_be_onthefly_matrix_cpu;
+  class uniform_spacetime_be_matrix_onthefly_cpu;
 }
 
 
@@ -52,7 +52,7 @@ namespace besthea::linear_algebra::onthefly {
  *  during multiplication on the fly, on the CPU.
  */
 template< class kernel_type, class test_space_type, class trial_space_type >
-class besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
+class besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   : public besthea::linear_algebra::block_matrix
 {
 protected:
@@ -116,25 +116,25 @@ public:
    * @param[in] order_singular Line quadrature order for regularized quadrature.
    * @param[in] order_regular Triangle quadrature order for regular quadrature.
    */
-  uniform_spacetime_be_onthefly_matrix_cpu( kernel_type & kernel,
+  uniform_spacetime_be_matrix_onthefly_cpu( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
     int order_singular = 4, int order_regular = 4 );
 
-  uniform_spacetime_be_onthefly_matrix_cpu(
-    const uniform_spacetime_be_onthefly_matrix_cpu & that )
+  uniform_spacetime_be_matrix_onthefly_cpu(
+    const uniform_spacetime_be_matrix_onthefly_cpu & that )
     = delete;
   
   /*!
    * Destructor.
    */
-  virtual ~uniform_spacetime_be_onthefly_matrix_cpu( );
+  virtual ~uniform_spacetime_be_matrix_onthefly_cpu( );
 
   /*!
    * Prints info on the object.
    */
   void print_info( ) const {
     std::cout
-      << "besthea::onthefly::uniform_spacetime_be_onthefly_matrix_cpu"
+      << "besthea::onthefly::uniform_spacetime_be_matrix_onthefly_cpu"
       << std::endl;
     std::cout << "  number of blocks: " << _block_dim << std::endl;
     std::cout << "  dimension of each block: " << _dim_domain
@@ -366,4 +366,4 @@ protected:
 };
 
 
-#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_CPU_H_ */
+#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_MATRIX_ONTHEFLY_CPU_H_ */

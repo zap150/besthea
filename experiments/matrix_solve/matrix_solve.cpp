@@ -1,6 +1,6 @@
 #include "besthea/besthea.h"
-#include "besthea/uniform_spacetime_be_onthefly_matrix_cpu.h"
-#include "besthea/uniform_spacetime_be_onthefly_matrix_gpu.h"
+#include "besthea/uniform_spacetime_be_matrix_onthefly_cpu.h"
+#include "besthea/uniform_spacetime_be_matrix_onthefly_gpu.h"
 
 #include <cstdlib>
 #include <filesystem>
@@ -102,8 +102,8 @@ int main( int argc, char * argv[] ) {
   // create matrix assembler
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
   block_lower_triangular_toeplitz_matrix V_mem;
-  uniform_spacetime_be_onthefly_matrix_cpu V_fly_cpu(kernel_v, space_p0, space_p0, order_sing, order_reg);
-  uniform_spacetime_be_onthefly_matrix_gpu V_fly_gpu(kernel_v, space_p0, space_p0, order_sing, order_reg, gpu_spacetime_mesh, 2);
+  uniform_spacetime_be_matrix_onthefly_cpu V_fly_cpu(kernel_v, space_p0, space_p0, order_sing, order_reg);
+  uniform_spacetime_be_matrix_onthefly_gpu V_fly_gpu(kernel_v, space_p0, space_p0, order_sing, order_reg, gpu_spacetime_mesh, 2);
   uniform_spacetime_be_assembler assembler_v(kernel_v, space_p0, space_p0, order_sing, order_reg );
 
   block_vector bV  (n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);

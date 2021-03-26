@@ -1,6 +1,6 @@
 #include "besthea/besthea.h"
-#include "besthea/uniform_spacetime_be_onthefly_matrix_cpu.h"
-#include "besthea/uniform_spacetime_be_onthefly_matrix_gpu.h"
+#include "besthea/uniform_spacetime_be_matrix_onthefly_cpu.h"
+#include "besthea/uniform_spacetime_be_matrix_onthefly_gpu.h"
 
 #include <cstdlib>
 #include <filesystem>
@@ -130,17 +130,17 @@ int main( int argc, char * argv[] ) {
   block_lower_triangular_toeplitz_matrix A_mem; // adjoint double layer operator
   block_lower_triangular_toeplitz_matrix D_mem; // hypersingular operator
   uniform_spacetime_be_assembler         assembler_v(kernel_v, space_p0, space_p0, order_sng_V, order_reg_V);
-  uniform_spacetime_be_onthefly_matrix_cpu V_fly_cpu(kernel_v, space_p0, space_p0, order_sng_V, order_reg_V);
-  uniform_spacetime_be_onthefly_matrix_gpu V_fly_gpu(kernel_v, space_p0, space_p0, order_sng_V, order_reg_V, gpu_spacetime_mesh, gpuAlgVer);
+  uniform_spacetime_be_matrix_onthefly_cpu V_fly_cpu(kernel_v, space_p0, space_p0, order_sng_V, order_reg_V);
+  uniform_spacetime_be_matrix_onthefly_gpu V_fly_gpu(kernel_v, space_p0, space_p0, order_sng_V, order_reg_V, gpu_spacetime_mesh, gpuAlgVer);
   uniform_spacetime_be_assembler         assembler_k(kernel_k, space_p0, space_p1, order_sng_K, order_reg_K);
-  uniform_spacetime_be_onthefly_matrix_cpu K_fly_cpu(kernel_k, space_p0, space_p1, order_sng_K, order_reg_K);
-  uniform_spacetime_be_onthefly_matrix_gpu K_fly_gpu(kernel_k, space_p0, space_p1, order_sng_K, order_reg_K, gpu_spacetime_mesh, gpuAlgVer);
+  uniform_spacetime_be_matrix_onthefly_cpu K_fly_cpu(kernel_k, space_p0, space_p1, order_sng_K, order_reg_K);
+  uniform_spacetime_be_matrix_onthefly_gpu K_fly_gpu(kernel_k, space_p0, space_p1, order_sng_K, order_reg_K, gpu_spacetime_mesh, gpuAlgVer);
   uniform_spacetime_be_assembler         assembler_a(kernel_k, space_p0, space_p1, order_sng_A, order_reg_A);
-  //uniform_spacetime_be_onthefly_matrix_cpu A_fly_cpu(kernel_a, space_p1, space_p0, order_sng_A, order_reg_A);
-  //uniform_spacetime_be_onthefly_matrix_gpu A_fly_gpu(kernel_a, space_p1, space_p0, order_sng_A, order_reg_A, gpu_spacetime_mesh, gpuAlgVer);
+  //uniform_spacetime_be_matrix_onthefly_cpu A_fly_cpu(kernel_a, space_p1, space_p0, order_sng_A, order_reg_A);
+  //uniform_spacetime_be_matrix_onthefly_gpu A_fly_gpu(kernel_a, space_p1, space_p0, order_sng_A, order_reg_A, gpu_spacetime_mesh, gpuAlgVer);
   uniform_spacetime_be_assembler         assembler_d(kernel_d, space_p1, space_p1, order_sng_D, order_reg_D);
-  uniform_spacetime_be_onthefly_matrix_cpu D_fly_cpu(kernel_d, space_p1, space_p1, order_sng_D, order_reg_D);
-  uniform_spacetime_be_onthefly_matrix_gpu D_fly_gpu(kernel_d, space_p1, space_p1, order_sng_D, order_reg_D, gpu_spacetime_mesh, gpuAlgVer);
+  uniform_spacetime_be_matrix_onthefly_cpu D_fly_cpu(kernel_d, space_p1, space_p1, order_sng_D, order_reg_D);
+  uniform_spacetime_be_matrix_onthefly_gpu D_fly_gpu(kernel_d, space_p1, space_p1, order_sng_D, order_reg_D, gpu_spacetime_mesh, gpuAlgVer);
 
   block_vector xV  (n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);
   block_vector yVm (n_timesteps, spacetime_mesh.get_n_spatial_elements(), false);

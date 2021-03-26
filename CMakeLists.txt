@@ -104,7 +104,7 @@ set(besthea_INCLUDES
   include/besthea/uniform_spacetime_be_assembler.h
   include/besthea/uniform_spacetime_be_evaluator.h
   include/besthea/uniform_spacetime_be_identity.h
-  include/besthea/uniform_spacetime_be_onthefly_matrix_cpu.h
+  include/besthea/uniform_spacetime_be_matrix_onthefly_cpu.h
   include/besthea/uniform_spacetime_be_solver.h
   include/besthea/uniform_spacetime_be_space.h
   include/besthea/uniform_spacetime_initial_assembler.h
@@ -119,7 +119,7 @@ if(USE_CUDA)
     ${besthea_INCLUDES}
     include/besthea/gpu_onthefly_helpers.h
     include/besthea/time_measurer_cuda.h
-    include/besthea/uniform_spacetime_be_onthefly_matrix_gpu.h
+    include/besthea/uniform_spacetime_be_matrix_onthefly_gpu.h
     include/besthea/uniform_spacetime_tensor_mesh_gpu.h
   )
 endif()
@@ -172,7 +172,7 @@ set(besthea_SOURCES
   src/uniform_spacetime_be_assembler.cpp
   src/uniform_spacetime_be_evaluator.cpp
   src/uniform_spacetime_be_identity.cpp
-  src/uniform_spacetime_be_onthefly_matrix_cpu.cpp
+  src/uniform_spacetime_be_matrix_onthefly_cpu.cpp
   src/uniform_spacetime_be_solver.cpp
   src/uniform_spacetime_be_space.cpp
   src/uniform_spacetime_initial_assembler.cpp
@@ -185,7 +185,7 @@ if(USE_CUDA)
   set(besthea_SOURCES
     ${besthea_SOURCES}
     src/gpu_onthefly_helpers.cpp
-    src/uniform_spacetime_be_onthefly_matrix_gpu.cu
+    src/uniform_spacetime_be_matrix_onthefly_gpu.cu
     src/uniform_spacetime_tensor_mesh_gpu.cpp
   )
 endif()

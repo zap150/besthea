@@ -28,22 +28,22 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file uniform_spacetime_be_onthefly_matrix_gpu.h
+/** @file uniform_spacetime_be_matrix_onthefly_gpu.h
  * @brief GPU version of onthefly boudary element matrix.
  */
 
-#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_GPU_H_
-#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_GPU_H_
+#ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_MATRIX_ONTHEFLY_GPU_H_
+#define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_MATRIX_ONTHEFLY_GPU_H_
 
 #include "besthea/gpu_onthefly_helpers.h"
-#include "besthea/uniform_spacetime_be_onthefly_matrix_cpu.h"
+#include "besthea/uniform_spacetime_be_matrix_onthefly_cpu.h"
 #include "besthea/uniform_spacetime_tensor_mesh_gpu.h"
 
 #include <array>
 
 namespace besthea::linear_algebra::onthefly {
   template< class kernel_type, class test_space_type, class trial_space_type >
-  class uniform_spacetime_be_onthefly_matrix_gpu;
+  class uniform_spacetime_be_matrix_onthefly_gpu;
 }
 
 /*!
@@ -52,9 +52,9 @@ namespace besthea::linear_algebra::onthefly {
  */
 template< class kernel_type, class test_space_type, class trial_space_type >
 class besthea::linear_algebra::onthefly::
-  uniform_spacetime_be_onthefly_matrix_gpu
+  uniform_spacetime_be_matrix_onthefly_gpu
   : public besthea::linear_algebra::onthefly::
-      uniform_spacetime_be_onthefly_matrix_cpu< kernel_type, test_space_type,
+      uniform_spacetime_be_matrix_onthefly_cpu< kernel_type, test_space_type,
         trial_space_type > {
  public:
   using block_vector_type
@@ -75,26 +75,26 @@ class besthea::linear_algebra::onthefly::
    * @param[in] gpu_mesh Spacetime mesh resident on the GPU
    * @param[in] gpu_kernel_version Version of GPU multiplication algorithm
    */
-  uniform_spacetime_be_onthefly_matrix_gpu( kernel_type & kernel,
+  uniform_spacetime_be_matrix_onthefly_gpu( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
     int order_singular, int order_regular,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu & gpu_mesh,
     int gpu_kernel_version = 1 );
 
-  uniform_spacetime_be_onthefly_matrix_gpu(
-    const uniform_spacetime_be_onthefly_matrix_gpu & that )
+  uniform_spacetime_be_matrix_onthefly_gpu(
+    const uniform_spacetime_be_matrix_onthefly_gpu & that )
     = delete;
 
   /*!
    * Destructor.
    */
-  virtual ~uniform_spacetime_be_onthefly_matrix_gpu( );
+  virtual ~uniform_spacetime_be_matrix_onthefly_gpu( );
 
   /*!
    * Prints info on the object.
    */
   void print_info( ) const {
-    std::cout << "besthea::onthefly::uniform_spacetime_be_onthefly_matrix_gpu"
+    std::cout << "besthea::onthefly::uniform_spacetime_be_matrix_onthefly_gpu"
               << std::endl;
     std::cout << "  number of blocks: " << this->_block_dim << std::endl;
     std::cout << "  dimension of each block: " << this->_dim_domain << " x "
@@ -168,4 +168,4 @@ class besthea::linear_algebra::onthefly::
     load_distr;  //!< Object handling CPU-GPU load distribution
 };
 
-#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_ONTHEFLY_MATRIX_GPU_H_ */
+#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_MATRIX_ONTHEFLY_GPU_H_ */

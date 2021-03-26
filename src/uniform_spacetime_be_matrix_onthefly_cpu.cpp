@@ -28,7 +28,7 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "besthea/uniform_spacetime_be_onthefly_matrix_cpu.h"
+#include "besthea/uniform_spacetime_be_matrix_onthefly_cpu.h"
 
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
@@ -44,9 +44,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
+besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   < kernel_type, test_space_type, trial_space_type >::
-  uniform_spacetime_be_onthefly_matrix_cpu( kernel_type & kernel,
+  uniform_spacetime_be_matrix_onthefly_cpu( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
     int order_singular, int order_regular )
   : block_matrix(
@@ -97,9 +97,9 @@ besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
+besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   < kernel_type, test_space_type, trial_space_type >::
-  ~uniform_spacetime_be_onthefly_matrix_cpu( ) {
+  ~uniform_spacetime_be_matrix_onthefly_cpu( ) {
 
 }
 
@@ -118,7 +118,7 @@ besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
@@ -168,7 +168,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
@@ -218,7 +218,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
@@ -265,7 +265,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
@@ -325,7 +325,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
@@ -389,7 +389,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
@@ -453,7 +453,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
@@ -514,7 +514,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
@@ -586,7 +586,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   besthea::bem::spacetime_heat_hs_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
@@ -694,7 +694,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   besthea::bem::spacetime_heat_hs_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
@@ -802,7 +802,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   besthea::bem::spacetime_heat_hs_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
@@ -907,7 +907,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   besthea::bem::spacetime_heat_hs_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
@@ -1004,7 +1004,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   <kernel_type, test_space_type, trial_space_type>::
   apply_regular_cpu( const block_vector_type & x_perm,
     block_vector_type & y_perm, sc alpha ) const {
@@ -1030,7 +1030,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
@@ -1092,7 +1092,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
@@ -1151,7 +1151,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
@@ -1225,7 +1225,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
@@ -1298,7 +1298,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
@@ -1366,7 +1366,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
@@ -1460,7 +1460,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   besthea::bem::spacetime_heat_hs_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
@@ -1561,7 +1561,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   besthea::bem::spacetime_heat_hs_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
@@ -1658,7 +1658,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   besthea::bem::spacetime_heat_hs_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
@@ -1780,7 +1780,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   <kernel_type, test_space_type, trial_space_type>::
   apply( const block_vector_type & x, block_vector_type & y,
     bool trans, sc alpha, sc beta ) const {
@@ -1864,7 +1864,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   <kernel_type, test_space_type, trial_space_type>::
   apply_cpu( const block_vector_type & x_perm, block_vector_type & y_perm,
     sc alpha, sc beta ) const {
@@ -1920,7 +1920,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   <kernel_type, test_space_type, trial_space_type>::init_quadrature( ) {
   // Use triangle rules for disjoint elements
   const std::vector< sc, besthea::allocator_type< sc > > & tri_x1
@@ -2006,7 +2006,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   <kernel_type, test_space_type, trial_space_type>::
   triangles_to_geometry_tst( lo i_tst, int n_shared_vertices, int rot_test,
     quadrature_nodes & quadr_nodes_tst ) const {
@@ -2063,7 +2063,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   <kernel_type, test_space_type, trial_space_type>::
   triangles_to_geometry_trl( lo i_trl, int n_shared_vertices, int rot_trial,
     quadrature_nodes & quadr_nodes_trl ) const {
@@ -2136,7 +2136,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   <kernel_type, test_space_type, trial_space_type>::
   get_type( lo i_test, lo i_trial, int & n_shared_vertices,
     int & rot_test, int & rot_trial ) const {
@@ -2191,7 +2191,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   < kernel_type, test_space_type, trial_space_type >::
   hypercube_to_triangles_identical( sc ksi, sc eta1,
     sc eta2, sc eta3, int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref,
@@ -2242,7 +2242,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   < kernel_type, test_space_type, trial_space_type >::
   hypercube_to_triangles_vertex( sc ksi, sc eta1, sc eta2,
     sc eta3, int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref, sc & y2_ref,
@@ -2267,7 +2267,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
+void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   < kernel_type, test_space_type, trial_space_type >::
   hypercube_to_triangles_edge( sc ksi, sc eta1, sc eta2,
     sc eta3, int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref, sc & y2_ref,
@@ -2326,19 +2326,19 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu
 
 
 template class
-  besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+  besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
     besthea::bem::spacetime_heat_sl_kernel_antiderivative,
     besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
     besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
 
 template class
-  besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+  besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
     besthea::bem::spacetime_heat_dl_kernel_antiderivative,
     besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
     besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
 
 template class
-  besthea::linear_algebra::onthefly::uniform_spacetime_be_onthefly_matrix_cpu<
+  besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
     besthea::bem::spacetime_heat_hs_kernel_antiderivative,
     besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
     besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;

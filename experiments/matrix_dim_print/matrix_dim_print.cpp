@@ -1,5 +1,4 @@
 #include "besthea/besthea.h"
-#include "besthea/uniform_spacetime_be_onthefly_matrix_cpu.h"
 
 #include <cstdlib>
 #include <filesystem>
