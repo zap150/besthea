@@ -35,7 +35,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDE_BESTHEA_TIME_MEASURER_CUDA_H_
 #define INCLUDE_BESTHEA_TIME_MEASURER_CUDA_H_
 
+#include <iostream>
 #include <cuda_runtime.h>
+#include <besthea/settings.h>
 
 
 
@@ -47,47 +49,58 @@ namespace besthea {
 
 
 
-/**
+/*!
  * Class measuring elapsed time between events on a cuda device
  */
 class besthea::tools::time_measurer_cuda {
 
 public:
 
-  /**
+  /*!
    * Default constructor. If this is used, the init method must then be called.
    */
   time_measurer_cuda() {
-    reset();
+    this->was_inited = false;
+
+    int curr_gpu_idx;
+    cudaGetDevice(&curr_gpu_idx);
+    this->init(curr_gpu_idx, 0);
   }
 
-  /**
+  /*!
    * Constructor.
    * @param[in] gpu_idx_ Index of the watched cuda device.
    * @param[in] stream_ Cuda stream to place the events in.
    */
   time_measurer_cuda(int gpu_idx_, cudaStream_t stream_) {
+    this->was_inited = false;
+
     this->init(gpu_idx_, stream_);
   }
 
-  /**
+  /*!
    * Destructor.
    */
   ~time_measurer_cuda() {
-    cudaEventDestroy(start_event);
-    cudaEventDestroy(stop_event);
+    destroy();
   }
   
-  /**
+  /*!
    * Initialization method.
    * @param[in] gpu_idx_ Index of the used cuda device.
    * @param[in] stream_ Cuda stream to place the events in.
    */
   void init(int gpu_idx_, cudaStream_t stream_) {
+    if(this->was_inited) {
+      destroy();
+    }
+
     int curr_gpu_idx;
     cudaGetDevice(&curr_gpu_idx);
     if(curr_gpu_idx != gpu_idx_) {
-      fprintf(stderr, "besthea::tools::time_measurer_cuda current device is %d but %d was provided\n", curr_gpu_idx, gpu_idx_);
+      if(besthea::settings::output_verbosity.warnings >= 1) {
+        std::cerr << "BESTHEA Warning: time measurer cuda, current device is " << curr_gpu_idx << " but " << gpu_idx_ << " was provided\n";
+      }
       this->gpu_idx = -1;
       return;
     }
@@ -98,36 +111,50 @@ public:
     cudaEventCreate(&start_event);
     cudaEventCreate(&stop_event);
     reset();
+    
+    this->was_inited = true;
   }
 
-  /**
+  /*!
+   * Destroys the cuda events.
+   */
+  void destroy() {
+    cudaEventDestroy(start_event);
+    cudaEventDestroy(stop_event);
+  }
+
+  /*!
    * Submits a cuda event marking the start of the measured timespan.
    */
   void start_submit() {
     int curr_gpu_idx;
     cudaGetDevice(&curr_gpu_idx);
     if(curr_gpu_idx != gpu_idx) {
-      fprintf(stderr, "besthea::tools::time_measurer_cuda was initialized with gpu_idx=%d but current is gpu_idx=%d\n", gpu_idx, curr_gpu_idx);
+      if(besthea::settings::output_verbosity.warnings >= 1) {
+        std::cerr << "BESTHEA Warning: time measurer cuda, was initialized with gpu_idx=" << gpu_idx << " but current is gpu_idx=" << curr_gpu_idx << "\n";
+      }
     }
 
     cudaEventRecord(start_event, stream);
   }
 
-  /**
+  /*!
    * Submits a cuda event marking the end of the measured timespan.
    */
   void stop_submit() {
     int curr_gpu_idx;
     cudaGetDevice(&curr_gpu_idx);
     if(curr_gpu_idx != gpu_idx) {
-      fprintf(stderr, "besthea::tools::time_measurer_cuda was initialized with gpu_idx=%d but current is gpu_idx=%d\n", gpu_idx, curr_gpu_idx);
+      if(besthea::settings::output_verbosity.warnings >= 1) {
+        std::cerr << "BESTHEA Warning: time measurer cuda, was initialized with gpu_idx=" << gpu_idx << " but current is gpu_idx=" << curr_gpu_idx << "\n";
+      }
     }
 
     cudaEventRecord(stop_event, stream);
     this->was_time_collected = false;
   }
 
-  /**
+  /*!
    * Resets the timer.
    */
   void reset() {
@@ -135,7 +162,7 @@ public:
     this->was_time_collected = true;
   }
 
-  /**
+  /*!
    * Synchronizes with stop event and returns elapsed time
    */
   double get_time() {
@@ -149,7 +176,7 @@ public:
 
 private:
 
-  /**
+  /*!
    * Synchronizes with end event and computes elapsed time.
    */
   void collect_time() {
@@ -173,6 +200,7 @@ private:
 	cudaEvent_t stop_event; //!< Event marking the end of the measured period
   double elapsed_time; //!< Elapsed time in seconds
   bool was_time_collected; //!< True if the stop event has been synchronized with.
+  bool was_inited; //!< True if init method has been called on this instance
   
 };
 
