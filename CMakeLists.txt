@@ -214,6 +214,15 @@ target_compile_definitions(besthea PUBLIC
   MKL_INT=long
   DATA_WIDTH=${DATA_WIDTH})
 
+if(USE_CUDA)
+  target_include_directories(besthea SYSTEM PUBLIC
+    ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+  target_link_libraries(besthea PUBLIC
+    ${CUDA_LIBRARIES})
+  target_compile_definitions(besthea PUBLIC
+    BESTHEA_USE_CUDA)
+endif()
+
 
 install (TARGETS besthea ARCHIVE DESTINATION "${CMAKE_BINARY_DIR}/lib")
 install(FILES ${besthea_INCLUDES}

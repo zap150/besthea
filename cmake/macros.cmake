@@ -21,7 +21,8 @@ macro(setup_compiler)
         " compiled only with icpc 19.0.1 or higher")
     endif()
 
-    # cant use add_compile_options, because cmake adds the options to cuda compiler as well, which does not understand them
+    # cant use add_compile_options, because cmake adds the options
+    # to the cuda compiler as well, which does not understand them
 
     string(APPEND CMAKE_CXX_FLAGS " -w3")
     # attribute appears more than once

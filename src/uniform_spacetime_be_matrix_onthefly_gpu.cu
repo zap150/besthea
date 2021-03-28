@@ -297,7 +297,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
 
 __device__ void d_reduce_sum(volatile sc * shmem_vals) {
 
-  // assuming number of threads is power of 2
+  // assuming blockDim.x is power of 2
   // assuming 1D block
   // assuming number of values is equal to blockDim
 
@@ -330,7 +330,7 @@ __device__ void d_reduce_sum(volatile sc * shmem_vals) {
 __device__ void d_reduce_sum_multiple(volatile sc * shmem_vals1,
   volatile sc * shmem_vals2, volatile sc * shmem_vals3) {
 
-  // assuming number of threads is power of 2
+  // assuming blockDim.x is power of 2
   // assuming 1D block
   // assuming number of values is equal to blockDim
 
