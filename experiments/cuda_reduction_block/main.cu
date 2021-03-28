@@ -191,27 +191,29 @@ int main(int argc, char ** argv) {
     reduce_block_sum_classic<<<height, tpb>>>(d_results, width);
     tm_classic.stop_submit();
     print_results<<<1,1>>>(d_results, height);
+    cudaDeviceSynchronize();
     
     cudaMemset(d_results, 0, height * cacheline_size);
     tm_atomic.start_submit();
     reduce_block_sum_atomic<<<height, tpb>>>(d_results, width);
     tm_atomic.stop_submit();
     print_results<<<1,1>>>(d_results, height);
+    cudaDeviceSynchronize();
     
     cudaMemset(d_results, 0, height * cacheline_size);
     tm_warpatomic.start_submit();
     reduce_block_sum_warpatomic<<<height, tpb>>>(d_results, width);
     tm_warpatomic.stop_submit();
     print_results<<<1,1>>>(d_results, height);
+    cudaDeviceSynchronize();
     
     cudaMemset(d_results, 0, height * cacheline_size);
     tm_warpwarp.start_submit();
     reduce_block_sum_warpwarp<<<height, tpb>>>(d_results, width);
     tm_warpwarp.stop_submit();
     print_results<<<1,1>>>(d_results, height);
-
-
     cudaDeviceSynchronize();
+    
 
     cudaFree(d_results);
 
