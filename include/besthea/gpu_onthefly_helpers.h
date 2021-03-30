@@ -44,7 +44,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cuda_runtime.h>
 #include <vector>
 
-namespace besthea::linear_algebra::onthefly::helpers {
+namespace besthea::bem::onthefly::helpers {
   template< int quadr_order >
   struct quadrature_reference_raw;
 
@@ -95,7 +95,7 @@ namespace besthea::linear_algebra::onthefly::helpers {
  * data.
  */
 template< int quadr_order >
-struct besthea::linear_algebra::onthefly::helpers::quadrature_reference_raw {
+struct besthea::bem::onthefly::helpers::quadrature_reference_raw {
   sc _x1_ref[ qo2qs( quadr_order ) ];
   sc _x2_ref[ qo2qs( quadr_order ) ];
   sc _y1_ref[ qo2qs( quadr_order ) ];
@@ -107,7 +107,7 @@ struct besthea::linear_algebra::onthefly::helpers::quadrature_reference_raw {
  *  Struct containing mapped quadrature nodes as raw data.
  */
 template< int quadr_order >
-struct besthea::linear_algebra::onthefly::helpers::quadrature_nodes_raw {
+struct besthea::bem::onthefly::helpers::quadrature_nodes_raw {
   sc xs[ qo2qs( quadr_order ) ];
   sc ys[ qo2qs( quadr_order ) ];
   sc zs[ qo2qs( quadr_order ) ];
@@ -116,7 +116,7 @@ struct besthea::linear_algebra::onthefly::helpers::quadrature_nodes_raw {
 /*!
  *  Struct containing parameters of heat kernel and other auxiliary variables.
  */
-struct besthea::linear_algebra::onthefly::helpers::heat_kernel_parameters {
+struct besthea::bem::onthefly::helpers::heat_kernel_parameters {
   sc alpha;
   sc sqrt_alpha;
   sc alpha_2;
@@ -134,7 +134,7 @@ struct besthea::linear_algebra::onthefly::helpers::heat_kernel_parameters {
 /*!
  *  Struct containing CPU and GPU resident vectors data.
  */
-struct besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data {
+struct besthea::bem::onthefly::helpers::gpu_apply_vectors_data {
   sc * h_x;                                // raw data on host
   std::vector< sc * > h_y;                 // raw data on host
   std::vector< sc * > d_x, d_y;            // raw data on device
@@ -153,7 +153,7 @@ struct besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data {
 /*!
  *  Class taking care of CPU-GPU load distribution
  */
-class besthea::linear_algebra::onthefly::helpers::apply_load_distribution {
+class besthea::bem::onthefly::helpers::apply_load_distribution {
  private:
   lo cpu_n_tst_elems;
   double cpu_n_tst_elems_target;
@@ -198,7 +198,7 @@ class besthea::linear_algebra::onthefly::helpers::apply_load_distribution {
 /*!
  *  Struct containing several timers used in GPU onthefly matrix apply.
  */
-struct besthea::linear_algebra::onthefly::helpers::timer_collection {
+struct besthea::bem::onthefly::helpers::timer_collection {
   std::vector< besthea::tools::time_measurer_cuda > gpu_all;
   std::vector< besthea::tools::time_measurer_cuda > gpu_copyin;
   std::vector< besthea::tools::time_measurer_cuda > gpu_compute;
@@ -224,7 +224,7 @@ struct besthea::linear_algebra::onthefly::helpers::timer_collection {
 /*!
  *  Struct containing GPU kernel launch settings.
  */
-struct besthea::linear_algebra::onthefly::helpers::gpu_threads_per_block {
+struct besthea::bem::onthefly::helpers::gpu_threads_per_block {
   dim3 tpb_qo1;
   dim3 tpb_qo2;
   dim3 tpb_qo4;

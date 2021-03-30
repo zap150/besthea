@@ -47,7 +47,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-namespace ns_gpu_helpers = besthea::linear_algebra::onthefly::helpers;
+namespace ns_gpu_helpers = besthea::bem::onthefly::helpers;
 
 __constant__ __device__ ns_gpu_helpers::quadrature_reference_raw<5> c_quadr_reference_order5;
 __constant__ __device__ ns_gpu_helpers::quadrature_reference_raw<4> c_quadr_reference_order4;
@@ -81,7 +81,7 @@ constexpr ns_gpu_helpers::gpu_threads_per_block tpb_ver4( 16,  8,     16,  8,   
 
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
+besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   <kernel_type, test_space_type, trial_space_type>::
   uniform_spacetime_be_matrix_onthefly_gpu( kernel_type & kernel,
   test_space_type & test_space, trial_space_type & trial_space,
@@ -146,7 +146,7 @@ besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
 
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
+besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   <kernel_type, test_space_type, trial_space_type>::
   ~uniform_spacetime_be_matrix_onthefly_gpu( ) {
 
@@ -160,7 +160,7 @@ besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
 
 
 template<class kernel_type, class test_space_type, class trial_space_type >
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
+void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   <kernel_type, test_space_type, trial_space_type>::
   init_gpu_data() {
 
@@ -203,7 +203,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
       break;
   }
   this->load_distr =
-    new besthea::linear_algebra::onthefly::helpers::apply_load_distribution(
+    new besthea::bem::onthefly::helpers::apply_load_distribution(
       n_gpus, gpu_mesh->get_metadata().n_elems, gpu_chunk_size);
 
 
@@ -245,7 +245,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
 
 template<class kernel_type, class test_space_type, class trial_space_type >
 template<int quadr_order>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
+void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   <kernel_type, test_space_type, trial_space_type>::
   init_gpu_quadrature_memory() const {
 
@@ -1877,12 +1877,12 @@ __global__ void g_apply_regular_ver4
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
+void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   <kernel_type, test_space_type, trial_space_type>::
   apply( const block_vector_type & x, block_vector_type & y, bool trans, sc alpha, sc beta ) const {
 
   if(n_gpus == 0) {
-    besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
+    besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
       <kernel_type, test_space_type, trial_space_type>::
       apply(x, y, trans, alpha, beta);
     return;
@@ -1898,26 +1898,22 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
 
   if(x.get_block_size() != this->get_block_dim() ||
      x.get_size_of_block() != this->get_dim_domain()) {
-    if(besthea::settings::output_verbosity.warnings >= 1) {
-      std::cerr << "BESTHEA Warning: x block vector dimension ("
-        << x.get_block_size() << "*" << x.get_size_of_block()
-        << ") does not match block matrix domain dimension ("
-        << this->get_block_dim() << "*" << this->get_dim_domain()
-        << "). Apply will not be performed.\n";
-    }
-    return;
+    std::cerr << "BESTHEA Error: x block vector dimension ("
+      << x.get_block_size() << "*" << x.get_size_of_block()
+      << ") does not match block matrix domain dimension ("
+      << this->get_block_dim() << "*" << this->get_dim_domain()
+      << ").\n";
+    throw std::runtime_error("BESTHEA Exception: incompatible matrix and vector dimensions");
   }
 
   if(y.get_block_size() != this->get_block_dim() ||
      y.get_size_of_block() != this->get_dim_range()) {
-    if(besthea::settings::output_verbosity.warnings >= 1) {
-      std::cerr << "BESTHEA Warning: y block vector dimension ("
-        << y.get_block_size() << "*" << y.get_size_of_block()
-        << ") does not match block matrix range dimension ("
-        << this->get_block_dim() << "*" << this->get_dim_range()
-        << "). Apply will not be performed.\n";
-    }
-    return;
+    std::cerr << "BESTHEA Error: y block vector dimension ("
+      << y.get_block_size() << "*" << y.get_size_of_block()
+      << ") does not match block matrix range dimension ("
+      << this->get_block_dim() << "*" << this->get_dim_range()
+      << "). Apply will not be performed.\n";
+    throw std::runtime_error("BESTHEA Exception: incompatible matrix and vector dimensions");
   }
   
   ns_gpu_helpers::timer_collection timers(n_gpus);
@@ -2023,7 +2019,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
+void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   <kernel_type, test_space_type, trial_space_type>::
   apply_regular_gpu_begin( const block_vector_type & x,
     const block_vector_type & y, sc alpha,
@@ -2232,7 +2228,7 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
 
 
 template<class kernel_type, class test_space_type, class trial_space_type>
-void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
+void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   <kernel_type, test_space_type, trial_space_type>::
   apply_regular_gpu_finalize( block_vector_type & y ) const {
   // this function does not really care if y is permuted or not
@@ -2282,19 +2278,19 @@ void besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
 
 
 template class
-  besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_gpu<
+  besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu<
     besthea::bem::spacetime_heat_sl_kernel_antiderivative,
     besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
     besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
 
 template class
-  besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_gpu<
+  besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu<
     besthea::bem::spacetime_heat_dl_kernel_antiderivative,
     besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
     besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
 
 template class
-  besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_gpu<
+  besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu<
     besthea::bem::spacetime_heat_hs_kernel_antiderivative,
     besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
     besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;

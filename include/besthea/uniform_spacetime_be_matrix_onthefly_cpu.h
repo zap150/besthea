@@ -40,7 +40,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <array>
 
 
-namespace besthea::linear_algebra::onthefly {
+namespace besthea::bem::onthefly {
   template< class kernel_type, class test_space_type, class trial_space_type >
   class uniform_spacetime_be_matrix_onthefly_cpu;
 }
@@ -52,7 +52,7 @@ namespace besthea::linear_algebra::onthefly {
  *  during multiplication on the fly, on the CPU.
  */
 template< class kernel_type, class test_space_type, class trial_space_type >
-class besthea::linear_algebra::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
+class besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   : public besthea::linear_algebra::block_matrix
 {
 protected:

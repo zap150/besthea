@@ -1,6 +1,4 @@
 #include "besthea/besthea.h"
-#include "besthea/uniform_spacetime_be_matrix_onthefly_cpu.h"
-#include "besthea/uniform_spacetime_be_matrix_onthefly_gpu.h"
 
 #include <cstdlib>
 #include <filesystem>
@@ -9,7 +7,7 @@
 using namespace besthea;
 using namespace besthea::mesh;
 using namespace besthea::linear_algebra;
-using namespace besthea::linear_algebra::onthefly;
+using namespace besthea::bem::onthefly;
 using namespace besthea::bem;
 using namespace besthea::tools;
 

@@ -55,4 +55,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/triangular_surface_mesh.h"
 #include "besthea/uniform_spacetime_tensor_mesh.h"
 
+#ifdef BESTHEA_USE_CUDA
+#include "besthea/uniform_spacetime_tensor_mesh.h"
+#endif
+
 #endif /* INCLUDE_BESTHEA_MESH_STRUCTURES_H_ */

@@ -41,7 +41,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <array>
 
-namespace besthea::linear_algebra::onthefly {
+namespace besthea::bem::onthefly {
   template< class kernel_type, class test_space_type, class trial_space_type >
   class uniform_spacetime_be_matrix_onthefly_gpu;
 }
@@ -51,9 +51,9 @@ namespace besthea::linear_algebra::onthefly {
  *  during multiplication on the fly, on the GPU.
  */
 template< class kernel_type, class test_space_type, class trial_space_type >
-class besthea::linear_algebra::onthefly::
+class besthea::bem::onthefly::
   uniform_spacetime_be_matrix_onthefly_gpu
-  : public besthea::linear_algebra::onthefly::
+  : public besthea::bem::onthefly::
       uniform_spacetime_be_matrix_onthefly_cpu< kernel_type, test_space_type,
         trial_space_type > {
  public:
@@ -147,7 +147,7 @@ class besthea::linear_algebra::onthefly::
    */
   void apply_regular_gpu_begin( const block_vector_type & x,
     const block_vector_type & y, sc alpha,
-    besthea::linear_algebra::onthefly::helpers::timer_collection & timers )
+    besthea::bem::onthefly::helpers::timer_collection & timers )
     const;
 
   /*!
@@ -162,9 +162,9 @@ class besthea::linear_algebra::onthefly::
   int n_gpus;              //!< Number of GPUs to use
   int gpu_kernel_version;  //!< Version of GPU multiplication algorithm
 
-  besthea::linear_algebra::onthefly::helpers::gpu_apply_vectors_data
+  besthea::bem::onthefly::helpers::gpu_apply_vectors_data
     vectors_data;  //!< GPU-resident vectors
-  besthea::linear_algebra::onthefly::helpers::apply_load_distribution *
+  besthea::bem::onthefly::helpers::apply_load_distribution *
     load_distr;  //!< Object handling CPU-GPU load distribution
 };
 
