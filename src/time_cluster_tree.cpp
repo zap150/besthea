@@ -413,6 +413,8 @@ void besthea::mesh::time_cluster_tree::build_tree(
   time_cluster & root, lo level ) {
   // stop recursion if maximum number of levels is reached or root contains less
   // than _n_min_elems elements
+  // note: the input value of level corresponds to the level of the potential
+  // children of root
   if ( level > _levels - 1 || root.get_n_elements( ) < _n_min_elems ) {
     root.set_n_children( 0 );
     if ( root.get_n_elements( ) > _n_max_elems_leaf ) {

@@ -1513,7 +1513,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
         coord_t = ( slou )( 2 * parent_coord[ 4 ] + 1 );
         clusters[ i + 8 ] = new general_spacetime_cluster( new_space_center,
           time_center_right, new_space_half_size, time_half_size_right,
-          oct_sizes[ i ], &root, root.get_level( ) + 1, i, coordinates, 1,
+          oct_sizes[ i + 8 ], &root, root.get_level( ) + 1, i, coordinates, 1,
           2 * root.get_global_time_index( ) + 2, n_space_div + 1,
           n_time_div + 1, _spacetime_mesh, root.get_process_id( ), true );
         clusters[ i + 8 ]->set_n_time_elements( n_time_elements_right );
