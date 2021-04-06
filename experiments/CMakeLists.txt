@@ -8,6 +8,7 @@ add_executable(block_vector_permute block_vector_permute/block_vector_permute.cp
 add_executable(default_arguments default_arguments/main.cpp)
 add_executable(matrix_dim_print matrix_dim_print/matrix_dim_print.cpp)
 add_executable(matrix_print matrix_print/matrix_print.cpp)
+add_executable(mwe_dirichlet mwe_dirichlet/mwe_dirichlet.cpp)
 add_executable(parallel_copy parallel_copy/main.cpp)
 add_executable(static_arrays static_arrays/main.cpp)
 add_executable(templates01 templates01/main.cpp)

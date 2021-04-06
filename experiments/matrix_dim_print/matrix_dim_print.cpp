@@ -98,8 +98,10 @@ int main( int argc, char * argv[] ) {
   // create matrix assembler
   spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
   spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
+  spacetime_heat_initial_m0_kernel_antiderivative kernel_m0( cauchy_data::_alpha );
   block_lower_triangular_toeplitz_matrix V_mem;
   block_lower_triangular_toeplitz_matrix K_mem;
+  uniform_spacetime_be_identity M_mem(space_p0, space_p1, order_reg);
   uniform_spacetime_be_assembler assembler_v(kernel_v, space_p0, space_p0, order_sing, order_reg );
   uniform_spacetime_be_assembler assembler_k(kernel_k, space_p0, space_p1, order_sing, order_reg );
 
@@ -112,6 +114,10 @@ int main( int argc, char * argv[] ) {
   t.reset( "Assembling K" );
   assembler_k.assemble( K_mem );
   t.measure( );
+  
+  t.reset( "Assembling M" );
+  M_mem.assemble( );
+  t.measure( );
 
   std::cout << "\n";
   std::cout << "Matrix V block count:   " << V_mem.get_block_dim() << "\n";
@@ -121,6 +127,10 @@ int main( int argc, char * argv[] ) {
   std::cout << "Matrix K block count:   " << K_mem.get_block_dim() << "\n";
   std::cout << "Matrix K rows in block: " << K_mem.get_n_rows()    << "\n";
   std::cout << "Matrix K cols in block: " << K_mem.get_n_columns() << "\n";
+  std::cout << "\n";
+  std::cout << "Matrix M block count:   " << M_mem.get_block_dim() << "\n";
+  std::cout << "Matrix M rows in block: " << M_mem.get_n_rows()    << "\n";
+  std::cout << "Matrix M cols in block: " << M_mem.get_n_columns() << "\n";
 
   std::cout << "p0 global " << space_p0.get_basis().dimension_global() << " local " << space_p0.get_basis().dimension_local() << "\n";
   std::cout << "p1 global " << space_p1.get_basis().dimension_global() << " local " << space_p1.get_basis().dimension_local() << "\n";
