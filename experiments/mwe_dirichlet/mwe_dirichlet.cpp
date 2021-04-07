@@ -1,4 +1,4 @@
-#include <cstring>
+#include <string>
 #include <besthea/besthea.h>
 
 using namespace besthea::mesh;
@@ -24,7 +24,7 @@ int main()
     sc alpha = 0.5;
     
     // load and create mesh
-    std::string mesh_file = "../examples/mesh_files/cube_192.txt";
+    std::string mesh_file = "path/to/mesh/cube_surf.txt";
     lo n_timesteps = 8;
     sc end_time = 10.0;
     triangular_surface_mesh space_mesh;
@@ -62,14 +62,31 @@ int main()
     K.apply(bc_dir, rhs, false, 1.0, 1.0);
 
     // solve the system
-    block_vector sol;
+    block_vector sol_neu;
     sc rel_error = 1e-6;
     lo n_iters = 1000;
-    V.mkl_fgmres_solve(rhs, sol, rel_error, n_iters);
+    V.mkl_fgmres_solve(rhs, sol_neu, rel_error, n_iters);
 
-    // evaluation TODO
+    // load volume mesh
+    std::string grid_file = "path/to/mesh/cube_vol.txt";
+    tetrahedral_volume_mesh vol_mesh;
+    vol_mesh.load(grid_file);
 
-    // do something with the solution
+    // evaluate single layer potential
+    block_vector slp;
+    uniform_spacetime_be_evaluator evaluator_v(kernel_v, space_p0);
+    evaluator_v.evaluate(vol_mesh.get_nodes(), sol_neu, slp);
+
+    // evaluate double layer potential
+    block_vector dlp;
+    uniform_spacetime_be_evaluator evaluator_k(kernel_k, space_p1);
+    evaluator_k.evaluate(vol_mesh.get_nodes(), bc_dir, dlp);
+
+    // combine the potentials to get the final solution
+    block_vector solution_grid(slp);
+    solution_grid.add(dlp, -1.0);
+
+    // do something with the solution ...
 
     return 0;
 }
@@ -90,3 +107,36 @@ void nothing()
     uniform_spacetime_be_assembler assembler_d(kernel_d, space_p1, space_p1);
 }
 */
+
+/*
+void besthea::linear_algebra::block_lower_triangular_toeplitz_matrix::apply(
+  const block_vector & x, block_vector & y, bool trans, sc alpha, sc beta ) const {
+  sc block_beta = beta;
+  for ( lo diag = 0; diag < _block_dim; ++diag ) {
+    const full_matrix * m = &( _data[ diag ] );
+    for ( lo block = 0; block < _block_dim - diag; ++block ) {
+      const vector * subx = &( x.get_block( block ) );
+      vector * suby = &( y.get_block( block + diag ) );
+      m->apply( *subx, *suby, trans, alpha, block_beta );
+    }
+    block_beta = 1.0;
+  }
+}
+*/
+
+/*
+void apply(block_vector & x, block_vector & y)
+{
+    for(lo diag = 0; diag < block_dimension; diag++)
+    {
+        full_matrix * sub_m = m.blocks[diag];
+        lo max_block = block_dimension - diag;
+        for(lo block = 0; block < max_block; block++)
+        {
+            vector * sub_x = x.blocks[block];
+            vector * sub_y = y.blocks[block + diag];
+            sub_m.apply(sub_x, sub_y);
+        }
+    }
+}*/
+
