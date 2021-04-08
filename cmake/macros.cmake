@@ -7,37 +7,6 @@ macro(check_insource)
 endmacro()
 
 macro(setup_compiler)
-  if(USE_CUDA)
-    # intel host compiler in combination with eigen 3.3.90 causes problems
-    # specifically https://gitlab.com/libeigen/eigen/-/issues/2180
-    # host compiler is on linux g++ by default and we dont change that default
-    # set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
-
-    enable_language(CUDA)
-
-    # message(STATUS "Using CUDA host compiler ${CMAKE_CUDA_HOST_COMPILER}")
-
-    if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.12.0")
-      cmake_policy(SET CMP0074 NEW)
-    endif()
-
-    find_package(CUDA REQUIRED)
-
-    if(${CMAKE_VERSION} VERSION_LESS "3.18.0")
-      string(APPEND CMAKE_CUDA_FLAGS " -std=c++17")
-    else()
-      set(CMAKE_CUDA_STANDARD 17)
-      set(CMAKE_CUDA_STANDARD_REQUIRED True)
-    endif()
-
-    if(${CMAKE_VERSION} VERSION_LESS "3.18.0")
-      string(APPEND CMAKE_CUDA_FLAGS " -arch=compute_60")
-    else()
-      cmake_policy(SET CMP0104 NEW)
-      set(CMAKE_CUDA_ARCHITECTURES 60-virtual)
-    endif()
-  endif()
-
   if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8.3)
       message(FATAL_ERROR "GCC compiler is too old, besthea can be"
@@ -45,11 +14,6 @@ macro(setup_compiler)
     endif()
 
     string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -pedantic-errors")
-
-    if(USE_CUDA)
-      string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -Wall")
-      string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -Wextra")
-    endif()
 
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.0.1)
@@ -81,10 +45,6 @@ macro(setup_compiler)
     string(APPEND CMAKE_CXX_FLAGS " -diag-disable 1572")
     # external function definition with no prior declaration
     string(APPEND CMAKE_CXX_FLAGS " -diag-disable 1418")
-
-    if(USE_CUDA)
-      string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -w3")
-    endif()
 
   else()
     message(FATAL_ERROR "Unknown C++ compiler: ${CMAKE_CXX_COMPILER_ID}")
@@ -129,14 +89,11 @@ endmacro()
 macro(enable_OpenMP)
   if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
     string(APPEND CMAKE_CXX_FLAGS " -fopenmp")
-    if(USE_CUDA)
-      string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -fopenmp")
-    endif()
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
     string(APPEND CMAKE_CXX_FLAGS " -qopenmp")
-    if(USE_CUDA)
-      string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -qopenmp")
-    endif()
+  endif()
+  if(USE_CUDA)
+    string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -fopenmp")
   endif()
 endmacro()
 
@@ -164,4 +121,36 @@ endmacro()
 
 macro(enable_Lyra)
   set(Lyra_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/Lyra/include)
+endmacro()
+
+macro(setup_CUDA)
+  # intel host compiler in combination with eigen 3.3.90 causes problems
+  # specifically https://gitlab.com/libeigen/eigen/-/issues/2180
+  # therefore we stick with the default host compiler, which is on linux g++
+  # and do not change anything. after intel is working, this should be reworked
+
+  enable_language(CUDA)
+
+  if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.12.0")
+    cmake_policy(SET CMP0074 NEW)
+  endif()
+
+  find_package(CUDA REQUIRED)
+
+  if(${CMAKE_VERSION} VERSION_LESS "3.18.0")
+    string(APPEND CMAKE_CUDA_FLAGS " -std=c++17")
+  else()
+    set(CMAKE_CUDA_STANDARD 17)
+    set(CMAKE_CUDA_STANDARD_REQUIRED True)
+  endif()
+
+  string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -Wall")
+  string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -Wextra")
+
+  if(${CMAKE_VERSION} VERSION_LESS "3.18.0")
+    string(APPEND CMAKE_CUDA_FLAGS " -arch=compute_60")
+  else()
+    cmake_policy(SET CMP0104 NEW)
+    set(CMAKE_CUDA_ARCHITECTURES 60-virtual)
+  endif()
 endmacro()

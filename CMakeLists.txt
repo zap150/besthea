@@ -6,6 +6,9 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake/Modules)
 
 check_insource()
 setup_compiler()
+if(USE_CUDA)
+  setup_CUDA()
+endif()
 
 enable_filesystem()
 enable_MKL()
