@@ -15,7 +15,7 @@ using namespace besthea::tools;
 int main( int argc, char * argv[] ) {
 
   if(argc > 1 && (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0)) {
-    printf("Usage: ./matrix_vector_product refine_space refine_time gpu_alg_ver repetitions pre_repetitions\n");
+    printf("Usage: ./matrix_vector_product refine_time refine_space gpu_alg_ver repetitions pre_repetitions\n");
     return 0;
   }
   
@@ -30,33 +30,33 @@ int main( int argc, char * argv[] ) {
   sc end_time = 1.0;
   sc heat_capacity_constant = 1.0;
 
-  lo order_sng_V = 4;
-  lo order_reg_V = 4;
-  lo order_sng_K = 4;
-  lo order_reg_K = 4;
-  lo order_sng_A = 4;
-  lo order_reg_A = 4;
-  lo order_sng_D = 4;
-  lo order_reg_D = 4;
+  lo order_sng_V = 1;
+  lo order_reg_V = 1;
+  lo order_sng_K = 1;
+  lo order_reg_K = 1;
+  lo order_sng_A = 1;
+  lo order_reg_A = 1;
+  lo order_sng_D = 1;
+  lo order_reg_D = 1;
 
-  bool doMem    = true;
+  bool doMem    = false;
   bool doFlyCpu = true;
-  bool doFlyGpu = true;
+  bool doFlyGpu = false;
   bool doV = true;
-  bool doK = true;
-  bool doA = true;
-  bool doD = true;
+  bool doK = false;
+  bool doA = false;
+  bool doD = false;
   
-  int refine_space = 2; // 192 elems
   int refine_time = 1; // 8 timesteps
+  int refine_space = 2; // 192 elems
   int gpu_alg_ver = 1;
   int repetitions = 1;
   int pre_repetitions = 0;
 
   tm_init.start();
 
-  if(argc > 1) refine_space = atoi(argv[1]);
-  if(argc > 2) refine_time = atoi(argv[2]);
+  if(argc > 1) refine_time = atoi(argv[1]);
+  if(argc > 2) refine_space = atoi(argv[2]);
   if(argc > 3) gpu_alg_ver = atoi(argv[3]);
   if(argc > 4) repetitions = atoi(argv[4]);
   if(argc > 5) pre_repetitions = atoi(argv[5]);
