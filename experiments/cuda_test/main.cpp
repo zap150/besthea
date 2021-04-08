@@ -28,8 +28,8 @@ int main(int argc, char ** argv)
 
     for(long long i = 0; i < count; i++)
     {
-        x[i] = i;
-        y[i] = 100 * i;
+        x[i] = (double)i;
+        y[i] = (double)(100 * i);
     }
     for(long long i = 0; i < std::min(count, 16LL); i++)
         printf("%7.2f ", x[i]);

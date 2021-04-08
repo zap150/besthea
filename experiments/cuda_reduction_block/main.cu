@@ -8,7 +8,7 @@ constexpr int doubles_in_cacheline = cacheline_size / sizeof(double);
 
 
 
-__host__ __device__ double calc_value(int row, int col) {
+__host__ __device__ double calc_value([[maybe_unused]] int row, int col) {
     return col;
 }
 

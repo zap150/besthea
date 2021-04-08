@@ -6,9 +6,9 @@ class Neco
 private:
     int x;
 public:
-    Neco(int x)
+    Neco(int x_)
     {
-        this->x = x;
+        this->x = x_;
     }
     // void Print(int a, int b = x) // cannot be used like that
     // {

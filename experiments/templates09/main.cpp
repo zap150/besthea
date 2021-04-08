@@ -16,9 +16,9 @@ public:
 };
 
 template<typename T>
-Container<T>::Container(T value)
+Container<T>::Container(T value_)
 {
-    this->value = value;
+    this->value = value_;
 }
 
 template<typename T>

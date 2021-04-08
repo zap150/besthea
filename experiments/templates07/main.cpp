@@ -26,5 +26,8 @@ int main()
 
     my_array_wrapper<s> maw;
 
+    maw.arr.data[7] = 7;
+    printf("%d\n", maw.arr.data[7]);
+
     return 0;
 }
