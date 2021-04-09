@@ -699,10 +699,10 @@ void besthea::bem::uniform_spacetime_be_assembler<
       ttau = timestep * delta;
 
 #pragma omp for schedule( dynamic )
-      for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
-        test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
-        test_area = test_mesh->spatial_area( i_test );
-        for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
+      for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
+        trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
+        trial_area = trial_mesh->spatial_area( i_trial );
+        for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
           if ( delta == 0 ) {
             get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
           } else {
@@ -710,9 +710,9 @@ void besthea::bem::uniform_spacetime_be_assembler<
             rot_test = 0;
             rot_trial = 0;
           }
-          trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
+          test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
+          test_area = test_mesh->spatial_area( i_test );
           test_mesh->get_spatial_normal( i_test, nx );
-          trial_area = trial_mesh->spatial_area( i_trial );
 
           test_basis.local_to_global(
             i_test, n_shared_vertices, rot_test, false, test_l2g );

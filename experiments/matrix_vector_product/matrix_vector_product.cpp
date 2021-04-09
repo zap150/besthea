@@ -41,11 +41,11 @@ int main( int argc, char * argv[] ) {
 
   bool doMem    = true;
   bool doFlyCpu = true;
-  bool doFlyGpu = false;
-  bool doV = false;
-  bool doK = false;
+  bool doFlyGpu = true;
+  bool doV = true;
+  bool doK = true;
   bool doA = true;
-  bool doD = false;
+  bool doD = true;
   
   int refine_time = 1; // 8 timesteps
   int refine_space = 2; // 192 elems
@@ -100,7 +100,7 @@ int main( int argc, char * argv[] ) {
   uniform_spacetime_be_matrix_onthefly_gpu K_fly_gpu(kernel_k, space_p0, space_p1, order_sng_K, order_reg_K, gpu_spacetime_mesh, gpu_alg_ver);
   uniform_spacetime_be_assembler         assembler_a(kernel_a, space_p1, space_p0, order_sng_A, order_reg_A);
   uniform_spacetime_be_matrix_onthefly_cpu A_fly_cpu(kernel_a, space_p1, space_p0, order_sng_A, order_reg_A);
-  //uniform_spacetime_be_matrix_onthefly_gpu A_fly_gpu(kernel_a, space_p1, space_p0, order_sng_A, order_reg_A, gpu_spacetime_mesh, gpu_alg_ver);
+  uniform_spacetime_be_matrix_onthefly_gpu A_fly_gpu(kernel_a, space_p1, space_p0, order_sng_A, order_reg_A, gpu_spacetime_mesh, gpu_alg_ver);
   uniform_spacetime_be_assembler         assembler_d(kernel_d, space_p1, space_p1, order_sng_D, order_reg_D);
   uniform_spacetime_be_matrix_onthefly_cpu D_fly_cpu(kernel_d, space_p1, space_p1, order_sng_D, order_reg_D);
   uniform_spacetime_be_matrix_onthefly_gpu D_fly_gpu(kernel_d, space_p1, space_p1, order_sng_D, order_reg_D, gpu_spacetime_mesh, gpu_alg_ver);
@@ -235,7 +235,7 @@ int main( int argc, char * argv[] ) {
   }
 
 
-  // A and K are a little different by quadrature errors
+  // A and K are a little different by quadrature errors on elements with shared edge
   if(doA) {
     if(doMem) {
       printf("A mem assembly\n");
@@ -259,10 +259,10 @@ int main( int argc, char * argv[] ) {
     }
     if(doFlyGpu) {
       printf("A fly gpu\n");
-      // for(int i = 0; i < pre_repetitions; i++) A_fly_gpu.apply(xA, yAfg, false, alpha, beta);
-      // tm_Afg.start();
-      // for(int i = 0; i < repetitions; i++) A_fly_gpu.apply(xA, yAfg, false, alpha, beta);
-      // tm_Afg.stop();
+      for(int i = 0; i < pre_repetitions; i++) A_fly_gpu.apply(xA, yAfg, false, alpha, beta);
+      tm_Afg.start();
+      for(int i = 0; i < repetitions; i++) A_fly_gpu.apply(xA, yAfg, false, alpha, beta);
+      tm_Afg.stop();
     }
   }
 
