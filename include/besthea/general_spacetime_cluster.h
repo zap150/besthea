@@ -854,6 +854,18 @@ class besthea::mesh::general_spacetime_cluster {
     int rotation, bool swap, std::vector< lo > & indices ) const;
 
   /**
+   * Computes a selected component of the surface curls of p1 basis functions
+   * associated to the triangles of the space-time elements contained in the
+   * cluster.
+   * @param[out] surface_curls_along_dim  Vector in which the surface curls are
+   *                                      stored.
+   * @tparam dim Used to select the component of the surface curls (0,1 or 2).
+   */
+  template< slou dim >
+  void compute_surface_curls_p1_along_dim(
+    std::vector< sc > & surface_curls_along_dim ) const;
+
+  /**
    * Prints info of the object.
    */
   void print( ) {
@@ -1055,5 +1067,4 @@ besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs<
       break;
   }
 }
-
 #endif /* INCLUDE_BESTHEA_GENERAL_SPACETIME_CLUSTER_H_ */

@@ -46,7 +46,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     _real_max_levels( 0 ),
     _spacetime_mesh( spacetime_mesh ),
     _local_max_space_level( 0 ),
-    _s_t_coeff( st_coeff ),
+    //_s_t_coeff( st_coeff ),
     _n_min_elems( n_min_elems ),
     _spatial_paddings( _max_levels, 0.0 ),
     _spatial_nearfield_limit( spatial_nearfield_limit ),
@@ -82,8 +82,11 @@ besthea::mesh::distributed_spacetime_cluster_tree::
 
   // determine the number of initial octasections that has to be performed to
   // get clusters whose spatial half size (or rather its largest component) h_x
-  // satisfies the condition h_x^ \approx st_coeff sqrt(delta). this is
+  // satisfies the condition h_x \approx st_coeff sqrt(delta). this is
   // _initial_space_refinement
+  // @todo the criterion should depend on the heat capacity constant alpha too:
+  // i.e. delta should be replaced by delta * alpha (or st_coeff has to be
+  // chosen accordingly)
   while ( max_half_size > st_coeff * sqrt( delta ) ) {
     max_half_size *= 0.5;
     _initial_space_refinement += 1;
@@ -95,6 +98,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     delta *= 0.5;
     _start_space_refinement += 1;
   }
+
   // like this it is guaranteed that max_halfsize <= st_coeff * sqrt( delta )
   // on all levels of the tree
 
@@ -121,6 +125,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   build_tree( _root );
 
   _max_levels = std::min( _max_levels, _real_max_levels );
+
   // note: _real_max_levels is global, since communication takes place in build
   // tree routine
   _spatial_paddings.resize( _max_levels );

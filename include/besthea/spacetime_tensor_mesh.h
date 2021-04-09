@@ -383,6 +383,34 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
   }
 
   /**
+   * Returns coordinates of all nodes of the mesh.
+   * @param[out] nodes Vector of linear_algebra::coordinates. If the size is not
+   * corresponding to the number of nodes per element, it will be resized.
+   */
+  void get_nodes(
+    std::vector< linear_algebra::coordinates< 4 > > & nodes ) const {
+    lo n_spatial_nodes = _space_mesh->get_n_nodes( );
+    lo n_temporal_nodes = _time_mesh->get_n_nodes( );
+    lo n_nodes = n_spatial_nodes * n_temporal_nodes;
+
+    nodes.reserve( n_nodes );
+
+    linear_algebra::coordinates< 3 > x;
+    linear_algebra::coordinates< 1 > t;
+    for ( lo i_t = 0; i_t < n_temporal_nodes; ++i_t ) {
+      for ( lo i_x = 0; i_x < n_spatial_nodes; ++i_x ) {
+        _space_mesh->get_node( i_x, x );
+        _time_mesh->get_node( i_t, t );
+        nodes.emplace_back( );
+        nodes.back( )[ 0 ] = x[ 0 ];
+        nodes.back( )[ 1 ] = x[ 1 ];
+        nodes.back( )[ 2 ] = x[ 2 ];
+        nodes.back( )[ 3 ] = t[ 0 ];
+      }
+    }
+  }
+
+  /**
    * Returns the length of  time interval.
    * @param[in] i_element Index of the element.
    */
@@ -549,6 +577,7 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * Returns the index of the space element corresponding to the given
    * spacetime element
    * @param[in] i_element Index of the spacetime element.
+   * @todo rename: hard to distinguish get_spatial_element and get_space_element
    */
   lo get_space_element( lo i_element ) const {
     return i_element % get_n_spatial_elements( );

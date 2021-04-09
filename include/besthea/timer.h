@@ -99,6 +99,18 @@ class besthea::tools::timer {
     return str.str( );
   }
 
+  /**
+   * Returns the elapsed time since the starting time point @ref _start.
+   * @tparam time_units Time unit in which the difference is computed and
+   *                    returned.
+   */
+  template< class time_units >
+  typename time_units::rep get_time_from_start( ) const {
+    clock_type::time_point now = clock_type::now( );
+    time_units ret = std::chrono::duration_cast< time_units >( now - _start );
+    return ret.count( );
+  }
+
  private:
   clock_type::time_point _start;  //!< Starting time point.
 };

@@ -88,6 +88,13 @@ bool besthea::mesh::spacetime_mesh_generator::generate(
   // execute the refinement in time and space according to the parameters.
   _time_mesh->refine( _refinement );
   _space_mesh->refine( _space_refinement );
+  // sc area = 0.0;
+  // for ( lo i = 0; i < _space_mesh->get_n_elements( ); ++i ) {
+  //   area += _space_mesh->area( i );
+  // }
+  // std::cout << "Avg. area of element = "
+  //           << area / _space_mesh->get_n_elements( ) << std::endl;
+  // std::cout << "ht = " << _time_mesh->length( 0 ) << std::endl;
 
   lo n_timesteps_per_mesh = _time_mesh->get_n_elements( ) / n_meshes;
   lo n_remaining_timesteps = _time_mesh->get_n_elements( ) % n_meshes;

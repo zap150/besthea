@@ -543,8 +543,8 @@ void besthea::mesh::tetrahedral_volume_mesh::init_surface_nodes( ) {
   for ( const lo & node : _surface_elements ) {
     _is_surface_node[ node ] = true;
   }
-  for ( const bool & is_surface_node : _is_surface_node ) {
-    if ( is_surface_node ) {
+  for ( std::size_t i = 0; i < _is_surface_node.size( ); ++i ) {
+    if ( _is_surface_node[ i ] ) {
       ++_n_surface_nodes;
     }
   }

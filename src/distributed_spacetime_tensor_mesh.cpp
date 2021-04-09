@@ -277,7 +277,6 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
   }
 
   filestream.close( );
-
   _dist_tree->reduce_2_essential( );
 
   return true;

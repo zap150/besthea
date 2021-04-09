@@ -58,8 +58,8 @@ namespace besthea {
  * @param[in] cluster  Cluster determining the local dofs.
  * @param[in] block_vector Input vector in block format.
  * @param[in,out] local_vector Local part of block vector.
- * @tparam space_type  fast_spacetime_be_space representing either p0 or p1
- *                     basis functions. It determines the dofs.
+ * @tparam space_type  @ref besthea::bem::fast_spacetime_be_space representing
+ *                     either p0 or p1 basis functions. It determines the DOFs.
  * @warning The local vector must have the correct size.
  * @note The local vector is not a block vector anymore, but a contiguous
  *       vector.
@@ -76,8 +76,8 @@ void get_local_part_of_block_vector( besthea::mesh::spacetime_cluster * cluster,
  *                     which the local vector is added.
  * @param[in] local_vector Local part of block vector to be added.
  * @param[in,out] block_vector Block vector to which the local vector is added.
- * @tparam space_type  fast_spacetime_be_space representing either p0 or p1
- *                     basis functions. It determines the dofs.
+ * @tparam space_type  @ref besthea::bem::fast_spacetime_be_space representing
+ *                     either p0 or p1 basis functions. It determines the DOFs.
  * @note The entries in the local vector are ordered according to the ordering
  *       of the time elements and spatial dofs in the spacetime cluster (time
  *       step after time step).
