@@ -30,21 +30,21 @@ int main( int argc, char * argv[] ) {
   sc end_time = 1.0;
   sc heat_capacity_constant = 1.0;
 
-  lo order_sng_V = 1;
-  lo order_reg_V = 1;
-  lo order_sng_K = 1;
-  lo order_reg_K = 1;
-  lo order_sng_A = 1;
-  lo order_reg_A = 1;
-  lo order_sng_D = 1;
-  lo order_reg_D = 1;
+  lo order_sng_V = 4;
+  lo order_reg_V = 4;
+  lo order_sng_K = 4;
+  lo order_reg_K = 4;
+  lo order_sng_A = 4;
+  lo order_reg_A = 4;
+  lo order_sng_D = 4;
+  lo order_reg_D = 4;
 
-  bool doMem    = false;
+  bool doMem    = true;
   bool doFlyCpu = true;
   bool doFlyGpu = false;
-  bool doV = true;
+  bool doV = false;
   bool doK = false;
-  bool doA = false;
+  bool doA = true;
   bool doD = false;
   
   int refine_time = 1; // 8 timesteps
@@ -98,8 +98,8 @@ int main( int argc, char * argv[] ) {
   uniform_spacetime_be_assembler         assembler_k(kernel_k, space_p0, space_p1, order_sng_K, order_reg_K);
   uniform_spacetime_be_matrix_onthefly_cpu K_fly_cpu(kernel_k, space_p0, space_p1, order_sng_K, order_reg_K);
   uniform_spacetime_be_matrix_onthefly_gpu K_fly_gpu(kernel_k, space_p0, space_p1, order_sng_K, order_reg_K, gpu_spacetime_mesh, gpu_alg_ver);
-  uniform_spacetime_be_assembler         assembler_a(kernel_k, space_p0, space_p1, order_sng_A, order_reg_A);
-  //uniform_spacetime_be_matrix_onthefly_cpu A_fly_cpu(kernel_a, space_p1, space_p0, order_sng_A, order_reg_A);
+  uniform_spacetime_be_assembler         assembler_a(kernel_a, space_p1, space_p0, order_sng_A, order_reg_A);
+  uniform_spacetime_be_matrix_onthefly_cpu A_fly_cpu(kernel_a, space_p1, space_p0, order_sng_A, order_reg_A);
   //uniform_spacetime_be_matrix_onthefly_gpu A_fly_gpu(kernel_a, space_p1, space_p0, order_sng_A, order_reg_A, gpu_spacetime_mesh, gpu_alg_ver);
   uniform_spacetime_be_assembler         assembler_d(kernel_d, space_p1, space_p1, order_sng_D, order_reg_D);
   uniform_spacetime_be_matrix_onthefly_cpu D_fly_cpu(kernel_d, space_p1, space_p1, order_sng_D, order_reg_D);
@@ -235,7 +235,7 @@ int main( int argc, char * argv[] ) {
   }
 
 
-
+  // A and K are a little different by quadrature errors
   if(doA) {
     if(doMem) {
       printf("A mem assembly\n");
@@ -245,17 +245,17 @@ int main( int argc, char * argv[] ) {
       tm_Ama.stop();
       
       printf("A mem multiply\n");
-      for(int i = 0; i < pre_repetitions; i++) A_mem.apply(xA, yAm, true, alpha, beta);
+      for(int i = 0; i < pre_repetitions; i++) A_mem.apply(xA, yAm, false, alpha, beta);
       tm_Amm.start();
-      for(int i = 0; i < repetitions; i++) A_mem.apply(xA, yAm, true, alpha, beta); // A is just K with transposed blocks
+      for(int i = 0; i < repetitions; i++) A_mem.apply(xA, yAm, false, alpha, beta);
       tm_Amm.stop();
-    }  
+    }
     if(doFlyCpu) {
       printf("A fly cpu\n");
-      // for(int i = 0; i < pre_repetitions; i++) A_fly_cpu.apply(xA, yAfc, false, alpha, beta);
-      // tm_Afc.start();
-      // for(int i = 0; i < repetitions; i++) A_fly_cpu.apply(xA, yAfc, false, alpha, beta);
-      // tm_Afc.stop();
+      for(int i = 0; i < pre_repetitions; i++) A_fly_cpu.apply(xA, yAfc, false, alpha, beta);
+      tm_Afc.start();
+      for(int i = 0; i < repetitions; i++) A_fly_cpu.apply(xA, yAfc, false, alpha, beta);
+      tm_Afc.stop();
     }
     if(doFlyGpu) {
       printf("A fly gpu\n");

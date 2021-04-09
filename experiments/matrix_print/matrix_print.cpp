@@ -90,14 +90,14 @@ int main( int argc, char * argv[] ) {
   uniform_spacetime_be_space< basis_tri_p1 > space_p1( spacetime_mesh );
 
   // numerical quadrature orders
-  lo order_sng_V = 4;  // for singular integrals (adjacent or identical spatial elements)
-  lo order_reg_V = 4;  // disjoint spatial elements
-  lo order_sng_K = 4;
-  lo order_reg_K = 4;
-  lo order_sng_A = 4;
-  lo order_reg_A = 4;
-  lo order_sng_D = 4;
-  lo order_reg_D = 4;
+  lo order_sng_V = 5;  // for singular integrals (adjacent or identical spatial elements)
+  lo order_reg_V = 5;  // disjoint spatial elements
+  lo order_sng_K = 5;
+  lo order_reg_K = 5;
+  lo order_sng_A = 5;
+  lo order_reg_A = 5;
+  lo order_sng_D = 5;
+  lo order_reg_D = 5;
 
   // create matrix assembler
   spacetime_heat_sl_kernel_antiderivative  kernel_v( cauchy_data::_alpha );
