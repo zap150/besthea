@@ -15,7 +15,7 @@ using namespace besthea::tools;
 int main( int argc, char * argv[] ) {
 
   if(argc > 1 && (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0)) {
-    printf("Usage: ./matrix_vector_product refine_time refine_space gpu_alg_ver repetitions pre_repetitions\n");
+    printf("Usage: ./matrix_vector_product refine gpu_alg_ver repetitions pre_repetitions quadr_order_reg quadr_order_sng\n");
     return 0;
   }
   
@@ -25,19 +25,10 @@ int main( int argc, char * argv[] ) {
   time_measurer tm_Ama, tm_Amm, tm_Afc, tm_Afg;
   time_measurer tm_Dma, tm_Dmm, tm_Dfc, tm_Dfg;
   
-  std::string mesh_file = "../../besthea/examples/mesh_files/cube_12.txt";
-  lo n_timesteps = 2;
+  std::string mesh_file = "../../besthea/examples/mesh_files/cube_192.txt";
+  lo n_timesteps = 8;
   sc end_time = 1.0;
   sc heat_capacity_constant = 1.0;
-
-  lo order_sng_V = 4;
-  lo order_reg_V = 4;
-  lo order_sng_K = 4;
-  lo order_reg_K = 4;
-  lo order_sng_A = 4;
-  lo order_reg_A = 4;
-  lo order_sng_D = 4;
-  lo order_reg_D = 4;
 
   bool doMem    = true;
   bool doFlyCpu = true;
@@ -47,23 +38,34 @@ int main( int argc, char * argv[] ) {
   bool doA = true;
   bool doD = true;
   
-  int refine_time = 1; // 8 timesteps
-  int refine_space = 2; // 192 elems
+  int refine = 0;
   int gpu_alg_ver = 1;
   int repetitions = 1;
   int pre_repetitions = 0;
+  int quadr_order_sng = 4;
+  int quadr_order_reg = 4;
 
   tm_init.start();
 
-  if(argc > 1) refine_time = atoi(argv[1]);
-  if(argc > 2) refine_space = atoi(argv[2]);
-  if(argc > 3) gpu_alg_ver = atoi(argv[3]);
-  if(argc > 4) repetitions = atoi(argv[4]);
-  if(argc > 5) pre_repetitions = atoi(argv[5]);
+  if(argc > 1) refine = atoi(argv[1]);
+  if(argc > 2) gpu_alg_ver = atoi(argv[2]);
+  if(argc > 3) repetitions = atoi(argv[3]);
+  if(argc > 4) pre_repetitions = atoi(argv[4]);
+  if(argc > 5) quadr_order_reg = atoi(argv[5]);
+  if(argc > 6) quadr_order_sng = atoi(argv[6]);
+
+  int order_reg_V = quadr_order_reg;
+  int order_reg_K = quadr_order_reg;
+  int order_reg_A = quadr_order_reg;
+  int order_reg_D = quadr_order_reg;
+  int order_sng_V = quadr_order_sng;
+  int order_sng_K = quadr_order_sng;
+  int order_sng_A = quadr_order_sng;
+  int order_sng_D = quadr_order_sng;
 
   //srand(time(nullptr));
   
-  besthea::settings::output_verbosity.timers = 0;
+  besthea::settings::output_verbosity.timers = 2;
   besthea::settings::output_verbosity.onthefly_loadbalance = 0;
 
   // load spatial mesh from file
@@ -71,13 +73,15 @@ int main( int argc, char * argv[] ) {
   space_mesh.load( mesh_file );
 
   // refinement
-  space_mesh.refine( refine_space );
-  n_timesteps *= std::exp2( 2 * refine_time );
+  space_mesh.refine( refine );
+  n_timesteps *= std::exp2( 2 * refine );
 
   // create spacetime mesh as a tensor product of spatial and temporal meshes
   uniform_spacetime_tensor_mesh spacetime_mesh( space_mesh, end_time, n_timesteps );
   uniform_spacetime_tensor_mesh_gpu gpu_spacetime_mesh(spacetime_mesh);
   spacetime_mesh.print_info();
+  printf("Using quadrature order regular  %d\n", quadr_order_reg);
+  printf("Using quadrature order singular %d\n", quadr_order_sng);
 
   // boundary element spaces
   uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
