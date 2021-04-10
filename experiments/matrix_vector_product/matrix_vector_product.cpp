@@ -25,7 +25,7 @@ int main( int argc, char * argv[] ) {
   time_measurer tm_Ama, tm_Amm, tm_Afc, tm_Afg;
   time_measurer tm_Dma, tm_Dmm, tm_Dfc, tm_Dfg;
   
-  std::string mesh_file = "../../besthea/examples/mesh_files/cube_12.txt";
+  std::string mesh_file = "../../besthea/examples/mesh_files/cube_192.txt";
   lo n_timesteps = 8;
   sc end_time = 1.0;
   sc heat_capacity_constant = 1.0;
@@ -34,9 +34,11 @@ int main( int argc, char * argv[] ) {
   bool doFlyCpu = false;
   bool doFlyGpu = true;
   bool doV = true;
-  bool doK = false;
-  bool doA = false;
-  bool doD = false;
+  bool doK = true;
+  bool doA = true;
+  bool doD = true;
+
+  bool printCheckErrors = false;
   
   int refine = 0;
   int gpu_alg_ver = 1;
@@ -82,6 +84,7 @@ int main( int argc, char * argv[] ) {
   spacetime_mesh.print_info();
   printf("Using quadrature order regular  %d\n", quadr_order_reg);
   printf("Using quadrature order singular %d\n", quadr_order_sng);
+  printf("Using GPU algorithm version %d\n", gpu_alg_ver);
 
   // boundary element spaces
   uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
@@ -315,7 +318,8 @@ int main( int argc, char * argv[] ) {
       sc vm = yVm.get(b, i);
       sc vf = yVfc.get(b, i);
       if( std::abs((vm - vf) / vm) > 1e-6 ) {
-        //printf("Vectors Vc dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
+        if(printCheckErrors)
+          printf("Vectors Vc dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
         equalVc = false;
       }
     }
@@ -325,7 +329,8 @@ int main( int argc, char * argv[] ) {
       sc vm = yVm.get(b, i);
       sc vf = yVfg.get(b, i);
       if( std::abs((vm - vf) / vm) > 1e-6 ) {
-        //printf("Vectors Vg dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
+        if(printCheckErrors)
+          printf("Vectors Vg dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
         equalVg = false;
       }
     }
@@ -338,7 +343,8 @@ int main( int argc, char * argv[] ) {
       sc vm = yKm.get(b, i);
       sc vf = yKfc.get(b, i);
       if( std::abs((vm - vf) / vm) > 1e-6 ) {
-        //printf("Vectors Kc dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
+        if(printCheckErrors)
+          printf("Vectors Kc dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
         equalKc = false;
       }
     }
@@ -348,7 +354,8 @@ int main( int argc, char * argv[] ) {
       sc vm = yKm.get(b, i);
       sc vf = yKfg.get(b, i);
       if( std::abs((vm - vf) / vm) > 1e-6 ) {
-        //printf("Vectors Kg dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
+        if(printCheckErrors)
+          printf("Vectors Kg dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
         equalKg = false;
       }
     }
@@ -361,7 +368,8 @@ int main( int argc, char * argv[] ) {
       sc vm = yAm.get(b, i);
       sc vf = yAfc.get(b, i);
       if( std::abs((vm - vf) / vm) > 1e-6 ) {
-        //printf("Vectors Ac dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
+        if(printCheckErrors)
+          printf("Vectors Ac dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
         equalAc = false;
       }
     }
@@ -371,7 +379,8 @@ int main( int argc, char * argv[] ) {
       sc vm = yAm.get(b, i);
       sc vf = yAfg.get(b, i);
       if( std::abs((vm - vf) / vm) > 1e-6 ) {
-        //printf("Vectors Ag dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
+        if(printCheckErrors)
+          printf("Vectors Ag dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
         equalAg = false;
       }
     }
@@ -384,7 +393,8 @@ int main( int argc, char * argv[] ) {
       sc vm = yDm.get(b, i);
       sc vf = yDfc.get(b, i);
       if( std::abs((vm - vf) / vm) > 1e-6 ) {
-        //printf("Vectors Dc dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
+        if(printCheckErrors)
+          printf("Vectors Dc dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
         equalDc = false;
       }
     }
@@ -394,7 +404,8 @@ int main( int argc, char * argv[] ) {
       sc vm = yDm.get(b, i);
       sc vf = yDfg.get(b, i);
       if( std::abs((vm - vf) / vm) > 1e-6 ) {
-        //printf("Vectors Dg dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
+        if(printCheckErrors)
+          printf("Vectors Dg dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
         equalDg = false;
       }
     }
