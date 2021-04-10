@@ -30,8 +30,8 @@ int main( int argc, char * argv[] ) {
   sc end_time = 1.0;
   sc heat_capacity_constant = 1.0;
 
-  bool doMem    = false;
-  bool doFlyCpu = false;
+  bool doMem    = true;
+  bool doFlyCpu = true;
   bool doFlyGpu = true;
   bool doV = true;
   bool doK = true;

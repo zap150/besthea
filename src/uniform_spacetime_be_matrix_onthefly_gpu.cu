@@ -1702,6 +1702,7 @@ __global__ void g_apply_regular_ver3
         __syncthreads();
         d_reduce_sum_2d_y(shmem_y_vals);
         if(tid < blockDim.x) y[block_row * ld_y + row] += alpha * shmem_y_vals[tid];
+        __syncthreads();
       }
   
     }
@@ -1775,6 +1776,7 @@ __global__ void g_apply_regular_ver3
         __syncthreads();
         d_reduce_sum_2d_y(shmem_y_vals);
         if(tid < blockDim.x) y[block_row * ld_y + row] += alpha * shmem_y_vals[tid];
+        __syncthreads();
       }
   
     }
@@ -1855,7 +1857,7 @@ __global__ void g_apply_regular_ver3
         __syncthreads();
         d_reduce_sum_2d_y_multiple(shmem_y_vals[0], shmem_y_vals[1], shmem_y_vals[2]);
         if(threadIdx.y < 3) atomicAdd(&y[block_row * ld_y + rows[threadIdx.y]], alpha * shmem_y_vals[threadIdx.y][threadIdx.x]);
-
+        __syncthreads(); // dont understand why this needs to be there, but it needs to
       }
     }
 
@@ -1937,7 +1939,7 @@ __global__ void g_apply_regular_ver3
         __syncthreads();
         d_reduce_sum_2d_y_multiple(shmem_y_vals[0], shmem_y_vals[1], shmem_y_vals[2]);
         if(threadIdx.y < 3) atomicAdd(&y[block_row * ld_y + rows[threadIdx.y]], alpha * shmem_y_vals[threadIdx.y][threadIdx.x]);
-
+        __syncthreads();
       }
     }
 
