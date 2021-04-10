@@ -144,10 +144,9 @@ besthea::bem::onthefly::helpers::apply_load_distribution::
   this->n_gpus = n_gpus_;
   this->n_elems = n_elems_;
   this->gpu_chunk_size = gpu_chunk_size_;
-  this->min_cpu_tst_elems = std::min(n_elems, (lo)omp_get_max_threads());
   
-  this->cpu_n_tst_elems = adjust_cpu_count(0.0);
-  this->cpu_n_tst_elems_target = (double)this->cpu_n_tst_elems;
+  this->cpu_n_tst_elems_target = (double)std::min((lo)omp_get_max_threads(), n_elems / 2);
+  this->cpu_n_tst_elems = adjust_cpu_count(this->cpu_n_tst_elems_target);
 
   this->gpu_i_tst_begins.resize(n_gpus+1);
   update_gpu_begins();
@@ -179,24 +178,28 @@ void besthea::bem::onthefly::helpers::apply_load_distribution::adapt(
       cpu_n_tst_elems, cpu_n_tst_elems_target);
   }
 
-  lo gpu_n_tst_elems = n_elems - cpu_n_tst_elems;
-  double cpu_n_elems_ideal;
+  if(cpu_n_tst_elems == 0) {
+    this->cpu_n_tst_elems_target = 0;
+  } else {
+    lo gpu_n_tst_elems = n_elems - cpu_n_tst_elems;
+    double cpu_n_elems_ideal;
 
-  if(gpu_n_tst_elems > 0) {
-    double time_per_elem_gpu = gpu_time_scaling / gpu_n_tst_elems;
-    double time_per_elem_cpu = cpu_time_scaling / cpu_n_tst_elems;
+    if(gpu_n_tst_elems > 0) {
+      double time_per_elem_gpu = gpu_time_scaling / gpu_n_tst_elems;
+      double time_per_elem_cpu = cpu_time_scaling / cpu_n_tst_elems;
 
-    cpu_n_elems_ideal =
-        (n_elems * time_per_elem_gpu - cpu_time_const + gpu_time_const)
-        /
-        (time_per_elem_cpu + time_per_elem_gpu);
+      cpu_n_elems_ideal =
+          (n_elems * time_per_elem_gpu - cpu_time_const + gpu_time_const)
+          /
+          (time_per_elem_cpu + time_per_elem_gpu);
+    }
+    else {
+      cpu_n_elems_ideal = (double)n_elems;
+    }
+      
+    this->cpu_n_tst_elems_target =
+      cpu_n_tst_elems_target * inertia + cpu_n_elems_ideal * (1 - inertia);
   }
-  else {
-    cpu_n_elems_ideal = (double)n_elems;
-  }
-    
-  this->cpu_n_tst_elems_target =
-    cpu_n_tst_elems_target * inertia + cpu_n_elems_ideal * (1 - inertia);
 
   this->cpu_n_tst_elems = adjust_cpu_count(cpu_n_tst_elems_target);
 
@@ -212,17 +215,17 @@ void besthea::bem::onthefly::helpers::apply_load_distribution::adapt(
 
 
 lo besthea::bem::onthefly::helpers::apply_load_distribution::
-  adjust_cpu_count(double suggested) const {  
-  suggested = std::max(suggested, 0.0);
+  adjust_cpu_count(double suggested) const {
+
+  suggested = std::clamp(suggested, 0.0, (double)n_elems);
 
   lo suggested_gpu_elems = (lo)std::ceil(n_elems - suggested);
 
   lo chunked_gpu_elems = 
     ((suggested_gpu_elems - 1) / gpu_chunk_size + 1) * gpu_chunk_size;
   
-  if( chunked_gpu_elems > n_elems - min_cpu_tst_elems)
-    chunked_gpu_elems =
-      ((n_elems - min_cpu_tst_elems) / gpu_chunk_size) * gpu_chunk_size;
+  if( chunked_gpu_elems >= n_elems)
+    chunked_gpu_elems = (n_elems / gpu_chunk_size) * gpu_chunk_size;
   
   return n_elems - chunked_gpu_elems;
 }

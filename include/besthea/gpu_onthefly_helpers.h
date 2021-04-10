@@ -161,7 +161,6 @@ class besthea::bem::onthefly::helpers::apply_load_distribution {
   int n_gpus;
   lo n_elems;
   lo gpu_chunk_size;
-  lo min_cpu_tst_elems;
 
  public:
   apply_load_distribution( int n_gpus, lo n_elems, lo gpu_chunk_size );

@@ -25,18 +25,18 @@ int main( int argc, char * argv[] ) {
   time_measurer tm_Ama, tm_Amm, tm_Afc, tm_Afg;
   time_measurer tm_Dma, tm_Dmm, tm_Dfc, tm_Dfg;
   
-  std::string mesh_file = "../../besthea/examples/mesh_files/cube_192.txt";
+  std::string mesh_file = "../../besthea/examples/mesh_files/cube_12.txt";
   lo n_timesteps = 8;
   sc end_time = 1.0;
   sc heat_capacity_constant = 1.0;
 
-  bool doMem    = true;
-  bool doFlyCpu = true;
+  bool doMem    = false;
+  bool doFlyCpu = false;
   bool doFlyGpu = true;
   bool doV = true;
-  bool doK = true;
-  bool doA = true;
-  bool doD = true;
+  bool doK = false;
+  bool doA = false;
+  bool doD = false;
   
   int refine = 0;
   int gpu_alg_ver = 1;
@@ -66,7 +66,7 @@ int main( int argc, char * argv[] ) {
   //srand(time(nullptr));
   
   besthea::settings::output_verbosity.timers = 2;
-  besthea::settings::output_verbosity.onthefly_loadbalance = 0;
+  besthea::settings::output_verbosity.onthefly_loadbalance = 2;
 
   // load spatial mesh from file
   triangular_surface_mesh space_mesh;

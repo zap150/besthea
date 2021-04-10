@@ -2379,9 +2379,11 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   }
   
   timers.cpu_all.start();
-  timers.cpu_regular.start();
-  this->apply_regular_cpu(x_perm, y_perm, alpha, load_distr->get_cpu_begin(), load_distr->get_cpu_end());
-  timers.cpu_regular.stop();
+  if(load_distr->get_cpu_count() > 0) {
+    timers.cpu_regular.start();
+    this->apply_regular_cpu(x_perm, y_perm, alpha, load_distr->get_cpu_begin(), load_distr->get_cpu_end());
+    timers.cpu_regular.stop();
+  }
   timers.cpu_singular.start();
   this->apply_singular_cpu(x_perm, y_perm, alpha);
   timers.cpu_singular.stop();
