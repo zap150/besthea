@@ -1019,10 +1019,10 @@ __global__ void g_apply_regular
       for (lo block = 0; block < max_block; block++) {
         lo block_row = diag + block;
         lo block_col = block;
-        shmem_y_vals[tid] = matrix_val * x[ ld_x * block_col + col ];
+        shmem_y_vals[tid] = matrix_val * x[block_col * ld_x + col];
         __syncthreads();
         d_reduce_sum(shmem_y_vals);
-        if(tid == 0) y_perm[row * ld_y_perm + block_row] += alpha * shmem_y_vals[0];
+        if(tid == 0) y_perm[block_row + ld_y_perm * row] += alpha * shmem_y_vals[0];
       }
     }
 
@@ -1091,12 +1091,12 @@ __global__ void g_apply_regular
       for (lo block = 0; block < max_block; block++) {
         lo block_row = diag + block;
         lo block_col = block;
-        shmem_y_vals[tid]  = matrix_vals[0] * x[ ld_x * block_col + cols[0]];
-        shmem_y_vals[tid] += matrix_vals[1] * x[ ld_x * block_col + cols[1]];
-        shmem_y_vals[tid] += matrix_vals[2] * x[ ld_x * block_col + cols[2]];
+        shmem_y_vals[tid]  = matrix_vals[0] * x[block_col * ld_x + cols[0]];
+        shmem_y_vals[tid] += matrix_vals[1] * x[block_col * ld_x + cols[1]];
+        shmem_y_vals[tid] += matrix_vals[2] * x[block_col * ld_x + cols[2]];
         __syncthreads();
         d_reduce_sum(shmem_y_vals);
-        if(tid == 0) y_perm[row * ld_y_perm + block_row] += alpha * shmem_y_vals[0];
+        if(tid == 0) y_perm[block_row + ld_y_perm * row] += alpha * shmem_y_vals[0];
       }
     }
 
@@ -1168,13 +1168,13 @@ __global__ void g_apply_regular
       for (lo block = 0; block < max_block; block++) {
         lo block_row = diag + block;
         lo block_col = block;
-        sc x_val = x[ ld_x * block_col + col];
+        sc x_val = x[block_col * ld_x + col];
         shmem_y_vals[0][tid] = matrix_vals[0] * x_val;
         shmem_y_vals[1][tid] = matrix_vals[1] * x_val;
         shmem_y_vals[2][tid] = matrix_vals[2] * x_val;
         __syncthreads();
         d_reduce_sum_multiple(shmem_y_vals[0], shmem_y_vals[1], shmem_y_vals[2]);
-        if(tid < 3) atomicAdd(&y_perm[rows[tid] * ld_y_perm + block_row], alpha * shmem_y_vals[tid][0]);
+        if(tid < 3) atomicAdd(&y_perm[block_row + ld_y_perm * rows[tid]], alpha * shmem_y_vals[tid][0]);
         
       }
     }
@@ -1248,14 +1248,14 @@ __global__ void g_apply_regular
       for (lo block = 0; block < max_block; block++) {
         lo block_row = diag + block;
         lo block_col = block;
-        x_vals[0] = x[ ld_x * block_col + cols[0]];
-        x_vals[1] = x[ ld_x * block_col + cols[1]];
-        x_vals[2] = x[ ld_x * block_col + cols[2]];
+        x_vals[0] = x[block_col * ld_x + cols[0]];
+        x_vals[1] = x[block_col * ld_x + cols[1]];
+        x_vals[2] = x[block_col * ld_x + cols[2]];
         for(lo r = 0; r < 3; r++) shmem_y_vals[r][tid] = 0;
         for(lo r = 0; r < 3; r++) for(lo c = 0; c < 3; c++) shmem_y_vals[r][tid] += matrix_vals[3*r+c] * x_vals[c];
         __syncthreads();
         d_reduce_sum_multiple(shmem_y_vals[0], shmem_y_vals[1], shmem_y_vals[2]);
-        if(tid < 3) atomicAdd(&y_perm[rows[tid] * ld_y_perm + block_row], alpha * shmem_y_vals[tid][0]);
+        if(tid < 3) atomicAdd(&y_perm[block_row + ld_y_perm * rows[tid]], alpha * shmem_y_vals[tid][0]);
         
       }
     }
@@ -1349,11 +1349,11 @@ __global__ void g_apply_regular_ver2
           for(lo j = 0; j < curr_active_threads; j++) {
             lo i_trl = (i / blockDim.x) * blockDim.x + j;
             lo &col = i_trl;
-            sc x_val = x_perm[col * ld_x_perm + block_col];
+            sc x_val = x_perm[block_col + ld_x_perm * col];
             y_val += shmem_matrix_vals[j] * x_val;
           }
           y_val *= alpha;
-          y_perm[row * ld_y_perm + block_row] += y_val;
+          y_perm[block_row + ld_y_perm * row] += y_val;
         }
         __syncthreads();
       }
@@ -1438,12 +1438,12 @@ __global__ void g_apply_regular_ver2
           for(lo j = 0; j < curr_active_threads; j++) {
             lo i_trl = (i / blockDim.x) * blockDim.x + j;
             lo * cols = mesh_data.d_element_nodes + 3 * i_trl;
-            y_val += shmem_matrix_vals[0][j] * x_perm[cols[0] * ld_x_perm + block_col];
-            y_val += shmem_matrix_vals[1][j] * x_perm[cols[1] * ld_x_perm + block_col];
-            y_val += shmem_matrix_vals[2][j] * x_perm[cols[2] * ld_x_perm + block_col];
+            y_val += shmem_matrix_vals[0][j] * x_perm[block_col + ld_x_perm * cols[0]];
+            y_val += shmem_matrix_vals[1][j] * x_perm[block_col + ld_x_perm * cols[1]];
+            y_val += shmem_matrix_vals[2][j] * x_perm[block_col + ld_x_perm * cols[2]];
           }
           y_val *= alpha;
-          y_perm[row * ld_y_perm + block_row] += y_val;
+          y_perm[block_row + ld_y_perm * row] += y_val;
         }
         __syncthreads();
       }
@@ -1526,14 +1526,14 @@ __global__ void g_apply_regular_ver2
           for(lo j = 0; j < curr_active_threads; j++) {
             lo i_trl = (i / blockDim.x) * blockDim.x + j;
             lo &col = i_trl;
-            sc x_val = x_perm[col * ld_x_perm + block_col];
+            sc x_val = x_perm[block_col + ld_x_perm * col];
             y_vals[0] += shmem_matrix_vals[0][j] * x_val;
             y_vals[1] += shmem_matrix_vals[1][j] * x_val;
             y_vals[2] += shmem_matrix_vals[2][j] * x_val;
           }
-          atomicAdd(&y_perm[rows[0] * ld_y_perm + block_row], alpha * y_vals[0]);
-          atomicAdd(&y_perm[rows[1] * ld_y_perm + block_row], alpha * y_vals[1]);
-          atomicAdd(&y_perm[rows[2] * ld_y_perm + block_row], alpha * y_vals[2]);
+          atomicAdd(&y_perm[block_row + ld_y_perm * rows[0]], alpha * y_vals[0]);
+          atomicAdd(&y_perm[block_row + ld_y_perm * rows[1]], alpha * y_vals[1]);
+          atomicAdd(&y_perm[block_row + ld_y_perm * rows[2]], alpha * y_vals[2]);
         }
         __syncthreads();
       }
@@ -1614,16 +1614,16 @@ __global__ void g_apply_regular_ver2
             lo i_trl = (i / blockDim.x) * blockDim.x + j;
             lo * cols = mesh_data.d_element_nodes + 3 * i_trl;
             sc x_vals[3];
-            x_vals[0] = x_perm[cols[0] * ld_x_perm + block_col];
-            x_vals[1] = x_perm[cols[1] * ld_x_perm + block_col];
-            x_vals[2] = x_perm[cols[2] * ld_x_perm + block_col];
+            x_vals[0] = x_perm[block_col + ld_x_perm * cols[0]];
+            x_vals[1] = x_perm[block_col + ld_x_perm * cols[1]];
+            x_vals[2] = x_perm[block_col + ld_x_perm * cols[2]];
             for(lo r = 0; r < 3; r++)
              for(lo c = 0; c < 3; c++)
               y_vals[r] += shmem_matrix_vals[3*r+c][j] * x_vals[c];
           }
-          atomicAdd(&y_perm[rows[0] * ld_y_perm + block_row], alpha * y_vals[0]);
-          atomicAdd(&y_perm[rows[1] * ld_y_perm + block_row], alpha * y_vals[1]);
-          atomicAdd(&y_perm[rows[2] * ld_y_perm + block_row], alpha * y_vals[2]);
+          atomicAdd(&y_perm[block_row + ld_y_perm * rows[0]], alpha * y_vals[0]);
+          atomicAdd(&y_perm[block_row + ld_y_perm * rows[1]], alpha * y_vals[1]);
+          atomicAdd(&y_perm[block_row + ld_y_perm * rows[2]], alpha * y_vals[2]);
         }
         __syncthreads();
       }
@@ -1770,9 +1770,9 @@ __global__ void g_apply_regular_ver3
       for(lo block = 0; block < max_block; block++) {
         lo block_row = diag + block;
         lo block_col = block;
-        shmem_y_vals[tid]  = matrix_vals[0] * x[ ld_x * block_col + cols[0]];
-        shmem_y_vals[tid] += matrix_vals[1] * x[ ld_x * block_col + cols[1]];
-        shmem_y_vals[tid] += matrix_vals[2] * x[ ld_x * block_col + cols[2]];
+        shmem_y_vals[tid]  = matrix_vals[0] * x[ block_col * ld_x + cols[0]];
+        shmem_y_vals[tid] += matrix_vals[1] * x[ block_col * ld_x + cols[1]];
+        shmem_y_vals[tid] += matrix_vals[2] * x[ block_col * ld_x + cols[2]];
         __syncthreads();
         d_reduce_sum_2d_y(shmem_y_vals);
         if(tid < blockDim.x) y[block_row * ld_y + row] += alpha * shmem_y_vals[tid];
@@ -1850,7 +1850,7 @@ __global__ void g_apply_regular_ver3
       for(lo block = 0; block < max_block; block++) {
         lo block_row = diag + block;
         lo block_col = block;
-        sc x_val = x[ ld_x * block_col + col];
+        sc x_val = x[ block_col * ld_x + col];
         shmem_y_vals[0][tid] = matrix_vals[0] * x_val;
         shmem_y_vals[1][tid] = matrix_vals[1] * x_val;
         shmem_y_vals[2][tid] = matrix_vals[2] * x_val;
@@ -1931,9 +1931,9 @@ __global__ void g_apply_regular_ver3
       for(lo block = 0; block < max_block; block++) {
         lo block_row = diag + block;
         lo block_col = block;
-        x_vals[0] = x[ ld_x * block_col + cols[0]];
-        x_vals[1] = x[ ld_x * block_col + cols[1]];
-        x_vals[2] = x[ ld_x * block_col + cols[2]];
+        x_vals[0] = x[block_col * ld_x + cols[0]];
+        x_vals[1] = x[block_col * ld_x + cols[1]];
+        x_vals[2] = x[block_col * ld_x + cols[2]];
         for(lo r = 0; r < 3; r++) shmem_y_vals[r][tid] = 0;
         for(lo r = 0; r < 3; r++) for(lo c = 0; c < 3; c++) shmem_y_vals[r][tid] += matrix_vals[3*r+c] * x_vals[c];
         __syncthreads();
