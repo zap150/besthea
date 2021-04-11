@@ -2,7 +2,7 @@
 
 # run from the build directory
 
-refine=2
+refine=3
 threads=24
 #threads=36
 gpu_version=4
