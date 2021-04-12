@@ -711,26 +711,41 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     ( *it6 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
   }
 
-  std::vector< sc > paddings_refinementwise( max_space_level + 1, 0.0 );
+  lo initial_space_refinement
+    = _distributed_spacetime_tree->get_initial_space_refinement( );
+
+  std::vector< sc > paddings_refinementwise(
+    max_space_level + 1 - initial_space_refinement, 0.0 );
   const std::vector< sc > & paddings_levelwise
     = _distributed_spacetime_tree->get_spatial_paddings( );
   // paddings_levelwise contains the padding levelwise with respect to the
   // clusters levels. we need the padding with respect to the number of
   // refinements in space.
-  lo initial_space_refinement
-    = _distributed_spacetime_tree->get_initial_space_refinement( );
-  if ( initial_space_refinement > 0 ) {
+
+  lo start_space_refinement
+    = _distributed_spacetime_tree->get_start_space_refinement( );
+  // if ( initial_space_refinement > 0 ) {
+  if ( start_space_refinement > 0 ) {
     // padding is only computed starting from the spatial refinement level
     // initial_space_refinement. set it to this value for all lower levels
-    for ( lo i = 0; i < initial_space_refinement; ++i ) {
+    // for ( lo i = 0; i < initial_space_refinement; ++i ) {
+    for ( lo i = 0; i < start_space_refinement; ++i ) {
       paddings_refinementwise[ i ] = paddings_levelwise[ 0 ];
     }
     // get the correct padding from paddings_levelwise (spatial refinement
     // every second step)
+    // std::cout << max_space_level << std::endl;
+    // std::cout << paddings_levelwise.size( ) << std::endl;
+    // std::cout << initial_space_refinement << std::endl;
+    // std::cout << _distributed_spacetime_tree->get_start_space_refinement( )
+    //           << std::endl;
+    // std::cout << _distributed_spacetime_tree->get_max_levels( ) << std::endl;
     lo current_idx = 0;
-    for ( lo i = initial_space_refinement; i <= max_space_level; ++i ) {
-      // note: by construction current_idx should never be out of bound for
-      // paddings_levelwise
+    // for ( lo i = initial_space_refinement; i <= max_space_level; ++i ) {
+    for ( lo i = start_space_refinement;
+          i <= max_space_level - initial_space_refinement; ++i ) {
+      // note: by construction current_idx should never be out of bound
+      // for paddings_levelwise
       paddings_refinementwise[ i ] = paddings_levelwise.at( current_idx );
       current_idx += 2;
     }
@@ -744,6 +759,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
   }
 
+  // for ( lo i = 0; i < paddings_levelwise.size( ); i++ ) {
+  //   std::cout << "pdl " << paddings_levelwise[ i ] << std::endl;
+  // }
+
+  // for ( lo i = 0; i < paddings_refinementwise.size( ); i++ ) {
+  //   std::cout << "pdr " << paddings_refinementwise[ i ] << std::endl;
+  // }
   // declare half box side lengths of parent and child cluster + initialize
   vector_type h_par_no_pad( 3, false ), h_child_no_pad( 3, false );
   sc dummy_val;

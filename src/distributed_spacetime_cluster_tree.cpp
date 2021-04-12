@@ -175,6 +175,10 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   non_leaf_buffer.clear( );
   non_leaf_buffer.shrink_to_fit( );
   fill_nearfield_and_interaction_lists( *_root );
+
+  // print_internal( _root );
+  // print_information( 0 );
+  ;
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
@@ -1289,7 +1293,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
       _real_max_levels = root.get_level( ) + 1;
     }
     lo n_space_div, n_time_div;
+
     root.get_n_divs( n_space_div, n_time_div );
+
     if ( n_space_div > _local_max_space_level ) {
       _local_max_space_level = n_space_div;
     }
