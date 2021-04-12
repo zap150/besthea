@@ -26,7 +26,7 @@ int main()
     // load and create mesh
     std::string mesh_file = "path/to/mesh/cube_surf.txt";
     lo n_timesteps = 8;
-    sc end_time = 10.0;
+    sc end_time = 1.0;
     triangular_surface_mesh space_mesh;
     space_mesh.load(mesh_file);
     uniform_spacetime_tensor_mesh spacetime_mesh(space_mesh, end_time, n_timesteps);
