@@ -40,7 +40,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/distributed_spacetime_tensor_mesh.h"
 #include "besthea/settings.h"
 #include "besthea/spacetime_be_space.h"
-#include "besthea/spacetime_cluster_tree.h"
 #include "besthea/spacetime_tensor_mesh.h"
 #include "besthea/temporal_mesh.h"
 #include "besthea/triangular_surface_mesh.h"
