@@ -94,6 +94,7 @@ class besthea::linear_algebra::block_linear_operator {
    */
   virtual void apply( const block_vector_type & x, block_vector_type & y,
     bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const = 0;
+
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
    * @param[in] x

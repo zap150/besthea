@@ -51,7 +51,7 @@ besthea::bem::distributed_fast_spacetime_be_space<
 // void besthea::bem::distributed_fast_spacetime_be_space<
 //   besthea::bem::basis_tri_p0 >::interpolation(
 //     sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-//     block_vector_type & interpolation ) const {
+//     distributed_block_vector_type & interpolation ) const {
 //   const s_mesh_type & s_mesh = _tree->get_spatial_mesh( );
 //   const t_mesh_type & t_mesh = _tree->get_temporal_mesh( );
 //   lo n_timesteps = t_mesh.get_n_elements( );
@@ -77,7 +77,7 @@ besthea::bem::distributed_fast_spacetime_be_space<
 // besthea::bem::basis_tri_p1 >::
 //   interpolation(
 //     sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-//     block_vector_type & interpolation ) const {
+//     distributed_block_vector_type & interpolation ) const {
 //   const s_mesh_type & s_mesh = _tree->get_spatial_mesh( );
 //   const t_mesh_type & t_mesh = _tree->get_temporal_mesh( );
 //   lo n_timesteps = t_mesh.get_n_elements( );

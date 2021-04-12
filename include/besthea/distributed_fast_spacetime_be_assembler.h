@@ -37,7 +37,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/chebyshev_evaluator.h"
 #include "besthea/distributed_pFMM_matrix.h"
-#include "besthea/fast_spacetime_be_space.h"
+// DELETE #include "besthea/fast_spacetime_be_space.h"
 #include "besthea/full_matrix.h"
 #include "besthea/general_spacetime_cluster.h"
 #include "besthea/lagrange_interpolant.h"

@@ -41,7 +41,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 besthea::mesh::distributed_spacetime_cluster_tree::
   distributed_spacetime_cluster_tree(
     distributed_spacetime_tensor_mesh & spacetime_mesh, lo levels,
-    lo n_min_elems, sc st_coeff, slou spatial_nearfield_limit, MPI_Comm * comm )
+    lo n_min_elems, sc st_coeff, sc alpha, slou spatial_nearfield_limit,
+    MPI_Comm * comm )
   : _max_levels( levels ),
     _real_max_levels( 0 ),
     _spacetime_mesh( spacetime_mesh ),
@@ -76,41 +77,27 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   // for the first time, and _initial_space_refinement, i.e. the number of
   // spatial refinements needed for level 0.
   _initial_space_refinement = 0;
-  sc delta = 2 * time_half_size;
+  sc delta = 4 * time_half_size * alpha;
   sc max_half_size
     = std::max( { ( xmax - xmin ), ( ymax - ymin ), ( zmax - zmin ) } ) / 2.0;
 
   // determine the number of initial octasections that has to be performed to
   // get clusters whose spatial half size (or rather its largest component) h_x
-  // satisfies the condition h_x \approx st_coeff sqrt(delta). this is
+  // satisfies the condition h_x^2 \approx st_coeff * delta. this is
   // _initial_space_refinement
-  // @todo the criterion should depend on the heat capacity constant alpha too:
-  // i.e. delta should be replaced by delta * alpha (or st_coeff has to be
-  // chosen accordingly)
-  while ( max_half_size > st_coeff * sqrt( delta ) ) {
+  while ( max_half_size * max_half_size > st_coeff * delta ) {
     max_half_size *= 0.5;
     _initial_space_refinement += 1;
   }
   // determine for which temporal level the first spatial refinement is needed
   _start_space_refinement = 1;
   delta *= 0.5;
-  while ( max_half_size <= st_coeff * sqrt( delta ) ) {
+  while ( max_half_size * max_half_size <= st_coeff * delta ) {
     delta *= 0.5;
     _start_space_refinement += 1;
   }
-
-  // like this it is guaranteed that max_halfsize <= st_coeff * sqrt( delta )
-  // on all levels of the tree
-
-  // // old version:
-  // if ( _initial_space_refinement == 0 ) {
-  //   while ( max_half_size <= st_coeff * sqrt( delta ) ) {
-  //     delta *= 0.5;
-  //     _start_space_refinement += 1;
-  //   }
-  // } else {
-  //   _start_space_refinement = 2;
-  // }
+  // like this it is guaranteed that max_halfsize^2 <= st_coeff * delta
+  // on all levels of the tree, with delta = 4 * time_half_size * alpha
 
   // create root at level -1 as combination of whole space and time.
   // set first value of pseudoroot to a distinguished value to avoid problems.
@@ -253,9 +240,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
     // replace time_cluster_on_level with the appropriate vector for the next
     // level
     std::vector< scheduling_time_cluster * > time_clusters_next_level;
-    for ( auto time_cluster : time_clusters_on_level ) {
-      if ( time_cluster->get_n_children( ) > 0 ) {
-        for ( auto child_cluster : *time_cluster->get_children( ) ) {
+    for ( auto t_cluster : time_clusters_on_level ) {
+      if ( t_cluster->get_n_children( ) > 0 ) {
+        for ( auto child_cluster : *t_cluster->get_children( ) ) {
           time_clusters_next_level.push_back( child_cluster );
         }
       }
