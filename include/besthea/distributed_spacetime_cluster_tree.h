@@ -66,13 +66,15 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @param[in] n_min_elems Minimum number of spacetime elements in cluster.
    * @param[in] st_coeff Coefficient to determine the coupling of the spatial
    * and temporal levels.
+   * @param[in] alpha Heat capacity constant. It influences the shape of the
+   * space-time clusters.
    * @param[in] spatial_nearfield_limit Number of clusters in the vicinity of a
    * given clusters to be considered as nearfield
    * @param[in] comm MPI communicator associated with the tree.
    */
   distributed_spacetime_cluster_tree(
     distributed_spacetime_tensor_mesh & spacetime_mesh, lo max_levels,
-    lo n_min_elems, sc st_coeff, slou spatial_nearfield_limit,
+    lo n_min_elems, sc st_coeff, sc alpha, slou spatial_nearfield_limit,
     MPI_Comm * comm );
 
   /**
