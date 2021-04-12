@@ -253,6 +253,14 @@ class besthea::mesh::tree_structure {
   static bool compare_clusters_top_down_right_2_left(
     scheduling_time_cluster * first, scheduling_time_cluster * second );
 
+  /**
+   * Counts the number of contributions of the associated spacetime clusters of
+   * all clusters in the tree structure.
+   *
+   * This is an auxiliary routine which helps to estimate the memory
+   * requirements of the farfield part of distributed pFMM matrices in
+   * @ref distributed_pFMM_matrix.h.
+   */
   void count_number_of_contributions( scheduling_time_cluster * root,
     lo & n_moments, lo & n_moments_receive, lo & n_local_contributions );
 
@@ -474,7 +482,7 @@ class besthea::mesh::tree_structure {
    * root and another essential cluster). In addition, @p _levels is reset. The
    * method is based on a tree traversal.
    * @param[in] root  Current cluster in the tree traversal.
-   * @note This method is solely used by @ref reduce_2_essential .
+   * @note This method is solely used by @ref reduce_2_essential.
    */
   void prepare_essential_reduction( scheduling_time_cluster & root );
 
@@ -514,8 +522,8 @@ class besthea::mesh::tree_structure {
    * @note The locally essential tree should also contain clusters which are
    * contained in a path from the root of the tree structure to a cluster which
    * meets one of the above requirements. Such clusters are not detected here,
-   * but in the routine @ref prepare_essential_reduction .
-   * @note This method is solely used by @ref reduce_2_essential .
+   * but in the routine @ref prepare_essential_reduction.
+   * @note This method is solely used by @ref reduce_2_essential.
    */
   void determine_essential_clusters(
     const lo my_process_id, scheduling_time_cluster & root ) const;

@@ -67,8 +67,6 @@ besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
     _spat_order( spat_order ),
     _m2l_integration_order( _spat_order ),
     _alpha( alpha ),
-    _lagrange( temp_order ),
-    _chebyshev( spat_order ),
     _comm( comm ) {
   MPI_Comm_rank( *_comm, &_my_rank );
 }
@@ -965,8 +963,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   lo size = my_quadrature._wy_cheb.size( );
 
   // x1, x2, x3 are vectors in R^3,
-  // y%_mapped are the %th components of the vectors to which y#_ref is
-  // mapped
+  // y%_mapped are the %th components of the vectors to which y%_ref is mapped
 #pragma omp simd aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref \
                           : DATA_ALIGN ) simdlen( DATA_WIDTH )
   for ( lo i = 0; i < size; ++i ) {

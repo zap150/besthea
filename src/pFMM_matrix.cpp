@@ -170,7 +170,7 @@ void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
   block_vector_type & y, bool trans, sc alpha, sc beta ) const {
 // Specialization for the single and double layer operators
 #pragma omp parallel for schedule( static )
-  for ( lo i = 0; i < y.get_block_size( ); ++i ) {
+  for ( lo i = 0; i < y.get_n_blocks( ); ++i ) {
     for ( lo j = 0; j < y.get_size_of_block( ); ++j ) {
       y.set( i, j, y.get( i, j ) * beta );
     }
@@ -257,7 +257,7 @@ void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
   full_matrix_type aux_buffer_1( ( _temp_order + 1 ) * ( _temp_order + 1 ),
     ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6,
     false );
-  block_vector_type y_pFMM( y.get_block_size( ), y.get_size_of_block( ), true );
+  block_vector_type y_pFMM( y.get_n_blocks( ), y.get_size_of_block( ), true );
 
   // S2M, M2M, M2L, L2L and L2T steps:
   apply_s2m_operations( x, trans );
@@ -278,7 +278,7 @@ void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
   // Specialization for hypersingular operator
 
 #pragma omp parallel for schedule( static )
-  for ( lo i = 0; i < y.get_block_size( ); ++i ) {
+  for ( lo i = 0; i < y.get_n_blocks( ); ++i ) {
     for ( lo j = 0; j < y.get_size_of_block( ); ++j ) {
       y.set( i, j, y.get( i, j ) * beta );
     }
@@ -361,7 +361,7 @@ void besthea::linear_algebra::pFMM_matrix< kernel_type, target_space,
   full_matrix_type aux_buffer_1( ( _temp_order + 1 ) * ( _temp_order + 1 ),
     ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6,
     false );
-  block_vector_type y_pFMM( y.get_block_size( ), y.get_size_of_block( ), true );
+  block_vector_type y_pFMM( y.get_n_blocks( ), y.get_size_of_block( ), true );
 
   // 3 "pFMM steps" for first term of hypersingular operator (curls)
   for ( lo dim = 0; dim < 3; ++dim ) {

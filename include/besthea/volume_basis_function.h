@@ -29,7 +29,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file volume_basis_function.h
- * @brief
+ * @brief Contains a parent class for all spatial finite element basis functions
+ * defined on tetrahedral volume meshes.
+ * @note updated documentation
  */
 
 #ifndef INCLUDE_BESTHEA_VOLUME_BASIS_FUNCTION_H_
@@ -86,12 +88,12 @@ class besthea::bem::volume_basis_function {
   }
 
   /**
-   * Returns number of basis functions supported on i_elem.
+   * Returns the number of basis functions supported on a single tetrahedron.
    */
   virtual lo dimension_local( ) const = 0;
 
   /**
-   * Returns number of basis functions on the whole mesh.
+   * Returns the number of basis functions on the whole mesh.
    */
   virtual lo dimension_global( ) const = 0;
 
@@ -99,14 +101,18 @@ class besthea::bem::volume_basis_function {
    * Provides global indices for local contributions.
    * @param[in] i_elem Element index.
    * @param[out] indices Global indices for local contributions.
+   * @remark Example: In case of p1 basis functions the global indices of the
+   * nodes of the tetrahedron with index \p i_elem are returned.
    */
   void local_to_global( lo i_elem, std::vector< lo > & indices ) const {
     derived( )->do_local_to_global( i_elem, indices );
   }
 
   /**
-   * Evaluates the basis function.
-   * @param[in] i_elem Element index.
+   * Evaluates a basis function in a point in a tetrahedron. The point is given
+   * by coordinates in the reference tetrahedron
+   * (\f$ (x_1,x_2,x_3) \in (0,1)\times(0,1-x_1)\times(0,1-x_1-x_2) \f$).
+   * @param[in] i_elem Index of the tetrahedron.
    * @param[in] i_fun Local basis function index.
    * @param[in] x1_ref First coordinate of reference quadrature point.
    * @param[in] x2_ref Second coordinate of reference quadrature point.
@@ -118,7 +124,7 @@ class besthea::bem::volume_basis_function {
   }
 
  protected:
-  const mesh_type * _mesh;  //!< Pointer to the mesh.
+  const mesh_type * _mesh;  //!< Pointer to the underlying mesh.
 };
 
 #endif /* INCLUDE_BESTHEA_VOLUME_BASIS_FUNCTION_H_ */

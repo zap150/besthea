@@ -82,8 +82,11 @@ besthea::mesh::distributed_spacetime_cluster_tree::
 
   // determine the number of initial octasections that has to be performed to
   // get clusters whose spatial half size (or rather its largest component) h_x
-  // satisfies the condition h_x^ \approx st_coeff sqrt(delta). this is
+  // satisfies the condition h_x \approx st_coeff sqrt(delta). this is
   // _initial_space_refinement
+  // @todo the criterion should depend on the heat capacity constant alpha too:
+  // i.e. delta should be replaced by delta * alpha (or st_coeff has to be
+  // chosen accordingly)
   while ( max_half_size > st_coeff * sqrt( delta ) ) {
     max_half_size *= 0.5;
     _initial_space_refinement += 1;

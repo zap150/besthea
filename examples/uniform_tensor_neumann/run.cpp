@@ -28,6 +28,12 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/**
+ * Solves the second boundary integral equation (possibly with non-zero initial
+ * conditions) for the unknown Dirichlet datum and evaluates it in a provided
+ * set of grid points.
+ */
+
 #include "besthea/besthea.h"
 
 #include <cstdlib>
