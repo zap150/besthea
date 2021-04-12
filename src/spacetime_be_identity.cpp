@@ -32,7 +32,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
-#include "besthea/fast_spacetime_be_space.h"
+// DELETE #include "besthea/fast_spacetime_be_space.h"
 #include "besthea/quadrature.h"
 #include "besthea/uniform_spacetime_be_space.h"
 
@@ -178,26 +178,30 @@ void besthea::bem::spacetime_be_identity< test_space_type,
   }
 }
 
-template class besthea::bem::spacetime_be_identity<
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
-template class besthea::bem::spacetime_be_identity<
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
-template class besthea::bem::spacetime_be_identity<
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+// DELETE the following lines
+// template class besthea::bem::spacetime_be_identity<
+//   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+//   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
+// template class besthea::bem::spacetime_be_identity<
+//   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+//   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+// template class besthea::bem::spacetime_be_identity<
+//   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+//   besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
 
-// Needed for L2 projection which is const
-template class besthea::bem::spacetime_be_identity<
-  const besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  const besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
-template class besthea::bem::spacetime_be_identity<
-  const besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  const besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
-template class besthea::bem::spacetime_be_identity<
-  const besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  const besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+// // Needed for L2 projection which is const
+// template class besthea::bem::spacetime_be_identity<
+//   const besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+//   const besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >
+//   >;
+// template class besthea::bem::spacetime_be_identity<
+//   const besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 >,
+//   const besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >
+//   >;
+// template class besthea::bem::spacetime_be_identity<
+//   const besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >,
+//   const besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 >
+//   >;
 
 template class besthea::bem::spacetime_be_identity<
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,

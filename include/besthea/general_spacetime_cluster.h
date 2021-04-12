@@ -46,7 +46,8 @@ namespace besthea {
   }
 }
 
-// forward declaration of fast_spacetime_be_space and basis functions
+// forward declaration of distributed_fast_spacetime_be_space and basis
+// functions
 namespace besthea {
   namespace bem {
     template< class basis_type >

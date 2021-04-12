@@ -90,7 +90,8 @@ class besthea::bem::distributed_fast_spacetime_be_space
     = besthea::mesh::triangular_surface_mesh;        //!< Spatial mesh type.
   using t_mesh_type = besthea::mesh::temporal_mesh;  //!< Temporal mesh type.
   using block_vector_type
-    = besthea::linear_algebra::block_vector;  //!< Block vector type.
+    = besthea::linear_algebra::block_vector;  //!< Block vector
+                                              //!< type.
 
  public:
   /**

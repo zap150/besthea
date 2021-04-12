@@ -253,9 +253,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
     // replace time_cluster_on_level with the appropriate vector for the next
     // level
     std::vector< scheduling_time_cluster * > time_clusters_next_level;
-    for ( auto time_cluster : time_clusters_on_level ) {
-      if ( time_cluster->get_n_children( ) > 0 ) {
-        for ( auto child_cluster : *time_cluster->get_children( ) ) {
+    for ( auto t_cluster : time_clusters_on_level ) {
+      if ( t_cluster->get_n_children( ) > 0 ) {
+        for ( auto child_cluster : *t_cluster->get_children( ) ) {
           time_clusters_next_level.push_back( child_cluster );
         }
       }
