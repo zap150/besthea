@@ -119,6 +119,30 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   _spatial_paddings.shrink_to_fit( );
 
   compute_local_spatial_padding( *_root );
+
+  // Correct the spatial padding to guarantee, that clusters which are refined
+  // in space the same number of times are padded equally (a correction is
+  // necessary in case of early space-time leaf clusters). It suffices to
+  // identify levels where the number of spatial refinements is the same and set
+  // the padding to the maximal value.
+  lo space_level_group_begin
+    = 0;  // used to keep track of the level where space was last refined
+  lo next_space_ref_level = _start_space_refinement;
+  sc max_padding_at_spatial_level = 0.0;
+  for ( lo i = 0; i < _max_levels; ++i ) {
+    if ( _spatial_paddings[ i ] > max_padding_at_spatial_level ) {
+      max_padding_at_spatial_level = _spatial_paddings[ i ];
+    }
+    if ( i + 1 == next_space_ref_level ) {
+      for ( lo j = space_level_group_begin; j <= i; ++j ) {
+        _spatial_paddings[ j ] = max_padding_at_spatial_level;
+      }
+      space_level_group_begin = i + 1;
+      next_space_ref_level += 2;
+      max_padding_at_spatial_level = 0.0;
+    }
+  }
+
   // reduce padding data among processes
   MPI_Allreduce( MPI_IN_PLACE, _spatial_paddings.data( ),
     _spatial_paddings.size( ), get_scalar_type< sc >::MPI_SC( ), MPI_MAX,
