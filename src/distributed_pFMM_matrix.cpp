@@ -1985,19 +1985,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   if ( verbose ) {
 #pragma omp critical( verbose )
     {
-      if ( _measure_tasks ) {
-        _l_subtask_times.at( omp_get_thread_num( ) )
-          .push_back( _global_timer.get_time_from_start< time_type >( ) );
-      }
       std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
       if ( outfile.is_open( ) ) {
         outfile << "call L2L for cluster " << time_cluster->get_global_index( )
                 << " at level " << time_cluster->get_level( ) << std::endl;
         outfile.close( );
-      }
-      if ( _measure_tasks ) {
-        _l_subtask_times.at( omp_get_thread_num( ) )
-          .push_back( _global_timer.get_time_from_start< time_type >( ) );
       }
     }
   }
@@ -2011,8 +2003,16 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 #pragma omp taskloop
   for ( lou i = n_associated_leaves; i < associated_spacetime_clusters->size( );
         ++i ) {
+    if ( _measure_tasks ) {
+      _l_subtask_times.at( omp_get_thread_num( ) )
+        .push_back( _global_timer.get_time_from_start< time_type >( ) );
+    }
     apply_grouped_l2l_operation(
       ( *associated_spacetime_clusters )[ i ], configuration );
+    if ( _measure_tasks ) {
+      _l_subtask_times.at( omp_get_thread_num( ) )
+        .push_back( _global_timer.get_time_from_start< time_type >( ) );
+    }
   }
 }
 
