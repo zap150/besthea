@@ -39,7 +39,7 @@ int main( int argc, char * argv[] ) {
 
   bool printCheckErrors = false;
   
-  lo finess_level = 2;
+  lo finess_level = 3;
   int gpu_alg_ver = 1;
   int repetitions = 1;
   int pre_repetitions = 0;
