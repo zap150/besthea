@@ -29,8 +29,8 @@ int main( int argc, char * argv[] ) {
   std::string mesh_file_24 = "../../besthea/examples/mesh_files/cube_24.txt";
   sc heat_capacity_constant = 1.0;
 
-  bool doMem    = false;
-  bool doFlyCpu = false;
+  bool doMem    = true;
+  bool doFlyCpu = true;
   bool doFlyGpu = true;
   bool doV = true;
   bool doK = true;
@@ -101,7 +101,6 @@ int main( int argc, char * argv[] ) {
   printf("Using quadrature order regular  %d\n", quadr_order_reg);
   printf("Using quadrature order singular %d\n", quadr_order_sng);
   printf("Using GPU algorithm version %d\n", gpu_alg_ver);
-  return 0;
 
   // boundary element spaces
   uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
