@@ -15,7 +15,7 @@ using namespace besthea::tools;
 int main( int argc, char * argv[] ) {
 
   if(argc > 1 && (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0)) {
-    printf("Usage: ./matrix_vector_product refine gpu_alg_ver repetitions pre_repetitions quadr_order_reg quadr_order_sng\n");
+    printf("Usage: ./matrix_vector_product finess_level gpu_alg_ver repetitions pre_repetitions quadr_order_reg quadr_order_sng\n");
     return 0;
   }
   
@@ -25,9 +25,8 @@ int main( int argc, char * argv[] ) {
   time_measurer tm_Ama, tm_Amm, tm_Afc, tm_Afg;
   time_measurer tm_Dma, tm_Dmm, tm_Dfc, tm_Dfg;
   
-  std::string mesh_file = "../../besthea/examples/mesh_files/cube_192.txt";
-  lo n_timesteps = 8;
-  sc end_time = 1.0;
+  std::string mesh_file_12 = "../../besthea/examples/mesh_files/cube_12.txt";
+  std::string mesh_file_24 = "../../besthea/examples/mesh_files/cube_24.txt";
   sc heat_capacity_constant = 1.0;
 
   bool doMem    = false;
@@ -40,7 +39,7 @@ int main( int argc, char * argv[] ) {
 
   bool printCheckErrors = false;
   
-  int refine = 0;
+  lo finess_level = 2;
   int gpu_alg_ver = 1;
   int repetitions = 1;
   int pre_repetitions = 0;
@@ -49,7 +48,7 @@ int main( int argc, char * argv[] ) {
 
   tm_init.start();
 
-  if(argc > 1) refine = atoi(argv[1]);
+  if(argc > 1) finess_level = atoi(argv[1]);
   if(argc > 2) gpu_alg_ver = atoi(argv[2]);
   if(argc > 3) repetitions = atoi(argv[3]);
   if(argc > 4) pre_repetitions = atoi(argv[4]);
@@ -70,21 +69,39 @@ int main( int argc, char * argv[] ) {
   besthea::settings::output_verbosity.timers = 2;
   besthea::settings::output_verbosity.onthefly_loadbalance = 2;
 
-  // load spatial mesh from file
+  // finess_level   1  2   3   4   5    6    7    8     9
+  // n_timesteps    2  4   8  16  32   64  128  256   512
+  // n_space_elems 48 96 192 384 768 1536 3072 6144 12288  ...
+  // orig_sp_elems 12 24  12  24  12   24   12   24    12
+  // space_refine   1  1   2   2   3    3    4    4     5
+  lo n_timesteps = std::exp2(finess_level);
+  sc end_time = 1.0;
+  std::string mesh_file;
+  if(finess_level % 2 == 0) {
+    mesh_file = mesh_file_24;
+  } else {
+    mesh_file = mesh_file_12;
+  }
+  int space_refine = (finess_level + 1) / 2;
+  
+  // load spatial mesh from file and refine
   triangular_surface_mesh space_mesh;
   space_mesh.load( mesh_file );
-
-  // refinement
-  space_mesh.refine( refine );
-  n_timesteps *= std::exp2( 2 * refine );
+  space_mesh.refine( space_refine );
 
   // create spacetime mesh as a tensor product of spatial and temporal meshes
   uniform_spacetime_tensor_mesh spacetime_mesh( space_mesh, end_time, n_timesteps );
   uniform_spacetime_tensor_mesh_gpu gpu_spacetime_mesh(spacetime_mesh);
+
+  // print some info
   spacetime_mesh.print_info();
+  printf("Sqrt of spatial element area (~hx) %f\n", std::sqrt(space_mesh.area(0)));
+  printf("Timestep length (ht) %f\n", end_time / n_timesteps);
+  printf("hx^2/ht %f\n", space_mesh.area(0) / (end_time / n_timesteps));
   printf("Using quadrature order regular  %d\n", quadr_order_reg);
   printf("Using quadrature order singular %d\n", quadr_order_sng);
   printf("Using GPU algorithm version %d\n", gpu_alg_ver);
+  return 0;
 
   // boundary element spaces
   uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
