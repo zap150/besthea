@@ -166,16 +166,16 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
 
   switch(gpu_kernel_version) {
     case 4:
-      // x, y
-      vectors_data.allocate(n_gpus, this->get_block_dim(), this->get_dim_domain(), this->get_block_dim(), this->get_dim_range());
+      // x_perm, y
+      vectors_data.allocate(n_gpus, this->get_dim_domain(), this->get_block_dim(), this->get_block_dim(), this->get_dim_range());
       break;
     case 3:
-      // x, y
-      vectors_data.allocate(n_gpus, this->get_block_dim(), this->get_dim_domain(), this->get_block_dim(), this->get_dim_range());
+      // x_perm, y
+      vectors_data.allocate(n_gpus, this->get_dim_domain(), this->get_block_dim(), this->get_block_dim(), this->get_dim_range());
       break;
     case 2:
-      // x_perm, y_perm
-      vectors_data.allocate(n_gpus, this->get_dim_domain(), this->get_block_dim(), this->get_dim_range(), this->get_block_dim());
+      // x_perm, y
+      vectors_data.allocate(n_gpus, this->get_dim_domain(), this->get_block_dim(), this->get_block_dim(), this->get_dim_range());
       break;
     case 1:
     default:
@@ -1289,7 +1289,7 @@ __global__ void g_apply_regular_ver2
   ( [[maybe_unused]] besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
-    const sc * x_perm, lo ld_x_perm, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin,
+    const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
@@ -1353,7 +1353,7 @@ __global__ void g_apply_regular_ver2
             y_val += shmem_matrix_vals[j] * x_val;
           }
           y_val *= alpha;
-          y_perm[block_row + ld_y_perm * row] += y_val;
+          y[block_row * ld_y + row] += y_val;
         }
         __syncthreads();
       }
@@ -1372,7 +1372,7 @@ __global__ void g_apply_regular_ver2
   ( [[maybe_unused]] besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
-    const sc * x_perm, lo ld_x_perm, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin,
+    const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
@@ -1443,7 +1443,7 @@ __global__ void g_apply_regular_ver2
             y_val += shmem_matrix_vals[2][j] * x_perm[block_col + ld_x_perm * cols[2]];
           }
           y_val *= alpha;
-          y_perm[block_row + ld_y_perm * row] += y_val;
+          y[block_row * ld_y + row] += y_val;
         }
         __syncthreads();
       }
@@ -1461,7 +1461,7 @@ __global__ void g_apply_regular_ver2
   ( [[maybe_unused]] besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
-    const sc * x_perm, lo ld_x_perm, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin,
+    const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
@@ -1531,9 +1531,9 @@ __global__ void g_apply_regular_ver2
             y_vals[1] += shmem_matrix_vals[1][j] * x_val;
             y_vals[2] += shmem_matrix_vals[2][j] * x_val;
           }
-          atomicAdd(&y_perm[block_row + ld_y_perm * rows[0]], alpha * y_vals[0]);
-          atomicAdd(&y_perm[block_row + ld_y_perm * rows[1]], alpha * y_vals[1]);
-          atomicAdd(&y_perm[block_row + ld_y_perm * rows[2]], alpha * y_vals[2]);
+          atomicAdd(&y[block_row * ld_y + rows[0]], alpha * y_vals[0]);
+          atomicAdd(&y[block_row * ld_y + rows[1]], alpha * y_vals[1]);
+          atomicAdd(&y[block_row * ld_y + rows[2]], alpha * y_vals[2]);
         }
         __syncthreads();
       }
@@ -1551,7 +1551,7 @@ __global__ void g_apply_regular_ver2
   ( [[maybe_unused]] besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
-    const sc * x_perm, lo ld_x_perm, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin,
+    const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
@@ -1621,9 +1621,9 @@ __global__ void g_apply_regular_ver2
              for(lo c = 0; c < 3; c++)
               y_vals[r] += shmem_matrix_vals[3*r+c][j] * x_vals[c];
           }
-          atomicAdd(&y_perm[block_row + ld_y_perm * rows[0]], alpha * y_vals[0]);
-          atomicAdd(&y_perm[block_row + ld_y_perm * rows[1]], alpha * y_vals[1]);
-          atomicAdd(&y_perm[block_row + ld_y_perm * rows[2]], alpha * y_vals[2]);
+          atomicAdd(&y[block_row * ld_y + rows[0]], alpha * y_vals[0]);
+          atomicAdd(&y[block_row * ld_y + rows[1]], alpha * y_vals[1]);
+          atomicAdd(&y[block_row * ld_y + rows[2]], alpha * y_vals[2]);
         }
         __syncthreads();
       }
@@ -1652,7 +1652,7 @@ __global__ void g_apply_regular_ver3
   ( [[maybe_unused]] besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
-    const sc * x, lo ld_x, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
+    const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
@@ -1698,7 +1698,7 @@ __global__ void g_apply_regular_ver3
       for(lo block = 0; block < max_block; block++) {
         lo block_row = diag + block;
         lo block_col = block;
-        shmem_y_vals[tid] = matrix_val * x[block_col * ld_x + col];
+        shmem_y_vals[tid] = matrix_val * x_perm[block_col + ld_x_perm * col];
         __syncthreads();
         d_reduce_sum_2d_y(shmem_y_vals);
         if(tid < blockDim.x) y[block_row * ld_y + row] += alpha * shmem_y_vals[tid];
@@ -1721,7 +1721,7 @@ __global__ void g_apply_regular_ver3
   ( [[maybe_unused]] besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
-    const sc * x, lo ld_x, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
+    const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
@@ -1770,9 +1770,9 @@ __global__ void g_apply_regular_ver3
       for(lo block = 0; block < max_block; block++) {
         lo block_row = diag + block;
         lo block_col = block;
-        shmem_y_vals[tid]  = matrix_vals[0] * x[ block_col * ld_x + cols[0]];
-        shmem_y_vals[tid] += matrix_vals[1] * x[ block_col * ld_x + cols[1]];
-        shmem_y_vals[tid] += matrix_vals[2] * x[ block_col * ld_x + cols[2]];
+        shmem_y_vals[tid]  = matrix_vals[0] * x_perm[block_col + ld_x_perm * cols[0]];
+        shmem_y_vals[tid] += matrix_vals[1] * x_perm[block_col + ld_x_perm * cols[1]];
+        shmem_y_vals[tid] += matrix_vals[2] * x_perm[block_col + ld_x_perm * cols[2]];
         __syncthreads();
         d_reduce_sum_2d_y(shmem_y_vals);
         if(tid < blockDim.x) y[block_row * ld_y + row] += alpha * shmem_y_vals[tid];
@@ -1795,7 +1795,7 @@ __global__ void g_apply_regular_ver3
   ( [[maybe_unused]] besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
-    const sc * x, lo ld_x, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
+    const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
@@ -1850,7 +1850,7 @@ __global__ void g_apply_regular_ver3
       for(lo block = 0; block < max_block; block++) {
         lo block_row = diag + block;
         lo block_col = block;
-        sc x_val = x[ block_col * ld_x + col];
+        sc x_val = x_perm[block_col + ld_x_perm * col];
         shmem_y_vals[0][tid] = matrix_vals[0] * x_val;
         shmem_y_vals[1][tid] = matrix_vals[1] * x_val;
         shmem_y_vals[2][tid] = matrix_vals[2] * x_val;
@@ -1877,7 +1877,7 @@ __global__ void g_apply_regular_ver3
   ( [[maybe_unused]] besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
-    const sc * x, lo ld_x, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
+    const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
@@ -1931,9 +1931,9 @@ __global__ void g_apply_regular_ver3
       for(lo block = 0; block < max_block; block++) {
         lo block_row = diag + block;
         lo block_col = block;
-        x_vals[0] = x[block_col * ld_x + cols[0]];
-        x_vals[1] = x[block_col * ld_x + cols[1]];
-        x_vals[2] = x[block_col * ld_x + cols[2]];
+        x_vals[0] = x_perm[block_col + ld_x_perm * cols[0]];
+        x_vals[1] = x_perm[block_col + ld_x_perm * cols[1]];
+        x_vals[2] = x_perm[block_col + ld_x_perm * cols[2]];
         for(lo r = 0; r < 3; r++) shmem_y_vals[r][tid] = 0;
         for(lo r = 0; r < 3; r++) for(lo c = 0; c < 3; c++) shmem_y_vals[r][tid] += matrix_vals[3*r+c] * x_vals[c];
         __syncthreads();
@@ -1971,7 +1971,7 @@ __global__ void g_apply_regular_ver4
   ( [[maybe_unused]] besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
-    const sc * x, lo ld_x, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
+    const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
@@ -2024,7 +2024,7 @@ __global__ void g_apply_regular_ver4
           for(int j = 0; j < curr_active_threads; j++) {
             lo i_trl = (i / blockDim.y) * blockDim.y + j;
             lo &col = i_trl;
-            sc x_val = x[block_col * ld_x + col];
+            sc x_val = x_perm[block_col + ld_x_perm * col];
             y_val += shmem_matrix_vals[j * blockDim.x + threadIdx.x] * x_val;
           }
           y_val *= alpha;
@@ -2046,7 +2046,7 @@ __global__ void g_apply_regular_ver4
   ( [[maybe_unused]] besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
-    const sc * x, lo ld_x, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
+    const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
@@ -2105,9 +2105,9 @@ __global__ void g_apply_regular_ver4
           for(int j = 0; j < curr_active_threads; j++) {
             lo i_trl = (i / blockDim.y) * blockDim.y + j;
             lo * cols = mesh_data.d_element_nodes + 3 * i_trl;
-            y_val += shmem_matrix_vals[0][j * blockDim.x + threadIdx.x] * x[block_col * ld_x + cols[0]];
-            y_val += shmem_matrix_vals[1][j * blockDim.x + threadIdx.x] * x[block_col * ld_x + cols[1]];
-            y_val += shmem_matrix_vals[2][j * blockDim.x + threadIdx.x] * x[block_col * ld_x + cols[2]];
+            y_val += shmem_matrix_vals[0][j * blockDim.x + threadIdx.x] * x_perm[block_col + ld_x_perm * cols[0]];
+            y_val += shmem_matrix_vals[1][j * blockDim.x + threadIdx.x] * x_perm[block_col + ld_x_perm * cols[1]];
+            y_val += shmem_matrix_vals[2][j * blockDim.x + threadIdx.x] * x_perm[block_col + ld_x_perm * cols[2]];
           }
           y_val *= alpha;
           y[block_row * ld_y + row] += y_val;
@@ -2128,7 +2128,7 @@ __global__ void g_apply_regular_ver4
   ( [[maybe_unused]] besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
-    const sc * x, lo ld_x, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
+    const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
@@ -2187,7 +2187,7 @@ __global__ void g_apply_regular_ver4
           for(int j = 0; j < curr_active_threads; j++) {
             lo i_trl = (i / blockDim.y) * blockDim.y + j;
             lo &col = i_trl;
-            sc x_val = x[block_col * ld_x + col];
+            sc x_val = x_perm[block_col + ld_x_perm * col];
             y_vals[0] += shmem_matrix_vals[0][j * blockDim.x + threadIdx.x] * x_val;
             y_vals[1] += shmem_matrix_vals[1][j * blockDim.x + threadIdx.x] * x_val;
             y_vals[2] += shmem_matrix_vals[2][j * blockDim.x + threadIdx.x] * x_val;
@@ -2212,7 +2212,7 @@ __global__ void g_apply_regular_ver4
   ( [[maybe_unused]] besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
     [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
-    const sc * x, lo ld_x, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
+    const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
@@ -2269,9 +2269,9 @@ __global__ void g_apply_regular_ver4
             lo i_trl = (i / blockDim.y) * blockDim.y + j;
             lo * cols = mesh_data.d_element_nodes + 3 * i_trl;
             sc x_vals[3];
-            x_vals[0] = x[block_col * ld_x + cols[0]];
-            x_vals[1] = x[block_col * ld_x + cols[1]];
-            x_vals[2] = x[block_col * ld_x + cols[2]];
+            x_vals[0] = x_perm[block_col + ld_x_perm * cols[0]];
+            x_vals[1] = x_perm[block_col + ld_x_perm * cols[1]];
+            x_vals[2] = x_perm[block_col + ld_x_perm * cols[2]];
             for(lo r = 0; r < 3; r++)
               for(lo c = 0; c < 3; c++)
                 y_vals[r] += shmem_matrix_vals[3*r+c][j * blockDim.x + threadIdx.x] * x_vals[c];
@@ -2365,13 +2365,13 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   if(load_distr->get_gpu_count_total() > 0) {
     switch(gpu_kernel_version) {
       case 4:
-        this->apply_regular_gpu_begin(x, y, alpha, timers);
+        this->apply_regular_gpu_begin(x_perm, y, alpha, timers);
         break;
       case 3:
-        this->apply_regular_gpu_begin(x, y, alpha, timers);
+        this->apply_regular_gpu_begin(x_perm, y, alpha, timers);
         break;
       case 2:
-        this->apply_regular_gpu_begin(x_perm, y_perm, alpha, timers);
+        this->apply_regular_gpu_begin(x_perm, y, alpha, timers);
         break;
       case 1:
       default:
@@ -2403,7 +2403,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
         this->apply_regular_gpu_finalize(y);
         break;
       case 2:
-        this->apply_regular_gpu_finalize(y_perm);
+        this->apply_regular_gpu_finalize(y);
         break;
       case 1:
       default:
