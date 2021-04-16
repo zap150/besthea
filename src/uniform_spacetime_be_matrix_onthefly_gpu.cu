@@ -294,31 +294,32 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
 
 
 
-
+template<int tpbx>
 __device__ void d_reduce_sum(volatile sc * shmem_vals) {
 
-  // assuming blockDim.x is power of 2
+  // assuming tpbx is power of 2
   // assuming 1D block
-  // assuming number of values is equal to blockDim
+  // assuming number of values is equal to tpbx
+  // assuming tpbx is equal to blockDim.x
 
-  int thread_count = blockDim.x / 2;
+  int curr_thread_count = tpbx / 2;
   int tid = threadIdx.x;
   
-  while(thread_count > 32) {
-    if(tid < thread_count) {
-      shmem_vals[tid] += shmem_vals[tid + thread_count];
+  while(curr_thread_count > 32) {
+    if(tid < curr_thread_count) {
+      shmem_vals[tid] += shmem_vals[tid ^ curr_thread_count];
     }
     __syncthreads();
-    thread_count /= 2;
+    curr_thread_count /= 2;
   }
 
   if(tid < 32) {
-    shmem_vals[tid] += shmem_vals[tid + 32];
-    shmem_vals[tid] += shmem_vals[tid + 16];
-    shmem_vals[tid] += shmem_vals[tid +  8];
-    shmem_vals[tid] += shmem_vals[tid +  4];
-    shmem_vals[tid] += shmem_vals[tid +  2];
-    shmem_vals[tid] += shmem_vals[tid +  1];
+    if(tpbx >= 64) shmem_vals[tid] += shmem_vals[tid ^ 32];
+    if(tpbx >= 32) shmem_vals[tid] += shmem_vals[tid ^ 16];
+    if(tpbx >= 16) shmem_vals[tid] += shmem_vals[tid ^  8];
+    if(tpbx >=  8) shmem_vals[tid] += shmem_vals[tid ^  4];
+    if(tpbx >=  4) shmem_vals[tid] += shmem_vals[tid ^  2];
+    if(tpbx >=  2) shmem_vals[tid] += shmem_vals[tid ^  1];
   }
 
   __syncthreads();
@@ -327,47 +328,49 @@ __device__ void d_reduce_sum(volatile sc * shmem_vals) {
 
 
 
+template<int tpbx>
 __device__ void d_reduce_sum_multiple(volatile sc * shmem_vals1,
   volatile sc * shmem_vals2, volatile sc * shmem_vals3) {
 
-  // assuming blockDim.x is power of 2
+  // assuming tpbx is power of 2
   // assuming 1D block
-  // assuming number of values is equal to blockDim
+  // assuming number of values is equal to tpbx
+  // assuming tpbx is equal to blockDim.x
 
-  int thread_count = blockDim.x / 2;
+  int curr_thread_count = tpbx / 2;
   int tid = threadIdx.x;
   
-  while(thread_count > 32) {
-    if(tid < thread_count) {
-      shmem_vals1[tid] += shmem_vals1[tid + thread_count];
-      shmem_vals2[tid] += shmem_vals2[tid + thread_count];
-      shmem_vals3[tid] += shmem_vals3[tid + thread_count];
+  while(curr_thread_count > 32) {
+    if(tid < curr_thread_count) {
+      shmem_vals1[tid] += shmem_vals1[tid ^ curr_thread_count];
+      shmem_vals2[tid] += shmem_vals2[tid ^ curr_thread_count];
+      shmem_vals3[tid] += shmem_vals3[tid ^ curr_thread_count];
     }
     __syncthreads();
-    thread_count /= 2;
+    curr_thread_count /= 2;
   }
 
   if(tid < 32) {
-    shmem_vals1[tid] += shmem_vals1[tid + 32];
-    shmem_vals1[tid] += shmem_vals1[tid + 16];
-    shmem_vals1[tid] += shmem_vals1[tid +  8];
-    shmem_vals1[tid] += shmem_vals1[tid +  4];
-    shmem_vals1[tid] += shmem_vals1[tid +  2];
-    shmem_vals1[tid] += shmem_vals1[tid +  1];
+    if(tpbx >= 64) shmem_vals1[tid] += shmem_vals1[tid ^ 32];
+    if(tpbx >= 32) shmem_vals1[tid] += shmem_vals1[tid ^ 16];
+    if(tpbx >= 16) shmem_vals1[tid] += shmem_vals1[tid ^  8];
+    if(tpbx >=  8) shmem_vals1[tid] += shmem_vals1[tid ^  4];
+    if(tpbx >=  4) shmem_vals1[tid] += shmem_vals1[tid ^  2];
+    if(tpbx >=  2) shmem_vals1[tid] += shmem_vals1[tid ^  1];
     
-    shmem_vals2[tid] += shmem_vals2[tid + 32];
-    shmem_vals2[tid] += shmem_vals2[tid + 16];
-    shmem_vals2[tid] += shmem_vals2[tid +  8];
-    shmem_vals2[tid] += shmem_vals2[tid +  4];
-    shmem_vals2[tid] += shmem_vals2[tid +  2];
-    shmem_vals2[tid] += shmem_vals2[tid +  1];
+    if(tpbx >= 64) shmem_vals2[tid] += shmem_vals2[tid ^ 32];
+    if(tpbx >= 32) shmem_vals2[tid] += shmem_vals2[tid ^ 16];
+    if(tpbx >= 16) shmem_vals2[tid] += shmem_vals2[tid ^  8];
+    if(tpbx >=  8) shmem_vals2[tid] += shmem_vals2[tid ^  4];
+    if(tpbx >=  4) shmem_vals2[tid] += shmem_vals2[tid ^  2];
+    if(tpbx >=  2) shmem_vals2[tid] += shmem_vals2[tid ^  1];
     
-    shmem_vals3[tid] += shmem_vals3[tid + 32];
-    shmem_vals3[tid] += shmem_vals3[tid + 16];
-    shmem_vals3[tid] += shmem_vals3[tid +  8];
-    shmem_vals3[tid] += shmem_vals3[tid +  4];
-    shmem_vals3[tid] += shmem_vals3[tid +  2];
-    shmem_vals3[tid] += shmem_vals3[tid +  1];
+    if(tpbx >= 64) shmem_vals3[tid] += shmem_vals3[tid ^ 32];
+    if(tpbx >= 32) shmem_vals3[tid] += shmem_vals3[tid ^ 16];
+    if(tpbx >= 16) shmem_vals3[tid] += shmem_vals3[tid ^  8];
+    if(tpbx >=  8) shmem_vals3[tid] += shmem_vals3[tid ^  4];
+    if(tpbx >=  4) shmem_vals3[tid] += shmem_vals3[tid ^  2];
+    if(tpbx >=  2) shmem_vals3[tid] += shmem_vals3[tid ^  1];
   }
 
   __syncthreads();
@@ -376,41 +379,45 @@ __device__ void d_reduce_sum_multiple(volatile sc * shmem_vals1,
 
 
 
+template<int tpbx, int tpby>
 __device__ void d_reduce_sum_2d_y(volatile sc * shmem_vals) {
   // sums the values along the y dimension
-  // assuming blockDim.y and blockDim.x is power of 2
+  // assuming tpbx and tpby is power of 2
+  // assuming tpbx = blockDim.x and tpby = blockDim.y
 
-  int thread_count = (blockDim.x * blockDim.y) / 2;
-  int tid = threadIdx.y * blockDim.x + threadIdx.x;
+  int curr_thread_count = (tpbx * tpby) / 2;
+  int tid = threadIdx.y * tpbx + threadIdx.x;
 
-  while(thread_count >= blockDim.x) {
-    if(tid < thread_count) {
-      shmem_vals[tid] += shmem_vals[tid + thread_count];
+  while(curr_thread_count >= tpbx) {
+    if(tid < curr_thread_count) {
+      shmem_vals[tid] += shmem_vals[tid ^ curr_thread_count];
     }
     __syncthreads();
-    thread_count /= 2;
+    curr_thread_count /= 2;
   }
 
 }
 
 
 
+template<int tpbx, int tpby>
 __device__ void d_reduce_sum_2d_y_multiple(volatile sc * shmem_vals1,
   volatile sc * shmem_vals2, volatile sc * shmem_vals3) {
-  // sums the values along the y dimension
-  // assuming blockDim.y and blockDim.x is power of 2
+    // sums the values along the y dimension
+    // assuming tpbx and tpby is power of 2
+    // assuming tpbx = blockDim.x and tpby = blockDim.y
 
-  int thread_count = (blockDim.x * blockDim.y) / 2;
-  int tid = threadIdx.y * blockDim.x + threadIdx.x;
+  int curr_thread_count = (tpbx * tpby) / 2;
+  int tid = threadIdx.y * tpbx + threadIdx.x;
 
-  while(thread_count >= blockDim.x) {
-    if(tid < thread_count) {
-      shmem_vals1[tid] += shmem_vals1[tid + thread_count];
-      shmem_vals2[tid] += shmem_vals2[tid + thread_count];
-      shmem_vals3[tid] += shmem_vals3[tid + thread_count];
+  while(curr_thread_count >= tpbx) {
+    if(tid < curr_thread_count) {
+      shmem_vals1[tid] += shmem_vals1[tid ^ curr_thread_count];
+      shmem_vals2[tid] += shmem_vals2[tid ^ curr_thread_count];
+      shmem_vals3[tid] += shmem_vals3[tid ^ curr_thread_count];
     }
     __syncthreads();
-    thread_count /= 2;
+    curr_thread_count /= 2;
   }
 
 }
@@ -978,8 +985,10 @@ __global__ void g_apply_regular
   // each block handles one test element
   // each thread handles one or more trial elements, and loops through all the blocks
 
+  constexpr int tpbx = tpb_ver1.get(quadr_order).x;
+
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
-  __shared__ volatile sc shmem_y_vals[tpb_ver1.get(quadr_order).x];
+  __shared__ volatile sc shmem_y_vals[tpbx];
   __shared__ volatile sc test[32];
 
   const lo &n_blocks = mesh_metadata.n_temporal_elements;
@@ -1021,7 +1030,7 @@ __global__ void g_apply_regular
         lo block_col = block;
         shmem_y_vals[tid] = matrix_val * x[block_col * ld_x + col];
         __syncthreads();
-        d_reduce_sum(shmem_y_vals);
+        d_reduce_sum<tpbx>(shmem_y_vals);
         if(tid == 0) y_perm[block_row + ld_y_perm * row] += alpha * shmem_y_vals[0];
       }
     }
@@ -1048,8 +1057,10 @@ __global__ void g_apply_regular
   // each block handles one test element
   // each thread handles one or more trial elements, and loops through all the blocks
 
+  constexpr int tpbx = tpb_ver1.get(quadr_order).x;
+
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
-  __shared__ sc shmem_y_vals[tpb_ver1.get(quadr_order).x];
+  __shared__ sc shmem_y_vals[tpbx];
 
   const lo &n_blocks = mesh_metadata.n_temporal_elements;
   const unsigned int &tid = threadIdx.x;
@@ -1095,7 +1106,7 @@ __global__ void g_apply_regular
         shmem_y_vals[tid] += matrix_vals[1] * x[block_col * ld_x + cols[1]];
         shmem_y_vals[tid] += matrix_vals[2] * x[block_col * ld_x + cols[2]];
         __syncthreads();
-        d_reduce_sum(shmem_y_vals);
+        d_reduce_sum<tpbx>(shmem_y_vals);
         if(tid == 0) y_perm[block_row + ld_y_perm * row] += alpha * shmem_y_vals[0];
       }
     }
@@ -1119,8 +1130,10 @@ __global__ void g_apply_regular
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
 
+  constexpr int tpbx = tpb_ver1.get(quadr_order).x;
+
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
-  __shared__ sc shmem_y_vals_data[3 * tpb_ver1.get(quadr_order).x];
+  __shared__ sc shmem_y_vals_data[3 * tpbx];
   sc * shmem_y_vals[3];
   shmem_y_vals[0] = shmem_y_vals_data + 0 * blockDim.x;
   shmem_y_vals[1] = shmem_y_vals_data + 1 * blockDim.x;
@@ -1173,7 +1186,7 @@ __global__ void g_apply_regular
         shmem_y_vals[1][tid] = matrix_vals[1] * x_val;
         shmem_y_vals[2][tid] = matrix_vals[2] * x_val;
         __syncthreads();
-        d_reduce_sum_multiple(shmem_y_vals[0], shmem_y_vals[1], shmem_y_vals[2]);
+        d_reduce_sum_multiple<tpbx>(shmem_y_vals[0], shmem_y_vals[1], shmem_y_vals[2]);
         if(tid < 3) atomicAdd(&y_perm[block_row + ld_y_perm * rows[tid]], alpha * shmem_y_vals[tid][0]);
         
       }
@@ -1200,8 +1213,10 @@ __global__ void g_apply_regular
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
 
+  constexpr int tpbx = tpb_ver1.get(quadr_order).x;
+
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
-  __shared__ sc shmem_y_vals_data[3 * tpb_ver1.get(quadr_order).x];
+  __shared__ sc shmem_y_vals_data[3 * tpbx];
   sc * shmem_y_vals[3];
   shmem_y_vals[0] = shmem_y_vals_data + 0 * blockDim.x;
   shmem_y_vals[1] = shmem_y_vals_data + 1 * blockDim.x;
@@ -1254,7 +1269,7 @@ __global__ void g_apply_regular
         for(lo r = 0; r < 3; r++) shmem_y_vals[r][tid] = 0;
         for(lo r = 0; r < 3; r++) for(lo c = 0; c < 3; c++) shmem_y_vals[r][tid] += matrix_vals[3*r+c] * x_vals[c];
         __syncthreads();
-        d_reduce_sum_multiple(shmem_y_vals[0], shmem_y_vals[1], shmem_y_vals[2]);
+        d_reduce_sum_multiple<tpbx>(shmem_y_vals[0], shmem_y_vals[1], shmem_y_vals[2]);
         if(tid < 3) atomicAdd(&y_perm[block_row + ld_y_perm * rows[tid]], alpha * shmem_y_vals[tid][0]);
         
       }
@@ -1297,9 +1312,11 @@ __global__ void g_apply_regular_ver2
   // each block handles one test element
   // each thread handles one or more trial elements,
   //   then is assigned to a block and loops through all the trial elements
+
+  constexpr int tpbx = tpb_ver2.get(quadr_order).x;
                       
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
-  __shared__ sc shmem_matrix_vals[tpb_ver2.get(quadr_order).x];
+  __shared__ sc shmem_matrix_vals[tpbx];
   
   const lo &n_blocks = mesh_metadata.n_temporal_elements;
   const lo &n_elems = mesh_metadata.n_elems;
@@ -1381,8 +1398,10 @@ __global__ void g_apply_regular_ver2
   // each thread handles one or more trial elements,
   //   then is assigned to a block and loops through all the trial elements
 
+  constexpr int tpbx = tpb_ver2.get(quadr_order).x;
+
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
-  __shared__ sc shmem_matrix_vals_data[3 * tpb_ver2.get(quadr_order).x];
+  __shared__ sc shmem_matrix_vals_data[3 * tpbx];
   sc * shmem_matrix_vals[3];
   shmem_matrix_vals[0] = shmem_matrix_vals_data + 0 * blockDim.x;
   shmem_matrix_vals[1] = shmem_matrix_vals_data + 1 * blockDim.x;
@@ -1469,8 +1488,10 @@ __global__ void g_apply_regular_ver2
   // each block handles one test element
   // each thread handles one or more trial elements, then is assigned to a block and loops through all the trial elements
 
+  constexpr int tpbx = tpb_ver2.get(quadr_order).x;
+
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
-  __shared__ sc shmem_matrix_vals_data[3 * tpb_ver2.get(quadr_order).x];
+  __shared__ sc shmem_matrix_vals_data[3 * tpbx];
   sc * shmem_matrix_vals[3];
   shmem_matrix_vals[0] = shmem_matrix_vals_data + 0 * blockDim.x;
   shmem_matrix_vals[1] = shmem_matrix_vals_data + 1 * blockDim.x;
@@ -1559,8 +1580,10 @@ __global__ void g_apply_regular_ver2
   // each block handles one test element
   // each thread handles one or more trial elements, then is assigned to a block and loops through all the trial elements
 
+  constexpr int tpbx = tpb_ver2.get(quadr_order).x;
+
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
-  __shared__ sc shmem_matrix_vals_data[9 * tpb_ver2.get(quadr_order).x];
+  __shared__ sc shmem_matrix_vals_data[9 * tpbx];
   sc * shmem_matrix_vals[9];
   for(lo j = 0; j < 9; j++) shmem_matrix_vals[j] = shmem_matrix_vals_data + j * blockDim.x;
   
@@ -1656,10 +1679,13 @@ __global__ void g_apply_regular_ver3
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
+
+  constexpr int tpbx = tpb_ver3.get(quadr_order).x;
+  constexpr int tpby = tpb_ver3.get(quadr_order).y;
   
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpb_ver3.get(quadr_order).x];
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpb_ver3.get(quadr_order).y];
-  __shared__ sc shmem_y_vals[tpb_ver3.get(quadr_order).x * tpb_ver3.get(quadr_order).y];
+  __shared__ sc shmem_y_vals[tpbx * tpby];
 
   const int tid = threadIdx.y * blockDim.x + threadIdx.x;
   const lo &n_blocks = mesh_metadata.n_temporal_elements;
@@ -1700,7 +1726,7 @@ __global__ void g_apply_regular_ver3
         lo block_col = block;
         shmem_y_vals[tid] = matrix_val * x_perm[block_col + ld_x_perm * col];
         __syncthreads();
-        d_reduce_sum_2d_y(shmem_y_vals);
+        d_reduce_sum_2d_y<tpbx,tpby>(shmem_y_vals);
         if(tid < blockDim.x) y[block_row * ld_y + row] += alpha * shmem_y_vals[tid];
         __syncthreads();
       }
@@ -1726,9 +1752,12 @@ __global__ void g_apply_regular_ver3
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
 
+  constexpr int tpbx = tpb_ver3.get(quadr_order).x;
+  constexpr int tpby = tpb_ver3.get(quadr_order).y;
+
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpb_ver3.get(quadr_order).x];
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpb_ver3.get(quadr_order).y];
-  __shared__ sc shmem_y_vals[tpb_ver3.get(quadr_order).x * tpb_ver3.get(quadr_order).y];
+  __shared__ sc shmem_y_vals[tpbx * tpby];
 
   const int tid = threadIdx.y * blockDim.x + threadIdx.x;
   const lo &n_blocks = mesh_metadata.n_temporal_elements;
@@ -1774,7 +1803,7 @@ __global__ void g_apply_regular_ver3
         shmem_y_vals[tid] += matrix_vals[1] * x_perm[block_col + ld_x_perm * cols[1]];
         shmem_y_vals[tid] += matrix_vals[2] * x_perm[block_col + ld_x_perm * cols[2]];
         __syncthreads();
-        d_reduce_sum_2d_y(shmem_y_vals);
+        d_reduce_sum_2d_y<tpbx,tpby>(shmem_y_vals);
         if(tid < blockDim.x) y[block_row * ld_y + row] += alpha * shmem_y_vals[tid];
         __syncthreads();
       }
@@ -1800,9 +1829,12 @@ __global__ void g_apply_regular_ver3
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
 
+  constexpr int tpbx = tpb_ver3.get(quadr_order).x;
+  constexpr int tpby = tpb_ver3.get(quadr_order).y;
+
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpb_ver3.get(quadr_order).x];
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpb_ver3.get(quadr_order).y];
-  __shared__ sc shmem_y_vals_data[3 * tpb_ver3.get(quadr_order).x * tpb_ver3.get(quadr_order).y];
+  __shared__ sc shmem_y_vals_data[3 * tpbx * tpby];
   sc * shmem_y_vals[3];
   shmem_y_vals[0] = shmem_y_vals_data + 0 * blockDim.x * blockDim.y;
   shmem_y_vals[1] = shmem_y_vals_data + 1 * blockDim.x * blockDim.y;
@@ -1855,7 +1887,7 @@ __global__ void g_apply_regular_ver3
         shmem_y_vals[1][tid] = matrix_vals[1] * x_val;
         shmem_y_vals[2][tid] = matrix_vals[2] * x_val;
         __syncthreads();
-        d_reduce_sum_2d_y_multiple(shmem_y_vals[0], shmem_y_vals[1], shmem_y_vals[2]);
+        d_reduce_sum_2d_y_multiple<tpbx,tpby>(shmem_y_vals[0], shmem_y_vals[1], shmem_y_vals[2]);
         if(threadIdx.y < 3) atomicAdd(&y[block_row * ld_y + rows[threadIdx.y]], alpha * shmem_y_vals[threadIdx.y][threadIdx.x]);
         __syncthreads(); // dont understand why this needs to be there, but it needs to
       }
@@ -1882,9 +1914,12 @@ __global__ void g_apply_regular_ver3
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
 
+  constexpr int tpbx = tpb_ver3.get(quadr_order).x;
+  constexpr int tpby = tpb_ver3.get(quadr_order).y;
+
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpb_ver3.get(quadr_order).x];
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpb_ver3.get(quadr_order).y];
-  __shared__ sc shmem_y_vals_data[3 * tpb_ver3.get(quadr_order).x * tpb_ver3.get(quadr_order).y];
+  __shared__ sc shmem_y_vals_data[3 * tpbx * tpby];
   sc * shmem_y_vals[3];
   shmem_y_vals[0] = shmem_y_vals_data + 0 * blockDim.x * blockDim.y;
   shmem_y_vals[1] = shmem_y_vals_data + 1 * blockDim.x * blockDim.y;
@@ -1937,7 +1972,7 @@ __global__ void g_apply_regular_ver3
         for(lo r = 0; r < 3; r++) shmem_y_vals[r][tid] = 0;
         for(lo r = 0; r < 3; r++) for(lo c = 0; c < 3; c++) shmem_y_vals[r][tid] += matrix_vals[3*r+c] * x_vals[c];
         __syncthreads();
-        d_reduce_sum_2d_y_multiple(shmem_y_vals[0], shmem_y_vals[1], shmem_y_vals[2]);
+        d_reduce_sum_2d_y_multiple<tpbx,tpby>(shmem_y_vals[0], shmem_y_vals[1], shmem_y_vals[2]);
         if(threadIdx.y < 3) atomicAdd(&y[block_row * ld_y + rows[threadIdx.y]], alpha * shmem_y_vals[threadIdx.y][threadIdx.x]);
         __syncthreads();
       }
@@ -1975,10 +2010,13 @@ __global__ void g_apply_regular_ver4
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
+
+    constexpr int tpbx = tpb_ver4.get(quadr_order).x;
+    constexpr int tpby = tpb_ver4.get(quadr_order).y;
   
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpb_ver4.get(quadr_order).x];
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpb_ver4.get(quadr_order).y];
-  __shared__ sc shmem_matrix_vals[tpb_ver4.get(quadr_order).x * tpb_ver4.get(quadr_order).y];
+  __shared__ sc shmem_matrix_vals[tpbx * tpby];
 
   const int tid = threadIdx.y * blockDim.x + threadIdx.x;
   const lo &n_blocks = mesh_metadata.n_temporal_elements;
@@ -2051,9 +2089,12 @@ __global__ void g_apply_regular_ver4
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
 
+  constexpr int tpbx = tpb_ver4.get(quadr_order).x;
+  constexpr int tpby = tpb_ver4.get(quadr_order).y;
+
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpb_ver4.get(quadr_order).x];
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpb_ver4.get(quadr_order).y];
-  __shared__ sc shmem_matrix_vals_data[3 * tpb_ver4.get(quadr_order).x * tpb_ver4.get(quadr_order).y];
+  __shared__ sc shmem_matrix_vals_data[3 * tpbx * tpby];
   sc * shmem_matrix_vals[3];
   shmem_matrix_vals[0] = shmem_matrix_vals_data + 0 * blockDim.x * blockDim.y;
   shmem_matrix_vals[1] = shmem_matrix_vals_data + 1 * blockDim.x * blockDim.y;
@@ -2133,9 +2174,12 @@ __global__ void g_apply_regular_ver4
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
 
+  constexpr int tpbx = tpb_ver4.get(quadr_order).x;
+  constexpr int tpby = tpb_ver4.get(quadr_order).y;
+
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpb_ver4.get(quadr_order).x];
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpb_ver4.get(quadr_order).y];
-  __shared__ sc shmem_matrix_vals_data[3 * tpb_ver4.get(quadr_order).x * tpb_ver4.get(quadr_order).y];
+  __shared__ sc shmem_matrix_vals_data[3 * tpbx * tpby];
   sc * shmem_matrix_vals[3];
   shmem_matrix_vals[0] = shmem_matrix_vals_data + 0 * blockDim.x * blockDim.y;
   shmem_matrix_vals[1] = shmem_matrix_vals_data + 1 * blockDim.x * blockDim.y;
@@ -2217,9 +2261,12 @@ __global__ void g_apply_regular_ver4
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
 
+  constexpr int tpbx = tpb_ver4.get(quadr_order).x;
+  constexpr int tpby = tpb_ver4.get(quadr_order).y;
+
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpb_ver4.get(quadr_order).x];
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpb_ver4.get(quadr_order).y];
-  __shared__ sc shmem_matrix_vals_data[9 * tpb_ver4.get(quadr_order).x * tpb_ver4.get(quadr_order).y];
+  __shared__ sc shmem_matrix_vals_data[9 * tpbx * tpby];
   sc * shmem_matrix_vals[9];
   for(lo j = 0; j < 9; j++) shmem_matrix_vals[j] = shmem_matrix_vals_data + j * blockDim.x * blockDim.y;
 
