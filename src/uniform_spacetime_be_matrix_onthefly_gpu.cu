@@ -60,9 +60,9 @@ template<> const ns_gpu_helpers::quadrature_reference_raw<4> & c_get_quadr_refer
 template<> const ns_gpu_helpers::quadrature_reference_raw<2> & c_get_quadr_reference<2>() { return c_quadr_reference_order2; }
 template<> const ns_gpu_helpers::quadrature_reference_raw<1> & c_get_quadr_reference<1>() { return c_quadr_reference_order1; }
 
-constexpr ns_gpu_helpers::gpu_threads_per_block tpb_ver1(256,  1,    256,  1,    256,  1,    256,  1);
-constexpr ns_gpu_helpers::gpu_threads_per_block tpb_ver2(256,  1,    256,  1,    256,  1,    256,  1);
-constexpr ns_gpu_helpers::gpu_threads_per_block tpb_ver3( 16, 16,     16, 16,     16, 16,     16, 16);
+constexpr ns_gpu_helpers::gpu_threads_per_block tpb_ver1(128,  1,    128,  1,    128,  1,    128,  1);
+constexpr ns_gpu_helpers::gpu_threads_per_block tpb_ver2(128,  1,    128,  1,    128,  1,    128,  1);
+constexpr ns_gpu_helpers::gpu_threads_per_block tpb_ver3( 16,  8,     16,  8,     16,  8,     16,  8);
 constexpr ns_gpu_helpers::gpu_threads_per_block tpb_ver4( 16,  8,     16,  8,     16,  8,     16,  8);
 
 
