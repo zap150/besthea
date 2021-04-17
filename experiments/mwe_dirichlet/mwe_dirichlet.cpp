@@ -36,7 +36,7 @@ int main()
     uniform_spacetime_be_space<basis_tri_p0> space_p0(spacetime_mesh);
     uniform_spacetime_be_space<basis_tri_p1> space_p1(spacetime_mesh);
 
-    // project the boundary condition on the BE space
+    // project the boundary condition onto the BE space
     block_vector bc_dir;
     space_p1.L2_projection( bc_dir_func, bc_dir );
 
