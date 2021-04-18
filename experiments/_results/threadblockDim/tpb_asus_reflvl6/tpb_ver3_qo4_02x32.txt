@@ -1,0 +1,275 @@
+besthea::mesh::uniform_spacetime_tensor_mesh
+  spatial elements: 1536, spatial nodes: 770, spatial edges: 2304
+  timesteps: 64
+Sqrt of spatial element area (~hx) 0.125000
+Timestep length (ht) 0.015625
+hx^2/ht 1.000000
+Using quadrature order regular  4
+Using quadrature order singular 1
+Using GPU algorithm version 3
+GPU kernel 3, tpb 2 x 32
+GPU kernel 3, tpb 2 x 32
+GPU kernel 3, tpb 2 x 32
+GPU kernel 3, tpb 2 x 32
+V fly gpu
+BESTHEA Info: onthefly load balancing: total 1536 CPU 0 GPU 1536: 0 1536
+BESTHEA Info: time gpu_copyin:     0.000129  
+BESTHEA Info: time gpu_compute:   12.415535  
+BESTHEA Info: time gpu_copyout:    0.000127  
+BESTHEA Info: time gpu_all:       12.415826  
+BESTHEA Info: time cpu_scalein:    0.003170
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.021883
+BESTHEA Info: time cpu_delta0:     0.252173
+BESTHEA Info: time cpu_all:        0.274056
+BESTHEA Info: time gpu_max:       12.415826
+BESTHEA Info: time combined:      12.420102
+BESTHEA Info: apply elapsed time = 12.4201 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+BESTHEA Info: onthefly load balancing: total 1536 CPU 0 GPU 1536: 0 1536
+BESTHEA Info: time gpu_copyin:     0.000131  
+BESTHEA Info: time gpu_compute:   12.429856  
+BESTHEA Info: time gpu_copyout:    0.000125  
+BESTHEA Info: time gpu_all:       12.430147  
+BESTHEA Info: time cpu_scalein:    0.000730
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.017336
+BESTHEA Info: time cpu_delta0:     0.264679
+BESTHEA Info: time cpu_all:        0.282015
+BESTHEA Info: time gpu_max:       12.430147
+BESTHEA Info: time combined:      12.431804
+BESTHEA Info: apply elapsed time = 12.4318 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+BESTHEA Info: onthefly load balancing: total 1536 CPU 0 GPU 1536: 0 1536
+BESTHEA Info: time gpu_copyin:     0.000129  
+BESTHEA Info: time gpu_compute:   12.415601  
+BESTHEA Info: time gpu_copyout:    0.000124  
+BESTHEA Info: time gpu_all:       12.415886  
+BESTHEA Info: time cpu_scalein:    0.000761
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.021713
+BESTHEA Info: time cpu_delta0:     0.266941
+BESTHEA Info: time cpu_all:        0.288655
+BESTHEA Info: time gpu_max:       12.415886
+BESTHEA Info: time combined:      12.417302
+BESTHEA Info: apply elapsed time = 12.4173 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+BESTHEA Info: onthefly load balancing: total 1536 CPU 0 GPU 1536: 0 1536
+BESTHEA Info: time gpu_copyin:     0.000130  
+BESTHEA Info: time gpu_compute:   12.433334  
+BESTHEA Info: time gpu_copyout:    0.000125  
+BESTHEA Info: time gpu_all:       12.433623  
+BESTHEA Info: time cpu_scalein:    0.000893
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.021288
+BESTHEA Info: time cpu_delta0:     0.247070
+BESTHEA Info: time cpu_all:        0.268358
+BESTHEA Info: time gpu_max:       12.433623
+BESTHEA Info: time combined:      12.435566
+BESTHEA Info: apply elapsed time = 12.4356 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+K fly gpu
+BESTHEA Info: onthefly load balancing: total 1536 CPU 0 GPU 1536: 0 1536
+BESTHEA Info: time gpu_copyin:     0.000070  
+BESTHEA Info: time gpu_compute:   14.722947  
+BESTHEA Info: time gpu_copyout:    0.000125  
+BESTHEA Info: time gpu_all:       14.723174  
+BESTHEA Info: time cpu_scalein:    0.000461
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.002925
+BESTHEA Info: time cpu_delta0:     0.336605
+BESTHEA Info: time cpu_all:        0.339530
+BESTHEA Info: time gpu_max:       14.723174
+BESTHEA Info: time combined:      14.724178
+BESTHEA Info: apply elapsed time = 14.7242 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+BESTHEA Info: onthefly load balancing: total 1536 CPU 0 GPU 1536: 0 1536
+BESTHEA Info: time gpu_copyin:     0.000070  
+BESTHEA Info: time gpu_compute:   14.722791  
+BESTHEA Info: time gpu_copyout:    0.000123  
+BESTHEA Info: time gpu_all:       14.723019  
+BESTHEA Info: time cpu_scalein:    0.000433
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.004560
+BESTHEA Info: time cpu_delta0:     0.359003
+BESTHEA Info: time cpu_all:        0.363564
+BESTHEA Info: time gpu_max:       14.723019
+BESTHEA Info: time combined:      14.723971
+BESTHEA Info: apply elapsed time = 14.724 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+BESTHEA Info: onthefly load balancing: total 1536 CPU 0 GPU 1536: 0 1536
+BESTHEA Info: time gpu_copyin:     0.000070  
+BESTHEA Info: time gpu_compute:   14.724144  
+BESTHEA Info: time gpu_copyout:    0.000126  
+BESTHEA Info: time gpu_all:       14.724371  
+BESTHEA Info: time cpu_scalein:    0.000442
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.005805
+BESTHEA Info: time cpu_delta0:     0.378030
+BESTHEA Info: time cpu_all:        0.383835
+BESTHEA Info: time gpu_max:       14.724371
+BESTHEA Info: time combined:      14.725368
+BESTHEA Info: apply elapsed time = 14.7254 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+BESTHEA Info: onthefly load balancing: total 1536 CPU 0 GPU 1536: 0 1536
+BESTHEA Info: time gpu_copyin:     0.000071  
+BESTHEA Info: time gpu_compute:   14.723267  
+BESTHEA Info: time gpu_copyout:    0.000124  
+BESTHEA Info: time gpu_all:       14.723495  
+BESTHEA Info: time cpu_scalein:    0.000498
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.004889
+BESTHEA Info: time cpu_delta0:     0.363275
+BESTHEA Info: time cpu_all:        0.368164
+BESTHEA Info: time gpu_max:       14.723495
+BESTHEA Info: time combined:      14.724626
+BESTHEA Info: apply elapsed time = 14.7246 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+A fly gpu
+BESTHEA Info: onthefly load balancing: total 1536 CPU 0 GPU 1536: 0 1536
+BESTHEA Info: time gpu_copyin:     0.000127  
+BESTHEA Info: time gpu_compute:   15.947780  
+BESTHEA Info: time gpu_copyout:    0.000068  
+BESTHEA Info: time gpu_all:       15.948010  
+BESTHEA Info: time cpu_scalein:    0.000502
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.009070
+BESTHEA Info: time cpu_delta0:     0.344834
+BESTHEA Info: time cpu_all:        0.353904
+BESTHEA Info: time gpu_max:       15.948010
+BESTHEA Info: time combined:      15.949413
+BESTHEA Info: apply elapsed time = 15.9494 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+BESTHEA Info: onthefly load balancing: total 1536 CPU 0 GPU 1536: 0 1536
+BESTHEA Info: time gpu_copyin:     0.000131  
+BESTHEA Info: time gpu_compute:   15.948331  
+BESTHEA Info: time gpu_copyout:    0.000065  
+BESTHEA Info: time gpu_all:       15.948560  
+BESTHEA Info: time cpu_scalein:    0.000685
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.003802
+BESTHEA Info: time cpu_delta0:     0.345636
+BESTHEA Info: time cpu_all:        0.349439
+BESTHEA Info: time gpu_max:       15.948560
+BESTHEA Info: time combined:      15.949971
+BESTHEA Info: apply elapsed time = 15.95 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+BESTHEA Info: onthefly load balancing: total 1536 CPU 0 GPU 1536: 0 1536
+BESTHEA Info: time gpu_copyin:     0.000127  
+BESTHEA Info: time gpu_compute:   15.948831  
+BESTHEA Info: time gpu_copyout:    0.000065  
+BESTHEA Info: time gpu_all:       15.949056  
+BESTHEA Info: time cpu_scalein:    0.000515
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.004026
+BESTHEA Info: time cpu_delta0:     0.344467
+BESTHEA Info: time cpu_all:        0.348493
+BESTHEA Info: time gpu_max:       15.949056
+BESTHEA Info: time combined:      15.950388
+BESTHEA Info: apply elapsed time = 15.9504 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+BESTHEA Info: onthefly load balancing: total 1536 CPU 0 GPU 1536: 0 1536
+BESTHEA Info: time gpu_copyin:     0.000127  
+BESTHEA Info: time gpu_compute:   15.949809  
+BESTHEA Info: time gpu_copyout:    0.000065  
+BESTHEA Info: time gpu_all:       15.950033  
+BESTHEA Info: time cpu_scalein:    0.000630
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.003665
+BESTHEA Info: time cpu_delta0:     0.397472
+BESTHEA Info: time cpu_all:        0.401137
+BESTHEA Info: time gpu_max:       15.950033
+BESTHEA Info: time combined:      15.951584
+BESTHEA Info: apply elapsed time = 15.9516 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+D fly gpu
+BESTHEA Info: onthefly load balancing: total 1536 CPU 0 GPU 1536: 0 1536
+BESTHEA Info: time gpu_copyin:     0.000069  
+BESTHEA Info: time gpu_compute:   20.050625  
+BESTHEA Info: time gpu_copyout:    0.000064  
+BESTHEA Info: time gpu_all:       20.050793  
+BESTHEA Info: time cpu_scalein:    0.000427
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.031815
+BESTHEA Info: time cpu_delta0:     0.869415
+BESTHEA Info: time cpu_all:        0.901230
+BESTHEA Info: time gpu_max:       20.050793
+BESTHEA Info: time combined:      20.051845
+BESTHEA Info: apply elapsed time = 20.0518 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+BESTHEA Info: onthefly load balancing: total 1536 CPU 0 GPU 1536: 0 1536
+BESTHEA Info: time gpu_copyin:     0.000068  
+BESTHEA Info: time gpu_compute:   20.050156  
+BESTHEA Info: time gpu_copyout:    0.000064  
+BESTHEA Info: time gpu_all:       20.050666  
+BESTHEA Info: time cpu_scalein:    0.000423
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.036268
+BESTHEA Info: time cpu_delta0:     0.854124
+BESTHEA Info: time cpu_all:        0.890392
+BESTHEA Info: time gpu_max:       20.050666
+BESTHEA Info: time combined:      20.051835
+BESTHEA Info: apply elapsed time = 20.0518 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+BESTHEA Info: onthefly load balancing: total 1536 CPU 0 GPU 1536: 0 1536
+BESTHEA Info: time gpu_copyin:     0.000068  
+BESTHEA Info: time gpu_compute:   20.050174  
+BESTHEA Info: time gpu_copyout:    0.000067  
+BESTHEA Info: time gpu_all:       20.050342  
+BESTHEA Info: time cpu_scalein:    0.000522
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.037506
+BESTHEA Info: time cpu_delta0:     0.860562
+BESTHEA Info: time cpu_all:        0.898069
+BESTHEA Info: time gpu_max:       20.050342
+BESTHEA Info: time combined:      20.051832
+BESTHEA Info: apply elapsed time = 20.0518 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+BESTHEA Info: onthefly load balancing: total 1536 CPU 0 GPU 1536: 0 1536
+BESTHEA Info: time gpu_copyin:     0.000068  
+BESTHEA Info: time gpu_compute:   20.052869  
+BESTHEA Info: time gpu_copyout:    0.000065  
+BESTHEA Info: time gpu_all:       20.053033  
+BESTHEA Info: time cpu_scalein:    0.000310
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.029943
+BESTHEA Info: time cpu_delta0:     0.880868
+BESTHEA Info: time cpu_all:        0.910811
+BESTHEA Info: time gpu_max:       20.053033
+BESTHEA Info: time combined:      20.053791
+BESTHEA Info: apply elapsed time = 20.0538 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+Vectors Vc are equal!
+Vectors Vg are NOT equal!
+Vectors Kc are equal!
+Vectors Kg are NOT equal!
+Vectors Ac are equal!
+Vectors Ag are NOT equal!
+Vectors Dc are equal!
+Vectors Dg are NOT equal!
+
+Time init:    0.836038
+Time check:   0.001125
+
+Time multiply (avg)    V            K            A            D
+mem_assemble          0.000000     0.000000     0.000000     0.000000
+mem_multiply          0.000000     0.000000     0.000000     0.000000
+mem_total             0.000000     0.000000     0.000000     0.000000
+fly_mult_cpu          0.000000     0.000000     0.000000     0.000000
+fly_mult_gpu         12.428509    14.724813    15.950851    20.052672

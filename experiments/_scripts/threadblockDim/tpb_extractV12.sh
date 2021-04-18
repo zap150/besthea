@@ -6,7 +6,7 @@
 
 for ver in 1 2
 do
-    for machineVersion in tpb_bar_reflvl8
+    for machineVersion in tpb_bar_reflvl8 tpb_asus_reflvl6
     do
         outfile=../_results/threadblockDim/${machineVersion}_ver${ver}_all.txt
         echo -n "" > ${outfile}
