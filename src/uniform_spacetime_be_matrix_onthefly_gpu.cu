@@ -61,62 +61,62 @@ template<> const ns_gpu_helpers::quadrature_reference_raw<4> & c_get_quadr_refer
 template<> const ns_gpu_helpers::quadrature_reference_raw<2> & c_get_quadr_reference<2>() { return c_quadr_reference_order2; }
 template<> const ns_gpu_helpers::quadrature_reference_raw<1> & c_get_quadr_reference<1>() { return c_quadr_reference_order1; }
 
-constexpr ns_gpu_helpers::gpu_threads_per_block tpb_V[5] = { // for each kernel version one element of the array
-  ns_gpu_helpers::gpu_threads_per_block(  0,  0,      0,  0,      0,  0,      0,  0), // dummy, so i can numer versions from 1
-  ns_gpu_helpers::gpu_threads_per_block( 64,  1,     64,  1,    256,  1,    256,  1),
-  ns_gpu_helpers::gpu_threads_per_block( 64,  1,    128,  1,    128,  1,    128,  1),
-  ns_gpu_helpers::gpu_threads_per_block(  8, 16,      2, 32,      8, 16,      8, 16),
-  ns_gpu_helpers::gpu_threads_per_block(  2, 32,      8, 16,      8, 16,      8, 16)
+constexpr dim3 tpb_V[5][6] = { // tpb_V[gpu_kernel_version][quadrature_order]
+  {dim3(  0,  0),     dim3(  0,  0),     dim3(  0,  0),     dim3(  0,  0),     dim3(  0,  0),     dim3(  0,  0)},
+  {dim3(  0,  0),     dim3( 64,  1),     dim3( 64,  1),     dim3(  0,  0),     dim3(256,  1),     dim3(256,  1)},
+  {dim3(  0,  0),     dim3( 64,  1),     dim3(128,  1),     dim3(  0,  0),     dim3(128,  1),     dim3(128,  1)},
+  {dim3(  0,  0),     dim3(  8, 16),     dim3(  2, 32),     dim3(  0,  0),     dim3(  8, 16),     dim3(  8, 16)},
+  {dim3(  0,  0),     dim3(  2, 32),     dim3(  8, 16),     dim3(  0,  0),     dim3(  8, 16),     dim3(  8, 16)}
 };
-constexpr ns_gpu_helpers::gpu_threads_per_block tpb_K[5] = {
-  ns_gpu_helpers::gpu_threads_per_block(  0,  0,      0,  0,      0,  0,      0,  0),
-  ns_gpu_helpers::gpu_threads_per_block(128,  1,    128,  1,    128,  1,    128,  1),
-  ns_gpu_helpers::gpu_threads_per_block(128,  1,    128,  1,    128,  1,    128,  1),
-  ns_gpu_helpers::gpu_threads_per_block(  8, 16,      8, 16,      8, 16,      8, 16),
-  ns_gpu_helpers::gpu_threads_per_block(  1, 32,      4, 16,      4, 16,      8, 16)
+constexpr dim3 tpb_K[5][6] = {
+  {dim3(  0,  0),     dim3(  0,  0),     dim3(  0,  0),     dim3(  0,  0),     dim3(  0,  0),     dim3(  0,  0)},
+  {dim3(  0,  0),     dim3(128,  1),     dim3(128,  1),     dim3(  0,  0),     dim3(128,  1),     dim3(128,  1)},
+  {dim3(  0,  0),     dim3(128,  1),     dim3(128,  1),     dim3(  0,  0),     dim3(128,  1),     dim3(128,  1)},
+  {dim3(  0,  0),     dim3(  8, 16),     dim3(  8, 16),     dim3(  0,  0),     dim3(  8, 16),     dim3(  8, 16)},
+  {dim3(  0,  0),     dim3(  1, 32),     dim3(  4, 16),     dim3(  0,  0),     dim3(  4, 16),     dim3(  8, 16)}
 };
-constexpr ns_gpu_helpers::gpu_threads_per_block tpb_Kt[5] = {
-  ns_gpu_helpers::gpu_threads_per_block(  0,  0,      0,  0,      0,  0,      0,  0),
-  ns_gpu_helpers::gpu_threads_per_block(128,  1,     32,  1,    128,  1,    128,  1),
-  ns_gpu_helpers::gpu_threads_per_block( 64,  1,    128,  1,    128,  1,    128,  1),
-  ns_gpu_helpers::gpu_threads_per_block(  8, 16,      8, 16,      8, 16,      8, 16),
-  ns_gpu_helpers::gpu_threads_per_block(  1, 32,      1, 32,      4, 16,      8, 16)
+constexpr dim3 tpb_Kt[5][6] = {
+  {dim3(  0,  0),     dim3(  0,  0),     dim3(  0,  0),     dim3(  0,  0),     dim3(  0,  0),     dim3(  0,  0)},
+  {dim3(  0,  0),     dim3(128,  1),     dim3( 32,  1),     dim3(  0,  0),     dim3(128,  1),     dim3(128,  1)},
+  {dim3(  0,  0),     dim3( 64,  1),     dim3(128,  1),     dim3(  0,  0),     dim3(128,  1),     dim3(128,  1)},
+  {dim3(  0,  0),     dim3(  8, 16),     dim3(  8, 16),     dim3(  0,  0),     dim3(  8, 16),     dim3(  8, 16)},
+  {dim3(  0,  0),     dim3(  1, 32),     dim3(  1, 32),     dim3(  0,  0),     dim3(  4, 16),     dim3(  8, 16)}
 };
-constexpr ns_gpu_helpers::gpu_threads_per_block tpb_D[5] = {
-  ns_gpu_helpers::gpu_threads_per_block(  0,  0,      0,  0,      0,  0,      0,  0),
-  ns_gpu_helpers::gpu_threads_per_block(128,  1,     64,  1,     64,  1,     64,  1),
-  ns_gpu_helpers::gpu_threads_per_block( 64,  1,     64,  1,     64,  1,     64,  1),
-  ns_gpu_helpers::gpu_threads_per_block(  8, 16,      8, 16,      8,  8,      4,  8),
-  ns_gpu_helpers::gpu_threads_per_block(  2, 32,      2, 32,      2, 16,      4, 16)
+constexpr dim3 tpb_D[5][6] = {
+  {dim3(  0,  0),     dim3(  0,  0),     dim3(  0,  0),     dim3(  0,  0),     dim3(  0,  0),     dim3(  0,  0)},
+  {dim3(  0,  0),     dim3(128,  1),     dim3( 64,  1),     dim3(  0,  0),     dim3( 64,  1),     dim3( 64,  1)},
+  {dim3(  0,  0),     dim3( 64,  1),     dim3( 64,  1),     dim3(  0,  0),     dim3( 64,  1),     dim3( 64,  1)},
+  {dim3(  0,  0),     dim3(  8, 16),     dim3(  8, 16),     dim3(  0,  0),     dim3(  8,  8),     dim3(  4,  8)},
+  {dim3(  0,  0),     dim3(  2, 32),     dim3(  2, 32),     dim3(  0,  0),     dim3(  2, 16),     dim3(  4, 16)}
 };
 
-constexpr ns_gpu_helpers::gpu_threads_per_block get_tpb_by_matrix_and_version(
-  [[maybe_unused]] besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
-  [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
-  [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
-  int version) {
-    return tpb_V[version];
+constexpr dim3 get_tpb(
+  [[maybe_unused]] const besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
+  [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
+  [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
+  int version, int quadrature_order) {
+    return tpb_V[version][quadrature_order];
 }
-constexpr ns_gpu_helpers::gpu_threads_per_block get_tpb_by_matrix_and_version(
-  [[maybe_unused]] besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
-  [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
-  [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
-  int version) {
-    return tpb_K[version];
+constexpr dim3 get_tpb(
+  [[maybe_unused]] const besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
+  [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
+  [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+  int version, int quadrature_order) {
+    return tpb_K[version][quadrature_order];
 }
-constexpr ns_gpu_helpers::gpu_threads_per_block get_tpb_by_matrix_and_version(
-  [[maybe_unused]] besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
-  [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
-  [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
-  int version) {
-    return tpb_Kt[version];
+constexpr dim3 get_tpb(
+  [[maybe_unused]] const besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
+  [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
+  [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
+  int version, int quadrature_order) {
+    return tpb_Kt[version][quadrature_order];
 }
-constexpr ns_gpu_helpers::gpu_threads_per_block get_tpb_by_matrix_and_version(
-  [[maybe_unused]] besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
-  [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
-  [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
-  int version) {
-    return tpb_D[version];
+constexpr dim3 get_tpb(
+  [[maybe_unused]] const besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
+  [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
+  [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+  int version, int quadrature_order) {
+    return tpb_D[version][quadrature_order];
 }
 
 
@@ -242,17 +242,17 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   lo gpu_chunk_size;
   switch(gpu_kernel_version) {
     case 4:
-      gpu_chunk_size = get_tpb_by_matrix_and_version(this->_kernel, this->_test_space, this->_trial_space, 4).get(this->_order_regular).x;
+      gpu_chunk_size = get_tpb(this->_kernel, this->_test_space, this->_trial_space, 4, this->_order_regular).x;
       break;
     case 3:
-      gpu_chunk_size = get_tpb_by_matrix_and_version(this->_kernel, this->_test_space, this->_trial_space, 3).get(this->_order_regular).x;
+      gpu_chunk_size = get_tpb(this->_kernel, this->_test_space, this->_trial_space, 3, this->_order_regular).x;
       break;
     case 2:
-      gpu_chunk_size = get_tpb_by_matrix_and_version(this->_kernel, this->_test_space, this->_trial_space, 2).get(this->_order_regular).y;
+      gpu_chunk_size = get_tpb(this->_kernel, this->_test_space, this->_trial_space, 2, this->_order_regular).y;
       break;
     case 1:
     default:
-      gpu_chunk_size = get_tpb_by_matrix_and_version(this->_kernel, this->_test_space, this->_trial_space, 1).get(this->_order_regular).y;
+      gpu_chunk_size = get_tpb(this->_kernel, this->_test_space, this->_trial_space, 1, this->_order_regular).y;
       break;
   }
   this->load_distr =
@@ -1027,9 +1027,9 @@ __device__ void d_get_values_regular_hs_p1_p1(sc * values_out,
 
 template< int quadr_order >
 __global__ void g_apply_regular
-  ( [[maybe_unused]] besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
+  ( [[maybe_unused]] const besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
     const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
@@ -1038,7 +1038,7 @@ __global__ void g_apply_regular
   // each block handles one test element
   // each thread handles one or more trial elements, and loops through all the blocks
 
-  constexpr int tpbx = tpb_V[1].get(quadr_order).x;
+  constexpr int tpbx = tpb_V[1][quadr_order].x;
 
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
   __shared__ volatile sc shmem_y_vals[tpbx];
@@ -1099,9 +1099,9 @@ __global__ void g_apply_regular
 
 template< int quadr_order >
 __global__ void g_apply_regular
-  ( [[maybe_unused]] besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+  ( [[maybe_unused]] const besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
     const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
@@ -1110,7 +1110,7 @@ __global__ void g_apply_regular
   // each block handles one test element
   // each thread handles one or more trial elements, and loops through all the blocks
 
-  constexpr int tpbx = tpb_K[1].get(quadr_order).x;
+  constexpr int tpbx = tpb_K[1][quadr_order].x;
 
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
   __shared__ sc shmem_y_vals[tpbx];
@@ -1175,15 +1175,15 @@ __global__ void g_apply_regular
 
 template< int quadr_order >
 __global__ void g_apply_regular
-  ( [[maybe_unused]] besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
+  ( [[maybe_unused]] const besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
     const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
 
-  constexpr int tpbx = tpb_Kt[1].get(quadr_order).x;
+  constexpr int tpbx = tpb_Kt[1][quadr_order].x;
 
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
   __shared__ sc shmem_y_vals_data[3 * tpbx];
@@ -1258,15 +1258,15 @@ __global__ void g_apply_regular
 
 template< int quadr_order >
 __global__ void g_apply_regular
-  ( [[maybe_unused]] besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+  ( [[maybe_unused]] const besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
     const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
 
-  constexpr int tpbx = tpb_D[1].get(quadr_order).x;
+  constexpr int tpbx = tpb_D[1][quadr_order].x;
 
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
   __shared__ sc shmem_y_vals_data[3 * tpbx];
@@ -1354,9 +1354,9 @@ __global__ void g_apply_regular
 
 template< int quadr_order >
 __global__ void g_apply_regular_ver2
-  ( [[maybe_unused]] besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
+  ( [[maybe_unused]] const besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
@@ -1366,7 +1366,7 @@ __global__ void g_apply_regular_ver2
   // each thread handles one or more trial elements,
   //   then is assigned to a block and loops through all the trial elements
 
-  constexpr int tpbx = tpb_V[2].get(quadr_order).x;
+  constexpr int tpbx = tpb_V[2][quadr_order].x;
                       
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
   __shared__ sc shmem_matrix_vals[tpbx];
@@ -1439,9 +1439,9 @@ __global__ void g_apply_regular_ver2
 
 template< int quadr_order >
 __global__ void g_apply_regular_ver2
-  ( [[maybe_unused]] besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+  ( [[maybe_unused]] const besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
@@ -1451,7 +1451,7 @@ __global__ void g_apply_regular_ver2
   // each thread handles one or more trial elements,
   //   then is assigned to a block and loops through all the trial elements
 
-  constexpr int tpbx = tpb_K[2].get(quadr_order).x;
+  constexpr int tpbx = tpb_K[2][quadr_order].x;
 
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
   __shared__ sc shmem_matrix_vals_data[3 * tpbx];
@@ -1530,9 +1530,9 @@ __global__ void g_apply_regular_ver2
 
 template< int quadr_order >
 __global__ void g_apply_regular_ver2
-  ( [[maybe_unused]] besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
+  ( [[maybe_unused]] const besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
@@ -1541,7 +1541,7 @@ __global__ void g_apply_regular_ver2
   // each block handles one test element
   // each thread handles one or more trial elements, then is assigned to a block and loops through all the trial elements
 
-  constexpr int tpbx = tpb_Kt[2].get(quadr_order).x;
+  constexpr int tpbx = tpb_Kt[2][quadr_order].x;
 
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
   __shared__ sc shmem_matrix_vals_data[3 * tpbx];
@@ -1622,9 +1622,9 @@ __global__ void g_apply_regular_ver2
 
 template< int quadr_order >
 __global__ void g_apply_regular_ver2
-  ( [[maybe_unused]] besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+  ( [[maybe_unused]] const besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
@@ -1633,7 +1633,7 @@ __global__ void g_apply_regular_ver2
   // each block handles one test element
   // each thread handles one or more trial elements, then is assigned to a block and loops through all the trial elements
 
-  constexpr int tpbx = tpb_D[2].get(quadr_order).x;
+  constexpr int tpbx = tpb_D[2][quadr_order].x;
 
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
   __shared__ sc shmem_matrix_vals_data[9 * tpbx];
@@ -1725,16 +1725,16 @@ __global__ void g_apply_regular_ver2
 
 template< int quadr_order >
 __global__ void g_apply_regular_ver3
-  ( [[maybe_unused]] besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
+  ( [[maybe_unused]] const besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
 
-  constexpr int tpbx = tpb_V[3].get(quadr_order).x;
-  constexpr int tpby = tpb_V[3].get(quadr_order).y;
+  constexpr int tpbx = tpb_V[3][quadr_order].x;
+  constexpr int tpby = tpb_V[3][quadr_order].y;
   
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
@@ -1797,16 +1797,16 @@ __global__ void g_apply_regular_ver3
 
 template< int quadr_order >
 __global__ void g_apply_regular_ver3
-  ( [[maybe_unused]] besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+  ( [[maybe_unused]] const besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
 
-  constexpr int tpbx = tpb_K[3].get(quadr_order).x;
-  constexpr int tpby = tpb_K[3].get(quadr_order).y;
+  constexpr int tpbx = tpb_K[3][quadr_order].x;
+  constexpr int tpby = tpb_K[3][quadr_order].y;
 
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
@@ -1874,16 +1874,16 @@ __global__ void g_apply_regular_ver3
 
 template< int quadr_order >
 __global__ void g_apply_regular_ver3
-  ( [[maybe_unused]] besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
+  ( [[maybe_unused]] const besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
 
-  constexpr int tpbx = tpb_Kt[3].get(quadr_order).x;
-  constexpr int tpby = tpb_Kt[3].get(quadr_order).y;
+  constexpr int tpbx = tpb_Kt[3][quadr_order].x;
+  constexpr int tpby = tpb_Kt[3][quadr_order].y;
 
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
@@ -1959,16 +1959,16 @@ __global__ void g_apply_regular_ver3
 
 template< int quadr_order >
 __global__ void g_apply_regular_ver3
-  ( [[maybe_unused]] besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+  ( [[maybe_unused]] const besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
 
-  constexpr int tpbx = tpb_D[3].get(quadr_order).x;
-  constexpr int tpby = tpb_D[3].get(quadr_order).y;
+  constexpr int tpbx = tpb_D[3][quadr_order].x;
+  constexpr int tpby = tpb_D[3][quadr_order].y;
 
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
@@ -2056,16 +2056,16 @@ __global__ void g_apply_regular_ver3
 
 template< int quadr_order >
 __global__ void g_apply_regular_ver4
-  ( [[maybe_unused]] besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
+  ( [[maybe_unused]] const besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
 
-  constexpr int tpbx = tpb_V[4].get(quadr_order).x;
-  constexpr int tpby = tpb_V[4].get(quadr_order).y;
+  constexpr int tpbx = tpb_V[4][quadr_order].x;
+  constexpr int tpby = tpb_V[4][quadr_order].y;
   
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
@@ -2134,16 +2134,16 @@ __global__ void g_apply_regular_ver4
 
 template< int quadr_order >
 __global__ void g_apply_regular_ver4
-  ( [[maybe_unused]] besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+  ( [[maybe_unused]] const besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
 
-  constexpr int tpbx = tpb_K[4].get(quadr_order).x;
-  constexpr int tpby = tpb_K[4].get(quadr_order).y;
+  constexpr int tpbx = tpb_K[4][quadr_order].x;
+  constexpr int tpby = tpb_K[4][quadr_order].y;
 
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
@@ -2219,16 +2219,16 @@ __global__ void g_apply_regular_ver4
 
 template< int quadr_order >
 __global__ void g_apply_regular_ver4
-  ( [[maybe_unused]] besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
+  ( [[maybe_unused]] const besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
 
-  constexpr int tpbx = tpb_Kt[4].get(quadr_order).x;
-  constexpr int tpby = tpb_Kt[4].get(quadr_order).y;
+  constexpr int tpbx = tpb_Kt[4][quadr_order].x;
+  constexpr int tpby = tpb_Kt[4][quadr_order].y;
 
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
@@ -2306,16 +2306,16 @@ __global__ void g_apply_regular_ver4
 
 template< int quadr_order >
 __global__ void g_apply_regular_ver4
-  ( [[maybe_unused]] besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
-    [[maybe_unused]] besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+  ( [[maybe_unused]] const besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
+    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
     const ns_gpu_helpers::heat_kernel_parameters kp) {
 
-  constexpr int tpbx = tpb_D[4].get(quadr_order).x;
-  constexpr int tpby = tpb_D[4].get(quadr_order).y;
+  constexpr int tpbx = tpb_D[4][quadr_order].x;
+  constexpr int tpby = tpb_D[4][quadr_order].y;
 
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
@@ -2605,7 +2605,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
     timers.gpu_compute[gpu_idx].start_submit();
     switch(gpu_kernel_version) {
       case 4: {
-        dim3 blockSize = get_tpb_by_matrix_and_version(this->_kernel, this->_test_space, this->_trial_space, 4).get(this->_order_regular);
+        dim3 blockSize = get_tpb(this->_kernel, this->_test_space, this->_trial_space, 4, this->_order_regular);
         dim3 gridSize(gpu_tst_elem_count / blockSize.x);
         switch(this->_order_regular) {
           case 5:
@@ -2630,7 +2630,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
       }
 
       case 3: {
-        dim3 blockSize = get_tpb_by_matrix_and_version(this->_kernel, this->_test_space, this->_trial_space, 3).get(this->_order_regular);
+        dim3 blockSize = get_tpb(this->_kernel, this->_test_space, this->_trial_space, 3, this->_order_regular);
         dim3 gridSize(gpu_tst_elem_count / blockSize.x);
         switch(this->_order_regular) {
           case 5:
@@ -2655,7 +2655,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
       }
 
       case 2: {
-        dim3 blockSize = get_tpb_by_matrix_and_version(this->_kernel, this->_test_space, this->_trial_space, 2).get(this->_order_regular);
+        dim3 blockSize = get_tpb(this->_kernel, this->_test_space, this->_trial_space, 2, this->_order_regular);
         dim3 gridSize(gpu_tst_elem_count);
         switch(this->_order_regular) {
           case 5:
@@ -2681,7 +2681,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
 
       case 1:
       default: {
-        dim3 blockSize = get_tpb_by_matrix_and_version(this->_kernel, this->_test_space, this->_trial_space, 1).get(this->_order_regular);
+        dim3 blockSize = get_tpb(this->_kernel, this->_test_space, this->_trial_space, 1, this->_order_regular);
         dim3 gridSize(gpu_tst_elem_count);
         switch(this->_order_regular) {
           case 5:
