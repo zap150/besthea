@@ -757,7 +757,7 @@ __device__ void d_basis_tri_p1_evaluate_curl_00(
 
 
 template<int quadr_order>
-__device__ void d_get_values_regular_sl_p0_p0(sc * values_out,
+__device__ void d_get_local_contributions_treg_sreg_sl_p0_p0(sc * values_out,
   lo delta, lo i_test, lo i_trial,
   const ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & quadr_nodes_tst,
   const ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & quadr_nodes_trl,
@@ -807,7 +807,7 @@ __device__ void d_get_values_regular_sl_p0_p0(sc * values_out,
 
 
 template<int quadr_order>
-__device__ void d_get_values_regular_dl_p0_p1(sc * values_out,
+__device__ void d_get_local_contributions_treg_sreg_dl_p0_p1(sc * values_out,
   lo delta, lo i_test, lo i_trial,
   const ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & quadr_nodes_tst,
   const ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & quadr_nodes_trl,
@@ -870,7 +870,7 @@ __device__ void d_get_values_regular_dl_p0_p1(sc * values_out,
 
 
 template<int quadr_order>
-__device__ void d_get_values_regular_adl_p1_p0(sc * values_out,
+__device__ void d_get_local_contributions_treg_sreg_adl_p1_p0(sc * values_out,
   lo delta, lo i_test, lo i_trial,
   const ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & quadr_nodes_tst,
   const ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & quadr_nodes_trl,
@@ -933,7 +933,7 @@ __device__ void d_get_values_regular_adl_p1_p0(sc * values_out,
 
 
 template<int quadr_order>
-__device__ void d_get_values_regular_hs_p1_p1(sc * values_out,
+__device__ void d_get_local_contributions_treg_sreg_hs_p1_p1(sc * values_out,
   lo delta, lo i_test, lo i_trial,
   const ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & quadr_nodes_tst,
   const ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & quadr_nodes_trl,
@@ -1026,7 +1026,7 @@ __device__ void d_get_values_regular_hs_p1_p1(sc * values_out,
 
 
 template< int quadr_order >
-__global__ void g_apply_regular
+__global__ void g_apply_gpu_treg_sreg_ver1
   ( [[maybe_unused]] const besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
@@ -1072,7 +1072,7 @@ __global__ void g_apply_regular
     for (lo diag = 0; diag < n_blocks; diag++) {
       val_prev = val_curr;
       val_curr = val_next;
-      d_get_values_regular_sl_p0_p0(&val_next, diag+1, i_tst, i_trl,
+      d_get_local_contributions_treg_sreg_sl_p0_p0(&val_next, diag+1, i_tst, i_trl,
         shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
 
       matrix_val = ((i_tst == i_trl) ? (0) : (-val_prev + 2*val_curr - val_next));
@@ -1098,7 +1098,7 @@ __global__ void g_apply_regular
 
 
 template< int quadr_order >
-__global__ void g_apply_regular
+__global__ void g_apply_gpu_treg_sreg_ver1
   ( [[maybe_unused]] const besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
@@ -1144,7 +1144,7 @@ __global__ void g_apply_regular
     for (lo diag = 0; diag < n_blocks; diag++) {
       vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
       vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-      d_get_values_regular_dl_p0_p1(vals_next, diag+1, i_tst, i_trl,
+      d_get_local_contributions_treg_sreg_dl_p0_p1(vals_next, diag+1, i_tst, i_trl,
         shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
 
       matrix_vals[0] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
@@ -1174,7 +1174,7 @@ __global__ void g_apply_regular
 
 
 template< int quadr_order >
-__global__ void g_apply_regular
+__global__ void g_apply_gpu_treg_sreg_ver1
   ( [[maybe_unused]] const besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
@@ -1223,7 +1223,7 @@ __global__ void g_apply_regular
     for (lo diag = 0; diag < n_blocks; diag++) {
       vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
       vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-      d_get_values_regular_adl_p1_p0(vals_next, diag+1, i_tst, i_trl,
+      d_get_local_contributions_treg_sreg_adl_p1_p0(vals_next, diag+1, i_tst, i_trl,
         shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
 
       matrix_vals[0] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
@@ -1257,7 +1257,7 @@ __global__ void g_apply_regular
 
 
 template< int quadr_order >
-__global__ void g_apply_regular
+__global__ void g_apply_gpu_treg_sreg_ver1
   ( [[maybe_unused]] const besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
@@ -1307,7 +1307,7 @@ __global__ void g_apply_regular
     for (lo diag = 0; diag < n_blocks; diag++) {
       for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
       for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
-      d_get_values_regular_hs_p1_p1(vals_next, diag+1, i_tst, i_trl,
+      d_get_local_contributions_treg_sreg_hs_p1_p1(vals_next, diag+1, i_tst, i_trl,
         shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
 
       for(lo j = 0; j < 9; j++) matrix_vals[j] = ((i_tst == i_trl) ? (0) : (-vals_prev[j] + 2*vals_curr[j] - vals_next[j]));
@@ -1353,7 +1353,7 @@ __global__ void g_apply_regular
 
 
 template< int quadr_order >
-__global__ void g_apply_regular_ver2
+__global__ void g_apply_gpu_treg_sreg_ver2
   ( [[maybe_unused]] const besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
@@ -1402,7 +1402,7 @@ __global__ void g_apply_regular_ver2
         lo &i_trl = i;
         val_prev = val_curr;
         val_curr = val_next;
-        d_get_values_regular_sl_p0_p0(&val_next, diag+1, i_tst, i_trl,
+        d_get_local_contributions_treg_sreg_sl_p0_p0(&val_next, diag+1, i_tst, i_trl,
           shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
         shmem_matrix_vals[tid] = ((i_tst == i_trl) ? (0) : (-val_prev + 2*val_curr - val_next));
         __syncthreads();
@@ -1438,7 +1438,7 @@ __global__ void g_apply_regular_ver2
 
 
 template< int quadr_order >
-__global__ void g_apply_regular_ver2
+__global__ void g_apply_gpu_treg_sreg_ver2
   ( [[maybe_unused]] const besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
@@ -1491,7 +1491,7 @@ __global__ void g_apply_regular_ver2
         lo &i_trl = i;
         vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
         vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-        d_get_values_regular_dl_p0_p1(vals_next, diag+1, i_tst, i_trl,
+        d_get_local_contributions_treg_sreg_dl_p0_p1(vals_next, diag+1, i_tst, i_trl,
           shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
         shmem_matrix_vals[0][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
         shmem_matrix_vals[1][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
@@ -1529,7 +1529,7 @@ __global__ void g_apply_regular_ver2
 
 
 template< int quadr_order >
-__global__ void g_apply_regular_ver2
+__global__ void g_apply_gpu_treg_sreg_ver2
   ( [[maybe_unused]] const besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
@@ -1581,7 +1581,7 @@ __global__ void g_apply_regular_ver2
         lo &i_trl = i;
         vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
         vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-        d_get_values_regular_adl_p1_p0(vals_next, diag+1, i_tst, i_trl,
+        d_get_local_contributions_treg_sreg_adl_p1_p0(vals_next, diag+1, i_tst, i_trl,
           shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
         shmem_matrix_vals[0][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
         shmem_matrix_vals[1][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
@@ -1621,7 +1621,7 @@ __global__ void g_apply_regular_ver2
 
 
 template< int quadr_order >
-__global__ void g_apply_regular_ver2
+__global__ void g_apply_gpu_treg_sreg_ver2
   ( [[maybe_unused]] const besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
@@ -1671,7 +1671,7 @@ __global__ void g_apply_regular_ver2
         lo &i_trl = i;
         for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
         for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
-        d_get_values_regular_hs_p1_p1(vals_next, diag+1, i_tst, i_trl,
+        d_get_local_contributions_treg_sreg_hs_p1_p1(vals_next, diag+1, i_tst, i_trl,
           shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
         for(lo j = 0; j < 9; j++)
           shmem_matrix_vals[j][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[j] + 2*vals_curr[j] - vals_next[j]));
@@ -1724,7 +1724,7 @@ __global__ void g_apply_regular_ver2
 
 
 template< int quadr_order >
-__global__ void g_apply_regular_ver3
+__global__ void g_apply_gpu_treg_sreg_ver3
   ( [[maybe_unused]] const besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
@@ -1769,7 +1769,7 @@ __global__ void g_apply_regular_ver3
     for(lo diag = 0; diag < n_blocks; diag++) {
       val_prev = val_curr;
       val_curr = val_next;
-      d_get_values_regular_sl_p0_p0(&val_next, diag+1, i_tst, i_trl,
+      d_get_local_contributions_treg_sreg_sl_p0_p0(&val_next, diag+1, i_tst, i_trl,
         shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
       matrix_val = ((i_tst == i_trl) ? (0) : (-val_prev + 2*val_curr - val_next));
       
@@ -1796,7 +1796,7 @@ __global__ void g_apply_regular_ver3
 
 
 template< int quadr_order >
-__global__ void g_apply_regular_ver3
+__global__ void g_apply_gpu_treg_sreg_ver3
   ( [[maybe_unused]] const besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
@@ -1841,7 +1841,7 @@ __global__ void g_apply_regular_ver3
     for(lo diag = 0; diag < n_blocks; diag++) {
       vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
       vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-      d_get_values_regular_dl_p0_p1(vals_next, diag+1, i_tst, i_trl,
+      d_get_local_contributions_treg_sreg_dl_p0_p1(vals_next, diag+1, i_tst, i_trl,
         shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
       
       matrix_vals[0] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
@@ -1873,7 +1873,7 @@ __global__ void g_apply_regular_ver3
 
 
 template< int quadr_order >
-__global__ void g_apply_regular_ver3
+__global__ void g_apply_gpu_treg_sreg_ver3
   ( [[maybe_unused]] const besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
@@ -1924,7 +1924,7 @@ __global__ void g_apply_regular_ver3
     for(lo diag = 0; diag < n_blocks; diag++) {
       vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
       vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-      d_get_values_regular_adl_p1_p0(vals_next, diag+1, i_tst, i_trl,
+      d_get_local_contributions_treg_sreg_adl_p1_p0(vals_next, diag+1, i_tst, i_trl,
         shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
       
       matrix_vals[0] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
@@ -1958,7 +1958,7 @@ __global__ void g_apply_regular_ver3
 
 
 template< int quadr_order >
-__global__ void g_apply_regular_ver3
+__global__ void g_apply_gpu_treg_sreg_ver3
   ( [[maybe_unused]] const besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
@@ -2010,7 +2010,7 @@ __global__ void g_apply_regular_ver3
     for(lo diag = 0; diag < n_blocks; diag++) {
       for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
       for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
-      d_get_values_regular_hs_p1_p1(vals_next, diag+1, i_tst, i_trl,
+      d_get_local_contributions_treg_sreg_hs_p1_p1(vals_next, diag+1, i_tst, i_trl,
         shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
       
       for(lo j = 0; j < 9; j++) matrix_vals[j] = ((i_tst == i_trl) ? (0) : (-vals_prev[j] + 2*vals_curr[j] - vals_next[j]));
@@ -2055,7 +2055,7 @@ __global__ void g_apply_regular_ver3
 
 
 template< int quadr_order >
-__global__ void g_apply_regular_ver4
+__global__ void g_apply_gpu_treg_sreg_ver4
   ( [[maybe_unused]] const besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
@@ -2100,7 +2100,7 @@ __global__ void g_apply_regular_ver4
         lo &i_trl = i;
         val_prev = val_curr;
         val_curr = val_next;
-        d_get_values_regular_sl_p0_p0(&val_next, diag+1, i_tst, i_trl,
+        d_get_local_contributions_treg_sreg_sl_p0_p0(&val_next, diag+1, i_tst, i_trl,
           shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
         shmem_matrix_vals[tid] = ((i_tst == i_trl) ? (0) : (-val_prev + 2*val_curr - val_next));
         __syncthreads();
@@ -2133,7 +2133,7 @@ __global__ void g_apply_regular_ver4
 
 
 template< int quadr_order >
-__global__ void g_apply_regular_ver4
+__global__ void g_apply_gpu_treg_sreg_ver4
   ( [[maybe_unused]] const besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
@@ -2182,7 +2182,7 @@ __global__ void g_apply_regular_ver4
         lo &i_trl = i;
         vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
         vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-        d_get_values_regular_dl_p0_p1(vals_next, diag+1, i_tst, i_trl,
+        d_get_local_contributions_treg_sreg_dl_p0_p1(vals_next, diag+1, i_tst, i_trl,
           shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
         shmem_matrix_vals[0][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
         shmem_matrix_vals[1][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
@@ -2218,7 +2218,7 @@ __global__ void g_apply_regular_ver4
 
 
 template< int quadr_order >
-__global__ void g_apply_regular_ver4
+__global__ void g_apply_gpu_treg_sreg_ver4
   ( [[maybe_unused]] const besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
@@ -2267,7 +2267,7 @@ __global__ void g_apply_regular_ver4
         lo &i_trl = i;
         vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
         vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-        d_get_values_regular_adl_p1_p0(vals_next, diag+1, i_tst, i_trl,
+        d_get_local_contributions_treg_sreg_adl_p1_p0(vals_next, diag+1, i_tst, i_trl,
           shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
         shmem_matrix_vals[0][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
         shmem_matrix_vals[1][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
@@ -2305,7 +2305,7 @@ __global__ void g_apply_regular_ver4
 
 
 template< int quadr_order >
-__global__ void g_apply_regular_ver4
+__global__ void g_apply_gpu_treg_sreg_ver4
   ( [[maybe_unused]] const besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
     [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
@@ -2352,7 +2352,7 @@ __global__ void g_apply_regular_ver4
         lo &i_trl = i;
         for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
         for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
-        d_get_values_regular_hs_p1_p1(vals_next, diag+1, i_tst, i_trl,
+        d_get_local_contributions_treg_sreg_hs_p1_p1(vals_next, diag+1, i_tst, i_trl,
           shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
         for(lo j = 0; j < 9; j++)
           shmem_matrix_vals[j][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[j] + 2*vals_curr[j] - vals_next[j]));
@@ -2465,49 +2465,49 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   if(load_distr->get_gpu_count_total() > 0) {
     switch(gpu_kernel_version) {
       case 4:
-        this->apply_regular_gpu_begin(x_perm, y, alpha, timers);
+        this->apply_gpu_treg_sreg_begin(x_perm, y, alpha, timers);
         break;
       case 3:
-        this->apply_regular_gpu_begin(x_perm, y, alpha, timers);
+        this->apply_gpu_treg_sreg_begin(x_perm, y, alpha, timers);
         break;
       case 2:
-        this->apply_regular_gpu_begin(x_perm, y, alpha, timers);
+        this->apply_gpu_treg_sreg_begin(x_perm, y, alpha, timers);
         break;
       case 1:
       default:
-        this->apply_regular_gpu_begin(x, y_perm, alpha, timers);
+        this->apply_gpu_treg_sreg_begin(x, y_perm, alpha, timers);
         break;
     }
   }
   
   timers.cpu_all.start();
   if(load_distr->get_cpu_count() > 0) {
-    timers.cpu_regular.start();
-    this->apply_regular_cpu(x_perm, y_perm, alpha, load_distr->get_cpu_begin(), load_distr->get_cpu_end());
-    timers.cpu_regular.stop();
+    timers.cpu_treg_sreg.start();
+    this->apply_cpu_treg_sreg(x_perm, y_perm, alpha, load_distr->get_cpu_begin(), load_distr->get_cpu_end());
+    timers.cpu_treg_sreg.stop();
   }
-  timers.cpu_singular.start();
-  this->apply_singular_cpu(x_perm, y_perm, alpha);
-  timers.cpu_singular.stop();
-  timers.cpu_delta0.start();
-  this->apply_delta0_cpu(x_perm, y_perm, alpha);
-  timers.cpu_delta0.stop();
+  timers.cpu_treg_ssng.start();
+  this->apply_cpu_treg_ssng(x_perm, y_perm, alpha);
+  timers.cpu_treg_ssng.stop();
+  timers.cpu_tsng.start();
+  this->apply_cpu_tsng(x_perm, y_perm, alpha);
+  timers.cpu_tsng.stop();
   timers.cpu_all.stop();
 
   if(load_distr->get_gpu_count_total() > 0) {
     switch(gpu_kernel_version) {
       case 4:
-        this->apply_regular_gpu_finalize(y);
+        this->apply_gpu_treg_sreg_finalize(y);
         break;
       case 3:
-        this->apply_regular_gpu_finalize(y);
+        this->apply_gpu_treg_sreg_finalize(y);
         break;
       case 2:
-        this->apply_regular_gpu_finalize(y);
+        this->apply_gpu_treg_sreg_finalize(y);
         break;
       case 1:
       default:
-        this->apply_regular_gpu_finalize(y_perm);
+        this->apply_gpu_treg_sreg_finalize(y_perm);
         break;
     }
   }
@@ -2550,7 +2550,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
 template<class kernel_type, class test_space_type, class trial_space_type>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   <kernel_type, test_space_type, trial_space_type>::
-  apply_regular_gpu_begin( const block_vector_type & x,
+  apply_gpu_treg_sreg_begin( const block_vector_type & x,
     const block_vector_type & y, sc alpha,
     ns_gpu_helpers::timer_collection & timers ) const {
   // this function does not really care if x or y are permuted or not
@@ -2609,20 +2609,20 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
         dim3 gridSize(gpu_tst_elem_count / blockSize.x);
         switch(this->_order_regular) {
           case 5:
-            g_apply_regular_ver4 <5> <<< gridSize, blockSize >>>
+            g_apply_gpu_treg_sreg_ver4 <5> <<< gridSize, blockSize >>>
               (this->_kernel, this->_test_space, this->_trial_space, vectors_data.d_x[gpu_idx], vectors_data.ld_x[gpu_idx], vectors_data.d_y[gpu_idx], vectors_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
           case 4:
-            g_apply_regular_ver4 <4> <<< gridSize, blockSize >>>
+            g_apply_gpu_treg_sreg_ver4 <4> <<< gridSize, blockSize >>>
               (this->_kernel, this->_test_space, this->_trial_space, vectors_data.d_x[gpu_idx], vectors_data.ld_x[gpu_idx], vectors_data.d_y[gpu_idx], vectors_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
           case 2:
-            g_apply_regular_ver4 <2> <<< gridSize, blockSize >>>
+            g_apply_gpu_treg_sreg_ver4 <2> <<< gridSize, blockSize >>>
               (this->_kernel, this->_test_space, this->_trial_space, vectors_data.d_x[gpu_idx], vectors_data.ld_x[gpu_idx], vectors_data.d_y[gpu_idx], vectors_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
           case 1:
           default:
-            g_apply_regular_ver4 <1> <<< gridSize, blockSize >>>
+            g_apply_gpu_treg_sreg_ver4 <1> <<< gridSize, blockSize >>>
               (this->_kernel, this->_test_space, this->_trial_space, vectors_data.d_x[gpu_idx], vectors_data.ld_x[gpu_idx], vectors_data.d_y[gpu_idx], vectors_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
         }
@@ -2634,20 +2634,20 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
         dim3 gridSize(gpu_tst_elem_count / blockSize.x);
         switch(this->_order_regular) {
           case 5:
-            g_apply_regular_ver3 <5> <<< gridSize, blockSize >>>
+            g_apply_gpu_treg_sreg_ver3 <5> <<< gridSize, blockSize >>>
               (this->_kernel, this->_test_space, this->_trial_space, vectors_data.d_x[gpu_idx], vectors_data.ld_x[gpu_idx], vectors_data.d_y[gpu_idx], vectors_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
           case 4:
-            g_apply_regular_ver3 <4> <<< gridSize, blockSize >>>
+            g_apply_gpu_treg_sreg_ver3 <4> <<< gridSize, blockSize >>>
               (this->_kernel, this->_test_space, this->_trial_space, vectors_data.d_x[gpu_idx], vectors_data.ld_x[gpu_idx], vectors_data.d_y[gpu_idx], vectors_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
           case 2:
-            g_apply_regular_ver3 <2> <<< gridSize, blockSize >>>
+            g_apply_gpu_treg_sreg_ver3 <2> <<< gridSize, blockSize >>>
               (this->_kernel, this->_test_space, this->_trial_space, vectors_data.d_x[gpu_idx], vectors_data.ld_x[gpu_idx], vectors_data.d_y[gpu_idx], vectors_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
           case 1:
           default:
-            g_apply_regular_ver3 <1> <<< gridSize, blockSize >>>
+            g_apply_gpu_treg_sreg_ver3 <1> <<< gridSize, blockSize >>>
               (this->_kernel, this->_test_space, this->_trial_space, vectors_data.d_x[gpu_idx], vectors_data.ld_x[gpu_idx], vectors_data.d_y[gpu_idx], vectors_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
         }
@@ -2659,20 +2659,20 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
         dim3 gridSize(gpu_tst_elem_count);
         switch(this->_order_regular) {
           case 5:
-            g_apply_regular_ver2 <5> <<< gridSize, blockSize >>>
+            g_apply_gpu_treg_sreg_ver2 <5> <<< gridSize, blockSize >>>
               (this->_kernel, this->_test_space, this->_trial_space, vectors_data.d_x[gpu_idx], vectors_data.ld_x[gpu_idx], vectors_data.d_y[gpu_idx], vectors_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
           case 4:
-            g_apply_regular_ver2 <4> <<< gridSize, blockSize >>>
+            g_apply_gpu_treg_sreg_ver2 <4> <<< gridSize, blockSize >>>
               (this->_kernel, this->_test_space, this->_trial_space, vectors_data.d_x[gpu_idx], vectors_data.ld_x[gpu_idx], vectors_data.d_y[gpu_idx], vectors_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
           case 2:
-            g_apply_regular_ver2 <2> <<< gridSize, blockSize >>>
+            g_apply_gpu_treg_sreg_ver2 <2> <<< gridSize, blockSize >>>
               (this->_kernel, this->_test_space, this->_trial_space, vectors_data.d_x[gpu_idx], vectors_data.ld_x[gpu_idx], vectors_data.d_y[gpu_idx], vectors_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
           case 1:
           default:
-            g_apply_regular_ver2 <1> <<< gridSize, blockSize >>>
+            g_apply_gpu_treg_sreg_ver2 <1> <<< gridSize, blockSize >>>
               (this->_kernel, this->_test_space, this->_trial_space, vectors_data.d_x[gpu_idx], vectors_data.ld_x[gpu_idx], vectors_data.d_y[gpu_idx], vectors_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
         }
@@ -2685,20 +2685,20 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
         dim3 gridSize(gpu_tst_elem_count);
         switch(this->_order_regular) {
           case 5:
-            g_apply_regular <5> <<< gridSize, blockSize >>>
+            g_apply_gpu_treg_sreg_ver1 <5> <<< gridSize, blockSize >>>
               (this->_kernel, this->_test_space, this->_trial_space, vectors_data.d_x[gpu_idx], vectors_data.ld_x[gpu_idx], vectors_data.d_y[gpu_idx], vectors_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
           case 4:
-            g_apply_regular <4> <<< gridSize, blockSize >>>
+            g_apply_gpu_treg_sreg_ver1 <4> <<< gridSize, blockSize >>>
               (this->_kernel, this->_test_space, this->_trial_space, vectors_data.d_x[gpu_idx], vectors_data.ld_x[gpu_idx], vectors_data.d_y[gpu_idx], vectors_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
           case 2:
-            g_apply_regular <2> <<< gridSize, blockSize >>>
+            g_apply_gpu_treg_sreg_ver1 <2> <<< gridSize, blockSize >>>
               (this->_kernel, this->_test_space, this->_trial_space, vectors_data.d_x[gpu_idx], vectors_data.ld_x[gpu_idx], vectors_data.d_y[gpu_idx], vectors_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
           case 1:
           default:
-            g_apply_regular <1> <<< gridSize, blockSize >>>
+            g_apply_gpu_treg_sreg_ver1 <1> <<< gridSize, blockSize >>>
               (this->_kernel, this->_test_space, this->_trial_space, vectors_data.d_x[gpu_idx], vectors_data.ld_x[gpu_idx], vectors_data.d_y[gpu_idx], vectors_data.ld_y[gpu_idx], alpha, gpu_tst_elem_begin, gpu_mesh->get_metadata(), gpu_mesh->get_per_gpu_data()[gpu_idx], kp);
             break;
         }
@@ -2759,7 +2759,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
 template<class kernel_type, class test_space_type, class trial_space_type>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   <kernel_type, test_space_type, trial_space_type>::
-  apply_regular_gpu_finalize( block_vector_type & y ) const {
+  apply_gpu_treg_sreg_finalize( block_vector_type & y ) const {
   // this function does not really care if y is permuted or not
 
   bool isOk = true;

@@ -168,39 +168,120 @@ public:
 
 protected:
 
+  /*!
+   * @brief Performs the whole apply operation on-the-fly on the CPU
+   * @param[in] x
+   * @param[in,out] y
+   * @param[in] trans Flag for transpose of individual blocks. Not supported.
+   * @param[in] alpha
+   * @param[in] beta
+   */
   void apply_cpu( const block_vector_type & x_perm, block_vector_type & y_perm,
     sc alpha, sc beta ) const;
 
-  void get_values_regular      (sc * values_out,lo delta, lo i_test, lo i_trial,
-    const quadrature_nodes & quadr_nodes_tst,
-    const quadrature_nodes & quadr_nodes_trl) const;
-
-  void get_values_singular     (sc * values_out,lo delta, lo i_test, lo i_trial,
-    const quadrature_nodes & quadr_nodes_tst,
-    const quadrature_nodes & quadr_nodes_trl) const;
-
-  void get_values_delta0       (sc * values_out,          lo i_test, lo i_trial,
-    int n_shared_vertices, int rot_test, int rot_trial,
-    const quadrature_nodes & quadr_nodes_tst,
-    const quadrature_nodes & quadr_nodes_trl) const;
-
-  void get_values_delta0special(sc * values_out,          lo i_test, lo i_trial,
-    int n_shared_vertices, int rot_test, int rot_trial,
-    const quadrature_nodes & quadr_nodes_tst,
-    const quadrature_nodes & quadr_nodes_trl) const;
-
-  void apply_regular_cpu(  const block_vector_type & x_perm,
+  /*!
+   * Performs the apply operation using only the fully regular contributions.
+   * @param[in] x
+   * @param[in,out] y
+   * @param[in] alpha
+   * @param[in] beta
+   */
+  void apply_cpu_treg_sreg( const block_vector_type & x_perm,
     block_vector_type & y_perm, sc alpha = 1.0 ) const;
     
-  void apply_regular_cpu(  const block_vector_type & x_perm,
+  /*!
+   * Performs the apply operation using only a section of the fully regular contributions.
+   * @param[in] x
+   * @param[in,out] y
+   * @param[in] alpha
+   * @param[in] beta
+   * @param[in] tst_elem_start Index of the first test element to be included.
+   * @param[in] tst_elem_end Index of the one-after-last test element to be included.
+   */
+  void apply_cpu_treg_sreg( const block_vector_type & x_perm,
     block_vector_type & y_perm, sc alpha,
     lo tst_elem_start, lo tst_elem_end ) const;
 
-  void apply_singular_cpu( const block_vector_type & x_perm,
+  /*!
+   * Performs the apply operation using only the time-regular
+   * space-singular contributions.
+   * @param[in] x
+   * @param[in,out] y
+   * @param[in] alpha
+   * @param[in] beta
+   */
+  void apply_cpu_treg_ssng( const block_vector_type & x_perm,
     block_vector_type & y_perm, sc alpha = 1.0 ) const;
 
-  void apply_delta0_cpu(   const block_vector_type & x_perm,
+  /*!
+   * Performs the apply operation using only the time-singular contributions.
+   * @param[in] x
+   * @param[in,out] y
+   * @param[in] alpha
+   * @param[in] beta
+   */
+  void apply_cpu_tsng( const block_vector_type & x_perm,
     block_vector_type & y_perm, sc alpha = 1.0 ) const;
+
+
+
+  /*!
+   * Calculates the values of the fully regular local contributions.
+   * @param[out] values_out Array of contribution values
+   * @param[in] delta Temporal element difference
+   * @param[in] i_test Test element index
+   * @param[in] i_trial Trial element index
+   * @param[in] quadr_nodes_tst Quadrature nodes mapped to the test element
+   * @param[in] quadr_nodes_trl Quadrature nodes mapped to the trial element
+   */
+  void get_local_contributions_treg_sreg(sc * values_out,
+    lo delta, lo i_test, lo i_trial,
+    const quadrature_nodes & quadr_nodes_tst,
+    const quadrature_nodes & quadr_nodes_trl) const;
+
+  /*!
+   * Calculates the values of the time-regular space-singular local contributions.
+   * @param[out] values_out Array of contribution values
+   * @param[in] delta Temporal element difference
+   * @param[in] i_test Test element index
+   * @param[in] i_trial Trial element index
+   * @param[in] quadr_nodes_tst Quadrature nodes mapped to the test element
+   * @param[in] quadr_nodes_trl Quadrature nodes mapped to the trial element
+   */
+  void get_local_contributions_treg_ssng( sc * values_out,
+    lo delta, lo i_test, lo i_trial,
+    const quadrature_nodes & quadr_nodes_tst,
+    const quadrature_nodes & quadr_nodes_trl) const;
+
+  /*!
+   * Calculates the values of the second time-singular local contributions.
+   * @param[out] values_out Array of contribution values
+   * @param[in] delta Temporal element difference
+   * @param[in] i_test Test element index
+   * @param[in] i_trial Trial element index
+   * @param[in] quadr_nodes_tst Quadrature nodes mapped to the test element
+   * @param[in] quadr_nodes_trl Quadrature nodes mapped to the trial element
+   */
+  void get_local_contributions_tsng_2( sc * values_out,
+    lo i_test, lo i_trial,
+    int n_shared_vertices, int rot_test, int rot_trial,
+    const quadrature_nodes & quadr_nodes_tst,
+    const quadrature_nodes & quadr_nodes_trl) const;
+
+  /*!
+   * Calculates the values of the first time-singular local contributions.
+   * @param[out] values_out Array of contribution values
+   * @param[in] delta Temporal element difference
+   * @param[in] i_test Test element index
+   * @param[in] i_trial Trial element index
+   * @param[in] quadr_nodes_tst Quadrature nodes mapped to the test element
+   * @param[in] quadr_nodes_trl Quadrature nodes mapped to the trial element
+   */
+  void get_local_contributions_tsng_1( sc * values_out,
+    lo i_test, lo i_trial,
+    int n_shared_vertices, int rot_test, int rot_trial,
+    const quadrature_nodes & quadr_nodes_tst,
+    const quadrature_nodes & quadr_nodes_trl) const;
 
   /*!
    * Initializes the quadrature reference structure.

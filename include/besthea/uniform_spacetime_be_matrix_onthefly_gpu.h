@@ -145,7 +145,7 @@ class besthea::bem::onthefly::
    * @param[in] alpha Scaling factor of vector x
    * @param[in] timers Timers for measuring elapsed time
    */
-  void apply_regular_gpu_begin( const block_vector_type & x,
+  void apply_gpu_treg_sreg_begin( const block_vector_type & x,
     const block_vector_type & y, sc alpha,
     besthea::bem::onthefly::helpers::timer_collection & timers )
     const;
@@ -154,7 +154,7 @@ class besthea::bem::onthefly::
    * Waits for all GPU tasks to finish and copies vector y back to CPU memory.
    * @param[out] y
    */
-  void apply_regular_gpu_finalize( block_vector_type & y ) const;
+  void apply_gpu_treg_sreg_finalize( block_vector_type & y ) const;
 
  private:
   const besthea::mesh::uniform_spacetime_tensor_mesh_gpu *

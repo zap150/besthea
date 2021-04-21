@@ -284,9 +284,9 @@ void besthea::bem::onthefly::helpers::timer_collection::print_all() {
   printf("BESTHEA Info: time gpu_all:      ");
   print_timers(gpu_all);
   printf("BESTHEA Info: time cpu_scalein:  %10.6f\n", cpu_scalein.get_time());
-  printf("BESTHEA Info: time cpu_regular:  %10.6f\n", cpu_regular.get_time());
-  printf("BESTHEA Info: time cpu_singular: %10.6f\n", cpu_singular.get_time());
-  printf("BESTHEA Info: time cpu_delta0:   %10.6f\n", cpu_delta0.get_time());
+  printf("BESTHEA Info: time cpu_regular:  %10.6f\n", cpu_treg_sreg.get_time());
+  printf("BESTHEA Info: time cpu_singular: %10.6f\n", cpu_treg_ssng.get_time());
+  printf("BESTHEA Info: time cpu_delta0:   %10.6f\n", cpu_tsng.get_time());
   printf("BESTHEA Info: time cpu_all:      %10.6f\n", cpu_all.get_time());
   printf("BESTHEA Info: time gpu_max:      %10.6f\n", get_gpu_time_all());
   printf("BESTHEA Info: time combined:     %10.6f\n", combined.get_time());
@@ -306,12 +306,12 @@ void besthea::bem::onthefly::helpers::timer_collection::
 
 double besthea::bem::onthefly::helpers::timer_collection::
   get_cpu_time_const() {
-  return cpu_singular.get_time() + cpu_delta0.get_time();
+  return cpu_treg_ssng.get_time() + cpu_tsng.get_time();
 }
 
 double besthea::bem::onthefly::helpers::timer_collection::
   get_cpu_time_scaling() {
-  return cpu_regular.get_time();
+  return cpu_treg_sreg.get_time();
 }
 
 double besthea::bem::onthefly::helpers::timer_collection::

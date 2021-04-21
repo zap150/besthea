@@ -203,9 +203,9 @@ struct besthea::bem::onthefly::helpers::timer_collection {
   std::vector< besthea::tools::time_measurer_cuda > gpu_compute;
   std::vector< besthea::tools::time_measurer_cuda > gpu_copyout;
   besthea::tools::time_measurer cpu_scalein;
-  besthea::tools::time_measurer cpu_regular;
-  besthea::tools::time_measurer cpu_singular;
-  besthea::tools::time_measurer cpu_delta0;
+  besthea::tools::time_measurer cpu_treg_sreg;
+  besthea::tools::time_measurer cpu_treg_ssng;
+  besthea::tools::time_measurer cpu_tsng;
   besthea::tools::time_measurer cpu_all;
   besthea::tools::time_measurer combined;
 
