@@ -214,7 +214,7 @@ int main( int argc, char * argv[] ) {
   M.assemble();
   tm_assemble_m_mem.stop();
   
-  sc prec = 1e-8;
+  sc prec = 1e-5;
   sc iter = 500;
 
   sc rel_error_dir_mem =     0.0;
@@ -281,7 +281,7 @@ int main( int argc, char * argv[] ) {
     if(do_mem) {
       printf("  solve mem\n");
       for(int i = 0; i < total_repetitions; i++) {
-        sol_mem.fill(0.0);
+        sol_mem.copy(rhs_mem);
         gmres_prec_dir_mem = prec;
         gmres_iter_dir_mem = iter;
         if(i >= pre_repetitions) tm_solve_dir_mem.start();
@@ -292,7 +292,7 @@ int main( int argc, char * argv[] ) {
     if(do_fly_cpu) {
       printf("  solve fly cpu\n");
       for(int i = 0; i < total_repetitions; i++) {
-        sol_fly_cpu.fill(0.0);
+        sol_fly_cpu.copy(rhs_fly_cpu);
         gmres_prec_dir_fly_cpu = prec;
         gmres_iter_dir_fly_cpu = iter;
         if(i >= pre_repetitions) tm_solve_dir_fly_cpu.start();
@@ -303,7 +303,7 @@ int main( int argc, char * argv[] ) {
     if(do_fly_gpu) {
       printf("  solve fly gpu\n");
       for(int i = 0; i < total_repetitions; i++) {
-        sol_fly_gpu.fill(0.0);
+        sol_fly_gpu.copy(rhs_fly_gpu);
         gmres_prec_dir_fly_gpu = prec;
         gmres_iter_dir_fly_gpu = iter;
         if(i >= pre_repetitions) tm_solve_dir_fly_gpu.start();
@@ -363,7 +363,7 @@ int main( int argc, char * argv[] ) {
     if(do_mem) {
       printf("  solve mem\n");
       for(int i = 0; i < total_repetitions; i++) {
-        sol_mem.fill(0.0);
+        sol_mem.copy(rhs_mem);
         gmres_prec_neu_mem = prec;
         gmres_iter_neu_mem = iter;
         if(i >= pre_repetitions) tm_solve_neu_mem.start();
@@ -374,7 +374,7 @@ int main( int argc, char * argv[] ) {
     if(do_fly_cpu) {
       printf("  solve fly cpu\n");
       for(int i = 0; i < total_repetitions; i++) {
-        sol_fly_cpu.fill(0.0);
+        sol_fly_cpu.copy(rhs_fly_cpu);
         gmres_prec_neu_fly_cpu = prec;
         gmres_iter_neu_fly_cpu = iter;
         if(i >= pre_repetitions) tm_solve_neu_fly_cpu.start();
@@ -385,7 +385,7 @@ int main( int argc, char * argv[] ) {
     if(do_fly_gpu) {
       printf("  solve fly gpu\n");
       for(int i = 0; i < total_repetitions; i++) {
-        sol_fly_gpu.fill(0.0);
+        sol_fly_gpu.copy(rhs_fly_gpu);
         gmres_prec_neu_fly_gpu = prec;
         gmres_iter_neu_fly_gpu = iter;
         if(i >= pre_repetitions) tm_solve_neu_fly_gpu.start();
