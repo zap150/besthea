@@ -24,13 +24,13 @@ int main()
     sc alpha = 0.5;
     
     // load and create mesh
-    std::string mesh_file = "path/to/mesh/cube_surf.txt";
+    std::string mesh_file = "bin/cube_192.txt";
     lo n_timesteps = 8;
     sc end_time = 1.0;
     triangular_surface_mesh space_mesh;
     space_mesh.load(mesh_file);
     uniform_spacetime_tensor_mesh spacetime_mesh(space_mesh, end_time, n_timesteps);
-    spacetime_mesh.refine(1);
+    //spacetime_mesh.refine(1);
 
     // create BE spaces
     uniform_spacetime_be_space<basis_tri_p0> space_p0(spacetime_mesh);
@@ -57,19 +57,20 @@ int main()
     M.assemble();
 
     // create and assemble right hand side vector
-    block_vector rhs(K.get_block_dim(), K.get_n_rows());
+    block_vector rhs( V.get_block_dim(), V.get_n_rows() );
     M.apply(bc_dir, rhs, false, 0.5, 0.0);
     K.apply(bc_dir, rhs, false, 1.0, 1.0);
 
     // solve the system
-    block_vector sol_neu;
+    block_vector sol_neu( V.get_block_dim(), V.get_n_columns() );
     sc rel_error = 1e-6;
     lo n_iters = 1000;
     V.mkl_fgmres_solve(rhs, sol_neu, rel_error, n_iters);
 
     // load volume mesh
-    std::string grid_file = "path/to/mesh/cube_vol.txt";
-    tetrahedral_volume_mesh vol_mesh;
+    std::string grid_file = "bin/grid_cube_xy.txt";
+    //tetrahedral_volume_mesh vol_mesh;
+    triangular_surface_mesh vol_mesh;
     vol_mesh.load(grid_file);
 
     // evaluate single layer potential
@@ -91,52 +92,4 @@ int main()
     return 0;
 }
 
-
-/*
-void nothing()
-{
-    uniform_spacetime_be_space<basis_tri_p0> space_p0(spacetime_mesh);
-    uniform_spacetime_be_space<basis_tri_p1> space_p1(spacetime_mesh);
-
-    spacetime_heat_sl_kernel_antiderivative kernel_v( alpha );
-    spacetime_heat_dl_kernel_antiderivative kernel_k( alpha );
-    spacetime_heat_hs_kernel_antiderivative kernel_d( alpha );
-    
-    uniform_spacetime_be_assembler assembler_v(kernel_v, space_p0, space_p0);
-    uniform_spacetime_be_assembler assembler_k(kernel_k, space_p0, space_p1);
-    uniform_spacetime_be_assembler assembler_d(kernel_d, space_p1, space_p1);
-}
-*/
-
-/*
-void besthea::linear_algebra::block_lower_triangular_toeplitz_matrix::apply(
-  const block_vector & x, block_vector & y, bool trans, sc alpha, sc beta ) const {
-  sc block_beta = beta;
-  for ( lo diag = 0; diag < _block_dim; ++diag ) {
-    const full_matrix * m = &( _data[ diag ] );
-    for ( lo block = 0; block < _block_dim - diag; ++block ) {
-      const vector * subx = &( x.get_block( block ) );
-      vector * suby = &( y.get_block( block + diag ) );
-      m->apply( *subx, *suby, trans, alpha, block_beta );
-    }
-    block_beta = 1.0;
-  }
-}
-*/
-
-/*
-void apply(block_vector & x, block_vector & y)
-{
-    for(lo diag = 0; diag < block_dimension; diag++)
-    {
-        full_matrix * sub_m = m.blocks[diag];
-        lo max_block = block_dimension - diag;
-        for(lo block = 0; block < max_block; block++)
-        {
-            vector * sub_x = x.blocks[block];
-            vector * sub_y = y.blocks[block + diag];
-            sub_m.apply(sub_x, sub_y);
-        }
-    }
-}*/
 

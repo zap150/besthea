@@ -71,45 +71,52 @@ struct cauchy_data {
     return value;
   }
 
-  static constexpr sc _alpha{ 0.5 };
-  static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
+  static constexpr sc _alpha{ 1.0 };
+  static constexpr std::array< sc, 3 > _y{ 1.5, 1.5, 1.5 };
   static constexpr sc _shift{ 0.0 };
 };  // struct cauchy_data
 
 int main() {
-  sc alpha = 0.5;
 
-  std::string space_mesh_file = "cube_192.txt";
-  int refine = 1;
+  std::string space_mesh_file = "bin/cube_192.txt";
+  int refine = 0;
   lo n_timesteps = 8;
   sc end_time = 1.0;
 
+  // load surface mesh, refine, create spacetime tensor mesh
   triangular_surface_mesh space_mesh;
   space_mesh.load( space_mesh_file );
   space_mesh.refine( refine );
   n_timesteps *= std::exp2( 2 * refine );
   uniform_spacetime_tensor_mesh spacetime_mesh( space_mesh, end_time, n_timesteps );
 
+  // create BE spaces
   uniform_spacetime_be_space< basis_tri_p0 > space_p0( spacetime_mesh );
   uniform_spacetime_be_space< basis_tri_p1 > space_p1( spacetime_mesh );
 
-  spacetime_heat_sl_kernel_antiderivative kernel_v( alpha );
-  spacetime_heat_dl_kernel_antiderivative kernel_k( alpha );
+  // create heat kernel antiderivatives
+  spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
+  spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
 
+  // project boundary condition onto the BE space
   block_vector bc_dir;
   space_p1.L2_projection( cauchy_data::dirichlet, bc_dir );
 
+  // create the CPU on-the-fly matrices. no assembly needed.
   uniform_spacetime_be_matrix_onthefly_cpu V(kernel_v, space_p0, space_p0);
   uniform_spacetime_be_matrix_onthefly_cpu K(kernel_k, space_p0, space_p1);
 
-  uniform_spacetime_be_identity M( space_p0, space_p1, 1 );
+  // create and assemble the mass matrix
+  uniform_spacetime_be_identity M( space_p0, space_p1 );
   M.assemble( );
 
-  block_vector rhs( K.get_block_dim(), K.get_n_rows() );
+  // create and assemble right hand side vector
+  block_vector rhs( V.get_block_dim(), V.get_n_rows() );
   M.apply( bc_dir, rhs, false, 0.5, 0.0 );
   K.apply( bc_dir, rhs, false, 1.0, 1.0 );
 
-  block_vector sol_neu;
+  // solve the system
+  block_vector sol_neu( V.get_block_dim(), V.get_n_columns() );
   sc rel_error = 1e-6;
   lo n_iters = 1000;
   V.mkl_fgmres_solve( rhs, sol_neu, rel_error, n_iters );
