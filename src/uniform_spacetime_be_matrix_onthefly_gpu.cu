@@ -1069,17 +1069,17 @@ __global__ void g_apply_gpu_treg_sreg_ver1
     val_curr = 0;
     val_next = 0;
     
-    for (lo diag = 0; diag < n_blocks; diag++) {
+    for (lo delta = 0; delta < n_blocks; delta++) {
       val_prev = val_curr;
       val_curr = val_next;
-      d_get_local_contributions_treg_sreg_sl_p0_p0(&val_next, diag+1, i_tst, i_trl,
+      d_get_local_contributions_treg_sreg_sl_p0_p0(&val_next, delta+1, i_tst, i_trl,
         shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
 
       matrix_val = ((i_tst == i_trl) ? (0) : (-val_prev + 2*val_curr - val_next));
 
-      lo max_block = n_blocks - diag;
+      lo max_block = n_blocks - delta;
       for (lo block = 0; block < max_block; block++) {
-        lo block_row = diag + block;
+        lo block_row = delta + block;
         lo block_col = block;
         shmem_y_vals[tid] = matrix_val * x[block_col * ld_x + col];
         __syncthreads();
@@ -1141,19 +1141,19 @@ __global__ void g_apply_gpu_treg_sreg_ver1
     vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
     vals_next[0] = 0;   vals_next[1] = 0;   vals_next[2] = 0;
 
-    for (lo diag = 0; diag < n_blocks; diag++) {
+    for (lo delta = 0; delta < n_blocks; delta++) {
       vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
       vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-      d_get_local_contributions_treg_sreg_dl_p0_p1(vals_next, diag+1, i_tst, i_trl,
+      d_get_local_contributions_treg_sreg_dl_p0_p1(vals_next, delta+1, i_tst, i_trl,
         shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
 
       matrix_vals[0] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
       matrix_vals[1] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
       matrix_vals[2] = ((i_tst == i_trl) ? (0) : (-vals_prev[2] + 2*vals_curr[2] - vals_next[2]));
 
-      lo max_block = n_blocks - diag;
+      lo max_block = n_blocks - delta;
       for (lo block = 0; block < max_block; block++) {
-        lo block_row = diag + block;
+        lo block_row = delta + block;
         lo block_col = block;
         shmem_y_vals[tid]  = matrix_vals[0] * x[block_col * ld_x + cols[0]];
         shmem_y_vals[tid] += matrix_vals[1] * x[block_col * ld_x + cols[1]];
@@ -1220,19 +1220,19 @@ __global__ void g_apply_gpu_treg_sreg_ver1
     vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
     vals_next[0] = 0;   vals_next[1] = 0;   vals_next[2] = 0;
 
-    for (lo diag = 0; diag < n_blocks; diag++) {
+    for (lo delta = 0; delta < n_blocks; delta++) {
       vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
       vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-      d_get_local_contributions_treg_sreg_adl_p1_p0(vals_next, diag+1, i_tst, i_trl,
+      d_get_local_contributions_treg_sreg_adl_p1_p0(vals_next, delta+1, i_tst, i_trl,
         shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
 
       matrix_vals[0] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
       matrix_vals[1] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
       matrix_vals[2] = ((i_tst == i_trl) ? (0) : (-vals_prev[2] + 2*vals_curr[2] - vals_next[2]));
 
-      lo max_block = n_blocks - diag;
+      lo max_block = n_blocks - delta;
       for (lo block = 0; block < max_block; block++) {
-        lo block_row = diag + block;
+        lo block_row = delta + block;
         lo block_col = block;
         sc x_val = x[block_col * ld_x + col];
         shmem_y_vals[0][tid] = matrix_vals[0] * x_val;
@@ -1304,17 +1304,17 @@ __global__ void g_apply_gpu_treg_sreg_ver1
     for(lo j = 0; j < 9; j++) vals_curr[j] = 0;
     for(lo j = 0; j < 9; j++) vals_next[j] = 0;
 
-    for (lo diag = 0; diag < n_blocks; diag++) {
+    for (lo delta = 0; delta < n_blocks; delta++) {
       for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
       for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
-      d_get_local_contributions_treg_sreg_hs_p1_p1(vals_next, diag+1, i_tst, i_trl,
+      d_get_local_contributions_treg_sreg_hs_p1_p1(vals_next, delta+1, i_tst, i_trl,
         shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
 
       for(lo j = 0; j < 9; j++) matrix_vals[j] = ((i_tst == i_trl) ? (0) : (-vals_prev[j] + 2*vals_curr[j] - vals_next[j]));
 
-      lo max_block = n_blocks - diag;
+      lo max_block = n_blocks - delta;
       for (lo block = 0; block < max_block; block++) {
-        lo block_row = diag + block;
+        lo block_row = delta + block;
         lo block_col = block;
         x_vals[0] = x[block_col * ld_x + cols[0]];
         x_vals[1] = x[block_col * ld_x + cols[1]];
@@ -1396,24 +1396,24 @@ __global__ void g_apply_gpu_treg_sreg_ver2
     lo curr_active_threads =
       (i >= (n_elems / blockDim.x) * blockDim.x) ? (n_elems % blockDim.x) : blockDim.x;
 
-    for(lo diag = 0; diag < n_blocks; diag++) {
+    for(lo delta = 0; delta < n_blocks; delta++) {
       // each thread calculates value corresponding to its i (i_trl)
       {
         lo &i_trl = i;
         val_prev = val_curr;
         val_curr = val_next;
-        d_get_local_contributions_treg_sreg_sl_p0_p0(&val_next, diag+1, i_tst, i_trl,
+        d_get_local_contributions_treg_sreg_sl_p0_p0(&val_next, delta+1, i_tst, i_trl,
           shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
         shmem_matrix_vals[tid] = ((i_tst == i_trl) ? (0) : (-val_prev + 2*val_curr - val_next));
         __syncthreads();
       }
 
       // now the thread logic is changed, each thread takes one (or more) blocks
-      // in this diag and loops through all of the current trial elements (columns)
+      // in this delta and loops through all of the current trial elements (columns)
       {
-        lo max_block = n_blocks - diag;
+        lo max_block = n_blocks - delta;
         for(lo block = threadIdx.x; block < max_block; block += curr_active_threads) {
-          lo block_row = diag + block;
+          lo block_row = delta + block;
           lo block_col = block;
           sc y_val = 0;
           for(lo j = 0; j < curr_active_threads; j++) {
@@ -1485,13 +1485,13 @@ __global__ void g_apply_gpu_treg_sreg_ver2
     lo curr_active_threads =
       (i >= (n_elems / blockDim.x) * blockDim.x) ? (n_elems % blockDim.x) : blockDim.x;
 
-    for(lo diag = 0; diag < n_blocks; diag++) {
+    for(lo delta = 0; delta < n_blocks; delta++) {
       // each thread calculates value corresponding to its i (i_trl)
       {
         lo &i_trl = i;
         vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
         vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-        d_get_local_contributions_treg_sreg_dl_p0_p1(vals_next, diag+1, i_tst, i_trl,
+        d_get_local_contributions_treg_sreg_dl_p0_p1(vals_next, delta+1, i_tst, i_trl,
           shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
         shmem_matrix_vals[0][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
         shmem_matrix_vals[1][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
@@ -1500,11 +1500,11 @@ __global__ void g_apply_gpu_treg_sreg_ver2
       }
 
       // now the thread logic is changed, each thread takes one (or more) blocks
-      // in this diag and loops through all of the current trial elements (columns)
+      // in this delta and loops through all of the current trial elements (columns)
       {
-        lo max_block = n_blocks - diag;
+        lo max_block = n_blocks - delta;
         for(lo block = threadIdx.x; block < max_block; block += curr_active_threads) {
-          lo block_row = diag + block;
+          lo block_row = delta + block;
           lo block_col = block;
           sc y_val = 0;
           for(lo j = 0; j < curr_active_threads; j++) {
@@ -1575,13 +1575,13 @@ __global__ void g_apply_gpu_treg_sreg_ver2
     lo curr_active_threads =
       (i >= (n_elems / blockDim.x) * blockDim.x) ? (n_elems % blockDim.x) : blockDim.x;
 
-    for(lo diag = 0; diag < n_blocks; diag++) {
+    for(lo delta = 0; delta < n_blocks; delta++) {
       // each thread calculates value corresponding to its i (i_trl)
       {
         lo &i_trl = i;
         vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
         vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-        d_get_local_contributions_treg_sreg_adl_p1_p0(vals_next, diag+1, i_tst, i_trl,
+        d_get_local_contributions_treg_sreg_adl_p1_p0(vals_next, delta+1, i_tst, i_trl,
           shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
         shmem_matrix_vals[0][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
         shmem_matrix_vals[1][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
@@ -1590,11 +1590,11 @@ __global__ void g_apply_gpu_treg_sreg_ver2
       }
 
       // now the thread logic is changed, each thread takes one (or more) blocks
-      // in this diag and loops through all of the current trial elements (columns)
+      // in this delta and loops through all of the current trial elements (columns)
       {
-        lo max_block = n_blocks - diag;
+        lo max_block = n_blocks - delta;
         for(lo block = threadIdx.x; block < max_block; block += curr_active_threads) {
-          lo block_row = diag + block;
+          lo block_row = delta + block;
           lo block_col = block;
           sc y_vals[3] = {0,0,0};
           for(lo j = 0; j < curr_active_threads; j++) {
@@ -1665,13 +1665,13 @@ __global__ void g_apply_gpu_treg_sreg_ver2
     lo curr_active_threads =
       (i >= (n_elems / blockDim.x) * blockDim.x) ? (n_elems % blockDim.x) : blockDim.x;
 
-    for(lo diag = 0; diag < n_blocks; diag++) {
+    for(lo delta = 0; delta < n_blocks; delta++) {
       // each thread calculates value corresponding to its i (i_trl)
       {
         lo &i_trl = i;
         for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
         for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
-        d_get_local_contributions_treg_sreg_hs_p1_p1(vals_next, diag+1, i_tst, i_trl,
+        d_get_local_contributions_treg_sreg_hs_p1_p1(vals_next, delta+1, i_tst, i_trl,
           shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
         for(lo j = 0; j < 9; j++)
           shmem_matrix_vals[j][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[j] + 2*vals_curr[j] - vals_next[j]));
@@ -1679,11 +1679,11 @@ __global__ void g_apply_gpu_treg_sreg_ver2
       }
 
       // now the thread logic is changed, each thread takes one (or more) blocks
-      // in this diag and loops through all of the current trial elements (columns)
+      // in this delta and loops through all of the current trial elements (columns)
       {
-        lo max_block = n_blocks - diag;
+        lo max_block = n_blocks - delta;
         for(lo block = threadIdx.x; block < max_block; block += curr_active_threads) {
-          lo block_row = diag + block;
+          lo block_row = delta + block;
           lo block_col = block;
           sc y_vals[3] = {0,0,0};
           for(lo j = 0; j < curr_active_threads; j++) {
@@ -1766,16 +1766,16 @@ __global__ void g_apply_gpu_treg_sreg_ver3
     val_curr = 0;
     val_next = 0;
 
-    for(lo diag = 0; diag < n_blocks; diag++) {
+    for(lo delta = 0; delta < n_blocks; delta++) {
       val_prev = val_curr;
       val_curr = val_next;
-      d_get_local_contributions_treg_sreg_sl_p0_p0(&val_next, diag+1, i_tst, i_trl,
+      d_get_local_contributions_treg_sreg_sl_p0_p0(&val_next, delta+1, i_tst, i_trl,
         shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
       matrix_val = ((i_tst == i_trl) ? (0) : (-val_prev + 2*val_curr - val_next));
       
-      lo max_block = n_blocks - diag;
+      lo max_block = n_blocks - delta;
       for(lo block = 0; block < max_block; block++) {
-        lo block_row = diag + block;
+        lo block_row = delta + block;
         lo block_col = block;
         shmem_y_vals[tid] = matrix_val * x_perm[block_col + ld_x_perm * col];
         __syncthreads();
@@ -1838,19 +1838,19 @@ __global__ void g_apply_gpu_treg_sreg_ver3
     vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
     vals_next[0] = 0;   vals_next[1] = 0;   vals_next[2] = 0;
 
-    for(lo diag = 0; diag < n_blocks; diag++) {
+    for(lo delta = 0; delta < n_blocks; delta++) {
       vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
       vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-      d_get_local_contributions_treg_sreg_dl_p0_p1(vals_next, diag+1, i_tst, i_trl,
+      d_get_local_contributions_treg_sreg_dl_p0_p1(vals_next, delta+1, i_tst, i_trl,
         shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
       
       matrix_vals[0] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
       matrix_vals[1] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
       matrix_vals[2] = ((i_tst == i_trl) ? (0) : (-vals_prev[2] + 2*vals_curr[2] - vals_next[2]));
       
-      lo max_block = n_blocks - diag;
+      lo max_block = n_blocks - delta;
       for(lo block = 0; block < max_block; block++) {
-        lo block_row = diag + block;
+        lo block_row = delta + block;
         lo block_col = block;
         shmem_y_vals[tid]  = matrix_vals[0] * x_perm[block_col + ld_x_perm * cols[0]];
         shmem_y_vals[tid] += matrix_vals[1] * x_perm[block_col + ld_x_perm * cols[1]];
@@ -1921,19 +1921,19 @@ __global__ void g_apply_gpu_treg_sreg_ver3
     vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
     vals_next[0] = 0;   vals_next[1] = 0;   vals_next[2] = 0;
 
-    for(lo diag = 0; diag < n_blocks; diag++) {
+    for(lo delta = 0; delta < n_blocks; delta++) {
       vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
       vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-      d_get_local_contributions_treg_sreg_adl_p1_p0(vals_next, diag+1, i_tst, i_trl,
+      d_get_local_contributions_treg_sreg_adl_p1_p0(vals_next, delta+1, i_tst, i_trl,
         shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
       
       matrix_vals[0] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
       matrix_vals[1] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
       matrix_vals[2] = ((i_tst == i_trl) ? (0) : (-vals_prev[2] + 2*vals_curr[2] - vals_next[2]));
       
-      lo max_block = n_blocks - diag;
+      lo max_block = n_blocks - delta;
       for(lo block = 0; block < max_block; block++) {
-        lo block_row = diag + block;
+        lo block_row = delta + block;
         lo block_col = block;
         sc x_val = x_perm[block_col + ld_x_perm * col];
         shmem_y_vals[0][tid] = matrix_vals[0] * x_val;
@@ -2007,17 +2007,17 @@ __global__ void g_apply_gpu_treg_sreg_ver3
     for(lo j = 0; j < 9; j++) vals_curr[j] = 0;
     for(lo j = 0; j < 9; j++) vals_next[j] = 0;
 
-    for(lo diag = 0; diag < n_blocks; diag++) {
+    for(lo delta = 0; delta < n_blocks; delta++) {
       for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
       for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
-      d_get_local_contributions_treg_sreg_hs_p1_p1(vals_next, diag+1, i_tst, i_trl,
+      d_get_local_contributions_treg_sreg_hs_p1_p1(vals_next, delta+1, i_tst, i_trl,
         shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
       
       for(lo j = 0; j < 9; j++) matrix_vals[j] = ((i_tst == i_trl) ? (0) : (-vals_prev[j] + 2*vals_curr[j] - vals_next[j]));
       
-      lo max_block = n_blocks - diag;
+      lo max_block = n_blocks - delta;
       for(lo block = 0; block < max_block; block++) {
-        lo block_row = diag + block;
+        lo block_row = delta + block;
         lo block_col = block;
         x_vals[0] = x_perm[block_col + ld_x_perm * cols[0]];
         x_vals[1] = x_perm[block_col + ld_x_perm * cols[1]];
@@ -2095,21 +2095,21 @@ __global__ void g_apply_gpu_treg_sreg_ver4
 
     lo curr_active_threads = (i >= (n_elems / blockDim.y) * blockDim.y) ? (n_elems % blockDim.y) : blockDim.y;
 
-    for(lo diag = 0; diag < n_blocks; diag++) {
+    for(lo delta = 0; delta < n_blocks; delta++) {
       {
         lo &i_trl = i;
         val_prev = val_curr;
         val_curr = val_next;
-        d_get_local_contributions_treg_sreg_sl_p0_p0(&val_next, diag+1, i_tst, i_trl,
+        d_get_local_contributions_treg_sreg_sl_p0_p0(&val_next, delta+1, i_tst, i_trl,
           shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
         shmem_matrix_vals[tid] = ((i_tst == i_trl) ? (0) : (-val_prev + 2*val_curr - val_next));
         __syncthreads();
       }
       
       {
-        lo max_block = n_blocks - diag;
+        lo max_block = n_blocks - delta;
         for(lo block = threadIdx.y; block < max_block; block += curr_active_threads) {
-          lo block_row = diag + block;
+          lo block_row = delta + block;
           lo block_col = block;
           sc y_val = 0.0;
           for(int j = 0; j < curr_active_threads; j++) {
@@ -2177,12 +2177,12 @@ __global__ void g_apply_gpu_treg_sreg_ver4
 
     lo curr_active_threads = (i >= (n_elems / blockDim.y) * blockDim.y) ? (n_elems % blockDim.y) : blockDim.y;
 
-    for(lo diag = 0; diag < n_blocks; diag++) {
+    for(lo delta = 0; delta < n_blocks; delta++) {
       {
         lo &i_trl = i;
         vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
         vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-        d_get_local_contributions_treg_sreg_dl_p0_p1(vals_next, diag+1, i_tst, i_trl,
+        d_get_local_contributions_treg_sreg_dl_p0_p1(vals_next, delta+1, i_tst, i_trl,
           shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
         shmem_matrix_vals[0][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
         shmem_matrix_vals[1][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
@@ -2191,9 +2191,9 @@ __global__ void g_apply_gpu_treg_sreg_ver4
       }
        
       {
-        lo max_block = n_blocks - diag;
+        lo max_block = n_blocks - delta;
         for(lo block = threadIdx.y; block < max_block; block += curr_active_threads) {
-          lo block_row = diag + block;
+          lo block_row = delta + block;
           lo block_col = block;
           sc y_val = 0.0;
           for(int j = 0; j < curr_active_threads; j++) {
@@ -2262,12 +2262,12 @@ __global__ void g_apply_gpu_treg_sreg_ver4
 
     lo curr_active_threads = (i >= (n_elems / blockDim.y) * blockDim.y) ? (n_elems % blockDim.y) : blockDim.y;
 
-    for(lo diag = 0; diag < n_blocks; diag++) {
+    for(lo delta = 0; delta < n_blocks; delta++) {
       {
         lo &i_trl = i;
         vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
         vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-        d_get_local_contributions_treg_sreg_adl_p1_p0(vals_next, diag+1, i_tst, i_trl,
+        d_get_local_contributions_treg_sreg_adl_p1_p0(vals_next, delta+1, i_tst, i_trl,
           shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
         shmem_matrix_vals[0][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
         shmem_matrix_vals[1][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
@@ -2276,9 +2276,9 @@ __global__ void g_apply_gpu_treg_sreg_ver4
       }
         
       {
-        lo max_block = n_blocks - diag;
+        lo max_block = n_blocks - delta;
         for(lo block = threadIdx.y; block < max_block; block += curr_active_threads) {
-          lo block_row = diag + block;
+          lo block_row = delta + block;
           lo block_col = block;
           sc y_vals[3] = {0,0,0};
           for(int j = 0; j < curr_active_threads; j++) {
@@ -2347,12 +2347,12 @@ __global__ void g_apply_gpu_treg_sreg_ver4
 
     lo curr_active_threads = (i >= (n_elems / blockDim.y) * blockDim.y) ? (n_elems % blockDim.y) : blockDim.y;
 
-    for(lo diag = 0; diag < n_blocks; diag++) {
+    for(lo delta = 0; delta < n_blocks; delta++) {
       {
         lo &i_trl = i;
         for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
         for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
-        d_get_local_contributions_treg_sreg_hs_p1_p1(vals_next, diag+1, i_tst, i_trl,
+        d_get_local_contributions_treg_sreg_hs_p1_p1(vals_next, delta+1, i_tst, i_trl,
           shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
         for(lo j = 0; j < 9; j++)
           shmem_matrix_vals[j][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[j] + 2*vals_curr[j] - vals_next[j]));
@@ -2360,9 +2360,9 @@ __global__ void g_apply_gpu_treg_sreg_ver4
       }
         
       {
-        lo max_block = n_blocks - diag;
+        lo max_block = n_blocks - delta;
         for(lo block = threadIdx.y; block < max_block; block += curr_active_threads) {
-          lo block_row = diag + block;
+          lo block_row = delta + block;
           lo block_col = block;
           sc y_vals[3] = {0,0,0};
           for(int j = 0; j < curr_active_threads; j++) {

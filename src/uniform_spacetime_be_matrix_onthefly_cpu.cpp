@@ -1328,17 +1328,17 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
           val_curr = 0;
           val_next = 0;
 
-          for (lo diag = 0; diag < n_blocks; diag++) {
+          for (lo delta = 0; delta < n_blocks; delta++) {
             val_prev = val_curr;
             val_curr = val_next;
-            get_local_contributions_treg_sreg(&val_next, diag+1, i_tst, i_trl,
+            get_local_contributions_treg_sreg(&val_next, delta+1, i_tst, i_trl,
               quadr_nodes_tst, quadr_nodes_trl);
 
             matrix_val = -val_prev + 2*val_curr - val_next;
             
-            lo max_block = n_blocks - diag;
+            lo max_block = n_blocks - delta;
             for (lo block = 0; block < max_block; block++) {
-              lo block_row = diag + block;
+              lo block_row = delta + block;
               lo block_col = block;
               sc x_val = x_perm.get(col, block_col);
               sc y_val = alpha * matrix_val * x_val;
@@ -1389,17 +1389,17 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
       val_curr = 0;
       val_next = 0;
 
-      for (lo diag = 0; diag < n_blocks; diag++) {
+      for (lo delta = 0; delta < n_blocks; delta++) {
         val_prev = val_curr;
         val_curr = val_next;
-        get_local_contributions_treg_ssng(&val_next, diag+1, i_elem, i_elem,
+        get_local_contributions_treg_ssng(&val_next, delta+1, i_elem, i_elem,
           quadr_nodes_tst, quadr_nodes_trl);
 
         matrix_val = -val_prev + 2*val_curr - val_next;
 
-        lo max_block = n_blocks - diag;
+        lo max_block = n_blocks - delta;
         for (lo block = 0; block < max_block; block++) {
-          lo block_row = diag + block;
+          lo block_row = delta + block;
           lo block_col = block;
           sc x_val = x_perm.get(col, block_col);
           sc y_val = alpha * matrix_val * x_val;
@@ -1529,18 +1529,18 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
           vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0; 
           vals_next[0] = 0;   vals_next[1] = 0;   vals_next[2] = 0;
 
-          for (lo diag = 0; diag < n_blocks; diag++) {
+          for (lo delta = 0; delta < n_blocks; delta++) {
             vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
             vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-            get_local_contributions_treg_sreg(vals_next, diag+1, i_tst, i_trl, quadr_nodes_tst, quadr_nodes_trl);
+            get_local_contributions_treg_sreg(vals_next, delta+1, i_tst, i_trl, quadr_nodes_tst, quadr_nodes_trl);
 
             matrix_vals[0] = -vals_prev[0] + 2*vals_curr[0] - vals_next[0];
             matrix_vals[1] = -vals_prev[1] + 2*vals_curr[1] - vals_next[1];
             matrix_vals[2] = -vals_prev[2] + 2*vals_curr[2] - vals_next[2];
 
-            max_block = n_blocks - diag;
+            max_block = n_blocks - delta;
             for (lo block = 0; block < max_block; block++) {
-              block_row = diag + block;
+              block_row = delta + block;
               block_col = block;
               sc y_val = 0;
               y_val += matrix_vals[0] * x_perm.get(cols[0], block_col);
@@ -1599,18 +1599,18 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
       vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
       vals_next[0] = 0;   vals_next[1] = 0;   vals_next[2] = 0;
 
-      for (lo diag = 0; diag < n_blocks; diag++) {
+      for (lo delta = 0; delta < n_blocks; delta++) {
         vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
         vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-        get_local_contributions_treg_ssng(vals_next, diag+1, i_elem, i_elem, quadr_nodes_tst, quadr_nodes_trl);
+        get_local_contributions_treg_ssng(vals_next, delta+1, i_elem, i_elem, quadr_nodes_tst, quadr_nodes_trl);
 
         matrix_vals[0] = -vals_prev[0] + 2*vals_curr[0] - vals_next[0];
         matrix_vals[1] = -vals_prev[1] + 2*vals_curr[1] - vals_next[1];
         matrix_vals[2] = -vals_prev[2] + 2*vals_curr[2] - vals_next[2];
 
-        max_block = n_blocks - diag;
+        max_block = n_blocks - delta;
         for (lo block = 0; block < max_block; block++) {
-          block_row = diag + block;
+          block_row = delta + block;
           block_col = block;
           sc y_val = 0;
           y_val += matrix_vals[0] * x_perm.get(cols[0], block_col);
@@ -1689,10 +1689,9 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
         matrix_vals[0] = -vals_curr[0];
         matrix_vals[1] = -vals_curr[1];
         matrix_vals[2] = -vals_curr[2];
-        constexpr lo diag = 1;
-        max_block = n_blocks - diag;
+        max_block = n_blocks - 1;
         for (lo block = 0; block < max_block; block++) {
-          block_row = diag + block;
+          block_row = 1 + block;
           block_col = block;
           sc y_val = 0;
           y_val += matrix_vals[0] * x_perm.get(cols_0[0], block_col);
@@ -1771,19 +1770,19 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
           vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
           vals_next[0] = 0;   vals_next[1] = 0;   vals_next[2] = 0;
 
-          for (lo diag = 0; diag < n_blocks; diag++) {
+          for (lo delta = 0; delta < n_blocks; delta++) {
             vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
             vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-            get_local_contributions_treg_sreg(vals_next, diag+1, i_tst, i_trl,
+            get_local_contributions_treg_sreg(vals_next, delta+1, i_tst, i_trl,
               quadr_nodes_tst, quadr_nodes_trl);
 
             matrix_vals[0] = -vals_prev[0] + 2*vals_curr[0] - vals_next[0];
             matrix_vals[1] = -vals_prev[1] + 2*vals_curr[1] - vals_next[1];
             matrix_vals[2] = -vals_prev[2] + 2*vals_curr[2] - vals_next[2];
 
-            max_block = n_blocks - diag;
+            max_block = n_blocks - delta;
             for (lo block = 0; block < max_block; block++) {
-              block_row = diag + block;
+              block_row = delta + block;
               block_col = block;
               sc x_val = alpha * x_perm.get(col, block_col);
               y_perm_private.add(rows[0], block_row, matrix_vals[0] * x_val);
@@ -1859,19 +1858,19 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
       vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
       vals_next[0] = 0;   vals_next[1] = 0;   vals_next[2] = 0;
 
-      for (lo diag = 0; diag < n_blocks; diag++) {
+      for (lo delta = 0; delta < n_blocks; delta++) {
         vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
         vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-        get_local_contributions_treg_ssng(vals_next, diag+1, i_elem, i_elem,
+        get_local_contributions_treg_ssng(vals_next, delta+1, i_elem, i_elem,
           quadr_nodes_tst, quadr_nodes_trl);
 
         matrix_vals[0] = -vals_prev[0] + 2*vals_curr[0] - vals_next[0];
         matrix_vals[1] = -vals_prev[1] + 2*vals_curr[1] - vals_next[1];
         matrix_vals[2] = -vals_prev[2] + 2*vals_curr[2] - vals_next[2];
 
-        max_block = n_blocks - diag;
+        max_block = n_blocks - delta;
         for (lo block = 0; block < max_block; block++) {
-          block_row = diag + block;
+          block_row = delta + block;
           block_col = block;
           sc x_val = alpha * x_perm.get(col, block_col);
           y_perm_private.add(rows[0], block_row, matrix_vals[0] * x_val);
@@ -2060,18 +2059,18 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
           for(lo j = 0; j < 9; j++) vals_curr[j] = 0;
           for(lo j = 0; j < 9; j++) vals_next[j] = 0;
 
-          for (lo diag = 0; diag < n_blocks; diag++) {
+          for (lo delta = 0; delta < n_blocks; delta++) {
             for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
             for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
-            get_local_contributions_treg_sreg(vals_next, diag+1, i_tst, i_trl,
+            get_local_contributions_treg_sreg(vals_next, delta+1, i_tst, i_trl,
               quadr_nodes_tst, quadr_nodes_trl);
 
             for(lo j = 0; j < 9; j++)
               matrix_vals[j] = -vals_prev[j] + 2*vals_curr[j] - vals_next[j];
 
-            max_block = n_blocks - diag;
+            max_block = n_blocks - delta;
             for (lo block = 0; block < max_block; block++) {
-              block_row = diag + block;
+              block_row = delta + block;
               block_col = block;
               x_vals[0] = alpha * x_perm.get(cols[0], block_col);
               x_vals[1] = alpha * x_perm.get(cols[1], block_col);
@@ -2156,18 +2155,18 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
       for(lo j = 0; j < 9; j++) vals_curr[j] = 0;
       for(lo j = 0; j < 9; j++) vals_next[j] = 0;
 
-      for (lo diag = 0; diag < n_blocks; diag++) {
+      for (lo delta = 0; delta < n_blocks; delta++) {
         for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
         for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
-        get_local_contributions_treg_ssng(vals_next, diag+1, i_elem, i_elem,
+        get_local_contributions_treg_ssng(vals_next, delta+1, i_elem, i_elem,
           quadr_nodes_tst, quadr_nodes_trl);
 
         for(lo j = 0; j < 9; j++)
           matrix_vals[j] = -vals_prev[j] + 2*vals_curr[j] - vals_next[j];
 
-        max_block = n_blocks - diag;
+        max_block = n_blocks - delta;
         for (lo block = 0; block < max_block; block++) {
-          block_row = diag + block;
+          block_row = delta + block;
           block_col = block;
           x_vals[0] = alpha * x_perm.get(cols[0], block_col);
           x_vals[1] = alpha * x_perm.get(cols[1], block_col);
