@@ -80,7 +80,7 @@ class besthea::mesh::uniform_spacetime_tensor_mesh_gpu {
    * Constructor. Creates this instance and copies necessary data tu GPU memory.
    * @param[in] orig_mesh The original mesh.
    */
-  uniform_spacetime_tensor_mesh_gpu(
+  explicit uniform_spacetime_tensor_mesh_gpu(
     const besthea::mesh::uniform_spacetime_tensor_mesh & orig_mesh );
 
   /*!
