@@ -1041,7 +1041,6 @@ __global__ void g_apply_gpu_treg_sreg_ver1
 
   __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
   __shared__ volatile sc shmem_y_vals[tpbx];
-  __shared__ volatile sc test[32];
 
   const lo &n_blocks = mesh_metadata.n_temporal_elements;
   const unsigned int &tid = threadIdx.x;
