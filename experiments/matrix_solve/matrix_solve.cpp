@@ -176,16 +176,16 @@ int main( int argc, char * argv[] ) {
   tm_init_fly_cpu_d.stop();  
 
   tm_init_fly_gpu_v.start();
-  uniform_spacetime_be_matrix_onthefly_gpu V_fly_gpu(kernel_v, space_p0, space_p0, order_sng_V, order_reg_V, gpu_spacetime_mesh, gpu_alg_ver);
+  uniform_spacetime_be_matrix_onthefly_gpu V_fly_gpu(kernel_v, space_p0, space_p0, gpu_spacetime_mesh, order_sng_V, order_reg_V, gpu_alg_ver);
   tm_init_fly_gpu_v.stop();
   tm_init_fly_gpu_k.start();
-  uniform_spacetime_be_matrix_onthefly_gpu K_fly_gpu(kernel_k, space_p0, space_p1, order_sng_K, order_reg_K, gpu_spacetime_mesh, gpu_alg_ver);
+  uniform_spacetime_be_matrix_onthefly_gpu K_fly_gpu(kernel_k, space_p0, space_p1, gpu_spacetime_mesh, order_sng_K, order_reg_K, gpu_alg_ver);
   tm_init_fly_gpu_k.stop();
   tm_init_fly_gpu_a.start();
-  uniform_spacetime_be_matrix_onthefly_gpu A_fly_gpu(kernel_a, space_p1, space_p0, order_sng_A, order_reg_A, gpu_spacetime_mesh, gpu_alg_ver);
+  uniform_spacetime_be_matrix_onthefly_gpu A_fly_gpu(kernel_a, space_p1, space_p0, gpu_spacetime_mesh, order_sng_A, order_reg_A, gpu_alg_ver);
   tm_init_fly_gpu_a.stop();
   tm_init_fly_gpu_d.start();
-  uniform_spacetime_be_matrix_onthefly_gpu D_fly_gpu(kernel_d, space_p1, space_p1, order_sng_D, order_reg_D, gpu_spacetime_mesh, gpu_alg_ver);
+  uniform_spacetime_be_matrix_onthefly_gpu D_fly_gpu(kernel_d, space_p1, space_p1, gpu_spacetime_mesh, order_sng_D, order_reg_D, gpu_alg_ver);
   tm_init_fly_gpu_d.stop();
 
   uniform_spacetime_be_identity M( space_p0, space_p1, 1 );

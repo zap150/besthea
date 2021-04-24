@@ -82,8 +82,6 @@ int main() {
   int refine = 0;
   lo n_timesteps = 8;
   sc end_time = 1.0;
-  int quadrature_order_singular = 4;
-  int quadrature_order_regular = 4;
 
   // load surface mesh, refine, create spacetime tensor mesh
   triangular_surface_mesh space_mesh;
@@ -108,10 +106,8 @@ int main() {
   space_p0.L2_projection( cauchy_data::neumann, bc_neu );
 
   // create the CPU on-the-fly matrices. no assembly needed.
-  uniform_spacetime_be_matrix_onthefly_gpu Kt(kernel_kt, space_p1, space_p0,
-      quadrature_order_singular, quadrature_order_regular, gpu_spacetime_mesh);
-  uniform_spacetime_be_matrix_onthefly_gpu D (kernel_d,  space_p1, space_p1,
-      quadrature_order_singular, quadrature_order_regular, gpu_spacetime_mesh);
+  uniform_spacetime_be_matrix_onthefly_gpu Kt(kernel_kt, space_p1, space_p0, gpu_spacetime_mesh);
+  uniform_spacetime_be_matrix_onthefly_gpu D (kernel_d,  space_p1, space_p1, gpu_spacetime_mesh);
 
   // create and assemble the mass matrix
   uniform_spacetime_be_identity M( space_p0, space_p1 );

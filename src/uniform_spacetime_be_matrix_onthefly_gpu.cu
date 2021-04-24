@@ -138,9 +138,8 @@ besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   <kernel_type, test_space_type, trial_space_type>::
   uniform_spacetime_be_matrix_onthefly_gpu( kernel_type & kernel,
   test_space_type & test_space, trial_space_type & trial_space,
-  int order_singular, int order_regular,
   const besthea::mesh::uniform_spacetime_tensor_mesh_gpu & gpu_mesh,
-  int gpu_kernel_version )
+  int order_singular, int order_regular, int gpu_kernel_version )
   : uniform_spacetime_be_matrix_onthefly_cpu
       <kernel_type, test_space_type, trial_space_type>(
         kernel, test_space, trial_space, order_singular, order_regular),
