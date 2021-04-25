@@ -441,25 +441,31 @@ class besthea::mesh::tree_structure {
    *
    * The routine is based on a tree traversal.
    * @param[in] root  Current cluster in the tree traversal.
-   * @param[in,out] subtree_send_list Vector storing the clusters and process
-   *                                  ids for which subtree data has to be sent.
-   * @param[in,out] subtree_receive_list  Vector storing the clusters and
-   *                                      process ids for which subtree data has
+   * @param[in,out] subtree_send_list Set storing process ids and pointers of
+   *                                  clusters for which subtree data has to be
+   *                                  sent.
+   * @param[in,out] subtree_receive_list  Set storing process ids and pointers
+   *                                      of clusters for which subtree data has
    *                                      to be received.
-   * @param[in,out] leaf_info_send_list Vector storing the clusters and process
-   *                                    ids for which leaf information has to be
-   *                                    sent.
-   * @param[in,out] leaf_info_receive_list  Vector storing the clusters and
-   *                                        process ids for which leaf
+   * @param[in,out] leaf_info_send_list Set storing process ids and pointers of
+   *                                    clusters for which leaf information has
+   *                                    to be sent.
+   * @param[in,out] leaf_info_receive_list  Set storing process ids and pointers
+   *                                        of clusters for which leaf
    *                                        information has to be received.
    */
   void determine_cluster_communication_lists( scheduling_time_cluster * root,
-    std::set< std::pair< lo, scheduling_time_cluster * > > & subtree_send_list,
-    std::set< std::pair< lo, scheduling_time_cluster * > > &
+    std::set< std::pair< lo, scheduling_time_cluster * >,
+      compare_pairs_of_process_ids_and_scheduling_time_clusters > &
+      subtree_send_list,
+    std::set< std::pair< lo, scheduling_time_cluster * >,
+      compare_pairs_of_process_ids_and_scheduling_time_clusters > &
       subtree_receive_list,
-    std::set< std::pair< lo, scheduling_time_cluster * > > &
+    std::set< std::pair< lo, scheduling_time_cluster * >,
+      compare_pairs_of_process_ids_and_scheduling_time_clusters > &
       leaf_info_send_list,
-    std::set< std::pair< lo, scheduling_time_cluster * > > &
+    std::set< std::pair< lo, scheduling_time_cluster * >,
+      compare_pairs_of_process_ids_and_scheduling_time_clusters > &
       leaf_info_receive_list ) const;
 
   /**

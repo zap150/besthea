@@ -591,10 +591,17 @@ bool besthea::mesh::tree_structure::subtree_contains_local_cluster(
 
 void besthea::mesh::tree_structure::determine_cluster_communication_lists(
   scheduling_time_cluster * root,
-  std::set< std::pair< lo, scheduling_time_cluster * > > & subtree_send_list,
-  std::set< std::pair< lo, scheduling_time_cluster * > > & subtree_receive_list,
-  std::set< std::pair< lo, scheduling_time_cluster * > > & leaf_info_send_list,
-  std::set< std::pair< lo, scheduling_time_cluster * > > &
+  std::set< std::pair< lo, scheduling_time_cluster * >,
+    compare_pairs_of_process_ids_and_scheduling_time_clusters > &
+    subtree_send_list,
+  std::set< std::pair< lo, scheduling_time_cluster * >,
+    compare_pairs_of_process_ids_and_scheduling_time_clusters > &
+    subtree_receive_list,
+  std::set< std::pair< lo, scheduling_time_cluster * >,
+    compare_pairs_of_process_ids_and_scheduling_time_clusters > &
+    leaf_info_send_list,
+  std::set< std::pair< lo, scheduling_time_cluster * >,
+    compare_pairs_of_process_ids_and_scheduling_time_clusters > &
     leaf_info_receive_list ) const {
   if ( root->get_n_children( ) > 0 ) {
     for ( auto it_child : *( root->get_children( ) ) ) {
