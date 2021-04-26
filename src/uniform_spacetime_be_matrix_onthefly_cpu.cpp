@@ -2408,7 +2408,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   apply_cpu( const block_vector_type & x_perm, block_vector_type & y_perm,
     sc alpha, sc beta ) const {
 
-  besthea::tools::time_measurer tm_scale, tm_reg, tm_sing, tm_d0;
+  besthea::tools::time_measurer tm_scale, tm_treg_sreg, tm_treg_ssng, tm_tsng;
 
   tm_scale.start();
   if(beta == 0.0) {
@@ -2418,27 +2418,27 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   }
   tm_scale.stop();
 
-  tm_reg.start();
+  tm_treg_sreg.start();
   this->apply_cpu_treg_sreg(x_perm, y_perm, alpha);
-  tm_reg.stop();
-  tm_sing.start();
+  tm_treg_sreg.stop();
+  tm_treg_ssng.start();
   this->apply_cpu_treg_ssng(x_perm, y_perm, alpha);
-  tm_sing.stop();
-  tm_d0.start();
+  tm_treg_ssng.stop();
+  tm_tsng.start();
   this->apply_cpu_tsng(x_perm, y_perm, alpha);
-  tm_d0.stop();
+  tm_tsng.stop();
   
 
 
   if(besthea::settings::output_verbosity.timers >= 2) {
     std::cout << "BESTHEA Info: apply, scalein elapsed time = "
       << tm_scale.get_time() << " seconds\n";
-    std::cout << "BESTHEA Info: apply, regular elapsed time = "
-      << tm_reg.get_time() << " seconds\n";
-    std::cout << "BESTHEA Info: apply, singular elapsed time = "
-      << tm_sing.get_time() << " seconds\n";
-    std::cout << "BESTHEA Info: apply, delta0 elapsed time = "
-      << tm_d0.get_time() << " seconds\n";
+    std::cout << "BESTHEA Info: apply, fully-regular elapsed time = "
+      << tm_treg_sreg.get_time() << " seconds\n";
+    std::cout << "BESTHEA Info: apply, time-regular-space-singular elapsed time = "
+      << tm_treg_ssng.get_time() << " seconds\n";
+    std::cout << "BESTHEA Info: apply, time-singular elapsed time = "
+      << tm_tsng.get_time() << " seconds\n";
   }
 
 }

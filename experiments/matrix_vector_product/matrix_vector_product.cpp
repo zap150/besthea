@@ -39,6 +39,9 @@ int main( int argc, char * argv[] ) {
 
   bool printCheckErrors = false;
   
+  besthea::settings::output_verbosity.timers = 2;
+  besthea::settings::output_verbosity.onthefly_loadbalance = 2;
+  
   lo finess_level = 3;
   int gpu_alg_ver = 1;
   int repetitions = 1;
@@ -65,9 +68,6 @@ int main( int argc, char * argv[] ) {
   int order_sng_D = quadr_order_sng;
 
   //srand(time(nullptr));
-  
-  besthea::settings::output_verbosity.timers = 2;
-  besthea::settings::output_verbosity.onthefly_loadbalance = 2;
 
   // finess_level   1  2   3   4   5    6    7    8     9
   // n_timesteps    2  4   8  16  32   64  128  256   512
