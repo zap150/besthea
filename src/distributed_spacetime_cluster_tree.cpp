@@ -153,10 +153,18 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   // cannot be done locally. in addition, determine scheduling time clusters
   // where the leaf information of the associated spacetime clusters is
   // required, but not available (for later)
-  std::set< std::pair< lo, scheduling_time_cluster * > > subtree_send_list;
-  std::set< std::pair< lo, scheduling_time_cluster * > > subtree_receive_list;
-  std::set< std::pair< lo, scheduling_time_cluster * > > leaf_info_send_list;
-  std::set< std::pair< lo, scheduling_time_cluster * > > leaf_info_receive_list;
+  std::set< std::pair< lo, scheduling_time_cluster * >,
+    compare_pairs_of_process_ids_and_scheduling_time_clusters >
+    subtree_send_list;
+  std::set< std::pair< lo, scheduling_time_cluster * >,
+    compare_pairs_of_process_ids_and_scheduling_time_clusters >
+    subtree_receive_list;
+  std::set< std::pair< lo, scheduling_time_cluster * >,
+    compare_pairs_of_process_ids_and_scheduling_time_clusters >
+    leaf_info_send_list;
+  std::set< std::pair< lo, scheduling_time_cluster * >,
+    compare_pairs_of_process_ids_and_scheduling_time_clusters >
+    leaf_info_receive_list;
   tree_structure * distribution_tree = get_distribution_tree( );
   distribution_tree->determine_cluster_communication_lists(
     distribution_tree->get_root( ), subtree_send_list, subtree_receive_list,
@@ -358,9 +366,11 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
 
 void besthea::mesh::distributed_spacetime_cluster_tree::
   expand_distribution_tree_communicatively(
-    const std::set< std::pair< lo, scheduling_time_cluster * > > &
+    const std::set< std::pair< lo, scheduling_time_cluster * >,
+      compare_pairs_of_process_ids_and_scheduling_time_clusters > &
       subtree_send_list,
-    const std::set< std::pair< lo, scheduling_time_cluster * > > &
+    const std::set< std::pair< lo, scheduling_time_cluster * >,
+      compare_pairs_of_process_ids_and_scheduling_time_clusters > &
       subtree_receive_list ) {
   tree_structure * distribution_tree = get_distribution_tree( );
   // first communicate the maximal depth of the distribution tree.
@@ -435,9 +445,11 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
 
 void besthea::mesh::distributed_spacetime_cluster_tree::
   communicate_necessary_leaf_information(
-    const std::set< std::pair< lo, scheduling_time_cluster * > > &
+    const std::set< std::pair< lo, scheduling_time_cluster * >,
+      compare_pairs_of_process_ids_and_scheduling_time_clusters > &
       leaf_info_send_list,
-    const std::set< std::pair< lo, scheduling_time_cluster * > > &
+    const std::set< std::pair< lo, scheduling_time_cluster * >,
+      compare_pairs_of_process_ids_and_scheduling_time_clusters > &
       leaf_info_receive_list ) {
   // the sets are sorted by default lexicographically, i.e. first in ascending
   // order with respect to the process ids. the code relies on that.
