@@ -17,7 +17,7 @@ do
 
         echo -ne "${threadcount}\t" >> ${outfile}
 
-        times="$(cat ${infile} | grep "BESTHEA Info: apply, apply itself elapsed time" | tr -s ' ' | cut -d' ' -f 9)"
+        times="$(cat ${infile} | grep "BESTHEA Info: apply elapsed time" | tr -s ' ' | cut -d' ' -f 7)"
 
         timescount=$(echo ${times} | wc -w)
         repstotal=$((${timescount} / 4))
