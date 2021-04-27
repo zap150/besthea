@@ -1,0 +1,59 @@
+besthea::mesh::uniform_spacetime_tensor_mesh
+  spatial elements: 3072, spatial nodes: 1538, spatial edges: 4608
+  timesteps: 128
+Sqrt of spatial element area (~hx) 0.088388
+Timestep length (ht) 0.007812
+hx^2/ht 1.000000
+Using quadrature order regular  4
+Using quadrature order singular 4
+Using GPU algorithm version 1
+V fly cpu
+BESTHEA Info: apply, scalein elapsed time = 2.9e-08 seconds
+BESTHEA Info: apply, fully-regular elapsed time = 166.417 seconds
+BESTHEA Info: apply, time-regular-space-singular elapsed time = 0.0640888 seconds
+BESTHEA Info: apply, time-singular elapsed time = 2.38965 seconds
+BESTHEA Info: apply, vector permutation elapsed time = 0.00751091 seconds
+BESTHEA Info: apply, apply itself elapsed time = 168.871 seconds
+BESTHEA Info: apply elapsed time = 168.878 seconds
+K fly cpu
+BESTHEA Info: apply, scalein elapsed time = 3e-08 seconds
+BESTHEA Info: apply, fully-regular elapsed time = 218.289 seconds
+BESTHEA Info: apply, time-regular-space-singular elapsed time = 0.0375814 seconds
+BESTHEA Info: apply, time-singular elapsed time = 3.56489 seconds
+BESTHEA Info: apply, vector permutation elapsed time = 0.0053055 seconds
+BESTHEA Info: apply, apply itself elapsed time = 221.891 seconds
+BESTHEA Info: apply elapsed time = 221.896 seconds
+A fly cpu
+BESTHEA Info: apply, scalein elapsed time = 3.6e-08 seconds
+BESTHEA Info: apply, fully-regular elapsed time = 244.687 seconds
+BESTHEA Info: apply, time-regular-space-singular elapsed time = 0.0507451 seconds
+BESTHEA Info: apply, time-singular elapsed time = 4.5307 seconds
+BESTHEA Info: apply, vector permutation elapsed time = 0.00505395 seconds
+BESTHEA Info: apply, apply itself elapsed time = 249.268 seconds
+BESTHEA Info: apply elapsed time = 249.273 seconds
+D fly cpu
+BESTHEA Info: apply, scalein elapsed time = 3.9e-08 seconds
+BESTHEA Info: apply, fully-regular elapsed time = 480.261 seconds
+BESTHEA Info: apply, time-regular-space-singular elapsed time = 0.160064 seconds
+BESTHEA Info: apply, time-singular elapsed time = 9.42021 seconds
+BESTHEA Info: apply, vector permutation elapsed time = 0.00330401 seconds
+BESTHEA Info: apply, apply itself elapsed time = 489.841 seconds
+BESTHEA Info: apply elapsed time = 489.845 seconds
+Vectors Vc are NOT equal!
+Vectors Vg are equal!
+Vectors Kc are NOT equal!
+Vectors Kg are equal!
+Vectors Ac are NOT equal!
+Vectors Ag are equal!
+Vectors Dc are NOT equal!
+Vectors Dg are equal!
+
+Time init:    0.046772
+Time check:   0.003026
+
+Time multiply (avg)    V            K            A            D
+mem_assemble          0.000000     0.000000     0.000000     0.000000
+mem_multiply          0.000000     0.000000     0.000000     0.000000
+mem_total             0.000000     0.000000     0.000000     0.000000
+fly_mult_cpu        168.879136   221.896903   249.273639   489.845258
+fly_mult_gpu          0.000000     0.000000     0.000000     0.000000

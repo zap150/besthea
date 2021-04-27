@@ -1,0 +1,143 @@
+besthea::mesh::uniform_spacetime_tensor_mesh
+  spatial elements: 3072, spatial nodes: 1538, spatial edges: 4608
+  timesteps: 128
+Sqrt of spatial element area (~hx) 0.088388
+Timestep length (ht) 0.007812
+hx^2/ht 1.000000
+Using quadrature order regular  4
+Using quadrature order singular 4
+Using GPU algorithm version 1
+V fly cpu
+BESTHEA Info: apply, scalein elapsed time = 2.9e-08 seconds
+BESTHEA Info: apply, fully-regular elapsed time = 27.7614 seconds
+BESTHEA Info: apply, time-regular-space-singular elapsed time = 0.0108151 seconds
+BESTHEA Info: apply, time-singular elapsed time = 0.393104 seconds
+BESTHEA Info: apply, vector permutation elapsed time = 0.00721715 seconds
+BESTHEA Info: apply, apply itself elapsed time = 28.1654 seconds
+BESTHEA Info: apply elapsed time = 28.1726 seconds
+BESTHEA Info: apply, scalein elapsed time = 3.2e-08 seconds
+BESTHEA Info: apply, fully-regular elapsed time = 27.7606 seconds
+BESTHEA Info: apply, time-regular-space-singular elapsed time = 0.0107199 seconds
+BESTHEA Info: apply, time-singular elapsed time = 0.392881 seconds
+BESTHEA Info: apply, vector permutation elapsed time = 0.00701088 seconds
+BESTHEA Info: apply, apply itself elapsed time = 28.1642 seconds
+BESTHEA Info: apply elapsed time = 28.1712 seconds
+BESTHEA Info: apply, scalein elapsed time = 2.4e-08 seconds
+BESTHEA Info: apply, fully-regular elapsed time = 27.7567 seconds
+BESTHEA Info: apply, time-regular-space-singular elapsed time = 0.0107334 seconds
+BESTHEA Info: apply, time-singular elapsed time = 0.393005 seconds
+BESTHEA Info: apply, vector permutation elapsed time = 0.00688894 seconds
+BESTHEA Info: apply, apply itself elapsed time = 28.1604 seconds
+BESTHEA Info: apply elapsed time = 28.1673 seconds
+BESTHEA Info: apply, scalein elapsed time = 2.3e-08 seconds
+BESTHEA Info: apply, fully-regular elapsed time = 27.7566 seconds
+BESTHEA Info: apply, time-regular-space-singular elapsed time = 0.0107386 seconds
+BESTHEA Info: apply, time-singular elapsed time = 0.393019 seconds
+BESTHEA Info: apply, vector permutation elapsed time = 0.00693047 seconds
+BESTHEA Info: apply, apply itself elapsed time = 28.1603 seconds
+BESTHEA Info: apply elapsed time = 28.1673 seconds
+K fly cpu
+BESTHEA Info: apply, scalein elapsed time = 3e-08 seconds
+BESTHEA Info: apply, fully-regular elapsed time = 35.9779 seconds
+BESTHEA Info: apply, time-regular-space-singular elapsed time = 0.00641875 seconds
+BESTHEA Info: apply, time-singular elapsed time = 0.593462 seconds
+BESTHEA Info: apply, vector permutation elapsed time = 0.00532304 seconds
+BESTHEA Info: apply, apply itself elapsed time = 36.5778 seconds
+BESTHEA Info: apply elapsed time = 36.5831 seconds
+BESTHEA Info: apply, scalein elapsed time = 3.6e-08 seconds
+BESTHEA Info: apply, fully-regular elapsed time = 36.5036 seconds
+BESTHEA Info: apply, time-regular-space-singular elapsed time = 0.00630173 seconds
+BESTHEA Info: apply, time-singular elapsed time = 0.594567 seconds
+BESTHEA Info: apply, vector permutation elapsed time = 0.00525746 seconds
+BESTHEA Info: apply, apply itself elapsed time = 37.1044 seconds
+BESTHEA Info: apply elapsed time = 37.1097 seconds
+BESTHEA Info: apply, scalein elapsed time = 2.9e-08 seconds
+BESTHEA Info: apply, fully-regular elapsed time = 36.4843 seconds
+BESTHEA Info: apply, time-regular-space-singular elapsed time = 0.00629378 seconds
+BESTHEA Info: apply, time-singular elapsed time = 0.593453 seconds
+BESTHEA Info: apply, vector permutation elapsed time = 0.00519088 seconds
+BESTHEA Info: apply, apply itself elapsed time = 37.0841 seconds
+BESTHEA Info: apply elapsed time = 37.0892 seconds
+BESTHEA Info: apply, scalein elapsed time = 3e-08 seconds
+BESTHEA Info: apply, fully-regular elapsed time = 36.5056 seconds
+BESTHEA Info: apply, time-regular-space-singular elapsed time = 0.00627652 seconds
+BESTHEA Info: apply, time-singular elapsed time = 0.594458 seconds
+BESTHEA Info: apply, vector permutation elapsed time = 0.00512676 seconds
+BESTHEA Info: apply, apply itself elapsed time = 37.1063 seconds
+BESTHEA Info: apply elapsed time = 37.1114 seconds
+A fly cpu
+BESTHEA Info: apply, scalein elapsed time = 3.5e-08 seconds
+BESTHEA Info: apply, fully-regular elapsed time = 40.9069 seconds
+BESTHEA Info: apply, time-regular-space-singular elapsed time = 0.0111936 seconds
+BESTHEA Info: apply, time-singular elapsed time = 0.770525 seconds
+BESTHEA Info: apply, vector permutation elapsed time = 0.00517808 seconds
+BESTHEA Info: apply, apply itself elapsed time = 41.6886 seconds
+BESTHEA Info: apply elapsed time = 41.6938 seconds
+BESTHEA Info: apply, scalein elapsed time = 3.4e-08 seconds
+BESTHEA Info: apply, fully-regular elapsed time = 40.8824 seconds
+BESTHEA Info: apply, time-regular-space-singular elapsed time = 0.0110952 seconds
+BESTHEA Info: apply, time-singular elapsed time = 0.769925 seconds
+BESTHEA Info: apply, vector permutation elapsed time = 0.00519535 seconds
+BESTHEA Info: apply, apply itself elapsed time = 41.6634 seconds
+BESTHEA Info: apply elapsed time = 41.6686 seconds
+BESTHEA Info: apply, scalein elapsed time = 3e-08 seconds
+BESTHEA Info: apply, fully-regular elapsed time = 40.8975 seconds
+BESTHEA Info: apply, time-regular-space-singular elapsed time = 0.0111107 seconds
+BESTHEA Info: apply, time-singular elapsed time = 0.769851 seconds
+BESTHEA Info: apply, vector permutation elapsed time = 0.00509624 seconds
+BESTHEA Info: apply, apply itself elapsed time = 41.6785 seconds
+BESTHEA Info: apply elapsed time = 41.6836 seconds
+BESTHEA Info: apply, scalein elapsed time = 3.6e-08 seconds
+BESTHEA Info: apply, fully-regular elapsed time = 40.8812 seconds
+BESTHEA Info: apply, time-regular-space-singular elapsed time = 0.0111486 seconds
+BESTHEA Info: apply, time-singular elapsed time = 0.769817 seconds
+BESTHEA Info: apply, vector permutation elapsed time = 0.00515414 seconds
+BESTHEA Info: apply, apply itself elapsed time = 41.6622 seconds
+BESTHEA Info: apply elapsed time = 41.6673 seconds
+D fly cpu
+BESTHEA Info: apply, scalein elapsed time = 3.6e-08 seconds
+BESTHEA Info: apply, fully-regular elapsed time = 80.7295 seconds
+BESTHEA Info: apply, time-regular-space-singular elapsed time = 0.0296541 seconds
+BESTHEA Info: apply, time-singular elapsed time = 1.56821 seconds
+BESTHEA Info: apply, vector permutation elapsed time = 0.00340815 seconds
+BESTHEA Info: apply, apply itself elapsed time = 82.3274 seconds
+BESTHEA Info: apply elapsed time = 82.3308 seconds
+BESTHEA Info: apply, scalein elapsed time = 3.5e-08 seconds
+BESTHEA Info: apply, fully-regular elapsed time = 80.7777 seconds
+BESTHEA Info: apply, time-regular-space-singular elapsed time = 0.0296661 seconds
+BESTHEA Info: apply, time-singular elapsed time = 1.57111 seconds
+BESTHEA Info: apply, vector permutation elapsed time = 0.00334988 seconds
+BESTHEA Info: apply, apply itself elapsed time = 82.3785 seconds
+BESTHEA Info: apply elapsed time = 82.3819 seconds
+BESTHEA Info: apply, scalein elapsed time = 3.6e-08 seconds
+BESTHEA Info: apply, fully-regular elapsed time = 80.7801 seconds
+BESTHEA Info: apply, time-regular-space-singular elapsed time = 0.029578 seconds
+BESTHEA Info: apply, time-singular elapsed time = 1.57118 seconds
+BESTHEA Info: apply, vector permutation elapsed time = 0.00341358 seconds
+BESTHEA Info: apply, apply itself elapsed time = 82.3809 seconds
+BESTHEA Info: apply elapsed time = 82.3843 seconds
+BESTHEA Info: apply, scalein elapsed time = 2.8e-08 seconds
+BESTHEA Info: apply, fully-regular elapsed time = 80.7913 seconds
+BESTHEA Info: apply, time-regular-space-singular elapsed time = 0.0295769 seconds
+BESTHEA Info: apply, time-singular elapsed time = 1.57118 seconds
+BESTHEA Info: apply, vector permutation elapsed time = 0.00335534 seconds
+BESTHEA Info: apply, apply itself elapsed time = 82.3921 seconds
+BESTHEA Info: apply elapsed time = 82.3954 seconds
+Vectors Vc are NOT equal!
+Vectors Vg are equal!
+Vectors Kc are NOT equal!
+Vectors Kg are equal!
+Vectors Ac are NOT equal!
+Vectors Ag are equal!
+Vectors Dc are NOT equal!
+Vectors Dg are equal!
+
+Time init:    0.048184
+Time check:   0.003020
+
+Time multiply (avg)    V            K            A            D
+mem_assemble          0.000000     0.000000     0.000000     0.000000
+mem_multiply          0.000000     0.000000     0.000000     0.000000
+mem_total             0.000000     0.000000     0.000000     0.000000
+fly_mult_cpu         28.169506    37.104116    41.673972    82.387703
+fly_mult_gpu          0.000000     0.000000     0.000000     0.000000
