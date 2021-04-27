@@ -181,8 +181,8 @@ sc besthea::bem::uniform_spacetime_be_space< basis_type >::L2_relative_error(
     }
   }
   sc result;
-  if ( l2_norm == 0 ) {
-    if ( l2_err == 0 ) {
+  if ( l2_norm < 1e-10 ) {
+    if ( l2_err < 1e-10 ) {
       result = 0;
     } else {
       result = std::numeric_limits< sc >::infinity( );
