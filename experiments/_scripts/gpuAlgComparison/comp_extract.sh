@@ -3,7 +3,7 @@
 # run from the _scripts directory
 
 
-for machineVersion in asus_qo4 bar_qo4
+for machineVersion in bar_qo4 bar_qo1 asus_qo4 asus_qo1
 do
 
     machineFolder=../_results/gpuAlgComparison/algcomp_${machineVersion}
