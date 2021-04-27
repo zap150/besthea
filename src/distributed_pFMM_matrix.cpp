@@ -3980,24 +3980,17 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   }
   // auxiliary arrays for OpenMP dependencies
   // (must not be members in OpenMP 4.5)
-  auto first = m2l_list.begin( );
-  auto last = m2l_list.end( );
-  char * aux_dep_m2l = new char[ std::distance( first, last ) ];
-  std::fill( aux_dep_m2l, aux_dep_m2l + sizeof( aux_dep_m2l ), 0 );
+  char * aux_dep_m2l = new char[ m2l_list.size( ) ];
+  std::fill( aux_dep_m2l, aux_dep_m2l + m2l_list.size( ), 0 );
 
-  char * aux_dep_m2l_send = new char[ std::distance( first, last ) ];
-  std::fill(
-    aux_dep_m2l_send, aux_dep_m2l_send + sizeof( aux_dep_m2l_send ), 0 );
+  char * aux_dep_m2l_send = new char[ m2l_list.size( ) ];
+  std::fill( aux_dep_m2l_send, aux_dep_m2l_send + m2l_list.size( ), 0 );
 
-  first = l_list.begin( );
-  last = l_list.end( );
-  char * aux_dep_l = new char[ std::distance( first, last ) ];
-  std::fill( aux_dep_l, aux_dep_l + sizeof( aux_dep_l ), 0 );
+  char * aux_dep_l = new char[ l_list.size( ) ];
+  std::fill( aux_dep_l, aux_dep_l + l_list.size( ), 0 );
 
-  first = m_list.begin( );
-  last = m_list.end( );
-  char * aux_dep_m = new char[ std::distance( first, last ) ];
-  std::fill( aux_dep_m, aux_dep_m + sizeof( aux_dep_m ), 0 );
+  char * aux_dep_m = new char[ m_list.size( ) ];
+  std::fill( aux_dep_m, aux_dep_m + m_list.size( ), 0 );
 
   // allocate buffers for m2l computation
   _aux_buffer_0.resize( omp_get_max_threads( ) );
