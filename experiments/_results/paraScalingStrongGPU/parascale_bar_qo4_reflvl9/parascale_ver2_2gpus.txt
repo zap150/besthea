@@ -1,0 +1,91 @@
+besthea::mesh::uniform_spacetime_tensor_mesh
+  spatial elements: 12288, spatial nodes: 6146, spatial edges: 18432
+  timesteps: 512
+Sqrt of spatial element area (~hx) 0.044194
+Timestep length (ht) 0.001953
+hx^2/ht 1.000000
+Using quadrature order regular  4
+Using quadrature order singular 4
+Using GPU algorithm version 2
+V fly gpu
+BESTHEA Info: onthefly load balancing: total 12288 CPU 0 GPU 12288: 0 6144 12288
+BESTHEA Info: time gpu_copyin:     0.008183    0.008156  
+BESTHEA Info: time gpu_compute:  128.569297  127.882531  
+BESTHEA Info: time gpu_copyout:    0.003823    0.003824  
+BESTHEA Info: time gpu_all:      128.581320  127.894523  
+BESTHEA Info: time cpu_scalein:    0.104482
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.156221
+BESTHEA Info: time cpu_delta0:     8.284079
+BESTHEA Info: time cpu_all:        8.440300
+BESTHEA Info: time gpu_max:      128.581320
+BESTHEA Info: time combined:     128.732073
+BESTHEA Info: apply elapsed time = 128.732 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+K fly gpu
+BESTHEA Info: onthefly load balancing: total 12288 CPU 0 GPU 12288: 0 6144 12288
+BESTHEA Info: time gpu_copyin:     0.004126    0.004119  
+BESTHEA Info: time gpu_compute:  141.025172  140.428406  
+BESTHEA Info: time gpu_copyout:    0.003827    0.003829  
+BESTHEA Info: time gpu_all:      141.033141  140.436375  
+BESTHEA Info: time cpu_scalein:    0.049851
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.144069
+BESTHEA Info: time cpu_delta0:    12.365208
+BESTHEA Info: time cpu_all:       12.509277
+BESTHEA Info: time gpu_max:      141.033141
+BESTHEA Info: time combined:     141.126780
+BESTHEA Info: apply elapsed time = 141.127 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+A fly gpu
+BESTHEA Info: onthefly load balancing: total 12288 CPU 0 GPU 12288: 0 6144 12288
+BESTHEA Info: time gpu_copyin:     0.008218    0.008204  
+BESTHEA Info: time gpu_compute:  146.597609  144.965516  
+BESTHEA Info: time gpu_copyout:    0.001919    0.001921  
+BESTHEA Info: time gpu_all:      146.607766  144.975656  
+BESTHEA Info: time cpu_scalein:    0.062583
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   1.372996
+BESTHEA Info: time cpu_delta0:    19.234102
+BESTHEA Info: time cpu_all:       20.607098
+BESTHEA Info: time gpu_max:      146.607766
+BESTHEA Info: time combined:     146.689922
+BESTHEA Info: apply elapsed time = 146.69 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+D fly gpu
+BESTHEA Info: onthefly load balancing: total 12288 CPU 0 GPU 12288: 0 6144 12288
+BESTHEA Info: time gpu_copyin:     0.004100    0.004087  
+BESTHEA Info: time gpu_compute:  206.727406  207.984141  
+BESTHEA Info: time gpu_copyout:    0.001920    0.001921  
+BESTHEA Info: time gpu_all:      206.733438  207.990156  
+BESTHEA Info: time cpu_scalein:    0.021235
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.577423
+BESTHEA Info: time cpu_delta0:    37.148690
+BESTHEA Info: time cpu_all:       37.726114
+BESTHEA Info: time gpu_max:      207.990156
+BESTHEA Info: time combined:     208.026242
+BESTHEA Info: apply elapsed time = 208.026 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+Vectors Vc are equal!
+Vectors Vg are NOT equal!
+Vectors Kc are equal!
+Vectors Kg are NOT equal!
+Vectors Ac are equal!
+Vectors Ag are NOT equal!
+Vectors Dc are equal!
+Vectors Dg are NOT equal!
+
+Time init:    1.147074
+Time check:   0.048856
+
+Time multiply (avg)    V            K            A            D
+mem_assemble          0.000000     0.000000     0.000000     0.000000
+mem_multiply          0.000000     0.000000     0.000000     0.000000
+mem_total             0.000000     0.000000     0.000000     0.000000
+fly_mult_cpu          0.000000     0.000000     0.000000     0.000000
+fly_mult_gpu        128.751306   141.141609   146.698993   208.028442

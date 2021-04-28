@@ -1,0 +1,91 @@
+besthea::mesh::uniform_spacetime_tensor_mesh
+  spatial elements: 12288, spatial nodes: 6146, spatial edges: 18432
+  timesteps: 512
+Sqrt of spatial element area (~hx) 0.044194
+Timestep length (ht) 0.001953
+hx^2/ht 1.000000
+Using quadrature order regular  4
+Using quadrature order singular 4
+Using GPU algorithm version 2
+V fly gpu
+BESTHEA Info: onthefly load balancing: total 12288 CPU 0 GPU 12288: 0 4096 8192 12288
+BESTHEA Info: time gpu_copyin:     0.008188    0.008164    0.004143  
+BESTHEA Info: time gpu_compute:   79.750539   80.532828   78.887992  
+BESTHEA Info: time gpu_copyout:    0.003825    0.003826    0.003824  
+BESTHEA Info: time gpu_all:       79.762563   80.544828   78.895969  
+BESTHEA Info: time cpu_scalein:    0.105211
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.160410
+BESTHEA Info: time cpu_delta0:     8.604018
+BESTHEA Info: time cpu_all:        8.764428
+BESTHEA Info: time gpu_max:       80.544828
+BESTHEA Info: time combined:      80.700676
+BESTHEA Info: apply elapsed time = 80.7007 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+K fly gpu
+BESTHEA Info: onthefly load balancing: total 12288 CPU 0 GPU 12288: 0 4096 8192 12288
+BESTHEA Info: time gpu_copyin:     0.004134    0.004120    0.002112  
+BESTHEA Info: time gpu_compute:   92.319734   92.061484   92.748594  
+BESTHEA Info: time gpu_copyout:    0.003828    0.003826    0.003827  
+BESTHEA Info: time gpu_all:       92.327703   92.069445   92.754547  
+BESTHEA Info: time cpu_scalein:    0.051727
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.149584
+BESTHEA Info: time cpu_delta0:    12.315205
+BESTHEA Info: time cpu_all:       12.464789
+BESTHEA Info: time gpu_max:       92.754547
+BESTHEA Info: time combined:      92.857088
+BESTHEA Info: apply elapsed time = 92.8571 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+A fly gpu
+BESTHEA Info: onthefly load balancing: total 12288 CPU 0 GPU 12288: 0 4096 8192 12288
+BESTHEA Info: time gpu_copyin:     0.008175    0.008158    0.004113  
+BESTHEA Info: time gpu_compute:   92.284891   90.456773   90.750539  
+BESTHEA Info: time gpu_copyout:    0.001918    0.001923    0.001920  
+BESTHEA Info: time gpu_all:       92.294992   90.466867   90.756586  
+BESTHEA Info: time cpu_scalein:    0.079379
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   1.499020
+BESTHEA Info: time cpu_delta0:    19.018540
+BESTHEA Info: time cpu_all:       20.517561
+BESTHEA Info: time gpu_max:       92.294992
+BESTHEA Info: time combined:      92.403293
+BESTHEA Info: apply elapsed time = 92.4033 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+D fly gpu
+BESTHEA Info: onthefly load balancing: total 12288 CPU 0 GPU 12288: 0 4096 8192 12288
+BESTHEA Info: time gpu_copyin:     0.004110    0.004090    0.002085  
+BESTHEA Info: time gpu_compute:  137.797750  138.072781  137.069609  
+BESTHEA Info: time gpu_copyout:    0.001919    0.001920    0.001919  
+BESTHEA Info: time gpu_all:      137.803797  138.078812  137.073625  
+BESTHEA Info: time cpu_scalein:    0.047086
+BESTHEA Info: time cpu_regular:    0.000000
+BESTHEA Info: time cpu_singular:   0.559412
+BESTHEA Info: time cpu_delta0:    37.038902
+BESTHEA Info: time cpu_all:       37.598314
+BESTHEA Info: time gpu_max:      138.078812
+BESTHEA Info: time combined:     138.147571
+BESTHEA Info: apply elapsed time = 138.148 seconds
+BESTHEA Info: onthefly load balancing: before adapt:      0     0.000000
+BESTHEA Info: onthefly load balancing: after adapt:       0     0.000000
+Vectors Vc are equal!
+Vectors Vg are NOT equal!
+Vectors Kc are equal!
+Vectors Kg are NOT equal!
+Vectors Ac are equal!
+Vectors Ag are NOT equal!
+Vectors Dc are equal!
+Vectors Dg are NOT equal!
+
+Time init:    1.344731
+Time check:   0.048949
+
+Time multiply (avg)    V            K            A            D
+mem_assemble          0.000000     0.000000     0.000000     0.000000
+mem_multiply          0.000000     0.000000     0.000000     0.000000
+mem_total             0.000000     0.000000     0.000000     0.000000
+fly_mult_cpu          0.000000     0.000000     0.000000     0.000000
+fly_mult_gpu         80.724026    92.870398    92.439039   138.151257
