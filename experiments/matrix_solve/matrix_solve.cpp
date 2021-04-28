@@ -72,8 +72,8 @@ int main( int argc, char * argv[] ) {
   std::string mesh_file_12 = "../../besthea/examples/mesh_files/cube_12.txt";
   std::string mesh_file_24 = "../../besthea/examples/mesh_files/cube_24.txt";
 
-  bool do_mem    = true;
-  bool do_fly_cpu = true;
+  bool do_mem    = false;
+  bool do_fly_cpu = false;
   bool do_fly_gpu = true;
   bool do_dirichlet = true; // solve with system matrix V
   bool do_neumann = true; // solve with system matrix D
@@ -192,31 +192,33 @@ int main( int argc, char * argv[] ) {
 
   tm_init.stop();
 
-  // assemble matrices
-  if(do_dirichlet) {
-    printf("assembly V\n");
-    for(int i = 0; i < total_repetitions; i++) {
-      V_mem.clear();
-      if(i >= pre_repetitions) tm_assemble_v_mem.start();
-      assembler_v.assemble(V_mem);
-      if(i >= pre_repetitions) tm_assemble_v_mem.stop();
+  if(do_mem) {
+    // assemble matrices
+    if(do_dirichlet) {
+      printf("assembly V\n");
+      for(int i = 0; i < total_repetitions; i++) {
+        V_mem.clear();
+        if(i >= pre_repetitions) tm_assemble_v_mem.start();
+        assembler_v.assemble(V_mem);
+        if(i >= pre_repetitions) tm_assemble_v_mem.stop();
+      }
     }
-  }
-  if(do_neumann) {
-    printf("assembly D\n");
-    for(int i = 0; i < total_repetitions; i++) {
-      D_mem.clear();
-      if(i >= pre_repetitions) tm_assemble_d_mem.start();
-      assembler_d.assemble(D_mem);
-      if(i >= pre_repetitions) tm_assemble_d_mem.stop();
+    if(do_neumann) {
+      printf("assembly D\n");
+      for(int i = 0; i < total_repetitions; i++) {
+        D_mem.clear();
+        if(i >= pre_repetitions) tm_assemble_d_mem.start();
+        assembler_d.assemble(D_mem);
+        if(i >= pre_repetitions) tm_assemble_d_mem.stop();
+      }
     }
-  }
-  printf("assembly K\n");
-  for(int i = 0; i < total_repetitions; i++) {
-    K_mem.clear();
-    if(i >= pre_repetitions) tm_assemble_k_mem.start();
-    assembler_k.assemble(K_mem);
-    if(i >= pre_repetitions) tm_assemble_k_mem.stop();
+    printf("assembly K\n");
+    for(int i = 0; i < total_repetitions; i++) {
+      K_mem.clear();
+      if(i >= pre_repetitions) tm_assemble_k_mem.start();
+      assembler_k.assemble(K_mem);
+      if(i >= pre_repetitions) tm_assemble_k_mem.stop();
+    }
   }
   printf("assembly M\n");
   tm_assemble_m_mem.start();
