@@ -195,20 +195,29 @@ int main( int argc, char * argv[] ) {
   // assemble matrices
   if(do_dirichlet) {
     printf("assembly V\n");
-    tm_assemble_v_mem.start();
-    assembler_v.assemble(V_mem);
-    tm_assemble_v_mem.stop();
+    for(int i = 0; i < total_repetitions; i++) {
+      V_mem.clear();
+      if(i >= pre_repetitions) tm_assemble_v_mem.start();
+      assembler_v.assemble(V_mem);
+      if(i >= pre_repetitions) tm_assemble_v_mem.stop();
+    }
   }
   if(do_neumann) {
     printf("assembly D\n");
-    tm_assemble_d_mem.start();
-    assembler_d.assemble(D_mem);
-    tm_assemble_d_mem.stop();
+    for(int i = 0; i < total_repetitions; i++) {
+      D_mem.clear();
+      if(i >= pre_repetitions) tm_assemble_d_mem.start();
+      assembler_d.assemble(D_mem);
+      if(i >= pre_repetitions) tm_assemble_d_mem.stop();
+    }
   }
   printf("assembly K\n");
-  tm_assemble_k_mem.start();
-  assembler_k.assemble(K_mem);
-  tm_assemble_k_mem.stop();
+  for(int i = 0; i < total_repetitions; i++) {
+    K_mem.clear();
+    if(i >= pre_repetitions) tm_assemble_k_mem.start();
+    assembler_k.assemble(K_mem);
+    if(i >= pre_repetitions) tm_assemble_k_mem.stop();
+  }
   printf("assembly M\n");
   tm_assemble_m_mem.start();
   M.assemble();
@@ -413,7 +422,7 @@ int main( int argc, char * argv[] ) {
   printf("Neumann problem:\n");
   printf("                  mem        fly_cpu     fly_gpu\n");
   printf("Neu precision:  %10.3e  %10.3e  %10.3e\n", gmres_prec_neu_mem, gmres_prec_neu_fly_cpu, gmres_prec_neu_fly_gpu);
-  printf("Neu iterations: %10ld  %10ld %10ld\n",     gmres_iter_neu_mem, gmres_iter_neu_fly_cpu, gmres_iter_neu_fly_gpu);
+  printf("Neu iterations: %10ld  %10ld  %10ld\n",     gmres_iter_neu_mem, gmres_iter_neu_fly_cpu, gmres_iter_neu_fly_gpu);
   printf("Neu rel_error:  %10.3e  %10.3e  %10.3e\n", rel_error_neu_mem, rel_error_neu_fly_cpu, rel_error_neu_fly_gpu);
   printf("\n");
   printf("Time init total: %.6f\n", tm_init.get_time());
@@ -424,10 +433,10 @@ int main( int argc, char * argv[] ) {
   printf("fly_gpu     %10.6f  %10.6f  %10.6f  %10.6f\n", tm_init_fly_gpu_v.get_time(), tm_init_fly_gpu_k.get_time(), tm_init_fly_gpu_a.get_time(), tm_init_fly_gpu_d.get_time());
   printf("\n");
   printf("Assemble:\n");
-  printf("Assemble V: %10.6f\n", tm_assemble_v_mem.get_time());
-  printf("Assemble K: %10.6f\n", tm_assemble_k_mem.get_time());
-  printf("Assemble D: %10.6f\n", tm_assemble_d_mem.get_time());
-  printf("Assemble M: %10.6f\n", tm_assemble_m_mem.get_time());  
+  printf("Assemble V: %10.6f\n", tm_assemble_v_mem.get_time() / repetitions);
+  printf("Assemble K: %10.6f\n", tm_assemble_k_mem.get_time() / repetitions);
+  printf("Assemble D: %10.6f\n", tm_assemble_d_mem.get_time() / repetitions);
+  printf("Assemble M: %10.6f\n", tm_assemble_m_mem.get_time() / repetitions);  
   printf("\n");
   printf("Right hand side vector:\n");
   printf("                    dirichlet   neumann\n");
@@ -449,7 +458,7 @@ int main( int argc, char * argv[] ) {
   printf("\n");
   printf("Total time:\n");
   printf("                    dirichlet   neumann\n");
-  printf("total mem         %10.6f  %10.6f\n", tm_solve_dir_mem.get_time() / repetitions + tm_assemble_v_mem.get_time() + tm_assemble_k_mem.get_time() + tm_assemble_m_mem.get_time() + tm_rhs_dir_mem.get_time(), tm_solve_neu_mem.get_time() / repetitions + tm_assemble_d_mem.get_time() + tm_assemble_k_mem.get_time() + tm_assemble_m_mem.get_time() + tm_rhs_neu_mem.get_time());
+  printf("total mem         %10.6f  %10.6f\n", tm_solve_dir_mem.get_time() / repetitions + tm_assemble_v_mem.get_time() / repetitions + tm_assemble_k_mem.get_time() / repetitions + tm_assemble_m_mem.get_time() + tm_rhs_dir_mem.get_time(), tm_solve_neu_mem.get_time() / repetitions + tm_assemble_d_mem.get_time() / repetitions + tm_assemble_k_mem.get_time() / repetitions + tm_assemble_m_mem.get_time() + tm_rhs_neu_mem.get_time());
   printf("total fly_cpu     %10.6f  %10.6f\n", tm_solve_dir_fly_cpu.get_time() / repetitions + tm_assemble_m_mem.get_time() + tm_rhs_dir_fly_cpu.get_time() + tm_init_fly_cpu_v.get_time() + tm_init_fly_cpu_k.get_time(), tm_solve_neu_fly_cpu.get_time() / repetitions + tm_assemble_m_mem.get_time() + tm_rhs_neu_fly_cpu.get_time() + tm_init_fly_cpu_d.get_time() + tm_init_fly_cpu_a.get_time());
   printf("total fly_gpu     %10.6f  %10.6f\n", tm_solve_dir_fly_gpu.get_time() / repetitions + tm_assemble_m_mem.get_time() + tm_rhs_dir_fly_gpu.get_time() + tm_init_fly_gpu_v.get_time() + tm_init_fly_gpu_k.get_time() + tm_init_gpu_mesh.get_time(), tm_solve_neu_fly_gpu.get_time() / repetitions + tm_assemble_m_mem.get_time() + tm_rhs_neu_fly_gpu.get_time() + tm_init_fly_gpu_d.get_time() + tm_init_fly_gpu_a.get_time() + tm_init_gpu_mesh.get_time());
  
