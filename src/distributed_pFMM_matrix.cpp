@@ -1036,12 +1036,17 @@ bool besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     ipar[ 11 ] = 1;  // perform test for zero norm of generated direction
     ipar[ 14 ]
       = n_iterations_until_restart;  // number of iterations before restart
+    if ( n_iterations_until_restart
+      != std::min( (lo) 150, solution.size( ) ) ) {
+      ipar[ 6 ] = 0;  // disable the verbosity in case of non-default iterations
+                      // until restart
+    }
 
     dpar[ 0 ] = relative_residual_error;  // relative tolerance
 
     dfgmres_check( &size, solution_contiguous->data( ), rhs_contiguous->data( ),
       &rci, ipar, dpar, tmp_data );
-    if ( rci ) {
+    if ( rci != 0 && rci != -1001 && rci != -1010 ) {
       std::cout << "MKL parameters incorrect." << std::endl;
       delete rhs_contiguous;
       delete solution_contiguous;
