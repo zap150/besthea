@@ -1,0 +1,68 @@
+besthea::mesh::uniform_spacetime_tensor_mesh
+  spatial elements: 768, spatial nodes: 386, spatial edges: 1152
+  timesteps: 32
+Sqrt of spatial element area (~hx) 0.176777
+Timestep length (ht) 0.031250
+hx^2/ht 1.000000
+Using quadrature order regular  4
+Using quadrature order singular 4
+Using GPU algorithm version 2
+assembly V
+assembly D
+assembly K
+assembly M
+dirichlet
+  rhs mem
+  solve mem
+neumann
+  rhs mem
+  solve mem
+
+Dirichlet problem:
+                  mem        fly_cpu     fly_gpu
+Dir precision:   6.625e-09   1.000e-08   1.000e-08
+Dir iterations:         33         500         500
+Dir rel_error:   2.649e-01   1.000e+00   1.000e+00
+
+Neumann problem:
+                  mem        fly_cpu     fly_gpu
+Neu precision:   7.196e-09   1.000e-08   1.000e-08
+Neu iterations:         38         500         500
+Neu rel_error:   8.636e-02   1.000e+00   1.000e+00
+
+Time init total: 0.007945
+Time init gpu mesh: 0.000170
+Time init fly classes:
+               V           K           A           D
+fly_cpu       0.000108    0.000101    0.000100    0.000110
+fly_gpu       0.000117    0.000096    0.000098    0.000111
+
+Assemble:
+Assemble V:   0.303036
+Assemble K:   0.353302
+Assemble D:   1.215189
+Assemble M:   0.000042
+
+Right hand side vector:
+                    dirichlet   neumann
+rhs mem             0.010509    0.005508
+rhs fly_cpu         0.000000    0.000000
+rhs fly_gpu         0.000000    0.000000
+
+Solving the system:
+                    dirichlet   neumann
+solve mem           0.408834    0.188530
+solve fly_cpu       0.000000    0.000000
+solve fly_gpu       0.000000    0.000000
+
+Time per iteration:
+                    dirichlet   neumann
+iter mem            0.012389    0.004961
+iter fly_cpu        0.000000    0.000000
+iter fly_gpu        0.000000    0.000000
+
+Total time:
+                    dirichlet   neumann
+total mem           1.075806    1.762655
+total fly_cpu       0.000335    0.000335
+total fly_gpu       0.000508    0.000504
