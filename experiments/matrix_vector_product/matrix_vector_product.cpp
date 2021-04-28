@@ -208,6 +208,8 @@ int main( int argc, char * argv[] ) {
       tm_Vmm.start();
       for(int i = 0; i < repetitions; i++) V_mem.apply(xV, yVm, false, alpha, beta);
       tm_Vmm.stop();
+
+      V_mem.clear();
     }
     if(doFlyCpu) {
       printf("V fly cpu\n");
@@ -240,6 +242,8 @@ int main( int argc, char * argv[] ) {
       tm_Kmm.start();
       for(int i = 0; i < repetitions; i++) K_mem.apply(xK, yKm, false, alpha, beta);
       tm_Kmm.stop();
+
+      K_mem.clear();
     }
     if(doFlyCpu) {
       printf("K fly cpu\n");
@@ -272,6 +276,8 @@ int main( int argc, char * argv[] ) {
       tm_Amm.start();
       for(int i = 0; i < repetitions; i++) A_mem.apply(xA, yAm, false, alpha, beta);
       tm_Amm.stop();
+
+      A_mem.clear();
     }
     if(doFlyCpu) {
       printf("A fly cpu\n");
@@ -304,6 +310,8 @@ int main( int argc, char * argv[] ) {
       tm_Dmm.start();
       for(int i = 0; i < repetitions; i++) D_mem.apply(xD, yDm, false, alpha, beta);
       tm_Dmm.stop();
+
+      D_mem.clear();
     }
     if(doFlyCpu) {
       printf("D fly cpu\n");
