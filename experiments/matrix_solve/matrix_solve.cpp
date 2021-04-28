@@ -12,7 +12,7 @@ using namespace besthea::bem;
 using namespace besthea::tools;
 
 struct cauchy_data {
-  static sc dirichlet( sc x1, sc x2, sc x3, const coordinates< 3 > & n, sc t ) {
+  static sc dirichlet( sc x1, sc x2, sc x3, const coordinates< 3 > &, sc t ) {
     sc norm2 = ( x1 - _y[ 0 ] ) * ( x1 - _y[ 0 ] )
       + ( x2 - _y[ 1 ] ) * ( x2 - _y[ 1 ] )
       + ( x3 - _y[ 2 ] ) * ( x3 - _y[ 2 ] );
@@ -35,14 +35,15 @@ struct cauchy_data {
     sc norm2 = ( x1 - _y[ 0 ] ) * ( x1 - _y[ 0 ] )
       + ( x2 - _y[ 1 ] ) * ( x2 - _y[ 1 ] )
       + ( x3 - _y[ 2 ] ) * ( x3 - _y[ 2 ] );
+    int dummy = 0.0;
     sc value = std::pow( 4.0 * M_PI * _alpha * _shift, -1.5 )
-      * std::exp( -norm2 / ( 4.0 * _alpha * _shift ) );
+      * std::exp( -norm2 / ( 4.0 * _alpha * _shift + dummy ) );
 
     return value;
   }
 
-  static constexpr sc _alpha{ 1.0 };
-  static constexpr std::array< sc, 3 > _y{ 1.5, 1.5, 1.5 };
+  static constexpr sc _alpha{ 0.5 };
+  static constexpr std::array< sc, 3 > _y{ 0.0, 0.0, 1.5 };
   static constexpr sc _shift{ 0.0 };
 };
 
@@ -72,8 +73,8 @@ int main( int argc, char * argv[] ) {
   std::string mesh_file_12 = "../../besthea/examples/mesh_files/cube_12.txt";
   std::string mesh_file_24 = "../../besthea/examples/mesh_files/cube_24.txt";
 
-  bool do_mem    = false;
-  bool do_fly_cpu = false;
+  bool do_mem     = true;
+  bool do_fly_cpu = true;
   bool do_fly_gpu = true;
   bool do_dirichlet = true; // solve with system matrix V
   bool do_neumann = true; // solve with system matrix D
