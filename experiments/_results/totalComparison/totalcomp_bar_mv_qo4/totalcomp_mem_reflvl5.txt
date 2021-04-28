@@ -1,0 +1,35 @@
+besthea::mesh::uniform_spacetime_tensor_mesh
+  spatial elements: 768, spatial nodes: 386, spatial edges: 1152
+  timesteps: 32
+Sqrt of spatial element area (~hx) 0.176777
+Timestep length (ht) 0.031250
+hx^2/ht 1.000000
+Using quadrature order regular  4
+Using quadrature order singular 4
+Using GPU algorithm version 2
+V mem assembly
+V mem multiply
+K mem assembly
+K mem multiply
+A mem assembly
+A mem multiply
+D mem assembly
+D mem multiply
+Vectors Vc are NOT equal!
+Vectors Vg are NOT equal!
+Vectors Kc are NOT equal!
+Vectors Kg are NOT equal!
+Vectors Ac are NOT equal!
+Vectors Ag are NOT equal!
+Vectors Dc are NOT equal!
+Vectors Dg are NOT equal!
+
+Time init:    0.012444
+Time check:   0.000160
+
+Time multiply (avg)    V            K            A            D
+mem_assemble          0.303110     0.328880     0.581341     1.360340
+mem_multiply          0.009127     0.003734     0.005214     0.003345
+mem_total             0.312238     0.332614     0.586555     1.363685
+fly_mult_cpu          0.000000     0.000000     0.000000     0.000000
+fly_mult_gpu          0.000000     0.000000     0.000000     0.000000
