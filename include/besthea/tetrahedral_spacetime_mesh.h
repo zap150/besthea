@@ -40,6 +40,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/indices.h"
 #include "besthea/mesh.h"
 #include "besthea/settings.h"
+#include "besthea/spacetime_tensor_mesh.h"
 #include "besthea/vector.h"
 
 #include <optional>
@@ -68,6 +69,13 @@ class besthea::mesh::tetrahedral_spacetime_mesh : public besthea::mesh::mesh {
    * @param[in] file Path to the file.
    */
   tetrahedral_spacetime_mesh( const std::string & file );
+
+  /**
+   * Constructing mesh from a spacetime tensor mesh.
+   * @param[in] stmesh Path to the file.
+   */
+  tetrahedral_spacetime_mesh(
+    const besthea::mesh::spacetime_tensor_mesh & stmesh );
 
   /**
    * Copy constructor.

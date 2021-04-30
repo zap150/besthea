@@ -45,6 +45,60 @@ besthea::mesh::tetrahedral_spacetime_mesh::tetrahedral_spacetime_mesh(
   load( file );
 }
 
+besthea::mesh::tetrahedral_spacetime_mesh::tetrahedral_spacetime_mesh(
+  const besthea::mesh::spacetime_tensor_mesh & stmesh )
+  : _n_nodes( stmesh.get_n_nodes( ) ),
+    _n_elements( 3 * stmesh.get_n_elements( ) ) {
+  stmesh.get_nodes( _nodes );
+  _elements.reserve( _n_elements );
+
+  // based on http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.35.4908
+
+  int map[ 6 ][ 6 ]
+    = { { 0, 1, 2, 3, 4, 5 }, { 1, 2, 0, 4, 5, 3 }, { 2, 0, 1, 5, 3, 4 },
+        { 3, 5, 4, 0, 2, 1 }, { 4, 3, 5, 1, 0, 2 }, { 5, 4, 3, 1, 1, 0 } };
+
+  besthea::linear_algebra::indices< 6 > e;
+  for ( lo i = 0; i < stmesh.get_n_elements( ); ++i ) {
+    stmesh.get_element( i, e );
+
+    int * cmap = map[ std::min_element( e.begin( ), e.end( ) ) - e.begin( ) ];
+
+    if ( std::min( e[ cmap[ 1 ] ], e[ cmap[ 5 ] ] )
+      < std::min( e[ cmap[ 2 ] ], e[ cmap[ 4 ] ] ) ) {
+      // first
+      _elements.push_back( e[ cmap[ 0 ] ] );
+      _elements.push_back( e[ cmap[ 1 ] ] );
+      _elements.push_back( e[ cmap[ 2 ] ] );
+      _elements.push_back( e[ cmap[ 5 ] ] );
+      // second
+      _elements.push_back( e[ cmap[ 0 ] ] );
+      _elements.push_back( e[ cmap[ 1 ] ] );
+      _elements.push_back( e[ cmap[ 5 ] ] );
+      _elements.push_back( e[ cmap[ 4 ] ] );
+    } else {
+      // first
+      _elements.push_back( e[ cmap[ 0 ] ] );
+      _elements.push_back( e[ cmap[ 1 ] ] );
+      _elements.push_back( e[ cmap[ 2 ] ] );
+      _elements.push_back( e[ cmap[ 4 ] ] );
+      // second
+      _elements.push_back( e[ cmap[ 0 ] ] );
+      _elements.push_back( e[ cmap[ 4 ] ] );
+      _elements.push_back( e[ cmap[ 2 ] ] );
+      _elements.push_back( e[ cmap[ 5 ] ] );
+    }
+    // third
+    _elements.push_back( e[ cmap[ 0 ] ] );
+    _elements.push_back( e[ cmap[ 4 ] ] );
+    _elements.push_back( e[ cmap[ 5 ] ] );
+    _elements.push_back( e[ cmap[ 3 ] ] );
+  }
+
+  init_areas( );
+  init_edges( );
+}
+
 besthea::mesh::tetrahedral_spacetime_mesh::~tetrahedral_spacetime_mesh( ) {
 }
 
@@ -170,7 +224,7 @@ void besthea::mesh::tetrahedral_spacetime_mesh::refine( int level ) {
     }
 
     // loop through old elements to define new elements as in Bey, J. Computing
-    //   (1995) 55: 355. https://doi.org/10.1007/BF02238487 node1
+    //   (1995) 55: 355. https://doi.org/10.1007/BF02238487
 #pragma omp parallel for private( element, edges, node1, node2, node3, node4, \
   node12, node13, node14, node23, node24, node34 )
     for ( lo i = 0; i < _n_elements; ++i ) {
