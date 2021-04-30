@@ -78,7 +78,7 @@ class besthea::bem::onthefly::
   uniform_spacetime_be_matrix_onthefly_gpu( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu & gpu_mesh,
-    int order_singular = 4, int order_regular = 4, int gpu_kernel_version = 1 );
+    int order_singular = 4, int order_regular = 4, int gpu_kernel_version = 2 );
 
   uniform_spacetime_be_matrix_onthefly_gpu(
     const uniform_spacetime_be_matrix_onthefly_gpu & that )

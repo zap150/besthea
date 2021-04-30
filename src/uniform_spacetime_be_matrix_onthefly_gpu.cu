@@ -178,9 +178,9 @@ besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   if(gpu_kernel_version < 1 || gpu_kernel_version > 4) {
     if(besthea::settings::output_verbosity.warnings >= 1) {
       std::cerr << "BESTHEA Warning: invalid value of gpu_kernel_version="
-        << gpu_kernel_version << ", using default gpu_kernel_version=1.\n";
+        << gpu_kernel_version << ", using default gpu_kernel_version=2.\n";
     }
-    this->gpu_kernel_version = 1;
+    this->gpu_kernel_version = 2;
   }
   
   if(n_gpus > 0) {
@@ -226,11 +226,11 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
       vectors_data.allocate(n_gpus, this->get_dim_domain(), this->get_block_dim(), this->get_block_dim(), this->get_dim_range());
       break;
     case 2:
+    default:
       // x_perm, y
       vectors_data.allocate(n_gpus, this->get_dim_domain(), this->get_block_dim(), this->get_block_dim(), this->get_dim_range());
       break;
     case 1:
-    default:
       // x, y_perm
       vectors_data.allocate(n_gpus, this->get_block_dim(), this->get_dim_domain(), this->get_dim_range(), this->get_block_dim());
       break;
@@ -247,10 +247,10 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
       gpu_chunk_size = get_tpb(this->_kernel, this->_test_space, this->_trial_space, 3, this->_order_regular).x;
       break;
     case 2:
+    default:
       gpu_chunk_size = get_tpb(this->_kernel, this->_test_space, this->_trial_space, 2, this->_order_regular).y;
       break;
     case 1:
-    default:
       gpu_chunk_size = get_tpb(this->_kernel, this->_test_space, this->_trial_space, 1, this->_order_regular).y;
       break;
   }
@@ -2469,10 +2469,10 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
         this->apply_gpu_treg_sreg_begin(x_perm, y, alpha, timers);
         break;
       case 2:
+      default:
         this->apply_gpu_treg_sreg_begin(x_perm, y, alpha, timers);
         break;
       case 1:
-      default:
         this->apply_gpu_treg_sreg_begin(x, y_perm, alpha, timers);
         break;
     }
@@ -2501,10 +2501,10 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
         this->apply_gpu_treg_sreg_finalize(y);
         break;
       case 2:
+      default:
         this->apply_gpu_treg_sreg_finalize(y);
         break;
       case 1:
-      default:
         this->apply_gpu_treg_sreg_finalize(y_perm);
         break;
     }
@@ -2652,7 +2652,8 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
         break;
       }
 
-      case 2: {
+      case 2:
+      default: {
         dim3 blockSize = get_tpb(this->_kernel, this->_test_space, this->_trial_space, 2, this->_order_regular);
         dim3 gridSize(gpu_tst_elem_count);
         switch(this->_order_regular) {
@@ -2677,8 +2678,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
         break;
       }
 
-      case 1:
-      default: {
+      case 1: {
         dim3 blockSize = get_tpb(this->_kernel, this->_test_space, this->_trial_space, 1, this->_order_regular);
         dim3 gridSize(gpu_tst_elem_count);
         switch(this->_order_regular) {
