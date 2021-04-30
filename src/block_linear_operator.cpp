@@ -414,10 +414,17 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
 
   dfgmres_check( &size, solution_contiguous.data( ), rhs_contiguous.data( ),
     &rci, ipar, dpar, tmp_data );
+<<<<<<< HEAD
+  // if ( rci ) {
+  //   std::cout << "MKL parameters incorrect." << std::endl;
+  //   return false;
+  // }
+=======
   if ( rci == -1100 ) {
     std::cout << "MKL parameters incorrect." << std::endl;
     return false;
   }
+>>>>>>> origin/fix_intel_dfgmres
 
   while ( true ) {
     dfgmres( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci,
@@ -504,10 +511,17 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
 
   dfgmres_check( &size, solution_contiguous.data( ), rhs_contiguous.data( ),
     &rci, ipar, dpar, tmp_data );
+<<<<<<< HEAD
+  // if ( rci ) {
+  //   std::cout << "MKL parameters incorrect." << std::endl;
+  //   return false;
+  // }
+=======
   if ( rci == -1100 ) {
     std::cout << "MKL parameters incorrect." << std::endl;
     return false;
   }
+>>>>>>> origin/fix_intel_dfgmres
 
   while ( true ) {
     dfgmres( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci,
@@ -599,10 +613,17 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
 
   dfgmres_check( &size, solution_contiguous.data( ), rhs_contiguous.data( ),
     &rci, ipar, dpar, tmp_data );
+<<<<<<< HEAD
+  // if ( rci ) {
+  //   std::cout << "MKL parameters incorrect." << std::endl;
+  //   return false;
+  // }
+=======
   if ( rci == -1100 ) {
     std::cout << "MKL parameters incorrect." << std::endl;
     return false;
   }
+>>>>>>> origin/fix_intel_dfgmres
 
   while ( true ) {
     dfgmres( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci,
@@ -691,10 +712,17 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
 
   dfgmres_check( &size, solution_contiguous.data( ), rhs_contiguous.data( ),
     &rci, ipar, dpar, tmp_data );
+<<<<<<< HEAD
+  // if ( rci ) {
+  //   std::cout << "MKL parameters incorrect." << std::endl;
+  //   return false;
+  // }
+=======
   if ( rci == -1100 ) {
     std::cout << "MKL parameters incorrect." << std::endl;
     return false;
   }
+>>>>>>> origin/fix_intel_dfgmres
 
   while ( true ) {
     dfgmres( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci,
