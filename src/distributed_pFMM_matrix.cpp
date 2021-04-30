@@ -632,7 +632,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // entries in the second part of the receive vector
   std::sort( _receive_data_information.begin( ) + _n_moments_to_receive_upward,
     _receive_data_information.end( ),
-    [ & ]( const std::pair< scheduling_time_cluster *, lo > pair_one,
+    [&]( const std::pair< scheduling_time_cluster *, lo > pair_one,
       const std::pair< scheduling_time_cluster *, lo > pair_two ) {
       return _scheduling_tree_structure->compare_clusters_top_down_right_2_left(
         pair_one.first, pair_two.first );
@@ -1027,7 +1027,8 @@ bool besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       return false;
     }
 
-    ipar[ 0 ] = size;          // size of the problem
+    bool silent = ( n_iterations_until_restart != ipar[ 4 ] );
+
     ipar[ 4 ] = n_iterations;  // maximum number of iterations
     ipar[ 7 ] = 1;             // perform the iteration stopping test
     ipar[ 8 ] = 1;             // do the residual stopping test
@@ -1036,8 +1037,7 @@ bool besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     ipar[ 11 ] = 1;  // perform test for zero norm of generated direction
     ipar[ 14 ]
       = n_iterations_until_restart;  // number of iterations before restart
-    if ( n_iterations_until_restart
-      != std::min( (lo) 150, solution.size( ) ) ) {
+    if ( silent ) {
       ipar[ 6 ] = 0;  // disable the verbosity in case of non-default iterations
                       // until restart
     }
@@ -1046,7 +1046,7 @@ bool besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
     dfgmres_check( &size, solution_contiguous->data( ), rhs_contiguous->data( ),
       &rci, ipar, dpar, tmp_data );
-    if ( rci != 0 && rci != -1001 && rci != -1010 ) {
+    if ( rci == -1100 ) {
       std::cout << "MKL parameters incorrect." << std::endl;
       delete rhs_contiguous;
       delete solution_contiguous;
