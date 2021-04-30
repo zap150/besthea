@@ -625,7 +625,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // entries in the second part of the receive vector
   std::sort( _receive_data_information.begin( ) + _n_moments_to_receive_upward,
     _receive_data_information.end( ),
-    [ & ]( const std::pair< scheduling_time_cluster *, lo > pair_one,
+    [&]( const std::pair< scheduling_time_cluster *, lo > pair_one,
       const std::pair< scheduling_time_cluster *, lo > pair_two ) {
       return _scheduling_tree_structure->compare_clusters_top_down_right_2_left(
         pair_one.first, pair_two.first );
@@ -1020,7 +1020,19 @@ bool besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       return false;
     }
 
-    ipar[ 0 ] = size;          // size of the problem
+    /*
+     * New behaviour of init and check
+     * https://community.intel.com/t5/Intel-oneAPI-Math-Kernel-Library/
+     * RCI-ISS-solver-FGMRES-working-well-in-IPS-XE-2020-Update-4-does/m-p/1271247
+     *
+     * https://software.intel.com/content/www/us/en/develop/documentation/
+     * onemkl-developer-reference-fortran/top/sparse-solver-routines/
+     * iterative-sparse-solvers-based-on-reverse-communication-interface-rci-iss/
+     * rci-iss-routines/dfgmres-check.html
+     */
+
+    bool silent = ( n_iterations_until_restart != ipar[ 4 ] );
+
     ipar[ 4 ] = n_iterations;  // maximum number of iterations
     ipar[ 7 ] = 1;             // perform the iteration stopping test
     ipar[ 8 ] = 1;             // do the residual stopping test
@@ -1029,12 +1041,16 @@ bool besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     ipar[ 11 ] = 1;  // perform test for zero norm of generated direction
     ipar[ 14 ]
       = n_iterations_until_restart;  // number of iterations before restart
+    if ( silent ) {
+      ipar[ 6 ] = 0;  // disable the verbosity in case of non-default iterations
+                      // until restart
+    }
 
     dpar[ 0 ] = relative_residual_error;  // relative tolerance
 
     dfgmres_check( &size, solution_contiguous->data( ), rhs_contiguous->data( ),
       &rci, ipar, dpar, tmp_data );
-    if ( rci ) {
+    if ( rci == -1100 ) {
       std::cout << "MKL parameters incorrect." << std::endl;
       delete rhs_contiguous;
       delete solution_contiguous;
