@@ -102,7 +102,9 @@ class besthea::mesh::tetrahedral_spacetime_mesh : public besthea::mesh::mesh {
   /**
    * Returns area (volume) of a single element
    */
-  sc area( lo i_elem ) const;
+  sc area( lo i_elem ) const {
+    return _areas[ i_elem ];
+  }
 
   /**
    * Returns number of elements.

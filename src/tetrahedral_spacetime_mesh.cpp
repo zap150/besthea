@@ -56,7 +56,7 @@ besthea::mesh::tetrahedral_spacetime_mesh::tetrahedral_spacetime_mesh(
 
   int map[ 6 ][ 6 ]
     = { { 0, 1, 2, 3, 4, 5 }, { 1, 2, 0, 4, 5, 3 }, { 2, 0, 1, 5, 3, 4 },
-        { 3, 5, 4, 0, 2, 1 }, { 4, 3, 5, 1, 0, 2 }, { 5, 4, 3, 1, 1, 0 } };
+        { 3, 5, 4, 0, 2, 1 }, { 4, 3, 5, 1, 0, 2 }, { 5, 4, 3, 2, 1, 0 } };
 
   besthea::linear_algebra::indices< 6 > e;
   for ( lo i = 0; i < stmesh.get_n_elements( ); ++i ) {
@@ -315,7 +315,7 @@ void besthea::mesh::tetrahedral_spacetime_mesh::init_areas( ) {
       - _nodes[ 4 * _elements[ 4 * i_elem ] + 3 ];
 
     x31[ 0 ] = _nodes[ 4 * _elements[ 4 * i_elem + 2 ] ]
-      - _nodes[ 3 * _elements[ 4 * i_elem ] ];
+      - _nodes[ 4 * _elements[ 4 * i_elem ] ];
     x31[ 1 ] = _nodes[ 4 * _elements[ 4 * i_elem + 2 ] + 1 ]
       - _nodes[ 4 * _elements[ 4 * i_elem ] + 1 ];
     x31[ 2 ] = _nodes[ 4 * _elements[ 4 * i_elem + 2 ] + 2 ]
@@ -330,7 +330,7 @@ void besthea::mesh::tetrahedral_spacetime_mesh::init_areas( ) {
     x41[ 2 ] = _nodes[ 4 * _elements[ 4 * i_elem + 3 ] + 2 ]
       - _nodes[ 4 * _elements[ 4 * i_elem ] + 2 ];
     x41[ 3 ] = _nodes[ 4 * _elements[ 4 * i_elem + 3 ] + 3 ]
-      - _nodes[ 4 * _elements[ 4 * i_elem ] + 2 ];
+      - _nodes[ 4 * _elements[ 4 * i_elem ] + 3 ];
 
     // volume of the 3d parallelogram in 4d
     dot11 = x21[ 0 ] * x21[ 0 ] + x21[ 1 ] * x21[ 1 ] + x21[ 2 ] * x21[ 2 ]
