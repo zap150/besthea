@@ -396,8 +396,6 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
   bool silent = ( n_iterations_until_restart != ipar[ 4 ] );
 
   ipar[ 4 ] = n_iterations;  // maximum number of iterations
-  ipar[ 6 ] = 0;             // do not print warnings (necessary since warnings
-                             // are generated when modifying ipar[ 14 ])
   ipar[ 7 ] = 1;             // perform the iteration stopping test
   ipar[ 8 ] = 1;             // do the residual stopping test
   ipar[ 9 ] = 0;             // do not request user stopping test
@@ -414,17 +412,10 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
 
   dfgmres_check( &size, solution_contiguous.data( ), rhs_contiguous.data( ),
     &rci, ipar, dpar, tmp_data );
-<<<<<<< HEAD
-  // if ( rci ) {
-  //   std::cout << "MKL parameters incorrect." << std::endl;
-  //   return false;
-  // }
-=======
   if ( rci == -1100 ) {
     std::cout << "MKL parameters incorrect." << std::endl;
     return false;
   }
->>>>>>> origin/fix_intel_dfgmres
 
   while ( true ) {
     dfgmres( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci,
@@ -493,8 +484,6 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
   bool silent = ( n_iterations_until_restart != ipar[ 4 ] );
 
   ipar[ 4 ] = n_iterations;  // maximum number of iterations
-  ipar[ 6 ] = 0;             // do not print warnings (necessary since warnings
-                             // are generated when modifying ipar[ 14 ])
   ipar[ 7 ] = 1;             // perform the iteration stopping test
   ipar[ 8 ] = 1;             // do the residual stopping test
   ipar[ 9 ] = 0;             // do not request user stopping test
@@ -511,17 +500,10 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
 
   dfgmres_check( &size, solution_contiguous.data( ), rhs_contiguous.data( ),
     &rci, ipar, dpar, tmp_data );
-<<<<<<< HEAD
-  // if ( rci ) {
-  //   std::cout << "MKL parameters incorrect." << std::endl;
-  //   return false;
-  // }
-=======
   if ( rci == -1100 ) {
     std::cout << "MKL parameters incorrect." << std::endl;
     return false;
   }
->>>>>>> origin/fix_intel_dfgmres
 
   while ( true ) {
     dfgmres( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci,
@@ -595,8 +577,6 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
   bool silent = ( n_iterations_until_restart != ipar[ 4 ] );
 
   ipar[ 4 ] = n_iterations;  // maximum number of iterations
-  ipar[ 6 ] = 0;             // do not print warnings (necessary since warnings
-                             // are generated when modifying ipar[ 14 ])
   ipar[ 7 ] = 1;             // perform the iteration stopping test
   ipar[ 8 ] = 1;             // do the residual stopping test
   ipar[ 9 ] = 0;             // do not request user stopping test
@@ -613,17 +593,10 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
 
   dfgmres_check( &size, solution_contiguous.data( ), rhs_contiguous.data( ),
     &rci, ipar, dpar, tmp_data );
-<<<<<<< HEAD
-  // if ( rci ) {
-  //   std::cout << "MKL parameters incorrect." << std::endl;
-  //   return false;
-  // }
-=======
   if ( rci == -1100 ) {
     std::cout << "MKL parameters incorrect." << std::endl;
     return false;
   }
->>>>>>> origin/fix_intel_dfgmres
 
   while ( true ) {
     dfgmres( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci,
@@ -694,8 +667,6 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
   bool silent = ( n_iterations_until_restart != ipar[ 4 ] );
 
   ipar[ 4 ] = n_iterations;  // maximum number of iterations
-  ipar[ 6 ] = 0;             // do not print warnings (necessary since warnings
-                             // are generated when modifying ipar[ 14 ])
   ipar[ 7 ] = 1;             // perform the iteration stopping test
   ipar[ 8 ] = 1;             // do the residual stopping test
   ipar[ 9 ] = 0;             // do not request user stopping test
@@ -712,17 +683,10 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
 
   dfgmres_check( &size, solution_contiguous.data( ), rhs_contiguous.data( ),
     &rci, ipar, dpar, tmp_data );
-<<<<<<< HEAD
-  // if ( rci ) {
-  //   std::cout << "MKL parameters incorrect." << std::endl;
-  //   return false;
-  // }
-=======
   if ( rci == -1100 ) {
     std::cout << "MKL parameters incorrect." << std::endl;
     return false;
   }
->>>>>>> origin/fix_intel_dfgmres
 
   while ( true ) {
     dfgmres( &size, solution_contiguous.data( ), rhs_contiguous.data( ), &rci,
