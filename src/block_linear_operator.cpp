@@ -383,7 +383,7 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
   }
 
   /*
-   * New bahaviour of init and check
+   * New behaviour of init and check
    * https://community.intel.com/t5/Intel-oneAPI-Math-Kernel-Library/
    * RCI-ISS-solver-FGMRES-working-well-in-IPS-XE-2020-Update-4-does/m-p/1271247
    *

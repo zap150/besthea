@@ -1027,6 +1027,17 @@ bool besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       return false;
     }
 
+    /*
+     * New behaviour of init and check
+     * https://community.intel.com/t5/Intel-oneAPI-Math-Kernel-Library/
+     * RCI-ISS-solver-FGMRES-working-well-in-IPS-XE-2020-Update-4-does/m-p/1271247
+     *
+     * https://software.intel.com/content/www/us/en/develop/documentation/
+     * onemkl-developer-reference-fortran/top/sparse-solver-routines/
+     * iterative-sparse-solvers-based-on-reverse-communication-interface-rci-iss/
+     * rci-iss-routines/dfgmres-check.html
+     */
+
     bool silent = ( n_iterations_until_restart != ipar[ 4 ] );
 
     ipar[ 4 ] = n_iterations;  // maximum number of iterations
