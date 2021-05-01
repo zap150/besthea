@@ -116,6 +116,8 @@ class besthea::bem::uniform_spacetime_be_space
    * assemble the right-hand side.
    * @param[in] order_rhs_temporal Temporal line quadrature order to assemble
    * the right-hand side.
+   * @warning It is not checked whether the function has L2-norm 0. If this is
+   * the case a division by zero occurs.
    */
   virtual sc L2_relative_error(
     sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
