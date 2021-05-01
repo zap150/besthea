@@ -180,16 +180,7 @@ sc besthea::bem::uniform_spacetime_be_space< basis_type >::L2_relative_error(
       }
     }
   }
-  sc result;
-  if ( l2_norm < 1e-10 ) {
-    if ( l2_err < 1e-10 ) {
-      result = 0;
-    } else {
-      result = std::numeric_limits< sc >::infinity( );
-    }
-  } else {
-    result = std::sqrt( l2_err / l2_norm );
-  }
+  sc result = std::sqrt( l2_err / l2_norm );
   return result;
 }
 
