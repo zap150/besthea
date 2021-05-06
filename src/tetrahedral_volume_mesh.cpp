@@ -621,7 +621,7 @@ bool besthea::mesh::tetrahedral_volume_mesh::print_ensight_case(
               << "filename start number: 0\n"
               << "filename increment: 1\n"
               << "time values:\n";
-
+    // TODO PREC do we care about precision here?
     sc t = 0.5 * timestep_size;
     for ( lo i = 0; i < n_timesteps; ++i ) {
       case_file << std::setw( 12 ) << std::setprecision( 5 ) << t << "\n";
@@ -845,6 +845,7 @@ void besthea::mesh::tetrahedral_volume_mesh::print( const std::string & file ) {
   std::ofstream data_file( file.c_str( ) );
 
   data_file.setf( std::ios::showpoint | std::ios::scientific );
+  // TODO PREC Should we increase the precision here?
   data_file.precision( 6 );
 
   if ( !data_file.is_open( ) ) {

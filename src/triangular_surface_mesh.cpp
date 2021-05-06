@@ -535,6 +535,9 @@ bool besthea::mesh::triangular_surface_mesh::print_vtu(
   std::ofstream file_vtu( file.str( ).c_str( ) );
 
   file_vtu.setf( std::ios::showpoint | std::ios::scientific );
+  // TODO PREC: Is this precision enough here?
+  // Below floating point numbers are cast from sc to floats several times. Is
+  // this necessary?
   file_vtu.precision( 6 );
 
   if ( !file_vtu.is_open( ) ) {
@@ -736,6 +739,7 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_case(
 
     sc t = 0.5 * timestep_size;
     for ( lo i = 0; i < n_timesteps; ++i ) {
+      // TODO Should the precision be increased here?
       case_file << std::setw( 12 ) << std::setprecision( 5 ) << t << "\n";
       t += timestep_size;
     }

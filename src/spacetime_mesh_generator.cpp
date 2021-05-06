@@ -80,6 +80,7 @@ bool besthea::mesh::spacetime_mesh_generator::generate(
 
   // print the original time slices structure
   std::stringstream slices;
+  slices.precision( std::numeric_limits< sc >::max_digits10 );
   for ( lo i = 0; i < _time_mesh->get_n_nodes( ); ++i ) {
     slices << _time_mesh->get_node( i ) << " ";
   }
