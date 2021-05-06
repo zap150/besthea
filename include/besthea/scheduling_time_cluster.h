@@ -1172,4 +1172,20 @@ class besthea::mesh::scheduling_time_cluster {
                                      //!< data races)
 };
 
+struct compare_pairs_of_process_ids_and_scheduling_time_clusters {
+  bool operator( )(
+    const std::pair< lo, besthea::mesh::scheduling_time_cluster * > first_pair,
+    const std::pair< lo, besthea::mesh::scheduling_time_cluster * >
+      second_pair ) const {
+    bool compare_value = false;
+    if ( first_pair.first < second_pair.first
+      || ( first_pair.first == second_pair.first
+        && first_pair.second->get_global_index( )
+          < second_pair.second->get_global_index( ) ) ) {
+      compare_value = true;
+    }
+    return compare_value;
+  }
+};
+
 #endif /* INCLUDE_BESTHEA_SCHEDULING_TIME_CLUSTER_H_ */
