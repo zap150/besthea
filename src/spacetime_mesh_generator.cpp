@@ -80,6 +80,7 @@ bool besthea::mesh::spacetime_mesh_generator::generate(
 
   // print the original time slices structure
   std::stringstream slices;
+  slices.precision( std::numeric_limits< sc >::max_digits10 );
   for ( lo i = 0; i < _time_mesh->get_n_nodes( ); ++i ) {
     slices << _time_mesh->get_node( i ) << " ";
   }
@@ -109,6 +110,7 @@ bool besthea::mesh::spacetime_mesh_generator::generate(
               << std::endl;
     return false;
   }
+  d_file.precision( std::numeric_limits< sc >::max_digits10 );
   // time interval
   d_file << _time_mesh->get_start( ) << " " << _time_mesh->get_end( ) << "\n";
   // number of time slices (saved meshes)
@@ -127,12 +129,12 @@ bool besthea::mesh::spacetime_mesh_generator::generate(
       = directory + file_name + "_t_" + std::to_string( i ) + "." + suffix;
 
     std::ofstream file( file_path.c_str( ) );
-
     if ( !file.is_open( ) ) {
       std::cout << "File '" << file_path << "' could not be opened!"
                 << std::endl;
       return false;
     }
+    file.precision( std::numeric_limits< sc >::max_digits10 );
 
     file << "1\n"
          << "2\n\n"

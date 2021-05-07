@@ -105,6 +105,9 @@ class besthea::mesh::space_cluster_tree {
    * @param[in] level If set, prints only a given level of the tree. For
    * -1, prints all levels.
    * @param[in] suffix Suffix for the filename.
+   *
+   * @note Floating point values are printed with single precision in the output
+   * files.
    */
   bool print_tree( const std::string & directory, bool include_padding = false,
     lo level = -1, std::optional< lo > suffix = std::nullopt ) const;

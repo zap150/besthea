@@ -736,6 +736,7 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_case(
 
     sc t = 0.5 * timestep_size;
     for ( lo i = 0; i < n_timesteps; ++i ) {
+      // TODO Should the precision be increased here?
       case_file << std::setw( 12 ) << std::setprecision( 5 ) << t << "\n";
       t += timestep_size;
     }
@@ -951,6 +952,8 @@ bool besthea::mesh::triangular_surface_mesh::save(
     std::cout << "File '" << file_path << "' could not be opened!" << std::endl;
     return false;
   }
+
+  file.precision( std::numeric_limits< sc >::max_digits10 );
 
   file << "3\n"
        << "3\n\n"

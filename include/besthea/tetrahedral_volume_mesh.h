@@ -89,6 +89,8 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
    * @param[in] element_labels Labels for elemental data.
    * @param[in] n_timesteps Number of time steps.
    * @param[in] timestep_size Size of the timestep.
+   *
+   * @note Timesteps are printed with reduced precision to output files.
    */
   bool print_ensight_case( const std::string & directory,
     const std::vector< std::string > * node_labels = nullptr,
@@ -124,6 +126,9 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
    * @param[in] node_data Scalar nodal data.
    * @param[in] element_labels Labels for elemental data.
    * @param[in] element_data Scalar elemental data.
+   *
+   * @note Floating point values are printed with single precision in the output
+   * files.
    */
   bool print_ensight( const std::string & directory,
     const std::vector< std::string > * node_labels = nullptr,
