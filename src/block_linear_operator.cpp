@@ -559,8 +559,12 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
     + n_iterations_until_restart * ( n_iterations_until_restart + 9 ) / 2 + 1 );
   sc * tmp_data = tmp.data( );
 
-  block_vector_type tmp_1( _block_dim, _dim_domain );
-  block_vector_type tmp_2( _block_dim, _dim_domain );
+  std::vector< lo > my_blocks = rhs.get_my_blocks( );
+
+  distributed_block_vector tmp_1(
+    my_blocks, _block_dim, _dim_domain, false, rhs.get_comm( ) );
+  distributed_block_vector tmp_2(
+    my_blocks, _block_dim, _dim_domain, false, rhs.get_comm( ) );
 
   vector_type rhs_contiguous( size );
   vector_type solution_contiguous( size );
@@ -603,14 +607,16 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
       ipar, dpar, tmp_data );
 
     if ( rci == 1 ) {  // apply operator
-      tmp_1.copy_from_raw( _block_dim, _dim_domain, tmp_data + ipar[ 21 ] - 1 );
+      tmp_1.copy_from_raw(
+        my_blocks, _block_dim, _dim_domain, tmp_data + ipar[ 21 ] - 1 );
       apply( tmp_1, tmp_2, trans, 1.0, 0.0 );
       tmp_2.copy_to_raw( tmp_data + ipar[ 22 ] - 1 );
       continue;
     } else if ( rci == 0 ) {  // success
       dfgmres_get( &size, solution_contiguous.data( ), rhs_contiguous.data( ),
         &rci, ipar, dpar, tmp_data, &iter );
-      solution.copy_from_vector( _block_dim, _dim_domain, solution_contiguous );
+      solution.copy_from_vector(
+        my_blocks, _block_dim, _dim_domain, solution_contiguous );
       n_iterations = iter;
       relative_residual_error = dpar[ 4 ] / dpar[ 2 ];
       break;
@@ -649,8 +655,12 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
     + n_iterations_until_restart * ( n_iterations_until_restart + 9 ) / 2 + 1 );
   sc * tmp_data = tmp.data( );
 
-  block_vector_type tmp_1( _block_dim, _dim_domain );
-  block_vector_type tmp_2( _block_dim, _dim_domain );
+  std::vector< lo > my_blocks = rhs.get_my_blocks( );
+
+  distributed_block_vector tmp_1(
+    my_blocks, _block_dim, _dim_domain, false, rhs.get_comm( ) );
+  distributed_block_vector tmp_2(
+    my_blocks, _block_dim, _dim_domain, false, rhs.get_comm( ) );
 
   vector_type rhs_contiguous( size );
   vector_type solution_contiguous( size );
@@ -693,19 +703,22 @@ bool besthea::linear_algebra::block_linear_operator::mkl_fgmres_solve(
       ipar, dpar, tmp_data );
 
     if ( rci == 1 ) {  // apply operator
-      tmp_1.copy_from_raw( _block_dim, _dim_domain, tmp_data + ipar[ 21 ] - 1 );
+      tmp_1.copy_from_raw(
+        my_blocks, _block_dim, _dim_domain, tmp_data + ipar[ 21 ] - 1 );
       apply( tmp_1, tmp_2, trans, 1.0, 0.0 );
       tmp_2.copy_to_raw( tmp_data + ipar[ 22 ] - 1 );
       continue;
     } else if ( rci == 3 ) {  // apply preconditioner
-      tmp_1.copy_from_raw( _block_dim, _dim_domain, tmp_data + ipar[ 21 ] - 1 );
+      tmp_1.copy_from_raw(
+        my_blocks, _block_dim, _dim_domain, tmp_data + ipar[ 21 ] - 1 );
       preconditioner.apply( tmp_1, tmp_2, trans_preconditioner, 1.0, 0.0 );
       tmp_2.copy_to_raw( tmp_data + ipar[ 22 ] - 1 );
       continue;
     } else if ( rci == 0 ) {  // success
       dfgmres_get( &size, solution_contiguous.data( ), rhs_contiguous.data( ),
         &rci, ipar, dpar, tmp_data, &iter );
-      solution.copy_from_vector( _block_dim, _dim_domain, solution_contiguous );
+      solution.copy_from_vector(
+        my_blocks, _block_dim, _dim_domain, solution_contiguous );
       n_iterations = iter;
       relative_residual_error = dpar[ 4 ] / dpar[ 2 ];
       break;
