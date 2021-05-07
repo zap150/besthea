@@ -109,6 +109,8 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    * @param[in] element_labels Labels for elemental data.
    * @param[in] n_timesteps Number of time steps.
    * @param[in] timestep_size Size of the timestep.
+   *
+   * @note Timesteps are printed with reduced precision to output files.
    */
   bool print_ensight_case( const std::string & directory,
     const std::vector< std::string > * node_labels = nullptr,
