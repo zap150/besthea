@@ -28,7 +28,7 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <besthea/fe_space.h>
+#include "besthea/fe_space.h"
 
 #include "besthea/basis_tetra_p1.h"
 #include "besthea/fe_identity.h"

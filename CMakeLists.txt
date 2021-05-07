@@ -105,6 +105,10 @@ set(besthea_INCLUDES
   include/besthea/uniform_spacetime_tensor_mesh.h
   include/besthea/vector.h
   include/besthea/volume_basis_function.h
+  include/besthea/spacetime_basis_function.h
+  include/besthea/spacetime_basis_tetra_p1.h
+  include/besthea/tetrahedral_spacetime_be_space.h
+  include/besthea/tetrahedral_spacetime_be_identity.h
 )
 
 set(besthea_SOURCES
@@ -161,6 +165,9 @@ set(besthea_SOURCES
   src/uniform_spacetime_initial_evaluator.cpp
   src/uniform_spacetime_tensor_mesh.cpp
   src/vector.cpp
+  src/spacetime_basis_tetra_p1.cpp
+  src/tetrahedral_spacetime_be_space.cpp
+  src/tetrahedral_spacetime_be_identity.cpp
 )
 
 if (NOT DEFINED DATA_WIDTH)

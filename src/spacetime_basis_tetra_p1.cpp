@@ -28,40 +28,30 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file bem.h
- * @brief Includes all header files of the besthea library relevant for boundary
- * element methods.
- * @note updated documentation
- */
-
-#ifndef INCLUDE_BESTHEA_BEM_H_
-#define INCLUDE_BESTHEA_BEM_H_
-
-#include "besthea/basis_tetra_p1.h"
-#include "besthea/basis_tri_p0.h"
-#include "besthea/basis_tri_p1.h"
-#include "besthea/distributed_fast_spacetime_be_assembler.h"
-#include "besthea/distributed_fast_spacetime_be_space.h"
-#include "besthea/fast_spacetime_be_assembler.h"
-#include "besthea/fast_spacetime_be_space.h"
-#include "besthea/fe_space.h"
 #include "besthea/spacetime_basis_tetra_p1.h"
-#include "besthea/spacetime_be_identity.h"
-#include "besthea/spacetime_heat_adl_kernel_antiderivative.h"
-#include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
-#include "besthea/spacetime_heat_hs_kernel_antiderivative.h"
-#include "besthea/spacetime_heat_initial_m0_kernel_antiderivative.h"
-#include "besthea/spacetime_heat_initial_m1_kernel_antiderivative.h"
-#include "besthea/spacetime_heat_kernel.h"
-#include "besthea/spacetime_heat_sl_kernel_antiderivative.h"
-#include "besthea/tetrahedral_spacetime_be_identity.h"
-#include "besthea/tetrahedral_spacetime_be_space.h"
-#include "besthea/uniform_spacetime_be_assembler.h"
-#include "besthea/uniform_spacetime_be_evaluator.h"
-#include "besthea/uniform_spacetime_be_identity.h"
-#include "besthea/uniform_spacetime_be_solver.h"
-#include "besthea/uniform_spacetime_be_space.h"
-#include "besthea/uniform_spacetime_initial_assembler.h"
-#include "besthea/uniform_spacetime_initial_evaluator.h"
 
-#endif /* INCLUDE_BESTHEA_BEM_H_ */
+besthea::bem::spacetime_basis_tetra_p1::spacetime_basis_tetra_p1(
+  const mesh_type & mesh ) {
+  _mesh = &mesh;
+}
+
+besthea::bem::spacetime_basis_tetra_p1::~spacetime_basis_tetra_p1( ) {
+}
+
+lo besthea::bem::spacetime_basis_tetra_p1::dimension_local( ) const {
+  return 4;
+}
+
+lo besthea::bem::spacetime_basis_tetra_p1::dimension_global( ) const {
+  return _mesh->get_n_nodes( );
+}
+
+void besthea::bem::spacetime_basis_tetra_p1::do_local_to_global(
+  lo i_elem, std::vector< lo > & indices ) const {
+  linear_algebra::indices< 4 > element;
+  _mesh->get_element( i_elem, element );
+  indices[ 0 ] = element[ 0 ];
+  indices[ 1 ] = element[ 1 ];
+  indices[ 2 ] = element[ 2 ];
+  indices[ 3 ] = element[ 3 ];
+}
