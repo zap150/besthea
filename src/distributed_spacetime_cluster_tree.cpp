@@ -119,6 +119,30 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   _spatial_paddings.shrink_to_fit( );
 
   compute_local_spatial_padding( *_root );
+
+  // Correct the spatial padding to guarantee, that clusters which are refined
+  // in space the same number of times are padded equally (a correction is
+  // necessary in case of early space-time leaf clusters). It suffices to
+  // identify levels where the number of spatial refinements is the same and set
+  // the padding to the maximal value.
+  lo space_level_group_begin
+    = 0;  // used to keep track of the level where space was last refined
+  lo next_space_ref_level = _start_space_refinement;
+  sc max_padding_at_spatial_level = 0.0;
+  for ( lo i = 0; i < _max_levels; ++i ) {
+    if ( _spatial_paddings[ i ] > max_padding_at_spatial_level ) {
+      max_padding_at_spatial_level = _spatial_paddings[ i ];
+    }
+    if ( i + 1 == next_space_ref_level ) {
+      for ( lo j = space_level_group_begin; j <= i; ++j ) {
+        _spatial_paddings[ j ] = max_padding_at_spatial_level;
+      }
+      space_level_group_begin = i + 1;
+      next_space_ref_level += 2;
+      max_padding_at_spatial_level = 0.0;
+    }
+  }
+
   // reduce padding data among processes
   MPI_Allreduce( MPI_IN_PLACE, _spatial_paddings.data( ),
     _spatial_paddings.size( ), get_scalar_type< sc >::MPI_SC( ), MPI_MAX,
@@ -129,10 +153,18 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   // cannot be done locally. in addition, determine scheduling time clusters
   // where the leaf information of the associated spacetime clusters is
   // required, but not available (for later)
-  std::set< std::pair< lo, scheduling_time_cluster * > > subtree_send_list;
-  std::set< std::pair< lo, scheduling_time_cluster * > > subtree_receive_list;
-  std::set< std::pair< lo, scheduling_time_cluster * > > leaf_info_send_list;
-  std::set< std::pair< lo, scheduling_time_cluster * > > leaf_info_receive_list;
+  std::set< std::pair< lo, scheduling_time_cluster * >,
+    compare_pairs_of_process_ids_and_scheduling_time_clusters >
+    subtree_send_list;
+  std::set< std::pair< lo, scheduling_time_cluster * >,
+    compare_pairs_of_process_ids_and_scheduling_time_clusters >
+    subtree_receive_list;
+  std::set< std::pair< lo, scheduling_time_cluster * >,
+    compare_pairs_of_process_ids_and_scheduling_time_clusters >
+    leaf_info_send_list;
+  std::set< std::pair< lo, scheduling_time_cluster * >,
+    compare_pairs_of_process_ids_and_scheduling_time_clusters >
+    leaf_info_receive_list;
   tree_structure * distribution_tree = get_distribution_tree( );
   distribution_tree->determine_cluster_communication_lists(
     distribution_tree->get_root( ), subtree_send_list, subtree_receive_list,
@@ -340,9 +372,11 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
 
 void besthea::mesh::distributed_spacetime_cluster_tree::
   expand_distribution_tree_communicatively(
-    const std::set< std::pair< lo, scheduling_time_cluster * > > &
+    const std::set< std::pair< lo, scheduling_time_cluster * >,
+      compare_pairs_of_process_ids_and_scheduling_time_clusters > &
       subtree_send_list,
-    const std::set< std::pair< lo, scheduling_time_cluster * > > &
+    const std::set< std::pair< lo, scheduling_time_cluster * >,
+      compare_pairs_of_process_ids_and_scheduling_time_clusters > &
       subtree_receive_list ) {
   tree_structure * distribution_tree = get_distribution_tree( );
   // first communicate the maximal depth of the distribution tree.
@@ -417,9 +451,11 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
 
 void besthea::mesh::distributed_spacetime_cluster_tree::
   communicate_necessary_leaf_information(
-    const std::set< std::pair< lo, scheduling_time_cluster * > > &
+    const std::set< std::pair< lo, scheduling_time_cluster * >,
+      compare_pairs_of_process_ids_and_scheduling_time_clusters > &
       leaf_info_send_list,
-    const std::set< std::pair< lo, scheduling_time_cluster * > > &
+    const std::set< std::pair< lo, scheduling_time_cluster * >,
+      compare_pairs_of_process_ids_and_scheduling_time_clusters > &
       leaf_info_receive_list ) {
   // the sets are sorted by default lexicographically, i.e. first in ascending
   // order with respect to the process ids. the code relies on that.
@@ -1477,14 +1513,14 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
       coord_y = 2 * root.get_box_coordinate( )[ 2 ] + _idx_2_coord[ i ][ 1 ];
       coord_z = 2 * root.get_box_coordinate( )[ 3 ] + _idx_2_coord[ i ][ 2 ];
 
-      std::vector< slou > coordinates
-        = { static_cast< slou >( root.get_level( ) + 1 ), coord_x, coord_y,
-            coord_z, coord_t };
       // std::cout << oct_sizes[ i ] << " " << oct_sizes[ i + 8 ] <<
       // std::endl;
       if ( oct_sizes[ i ] > 0 ) {
         ++n_clusters;
         coord_t = ( slou )( 2 * parent_coord[ 4 ] );
+        std::vector< slou > coordinates
+          = { static_cast< slou >( root.get_level( ) + 1 ), coord_x, coord_y,
+              coord_z, coord_t };
         clusters[ i ] = new general_spacetime_cluster( new_space_center,
           time_center_left, new_space_half_size, time_half_size_left,
           oct_sizes[ i ], &root, root.get_level( ) + 1, i, coordinates, 0,
@@ -1498,6 +1534,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
       if ( oct_sizes[ i + 8 ] > 0 ) {
         ++n_clusters;
         coord_t = ( slou )( 2 * parent_coord[ 4 ] + 1 );
+        std::vector< slou > coordinates
+          = { static_cast< slou >( root.get_level( ) + 1 ), coord_x, coord_y,
+              coord_z, coord_t };
         clusters[ i + 8 ] = new general_spacetime_cluster( new_space_center,
           time_center_right, new_space_half_size, time_half_size_right,
           oct_sizes[ i + 8 ], &root, root.get_level( ) + 1, i, coordinates, 1,

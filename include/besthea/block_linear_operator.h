@@ -222,7 +222,9 @@ class besthea::linear_algebra::block_linear_operator {
    * @param[in] trans Indicates if the block linear operator is transposed or
    * not.
    * @warning This is not a proper parallel version of preconditioned CG. The
-   * distributed vectors are serialized!
+   * distributed vectors are serialized! It is unsafe to use (all MPI processes
+   * execute the mkl fgmres routines. If a single process terminates earlier
+   * than others a dead lock can occur)
    */
   bool mkl_fgmres_solve( const distributed_block_vector_type & rhs,
     distributed_block_vector_type & solution, sc & relative_residual_error,
@@ -246,7 +248,9 @@ class besthea::linear_algebra::block_linear_operator {
    * @param[in] trans_preconditioner Indicates if the block linear operator used
    * for preconditioning is transposed or not.
    * @warning This is not a proper parallel version of preconditioned CG. The
-   * distributed vectors are serialized!
+   * distributed vectors are serialized! It is unsafe to use (all MPI processes
+   * execute the mkl fgmres routines. If a single process terminates earlier
+   * than others a dead lock can occur)
    */
   bool mkl_fgmres_solve( const block_linear_operator & preconditioner,
     const distributed_block_vector_type & rhs,

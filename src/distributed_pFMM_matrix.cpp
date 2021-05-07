@@ -710,21 +710,32 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   _m2m_coeffs_s_dim_1_right.resize( max_space_level );
   _m2m_coeffs_s_dim_2_left.resize( max_space_level );
   _m2m_coeffs_s_dim_2_right.resize( max_space_level );
-  auto it1 = _m2m_coeffs_s_dim_0_left.begin( );
-  auto it2 = _m2m_coeffs_s_dim_0_right.begin( );
-  auto it3 = _m2m_coeffs_s_dim_1_left.begin( );
-  auto it4 = _m2m_coeffs_s_dim_1_right.begin( );
-  auto it5 = _m2m_coeffs_s_dim_2_left.begin( );
-  auto it6 = _m2m_coeffs_s_dim_2_right.begin( );
 
-  for ( ; it1 != _m2m_coeffs_s_dim_0_left.end( );
-        ++it1, ++it2, ++it3, ++it4, ++it5, ++it6 ) {
-    ( *it1 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
-    ( *it2 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
-    ( *it3 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
-    ( *it4 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
-    ( *it5 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
-    ( *it6 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+  // Allocate storage for the required m2m coefficients. We do not need m2m
+  // matrices for all spatial levels, but only for those corresponding to
+  // space-time levels >= 2. This is considered in the following.
+  lo initial_space_refinement
+    = _distributed_spacetime_tree->get_initial_space_refinement( );
+  lo start_space_refinement
+    = _distributed_spacetime_tree->get_start_space_refinement( );
+  lo first_parent_m2m_level_space = initial_space_refinement;
+  if ( start_space_refinement <= 2 ) {
+    first_parent_m2m_level_space += 1;
+  }
+
+  for ( lo i = first_parent_m2m_level_space; i < max_space_level; ++i ) {
+    _m2m_coeffs_s_dim_0_left[ i ].resize(
+      ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    _m2m_coeffs_s_dim_0_right[ i ].resize(
+      ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    _m2m_coeffs_s_dim_1_left[ i ].resize(
+      ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    _m2m_coeffs_s_dim_1_right[ i ].resize(
+      ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    _m2m_coeffs_s_dim_2_left[ i ].resize(
+      ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    _m2m_coeffs_s_dim_2_right[ i ].resize(
+      ( _spat_order + 1 ) * ( _spat_order + 1 ) );
   }
 
   std::vector< sc > paddings_refinementwise( max_space_level + 1, 0.0 );
@@ -733,18 +744,16 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // paddings_levelwise contains the padding levelwise with respect to the
   // clusters levels. we need the padding with respect to the number of
   // refinements in space.
-  lo initial_space_refinement
-    = _distributed_spacetime_tree->get_initial_space_refinement( );
   if ( initial_space_refinement > 0 ) {
     // padding is only computed starting from the spatial refinement level
     // initial_space_refinement. set it to this value for all lower levels
-    for ( lo i = 0; i < initial_space_refinement; ++i ) {
+    for ( lo i = 0; i <= initial_space_refinement; ++i ) {
       paddings_refinementwise[ i ] = paddings_levelwise[ 0 ];
     }
     // get the correct padding from paddings_levelwise (spatial refinement
     // every second step)
-    lo current_idx = 0;
-    for ( lo i = initial_space_refinement; i <= max_space_level; ++i ) {
+    lo current_idx = start_space_refinement;
+    for ( lo i = initial_space_refinement + 1; i <= max_space_level; ++i ) {
       // note: by construction current_idx should never be out of bound for
       // paddings_levelwise
       paddings_refinementwise[ i ] = paddings_levelwise.at( current_idx );
@@ -753,7 +762,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   } else {
     paddings_refinementwise[ 0 ] = paddings_levelwise[ 0 ];
     // the level of the first spatial refinement is known
-    lo current_idx = _distributed_spacetime_tree->get_start_space_refinement( );
+    lo current_idx = start_space_refinement;
     for ( lo i = 1; i <= max_space_level; ++i ) {
       paddings_refinementwise[ i ] = paddings_levelwise.at( current_idx );
       current_idx += 2;
@@ -784,7 +793,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   vector_type nodes_l_child_dim_2( _spat_order + 1, false );
   vector_type nodes_r_child_dim_2( _spat_order + 1, false );
 
-  for ( lo curr_level = 0; curr_level < max_space_level; ++curr_level ) {
+  // compute the spatial half sizes of the first parent box, for which m2m
+  // coefficients are computed
+  h_par_no_pad[ 0 ] /= ( sc )( 1 << first_parent_m2m_level_space );
+  h_par_no_pad[ 1 ] /= ( sc )( 1 << first_parent_m2m_level_space );
+  h_par_no_pad[ 2 ] /= ( sc )( 1 << first_parent_m2m_level_space );
+
+  for ( lo curr_level = first_parent_m2m_level_space;
+        curr_level < max_space_level; ++curr_level ) {
     h_child_no_pad[ 0 ] = h_par_no_pad[ 0 ] / 2.0;
     h_child_no_pad[ 1 ] = h_par_no_pad[ 1 ] / 2.0;
     h_child_no_pad[ 2 ] = h_par_no_pad[ 2 ] / 2.0;
@@ -2009,19 +2025,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   if ( verbose ) {
 #pragma omp critical( verbose )
     {
-      if ( _measure_tasks ) {
-        _l_subtask_times.at( omp_get_thread_num( ) )
-          .push_back( _global_timer.get_time_from_start< time_type >( ) );
-      }
       std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
       if ( outfile.is_open( ) ) {
         outfile << "call L2L for cluster " << t_cluster->get_global_index( )
                 << " at level " << t_cluster->get_level( ) << std::endl;
         outfile.close( );
-      }
-      if ( _measure_tasks ) {
-        _l_subtask_times.at( omp_get_thread_num( ) )
-          .push_back( _global_timer.get_time_from_start< time_type >( ) );
       }
     }
   }
@@ -2035,8 +2043,16 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 #pragma omp taskloop
   for ( lou i = n_associated_leaves; i < associated_spacetime_clusters->size( );
         ++i ) {
+    if ( _measure_tasks ) {
+      _l_subtask_times.at( omp_get_thread_num( ) )
+        .push_back( _global_timer.get_time_from_start< time_type >( ) );
+    }
     apply_grouped_l2l_operation(
       ( *associated_spacetime_clusters )[ i ], configuration );
+    if ( _measure_tasks ) {
+      _l_subtask_times.at( omp_get_thread_num( ) )
+        .push_back( _global_timer.get_time_from_start< time_type >( ) );
+    }
   }
 }
 
