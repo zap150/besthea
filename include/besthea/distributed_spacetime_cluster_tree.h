@@ -38,6 +38,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/block_vector.h"
 #include "besthea/full_matrix.h"
 #include "besthea/general_spacetime_cluster.h"
+#include "besthea/scheduling_time_cluster.h"
 #include "besthea/space_cluster_tree.h"
 #include "besthea/spacetime_cluster.h"
 #include "besthea/time_cluster_tree.h"
@@ -214,9 +215,11 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @ref tree_structure::determine_cluster_communication_lists.
    */
   void expand_distribution_tree_communicatively(
-    const std::set< std::pair< lo, scheduling_time_cluster * > > &
+    const std::set< std::pair< lo, scheduling_time_cluster * >,
+      compare_pairs_of_process_ids_and_scheduling_time_clusters > &
       cluster_send_list,
-    const std::set< std::pair< lo, scheduling_time_cluster * > > &
+    const std::set< std::pair< lo, scheduling_time_cluster * >,
+      compare_pairs_of_process_ids_and_scheduling_time_clusters > &
       cluster_receive_list );
 
   /**
@@ -241,9 +244,11 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * associated spacetime clusters)
    */
   void communicate_necessary_leaf_information(
-    const std::set< std::pair< lo, scheduling_time_cluster * > > &
+    const std::set< std::pair< lo, scheduling_time_cluster * >,
+      compare_pairs_of_process_ids_and_scheduling_time_clusters > &
       leaf_info_send_list,
-    const std::set< std::pair< lo, scheduling_time_cluster * > > &
+    const std::set< std::pair< lo, scheduling_time_cluster * >,
+      compare_pairs_of_process_ids_and_scheduling_time_clusters > &
       leaf_info_receive_list );
 
   /**
