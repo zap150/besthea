@@ -1125,8 +1125,6 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
   // this->apply( solution, r, trans, 1.0, 1.0 );
   gamma[ 0 ] = r.norm( );
 
-  std::cout << "GMRES: initial residual = " << gamma[ 0 ] << std::endl;
-
   if ( abs( gamma[ 0 ] ) < gmres_eps ) {
     relative_residual_error = 0.0;
     return true;

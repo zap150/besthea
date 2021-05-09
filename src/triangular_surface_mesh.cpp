@@ -736,7 +736,6 @@ bool besthea::mesh::triangular_surface_mesh::print_ensight_case(
 
     sc t = 0.5 * timestep_size;
     for ( lo i = 0; i < n_timesteps; ++i ) {
-      // TODO Should the precision be increased here?
       case_file << std::setw( 12 ) << std::setprecision( 5 ) << t << "\n";
       t += timestep_size;
     }
