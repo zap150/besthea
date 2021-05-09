@@ -898,9 +898,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
           lo global_time_index = t_child->get_global_index( );
           slou coord_t;
           if ( left_right == 0 ) {
-            coord_t = ( slou )( 2 * parent_coord[ 4 ] );  // left child
+            coord_t = (slou) ( 2 * parent_coord[ 4 ] );  // left child
           } else {
-            coord_t = ( slou )( 2 * parent_coord[ 4 ] + 1 );  // right child
+            coord_t = (slou) ( 2 * parent_coord[ 4 ] + 1 );  // right child
           }
           // compute the time index on the current level (n_time_div) by
           // substracting the correct conversion term.
@@ -1024,18 +1024,22 @@ void besthea::mesh::distributed_spacetime_cluster_tree::compute_bounding_box(
     max_side_length = z_side_length;
   }
   // adapt the bounding box if necessary in each dimension. this is done by
-  // extending the box to the right
+  // extending the box equally to the left and right
+  sc side_difference;
   if ( max_side_length > x_side_length ) {
-    // add side difference to xmax
-    xmax += max_side_length - x_side_length;
+    side_difference = max_side_length - x_side_length;
+    xmin -= side_difference / 2.0;
+    xmax += side_difference / 2.0;
   }
   if ( max_side_length > y_side_length ) {
-    // add side difference to ymax
-    ymax += max_side_length - y_side_length;
+    side_difference = max_side_length - y_side_length;
+    ymin -= side_difference / 2.0;
+    ymax += side_difference / 2.0;
   }
   if ( max_side_length > z_side_length ) {
-    // add side difference to zmax
-    zmax += max_side_length - z_side_length;
+    side_difference = max_side_length - z_side_length;
+    zmin -= side_difference / 2.0;
+    zmax += side_difference / 2.0;
   }
 }
 
@@ -1586,7 +1590,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
       // std::endl;
       if ( oct_sizes[ i ] > 0 ) {
         ++n_clusters;
-        coord_t = ( slou )( 2 * parent_coord[ 4 ] );
+        coord_t = (slou) ( 2 * parent_coord[ 4 ] );
         std::vector< slou > coordinates
           = { static_cast< slou >( root.get_level( ) + 1 ), coord_x, coord_y,
               coord_z, coord_t };
@@ -1602,7 +1606,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
       }
       if ( oct_sizes[ i + 8 ] > 0 ) {
         ++n_clusters;
-        coord_t = ( slou )( 2 * parent_coord[ 4 ] + 1 );
+        coord_t = (slou) ( 2 * parent_coord[ 4 ] + 1 );
         std::vector< slou > coordinates
           = { static_cast< slou >( root.get_level( ) + 1 ), coord_x, coord_y,
               coord_z, coord_t };
@@ -1754,7 +1758,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
     coord_x = parent_coord[ 1 ];
     coord_y = parent_coord[ 2 ];
     coord_z = parent_coord[ 3 ];
-    coord_t = ( slou )( 2 * parent_coord[ 4 ] );
+    coord_t = (slou) ( 2 * parent_coord[ 4 ] );
     std::vector< slou > coordinates
       = { static_cast< slou >( root.get_level( ) + 1 ), coord_x, coord_y,
           coord_z, coord_t };
@@ -1781,7 +1785,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
     }
 
     // right temporal cluster
-    coord_t = ( slou )( 2 * parent_coord[ 4 ] + 1 );
+    coord_t = (slou) ( 2 * parent_coord[ 4 ] + 1 );
     coordinates[ 4 ] = coord_t;
     if ( oct_sizes[ 1 ] > 0 ) {
       n_clusters++;
@@ -2189,7 +2193,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::print_information(
     std::cout << "half sizes of spatial boxes in each spatial level: "
               << std::endl;
     std::vector< sc > box_size = _bounding_box_size;
-    sc initial_scaling_factor = ( sc )( 1 << _initial_space_refinement );
+    sc initial_scaling_factor = (sc) ( 1 << _initial_space_refinement );
     for ( lou box_dim = 0; box_dim < 3; ++box_dim ) {
       box_size[ box_dim ] /= initial_scaling_factor;
     }
