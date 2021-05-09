@@ -996,6 +996,37 @@ void besthea::mesh::distributed_spacetime_cluster_tree::compute_bounding_box(
     if ( node[ 2 ] > zmax )
       zmax = node[ 2 ];
   }
+
+  // turn the bounding box into a cube:
+  // determine the side lengths and their maxima
+  sc x_side_length = xmax - xmin;
+  sc y_side_length = ymax - ymin;
+  sc z_side_length = zmax - zmin;
+  sc max_side_length = x_side_length;
+  if ( y_side_length > max_side_length ) {
+    max_side_length = y_side_length;
+  }
+  if ( z_side_length > max_side_length ) {
+    max_side_length = z_side_length;
+  }
+  // adapt the bounding box if necessary in each dimension. this is done by
+  // extending the box equally to the left and right
+  sc side_difference;
+  if ( max_side_length > x_side_length ) {
+    side_difference = max_side_length - x_side_length;
+    xmin -= side_difference / 2.0;
+    xmax += side_difference / 2.0;
+  }
+  if ( max_side_length > y_side_length ) {
+    side_difference = max_side_length - y_side_length;
+    ymin -= side_difference / 2.0;
+    ymax += side_difference / 2.0;
+  }
+  if ( max_side_length > z_side_length ) {
+    side_difference = max_side_length - z_side_length;
+    zmin -= side_difference / 2.0;
+    zmax += side_difference / 2.0;
+  }
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::collect_local_leaves(
