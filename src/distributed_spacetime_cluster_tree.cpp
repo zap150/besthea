@@ -1507,14 +1507,14 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
       coord_y = 2 * root.get_box_coordinate( )[ 2 ] + _idx_2_coord[ i ][ 1 ];
       coord_z = 2 * root.get_box_coordinate( )[ 3 ] + _idx_2_coord[ i ][ 2 ];
 
-      std::vector< slou > coordinates
-        = { static_cast< slou >( root.get_level( ) + 1 ), coord_x, coord_y,
-            coord_z, coord_t };
       // std::cout << oct_sizes[ i ] << " " << oct_sizes[ i + 8 ] <<
       // std::endl;
       if ( oct_sizes[ i ] > 0 ) {
         ++n_clusters;
         coord_t = ( slou )( 2 * parent_coord[ 4 ] );
+        std::vector< slou > coordinates
+          = { static_cast< slou >( root.get_level( ) + 1 ), coord_x, coord_y,
+              coord_z, coord_t };
         clusters[ i ] = new general_spacetime_cluster( new_space_center,
           time_center_left, new_space_half_size, time_half_size_left,
           oct_sizes[ i ], &root, root.get_level( ) + 1, i, coordinates, 0,
@@ -1528,6 +1528,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
       if ( oct_sizes[ i + 8 ] > 0 ) {
         ++n_clusters;
         coord_t = ( slou )( 2 * parent_coord[ 4 ] + 1 );
+        std::vector< slou > coordinates
+          = { static_cast< slou >( root.get_level( ) + 1 ), coord_x, coord_y,
+              coord_z, coord_t };
         clusters[ i + 8 ] = new general_spacetime_cluster( new_space_center,
           time_center_right, new_space_half_size, time_half_size_right,
           oct_sizes[ i + 8 ], &root, root.get_level( ) + 1, i, coordinates, 1,

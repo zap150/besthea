@@ -362,7 +362,6 @@ bool besthea::mesh::space_cluster_tree::print_tree(
     }
     for ( auto itt = ( *it ).begin( ); itt != ( *it ).end( ); ++itt ) {
       ( *itt )->get_center( center );
-
       file_vtu << "          " << static_cast< float >( center[ 0 ] ) << " "
                << static_cast< float >( center[ 1 ] ) << " "
                << static_cast< float >( center[ 2 ] ) << std::endl;

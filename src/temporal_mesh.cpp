@@ -148,6 +148,8 @@ bool besthea::mesh::temporal_mesh::save( const std::string & directory,
     return false;
   }
 
+  file.precision( std::numeric_limits< sc >::max_digits10 );
+
   file << "1\n"
        << "2\n\n"
        << _n_temporal_nodes << "\n";
