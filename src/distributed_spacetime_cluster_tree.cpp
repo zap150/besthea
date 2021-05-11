@@ -1024,22 +1024,18 @@ void besthea::mesh::distributed_spacetime_cluster_tree::compute_bounding_box(
     max_side_length = z_side_length;
   }
   // adapt the bounding box if necessary in each dimension. this is done by
-  // extending the box equally to the left and right
-  sc side_difference;
+  // extending the box to the right
   if ( max_side_length > x_side_length ) {
-    side_difference = max_side_length - x_side_length;
-    xmin -= side_difference / 2.0;
-    xmax += side_difference / 2.0;
+    // add side difference to xmax
+    xmax += max_side_length - x_side_length;
   }
   if ( max_side_length > y_side_length ) {
-    side_difference = max_side_length - y_side_length;
-    ymin -= side_difference / 2.0;
-    ymax += side_difference / 2.0;
+    // add side difference to ymax
+    ymax += max_side_length - y_side_length;
   }
   if ( max_side_length > z_side_length ) {
-    side_difference = max_side_length - z_side_length;
-    zmin -= side_difference / 2.0;
-    zmax += side_difference / 2.0;
+    // add side difference to zmax
+    zmax += max_side_length - z_side_length;
   }
 }
 
