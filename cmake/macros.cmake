@@ -60,6 +60,8 @@ macro(setup_compiler)
 
     add_compile_options(-w3)
     #add_compile_options(-qopt-report=5 -qopt-report-phase=vec)
+    # zero used for undefined preprocessing identifier
+    add_compile_options("SHELL:-diag-disable 193")
     # attribute appears more than once
     add_compile_options("SHELL:-diag-disable 2620")
     # parameter was never referenced

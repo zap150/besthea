@@ -122,6 +122,26 @@ class besthea::bem::spacetime_basis_function {
     return derived( )->do_evaluate( i_elem, i_fun, x1_ref, x2_ref, x3_ref );
   }
 
+/**
+ * Evaluates a basis function in a point in a tetrahedron. The point is given
+ * by coordinates in the reference tetrahedron
+ * (\f$ (x_1,x_2,x_3) \in (0,1)\times(0,1-x_1)\times(0,1-x_1-x_2) \f$).
+ * @param[in] i_elem Index of the tetrahedron.
+ * @param[in] i_fun Local basis function index.
+ * @param[in] x1_ref First coordinate of reference quadrature point.
+ * @param[in] x2_ref Second coordinate of reference quadrature point.
+ * @param[in] x3_ref Third coordinate of reference quadrature point.
+ * @param[in] n Outward spatial normal vector on the element
+ * @param[in] perm Virtual element permutation (regularized quadrature).
+ */
+#pragma omp declare simd uniform( this, i_elem, i_fun, n, perm ) \
+  simdlen( DATA_WIDTH )
+  sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, sc x3_ref,
+    const sc * n, const lo * perm ) const {
+    return derived( )->do_evaluate(
+      i_elem, i_fun, x1_ref, x2_ref, x3_ref, n, perm );
+  }
+
  protected:
   const mesh_type * _mesh;  //!< Pointer to the underlying mesh.
 };

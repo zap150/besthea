@@ -109,6 +109,8 @@ set(besthea_INCLUDES
   include/besthea/spacetime_basis_tetra_p1.h
   include/besthea/tetrahedral_spacetime_be_space.h
   include/besthea/tetrahedral_spacetime_be_identity.h
+  include/besthea/tetrahedral_spacetime_be_assembler.h
+  include/besthea/spacetime_constant_kernel.h
 )
 
 set(besthea_SOURCES
@@ -168,6 +170,7 @@ set(besthea_SOURCES
   src/spacetime_basis_tetra_p1.cpp
   src/tetrahedral_spacetime_be_space.cpp
   src/tetrahedral_spacetime_be_identity.cpp
+  src/tetrahedral_spacetime_be_assembler.cpp
 )
 
 if (NOT DEFINED DATA_WIDTH)

@@ -60,10 +60,11 @@ namespace besthea {
 
 /**
  * Class representing an assembler for fast boundary element matrices.
- * @tparam kernel_type @ref spacetime_kernel used for the evaluation of
- *                     antiderivatives in the integration routines. E.g., when
- *                     assembling the single layer matrix the kernel is
- *                     @ref spacetime_heat_sl_kernel_antiderivative.
+ * @tparam kernel_type @ref spacetime_kernel_antiderivative used for the
+ *                          evaluation of antiderivatives in the integration
+ *                          routines. E.g., when assembling the single layer
+ *                          matrix the kernel is
+ *                          @ref spacetime_heat_sl_kernel_antiderivative.
  * @tparam test_space_type @ref distributed_fast_spacetime_be_space that
  *                         specifies the basis functions of the test space.
  *                         Supported are tensor product basis functions, p0 in
