@@ -54,7 +54,8 @@ namespace besthea {
  */
 template< class basis_type >
 class besthea::bem::uniform_spacetime_be_space
-  : public besthea::bem::spacetime_be_space< basis_type > {
+  : public besthea::bem::spacetime_be_space< basis_type,
+      besthea::linear_algebra::block_vector > {
   template< class, class >
   friend class besthea::bem::uniform_spacetime_be_evaluator;
 

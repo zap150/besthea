@@ -32,52 +32,45 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
+#include "besthea/block_vector.h"
+#include "besthea/distributed_block_vector.h"
 #include "besthea/quadrature.h"
 
-template< class basis_type >
-besthea::bem::spacetime_be_space< basis_type >::spacetime_be_space(
-  const mesh_type & mesh )
+template< class basis_type, class block_vector_type >
+besthea::bem::spacetime_be_space< basis_type,
+  block_vector_type >::spacetime_be_space( const mesh_type & mesh )
   : _basis( mesh ) {
 }
 
-template< class basis_type >
-besthea::bem::spacetime_be_space< basis_type >::~spacetime_be_space( ) {
+template< class basis_type, class block_vector_type >
+besthea::bem::spacetime_be_space< basis_type,
+  block_vector_type >::~spacetime_be_space( ) {
 }
 
-template< class basis_type >
-void besthea::bem::spacetime_be_space< basis_type >::interpolation(
-  [[maybe_unused]] sc ( *f )(
-    sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-  [[maybe_unused]] block_vector_type & interpolation ) const {
+template< class basis_type, class block_vector_type >
+void besthea::bem::spacetime_be_space< basis_type, block_vector_type >::
+  interpolation( [[maybe_unused]] sc ( *f )(
+                   sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
+    [[maybe_unused]] block_vector_type & interpolation ) const {
   std::cout << "Only use specialized templates in descendant classes!"
             << std::endl;
 }
 
-template< class basis_type >
-sc besthea::bem::spacetime_be_space< basis_type >::l2_relative_error(
-  const block_vector_type & f, const block_vector_type & approximation ) const {
-  lo n_blocks = f.get_n_blocks( );
-  lo size = f.get_size_of_block( );
-  sc l2diffnorm = 0.0;
-  sc l2norm = 0.0;
-  sc aux;
-
-  for ( lo i_block = 0; i_block < n_blocks; ++i_block ) {
-    for ( lo i_elem = 0; i_elem < size; ++i_elem ) {
-      aux = f.get( i_block, i_elem );
-      l2norm += aux * aux;
-      aux -= approximation.get( i_block, i_elem );
-      l2diffnorm += aux * aux;
-    }
-  }
-
-  return std::sqrt( l2diffnorm / l2norm );
+template< class basis_type, class block_vector_type >
+sc besthea::bem::spacetime_be_space< basis_type,
+  block_vector_type >::l2_relative_error( const block_vector_type & f,
+  const block_vector_type & approximation ) const {
+  sc l2norm = f.norm( );
+  block_vector_type difference( approximation );
+  difference.add( f, -1.0 );
+  sc l2diffnorm = difference.norm( );
+  return l2diffnorm / l2norm;
 }
 
-template< class basis_type >
-void besthea::bem::spacetime_be_space< basis_type >::init_quadrature(
-  int order_rhs_spatial, int order_rhs_temporal,
-  quadrature_wrapper & my_quadrature ) const {
+template< class basis_type, class block_vector_type >
+void besthea::bem::spacetime_be_space< basis_type,
+  block_vector_type >::init_quadrature( int order_rhs_spatial,
+  int order_rhs_temporal, quadrature_wrapper & my_quadrature ) const {
   // calling copy constructor of std::vector
   my_quadrature._x1_ref = quadrature::triangle_x1( order_rhs_spatial );
   my_quadrature._x2_ref = quadrature::triangle_x2( order_rhs_spatial );
@@ -96,12 +89,12 @@ void besthea::bem::spacetime_be_space< basis_type >::init_quadrature(
   my_quadrature._t.resize( size );
 }
 
-template< class basis_type >
-void besthea::bem::spacetime_be_space< basis_type >::triangle_to_geometry(
-  const linear_algebra::coordinates< 3 > & x1,
-  const linear_algebra::coordinates< 3 > & x2,
-  const linear_algebra::coordinates< 3 > & x3,
-  quadrature_wrapper & my_quadrature ) const {
+template< class basis_type, class block_vector_type >
+void besthea::bem::spacetime_be_space< basis_type, block_vector_type >::
+  triangle_to_geometry( const linear_algebra::coordinates< 3 > & x1,
+    const linear_algebra::coordinates< 3 > & x2,
+    const linear_algebra::coordinates< 3 > & x3,
+    quadrature_wrapper & my_quadrature ) const {
   const sc * x1_ref = my_quadrature._x1_ref.data( );
   const sc * x2_ref = my_quadrature._x2_ref.data( );
   sc * x1_mapped = my_quadrature._x1.data( );
@@ -122,9 +115,10 @@ void besthea::bem::spacetime_be_space< basis_type >::triangle_to_geometry(
   }
 }
 
-template< class basis_type >
-void besthea::bem::spacetime_be_space< basis_type >::line_to_time(
-  lo d, sc timestep, quadrature_wrapper & my_quadrature ) const {
+template< class basis_type, class block_vector_type >
+void besthea::bem::spacetime_be_space< basis_type,
+  block_vector_type >::line_to_time( lo d, sc timestep,
+  quadrature_wrapper & my_quadrature ) const {
   const sc * t_ref = my_quadrature._t_ref.data( );
   sc * t_mapped = my_quadrature._t.data( );
 
@@ -136,5 +130,12 @@ void besthea::bem::spacetime_be_space< basis_type >::line_to_time(
   }
 }
 
-template class besthea::bem::spacetime_be_space< besthea::bem::basis_tri_p0 >;
-template class besthea::bem::spacetime_be_space< besthea::bem::basis_tri_p1 >;
+template class besthea::bem::spacetime_be_space< besthea::bem::basis_tri_p0,
+  besthea::linear_algebra::block_vector >;
+template class besthea::bem::spacetime_be_space< besthea::bem::basis_tri_p1,
+  besthea::linear_algebra::block_vector >;
+
+template class besthea::bem::spacetime_be_space< besthea::bem::basis_tri_p0,
+  besthea::linear_algebra::distributed_block_vector >;
+template class besthea::bem::spacetime_be_space< besthea::bem::basis_tri_p1,
+  besthea::linear_algebra::distributed_block_vector >;

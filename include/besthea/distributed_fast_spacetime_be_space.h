@@ -35,7 +35,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDE_BESTHEA_DISTRIBUTED_FAST_SPACETIME_BE_SPACE_H_
 #define INCLUDE_BESTHEA_DISTRIBUTED_FAST_SPACETIME_BE_SPACE_H_
 
-#include "besthea/block_vector.h"
+#include "besthea/distributed_block_vector.h"
 #include "besthea/distributed_spacetime_cluster_tree.h"
 #include "besthea/distributed_spacetime_tensor_mesh.h"
 #include "besthea/settings.h"
@@ -56,7 +56,8 @@ namespace besthea {
  */
 template< class basis_type >
 class besthea::bem::distributed_fast_spacetime_be_space
-  : public besthea::bem::spacetime_be_space< basis_type > {
+  : public besthea::bem::spacetime_be_space< basis_type,
+      besthea::linear_algebra::distributed_block_vector > {
   /**
    * Wraps the mapped quadrature point so that they can be private for OpenMP
    * threads
@@ -90,8 +91,8 @@ class besthea::bem::distributed_fast_spacetime_be_space
     = besthea::mesh::triangular_surface_mesh;        //!< Spatial mesh type.
   using t_mesh_type = besthea::mesh::temporal_mesh;  //!< Temporal mesh type.
   using block_vector_type
-    = besthea::linear_algebra::block_vector;  //!< Block vector
-                                              //!< type.
+    = besthea::linear_algebra::distributed_block_vector;  //!< Block vector
+                                                          //!< type.
 
  public:
   /**
