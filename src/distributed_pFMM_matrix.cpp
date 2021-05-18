@@ -1136,11 +1136,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::print_information( const int root_process ) {
+  target_space, source_space >::print_information( const int root_process,
+  const bool print_tree_information ) {
   // first print some information of the underlying distributed space time
   // tree
-  _distributed_spacetime_tree->print_information( root_process );
-
+  if ( print_tree_information ) {
+    _distributed_spacetime_tree->print_information( root_process );
+  }
   // print rough nearfield percentage
   // compute the nearfield ratios (two versions) on each process.
   sc local_nearfield_ratio = compute_nearfield_ratio( );
@@ -1265,13 +1267,15 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     std::cout << "#############################################################"
               << "###########################" << std::endl;
     std::cout << "rough memory estimates per process: " << std::endl;
-    lo n_global_elements
-      = _distributed_spacetime_tree->get_mesh( ).get_n_elements( );
+    lo n_target_dofs
+      = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< target_space >( );
+    lo n_source_dofs
+      = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< source_space >( );
     sc total_storage_nearfield = 0.0;
     sc total_storage_contributions = 0.0;
     for ( int i = 0; i < n_processes; ++i ) {
-      sc local_storage_nearfield = n_global_elements * n_global_elements
-        * all_local_nearfield_ratios[ i ];
+      sc local_storage_nearfield
+        = n_target_dofs * n_source_dofs * all_local_nearfield_ratios[ i ];
       local_storage_nearfield
         *= 8. / 1024. / 1024. / 1024.;  // get memory for double entries in GiB.
       sc local_storage_contributions
@@ -1289,8 +1293,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               << total_storage_nearfield
               << " GiB, moment and local contributions: "
               << total_storage_contributions << " GiB." << std::endl;
-    std::cout << "storage per allocated vector: "
-              << n_global_elements * 8. / 1024. / 1024. / 1024. << " GiB."
+    std::cout << "storage per allocated vector (source): "
+              << n_source_dofs * 8. / 1024. / 1024. / 1024. << " GiB."
+              << std::endl;
+    std::cout << "storage per allocated vector (target): "
+              << n_target_dofs * 8. / 1024. / 1024. / 1024. << " GiB."
               << std::endl;
     delete[] all_local_nearfield_ratios;
     delete[] all_local_nonzero_nearfield_ratios;
@@ -3548,7 +3555,7 @@ sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
     for ( lou i = 0; i < n_associated_leaves; ++i ) {
       // consider all associated st target clusters
       general_spacetime_cluster * st_target = ( *st_targets )[ i ];
-      lo n_tar_elements_space = st_target->get_n_space_elements( );
+      lo n_tar_space_dofs = st_target->get_n_space_dofs< target_space >( );
       lo n_tar_elements_time = st_target->get_n_time_elements( );
       lo n_tar_elements = st_target->get_n_elements( );
       std::vector< general_spacetime_cluster * > * st_nearfield_list
@@ -3564,7 +3571,7 @@ sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
         } else {
           src_mesh = nearfield_mesh;
         }
-        lo n_src_elements_space = st_source->get_n_space_elements( );
+        lo n_src_space_dofs = st_source->get_n_space_dofs< source_space >( );
         lo n_src_elements_time = st_source->get_n_time_elements( );
         lo n_src_elements = st_source->get_n_elements( );
         // depending on the configuration in time update the number of
@@ -3579,7 +3586,7 @@ sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
               st_source->get_element( n_src_elements - 1 ) );
             lo tar_max_time_idx = tar_mesh->get_time_element(
               st_target->get_element( n_tar_elements - 1 ) );
-            n_nearfield_entries += n_src_elements_space * n_tar_elements_space
+            n_nearfield_entries += n_src_space_dofs * n_tar_space_dofs
               * ( ( n_src_elements_time * ( n_src_elements_time + 1 ) ) / 2
                 + n_src_elements_time
                   * ( tar_max_time_idx - src_max_time_idx ) );
@@ -3593,11 +3600,11 @@ sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
             = src_mesh->get_time_element( st_source->get_element( 0 ) );
           lo tar_min_time_idx
             = tar_mesh->get_time_element( st_target->get_element( 0 ) );
-          n_nearfield_entries += n_src_elements_space * n_tar_elements_space
+          n_nearfield_entries += n_src_space_dofs * n_tar_space_dofs
             * ( ( n_tar_elements_time * ( n_tar_elements_time + 1 ) ) / 2
               + n_tar_elements_time * ( tar_min_time_idx - src_min_time_idx ) );
         } else {
-          n_nearfield_entries += n_src_elements_space * n_tar_elements_space
+          n_nearfield_entries += n_src_space_dofs * n_tar_space_dofs
             * n_src_elements_time * n_tar_elements_time;
         }
       }
@@ -3605,12 +3612,14 @@ sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
   }
   lou n_global_time_elements
     = _distributed_spacetime_tree->get_mesh( ).get_n_temporal_elements( );
-  lou n_global_elements
-    = _distributed_spacetime_tree->get_mesh( ).get_n_elements( );
-  lou n_global_space_elements = n_global_elements / n_global_time_elements;
+  lou n_global_src_space_dofs
+    = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< source_space >( );
+  lou n_global_tar_space_dofs
+    = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< target_space >( );
   return n_nearfield_entries
-    / ( (sc) n_global_space_elements * n_global_space_elements
-      * ( n_global_time_elements * ( n_global_time_elements + 1 ) / 2 ) );
+    / ( ( sc )( ( n_global_tar_space_dofs * n_global_src_space_dofs
+                  * ( n_global_time_elements + 1 ) )
+      / ( 2 * n_global_time_elements ) ) );
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -3623,20 +3632,24 @@ sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
     lou n_associated_leaves = it->get_n_associated_leaves( );
     for ( lou i = 0; i < n_associated_leaves; ++i ) {
       general_spacetime_cluster * st_target = ( *st_targets )[ i ];
-      lo n_target_elements = st_target->get_n_elements( );
+      lo n_target_dofs = st_target->get_n_dofs< target_space >( );
       std::vector< general_spacetime_cluster * > * st_nearfield_list
         = st_target->get_nearfield_list( );
       for ( lou src_index = 0; src_index < st_nearfield_list->size( );
             ++src_index ) {
         general_spacetime_cluster * st_source
           = ( *st_nearfield_list )[ src_index ];
-        n_nearfield_entries += n_target_elements * st_source->get_n_elements( );
+        n_nearfield_entries
+          += n_target_dofs * st_source->get_n_dofs< source_space >( );
       }
     }
   }
-  lou n_global_elements
-    = _distributed_spacetime_tree->get_mesh( ).get_n_elements( );
-  return n_nearfield_entries / ( (sc) n_global_elements * n_global_elements );
+  lou n_global_target_dofs
+    = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< target_space >( );
+  lou n_global_source_dofs
+    = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< source_space >( );
+  return n_nearfield_entries
+    / ( (sc) n_global_target_dofs * n_global_source_dofs );
 }
 
 template< class kernel_type, class target_space, class source_space >
