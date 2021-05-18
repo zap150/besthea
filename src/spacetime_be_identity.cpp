@@ -93,12 +93,13 @@ void besthea::bem::spacetime_be_identity< test_space_type,
   std::vector< los > & jj, std::vector< sc > & vv ) const {
   auto & test_basis = _test_space->get_basis( );
   auto & trial_basis = _trial_space->get_basis( );
-  const auto mesh = _test_space->get_mesh( );
+  const auto spatial_mesh
+    = _test_space->get_mesh( )->get_spatial_surface_mesh( );
 
   lo n_loc_rows = test_basis.dimension_local( );
   lo n_loc_columns = trial_basis.dimension_local( );
 
-  lo n_elements = mesh->get_n_spatial_elements( );
+  lo n_elements = spatial_mesh->get_n_elements( );
   std::vector< lo > test_l2g( n_loc_rows );
   std::vector< lo > trial_l2g( n_loc_columns );
   ii.reserve( n_elements * n_loc_rows * n_loc_columns );
@@ -116,8 +117,8 @@ void besthea::bem::spacetime_be_identity< test_space_type,
   sc value, test, trial, area;
   linear_algebra::coordinates< 3 > n;
   for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
-    mesh->get_spatial_normal( i_elem, n );
-    area = mesh->spatial_area( i_elem );
+    spatial_mesh->get_normal( i_elem, n );
+    area = spatial_mesh->area( i_elem );
 
     test_basis.local_to_global( i_elem, test_l2g );
     trial_basis.local_to_global( i_elem, trial_l2g );

@@ -39,6 +39,7 @@ set(besthea_INCLUDES
   include/besthea/distributed_fast_spacetime_be_assembler.h
   include/besthea/distributed_fast_spacetime_be_space.h
   include/besthea/distributed_pFMM_matrix.h
+  include/besthea/distributed_spacetime_be_identity.h
   include/besthea/distributed_spacetime_cluster_tree.h
   include/besthea/distributed_spacetime_tensor_mesh.h
   include/besthea/fe_identity.h
@@ -116,6 +117,7 @@ set(besthea_SOURCES
   src/distributed_fast_spacetime_be_assembler.cpp
   src/distributed_fast_spacetime_be_space.cpp
   src/distributed_pFMM_matrix.cpp
+  src/distributed_spacetime_be_identity.cpp
   src/distributed_spacetime_cluster_tree.cpp
   src/distributed_spacetime_tensor_mesh.cpp
   src/fe_identity.cpp

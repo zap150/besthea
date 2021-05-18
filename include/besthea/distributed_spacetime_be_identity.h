@@ -28,32 +28,27 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file spacetime_be_identity.h
- * @brief Discretized identity operator.
+/** @file distributed_spacetime_be_identity.h
+ * @brief Distributed discrete identity operator.
  */
 
-#ifndef INCLUDE_BESTHEA_SPACETIME_BE_IDENTITY_H_
-#define INCLUDE_BESTHEA_SPACETIME_BE_IDENTITY_H_
+#ifndef INCLUDE_BESTHEA_DISTRIBUTED_SPACETIME_BE_IDENTITY_H_
+#define INCLUDE_BESTHEA_DISTRIBUTED_SPACETIME_BE_IDENTITY_H_
 
-#include "besthea/block_matrix.h"
-#include "besthea/distributed_block_vector.h"
-#include "besthea/sparse_matrix.h"
+#include "besthea/spacetime_be_identity.h"
 
 namespace besthea {
   namespace bem {
     template< class test_space_type, class trial_space_type >
-    class spacetime_be_identity;
+    class distributed_spacetime_be_identity;
   }
 }
 
-/**
- *  Class representing a boundary element identity operator.
- */
 template< class test_space_type, class trial_space_type >
-class besthea::bem::spacetime_be_identity
-  : public besthea::linear_algebra::block_matrix {
+class besthea::bem::distributed_spacetime_be_identity
+  : public besthea::bem::spacetime_be_identity< test_space_type,
+      trial_space_type > {
  public:
-  using matrix_type = besthea::linear_algebra::sparse_matrix;  //!< Matrix type.
   using block_vector_type
     = besthea::linear_algebra::block_vector;  //!< Block vector type.
   using distributed_block_vector_type
@@ -66,32 +61,16 @@ class besthea::bem::spacetime_be_identity
    * @param[in] trial_space Trial boundary element space.
    * @param[in] order_regular Triangle quadrature order for regular quadrature.
    */
-  spacetime_be_identity( test_space_type & test_space,
+  distributed_spacetime_be_identity( test_space_type & test_space,
     trial_space_type & trial_space, int order_regular = 4 );
 
-  ~spacetime_be_identity( );
+  ~distributed_spacetime_be_identity( );
 
   /**
-   * Assembles the identity matrix.
+   * Collects the sizes of the timesteps of the local temporal mesh associated
+   * with the test (and trial) space and stores them in @ref _timesteps.
    */
-  void assemble( );
-
-  /**
-   * Assembles the identity matrix (without the timestep premultiply).
-   */
-  void assemble( matrix_type & global_matrix ) const;
-
-  /**
-   * Prints info on the object.
-   */
-  void print_info( ) const {
-    std::cout << "besthea::bem::spacetime_be_identity" << std::endl;
-    std::cout << "  number of blocks: "
-              << _test_space->get_mesh( )->get_n_temporal_elements( )
-              << std::endl;
-    std::cout << "  dimension of each block: " << _data.get_n_rows( ) << " x "
-              << _data.get_n_columns( ) << std::endl;
-  }
+  void assemble_timesteps( ) override;
 
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
@@ -100,9 +79,11 @@ class besthea::bem::spacetime_be_identity
    * @param[in] trans
    * @param[in] alpha
    * @param[in] beta
+   * @note This routine is just a dummy here. Please use the corresponding
+   * version with distributed block vectors.
    */
   virtual void apply( const block_vector_type & x, block_vector_type & y,
-    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
+    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
 
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
@@ -114,33 +95,7 @@ class besthea::bem::spacetime_be_identity
    */
   virtual void apply( const distributed_block_vector_type & x,
     distributed_block_vector_type & y, bool trans = false, sc alpha = 1.0,
-    sc beta = 0.0 ) const;
-
- private:
-  /**
-   * Assembles the triplets for the sparse identity matrix.
-   * @param[in] ii Row indices.
-   * @param[in] jj Column indices.
-   * @param[in] vv Values.
-   */
-  void assemble_triplets( std::vector< los > & ii, std::vector< los > & jj,
-    std::vector< sc > & vv ) const;
-
-  /**
-   * Collects the sizes of the timesteps of the temporal mesh associated with
-   * the test (and trial) space and stores them in @ref _timesteps.
-   */
-  virtual void assemble_timesteps( );
-
-  matrix_type _data;  //!< Raw matrix data.
-
-  std::vector< sc > _timesteps;  //!< Holds the information of timesteps.
-
-  const test_space_type * _test_space;  //!< Boundary element test space.
-
-  const trial_space_type * _trial_space;  //!< Boundary element trial space.
-
-  int _order_regular;  //!< Triangle quadrature order for the regular integrals.
+    sc beta = 0.0 ) const override;
 };
 
-#endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_IDENTITY_H_ */
+#endif /* INCLUDE_BESTHEA_DISTRIBUTED_SPACETIME_BE_IDENTITY_H_ */

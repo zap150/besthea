@@ -38,7 +38,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 template< class basis_type >
 besthea::bem::uniform_spacetime_be_space<
   basis_type >::uniform_spacetime_be_space( st_mesh_type & spacetime_mesh )
-  : spacetime_be_space< basis_type >( spacetime_mesh ) {
+  : spacetime_be_space< basis_type, block_vector_type >( spacetime_mesh ) {
   _spacetime_mesh = &spacetime_mesh;
 }
 
@@ -75,7 +75,8 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::L2_projection(
   sc cg_eps;
   lo n_iter;
 
-  typename spacetime_be_space< basis_type >::quadrature_wrapper my_quadrature;
+  typename spacetime_be_space< basis_type,
+    block_vector_type >::quadrature_wrapper my_quadrature;
   this->init_quadrature( order_rhs_spatial, order_rhs_temporal, my_quadrature );
   lo size_wt = my_quadrature._wt.size( );
   lo size_x = my_quadrature._wx.size( );
@@ -138,7 +139,8 @@ sc besthea::bem::uniform_spacetime_be_space< basis_type >::L2_relative_error(
   sc local_value;
   sc absdiff, absf;
 
-  typename spacetime_be_space< basis_type >::quadrature_wrapper my_quadrature;
+  typename spacetime_be_space< basis_type,
+    block_vector_type >::quadrature_wrapper my_quadrature;
   this->init_quadrature( order_rhs_spatial, order_rhs_temporal, my_quadrature );
   lo size_wt = my_quadrature._wt.size( );
   lo size_x = my_quadrature._wx.size( );
