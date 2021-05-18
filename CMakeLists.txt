@@ -99,15 +99,6 @@ set(besthea_INCLUDES
   include/besthea/volume_basis_function.h
 )
 
-# include/besthea/pFMM_matrix.h
-# include/besthea/fast_spacetime_be_assembler.h
-# include/besthea/fast_spacetime_be_space.h
-# include/besthea/local_vector_routines.h
-# include/besthea/spacetime_cluster.h
-# include/besthea/spacetime_cluster_tree.h
-# include/besthea/space_cluster.h
-# include/besthea/space_cluster_tree.h
-
 set(besthea_SOURCES
   src/basis_tetra_p1.cpp
   src/basis_tri_p0.cpp
@@ -158,12 +149,6 @@ set(besthea_SOURCES
   src/uniform_spacetime_tensor_mesh.cpp
   src/vector.cpp
 )
-
-# src/fast_spacetime_be_space.cpp
-# src/fast_spacetime_be_assembler.cpp
-# src/pFMM_matrix.cpp
-# src/space_cluster_tree.cpp
-# src/spacetime_cluster_tree.cpp
 
 if (NOT DEFINED DATA_WIDTH)
 set(DATA_WIDTH 8)

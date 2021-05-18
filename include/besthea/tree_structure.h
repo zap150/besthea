@@ -38,8 +38,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/io_routines.h"
 #include "besthea/scheduling_time_cluster.h"
 #include "besthea/settings.h"
-// DELETE #include "besthea/spacetime_cluster.h"
-// DELETE #include "besthea/spacetime_cluster_tree.h"
 
 #include <iostream>
 #include <list>
