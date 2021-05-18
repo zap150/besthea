@@ -49,7 +49,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/indices.h"
 #include "besthea/mkl_cg_inverse.h"
 #include "besthea/mkl_fgmres_inverse.h"
-#include "besthea/pFMM_matrix.h"
 #include "besthea/sparse_matrix.h"
 #include "besthea/vector.h"
 

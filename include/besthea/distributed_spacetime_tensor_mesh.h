@@ -54,6 +54,15 @@ namespace besthea {
   }
 }
 
+namespace besthea {
+  namespace bem {
+    template< class basis_type >
+    class distributed_fast_spacetime_be_space;
+    class basis_tri_p0;
+    class basis_tri_p1;
+  }
+}
+
 /**
  * Class serving as a container holding spacetime tensor product meshes
  * distributed among MPI processes.
@@ -261,6 +270,9 @@ class besthea::mesh::distributed_spacetime_tensor_mesh
    */
   std::vector< lo > get_my_timesteps( ) const;
 
+  template< class space_type >
+  lo get_n_dofs( ) const;
+
  protected:
   /**
    * Loads submeshes assigned to the current rank and merges them into one mesh.
@@ -323,5 +335,22 @@ class besthea::mesh::distributed_spacetime_tensor_mesh
                            //!< mesh
   int _my_rank;            //!< MPI rank of the current process
 };
+
+/** specialization for p0 basis functions */
+template<>
+inline lo besthea::mesh::distributed_spacetime_tensor_mesh::get_n_dofs<
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 > >( ) const {
+  return _n_global_elements;
+}
+
+/** specialization for p1 basis functions
+ */
+template<>
+inline lo besthea::mesh::distributed_spacetime_tensor_mesh::get_n_dofs<
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >( ) const {
+  return _n_global_time_elements * _space_mesh->get_n_nodes( );
+}
 
 #endif /* INCLUDE_BESTHEA_DISTRIBUTED_SPACETIME_TENSOR_MESH_H_ */

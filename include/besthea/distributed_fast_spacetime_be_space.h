@@ -40,7 +40,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/distributed_spacetime_tensor_mesh.h"
 #include "besthea/settings.h"
 #include "besthea/spacetime_be_space.h"
-#include "besthea/spacetime_cluster_tree.h"
 #include "besthea/spacetime_tensor_mesh.h"
 #include "besthea/temporal_mesh.h"
 #include "besthea/triangular_surface_mesh.h"
@@ -91,7 +90,8 @@ class besthea::bem::distributed_fast_spacetime_be_space
     = besthea::mesh::triangular_surface_mesh;        //!< Spatial mesh type.
   using t_mesh_type = besthea::mesh::temporal_mesh;  //!< Temporal mesh type.
   using block_vector_type
-    = besthea::linear_algebra::block_vector;  //!< Block vector type.
+    = besthea::linear_algebra::block_vector;  //!< Block vector
+                                              //!< type.
 
  public:
   /**

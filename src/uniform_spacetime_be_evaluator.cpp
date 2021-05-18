@@ -32,7 +32,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
-#include "besthea/fast_spacetime_be_space.h"
 #include "besthea/quadrature.h"
 #include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_hs_kernel_antiderivative.h"
@@ -441,17 +440,3 @@ template class besthea::bem::uniform_spacetime_be_evaluator<
 template class besthea::bem::uniform_spacetime_be_evaluator<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
-
-template class besthea::bem::uniform_spacetime_be_evaluator<
-  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
-template class besthea::bem::uniform_spacetime_be_evaluator<
-  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
-
-template class besthea::bem::uniform_spacetime_be_evaluator<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
-template class besthea::bem::uniform_spacetime_be_evaluator<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
