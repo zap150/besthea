@@ -116,7 +116,7 @@ class besthea::bem::spacetime_be_identity
     distributed_block_vector_type & y, bool trans = false, sc alpha = 1.0,
     sc beta = 0.0 ) const;
 
- private:
+ protected:
   /**
    * Assembles the triplets for the sparse identity matrix.
    * @param[in] ii Row indices.
