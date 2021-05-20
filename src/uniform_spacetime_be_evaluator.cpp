@@ -56,12 +56,12 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
   space_type >::evaluate( const std::vector< sc > & x,
   const block_vector_type & density, block_vector_type & result ) const {
   auto & basis = _space->get_basis( );
-  auto mesh = _space->get_mesh( );
+  const auto & st_mesh = _space->get_mesh( );
 
-  lo n_timesteps = mesh->get_n_temporal_elements( );
-  sc timestep = mesh->temporal_length( 0 );
+  lo n_timesteps = st_mesh.get_n_temporal_elements( );
+  sc timestep = st_mesh.temporal_length( 0 );
   lo n_points = x.size( ) / 3;
-  lo n_elements = mesh->get_n_spatial_elements( );
+  lo n_elements = st_mesh.get_n_spatial_elements( );
   lo loc_dim = basis.dimension_local( );
 
   result.resize( n_timesteps );
@@ -154,9 +154,9 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
         ttau = ( delta + 0.5 ) * timestep;
 
         for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
-          mesh->get_spatial_nodes( i_elem, y1, y2, y3 );
-          mesh->get_spatial_normal( i_elem, ny );
-          area = mesh->spatial_area( i_elem );
+          st_mesh.get_spatial_nodes( i_elem, y1, y2, y3 );
+          st_mesh.get_spatial_normal( i_elem, ny );
+          area = st_mesh.spatial_area( i_elem );
           basis.local_to_global( i_elem, l2g );
           triangle_to_geometry( y1, y2, y3, my_quadrature );
 
@@ -258,11 +258,11 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type, space_type >::
   evaluate( const std::vector< linear_algebra::coordinates< 4 > > & xt,
     const block_vector_type & density, vector_type & result ) const {
   auto & basis = _space->get_basis( );
-  auto mesh = _space->get_mesh( );
+  const auto & st_mesh = _space->get_mesh( );
 
-  sc timestep = mesh->temporal_length( 0 );
+  sc timestep = st_mesh.temporal_length( 0 );
   lo n_points = xt.size( );
-  lo n_elements = mesh->get_n_spatial_elements( );
+  lo n_elements = st_mesh.get_n_spatial_elements( );
   lo loc_dim = basis.dimension_local( );
 
   result.resize( n_points, false );
@@ -303,9 +303,9 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type, space_type >::
         sc ttau = delta * timestep + diff;
 
         for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
-          mesh->get_spatial_nodes( i_elem, y1, y2, y3 );
-          mesh->get_spatial_normal( i_elem, ny );
-          sc area = mesh->spatial_area( i_elem );
+          st_mesh.get_spatial_nodes( i_elem, y1, y2, y3 );
+          st_mesh.get_spatial_normal( i_elem, ny );
+          sc area = st_mesh.spatial_area( i_elem );
           basis.local_to_global( i_elem, l2g );
           triangle_to_geometry( y1, y2, y3, my_quadrature );
 
@@ -347,9 +347,9 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type, space_type >::
       // adding last part
       if ( diff > 0.0 ) {
         for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
-          mesh->get_spatial_nodes( i_elem, y1, y2, y3 );
-          mesh->get_spatial_normal( i_elem, ny );
-          sc area = mesh->spatial_area( i_elem );
+          st_mesh.get_spatial_nodes( i_elem, y1, y2, y3 );
+          st_mesh.get_spatial_normal( i_elem, ny );
+          sc area = st_mesh.spatial_area( i_elem );
           basis.local_to_global( i_elem, l2g );
           triangle_to_geometry( y1, y2, y3, my_quadrature );
 

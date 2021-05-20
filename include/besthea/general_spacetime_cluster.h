@@ -149,8 +149,8 @@ class besthea::mesh::general_spacetime_cluster {
   /**
    * Returns the distributed spacetime mesh associated with the cluster.
    */
-  const distributed_spacetime_tensor_mesh * get_mesh( ) const {
-    return &_mesh;
+  const distributed_spacetime_tensor_mesh & get_mesh( ) const {
+    return _mesh;
   }
 
   /**

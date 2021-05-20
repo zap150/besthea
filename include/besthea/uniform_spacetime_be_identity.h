@@ -88,7 +88,7 @@ class besthea::bem::uniform_spacetime_be_identity
   void print_info( ) const {
     std::cout << "besthea::bem::uniform_spacetime_be_identity" << std::endl;
     std::cout << "  number of blocks: "
-              << _test_space->get_mesh( )->get_n_temporal_elements( )
+              << ( _test_space->get_mesh( ) ).get_n_temporal_elements( )
               << std::endl;
     std::cout << "  dimension of each block: " << _data.get_n_rows( ) << " x "
               << _data.get_n_columns( ) << std::endl;
