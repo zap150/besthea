@@ -80,16 +80,9 @@ class besthea::bem::uniform_spacetime_be_space
   uniform_spacetime_be_space( st_mesh_type & spacetime_mesh );
 
   /**
-   * Returns pointer to the mesh.
+   * Returns const reference of the mesh.
    */
-  st_mesh_type * get_mesh( ) {
-    return _spacetime_mesh;
-  }
-
-  /**
-   * Returns pointer to the mesh.
-   */
-  const st_mesh_type * get_mesh( ) const {
+  const st_mesh_type & get_mesh( ) const {
     return _spacetime_mesh;
   }
 
@@ -136,7 +129,7 @@ class besthea::bem::uniform_spacetime_be_space
     block_vector_type & interpolation ) const override;
 
  protected:
-  st_mesh_type * _spacetime_mesh;  //!< uniform spacetime tensor mesh
+  const st_mesh_type & _spacetime_mesh;  //!< uniform spacetime tensor mesh
 };
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_SPACE_H_ */

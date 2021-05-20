@@ -1807,18 +1807,18 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   vector_type cheb_dim_1( ( _spat_order + 1 ) * size_quad );
   vector_type cheb_dim_2( ( _spat_order + 1 ) * size_quad );
 
-  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
+  const mesh::distributed_spacetime_tensor_mesh & distributed_mesh
     = source_cluster->get_mesh( );
   const mesh::spacetime_tensor_mesh * local_mesh
-    = distributed_mesh->get_local_mesh( );
-  lo local_start_idx = distributed_mesh->get_local_start_idx( );
+    = distributed_mesh.get_local_mesh( );
+  lo local_start_idx = distributed_mesh.get_local_start_idx( );
 
   for ( lo i = 0; i < n_space_elems; ++i ) {
     // we use that the elements in the cluster are tensor products of spatial
     // elements and timesteps, and are sorted w.r.t. the timesteps. In
     // particular we get all spatial elements in the cluster by considering
     // the first n_space_elems spacetime elements.
-    lo local_elem_idx = distributed_mesh->global_2_local(
+    lo local_elem_idx = distributed_mesh.global_2_local(
       local_start_idx, source_cluster->get_element( i ) );
     lo local_elem_idx_space = local_mesh->get_space_element( local_elem_idx );
 
@@ -1901,14 +1901,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     = source_cluster->get_elems_2_local_nodes( );
   linear_algebra::coordinates< 3 > normal;
 
-  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
+  const mesh::distributed_spacetime_tensor_mesh & distributed_mesh
     = source_cluster->get_mesh( );
   const mesh::spacetime_tensor_mesh * local_mesh
-    = distributed_mesh->get_local_mesh( );
-  lo local_start_idx = distributed_mesh->get_local_start_idx( );
+    = distributed_mesh.get_local_mesh( );
+  lo local_start_idx = distributed_mesh.get_local_start_idx( );
 
   for ( lo i = 0; i < n_space_elems; ++i ) {
-    lo local_elem_idx = distributed_mesh->global_2_local(
+    lo local_elem_idx = distributed_mesh.global_2_local(
       local_start_idx, source_cluster->get_element( i ) );
     lo local_elem_idx_space = local_mesh->get_space_element( local_elem_idx );
     local_mesh->get_spatial_normal( local_elem_idx_space, normal );
@@ -2021,14 +2021,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     = source_cluster->get_elems_2_local_nodes( );
   linear_algebra::coordinates< 3 > normal;
 
-  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
+  const mesh::distributed_spacetime_tensor_mesh & distributed_mesh
     = source_cluster->get_mesh( );
   const mesh::spacetime_tensor_mesh * local_mesh
-    = distributed_mesh->get_local_mesh( );
-  lo local_start_idx = distributed_mesh->get_local_start_idx( );
+    = distributed_mesh.get_local_mesh( );
+  lo local_start_idx = distributed_mesh.get_local_start_idx( );
 
   for ( lo i = 0; i < n_space_elems; ++i ) {
-    lo local_elem_idx = distributed_mesh->global_2_local(
+    lo local_elem_idx = distributed_mesh.global_2_local(
       local_start_idx, source_cluster->get_element( i ) );
     lo local_elem_idx_space = local_mesh->get_space_element( local_elem_idx );
     local_mesh->get_spatial_normal( local_elem_idx_space, normal );
@@ -2146,11 +2146,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     + source_cluster->get_time_half_size( );
   sc cluster_size = cluster_t_end - cluster_t_start;
 
-  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
+  const mesh::distributed_spacetime_tensor_mesh & distributed_mesh
     = source_cluster->get_mesh( );
   const mesh::spacetime_tensor_mesh * local_mesh
-    = distributed_mesh->get_local_mesh( );
-  lo local_start_idx = distributed_mesh->get_local_start_idx( );
+    = distributed_mesh.get_local_mesh( );
+  lo local_start_idx = distributed_mesh.get_local_start_idx( );
 
   linear_algebra::coordinates< 1 > elem_t_start;
   linear_algebra::coordinates< 1 > elem_t_end;
@@ -2159,7 +2159,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     // elements and timesteps, and are sorted w.r.t. the timesteps. In
     // particular we get all temporal elements in the cluster by considering
     // every n_spat_elems spacetime element.
-    lo local_elem_idx = distributed_mesh->global_2_local(
+    lo local_elem_idx = distributed_mesh.global_2_local(
       local_start_idx, source_cluster->get_element( i * n_spat_elems ) );
     lo local_elem_idx_time = local_mesh->get_time_element( local_elem_idx );
 
@@ -2208,13 +2208,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     + source_cluster->get_time_half_size( );
   sc cluster_size = cluster_t_end - cluster_t_start;
 
-  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
+  const mesh::distributed_spacetime_tensor_mesh & distributed_mesh
     = source_cluster->get_mesh( );
   // this function should only be called for clusters which are local, i.e.
   // whose elemnts are in the local mesh
   const mesh::spacetime_tensor_mesh * local_mesh
-    = distributed_mesh->get_local_mesh( );
-  lo local_start_idx = distributed_mesh->get_local_start_idx( );
+    = distributed_mesh.get_local_mesh( );
+  lo local_start_idx = distributed_mesh.get_local_start_idx( );
 
   linear_algebra::coordinates< 1 > elem_t_start;
   linear_algebra::coordinates< 1 > elem_t_end;
@@ -2223,7 +2223,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     // elements and timesteps, and are sorted w.r.t. the timesteps. In
     // particular we get all temporal elements in the cluster by considering
     // every n_spat_elems spacetime element.
-    lo local_elem_idx = distributed_mesh->global_2_local(
+    lo local_elem_idx = distributed_mesh.global_2_local(
       local_start_idx, source_cluster->get_element( i * n_spat_elems ) );
     lo local_elem_idx_time = local_mesh->get_time_element( local_elem_idx );
 
