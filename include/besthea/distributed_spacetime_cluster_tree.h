@@ -184,10 +184,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * Builts the spacetime cluster tree in a communicative way in the upper part
    * (where clusters can contain elements located in meshes of two or more
    * processes) and in a non-communicative way in the lower part.
-   * @param[in] pseudo_root Cluster at level -1 which acts as pseudo-root for
-   *                        the distributed space-time cluster tree.
    */
-  void build_tree( general_spacetime_cluster * pseudo_root );
+  void build_tree( );
 
   /**
    * Expands the distribution tree included in @p _spacetime_mesh by adding
@@ -297,7 +295,6 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * Collectively computes number of elements in subdivisioning (given by
    * numbers of space divisioning and vector of time clusters) of the bounding
    * box.
-   * @param[in] root Root of the tree.
    * @param[in] n_space_div Number of the spatial octasections.
    * @param[in] level_time The level in time determining the subdivision. On
    *                       each new level the clusters are split into halves
@@ -306,15 +303,20 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    *                                    the temporal domain is subdivided (
    *                                    the clusters do not have to span the
    *                                    complete time interval).
+   * @param[in] fine_box_bounds Auxiliary structure which contains the bounds of
+   *                            the spatial boxes at the finest required spatial
+   *                            level for all three spatial dimensions. It is
+   *                            used to determine the bounds of the boxes for
+   *                            each subdivision consistently.
    * @param[inout] elems_in_clusters Vector consisting of numbers of elements in
    * individual subclusters of the bounding box (ordered as pos_t *
    n_space_clusters * n_space_clusters * n_space_clusters
       + pos_x * n_space_clusters * n_space_clusters + pos_y * n_space_clusters
       + pos_z).
    */
-  void get_n_elements_in_subdivisioning( general_spacetime_cluster & root,
-    lo n_space_div, lo level_time,
+  void get_n_elements_in_subdivisioning( lo n_space_div, lo level_time,
     const std::vector< scheduling_time_cluster * > & time_clusters_on_level,
+    const std::vector< std::vector< sc > > & fine_box_bounds,
     std::vector< lo > & elems_in_clusters );
 
   /**
@@ -404,8 +406,14 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   /**
    * Adds elements to the cluster.
    * @param[in] cluster Cluster to be filled with elements.
+   * @param[in] fine_box_boubds Auxiliary structure which contains the bounds of
+   *                            the spatial boxes at the finest required spatial
+   *                            level for all three spatial dimensions. It is
+   *                            used to determine the bounds of the cluster for
+   *                            which elements are filled in consistently.
    */
-  void fill_elements( general_spacetime_cluster & cluster );
+  void fill_elements( general_spacetime_cluster & cluster,
+    const std::vector< std::vector< sc > > & fine_box_bounds );
 
   // void fill_elements2( std::vector< general_spacetime_cluster * > & leaves,
   //  spacetime_tensor_mesh const * current_mesh );
