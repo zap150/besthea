@@ -392,7 +392,9 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   }
 }
 
-/** specialization for p1p1 hypersingular operator */
+/** specialization of
+ * @ref distributed_fast_spacetime_be_assembler::assemble_nearfield_matrix for
+ * p1p1 hypersingular operator */
 template<>
 void besthea::bem::distributed_fast_spacetime_be_assembler<
   besthea::bem::spacetime_heat_hs_kernel_antiderivative,

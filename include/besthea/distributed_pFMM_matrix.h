@@ -383,6 +383,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * Prints information about the underlying distributed spacetime cluster tree
    * and the operations which have to be applied.
    * @param[in] root_process  Process responsible for printing the information.
+   * @param[in] print_tree_information  If true, information is printed for the
+   *                                    distributed spacetime cluster tree
+   *                                    corresponding to the matrix.
    */
   void print_information(
     const int root_process, const bool print_tree_information = false );
@@ -490,8 +493,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] source_vector Global sources containing the once used for the
    *                          S2M operation.
    * @param[in] source_cluster  Considered spacetime cluster.
-   * @tparam dim  Used to select the component of the normal derivatives of the
-   *              Chebyshev polynomials (0,1 or 2).
+   * @param[in] dimension Used to select the component of the normal derivatives
+   *                      of the Chebyshev polynomials (0,1 or 2).
    * @todo Use buffers instead of reallocating sources and aux buffer in every
    * function call?
    */
@@ -709,15 +712,16 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     distributed_block_vector & output_vector ) const;
 
   /**
-   * Applies the L2T operation the given target cluster for p1 basis functions
-   * and a selected component of the normal derivative of the Chebyshev
-   * polynomials, which are used for the expansion (for hypersingular operator),
-   * and writes the result to the appropriate part of the output vector.
+   * Applies the L2T operation for the given target cluster for p1 basis
+   * functions and a selected component of the normal derivative of the
+   * Chebyshev polynomials, which are used for the expansion (for hypersingular
+   * operator), and writes the result to the appropriate part of the output
+   * vector.
    * @param[in] cluster Considered spacetime cluster.
+   * @param[in] dimension Used to select the component of the normal derivatives
+   *                      of the Chebyshev polynomials (0,1 or 2).
    * @param[in,out] output_vector Global result vector to which the result of
    *                              the operation is added.
-   * @tparam dim  Used to select the component of the normal derivatives of the
-   *              Chebyshev polynomials (0,1 or 2).
    * @todo Use buffers instead of reallocating targets and aux buffer in every
    * function call?
    */
@@ -914,12 +918,12 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * a spacetime cluster.
    * @param[in] source_cluster  Cluster for whose spatial component the
    *                            quadratures are computed.
+   * @param[in] dim Used to select the component of the normal derivatives of
+   *                the Chebyshev polynomials (0,1 or 2).
    * @param[out] T_normal_along_dim Full matrix where the quadratures are
    *                                stored. The nodes of the cluster vary along
    *                                the rows, the order of the polynomial along
    *                                the columns of the matrix.
-   * @tparam dim  Used to select the component of the normal derivatives of the
-   *              Chebyshev polynomials (0,1 or 2).
    */
   void compute_chebyshev_times_normal_quadrature_p1_along_dimension(
     const mesh::general_spacetime_cluster * source_cluster, const slou dim,
@@ -943,9 +947,10 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * functions for the temporal part of a spacetime cluster
    * @param[in] source_cluster  Cluster for whose temporal component the
    *                            quadratures are computed.
-   * @param[out] L  Full matrix where the quadratures are stored. The temporal
-   *                elements of the cluster vary along the columns, the order
-   *                of the polynomial along the rows of the matrix.
+   * @param[out] L_drv  Full matrix where the quadratures are stored. The
+   *                    temporal elements of the cluster vary along the columns,
+   *                    the order of the polynomial along the rows of the
+   *                    matrix.
    */
   void compute_lagrange_drv_quadrature(
     const mesh::general_spacetime_cluster * source_cluster,
@@ -1293,13 +1298,29 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     _n_subtask_times;  //!< Same as @ref _m_subtask_times for n-list
                        //!< subtasks.
 
-  mutable std::vector< std::vector< time_type::rep > > _mpi_send_m2l;
-  mutable std::vector< std::vector< time_type::rep > > _mpi_send_m_parent;
-  mutable std::vector< std::vector< time_type::rep > > _mpi_send_l_children;
+  mutable std::vector< std::vector< time_type::rep > >
+    _mpi_send_m2l;  //!< Contains a vector for each thread. The entries in these
+                    //!< vectors are the times when the sending of a group of
+                    //!< moments to another process for m2l-list operations has
+                    //!< started.
+  mutable std::vector< std::vector< time_type::rep > >
+    _mpi_send_m_parent;  //!< Same as @ref _mpi_send_m2l for sending moments
+                         //!< for m-list operations.
+  mutable std::vector< std::vector< time_type::rep > >
+    _mpi_send_l_children;  //!< Same as @ref _mpi_send_m2l for sending local
+                           //!< contributions for l-list operations.
 
-  mutable std::vector< std::vector< time_type::rep > > _mpi_recv_m2l;
-  mutable std::vector< std::vector< time_type::rep > > _mpi_recv_m_parent;
-  mutable std::vector< std::vector< time_type::rep > > _mpi_recv_l_children;
+  mutable std::vector< std::vector< time_type::rep > >
+    _mpi_recv_m2l;  //!< Contains a vector for each thread. The entries in these
+                    //!< vectors are the times when the thread has detected the
+                    //!< reception of a group of moments needed for m2l-list
+                    //!< operations.
+  mutable std::vector< std::vector< time_type::rep > >
+    _mpi_recv_m_parent;  //!< Same as @ref _mpi_recv_m2l for receiving moments
+                         //!< needed for m-list operations.
+  mutable std::vector< std::vector< time_type::rep > >
+    _mpi_recv_l_children;  //!< Same as @ref _mpi_recv_m2l for receiving local
+                           //!< contributions needed for l-list operations.
 
   /*!
    * Saves task duration measurement per thread in files (1 per MPI rank).

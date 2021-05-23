@@ -2689,7 +2689,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   std::cout << "apply: NOT IMPLEMENTED" << std::endl;
 }
 
-//! template specialization for single layer p0p0 matrix
+//! template specialization of @ref distributed_pFMM_matrix::apply for single
+//! layer p0p0 matrix
 template<>
 void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
@@ -2701,7 +2702,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
   apply_sl_dl( x, y, trans, alpha, beta );
 }
 
-//! template specialization for double layer p0p1 matrix
+//! template specialization of @ref distributed_pFMM_matrix::apply for double
+//! layer p0p1 matrix
 template<>
 void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
@@ -2713,7 +2715,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
   apply_sl_dl( x, y, trans, alpha, beta );
 }
 
-//! template specialization for double layer p1p0 matrix
+//! template specialization of @ref distributed_pFMM_matrix::apply for double
+//! layer p1p0 matrix
 template<>
 void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_adl_kernel_antiderivative,
@@ -2725,7 +2728,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
   apply_sl_dl( x, y, trans, alpha, beta );
 }
 
-//! template specialization for hypersingular p1p1 matrix
+//! template specialization of @ref distributed_pFMM_matrix::apply for
+//! hypersingular p1p1 matrix
 template<>
 void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_hs_kernel_antiderivative,
