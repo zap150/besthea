@@ -399,7 +399,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   /**
    * Adds elements to the cluster.
    * @param[in] cluster Cluster to be filled with elements.
-   * @param[in] fine_box_boubds Auxiliary structure which contains the bounds of
+   * @param[in] fine_box_bounds Auxiliary structure which contains the bounds of
    *                            the spatial boxes at the finest required spatial
    *                            level for all three spatial dimensions. It is
    *                            used to determine the bounds of the cluster for

@@ -1172,7 +1172,21 @@ class besthea::mesh::scheduling_time_cluster {
                                      //!< data races)
 };
 
+/**
+ * Struct that realizes a comparison (<) between pairs consisting of process ids
+ * (lo) and scheduling time clusters.
+ */
 struct compare_pairs_of_process_ids_and_scheduling_time_clusters {
+  /**
+   * Operator realizing the comparison < between pairs consisting of process ids
+   * (lo) and scheduling time clusters
+   *
+   * (a, I) < (b, J) if the process ids satisfy a < b or
+   * (a == b) and I's global index < J's global index
+   * @param[in] first_pair  First pair considered in the comparison
+   * @param[in] second_pair Second pair considered in the comparison
+   * @return True if first_pair is smaller than second pair.
+   */
   bool operator( )(
     const std::pair< lo, besthea::mesh::scheduling_time_cluster * > first_pair,
     const std::pair< lo, besthea::mesh::scheduling_time_cluster * >
