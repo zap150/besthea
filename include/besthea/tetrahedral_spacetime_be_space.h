@@ -65,7 +65,7 @@ class besthea::bem::tetrahedral_spacetime_be_space {
    */
   struct quadrature_wrapper {
     std::vector< sc, besthea::allocator_type< sc > >
-      _wx;  //!< Spatial quadrature weights
+      _w;  //!< Quadrature weights
     std::vector< sc, besthea::allocator_type< sc > >
       _x1_ref;  //!< First coordinates of quadrature nodes in the reference
                 //!< spatial element
@@ -83,7 +83,7 @@ class besthea::bem::tetrahedral_spacetime_be_space {
     std::vector< sc, besthea::allocator_type< sc > >
       _x3;  //!< Third coordinates of quadrature nodes in the spacetime element
     std::vector< sc, besthea::allocator_type< sc > >
-      _x4;  //!< Fourth coordinates of quadrature nodes in the spacetime element
+      _t;  //!< Fourth coordinates of quadrature nodes in the spacetime element
   };
 
  public:
@@ -134,8 +134,9 @@ class besthea::bem::tetrahedral_spacetime_be_space {
    * @param[in] order_rhs Triangular quadrature order to
    * assemble the right-hand side.
    */
-  void L2_projection( sc ( *f )( sc, sc, sc, sc ), vector_type & projection,
-    int order_matrix = 2, int order_rhs = 4 ) const;
+  void L2_projection(
+    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
+    vector_type & projection, int order_matrix = 2, int order_rhs = 4 ) const;
 
   /**
    * Returns the L2 relative error |f-approximation|/|f|.
@@ -144,7 +145,8 @@ class besthea::bem::tetrahedral_spacetime_be_space {
    * @param[in] order_rhs Triangular quadrature order to
    * assemble the right-hand side.
    */
-  sc L2_relative_error( sc ( *f )( sc, sc, sc, sc ),
+  sc L2_relative_error(
+    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
     const vector_type & approximation, int order_rhs = 4 ) const;
 
   /**
@@ -154,7 +156,8 @@ class besthea::bem::tetrahedral_spacetime_be_space {
    * @param[out] interpolation Interpolation vector.
    */
   void interpolation(
-    sc ( *f )( sc, sc, sc, sc ), vector_type & interpolation ) const;
+    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
+    vector_type & interpolation ) const;
 
   /**
    * Returns the l2 relative error |f-approximation|/|f|.

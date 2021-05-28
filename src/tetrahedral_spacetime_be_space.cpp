@@ -33,6 +33,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/quadrature.h"
 #include "besthea/spacetime_basis_tetra_p1.h"
 #include "besthea/sparse_matrix.h"
+#include "besthea/tetrahedral_spacetime_be_identity.h"
 
 template< class basis_type >
 besthea::bem::tetrahedral_spacetime_be_space<
@@ -45,14 +46,6 @@ besthea::bem::tetrahedral_spacetime_be_space<
   basis_type >::~tetrahedral_spacetime_be_space( ) {
 }
 
-template< class basis_type >
-void besthea::bem::tetrahedral_spacetime_be_space< basis_type >::interpolation(
-  [[maybe_unused]] sc ( *f )( sc, sc, sc, sc ),
-  vector_type & /*interpolation*/ ) const {
-  std::cout << "Only use specialized templates in descendant classes!"
-            << std::endl;
-}
-
 /**
  * Projects a function to the piecewise linear finite element space.
  * @param[in] f Function to be projected.
@@ -60,17 +53,20 @@ void besthea::bem::tetrahedral_spacetime_be_space< basis_type >::interpolation(
  */
 template<>
 void besthea::bem::tetrahedral_spacetime_be_space<
-  besthea::bem::spacetime_basis_tetra_p1 >::interpolation( sc ( *f )( sc, sc,
-                                                             sc, sc ),
-  vector_type & interpolation ) const {
+  besthea::bem::spacetime_basis_tetra_p1 >::
+  interpolation(
+    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
+    vector_type & interpolation ) const {
   lo n_nodes = _mesh->get_n_nodes( );
 
   interpolation.resize( n_nodes );
   linear_algebra::coordinates< 4 > x;
+  linear_algebra::coordinates< 3 > n;
 
   for ( lo i_node = 0; i_node < n_nodes; ++i_node ) {
     _mesh->get_node( i_node, x );
-    interpolation.set( i_node, f( x[ 0 ], x[ 1 ], x[ 2 ], x[ 3 ] ) );
+    _mesh->get_spatial_nodal_normal( i_node, n );
+    interpolation.set( i_node, f( x[ 0 ], x[ 1 ], x[ 2 ], n, x[ 3 ] ) );
   }
 }
 
@@ -101,128 +97,136 @@ void besthea::bem::tetrahedral_spacetime_be_space<
   my_quadrature._x1_ref = quadrature::tetrahedron_x1( order_rhs );
   my_quadrature._x2_ref = quadrature::tetrahedron_x2( order_rhs );
   my_quadrature._x3_ref = quadrature::tetrahedron_x3( order_rhs );
-  my_quadrature._wx = quadrature::tetrahedron_w( order_rhs );
+  my_quadrature._w = quadrature::tetrahedron_w( order_rhs );
 
-  lo size = my_quadrature._wx.size( );
+  lo size = my_quadrature._w.size( );
   my_quadrature._x1.resize( size );
   my_quadrature._x2.resize( size );
   my_quadrature._x3.resize( size );
-  my_quadrature._x4.resize( size );
+  my_quadrature._t.resize( size );
 }
 
 template< class basis_type >
 void besthea::bem::tetrahedral_spacetime_be_space< basis_type >::L2_projection(
-  sc ( *f )( sc, sc, sc, sc ), vector_type & projection, int order_matrix,
-  int order_rhs ) const {
-  /*
-besthea::linear_algebra::sparse_matrix M;
-besthea::bem::fe_identity identity( *this, *this, order_matrix );
-identity.assemble( M );
+  sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
+  vector_type & projection, int order_matrix, int order_rhs ) const {
+  besthea::linear_algebra::sparse_matrix M;
+  besthea::bem::tetrahedral_spacetime_be_identity identity(
+    *this, *this, order_matrix );
+  identity.assemble( M );
 
-lo global_dim = _basis.dimension_global( );
-besthea::linear_algebra::vector rhs( global_dim, true );
+  lo global_dim = this->_basis.dimension_global( );
+  besthea::linear_algebra::vector rhs( global_dim, true );
 
-lo n_elements = _mesh->get_n_elements( );
+  lo n_elements = _mesh->get_n_elements( );
 
-projection.resize( global_dim );
+  projection.resize( global_dim );
 
-lo local_dim = _basis.dimension_local( );
-std::vector< lo > l2g( local_dim );
+  lo local_dim = this->_basis.dimension_local( );
+  std::vector< lo > l2g( local_dim );
 
-linear_algebra::coordinates< 3 > x1, x2, x3, x4;
-sc area, basis_val, fun_val;
+  linear_algebra::coordinates< 4 > x1, x2, x3, x4;
+  linear_algebra::coordinates< 3 > n;
+  sc area, basis_val, fun_val;
+  sc cg_eps;
+  lo n_iter;
 
-typename fe_space< basis_type >::quadrature_wrapper my_quadrature;
-init_quadrature( order_rhs, my_quadrature );
-lo size_x = my_quadrature._wx.size( );
-sc * x1_ref = my_quadrature._x1_ref.data( );
-sc * x2_ref = my_quadrature._x2_ref.data( );
-sc * x3_ref = my_quadrature._x3_ref.data( );
-sc * wx = my_quadrature._wx.data( );
-sc * x1_mapped = my_quadrature._x1.data( );
-sc * x2_mapped = my_quadrature._x2.data( );
-sc * x3_mapped = my_quadrature._x3.data( );
-sc * rhs_data = rhs.data( );
-lo * l2g_data = l2g.data( );
+  typename tetrahedral_spacetime_be_space< basis_type >::quadrature_wrapper
+    my_quadrature;
+  this->init_quadrature( order_rhs, my_quadrature );
+  lo size = my_quadrature._w.size( );
+  sc * x1_ref = my_quadrature._x1_ref.data( );
+  sc * x2_ref = my_quadrature._x2_ref.data( );
+  sc * x3_ref = my_quadrature._x3_ref.data( );
+  sc * w = my_quadrature._w.data( );
+  sc * x1_mapped = my_quadrature._x1.data( );
+  sc * x2_mapped = my_quadrature._x2.data( );
+  sc * x3_mapped = my_quadrature._x3.data( );
+  sc * t_mapped = my_quadrature._t.data( );
+  sc * rhs_data = rhs.data( );
+  lo * l2g_data = l2g.data( );
 
-for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
-  _mesh->get_nodes( i_elem, x1, x2, x3, x4 );
-  tetrahedron_to_geometry( x1, x2, x3, x4, my_quadrature );
-  _basis.local_to_global( i_elem, l2g );
-  area = _mesh->area( i_elem );
+  for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
+    _mesh->get_nodes( i_elem, x1, x2, x3, x4 );
+    this->tetrahedron_to_geometry( x1, x2, x3, x4, my_quadrature );
+    this->_basis.local_to_global( i_elem, l2g );
+    _mesh->get_spatial_normal( i_elem, n );
+    area = _mesh->area( i_elem );
 
-  for ( lo i_x = 0; i_x < size_x; ++i_x ) {
-    fun_val = f( x1_mapped[ i_x ], x2_mapped[ i_x ], x3_mapped[ i_x ] )
-      * wx[ i_x ] * area;
-    for ( lo i_loc = 0; i_loc < local_dim; ++i_loc ) {
-      basis_val = _basis.evaluate(
-        i_elem, i_loc, x1_ref[ i_x ], x2_ref[ i_x ], x3_ref[ i_x ] );
-      rhs_data[ l2g_data[ i_loc ] ] += basis_val * fun_val;
+    for ( lo i_x = 0; i_x < size; ++i_x ) {
+      fun_val = f( x1_mapped[ i_x ], x2_mapped[ i_x ], x3_mapped[ i_x ], n,
+                  t_mapped[ i_x ] )
+        * w[ i_x ] * area;
+      for ( lo i_loc = 0; i_loc < local_dim; ++i_loc ) {
+        basis_val = this->_basis.evaluate(
+          i_elem, i_loc, x1_ref[ i_x ], x2_ref[ i_x ], x3_ref[ i_x ] );
+        rhs_data[ l2g_data[ i_loc ] ] += basis_val * fun_val;
+      }
     }
   }
-}
-
-sc cg_eps = 1e-6;
-lo n_iter = 200;
-M.eigen_cg_solve( rhs, projection, cg_eps, n_iter );
-*/
+  cg_eps = 1e-6;
+  n_iter = 200;
+  M.eigen_cg_solve( rhs, projection, cg_eps, n_iter );
 }
 
 template< class basis_type >
 sc besthea::bem::tetrahedral_spacetime_be_space<
-  basis_type >::L2_relative_error( sc ( *f )( sc, sc, sc, sc ),
+  basis_type >::L2_relative_error( sc ( *f )( sc, sc, sc,
+                                     const linear_algebra::coordinates< 3 > &,
+                                     sc ),
   const vector_type & approximation, int order_rhs ) const {
-  /*
-lo n_elements = _mesh->get_n_elements( );
+  lo n_elements = _mesh->get_n_elements( );
 
-lo local_dim = _basis.dimension_local( );
-std::vector< lo > l2g( local_dim );
+  lo local_dim = _basis.dimension_local( );
+  std::vector< lo > l2g( local_dim );
 
-linear_algebra::coordinates< 3 > x1, x2, x3, x4;
-sc area, basis_val, fun_val;
-sc l2_err = 0.0;
-sc l2_norm = 0.0;
-sc local_value;
-sc absdiff, absf;
+  linear_algebra::coordinates< 4 > x1, x2, x3, x4;
+  linear_algebra::coordinates< 3 > n;
+  sc area, basis_val, fun_val;
+  sc l2_err = 0.0;
+  sc l2_norm = 0.0;
+  sc local_value;
+  sc absdiff, absf;
 
-typename fe_space< basis_type >::quadrature_wrapper my_quadrature;
-this->init_quadrature( order_rhs, my_quadrature );
-lo size_x = my_quadrature._wx.size( );
-sc * x1_ref = my_quadrature._x1_ref.data( );
-sc * x2_ref = my_quadrature._x2_ref.data( );
-sc * x3_ref = my_quadrature._x3_ref.data( );
-sc * wx = my_quadrature._wx.data( );
-sc * x1_mapped = my_quadrature._x1.data( );
-sc * x2_mapped = my_quadrature._x2.data( );
-sc * x3_mapped = my_quadrature._x3.data( );
-lo * l2g_data = l2g.data( );
-const sc * approximation_data = approximation.data( );
+  quadrature_wrapper my_quadrature;
+  this->init_quadrature( order_rhs, my_quadrature );
+  lo size_x = my_quadrature._w.size( );
+  sc * x1_ref = my_quadrature._x1_ref.data( );
+  sc * x2_ref = my_quadrature._x2_ref.data( );
+  sc * x3_ref = my_quadrature._x3_ref.data( );
+  sc * w = my_quadrature._w.data( );
+  sc * x1_mapped = my_quadrature._x1.data( );
+  sc * x2_mapped = my_quadrature._x2.data( );
+  sc * x3_mapped = my_quadrature._x3.data( );
+  sc * t_mapped = my_quadrature._t.data( );
+  lo * l2g_data = l2g.data( );
+  const sc * approximation_data = approximation.data( );
 
-for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
-  _mesh->get_nodes( i_elem, x1, x2, x3, x4 );
-  this->tetrahedron_to_geometry( x1, x2, x3, x4, my_quadrature );
-  this->_basis.local_to_global( i_elem, l2g );
-  area = _mesh->area( i_elem );
-  for ( lo i_x = 0; i_x < size_x; ++i_x ) {
-    local_value = 0.0;
-    for ( lo i_loc = 0; i_loc < local_dim; ++i_loc ) {
-      basis_val = _basis.evaluate(
-        i_elem, i_loc, x1_ref[ i_x ], x2_ref[ i_x ], x3_ref[ i_x ] );
-      local_value += approximation_data[ l2g_data[ i_loc ] ] * basis_val;
+  for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
+    _mesh->get_nodes( i_elem, x1, x2, x3, x4 );
+    _mesh->get_spatial_normal( i_elem, n );
+    this->tetrahedron_to_geometry( x1, x2, x3, x4, my_quadrature );
+    this->_basis.local_to_global( i_elem, l2g );
+    area = _mesh->area( i_elem );
+    for ( lo i_x = 0; i_x < size_x; ++i_x ) {
+      local_value = 0.0;
+      for ( lo i_loc = 0; i_loc < local_dim; ++i_loc ) {
+        basis_val = _basis.evaluate(
+          i_elem, i_loc, x1_ref[ i_x ], x2_ref[ i_x ], x3_ref[ i_x ] );
+        local_value += approximation_data[ l2g_data[ i_loc ] ] * basis_val;
+      }
+
+      fun_val = f( x1_mapped[ i_x ], x2_mapped[ i_x ], x3_mapped[ i_x ], n,
+        t_mapped[ i_x ] );
+      absdiff = std::abs( fun_val - local_value );
+      absf = std::abs( fun_val );
+      l2_err += absdiff * absdiff * w[ i_x ] * area;
+      l2_norm += absf * absf * w[ i_x ] * area;
     }
-
-    fun_val = f( x1_mapped[ i_x ], x2_mapped[ i_x ], x3_mapped[ i_x ] );
-    absdiff = std::abs( fun_val - local_value );
-    absf = std::abs( fun_val );
-    l2_err += absdiff * absdiff * wx[ i_x ] * area;
-    l2_norm += absf * absf * wx[ i_x ] * area;
   }
-}
 
-sc result = std::sqrt( l2_err / l2_norm );
-return result;
-*/
-  return 0.0;
+  sc result = std::sqrt( l2_err / l2_norm );
+  return result;
 }
 
 template< class basis_type >
@@ -238,12 +242,12 @@ void besthea::bem::tetrahedral_spacetime_be_space< basis_type >::
   sc * x1_mapped = my_quadrature._x1.data( );
   sc * x2_mapped = my_quadrature._x2.data( );
   sc * x3_mapped = my_quadrature._x3.data( );
-  sc * x4_mapped = my_quadrature._x4.data( );
+  sc * t_mapped = my_quadrature._t.data( );
 
-  lo size = my_quadrature._wx.size( );
+  lo size = my_quadrature._w.size( );
 
-#pragma omp simd aligned(                                            \
-  x1_mapped, x2_mapped, x3_mapped, x4_mapped, x1_ref, x2_ref, x3_ref \
+#pragma omp simd aligned(                                           \
+  x1_mapped, x2_mapped, x3_mapped, t_mapped, x1_ref, x2_ref, x3_ref \
   : DATA_ALIGN ) simdlen( DATA_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     x1_mapped[ i ] = x1[ 0 ] + ( x2[ 0 ] - x1[ 0 ] ) * x1_ref[ i ]
@@ -255,7 +259,7 @@ void besthea::bem::tetrahedral_spacetime_be_space< basis_type >::
     x3_mapped[ i ] = x1[ 2 ] + ( x2[ 2 ] - x1[ 2 ] ) * x1_ref[ i ]
       + ( x3[ 2 ] - x1[ 2 ] ) * x2_ref[ i ]
       + ( x4[ 2 ] - x1[ 2 ] ) * x3_ref[ i ];
-    x4_mapped[ i ] = x1[ 3 ] + ( x2[ 3 ] - x1[ 3 ] ) * x1_ref[ i ]
+    t_mapped[ i ] = x1[ 3 ] + ( x2[ 3 ] - x1[ 3 ] ) * x1_ref[ i ]
       + ( x3[ 3 ] - x1[ 3 ] ) * x2_ref[ i ]
       + ( x4[ 3 ] - x1[ 3 ] ) * x3_ref[ i ];
   }

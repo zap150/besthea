@@ -62,13 +62,17 @@ class besthea::mesh::tetrahedral_spacetime_mesh : public besthea::mesh::mesh {
   /**
    * Constructor.
    */
+  /*
   tetrahedral_spacetime_mesh( );
+  */
 
   /**
    * Constructing mesh from a file.
    * @param[in] file Path to the file.
    */
+  /*
   tetrahedral_spacetime_mesh( const std::string & file );
+  */
 
   /**
    * Constructing mesh from a spacetime tensor mesh.
@@ -97,7 +101,9 @@ class besthea::mesh::tetrahedral_spacetime_mesh : public besthea::mesh::mesh {
    * Loads mesh from a file.
    * @param[in] file File name.
    */
+  /*
   bool load( const std::string & file );
+  */
 
   /**
    * Returns area (volume) of a single element
@@ -249,6 +255,44 @@ class besthea::mesh::tetrahedral_spacetime_mesh : public besthea::mesh::mesh {
   }
 
   /**
+   * Returns element normal vector.
+   * @param[in] i_element Index of the element.
+   * @param[out] n Normal indices.
+   */
+  void get_spatial_normal(
+    lo i_element, linear_algebra::coordinates< 3 > & n ) const {
+    n[ 0 ] = _normals[ 3 * i_element ];
+    n[ 1 ] = _normals[ 3 * i_element + 1 ];
+    n[ 2 ] = _normals[ 3 * i_element + 2 ];
+  }
+
+  /**
+   * Returns element normal vector.
+   * @param[in] i_node Index of the node.
+   * @param[out] n Normal indices.
+   */
+  void get_spatial_nodal_normal(
+    lo i_node, linear_algebra::coordinates< 3 > & n ) const {
+    n[ 0 ] = n[ 1 ] = n[ 2 ] = 0.0;
+    lo size = _node_to_elements[ i_node ].size( );
+    linear_algebra::coordinates< 3 > nn;
+    lo i_elem;
+
+    for ( lo i = 0; i < size; ++i ) {
+      i_elem = _node_to_elements[ i_node ][ i ];
+      get_spatial_normal( i_elem, nn );
+      n[ 0 ] += _areas[ i_elem ] * nn[ 0 ];
+      n[ 1 ] += _areas[ i_elem ] * nn[ 1 ];
+      n[ 2 ] += _areas[ i_elem ] * nn[ 2 ];
+    }
+
+    sc norm = std::sqrt( n[ 0 ] * n[ 0 ] + n[ 1 ] * n[ 1 ] + n[ 2 ] * n[ 2 ] );
+    n[ 0 ] /= norm;
+    n[ 1 ] /= norm;
+    n[ 2 ] /= norm;
+  }
+
+  /**
    * Scales the mesh around its spatial centroid (scales only the spatial
    * coordinates).
    * @param[in] factor Scaling multiplier.
@@ -310,9 +354,16 @@ class besthea::mesh::tetrahedral_spacetime_mesh : public besthea::mesh::mesh {
   void init_edges( );
 
   /**
+   * Initializes the mapping from nodes to elements.
+   */
+  void init_node_to_elements( );
+
+  /**
    * Initializes faces.
    */
+  /*
   void init_faces( );
+  */
 
   lo _n_nodes;               //!< number of nodes
   std::vector< sc > _nodes;  //!< coordinates of nodes
@@ -326,9 +377,13 @@ class besthea::mesh::tetrahedral_spacetime_mesh : public besthea::mesh::mesh {
   std::vector< lo > _edges;             //!< indices into #_nodes
   std::vector< lo > _element_to_edges;  //!< indices into #_edges
 
-  lo _n_faces;                          //!< number of faces
-  std::vector< lo > _faces;             //!< indices into #_nodes
-  std::vector< lo > _element_to_faces;  //!< indices into #_faces
+  /*
+    lo _n_faces;                          //!< number of faces
+    std::vector< lo > _faces;             //!< indices into #_nodes
+    std::vector< lo > _element_to_faces;  //!< indices into #_faces
+  */
+
+  std::vector< sc > _normals;  //!< spatial normals (temporal part is zero)
 };
 
 #endif /* INCLUDE_BESTHEA_TETRAHEDRAL_SPACETIME_MESH_H_ */
