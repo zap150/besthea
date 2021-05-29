@@ -92,7 +92,9 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::L2_projection(
   lo * l2g_data = l2g.data( );
 
   for ( lo d = 0; d < n_timesteps; ++d ) {
-    this->line_to_time( d, timestep, my_quadrature );
+    sc t_start, t_end;
+    _spacetime_mesh.get_temporal_nodes( d, &t_start, &t_end );
+    this->line_to_time( t_start, t_end, my_quadrature );
     for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
       _spacetime_mesh.get_spatial_nodes( i_elem, x1, x2, x3 );
       this->triangle_to_geometry( x1, x2, x3, my_quadrature );
@@ -156,7 +158,9 @@ sc besthea::bem::uniform_spacetime_be_space< basis_type >::L2_relative_error(
   const sc * approximation_data = nullptr;
 
   for ( lo d = 0; d < n_timesteps; ++d ) {
-    this->line_to_time( d, timestep, my_quadrature );
+    sc t_start, t_end;
+    _spacetime_mesh.get_temporal_nodes( d, &t_start, &t_end );
+    this->line_to_time( t_start, t_end, my_quadrature );
     approximation_data = approximation.get_block( d ).data( );
     for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
       _spacetime_mesh.get_spatial_nodes( i_elem, x1, x2, x3 );

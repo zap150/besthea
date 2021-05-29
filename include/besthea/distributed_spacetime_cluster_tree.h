@@ -152,6 +152,13 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   }
 
   /**
+   * Returns the associated MPI communicator.
+   */
+  const MPI_Comm * get_MPI_comm( ) const {
+    return _comm;
+  }
+
+  /**
    * Prints levels of the tree.
    */
   void print( ) {
