@@ -3954,6 +3954,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     associated_spacetime_targets
     = cluster->get_associated_spacetime_clusters( );
   lou n_associated_leaves = cluster->get_n_associated_leaves( );
+
+  //std::vector<lo> permutation = _permutation_lists.at(cluster);
+
   // there is an implicit taskgroup after this taskloop
 #pragma omp taskloop shared( output_vector, _clusterwise_nearfield_matrices )
   for ( lou i = 0; i < n_associated_leaves; ++i ) {
@@ -3970,6 +3973,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     // apply the nearfield operations for all the clusters in this list.
     std::vector< general_spacetime_cluster * > * spacetime_nearfield_list
       = current_spacetime_target->get_nearfield_list( );
+      
     for ( lou src_index = 0; src_index < spacetime_nearfield_list->size( );
           ++src_index ) {
       general_spacetime_cluster * current_spacetime_source
@@ -3985,6 +3989,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       // apply the nearfield matrix and add the result to local_result
       current_block->apply( local_sources, local_result, trans, 1.0, 1.0 );
     }
+    
     // add the local result to the output vector
     output_vector.add_local_part< target_space >(
       current_spacetime_target, local_result );
@@ -4262,6 +4267,66 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     outfile.close( );
   }
 }
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::sort_clusters_in_nearfield() {
+    
+    lo counter = 0;
+    std::vector< lo > total_sizes_global( _n_list.size(), 0 );
+    for (auto it: _n_list) {
+      std::vector< general_spacetime_cluster * > *
+        associated_spacetime_targets 
+        = it->get_associated_spacetime_clusters( );
+      lou n_associated_leaves = it->get_n_associated_leaves( );
+      std::vector< lo > total_sizes( n_associated_leaves, 0 );
+      for ( lou i = 0; i < n_associated_leaves; ++i ) {
+        general_spacetime_cluster * current_spacetime_target
+          = ( *associated_spacetime_targets )[ i ];
+        std::vector< general_spacetime_cluster * > * spacetime_nearfield_list
+          = current_spacetime_target->get_nearfield_list( );
+        for ( lou src_index = 0; src_index < spacetime_nearfield_list->size( );
+        ++src_index ) {
+          full_matrix * current_block = _clusterwise_nearfield_matrices.at(
+            current_spacetime_target )[ src_index ];
+          lo n_rows = current_block->get_n_rows();
+          lo n_cols = current_block->get_n_columns();
+          total_sizes[i] += n_rows * n_cols;
+          total_sizes_global[counter] += n_rows * n_cols;
+        }
+      }
+      
+      // sort within nearfield cluster
+      std::vector<lo> permutation_index(total_sizes.size(), 0);
+        for (lo i = 0 ; i != permutation_index.size() ; i++) {
+          permutation_index[i] = i;
+        }
+      sort(permutation_index.begin(), permutation_index.end(),
+        [&](const int& a, const int& b) {
+          return (total_sizes[a] > total_sizes[b]);
+        }
+      );
+
+      std::vector< general_spacetime_cluster * > aux_copy(n_associated_leaves); 
+      for (lou i = 0 ; i < n_associated_leaves; ++i) {
+        aux_copy[ i ] = (*associated_spacetime_targets)[i];
+      }
+      
+      for ( lou i = 0; i < n_associated_leaves; ++i ) {
+        (*associated_spacetime_targets)[ i ] = aux_copy[ permutation_index[ i ] ];
+      }
+        
+      //_permutation_lists.insert({it, permutation_index});
+      
+      it->set_total_matrix_size( total_sizes_global[counter] );
+      ++counter;
+    }
+      // sort nearfield clusters
+    _n_list.sort([]( mesh::scheduling_time_cluster * lhs, mesh::scheduling_time_cluster * rhs ) {
+          return ( lhs->get_total_matrix_size( ) > rhs->get_total_matrix_size( ) );
+      }
+    );
+  }
 
 template class besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
