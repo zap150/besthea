@@ -83,6 +83,7 @@ void besthea::bem::distributed_spacetime_be_identity< test_space_type,
         y.get_block( local_start_idx + local_time_index ), trans,
         alpha * this->_timesteps[ local_time_index ], beta );
     }
+    y.synchronize_shared_parts( );
   } else {
     std::cout
       << "ERROR: Matrix not assembled correctly. Please use assemble routine"

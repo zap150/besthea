@@ -155,6 +155,78 @@ void besthea::bem::spacetime_be_identity< test_space_type,
   }
 }
 
+template<>
+void besthea::bem::spacetime_be_identity<
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 > >::assemble_timesteps( ) {
+  std::cout << "Assembly of timesteps not implemented for class "
+               "spacetime_be_identity and distributed spacetime be spaces. "
+               "Please use distributed_spacetime_be_identity"
+            << std::endl;
+}
+
+template<>
+void besthea::bem::spacetime_be_identity<
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >::assemble_timesteps( ) {
+  std::cout << "Assembly of timesteps not implemented for class "
+               "spacetime_be_identity and distributed spacetime be spaces. "
+               "Please use distributed_spacetime_be_identity"
+            << std::endl;
+}
+
+template<>
+void besthea::bem::spacetime_be_identity<
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >::assemble_timesteps( ) {
+  std::cout << "Assembly of timesteps not implemented for class "
+               "spacetime_be_identity and distributed spacetime be spaces. "
+               "Please use distributed_spacetime_be_identity"
+            << std::endl;
+}
+
+template<>
+void besthea::bem::spacetime_be_identity<
+  const besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 >,
+  const besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 > >::assemble_timesteps( ) {
+  std::cout << "Assembly of timesteps not implemented for class "
+               "spacetime_be_identity and distributed spacetime be spaces. "
+               "Please use distributed_spacetime_be_identity"
+            << std::endl;
+}
+
+template<>
+void besthea::bem::spacetime_be_identity<
+  const besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 >,
+  const besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >::assemble_timesteps( ) {
+  std::cout << "Assembly of timesteps not implemented for class "
+               "spacetime_be_identity and distributed spacetime be spaces. "
+               "Please use distributed_spacetime_be_identity"
+            << std::endl;
+}
+
+template<>
+void besthea::bem::spacetime_be_identity<
+  const besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 >,
+  const besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >::assemble_timesteps( ) {
+  std::cout << "Assembly of timesteps not implemented for class "
+               "spacetime_be_identity and distributed spacetime be spaces. "
+               "Please use distributed_spacetime_be_identity"
+            << std::endl;
+}
+
 template< class test_space_type, class trial_space_type >
 void besthea::bem::spacetime_be_identity< test_space_type,
   trial_space_type >::apply( const block_vector_type & x, block_vector_type & y,
@@ -203,36 +275,36 @@ template class besthea::bem::spacetime_be_identity<
   const besthea::bem::uniform_spacetime_be_space<
     besthea::bem::basis_tri_p1 > >;
 
-// // Needed for distributed versions
-// template class besthea::bem::spacetime_be_identity<
-//   besthea::bem::distributed_fast_spacetime_be_space<
-//     besthea::bem::basis_tri_p0 >,
-//   besthea::bem::distributed_fast_spacetime_be_space<
-//     besthea::bem::basis_tri_p0 > >;
-// template class besthea::bem::spacetime_be_identity<
-//   besthea::bem::distributed_fast_spacetime_be_space<
-//     besthea::bem::basis_tri_p0 >,
-//   besthea::bem::distributed_fast_spacetime_be_space<
-//     besthea::bem::basis_tri_p1 > >;
-// template class besthea::bem::spacetime_be_identity<
-//   besthea::bem::distributed_fast_spacetime_be_space<
-//     besthea::bem::basis_tri_p1 >,
-//   besthea::bem::distributed_fast_spacetime_be_space<
-//     besthea::bem::basis_tri_p1 > >;
+// Needed for distributed versions
+template class besthea::bem::spacetime_be_identity<
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 > >;
+template class besthea::bem::spacetime_be_identity<
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >;
+template class besthea::bem::spacetime_be_identity<
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >;
 
-// // Needed for L2 projection which is const
-// template class besthea::bem::spacetime_be_identity<
-//   const besthea::bem::distributed_fast_spacetime_be_space<
-//     besthea::bem::basis_tri_p0 >,
-//   const besthea::bem::distributed_fast_spacetime_be_space<
-//     besthea::bem::basis_tri_p0 > >;
-// template class besthea::bem::spacetime_be_identity<
-//   const besthea::bem::distributed_fast_spacetime_be_space<
-//     besthea::bem::basis_tri_p0 >,
-//   const besthea::bem::distributed_fast_spacetime_be_space<
-//     besthea::bem::basis_tri_p1 > >;
-// template class besthea::bem::spacetime_be_identity<
-//   const besthea::bem::distributed_fast_spacetime_be_space<
-//     besthea::bem::basis_tri_p1 >,
-//   const besthea::bem::distributed_fast_spacetime_be_space<
-//     besthea::bem::basis_tri_p1 > >;
+// Needed for L2 projection with const spaces
+template class besthea::bem::spacetime_be_identity<
+  const besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 >,
+  const besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 > >;
+template class besthea::bem::spacetime_be_identity<
+  const besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 >,
+  const besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >;
+template class besthea::bem::spacetime_be_identity<
+  const besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 >,
+  const besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >;

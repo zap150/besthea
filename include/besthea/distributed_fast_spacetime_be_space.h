@@ -90,9 +90,6 @@ class besthea::bem::distributed_fast_spacetime_be_space
   using s_mesh_type
     = besthea::mesh::triangular_surface_mesh;        //!< Spatial mesh type.
   using t_mesh_type = besthea::mesh::temporal_mesh;  //!< Temporal mesh type.
-  using block_vector_type
-    = besthea::linear_algebra::distributed_block_vector;  //!< Block vector
-                                                          //!< type.
 
  public:
   /**
@@ -151,7 +148,7 @@ class besthea::bem::distributed_fast_spacetime_be_space
    */
   virtual void L2_projection(
     sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-    block_vector_type & projection, int order_matrix = 2,
+    linear_algebra::distributed_block_vector & projection, int order_matrix = 2,
     int order_rhs_spatial = 5, int order_rhs_temporal = 4 ) const override;
 
   /**
@@ -166,8 +163,8 @@ class besthea::bem::distributed_fast_spacetime_be_space
    */
   virtual sc L2_relative_error(
     sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-    const block_vector_type & approximation, int order_rhs_spatial = 5,
-    int order_rhs_temporal = 4 ) const override;
+    const linear_algebra::distributed_block_vector & approximation,
+    int order_rhs_spatial = 5, int order_rhs_temporal = 4 ) const override;
 
   /**
    * Projects a function to the boundary element space. ONLY USE SPECIALIZED

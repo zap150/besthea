@@ -117,16 +117,18 @@ void besthea::bem::spacetime_be_space< basis_type, block_vector_type >::
 
 template< class basis_type, class block_vector_type >
 void besthea::bem::spacetime_be_space< basis_type,
-  block_vector_type >::line_to_time( lo d, sc timestep,
-  quadrature_wrapper & my_quadrature ) const {
+  block_vector_type >::line_to_time( sc time_interval_begin,
+  sc time_interval_end, quadrature_wrapper & my_quadrature ) const {
   const sc * t_ref = my_quadrature._t_ref.data( );
   sc * t_mapped = my_quadrature._t.data( );
 
   lo size = my_quadrature._wt.size( );
 
+  sc interval_length = time_interval_end - time_interval_begin;
+
 #pragma omp simd aligned( t_mapped, t_ref ) simdlen( DATA_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
-    t_mapped[ i ] = ( t_ref[ i ] + d ) * timestep;
+    t_mapped[ i ] = time_interval_begin + interval_length * t_ref[ i ];
   }
 }
 
