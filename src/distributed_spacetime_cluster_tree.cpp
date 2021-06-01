@@ -42,7 +42,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   distributed_spacetime_cluster_tree(
     distributed_spacetime_tensor_mesh & spacetime_mesh, lo levels,
     lo n_min_elems, sc st_coeff, sc alpha, slou spatial_nearfield_limit,
-    MPI_Comm * comm )
+    MPI_Comm * comm, lo & status )
   : _max_levels( levels ),
     _real_max_levels( 0 ),
     _spacetime_mesh( spacetime_mesh ),
@@ -109,12 +109,42 @@ besthea::mesh::distributed_spacetime_cluster_tree::
 
   std::vector< lo > elems_in_clusters;
 
-  build_tree( );
+  build_tree( status );
 
+  // check whether some process returned status 1 during tree construction
+  MPI_Allreduce( MPI_IN_PLACE, &status, 1, get_index_type< lo >::MPI_LO( ),
+    MPI_MAX, *_comm );
+  if ( status == 1 ) {
+    if ( _my_rank == 0 ) {
+      std::cout << "Error in space-time tree construction during assignment of "
+                   "elements to clusters."
+                << std::endl;
+      std::cout << "Possible reason: Too many MPI processes for a too coarse "
+                   "space-time mesh."
+                << std::endl;
+    }
+    return;
+  }
+  // if not, check whether the depth of the space-time tree is greater than or
+  // equal to the depth of the distribution tree. If not, abort too
   _max_levels = std::min( _max_levels, _real_max_levels );
-
   // note: _real_max_levels is global, since communication takes place in build
   // tree routine
+  if ( _max_levels < get_distribution_tree( )->get_levels( ) ) {
+    status = 2;
+    if ( _my_rank == 0 ) {
+      std::cout << "Error: Depth of local spacetime tree (" << _max_levels - 1
+                << ") is less than depth of local distribution tree ("
+                << get_distribution_tree( )->get_levels( ) - 1 << ")!"
+                << std::endl;
+    }
+    return;
+  }
+
+  // otherwise, continue with the tree construction
+  // collect the leaves in the local part of the spacetime cluster
+  collect_local_leaves( *_root );
+
   _spatial_paddings.resize( _max_levels );
   _spatial_paddings.shrink_to_fit( );
 
@@ -148,11 +178,33 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     _spatial_paddings.size( ), get_scalar_type< sc >::MPI_SC( ), MPI_MAX,
     *_comm );
 
+  // reduce the distribution tree locally: Remove clusters whose essential
+  // status is at least 2 (essential in the distribution and space-time tree),
+  // but for which there exist no associated space-time clusters. Associate
+  // scheduling clusters and space time clusters temporarily for that purpose.
+  associate_scheduling_clusters_and_space_time_clusters( );
+  tree_structure * distribution_tree = get_distribution_tree( );
+  distribution_tree->remove_clusters_with_no_association(
+    *distribution_tree->get_root( ) );
+  // reset the nearfield, send and interaction lists of all scheduling time
+  // clusters.
+  distribution_tree->clear_nearfield_send_and_interaction_lists(
+    distribution_tree->get_root( ) );
+  distribution_tree->set_nearfield_interaction_and_send_list(
+    *distribution_tree->get_root( ) );
+  // clear the lists of cluster associations. they are reset again below after
+  // the distribution tree is locally extended.
+  distribution_tree->clear_lists_of_associated_clusters(
+    *distribution_tree->get_root( ) );
+
   // extend the locally essential distribution tree:
   // first determine clusters in the distribution tree for which the extension
   // cannot be done locally. in addition, determine scheduling time clusters
   // where the leaf information of the associated spacetime clusters is
-  // required, but not available (for later)
+  // required, but not available (necessary for correct execution of FMM)
+  // NOTE: the leaf information is available for all space-time clusters whose
+  // level is smaller than the depth of the scheduling tree, due to the joint
+  // assembly in the build_tree routine
   std::set< std::pair< lo, scheduling_time_cluster * >,
     compare_pairs_of_process_ids_and_scheduling_time_clusters >
     subtree_send_list;
@@ -165,7 +217,6 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   std::set< std::pair< lo, scheduling_time_cluster * >,
     compare_pairs_of_process_ids_and_scheduling_time_clusters >
     leaf_info_receive_list;
-  tree_structure * distribution_tree = get_distribution_tree( );
   distribution_tree->determine_cluster_communication_lists(
     distribution_tree->get_root( ), subtree_send_list, subtree_receive_list,
     leaf_info_send_list, leaf_info_receive_list );
@@ -194,9 +245,11 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   non_leaf_buffer.clear( );
   non_leaf_buffer.shrink_to_fit( );
   fill_nearfield_and_interaction_lists( *_root );
+  status = 0;
 }
 
-void besthea::mesh::distributed_spacetime_cluster_tree::build_tree( ) {
+void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
+  lo & status ) {
   tree_structure * dist_tree = get_distribution_tree( );
   lo dist_tree_depth = dist_tree->get_levels( );
   lo dist_tree_depth_coll;
@@ -324,46 +377,20 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree( ) {
     collect_real_leaves( *spacetime_root, *temporal_root, leaves );
   }
 
-  //  std::cout << "Inserting local elements" << std::endl;
-  //  vector_type space_center;
-  //  space_center.resize( 3 );
-  //  vector_type half_size;
-  //  half_size.resize( 3 );
-  //  linear_algebra::coordinates< 4 > centroid;
-  //  std::vector< sc > boundary( 8 );
-  //  besthea::tools::timer t;
-  //  t.reset( "Filling recursively" );
-  //  for ( lo i = 0; i < current_mesh->get_n_elements( ); ++i ) {
-  //    insert_local_element(
-  //      i, *_root, space_center, half_size, centroid, boundary );
-  //  }
-  //  t.measure( );
-  //  std::cout << "Done" << std::endl;
-
   for ( auto it : leaves ) {
     // @todo Discuss: Inefficient way of filling in the elements? For each
     // leaf cluster the whole mesh is traversed once. If the depth of the tree
     // is reasonably high this takes a while!
-    fill_elements( *it, fine_box_bounds );
-
+    fill_elements( *it, fine_box_bounds, status );
+    if ( status == 1 ) {
+      break;
+    }
     build_subtree( *it, split_space_levelwise[ it->get_level( ) + 1 ] );
   }
 
   // exchange necessary data
   MPI_Allreduce( MPI_IN_PLACE, &_real_max_levels, 1,
     get_index_type< lo >::MPI_LO( ), MPI_MAX, *_comm );
-
-  if ( _real_max_levels < get_distribution_tree( )->get_levels( ) ) {
-    if ( _my_rank == 0 ) {
-      std::cout
-        << "Warning: Depth of local spacetime tree is less than depth of"
-        << " local distribution tree!" << std::endl;
-      std::cout << "depth spacetime tree: " << _real_max_levels
-                << ", distribution tree :"
-                << get_distribution_tree( )->get_levels( ) << std::endl;
-    }
-    assert( _real_max_levels >= get_distribution_tree( )->get_levels( ) );
-  }
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::
@@ -381,11 +408,10 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     }
     // clear the nearfield, interaction and send list of each cluster and fill
     // them anew, to guarantee correctness.
-    distribution_tree->clear_cluster_lists( time_root );
+    distribution_tree->clear_nearfield_send_and_interaction_lists( time_root );
     distribution_tree->set_nearfield_interaction_and_send_list( *time_root );
     // determine activity of clusters in upward and downward path of FMM anew
     distribution_tree->determine_cluster_activity( *time_root );
-    // reduce the tree to make it essential again
   } else {
     std::cout << "Error: Corrupted spacetime tree" << std::endl;
   }
@@ -461,7 +487,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   }
   // clear the nearfield, interaction and send list of each cluster and fill
   // them anew, to guarantee correctness.
-  distribution_tree->clear_cluster_lists( distribution_tree->get_root( ) );
+  distribution_tree->clear_nearfield_send_and_interaction_lists(
+    distribution_tree->get_root( ) );
   distribution_tree->set_nearfield_interaction_and_send_list(
     *distribution_tree->get_root( ) );
   // determine activity of clusters in upward and downward path of FMM anew
@@ -1094,7 +1121,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::collect_real_leaves(
 
 void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
   general_spacetime_cluster & cluster,
-  const std::vector< std::vector< sc > > & fine_box_bounds ) {
+  const std::vector< std::vector< sc > > & fine_box_bounds, lo & status ) {
   assert( cluster.get_level( ) > 1 );
   lo n_space_div, n_time_div;
   cluster.get_n_divs( n_space_div, n_time_div );
@@ -1219,14 +1246,36 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
     timesteps_union.insert( it.begin( ), it.end( ) );
   }
 
+  lo n_assigned_elems = 0;
   for ( auto it : elems_thread ) {
+    n_assigned_elems += it.size( );
     for ( auto it2 : it ) {
       cluster.add_element( it2 );
     }
   }
+
+  if ( n_assigned_elems != cluster.get_n_elements( ) ) {
+    std::cout << "Process " << _my_rank << ", error for cluster (" << coord[ 0 ]
+              << ", " << coord[ 1 ] << ", " << coord[ 2 ] << ", " << coord[ 3 ]
+              << ", " << coord[ 4 ] << "): Assigned " << n_assigned_elems
+              << " elements instead of expected " << cluster.get_n_elements( )
+              << std::endl;
+    std::cout << "my mesh has " << current_mesh->get_n_elements( )
+              << " elements " << std::endl;
+    std::cout << "temporal start = "
+              << current_mesh->get_temporal_mesh( )->get_start( ) << std::endl;
+    std::cout << "temporal end = "
+              << current_mesh->get_temporal_mesh( )->get_end( ) << std::endl;
+    std::cout << "cluster start = " << beginning << std::endl;
+    std::cout << "cluster end = " << end << std::endl;
+    status = 1;
+    return;
+  }
+
   cluster.set_n_time_elements( timesteps_union.size( ) );
   cluster.compute_node_mapping( );
   cluster.set_n_space_nodes( );
+  status = 0;
 }
 
 // void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements2(
@@ -2119,16 +2168,24 @@ void besthea::mesh::distributed_spacetime_cluster_tree::send_leaf_info(
     // determine first the size of the array of leaf info which is sent
     lou array_size = 0;
     for ( auto send_cluster : send_cluster_vector ) {
-      array_size += send_cluster->get_associated_spacetime_clusters( )->size( );
+      // if send_cluster has no associated spacetime clusters, also the
+      // receiving process knows this. Note that this should not happen, since
+      // we reduce the distribution tree in such cases.
+      if ( send_cluster->get_associated_spacetime_clusters( ) != nullptr ) {
+        array_size
+          += send_cluster->get_associated_spacetime_clusters( )->size( );
+      }
     }
     bool * leaf_info_array = new bool[ array_size ];
     // fill the array appropriately
     lo pos = 0;
     for ( auto send_cluster : send_cluster_vector ) {
-      for ( auto st_cluster :
-        *send_cluster->get_associated_spacetime_clusters( ) ) {
-        leaf_info_array[ pos ] = st_cluster->is_global_leaf( );
-        pos++;
+      if ( send_cluster->get_associated_spacetime_clusters( ) != nullptr ) {
+        for ( auto st_cluster :
+          *send_cluster->get_associated_spacetime_clusters( ) ) {
+          leaf_info_array[ pos ] = st_cluster->is_global_leaf( );
+          pos++;
+        }
       }
     }
     // send the whole array at once to the appropriate process
@@ -2145,8 +2202,13 @@ void besthea::mesh::distributed_spacetime_cluster_tree::receive_leaf_info(
     // determine first the size of the array of leaf info which is received
     lou array_size = 0;
     for ( auto receive_cluster : receive_cluster_vector ) {
-      array_size
-        += receive_cluster->get_associated_spacetime_clusters( )->size( );
+      // if receive_cluster has no associated spacetime clusters, also the
+      // sending process knows this. Note that this should not happen, since
+      // we reduce the distribution tree in such cases.
+      if ( receive_cluster->get_associated_spacetime_clusters( ) != nullptr ) {
+        array_size
+          += receive_cluster->get_associated_spacetime_clusters( )->size( );
+      }
     }
     bool * leaf_info_array = new bool[ array_size ];
 
@@ -2158,10 +2220,12 @@ void besthea::mesh::distributed_spacetime_cluster_tree::receive_leaf_info(
     // scheduling time clusters in the receive cluster vector
     lo pos = 0;
     for ( auto receive_cluster : receive_cluster_vector ) {
-      for ( auto st_cluster :
-        *receive_cluster->get_associated_spacetime_clusters( ) ) {
-        st_cluster->set_global_leaf_status( leaf_info_array[ pos ] );
-        pos++;
+      if ( receive_cluster->get_associated_spacetime_clusters( ) != nullptr ) {
+        for ( auto st_cluster :
+          *receive_cluster->get_associated_spacetime_clusters( ) ) {
+          st_cluster->set_global_leaf_status( leaf_info_array[ pos ] );
+          pos++;
+        }
       }
     }
     delete[] leaf_info_array;

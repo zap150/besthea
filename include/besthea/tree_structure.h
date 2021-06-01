@@ -451,6 +451,12 @@ class besthea::mesh::tree_structure {
    * @param[in,out] leaf_info_receive_list  Set storing process ids and pointers
    *                                        of clusters for which leaf
    *                                        information has to be received.
+   * @note We call this routine after executing
+   * @ref remove_clusters_with_no_association. This routine gets rid of
+   * unnecessary scheduling time clusters, and updates the global leaf status of
+   * clusters which turn into leaves in this process. Such clusters are also
+   * added to the send and receive list, even though this would not be
+   * necessary.
    */
   void determine_cluster_communication_lists( scheduling_time_cluster * root,
     std::set< std::pair< lo, scheduling_time_cluster * >,
@@ -468,10 +474,24 @@ class besthea::mesh::tree_structure {
 
   /**
    * Clears the nearfield, interaction and send list of all clusters in the
-   * tree. The method relies on a tree traversal.
+   * tree.
+   *
+   * The method relies on a tree traversal.
    * @param[in] root  Current cluster in the tree traversal.
    */
-  void clear_cluster_lists( scheduling_time_cluster * root );
+  void clear_nearfield_send_and_interaction_lists(
+    scheduling_time_cluster * root );
+
+  /**
+   * Clears the lists of associated spacetime clusters of all clusters in the
+   * tree structure.
+   *
+   * The method relies on a recursive tree traversal.
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   */
+  void clear_lists_of_associated_clusters(
+    scheduling_time_cluster & current_cluster );
+
   /**
    * Determines if clusters are active in the upward or downward path (needed
    * for FMM).
@@ -531,6 +551,17 @@ class besthea::mesh::tree_structure {
    */
   void determine_essential_clusters(
     const lo my_process_id, scheduling_time_cluster & root ) const;
+
+  /**
+   * Removes scheduling cluster from the tree structure which are not associated
+   * with any space-time clusters.
+   *
+   * The clusters are not only removed but deleted. The routine is based on a
+   * recursive tree traversal.
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   */
+  void remove_clusters_with_no_association(
+    scheduling_time_cluster & current_cluster );
 
   /**
    * Aux for printing
