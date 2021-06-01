@@ -193,14 +193,11 @@ void besthea::mesh::general_spacetime_cluster::
 }
 
 /** template specialization for dimension 0 */
-template<>
-void besthea::mesh::general_spacetime_cluster::
+template void besthea::mesh::general_spacetime_cluster::
   compute_surface_curls_p1_along_dim< 0 >( std::vector< sc > & ) const;
 /** template specialization for dimension 1 */
-template<>
-void besthea::mesh::general_spacetime_cluster::
+template void besthea::mesh::general_spacetime_cluster::
   compute_surface_curls_p1_along_dim< 1 >( std::vector< sc > & ) const;
 /** template specialization for dimension 2 */
-template<>
-void besthea::mesh::general_spacetime_cluster::
+template void besthea::mesh::general_spacetime_cluster::
   compute_surface_curls_p1_along_dim< 2 >( std::vector< sc > & ) const;

@@ -240,7 +240,8 @@ int main( int argc, char * argv[] ) {
     std::cout << "fundamental solution with alpha = " << cauchy_data::_alpha
               << " and source at tau = 0 and y = (";
     std::cout << cauchy_data::_y[ 0 ] << ", " << cauchy_data::_y[ 1 ] << ", "
-              << cauchy_data::_y[ 2 ] << ")" << std::endl;
+              << cauchy_data::_y[ 2 ] << ")" << std::endl
+              << std::endl;
   }
 
   // choose some assignment strategy for assignment of time clusters to
@@ -311,132 +312,140 @@ int main( int argc, char * argv[] ) {
 
   // construct the distributed spacetime cluster tree
   lo n_max_levels_spacetime_tree = 20;
+  lo status;
   distributed_spacetime_cluster_tree distributed_st_tree( distributed_mesh,
     n_max_levels_spacetime_tree, c.n_min_elems_refine, c.st_coupling_coeff,
-    cauchy_data::_alpha, c.trunc_space, &comm );
+    cauchy_data::_alpha, c.trunc_space, &comm, status );
 
-  // declare boundary element spaces
-  distributed_fast_spacetime_be_space< basis_tri_p0 > distributed_space_p0(
-    distributed_st_tree );
-  distributed_fast_spacetime_be_space< basis_tri_p1 > distributed_space_p1(
-    distributed_st_tree );
+  if ( status > 0 ) {
+    if ( my_rank == 0 ) {
+      std::cout << "Error in tree construction. Aborting." << std::endl;
+    }
+  } else {
+    // declare boundary element spaces
+    distributed_fast_spacetime_be_space< basis_tri_p0 > distributed_space_p0(
+      distributed_st_tree );
+    distributed_fast_spacetime_be_space< basis_tri_p1 > distributed_space_p1(
+      distributed_st_tree );
 
-  MPI_Barrier( comm );
+    MPI_Barrier( comm );
 
-  if ( my_rank == 0 ) {
-    t.measure( );
-    std::cout << std::endl << "mesh information:" << std::endl;
-    std::cout << "number of timesteps = " << n_global_timesteps << std::endl;
-    std::cout << "number of spatial triangles = " << n_global_space_elements
-              << std::endl;
-    std::cout << "number of spatial vertices = " << n_global_space_nodes
-              << std::endl;
+    if ( my_rank == 0 ) {
+      t.measure( );
+      std::cout << std::endl << "mesh information:" << std::endl;
+      std::cout << "number of timesteps = " << n_global_timesteps << std::endl;
+      std::cout << "number of spatial triangles = " << n_global_space_elements
+                << std::endl;
+      std::cout << "number of spatial vertices = " << n_global_space_nodes
+                << std::endl;
+    }
+
+    MPI_Barrier( comm );
+
+    // assemble the double layer matrix K and measure assembly time.
+    if ( my_rank == 0 ) {
+      t.reset( "assembly of distributed pFMM matrix K" );
+    }
+    distributed_pFMM_matrix_heat_dl_p0p1 * K
+      = new distributed_pFMM_matrix_heat_dl_p0p1;
+    spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
+    distributed_fast_spacetime_be_assembler distributed_assembler_k( kernel_k,
+      distributed_space_p0, distributed_space_p1, &comm, order_sing, order_reg,
+      c.temp_order, c.spat_order, cauchy_data::_alpha );
+    distributed_assembler_k.assemble( *K );
+
+    MPI_Barrier( comm );
+    if ( my_rank == 0 ) {
+      t.measure( );
+    }
+
+    // compute the L2 projection g of the Dirichlet datum and initialize the rhs
+    // of the first boundary integral equation by 1/2 M g (M ... mass matrix)
+    if ( my_rank == 0 ) {
+      t.reset( "projection of Dirichlet datum + application of mass matrix" );
+    }
+    distributed_block_vector dirichlet_projection;
+    distributed_space_p1.L2_projection(
+      cauchy_data::dirichlet, dirichlet_projection );
+
+    besthea::bem::distributed_spacetime_be_identity M(
+      distributed_space_p0, distributed_space_p1, 1 );
+    M.assemble( );
+    // initialize rhs as a distributed vector. Every process just stores the
+    // data corresponding to the time steps in its local blocks
+    std::vector< lo > local_blocks = distributed_mesh.get_my_timesteps( );
+    distributed_block_vector rhs(
+      local_blocks, n_global_timesteps, n_global_space_elements );
+    M.apply( dirichlet_projection, rhs, false, 0.5, 0.0 );
+    if ( my_rank == 0 ) {
+      t.measure( );
+    }
+
+    MPI_Barrier( comm );
+    // add K * g to the rhs.
+    if ( my_rank == 0 ) {
+      t.reset( "application of K" );
+    }
+    K->apply( dirichlet_projection, rhs, false, 1.0, 1.0 );
+    MPI_Barrier( comm );
+    if ( my_rank == 0 ) {
+      t.measure( );
+    }
+    // K is not needed anymore and thus it is deleted to free the memory
+    delete K;
+
+    // assemble the single layer matrix V and measure assembly time.
+    MPI_Barrier( comm );
+    if ( my_rank == 0 ) {
+      t.reset( "assembly of distributed pFMM matrix V" );
+    }
+    distributed_pFMM_matrix_heat_sl_p0p0 * V
+      = new distributed_pFMM_matrix_heat_sl_p0p0;
+    spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
+    distributed_fast_spacetime_be_assembler distributed_assembler_v( kernel_v,
+      distributed_space_p0, distributed_space_p0, &comm, order_sing, order_reg,
+      c.temp_order, c.spat_order, cauchy_data::_alpha );
+    distributed_assembler_v.assemble( *V );
+    MPI_Barrier( comm );
+    if ( my_rank == 0 ) {
+      t.measure( );
+    }
+
+    // Use GMRES to solve V q = g for the sought-after Neumann datum q
+    if ( my_rank == 0 ) {
+      t.reset( "solving for neumann datum" );
+    }
+    // use the rhs as initial guess of the neumann datum for GMRES
+    distributed_block_vector approx_neumann_datum( rhs );
+    V->gmres_solve( rhs, approx_neumann_datum, gmres_prec, gmres_iter );
+    if ( my_rank == 0 ) {
+      t.measure( );
+      std::cout << "executed GMRES iterations: " << gmres_iter
+                << ", achieved precision: " << gmres_prec << std::endl;
+    }
+
+    MPI_Barrier( comm );
+
+    // compute the relative approximation error of the Neumann datum in the L2
+    // norm (approximately)
+    sc neumann_l2_relative_error = distributed_space_p0.L2_relative_error(
+      cauchy_data::neumann, approx_neumann_datum );
+
+    // compute the L2 projection of the Neumann datum and the corresponding
+    // relative error in the L2 norm (best approximation error).
+    distributed_block_vector neumann_projection;
+    distributed_space_p0.L2_projection(
+      cauchy_data::neumann, neumann_projection );
+    sc neumann_projection_error = distributed_space_p0.L2_relative_error(
+      cauchy_data::neumann, neumann_projection );
+    if ( my_rank == 0 ) {
+      std::cout << std::endl
+                << "Neumann L2 relative error:  " << neumann_l2_relative_error
+                << std::endl;
+      std::cout << "Best approximation error:   " << neumann_projection_error
+                << std::endl;
+    }
+    delete V;
   }
-
-  MPI_Barrier( comm );
-
-  // assemble the double layer matrix K and measure assembly time.
-  if ( my_rank == 0 ) {
-    t.reset( "assembly of distributed pFMM matrix K" );
-  }
-  distributed_pFMM_matrix_heat_dl_p0p1 * K
-    = new distributed_pFMM_matrix_heat_dl_p0p1;
-  spacetime_heat_dl_kernel_antiderivative kernel_k( cauchy_data::_alpha );
-  distributed_fast_spacetime_be_assembler distributed_assembler_k( kernel_k,
-    distributed_space_p0, distributed_space_p1, &comm, order_sing, order_reg,
-    c.temp_order, c.spat_order, cauchy_data::_alpha );
-  distributed_assembler_k.assemble( *K );
-
-  MPI_Barrier( comm );
-  if ( my_rank == 0 ) {
-    t.measure( );
-  }
-
-  // compute the L2 projection g of the Dirichlet datum and initialize the rhs
-  // of the first boundary integral equation by 1/2 M g (M ... mass matrix)
-  if ( my_rank == 0 ) {
-    t.reset( "projection of Dirichlet datum + application of mass matrix" );
-  }
-  distributed_block_vector dirichlet_projection;
-  distributed_space_p1.L2_projection(
-    cauchy_data::dirichlet, dirichlet_projection );
-
-  besthea::bem::distributed_spacetime_be_identity M(
-    distributed_space_p0, distributed_space_p1, 1 );
-  M.assemble( );
-  // initialize rhs as a distributed vector. Every process just stores the data
-  // corresponding to the time steps in its local blocks
-  std::vector< lo > local_blocks = distributed_mesh.get_my_timesteps( );
-  distributed_block_vector rhs(
-    local_blocks, n_global_timesteps, n_global_space_elements );
-  M.apply( dirichlet_projection, rhs, false, 0.5, 0.0 );
-  if ( my_rank == 0 ) {
-    t.measure( );
-  }
-
-  MPI_Barrier( comm );
-  // add K * g to the rhs.
-  if ( my_rank == 0 ) {
-    t.reset( "application of K" );
-  }
-  K->apply( dirichlet_projection, rhs, false, 1.0, 1.0 );
-  MPI_Barrier( comm );
-  if ( my_rank == 0 ) {
-    t.measure( );
-  }
-  // K is not needed anymore and thus it is deleted to free the memory
-  delete K;
-
-  // assemble the single layer matrix V and measure assembly time.
-  MPI_Barrier( comm );
-  if ( my_rank == 0 ) {
-    t.reset( "assembly of distributed pFMM matrix V" );
-  }
-  distributed_pFMM_matrix_heat_sl_p0p0 * V
-    = new distributed_pFMM_matrix_heat_sl_p0p0;
-  spacetime_heat_sl_kernel_antiderivative kernel_v( cauchy_data::_alpha );
-  distributed_fast_spacetime_be_assembler distributed_assembler_v( kernel_v,
-    distributed_space_p0, distributed_space_p0, &comm, order_sing, order_reg,
-    c.temp_order, c.spat_order, cauchy_data::_alpha );
-  distributed_assembler_v.assemble( *V );
-  MPI_Barrier( comm );
-  if ( my_rank == 0 ) {
-    t.measure( );
-  }
-
-  // Use GMRES to solve V q = g for the sought-after Neumann datum q
-  if ( my_rank == 0 ) {
-    t.reset( "solving for neumann datum" );
-  }
-  // use the rhs as initial guess of the neumann datum for GMRES
-  distributed_block_vector approx_neumann_datum( rhs );
-  V->gmres_solve( rhs, approx_neumann_datum, gmres_prec, gmres_iter );
-  if ( my_rank == 0 ) {
-    t.measure( );
-    std::cout << "executed GMRES iterations: " << gmres_iter
-              << ", achieved precision: " << gmres_prec << std::endl;
-  }
-
-  MPI_Barrier( comm );
-
-  // compute the relative approximation error of the Neumann datum in the L2
-  // norm (approximately)
-  sc neumann_l2_relative_error = distributed_space_p0.L2_relative_error(
-    cauchy_data::neumann, approx_neumann_datum );
-
-  // compute the L2 projection of the Neumann datum and the corresponding
-  // relative error in the L2 norm (best approximation error).
-  distributed_block_vector neumann_projection;
-  distributed_space_p0.L2_projection(
-    cauchy_data::neumann, neumann_projection );
-  sc neumann_projection_error = distributed_space_p0.L2_relative_error(
-    cauchy_data::neumann, neumann_projection );
-  if ( my_rank == 0 ) {
-    std::cout << "Neumann L2 relative error:  " << neumann_l2_relative_error
-              << std::endl;
-    std::cout << "Best approximation error:   " << neumann_projection_error
-              << std::endl;
-  }
-  delete V;
   MPI_Finalize( );
 }

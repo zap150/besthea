@@ -72,11 +72,13 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @param[in] spatial_nearfield_limit Number of clusters in the vicinity of a
    * given clusters to be considered as nearfield
    * @param[in] comm MPI communicator associated with the tree.
+   * @param[in,out] status  Indicates if the tree construction was successfull
+   *                        (status 0) or not (status 1)
    */
   distributed_spacetime_cluster_tree(
     distributed_spacetime_tensor_mesh & spacetime_mesh, lo max_levels,
     lo n_min_elems, sc st_coeff, sc alpha, slou spatial_nearfield_limit,
-    MPI_Comm * comm );
+    MPI_Comm * comm, lo & status );
 
   /**
    * Destructor.
@@ -184,8 +186,12 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * Builts the spacetime cluster tree in a communicative way in the upper part
    * (where clusters can contain elements located in meshes of two or more
    * processes) and in a non-communicative way in the lower part.
+   * @param[in] status  Indicates if the tree has been built correctly
+   *                    (status 0). Status 1 means that for some cluster the
+   *                    number of assigned elements did not match with the
+   *                    predetermined value.
    */
-  void build_tree( );
+  void build_tree( lo & status );
 
   /**
    * Expands the distribution tree included in @p _spacetime_mesh by adding
@@ -196,7 +202,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    *       is executed by @ref expand_tree_structure_recursively.
    * @note The nearfields, interaction lists and send lists of the distribution
    *       tree are cleared using the routine
-   *       @ref tree_structure::clear_cluster_lists and filled anew.
+   *       @ref tree_structure::clear_nearfield_send_and_interaction_lists and
+   *       filled anew.
    * @note After execution the distribution tree is possibly not locally
    *       essential anymore. Call the routine
    *       @ref tree_structure::reduce_2_essential on the distribution tree to
@@ -411,9 +418,12 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    *                            level for all three spatial dimensions. It is
    *                            used to determine the bounds of the cluster for
    *                            which elements are filled in consistently.
+   * @param[out]  status  Indicates if the cluster has been filled correctly
+   *                      (status 0). If not the exact amount of elements as
+   *                      expected is assigned to the cluster, status is 1.
    */
   void fill_elements( general_spacetime_cluster & cluster,
-    const std::vector< std::vector< sc > > & fine_box_bounds );
+    const std::vector< std::vector< sc > > & fine_box_bounds, lo & status );
 
   // void fill_elements2( std::vector< general_spacetime_cluster * > & leaves,
   //  spacetime_tensor_mesh const * current_mesh );
