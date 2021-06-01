@@ -116,12 +116,29 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     MPI_MAX, *_comm );
   if ( status == 1 ) {
     if ( _my_rank == 0 ) {
-      std::cout << "Error in space-time tree construction during assignment of "
-                   "elements to clusters."
+      std::cout
+        << "ERROR: in space-time tree construction during assignment of "
+           "elements to clusters:"
+        << std::endl;
+      std::cout << "Counted and assigned number of elements does not match for "
+                   "at least one cluster."
                 << std::endl;
-      std::cout << "Possible reason: Too many MPI processes for a too coarse "
-                   "space-time mesh."
+      std::cout
+        << "Possible reasons: - Too many MPI processes for a too coarse "
+           "space-time mesh."
+        << std::endl;
+      std::cout << "                  - Distribution tree has too many levels. "
+                   "Try to reduce them."
                 << std::endl;
+    }
+    return;
+  } else if ( status == 3 ) {
+    if ( _my_rank == 0 ) {
+      std::cout << "ERROR: Found a space-time leaf cluster at level 0 or 1"
+                << std::endl;
+      std::cout
+        << "This means that the space-time mesh is (locally) too coarse."
+        << std::endl;
     }
     return;
   }
@@ -133,7 +150,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   if ( _max_levels < get_distribution_tree( )->get_levels( ) ) {
     status = 2;
     if ( _my_rank == 0 ) {
-      std::cout << "Error: Depth of local spacetime tree (" << _max_levels - 1
+      std::cout << "ERROR: Depth of local spacetime tree (" << _max_levels - 1
                 << ") is less than depth of local distribution tree ("
                 << get_distribution_tree( )->get_levels( ) - 1 << ")!"
                 << std::endl;
@@ -382,7 +399,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
     // leaf cluster the whole mesh is traversed once. If the depth of the tree
     // is reasonably high this takes a while!
     fill_elements( *it, fine_box_bounds, status );
-    if ( status == 1 ) {
+    if ( status > 0 ) {
       break;
     }
     build_subtree( *it, split_space_levelwise[ it->get_level( ) + 1 ] );
@@ -1122,7 +1139,11 @@ void besthea::mesh::distributed_spacetime_cluster_tree::collect_real_leaves(
 void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
   general_spacetime_cluster & cluster,
   const std::vector< std::vector< sc > > & fine_box_bounds, lo & status ) {
-  assert( cluster.get_level( ) > 1 );
+  if ( cluster.get_level( ) <= 1 ) {
+    status = 3;
+    return;
+  }
+  // assert( cluster.get_level( ) > 1 );
   lo n_space_div, n_time_div;
   cluster.get_n_divs( n_space_div, n_time_div );
   lo n_space_clusters = 1;
@@ -1255,19 +1276,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
   }
 
   if ( n_assigned_elems != cluster.get_n_elements( ) ) {
-    std::cout << "Process " << _my_rank << ", error for cluster (" << coord[ 0 ]
-              << ", " << coord[ 1 ] << ", " << coord[ 2 ] << ", " << coord[ 3 ]
-              << ", " << coord[ 4 ] << "): Assigned " << n_assigned_elems
-              << " elements instead of expected " << cluster.get_n_elements( )
-              << std::endl;
-    std::cout << "my mesh has " << current_mesh->get_n_elements( )
-              << " elements " << std::endl;
-    std::cout << "temporal start = "
-              << current_mesh->get_temporal_mesh( )->get_start( ) << std::endl;
-    std::cout << "temporal end = "
-              << current_mesh->get_temporal_mesh( )->get_end( ) << std::endl;
-    std::cout << "cluster start = " << beginning << std::endl;
-    std::cout << "cluster end = " << end << std::endl;
     status = 1;
     return;
   }

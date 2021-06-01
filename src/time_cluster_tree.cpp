@@ -131,7 +131,7 @@ void besthea::mesh::time_cluster_tree::print_cluster_bounds(
 }
 
 std::vector< lo > besthea::mesh::time_cluster_tree::compute_process_assignments(
-  const lo n_processes, const lo strategy ) const {
+  const lo n_processes, const lo strategy, lo & status ) const {
   // determine the minimal level of all leaf clusters
   // for the assignment of processes only the clusters up to this level are
   // considered
@@ -148,10 +148,12 @@ std::vector< lo > besthea::mesh::time_cluster_tree::compute_process_assignments(
 
   if ( trunc_level <= 1 ) {
     std::cout << "Error: Temporal cluster tree is too coarse!" << std::endl;
+    status = 1;
     return std::vector< lo >( 1, -1 );
   } else if ( thresh_level > trunc_level ) {
     std::cout << "Error: The number of processes is higher than the number of "
               << "clusters at the level of the earliest leaf!" << std::endl;
+    status = 2;
     return std::vector< lo >( 1, -1 );
   } else {
     // Create a vector to store the assignment in a levelwise format.
@@ -405,6 +407,7 @@ std::vector< lo > besthea::mesh::time_cluster_tree::compute_process_assignments(
     convert_assignment_vector_2_tree_format( *_root, levelwise_assignment,
       thresh_level, trunc_level, n_processes, -1, assigned_clusters,
       process_pointers, process_assignment );
+    status = 0;
     return process_assignment;
   }
 }
