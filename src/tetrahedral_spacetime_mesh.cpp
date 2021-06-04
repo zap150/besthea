@@ -35,18 +35,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <iomanip>
 #include <sstream>
 
-/*
-besthea::mesh::tetrahedral_spacetime_mesh::tetrahedral_spacetime_mesh( )
-  : _n_nodes( 0 ), _n_elements( 0 ), _n_edges( 0 ), _n_faces( 0 ) {
-}
-*/
-/*
-besthea::mesh::tetrahedral_spacetime_mesh::tetrahedral_spacetime_mesh(
-  const std::string & file )
-  : _n_nodes( 0 ), _n_elements( 0 ) {
-  load( file );
-}
-*/
 besthea::mesh::tetrahedral_spacetime_mesh::tetrahedral_spacetime_mesh(
   const besthea::mesh::spacetime_tensor_mesh & stmesh )
   : _n_nodes( stmesh.get_n_nodes( ) ),
@@ -108,6 +96,19 @@ besthea::mesh::tetrahedral_spacetime_mesh::tetrahedral_spacetime_mesh(
     }
   }
 
+  init_areas( );
+  init_edges( );
+  init_node_to_elements( );
+}
+
+besthea::mesh::tetrahedral_spacetime_mesh::tetrahedral_spacetime_mesh(
+  const std::vector< sc > & nodes, const std::vector< lo > & elements,
+  const std::vector< sc > & normals )
+  : _n_nodes( nodes.size( ) / 4 ),
+    _nodes( nodes ),
+    _n_elements( elements.size( ) / 4 ),
+    _elements( elements ),
+    _normals( normals ) {
   init_areas( );
   init_edges( );
   init_node_to_elements( );

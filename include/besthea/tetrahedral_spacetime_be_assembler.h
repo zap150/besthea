@@ -106,18 +106,76 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
       _kernel_values;  //!< Buffer for storing kernel values.
   };
 
+  struct element {
+    std::array< besthea::linear_algebra::coordinates< 3 >, 4 > _nodes;
+    static constexpr double _eps = 1e-6;
+
+    element( ) : _nodes( ){};
+
+    element( const besthea::linear_algebra::coordinates< 3 > & x1,
+      const besthea::linear_algebra::coordinates< 3 > & x2,
+      const besthea::linear_algebra::coordinates< 3 > & x3,
+      const besthea::linear_algebra::coordinates< 3 > & x4 )
+      : _nodes{ x1, x2, x3, x4 } {
+    }
+
+    bool admissible( const element & that ) {
+      for ( int i = 0; i < 4; ++i ) {
+        for ( int j = 0; j < 4; ++j ) {
+          double dist2 = 0.0;
+          for ( int k = 0; k < 3; ++k ) {
+            double diff = _nodes[ i ][ k ] - that._nodes[ j ][ k ];
+            dist2 += diff * diff;
+          }
+          if ( dist2 < _eps * _eps ) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    std::array< element, 8 > refine( ) {
+      return {};
+    }
+
+    using pair = std::pair< element, element >;
+  };
+  /*
+    template< typename element_type, int n_children >
+    struct tree {
+      element_type * _root;
+      std::array< element_type *, n_children > _children;
+
+      tree( const element_type * root ) : _root( root ) {
+        std::fill( _children.begin( ), _children.end( ), nullptr );
+      }
+
+      ~tree( ) {
+        for ( int i = 0; i < n_children; ++i ) {
+          delete _children[ i ];
+        }
+        delete _root;
+      }
+    };
+
+    using element_tree = tree< element, 8 >;
+    using element_pair_tree = tree< typename element::pair, 64 >;
+  */
  public:
   /**
    * Constructor.
    * @param[in] kernel Spacetime kernel antiderivative object.
    * @param[in] test_space Test boundary element space.
    * @param[in] trial_space Trial boundary element space.
-   * @param[in] order_singular Line quadrature order for regularized quadrature.
-   * @param[in] order_regular Triangle quadrature order for regular quadrature.
+   * @param[in] order_singular Line quadrature order for regularized
+   * quadrature.
+   * @param[in] order_regular Triangle quadrature order for regular
+   * quadrature.
    */
   tetrahedral_spacetime_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
-    int order_singular = 4, int order_regular = 4 );
+    int singular_refinements, int order_regular = 4 );
 
   tetrahedral_spacetime_be_assembler(
     const tetrahedral_spacetime_be_assembler & that )
@@ -140,6 +198,12 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
    * @param[out] my_quadrature Wrapper holding quadrature data.
    */
   void init_quadrature( quadrature_wrapper & my_quadrature ) const;
+
+  /**
+   * Initializes quadrature structures.
+   * @param[out] my_quadrature Wrapper holding quadrature data.
+   */
+  void init_quadrature_shared_4( quadrature_wrapper & my_quadrature ) const;
 
   /**
    * Determines the configuration of two tetrahedral elements.
@@ -186,7 +250,8 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
 
   trial_space_type * _trial_space;  //!< Boundary element trial space.
 
-  int _order_singular;  //!< Line quadrature order for the singular integrals.
+  int
+    _singular_refinements;  //!< Number of refinements for singular integration
 
   int _order_regular;  //!< Tetrahedron quadrature order for the regular
                        //!< integrals.

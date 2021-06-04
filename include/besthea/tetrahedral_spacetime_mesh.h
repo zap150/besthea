@@ -60,26 +60,18 @@ namespace besthea {
 class besthea::mesh::tetrahedral_spacetime_mesh : public besthea::mesh::mesh {
  public:
   /**
-   * Constructor.
-   */
-  /*
-  tetrahedral_spacetime_mesh( );
-  */
-
-  /**
-   * Constructing mesh from a file.
-   * @param[in] file Path to the file.
-   */
-  /*
-  tetrahedral_spacetime_mesh( const std::string & file );
-  */
-
-  /**
    * Constructing mesh from a spacetime tensor mesh.
    * @param[in] stmesh Path to the file.
    */
   tetrahedral_spacetime_mesh(
     const besthea::mesh::spacetime_tensor_mesh & stmesh );
+
+  /**
+   * Constructing mesh from provided data.
+   * @param[in] stmesh Path to the file.
+   */
+  tetrahedral_spacetime_mesh( const std::vector< sc > & nodes,
+    const std::vector< lo > & elements, const std::vector< sc > & normals );
 
   /**
    * Copy constructor.
