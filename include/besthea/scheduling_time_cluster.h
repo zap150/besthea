@@ -1069,14 +1069,6 @@ class besthea::mesh::scheduling_time_cluster {
   lo get_pos_in_m2l_list( ) {
     return _pos_in_m2l_list;
   }
-  
-  void set_total_matrix_size( lo size ) {
-    _matrix_size = size;
-  }
-
-  lo get_total_matrix_size( ) const {
-    return _matrix_size;
-  } 
 
  private:
   sc _center;                         //!< Center of the cluster.
@@ -1179,8 +1171,8 @@ class besthea::mesh::scheduling_time_cluster {
   lou _ready_interaction_list_size;  //!< size of the ready interaction list
                                      //!< (stored as variable due to possible
                                      //!< data races)
-  
-  lo _matrix_size; //! auxiliary data for sorting
+
+  lo _matrix_size;  //! auxiliary data for sorting
 };
 
 /**

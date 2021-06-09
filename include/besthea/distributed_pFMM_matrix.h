@@ -407,7 +407,11 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     _measure_tasks = measure_tasks;
   }
 
-    void sort_clusters_in_nearfield();
+  /*!
+   * Auxiliary method that sorts clusters within the _n_list to improve shared
+   * memory scalability during matrix vector multiplication.
+   */
+  void sort_clusters_in_nearfield( );
 
  private:
   /**
