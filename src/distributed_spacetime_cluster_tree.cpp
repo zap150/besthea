@@ -109,7 +109,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
 
   std::vector< lo > elems_in_clusters;
 
-  build_tree( _root );
+  build_tree( );
 
   _max_levels = std::min( _max_levels, _real_max_levels );
 
@@ -196,8 +196,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   fill_nearfield_and_interaction_lists( *_root );
 }
 
-void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
-  [[maybe_unused]] general_spacetime_cluster * pseudo_root ) {
+void besthea::mesh::distributed_spacetime_cluster_tree::build_tree( ) {
   tree_structure * dist_tree = get_distribution_tree( );
   lo dist_tree_depth = dist_tree->get_levels( );
   lo dist_tree_depth_coll;
@@ -222,19 +221,47 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
   std::vector< scheduling_time_cluster * > time_clusters_on_level;
   time_clusters_on_level.push_back( dist_tree->get_root( ) );
 
+  // split the spatial box into subintervals according to the spatial size of
+  // the boxes at the space-time level dist_tree_depth_coll
+  vector_type space_center( 3 );
+  vector_type space_half_size( 3 );
+  sc time_center, time_half_size;
+  _root->get_center( space_center, time_center );
+  _root->get_half_size( space_half_size, time_half_size );
+  // compute the space level in the space-time tree at level
+  // dist_tree_depth_coll. this is the maximal spatial level which is considered
+  // in the first part of the tree construction
+  lo max_space_level = _initial_space_refinement;
+  if ( dist_tree_depth_coll - 1 >= _start_space_refinement ) {
+    max_space_level
+      += ( dist_tree_depth_coll - 1 - _start_space_refinement ) / 2 + 1;
+  }
+  lo n_boxes_per_dimension_max_space_level = 1 << max_space_level;
+  std::vector< std::vector< sc > > fine_box_bounds;
+  fine_box_bounds.resize( 3 );
+  fine_box_bounds[ 0 ].resize( n_boxes_per_dimension_max_space_level + 1 );
+  fine_box_bounds[ 1 ].resize( n_boxes_per_dimension_max_space_level + 1 );
+  fine_box_bounds[ 2 ].resize( n_boxes_per_dimension_max_space_level + 1 );
+  for ( lo i = 0; i < 3; ++i ) {
+    lo j = 0;
+    sc full_box_length = 2 * space_half_size[ i ];
+    sc fine_step_size
+      = full_box_length / ( (sc) n_boxes_per_dimension_max_space_level );
+    sc box_start = space_center[ i ] - space_half_size[ i ];
+    for ( ; j < n_boxes_per_dimension_max_space_level; ++j ) {
+      fine_box_bounds[ i ][ j ] = box_start + j * fine_step_size;
+    }
+    fine_box_bounds[ i ][ j ] = space_center[ i ] + space_half_size[ i ];
+  }
+
   if ( _initial_space_refinement > 0 ) {
     // execute the initial spatial refinements
-    get_n_elements_in_subdivisioning( *_root, n_space_div, 0,
-      time_clusters_on_level, n_elems_per_subdivisioning );
+    get_n_elements_in_subdivisioning( n_space_div, 0, time_clusters_on_level,
+      fine_box_bounds, n_elems_per_subdivisioning );
     create_spacetime_roots( n_elems_per_subdivisioning, cluster_pairs );
   } else {
-    // no initial spatial refinement is necessary. construct the root at level 0
-    // directly (as copy of _root with different level)
-    vector_type space_center( 3 );
-    vector_type space_half_size( 3 );
-    sc time_center, time_half_size;
-    _root->get_center( space_center, time_center );
-    _root->get_half_size( space_half_size, time_half_size );
+    // no initial spatial refinement is necessary. construct the root at level
+    // 0 directly (as copy of _root with different level)
     std::vector< slou > coordinates = { 0, 0, 0, 0, 0 };
     general_spacetime_cluster * spacetime_root = new general_spacetime_cluster(
       space_center, time_center, space_half_size, time_half_size,
@@ -265,8 +292,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
   for ( lo child_level = 1; child_level < dist_tree_depth_coll;
         ++child_level ) {
     // get global number of elements per cluster
-    get_n_elements_in_subdivisioning( *_root, n_space_div, child_level,
-      time_clusters_on_level, n_elems_per_subdivisioning );
+    get_n_elements_in_subdivisioning( n_space_div, child_level,
+      time_clusters_on_level, fine_box_bounds, n_elems_per_subdivisioning );
     split_clusters_levelwise( split_space, n_space_div, n_time_div,
       n_elems_per_subdivisioning, cluster_pairs );
     // replace time_cluster_on_level with the appropriate vector for the next
@@ -297,12 +324,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
     collect_real_leaves( *spacetime_root, *temporal_root, leaves );
   }
 
-  // const spacetime_tensor_mesh * current_mesh
-  //  = _spacetime_mesh.get_local_mesh( );
-  for ( auto it : leaves ) {
-    it->reserve_elements( it->get_n_elements( ) );
-  }
-
   //  std::cout << "Inserting local elements" << std::endl;
   //  vector_type space_center;
   //  space_center.resize( 3 );
@@ -323,7 +344,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
     // @todo Discuss: Inefficient way of filling in the elements? For each
     // leaf cluster the whole mesh is traversed once. If the depth of the tree
     // is reasonably high this takes a while!
-    fill_elements( *it );
+    fill_elements( *it, fine_box_bounds );
 
     build_subtree( *it, split_space_levelwise[ it->get_level( ) + 1 ] );
   }
@@ -609,9 +630,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::
-  get_n_elements_in_subdivisioning( general_spacetime_cluster & root,
-    lo n_space_div, lo level_time,
+  get_n_elements_in_subdivisioning( lo n_space_div, lo level_time,
     const std::vector< scheduling_time_cluster * > & time_clusters_on_level,
+    const std::vector< std::vector< sc > > & fine_box_bounds,
     std::vector< lo > & elems_in_clusters ) {
   lo n_space_clusters = 1;
   lo n_time_clusters
@@ -631,28 +652,28 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   vector_type half_size;
   half_size.resize( 3 );
   sc time_center, time_half_size;
-  root.get_center( space_center, time_center );
-  root.get_half_size( half_size, time_half_size );
+  _root->get_center( space_center, time_center );
+  _root->get_half_size( half_size, time_half_size );
 
   // doing it this complicated to avoid inconsistencies with tree
   // assembly due to rounding errors
-  std::vector< sc > steps_x( 0 );
-  steps_x.reserve( n_space_clusters );
-  std::vector< sc > steps_y( 0 );
-  steps_y.reserve( n_space_clusters );
-  std::vector< sc > steps_z( 0 );
-  steps_z.reserve( n_space_clusters );
-
-  decompose_line( space_center[ 0 ], half_size[ 0 ],
-    space_center[ 0 ] - half_size[ 0 ], n_space_div, 0, steps_x );
-  decompose_line( space_center[ 1 ], half_size[ 1 ],
-    space_center[ 1 ] - half_size[ 1 ], n_space_div, 0, steps_y );
-  decompose_line( space_center[ 2 ], half_size[ 2 ],
-    space_center[ 2 ] - half_size[ 2 ], n_space_div, 0, steps_z );
-
-  steps_x.push_back( space_center[ 0 ] + half_size[ 0 ] + 1.0 );
-  steps_y.push_back( space_center[ 1 ] + half_size[ 1 ] + 1.0 );
-  steps_z.push_back( space_center[ 2 ] + half_size[ 2 ] + 1.0 );
+  std::vector< sc > steps_x( n_space_clusters + 1 );
+  std::vector< sc > steps_y( n_space_clusters + 1 );
+  std::vector< sc > steps_z( n_space_clusters + 1 );
+  lo n_space_clusters_fine = fine_box_bounds[ 0 ].size( ) - 1;
+  for ( lo j = 0; j <= n_space_clusters; ++j ) {
+    steps_x[ j ]
+      = fine_box_bounds[ 0 ][ j * n_space_clusters_fine / n_space_clusters ];
+    steps_y[ j ]
+      = fine_box_bounds[ 1 ][ j * n_space_clusters_fine / n_space_clusters ];
+    steps_z[ j ]
+      = fine_box_bounds[ 2 ][ j * n_space_clusters_fine / n_space_clusters ];
+  }
+  // increase the rightmost bound to avoid problems caused by floating point
+  // arithmetic
+  steps_x[ n_space_clusters ] += 1.0;
+  steps_y[ n_space_clusters ] += 1.0;
+  steps_z[ n_space_clusters ] += 1.0;
 
   // assign slices to tree nodes
   std::vector< sc > starts(
@@ -989,6 +1010,33 @@ void besthea::mesh::distributed_spacetime_cluster_tree::compute_bounding_box(
     if ( node[ 2 ] > zmax )
       zmax = node[ 2 ];
   }
+
+  // turn the bounding box into a cube:
+  // determine the side lengths and their maxima
+  sc x_side_length = xmax - xmin;
+  sc y_side_length = ymax - ymin;
+  sc z_side_length = zmax - zmin;
+  sc max_side_length = x_side_length;
+  if ( y_side_length > max_side_length ) {
+    max_side_length = y_side_length;
+  }
+  if ( z_side_length > max_side_length ) {
+    max_side_length = z_side_length;
+  }
+  // adapt the bounding box if necessary in each dimension. this is done by
+  // extending the box to the right
+  if ( max_side_length > x_side_length ) {
+    // add side difference to xmax
+    xmax += max_side_length - x_side_length;
+  }
+  if ( max_side_length > y_side_length ) {
+    // add side difference to ymax
+    ymax += max_side_length - y_side_length;
+  }
+  if ( max_side_length > z_side_length ) {
+    // add side difference to zmax
+    zmax += max_side_length - z_side_length;
+  }
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::collect_local_leaves(
@@ -1045,7 +1093,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::collect_real_leaves(
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
-  general_spacetime_cluster & cluster ) {
+  general_spacetime_cluster & cluster,
+  const std::vector< std::vector< sc > > & fine_box_bounds ) {
   assert( cluster.get_level( ) > 1 );
   lo n_space_div, n_time_div;
   cluster.get_n_divs( n_space_div, n_time_div );
@@ -1063,25 +1112,49 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
   cluster.get_center( space_center, time_center );
   cluster.get_half_size( half_size, time_half_size );
 
-  sc left = space_center[ 0 ] - half_size[ 0 ];
-  sc right = space_center[ 0 ] + half_size[ 0 ];
-  sc front = space_center[ 1 ] - half_size[ 1 ];
-  sc back = space_center[ 1 ] + half_size[ 1 ];
-  sc bottom = space_center[ 2 ] - half_size[ 2 ];
-  sc top = space_center[ 2 ] + half_size[ 2 ];
+  lo n_space_clusters_fine = fine_box_bounds[ 0 ].size( ) - 1;
+  // get the spatial cluster bounds using the box coordinates and the
+  // fine_box_bounds. this ensures that the cluster bounds are exactly the same
+  // as in the routine get_n_elements_in_subdivisioning
+
+  sc left = fine_box_bounds[ 0 ][ coord[ 1 ] * n_space_clusters_fine
+    / n_space_clusters ];
+  sc right = fine_box_bounds[ 0 ][ ( coord[ 1 ] + 1 ) * n_space_clusters_fine
+    / n_space_clusters ];
+  sc front = fine_box_bounds[ 1 ][ coord[ 2 ] * n_space_clusters_fine
+    / n_space_clusters ];
+  sc back = fine_box_bounds[ 1 ][ ( coord[ 2 ] + 1 ) * n_space_clusters_fine
+    / n_space_clusters ];
+  sc bottom = fine_box_bounds[ 2 ][ coord[ 3 ] * n_space_clusters_fine
+    / n_space_clusters ];
+  sc top = fine_box_bounds[ 2 ][ ( coord[ 3 ] + 1 ) * n_space_clusters_fine
+    / n_space_clusters ];
   sc beginning = time_center - time_half_size;
   sc end = time_center + time_half_size;
 
+  // change cluster bounds for boxes on the boundary to overcome potential
+  // problems due to rounding errors
   if ( coord[ 1 ] == n_space_clusters - 1 ) {
     right += 1.0;
   }
+  if ( coord[ 1 ] == 0 ) {
+    left -= 1.0;
+  }
+
   if ( coord[ 2 ] == n_space_clusters - 1 ) {
     back += 1.0;
+  }
+  if ( coord[ 2 ] == 0 ) {
+    front -= 1.0;
   }
 
   if ( coord[ 3 ] == n_space_clusters - 1 ) {
     top += 1.0;
   }
+  if ( coord[ 3 ] == 0 ) {
+    bottom -= 1.0;
+  }
+
   if ( coord[ 4 ] == 0 ) {
     beginning -= 1.0;
   }
@@ -1127,8 +1200,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
         && ( centroid[ 3 ] > beginning ) && ( centroid[ 3 ] <= end ) ) {
         elems_thread[ omp_get_thread_num( ) ].push_back(
           _spacetime_mesh.local_2_global( start_idx, i ) );
-        // cluster.add_element( _spacetime_mesh.local_2_global( start_idx, i )
-        // );
         // check if the temporal component of the element is a new timestep
         // (the check with > is safe, due to the computation of the centroid in
         // get_centroid. since the elements are sorted with respect to time the
@@ -1136,8 +1207,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
         if ( timesteps_thread[ omp_get_thread_num( ) ].size( ) == 0 ) {
           timesteps_thread[ omp_get_thread_num( ) ].push_back( centroid[ 3 ] );
         }
-        // if ( centroid[ 3 ]
-        //    > timesteps_thread[ omp_get_thread_num( ) ].back( ) ) {
         if ( centroid[ 3 ] > max_thread[ omp_get_thread_num( ) ] ) {
           timesteps_thread[ omp_get_thread_num( ) ].push_back( centroid[ 3 ] );
           max_thread[ omp_get_thread_num( ) ] = centroid[ 3 ];

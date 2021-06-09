@@ -270,6 +270,13 @@ class besthea::mesh::distributed_spacetime_tensor_mesh
    */
   std::vector< lo > get_my_timesteps( ) const;
 
+  /**
+   * Returns the global number of dofs in the mesh, depending on the considered
+   * discrete space.
+   * @tparam space_type  @ref besthea::bem::distributed_fast_spacetime_be_space
+   *                     representing either p0 or p1 basis functions. It
+   *                     determines the DOFs.
+   */
   template< class space_type >
   lo get_n_dofs( ) const;
 
@@ -336,7 +343,9 @@ class besthea::mesh::distributed_spacetime_tensor_mesh
   int _my_rank;            //!< MPI rank of the current process
 };
 
-/** specialization for p0 basis functions */
+/** specialization of
+ * @ref besthea::mesh::distributed_spacetime_tensor_mesh::get_n_dofs for p0
+ * basis functions */
 template<>
 inline lo besthea::mesh::distributed_spacetime_tensor_mesh::get_n_dofs<
   besthea::bem::distributed_fast_spacetime_be_space<
@@ -344,7 +353,9 @@ inline lo besthea::mesh::distributed_spacetime_tensor_mesh::get_n_dofs<
   return _n_global_elements;
 }
 
-/** specialization for p1 basis functions
+/** specialization of
+ * @ref besthea::mesh::distributed_spacetime_tensor_mesh::get_n_dofs for p1
+ * basis functions
  */
 template<>
 inline lo besthea::mesh::distributed_spacetime_tensor_mesh::get_n_dofs<

@@ -30,6 +30,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/general_spacetime_cluster.h"
 
+/** Specialization of
+ * @ref general_spacetime_cluster::compute_surface_curls_p1_along_dim for
+ * dimension 0 */
 template<>
 void besthea::mesh::general_spacetime_cluster::
   compute_surface_curls_p1_along_dim< 0 >(
@@ -81,6 +84,9 @@ void besthea::mesh::general_spacetime_cluster::
   }
 }
 
+/** Specialization of
+ * @ref general_spacetime_cluster::compute_surface_curls_p1_along_dim for
+ * dimension 1 */
 template<>
 void besthea::mesh::general_spacetime_cluster::
   compute_surface_curls_p1_along_dim< 1 >(
@@ -132,6 +138,9 @@ void besthea::mesh::general_spacetime_cluster::
   }
 }
 
+/** Specialization of
+ * @ref general_spacetime_cluster::compute_surface_curls_p1_along_dim for
+ * dimension 2 */
 template<>
 void besthea::mesh::general_spacetime_cluster::
   compute_surface_curls_p1_along_dim< 2 >(
@@ -183,9 +192,15 @@ void besthea::mesh::general_spacetime_cluster::
   }
 }
 
-template void besthea::mesh::general_spacetime_cluster::
+/** template specialization for dimension 0 */
+template<>
+void besthea::mesh::general_spacetime_cluster::
   compute_surface_curls_p1_along_dim< 0 >( std::vector< sc > & ) const;
-template void besthea::mesh::general_spacetime_cluster::
+/** template specialization for dimension 1 */
+template<>
+void besthea::mesh::general_spacetime_cluster::
   compute_surface_curls_p1_along_dim< 1 >( std::vector< sc > & ) const;
-template void besthea::mesh::general_spacetime_cluster::
+/** template specialization for dimension 2 */
+template<>
+void besthea::mesh::general_spacetime_cluster::
   compute_surface_curls_p1_along_dim< 2 >( std::vector< sc > & ) const;
