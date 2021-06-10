@@ -278,13 +278,23 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
     return;
   }
 
-  besthea::mesh::tetrahedral_spacetime_mesh local_mesh(
-    { 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 },
-    { 0, 1, 2, 3 }, { 0.0, 0.0, 0.0, 0.0 } );
+  // besthea::mesh::tetrahedral_spacetime_mesh local_mesh(
+  //   { 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 },
+  //   { 0, 1, 2, 3 }, { 0.0, 0.0, 0.0, 0.0 } );
 
   element tetra( { 0.0, 0.0, 0.0 }, { 1.0, 0.0, 0.0 }, { 0.0, 1.0, 0.0 },
     { 0.0, 0.0, 1.0 } );
   typename element::pair tetra_pair = std::make_pair( tetra, tetra );
+
+  std::array< element, 8 > new_elements;
+  new_elements = tetra.refine( );
+  // for ( lo i = 0; i < 8; ++i ) {
+  //   element el1 = new_elements[ i ];
+  //   for ( lo j = 0; j < 4; ++j )
+  //     std::cout << el1._nodes[ j ][ 0 ] << ", " << el1._nodes[ j ][ 1 ] << ",
+  //     "
+  //               << el1._nodes[ j ][ 2 ] << std::endl;
+  // }
   // refinement of
 }
 

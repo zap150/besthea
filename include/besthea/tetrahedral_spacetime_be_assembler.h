@@ -110,7 +110,7 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
     std::array< besthea::linear_algebra::coordinates< 3 >, 4 > _nodes;
     static constexpr double _eps = 1e-6;
 
-    element( ) : _nodes( ){};
+    element( ) : _nodes( ){ };
 
     element( const besthea::linear_algebra::coordinates< 3 > & x1,
       const besthea::linear_algebra::coordinates< 3 > & x2,
@@ -136,7 +136,40 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
     }
 
     std::array< element, 8 > refine( ) {
-      return {};
+      // new nodes created in the center of edges of the current tetrahedron
+      besthea::linear_algebra::coordinates< 3 > x1 = _nodes[ 0 ];
+      besthea::linear_algebra::coordinates< 3 > x2 = _nodes[ 1 ];
+      besthea::linear_algebra::coordinates< 3 > x3 = _nodes[ 2 ];
+      besthea::linear_algebra::coordinates< 3 > x4 = _nodes[ 3 ];
+      besthea::linear_algebra::coordinates< 3 > node12(
+        { ( x1[ 0 ] + x2[ 0 ] ) / 2.0, ( x1[ 1 ] + x2[ 1 ] ) / 2.0,
+          ( x1[ 2 ] + x2[ 2 ] ) / 2.0 } );
+      besthea::linear_algebra::coordinates< 3 > node13(
+        { ( x1[ 0 ] + x3[ 0 ] ) / 2.0, ( x1[ 1 ] + x3[ 1 ] ) / 2.0,
+          ( x1[ 2 ] + x3[ 2 ] ) / 2.0 } );
+      besthea::linear_algebra::coordinates< 3 > node14(
+        { ( x1[ 0 ] + x4[ 0 ] ) / 2.0, ( x1[ 1 ] + x4[ 1 ] ) / 2.0,
+          ( x1[ 2 ] + x4[ 2 ] ) / 2.0 } );
+      besthea::linear_algebra::coordinates< 3 > node23(
+        { ( x2[ 0 ] + x3[ 0 ] ) / 2.0, ( x2[ 1 ] + x3[ 1 ] ) / 2.0,
+          ( x2[ 2 ] + x3[ 2 ] ) / 2.0 } );
+      besthea::linear_algebra::coordinates< 3 > node24(
+        { ( x2[ 0 ] + x4[ 0 ] ) / 2.0, ( x2[ 1 ] + x4[ 1 ] ) / 2.0,
+          ( x2[ 2 ] + x4[ 2 ] ) / 2.0 } );
+      besthea::linear_algebra::coordinates< 3 > node34(
+        { ( x3[ 0 ] + x4[ 0 ] ) / 2.0, ( x3[ 1 ] + x4[ 1 ] ) / 2.0,
+          ( x3[ 2 ] + x4[ 2 ] ) / 2.0 } );
+
+      // create 8 new elements from the current one
+      element el1( { x1, node12, node13, node14 } );
+      element el2( { node12, x2, node23, node24 } );
+      element el3( { node13, node23, x3, node34 } );
+      element el4( { node14, node24, node34, x4 } );
+      element el5( { node12, node13, node14, node24 } );
+      element el6( { node12, node13, node23, node24 } );
+      element el7( { node13, node14, node24, node34 } );
+      element el8( { node13, node23, node24, node34 } );
+      return { el1, el2, el3, el4, el5, el6, el7, el8 };
     }
 
     using pair = std::pair< element, element >;
