@@ -252,31 +252,32 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
 
   int n_shared_vertices = 4;
 
-  if ( _singular_refinements <= 0 ) {
-    my_quadrature._x1_ref[ n_shared_vertices ].resize( tetra_size2 );
-    my_quadrature._x2_ref[ n_shared_vertices ].resize( tetra_size2 );
-    my_quadrature._x3_ref[ n_shared_vertices ].resize( tetra_size2 );
-    my_quadrature._y1_ref[ n_shared_vertices ].resize( tetra_size2 );
-    my_quadrature._y2_ref[ n_shared_vertices ].resize( tetra_size2 );
-    my_quadrature._y3_ref[ n_shared_vertices ].resize( tetra_size2 );
-    my_quadrature._w[ n_shared_vertices ].resize( tetra_size2 );
+  // if ( _singular_refinements <= 0 ) {
+  //   my_quadrature._x1_ref[ n_shared_vertices ].resize( tetra_size2 );
+  //   my_quadrature._x2_ref[ n_shared_vertices ].resize( tetra_size2 );
+  //   my_quadrature._x3_ref[ n_shared_vertices ].resize( tetra_size2 );
+  //   my_quadrature._y1_ref[ n_shared_vertices ].resize( tetra_size2 );
+  //   my_quadrature._y2_ref[ n_shared_vertices ].resize( tetra_size2 );
+  //   my_quadrature._y3_ref[ n_shared_vertices ].resize( tetra_size2 );
+  //   my_quadrature._w[ n_shared_vertices ].resize( tetra_size2 );
 
-    lo counter = 0;
-    for ( lo i_x = 0; i_x < tetra_size; ++i_x ) {
-      for ( lo i_y = 0; i_y < tetra_size; ++i_y ) {
-        my_quadrature._x1_ref[ n_shared_vertices ][ counter ] = tetra_x1[ i_x ];
-        my_quadrature._x2_ref[ n_shared_vertices ][ counter ] = tetra_x2[ i_x ];
-        my_quadrature._x3_ref[ n_shared_vertices ][ counter ] = tetra_x3[ i_x ];
-        my_quadrature._y1_ref[ n_shared_vertices ][ counter ] = tetra_x1[ i_y ];
-        my_quadrature._y2_ref[ n_shared_vertices ][ counter ] = tetra_x2[ i_y ];
-        my_quadrature._y3_ref[ n_shared_vertices ][ counter ] = tetra_x3[ i_y ];
-        my_quadrature._w[ n_shared_vertices ][ counter ]
-          = tetra_w[ i_x ] * tetra_w[ i_y ];
-        ++counter;
-      }
-    }
-    return;
-  }
+  //   lo counter = 0;
+  //   for ( lo i_x = 0; i_x < tetra_size; ++i_x ) {
+  //     for ( lo i_y = 0; i_y < tetra_size; ++i_y ) {
+  //       my_quadrature._x1_ref[ n_shared_vertices ][ counter ] = tetra_x1[ i_x
+  //       ]; my_quadrature._x2_ref[ n_shared_vertices ][ counter ] = tetra_x2[
+  //       i_x ]; my_quadrature._x3_ref[ n_shared_vertices ][ counter ] =
+  //       tetra_x3[ i_x ]; my_quadrature._y1_ref[ n_shared_vertices ][ counter
+  //       ] = tetra_x1[ i_y ]; my_quadrature._y2_ref[ n_shared_vertices ][
+  //       counter ] = tetra_x2[ i_y ]; my_quadrature._y3_ref[ n_shared_vertices
+  //       ][ counter ] = tetra_x3[ i_y ]; my_quadrature._w[ n_shared_vertices
+  //       ][ counter ]
+  //         = tetra_w[ i_x ] * tetra_w[ i_y ];
+  //       ++counter;
+  //     }
+  //   }
+  //   return;
+  // }
 
   // besthea::mesh::tetrahedral_spacetime_mesh local_mesh(
   //   { 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 },
@@ -284,10 +285,15 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
 
   element tetra( { 0.0, 0.0, 0.0 }, { 1.0, 0.0, 0.0 }, { 0.0, 1.0, 0.0 },
     { 0.0, 0.0, 1.0 } );
-  typename element::pair tetra_pair = std::make_pair( tetra, tetra );
+  // typename element::pair tetra_pair = std::make_pair( tetra, tetra );
 
-  std::array< element, 8 > new_elements;
-  new_elements = tetra.refine( );
+  ElementPair initial_pair = { tetra, tetra, 0 };
+
+  refine_reference_recursively( initial_pair, my_quadrature._ready_elems );
+  std::cout << my_quadrature._ready_elems.size( ) << std::endl;
+
+  // std::array< element, 8 > new_elements;
+  // new_elements = tetra.refine( );
   // for ( lo i = 0; i < 8; ++i ) {
   //   element el1 = new_elements[ i ];
   //   for ( lo j = 0; j < 4; ++j )
@@ -296,6 +302,73 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
   //               << el1._nodes[ j ][ 2 ] << std::endl;
   // }
   // refinement of
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
+  test_space_type, trial_space_type >::refine_reference_recursively( ElementPair
+                                                                       el,
+  std::list< ElementPair > & ready_elems ) const {
+  int level = std::get< 2 >( el );
+  if ( level < _singular_refinements ) {
+    std::array< element, 8 > new_elements_1, new_elements_2;
+    new_elements_1 = std::get< 0 >( el ).refine( );
+    new_elements_2 = std::get< 1 >( el ).refine( );
+
+    lo n_shared_nodes = 0;
+
+    for ( lo i = 0; i < 8; ++i ) {
+      for ( lo j = 0; j < 8; ++j ) {
+        if ( new_elements_1[ i ].admissible(
+               new_elements_2[ j ], n_shared_nodes ) ) {
+          // push element pair into the ready_elems list
+          ready_elems.push_back( std::make_tuple(
+            new_elements_1[ i ], new_elements_2[ j ], level + 1 ) );
+        } else if ( ( !new_elements_1[ i ].admissible(
+                      new_elements_2[ j ], n_shared_nodes ) )
+          && ( level + 1 < _singular_refinements ) ) {
+          if ( n_shared_nodes < 4 ) {
+            // push into the ready_elems list (for now)
+            ready_elems.push_back( std::make_tuple(
+              new_elements_1[ i ], new_elements_2[ j ], level + 1 ) );
+          } else {
+            // further refine the pair of (for now identical) elements
+            refine_reference_recursively( std::make_tuple( new_elements_1[ i ],
+                                            new_elements_2[ j ], level + 1 ),
+              ready_elems );
+          }
+        } else {
+          // push the pair of nonidentical elements into ready_elems list, do
+          // nothing with identical ones
+          if ( n_shared_nodes < 4 ) {
+            // push into the ready_elems list (for now)
+            ready_elems.push_back( std::make_tuple(
+              new_elements_1[ i ], new_elements_2[ j ], level + 1 ) );
+          }
+        }
+      }
+    }
+  }
+
+  // std::array< element, 8 > new_elements;
+  // new_elements = el.refine( );
+
+  // for ( lo i = 0; i < 8; ++i ) {
+  //   for ( lo j = 0; j < 8; ++j ) {
+  //     if ( ( i == j ) && ( level < _singular_refinements ) ) {
+  //       refine_reference_recursively( new_elements[ i ], level + 1 );
+  //     } else if ( ( i == j ) && ( level == _singular_refinements ) ) {
+  //       continue;
+  //     } else {
+  //       // generate quadrature points & weights for both el_i, el_j and store
+  //       // them at the end of four separate unrolled vectors
+
+  //       // modified version of tetrahedral_to_geometry to map from reference
+  //       to
+  //       // current
+  //     }
+  //   }
+  // }
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >

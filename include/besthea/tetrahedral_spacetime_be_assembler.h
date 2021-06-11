@@ -39,6 +39,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/tetrahedral_spacetime_be_space.h"
 
 #include <array>
+#include <list>
+#include <tuple>
 
 namespace besthea {
   namespace bem {
@@ -53,6 +55,78 @@ namespace besthea {
 template< class kernel_type, class test_space_type, class trial_space_type >
 class besthea::bem::tetrahedral_spacetime_be_assembler {
  private:
+  struct element {
+    std::array< besthea::linear_algebra::coordinates< 3 >, 4 > _nodes;
+    static constexpr double _eps = 1e-6;
+
+    element( ) : _nodes( ){ };
+
+    element( const besthea::linear_algebra::coordinates< 3 > & x1,
+      const besthea::linear_algebra::coordinates< 3 > & x2,
+      const besthea::linear_algebra::coordinates< 3 > & x3,
+      const besthea::linear_algebra::coordinates< 3 > & x4 )
+      : _nodes{ x1, x2, x3, x4 } {
+    }
+
+    bool admissible( const element & that, lo & n_nodes ) {
+      n_nodes = 0;
+      for ( int i = 0; i < 4; ++i ) {
+        for ( int j = 0; j < 4; ++j ) {
+          double dist2 = 0.0;
+          for ( int k = 0; k < 3; ++k ) {
+            double diff = _nodes[ i ][ k ] - that._nodes[ j ][ k ];
+            dist2 += diff * diff;
+          }
+          if ( dist2 < _eps * _eps ) {
+            ++n_nodes;
+          }
+        }
+      }
+      return ( n_nodes == 0 );
+    }
+
+    std::array< element, 8 > refine( ) {
+      // new nodes created in the center of edges of the current tetrahedron
+      besthea::linear_algebra::coordinates< 3 > x1 = _nodes[ 0 ];
+      besthea::linear_algebra::coordinates< 3 > x2 = _nodes[ 1 ];
+      besthea::linear_algebra::coordinates< 3 > x3 = _nodes[ 2 ];
+      besthea::linear_algebra::coordinates< 3 > x4 = _nodes[ 3 ];
+      besthea::linear_algebra::coordinates< 3 > node12(
+        { ( x1[ 0 ] + x2[ 0 ] ) / 2.0, ( x1[ 1 ] + x2[ 1 ] ) / 2.0,
+          ( x1[ 2 ] + x2[ 2 ] ) / 2.0 } );
+      besthea::linear_algebra::coordinates< 3 > node13(
+        { ( x1[ 0 ] + x3[ 0 ] ) / 2.0, ( x1[ 1 ] + x3[ 1 ] ) / 2.0,
+          ( x1[ 2 ] + x3[ 2 ] ) / 2.0 } );
+      besthea::linear_algebra::coordinates< 3 > node14(
+        { ( x1[ 0 ] + x4[ 0 ] ) / 2.0, ( x1[ 1 ] + x4[ 1 ] ) / 2.0,
+          ( x1[ 2 ] + x4[ 2 ] ) / 2.0 } );
+      besthea::linear_algebra::coordinates< 3 > node23(
+        { ( x2[ 0 ] + x3[ 0 ] ) / 2.0, ( x2[ 1 ] + x3[ 1 ] ) / 2.0,
+          ( x2[ 2 ] + x3[ 2 ] ) / 2.0 } );
+      besthea::linear_algebra::coordinates< 3 > node24(
+        { ( x2[ 0 ] + x4[ 0 ] ) / 2.0, ( x2[ 1 ] + x4[ 1 ] ) / 2.0,
+          ( x2[ 2 ] + x4[ 2 ] ) / 2.0 } );
+      besthea::linear_algebra::coordinates< 3 > node34(
+        { ( x3[ 0 ] + x4[ 0 ] ) / 2.0, ( x3[ 1 ] + x4[ 1 ] ) / 2.0,
+          ( x3[ 2 ] + x4[ 2 ] ) / 2.0 } );
+
+      // create 8 new elements from the current one
+      element el1( { x1, node12, node13, node14 } );
+      element el2( { node12, x2, node23, node24 } );
+      element el3( { node13, node23, x3, node34 } );
+      element el4( { node14, node24, node34, x4 } );
+      element el5( { node12, node13, node14, node24 } );
+      element el6( { node12, node13, node23, node24 } );
+      element el7( { node13, node14, node24, node34 } );
+      element el8( { node13, node23, node24, node34 } );
+      return { el1, el2, el3, el4, el5, el6, el7, el8 };
+    }
+
+    using pair = std::pair< element, element >;
+  };
+
+  typedef std::tuple< element, element, int > ElementPair;
+
   /**
    * Wraps the mapped quadrature point so that they can be private for OpenMP
    * threads
@@ -104,76 +178,12 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
 
     std::vector< sc, besthea::allocator_type< sc > >
       _kernel_values;  //!< Buffer for storing kernel values.
+
+    std::list< ElementPair >
+      _ready_elems;  //!< Auxiliary vector used in generation of
+                     //!< quadrature points for nonadmissible elements.
   };
 
-  struct element {
-    std::array< besthea::linear_algebra::coordinates< 3 >, 4 > _nodes;
-    static constexpr double _eps = 1e-6;
-
-    element( ) : _nodes( ){ };
-
-    element( const besthea::linear_algebra::coordinates< 3 > & x1,
-      const besthea::linear_algebra::coordinates< 3 > & x2,
-      const besthea::linear_algebra::coordinates< 3 > & x3,
-      const besthea::linear_algebra::coordinates< 3 > & x4 )
-      : _nodes{ x1, x2, x3, x4 } {
-    }
-
-    bool admissible( const element & that ) {
-      for ( int i = 0; i < 4; ++i ) {
-        for ( int j = 0; j < 4; ++j ) {
-          double dist2 = 0.0;
-          for ( int k = 0; k < 3; ++k ) {
-            double diff = _nodes[ i ][ k ] - that._nodes[ j ][ k ];
-            dist2 += diff * diff;
-          }
-          if ( dist2 < _eps * _eps ) {
-            return false;
-          }
-        }
-      }
-      return true;
-    }
-
-    std::array< element, 8 > refine( ) {
-      // new nodes created in the center of edges of the current tetrahedron
-      besthea::linear_algebra::coordinates< 3 > x1 = _nodes[ 0 ];
-      besthea::linear_algebra::coordinates< 3 > x2 = _nodes[ 1 ];
-      besthea::linear_algebra::coordinates< 3 > x3 = _nodes[ 2 ];
-      besthea::linear_algebra::coordinates< 3 > x4 = _nodes[ 3 ];
-      besthea::linear_algebra::coordinates< 3 > node12(
-        { ( x1[ 0 ] + x2[ 0 ] ) / 2.0, ( x1[ 1 ] + x2[ 1 ] ) / 2.0,
-          ( x1[ 2 ] + x2[ 2 ] ) / 2.0 } );
-      besthea::linear_algebra::coordinates< 3 > node13(
-        { ( x1[ 0 ] + x3[ 0 ] ) / 2.0, ( x1[ 1 ] + x3[ 1 ] ) / 2.0,
-          ( x1[ 2 ] + x3[ 2 ] ) / 2.0 } );
-      besthea::linear_algebra::coordinates< 3 > node14(
-        { ( x1[ 0 ] + x4[ 0 ] ) / 2.0, ( x1[ 1 ] + x4[ 1 ] ) / 2.0,
-          ( x1[ 2 ] + x4[ 2 ] ) / 2.0 } );
-      besthea::linear_algebra::coordinates< 3 > node23(
-        { ( x2[ 0 ] + x3[ 0 ] ) / 2.0, ( x2[ 1 ] + x3[ 1 ] ) / 2.0,
-          ( x2[ 2 ] + x3[ 2 ] ) / 2.0 } );
-      besthea::linear_algebra::coordinates< 3 > node24(
-        { ( x2[ 0 ] + x4[ 0 ] ) / 2.0, ( x2[ 1 ] + x4[ 1 ] ) / 2.0,
-          ( x2[ 2 ] + x4[ 2 ] ) / 2.0 } );
-      besthea::linear_algebra::coordinates< 3 > node34(
-        { ( x3[ 0 ] + x4[ 0 ] ) / 2.0, ( x3[ 1 ] + x4[ 1 ] ) / 2.0,
-          ( x3[ 2 ] + x4[ 2 ] ) / 2.0 } );
-
-      // create 8 new elements from the current one
-      element el1( { x1, node12, node13, node14 } );
-      element el2( { node12, x2, node23, node24 } );
-      element el3( { node13, node23, x3, node34 } );
-      element el4( { node14, node24, node34, x4 } );
-      element el5( { node12, node13, node14, node24 } );
-      element el6( { node12, node13, node23, node24 } );
-      element el7( { node13, node14, node24, node34 } );
-      element el8( { node13, node23, node24, node34 } );
-      return { el1, el2, el3, el4, el5, el6, el7, el8 };
-    }
-
-    using pair = std::pair< element, element >;
-  };
   /*
     template< typename element_type, int n_children >
     struct tree {
@@ -239,6 +249,15 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
   void init_quadrature_shared_4( quadrature_wrapper & my_quadrature ) const;
 
   /**
+   * Recursively refines the reference element to create quadrature points for
+   * non-disjoint elements.
+   * @param[in] el Tuple consisting of pair of subelements and refinement
+   * level.
+   */
+  void refine_reference_recursively(
+    ElementPair el, std::list< ElementPair > & _ready_elems ) const;
+
+  /**
    * Determines the configuration of two tetrahedral elements.
    * @param[in] i_test Index of the test element.
    * @param[in] i_trial Index of the trial element.
@@ -276,6 +295,34 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
     const besthea::linear_algebra::indices< 4 > & perm_test,
     const besthea::linear_algebra::indices< 4 > & perm_trial,
     quadrature_wrapper & my_quadrature ) const;
+
+  /**
+   * Maps the quadrature nodes from reference tetrahedron to one if its
+   * subtetrahedra.
+   * @param[in] x1 Coordinates of the first node of the test element.
+   * @param[in] x2 Coordinates of the second node of the test element.
+   * @param[in] x3 Coordinates of the third node of the test element.
+   * @param[in] x4 Coordinates of the fourth node of the test element.
+   * @param[in] y1 Coordinates of the first node of the trial element.
+   * @param[in] y2 Coordinates of the second node of the trial element.
+   * @param[in] y3 Coordinates of the third node of the trial element.
+   * @param[in] y4 Coordinates of the fourth node of the trial element.
+   * @param[in] type_int Type of the configuration (number of vertices shared).
+   * @param[in,out] test_q_points Reference to the vector storing quadrature
+   * points in the test element.
+   * @param[in,out] trial_q_points Reference to the vector storing quadrature
+   * points in the trial element.
+   * @param[in,out] test_w
+   */
+  // void tetrahedral_to_tetrahedral_refined(
+  //   const linear_algebra::coordinates< 4 > & x1,
+  //   const linear_algebra::coordinates< 4 > & x2,
+  //   const linear_algebra::coordinates< 4 > & x3,
+  //   const linear_algebra::coordinates< 4 > & x4,
+  //   const linear_algebra::coordinates< 4 > & y1,
+  //   const linear_algebra::coordinates< 4 > & y2,
+  //   const linear_algebra::coordinates< 4 > & y3,
+  //   const linear_algebra::coordinates< 4 > & y4, int type_int );
 
   kernel_type * _kernel;  //!< Kernel temporal antiderivative.
 
