@@ -96,6 +96,8 @@ class besthea::bem::spacetime_be_space {
    */
   spacetime_be_space( const mesh_type & mesh );
 
+  spacetime_be_space( const mesh_type && ) = delete;
+
   /**
    * Destructor.
    */

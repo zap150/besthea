@@ -90,6 +90,8 @@ class besthea::bem::fe_space {
    */
   fe_space( const mesh_type & mesh );
 
+  fe_space( const mesh_type && ) = delete;
+
   /**
    * Destructor.
    */
