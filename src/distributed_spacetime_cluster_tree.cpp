@@ -52,6 +52,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     _spatial_paddings( _max_levels, 0.0 ),
     _spatial_nearfield_limit( spatial_nearfield_limit ),
     _comm( comm ) {
+  status = 0;
   MPI_Comm_rank( *_comm, &_my_rank );
   MPI_Comm_size( *_comm, &_n_processes );
 
@@ -109,7 +110,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
 
   std::vector< lo > elems_in_clusters;
 
-  build_tree( status );
+  build_tree_new( status );
 
   // check whether some process returned status 1 during tree construction
   MPI_Allreduce( MPI_IN_PLACE, &status, 1, get_index_type< lo >::MPI_LO( ),
@@ -245,8 +246,6 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     subtree_send_list, subtree_receive_list );
   distribution_tree->reduce_2_essential( );
 
-  collect_local_leaves( *_root );
-
   associate_scheduling_clusters_and_space_time_clusters( );
   // communicate necessary leaf information
   communicate_necessary_leaf_information(
@@ -262,7 +261,6 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   non_leaf_buffer.clear( );
   non_leaf_buffer.shrink_to_fit( );
   fill_nearfield_and_interaction_lists( *_root );
-  status = 0;
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
@@ -403,6 +401,139 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
       break;
     }
     build_subtree( *it, split_space_levelwise[ it->get_level( ) + 1 ] );
+  }
+
+  // exchange necessary data
+  MPI_Allreduce( MPI_IN_PLACE, &_real_max_levels, 1,
+    get_index_type< lo >::MPI_LO( ), MPI_MAX, *_comm );
+}
+
+void besthea::mesh::distributed_spacetime_cluster_tree::build_tree_new(
+  lo & status ) {
+  status = 0;
+  tree_structure * dist_tree = get_distribution_tree( );
+  lo dist_tree_depth = dist_tree->get_levels( );
+  lo dist_tree_depth_coll;
+
+  MPI_Allreduce( &dist_tree_depth, &dist_tree_depth_coll, 1,
+    get_index_type< lo >::MPI_LO( ), MPI_MAX, *_comm );
+
+  scheduling_time_cluster * temporal_root = dist_tree->get_root( );
+
+  // compute the appropriate spatial levels for all levels in the temporal
+  // distribution tree.
+  std::vector< lo > space_levels(
+    dist_tree_depth_coll, _initial_space_refinement );
+  lo current_space_level = _initial_space_refinement;
+  bool split_space = true;
+  for ( lo j = _start_space_refinement; j < dist_tree_depth_coll; ++j ) {
+    if ( split_space ) {
+      split_space = false;
+      current_space_level += 1;
+    } else {
+      split_space = true;
+    }
+    space_levels[ j ] = current_space_level;
+  }
+
+  // split the spatial box into subintervals according to the spatial size of
+  // the boxes at the space-time level dist_tree_depth_coll
+  vector_type space_center( 3 );
+  vector_type space_half_size( 3 );
+  sc time_center, time_half_size;
+  _root->get_center( space_center, time_center );
+  _root->get_half_size( space_half_size, time_half_size );
+
+  lo max_space_level = space_levels[ dist_tree_depth_coll - 1 ];
+
+  std::vector< std::vector< lo > > levelwise_elems_per_subdivisioning;
+  levelwise_elems_per_subdivisioning.resize( dist_tree_depth_coll );
+
+  std::vector< lo > boxes_of_local_elements;
+
+  // communicatively determine the number of elements in boxes at the level
+  // dist_tree_depth_coll
+  get_n_elements_in_fine_subdivisioning( max_space_level,
+    levelwise_elems_per_subdivisioning[ dist_tree_depth_coll - 1 ],
+    boxes_of_local_elements );
+
+  // now each process can sum up these numbers locally to get the number of
+  // elements in boxes at all levels
+  for ( lo time_level = dist_tree_depth_coll - 2; time_level >= 0;
+        --time_level ) {
+    if ( space_levels[ time_level + 1 ] != space_levels[ time_level ] ) {
+      split_space = true;
+    } else {
+      split_space = false;
+    }
+    sum_up_elements_in_boxes( time_level, space_levels[ time_level ],
+      levelwise_elems_per_subdivisioning[ time_level + 1 ], split_space,
+      levelwise_elems_per_subdivisioning[ time_level ] );
+  }
+
+  //// create the space-time roots at level 0
+  std::vector<
+    std::pair< general_spacetime_cluster *, scheduling_time_cluster * > >
+    cluster_pairs;
+  if ( _initial_space_refinement > 0 ) {
+    create_spacetime_roots(
+      levelwise_elems_per_subdivisioning[ 0 ], cluster_pairs );
+  } else {
+    // no initial spatial refinement is necessary. construct the root at level
+    // 0 directly (as copy of _root with different level)
+    std::vector< slou > coordinates = { 0, 0, 0, 0, 0 };
+    general_spacetime_cluster * spacetime_root = new general_spacetime_cluster(
+      space_center, time_center, space_half_size, time_half_size,
+      _spacetime_mesh.get_n_elements( ), _root, 0, 0, coordinates, 0, 0, 0, 0,
+      _spacetime_mesh, _root->get_process_id( ), false );
+    _root->add_child( spacetime_root );
+    cluster_pairs.push_back(
+      { spacetime_root, get_distribution_tree( )->get_root( ) } );
+  }
+
+  // remember whether space was split (value of split_space) for all levels
+  // (to allow for a consistent local refinement in case of leaves at different
+  // levels) and add the entry for level 0
+  std::vector< bool > split_space_levelwise;
+  split_space_levelwise.push_back( ( _initial_space_refinement > 0 ) );
+
+  //// construct clusters in the spacetime tree according to the distribution
+  /// tree
+  split_space = ( _start_space_refinement <= 1 );
+  split_space_levelwise.push_back( split_space );
+
+  // loop over the level of the clusters which are next to be constructed (from
+  // top to bottom)
+  for ( lo child_level = 1; child_level < dist_tree_depth_coll;
+        ++child_level ) {
+    split_clusters_levelwise( split_space, space_levels[ child_level ],
+      child_level, levelwise_elems_per_subdivisioning[ child_level ],
+      cluster_pairs );
+    // replace time_cluster_on_level with the appropriate vector for the next
+    // level
+    if ( !split_space && child_level + 1 >= _start_space_refinement ) {
+      split_space = true;
+    } else {
+      split_space = false;
+    }
+    split_space_levelwise.push_back( split_space );
+  }
+
+  MPI_Barrier( *_comm );
+
+  std::vector< general_spacetime_cluster * > leaves;
+  // collect the real leaves of the local spacetime cluster tree
+  for ( auto spacetime_root : *_root->get_children( ) ) {
+    collect_real_leaves( *spacetime_root, *temporal_root, leaves );
+  }
+
+  fill_elements_new( leaves, dist_tree_depth_coll - 1, space_levels,
+    boxes_of_local_elements, status );
+
+  if ( status == 0 ) {
+    for ( auto it : leaves ) {
+      build_subtree( *it, split_space_levelwise[ it->get_level( ) + 1 ] );
+    }
   }
 
   // exchange necessary data
@@ -811,6 +942,423 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     *_comm );
 }
 
+void besthea::mesh::distributed_spacetime_cluster_tree::
+  prepare_data_for_element_counting(
+    const std::vector< scheduling_time_cluster * > & temporal_leaf_clusters,
+    const lo n_space_clusters_per_dim, lo & leaves_start_index,
+    std::vector< sc > & starts_time_intervals,
+    std::vector< sc > & endings_time_intervals,
+    std::vector< sc > & spatial_step_sizes, std::vector< sc > & space_bounds_x,
+    std::vector< sc > & space_bounds_y, std::vector< sc > & space_bounds_z ) {
+  ////// first, take care of the temporal data
+  tree_structure * dist_tree = get_distribution_tree( );
+  lo dist_tree_depth = dist_tree->get_levels( ) - 1;
+
+  lo time_cluster_index_conversion_factor = ( 1 << dist_tree_depth ) - 1;
+  // by subtracting this index from a global index of a cluster at level
+  // dist_tree_depth one obtains a local index between 0 and 2^dist_tree_depth-1
+
+  lo cluster_level = temporal_leaf_clusters[ 0 ]->get_level( );
+  leaves_start_index = temporal_leaf_clusters[ 0 ]->get_global_index( );
+  // if the first cluster is not a leaf, its index is exchanged by the index
+  // its leftmost descendant at level dist_tree_depth would have
+  if ( cluster_level < dist_tree_depth ) {
+    for ( lo j = 0; j < ( dist_tree_depth - cluster_level ); ++j ) {
+      leaves_start_index = leaves_start_index * 2 + 1;
+    }
+  }
+  leaves_start_index -= time_cluster_index_conversion_factor;
+  // similar for last cluster
+  cluster_level = ( *temporal_leaf_clusters.rbegin( ) )->get_level( );
+  lo leaves_end_index
+    = ( *temporal_leaf_clusters.rbegin( ) )->get_global_index( );
+  // if the last cluster is not a leaf, its index is exchanged by the index
+  // its rightmost descendant at level dist_tree_depth would have
+  if ( cluster_level < dist_tree_depth ) {
+    for ( lo j = 0; j < ( dist_tree_depth - cluster_level ); ++j ) {
+      leaves_end_index = leaves_end_index * 2 + 2;
+    }
+  }
+  leaves_end_index -= time_cluster_index_conversion_factor;
+  lo n_considerd_time_clusters = leaves_end_index - leaves_start_index + 1;
+
+  // get the cluster bounds of the local temporal clusters; store them into
+  // vectors according to their appropriate local indices;
+  starts_time_intervals.resize( n_considerd_time_clusters );
+  endings_time_intervals.resize( n_considerd_time_clusters );
+  for ( lo i = 0; i < n_considerd_time_clusters; ++i ) {
+    starts_time_intervals[ i ] = std::numeric_limits< sc >::infinity( );
+    endings_time_intervals[ i ] = -std::numeric_limits< sc >::infinity( );
+  }
+  // treat the first cluster separately
+  sc cluster_center = temporal_leaf_clusters[ 0 ]->get_center( );
+  sc cluster_half_size = temporal_leaf_clusters[ 0 ]->get_half_size( );
+  starts_time_intervals[ 0 ] = cluster_center - cluster_half_size;
+  endings_time_intervals[ 0 ] = cluster_center + cluster_half_size;
+
+  ////  fill in starts and ends of all clusters. always keep track of the
+  // last_end, and use it as the start of the next cluster
+  sc last_end = endings_time_intervals[ 0 ];
+  for ( auto leaf = temporal_leaf_clusters.begin( ) + 1;
+        leaf != temporal_leaf_clusters.end( ); ++leaf ) {
+    cluster_level = ( *leaf )->get_level( );
+    lo cluster_index = ( *leaf )->get_global_index( );
+    if ( cluster_level < dist_tree_depth ) {
+      // substitute the cluster index by the index of its leftmost descendant at
+      // level dist_tree_depth
+      for ( lo j = 0; j < ( dist_tree_depth - cluster_level ); ++j ) {
+        cluster_index = 2 * cluster_index + 1;
+      }
+    }
+    cluster_index -= time_cluster_index_conversion_factor;
+    cluster_center = ( *leaf )->get_center( );
+    cluster_half_size = ( *leaf )->get_half_size( );
+    starts_time_intervals[ cluster_index - leaves_start_index ] = last_end;
+    last_end = cluster_center + cluster_half_size;
+    endings_time_intervals[ cluster_index - leaves_start_index ] = last_end;
+  }
+
+  ////// now take care of the spatial data
+  vector_type space_center( 3, false ), half_size( 3, false );
+  sc time_center, time_half_size;
+  _root->get_center( space_center, time_center );
+  _root->get_half_size( half_size, time_half_size );
+
+  space_bounds_x.resize( n_space_clusters_per_dim + 1 );
+  space_bounds_y.resize( n_space_clusters_per_dim + 1 );
+  space_bounds_z.resize( n_space_clusters_per_dim + 1 );
+  spatial_step_sizes.resize( 3 );
+
+  spatial_step_sizes[ 0 ]
+    = 2 * half_size[ 0 ] / ( (sc) n_space_clusters_per_dim );
+  spatial_step_sizes[ 1 ]
+    = 2 * half_size[ 0 ] / ( (sc) n_space_clusters_per_dim );
+  spatial_step_sizes[ 2 ]
+    = 2 * half_size[ 0 ] / ( (sc) n_space_clusters_per_dim );
+  vector_type box_starts( 3, false );
+  box_starts[ 0 ] = space_center[ 0 ] - half_size[ 0 ];
+  box_starts[ 1 ] = space_center[ 1 ] - half_size[ 1 ];
+  box_starts[ 2 ] = space_center[ 2 ] - half_size[ 2 ];
+  lo j = 0;
+  for ( ; j < n_space_clusters_per_dim; ++j ) {
+    space_bounds_x[ j ] = box_starts[ 0 ] + j * spatial_step_sizes[ 0 ];
+    space_bounds_y[ j ] = box_starts[ 1 ] + j * spatial_step_sizes[ 1 ];
+    space_bounds_z[ j ] = box_starts[ 2 ] + j * spatial_step_sizes[ 2 ];
+  }
+  space_bounds_x[ j ] = space_center[ 0 ] + half_size[ 0 ];
+  space_bounds_y[ j ] = space_center[ 1 ] + half_size[ 1 ];
+  space_bounds_z[ j ] = space_center[ 2 ] + half_size[ 2 ];
+
+  // extend the leftmost and rightmost boxes to avoid problems caused by
+  // floating point arithmetic
+  space_bounds_x[ 0 ] -= half_size[ 0 ];
+  space_bounds_x[ n_space_clusters_per_dim ] += half_size[ 0 ];
+  space_bounds_y[ 0 ] -= half_size[ 1 ];
+  space_bounds_y[ n_space_clusters_per_dim ] += half_size[ 1 ];
+  space_bounds_z[ 0 ] -= half_size[ 2 ];
+  space_bounds_z[ n_space_clusters_per_dim ] += half_size[ 2 ];
+}
+
+void besthea::mesh::distributed_spacetime_cluster_tree::
+  get_n_elements_in_fine_subdivisioning( lo n_space_div,
+    std::vector< lo > & elems_in_clusters,
+    std::vector< lo > & boxes_of_local_elements ) {
+  lo n_space_clusters_per_dim = 1 << n_space_div;
+  tree_structure * dist_tree = get_distribution_tree( );
+  lo dist_tree_depth = dist_tree->get_levels( ) - 1;
+  lo n_time_clusters = 1 << dist_tree_depth;
+  lo n_clusters = n_space_clusters_per_dim * n_space_clusters_per_dim
+    * n_space_clusters_per_dim * n_time_clusters;
+
+  elems_in_clusters.resize( n_clusters );
+
+  // get the local leaves in the distribution tree
+  const std::vector< scheduling_time_cluster * > & dist_tree_leaves
+    = dist_tree->get_leaves( );
+  std::vector< scheduling_time_cluster * > my_global_leaves;
+  for ( auto leaf : dist_tree_leaves ) {
+    if ( leaf->is_global_leaf( ) && leaf->get_process_id( ) == _my_rank ) {
+      my_global_leaves.push_back( leaf );
+    }
+  }
+
+  // get the auxiliary data needed to count elements in clusters
+  lo leaves_start_index;
+  std::vector< sc > starts_time_clusters, endings_time_clusters,
+    spatial_step_sizes, space_bounds_x, space_bounds_y, space_bounds_z;
+  prepare_data_for_element_counting( my_global_leaves, n_space_clusters_per_dim,
+    leaves_start_index, starts_time_clusters, endings_time_clusters,
+    spatial_step_sizes, space_bounds_x, space_bounds_y, space_bounds_z );
+  vector_type half_size( 3, false ), space_center( 3, false );
+  sc time_half_size, time_center;
+  _root->get_center( space_center, time_center );
+  _root->get_half_size( half_size, time_half_size );
+
+  lo n_my_time_clusters = starts_time_clusters.size( );
+  lo n_my_clusters = n_space_clusters_per_dim * n_space_clusters_per_dim
+    * n_space_clusters_per_dim * n_my_time_clusters;
+  std::vector< lo > loc_elems_in_clusters( n_my_clusters, 0 );
+  boxes_of_local_elements.resize(
+    _spacetime_mesh.get_local_mesh( )->get_n_elements( ) );
+
+// count elements in boxes and remember there position (in parallel)
+#pragma omp parallel shared( boxes_of_local_elements ) \
+  reduction( lo_vec_plus                               \
+             : loc_elems_in_clusters )
+  {
+    lo y_stride = n_space_clusters_per_dim;
+    lo x_stride = n_space_clusters_per_dim * n_space_clusters_per_dim;
+    lo t_stride = x_stride * n_space_clusters_per_dim;
+    linear_algebra::coordinates< 4 > centroid;
+#pragma omp for schedule( static )
+    for ( lo i = 0; i < _spacetime_mesh.get_local_mesh( )->get_n_elements( );
+          ++i ) {
+      _spacetime_mesh.get_local_mesh( )->get_centroid( i, centroid );
+      lo pos_x = ( centroid[ 0 ] - ( space_center[ 0 ] - half_size[ 0 ] ) )
+        / spatial_step_sizes[ 0 ];
+      lo pos_y = ( centroid[ 1 ] - ( space_center[ 1 ] - half_size[ 1 ] ) )
+        / spatial_step_sizes[ 1 ];
+      lo pos_z = ( centroid[ 2 ] - ( space_center[ 2 ] - half_size[ 2 ] ) )
+        / spatial_step_sizes[ 2 ];
+
+      lo pos_t = -1;
+      for ( lo j = 0; j < n_my_time_clusters; ++j ) {
+        if ( centroid[ 3 ] > starts_time_clusters[ j ]
+          && centroid[ 3 ] <= endings_time_clusters[ j ] ) {
+          pos_t = j;
+          break;
+        }
+      }
+
+      lo start = pos_x > 0 ? pos_x - 1 : pos_x;
+      lo end = pos_x < static_cast< lo >( space_bounds_x.size( ) ) - 2
+        ? pos_x + 1
+        : pos_x;
+      for ( lo j = start; j <= end; ++j ) {
+        if ( ( centroid[ 0 ] >= space_bounds_x[ j ] )
+          && ( centroid[ 0 ] < space_bounds_x[ j + 1 ] ) ) {
+          pos_x = j;
+          break;
+        }
+      }
+
+      start = pos_y > 0 ? pos_y - 1 : pos_y;
+      end = pos_y < static_cast< lo >( space_bounds_y.size( ) ) - 2 ? pos_y + 1
+                                                                    : pos_y;
+      for ( lo j = start; j <= end; ++j ) {
+        if ( ( centroid[ 1 ] >= space_bounds_y[ j ] )
+          && ( centroid[ 1 ] < space_bounds_y[ j + 1 ] ) ) {
+          pos_y = j;
+          break;
+        }
+      }
+
+      start = pos_z > 0 ? pos_z - 1 : pos_z;
+      end = pos_z < static_cast< lo >( space_bounds_z.size( ) ) - 2 ? pos_z + 1
+                                                                    : pos_z;
+      for ( lo j = start; j <= end; ++j ) {
+        if ( ( centroid[ 2 ] >= space_bounds_z[ j ] )
+          && ( centroid[ 2 ] < space_bounds_z[ j + 1 ] ) ) {
+          pos_z = j;
+          break;
+        }
+      }
+      // if the element was found in a time cluster update the counter
+      if ( pos_t > -1 ) {
+        lo pos = pos_t * t_stride + pos_x * x_stride + pos_y * y_stride + pos_z;
+        loc_elems_in_clusters.at( pos )++;
+        // remember the position in which the element was found (by storing this
+        // information as a "global position" it is easier to find the
+        // corresponding box later)
+        lo global_pos = ( pos_t + leaves_start_index ) * t_stride
+          + pos_x * x_stride + pos_y * y_stride + pos_z;
+        boxes_of_local_elements[ i ] = global_pos;
+      }
+    }
+  }
+
+  // exchange the local numbers of clusters
+  int n_processes;
+  MPI_Comm_size( *_comm, &n_processes );
+  std::vector< int > n_clusters_all_proc( n_processes, 0 );
+  int n_my_clusters_int = n_my_clusters;
+  MPI_Allgather( &n_my_clusters_int, 1, MPI_INT, n_clusters_all_proc.data( ), 1,
+    MPI_INT, *_comm );
+  // now exchange the results of the local counting processes
+
+  std::vector< int > offsets( n_processes, 0 );
+  for ( lo i = 1; i < n_processes; ++i ) {
+    offsets[ i ] = offsets[ i - 1 ] + n_clusters_all_proc[ i - 1 ];
+  }
+
+  MPI_Allgatherv( loc_elems_in_clusters.data( ), n_my_clusters,
+    get_index_type< lo >::MPI_LO( ), elems_in_clusters.data( ),
+    n_clusters_all_proc.data( ), offsets.data( ),
+    get_index_type< lo >::MPI_LO( ), *_comm );
+}
+
+void besthea::mesh::distributed_spacetime_cluster_tree::
+  sum_up_elements_in_boxes( const lo time_level, const lo space_level,
+    const std::vector< lo > & elems_per_subdivisioning_child_level,
+    const bool space_refined,
+    std::vector< lo > & elems_per_subdivisioning_this_level ) const {
+  lo n_time_clusters = 1 << time_level;
+  lo n_space_clusters_per_dim = 1 << space_level;
+  lo n_clusters = n_time_clusters * n_space_clusters_per_dim
+    * n_space_clusters_per_dim * n_space_clusters_per_dim;
+  elems_per_subdivisioning_this_level.resize( n_clusters );
+  if ( space_refined ) {
+    lo y_stride_par = n_space_clusters_per_dim;
+    lo x_stride_par = n_space_clusters_per_dim * n_space_clusters_per_dim;
+    lo time_stride_par = n_space_clusters_per_dim * x_stride_par;
+    // change the strides according to the child level
+    n_space_clusters_per_dim = 1 << ( space_level + 1 );
+    lo y_stride_child = n_space_clusters_per_dim;
+    lo x_stride_child = n_space_clusters_per_dim * n_space_clusters_per_dim;
+    lo time_stride_child = x_stride_child * n_space_clusters_per_dim;
+    // todo: parallelize with omp for
+    for ( lo i = 0; i < n_clusters; ++i ) {
+      lo i_t = i / time_stride_par;
+      lo rest = i % time_stride_par;
+      lo i_x = rest / x_stride_par;
+      rest = rest % x_stride_par;
+      lo i_y = rest / y_stride_par;
+      lo i_z = rest % y_stride_par;
+      for ( lo t_child = 0; t_child < 2; ++t_child ) {
+        for ( lo x_child = 0; x_child < 2; ++x_child ) {
+          for ( lo y_child = 0; y_child < 2; ++y_child ) {
+            for ( lo z_child = 0; z_child < 2; ++z_child ) {
+              lo i_child = ( 2 * i_t + t_child ) * time_stride_child
+                + ( 2 * i_x + x_child ) * x_stride_child
+                + ( 2 * i_y + y_child ) * y_stride_child
+                + ( 2 * i_z + z_child );
+              elems_per_subdivisioning_this_level[ i ]
+                += elems_per_subdivisioning_child_level[ i_child ];
+            }
+          }
+        }
+      }
+    }
+  } else {
+    lo time_stride = n_space_clusters_per_dim * n_space_clusters_per_dim
+      * n_space_clusters_per_dim;
+    // todo: parallelize with omp for
+    for ( lo i = 0; i < n_clusters; ++i ) {
+      lo i_t = i / time_stride;
+      lo space_rest = i % time_stride;
+      for ( lo t_child = 0; t_child < 2; ++t_child ) {
+        lo i_child = ( 2 * i_t + t_child ) * time_stride + space_rest;
+        elems_per_subdivisioning_this_level[ i ]
+          += elems_per_subdivisioning_child_level[ i_child ];
+      }
+    }
+  }
+}
+
+void besthea::mesh::distributed_spacetime_cluster_tree::
+  assign_nearfield_elements_to_boxes( const lo n_space_clusters_per_dim,
+    std::vector< lo > & boxes_of_nearfield_elements ) {
+  // get the leaves in the distribution tree which are handled by other
+  // processes, but whose mesh is available (nearfield clusters)
+  tree_structure * dist_tree = get_distribution_tree( );
+  const std::vector< scheduling_time_cluster * > & dist_tree_leaves
+    = dist_tree->get_leaves( );
+  std::vector< scheduling_time_cluster * > nearfield_leaves;
+  for ( auto leaf : dist_tree_leaves ) {
+    if ( leaf->is_global_leaf( ) && leaf->get_process_id( ) != _my_rank
+      && leaf->mesh_is_available( ) ) {
+      nearfield_leaves.push_back( leaf );
+    }
+  }
+
+  // get the auxiliary data needed to assign elements to clusters
+  lo leaves_start_index;
+  std::vector< sc > starts_time_clusters, endings_time_clusters,
+    spatial_step_sizes, space_bounds_x, space_bounds_y, space_bounds_z;
+  prepare_data_for_element_counting( nearfield_leaves, n_space_clusters_per_dim,
+    leaves_start_index, starts_time_clusters, endings_time_clusters,
+    spatial_step_sizes, space_bounds_x, space_bounds_y, space_bounds_z );
+  vector_type half_size( 3, false ), space_center( 3, false );
+  sc time_half_size, time_center;
+  _root->get_center( space_center, time_center );
+  _root->get_half_size( half_size, time_half_size );
+  lo n_my_time_clusters = starts_time_clusters.size( );
+
+  // assign elements to boxes by remembering there position (in parallel)
+  boxes_of_nearfield_elements.resize(
+    _spacetime_mesh.get_nearfield_mesh( )->get_n_elements( ) );
+#pragma omp parallel shared( boxes_of_nearfield_elements )
+  {
+    lo y_stride = n_space_clusters_per_dim;
+    lo x_stride = n_space_clusters_per_dim * n_space_clusters_per_dim;
+    lo t_stride = x_stride * n_space_clusters_per_dim;
+    linear_algebra::coordinates< 4 > centroid;
+#pragma omp for schedule( static )
+    for ( lo i = 0;
+          i < _spacetime_mesh.get_nearfield_mesh( )->get_n_elements( ); ++i ) {
+      _spacetime_mesh.get_nearfield_mesh( )->get_centroid( i, centroid );
+      lo pos_x = ( centroid[ 0 ] - ( space_center[ 0 ] - half_size[ 0 ] ) )
+        / spatial_step_sizes[ 0 ];
+      lo pos_y = ( centroid[ 1 ] - ( space_center[ 1 ] - half_size[ 1 ] ) )
+        / spatial_step_sizes[ 1 ];
+      lo pos_z = ( centroid[ 2 ] - ( space_center[ 2 ] - half_size[ 2 ] ) )
+        / spatial_step_sizes[ 2 ];
+
+      lo pos_t = -1;
+      for ( lo j = 0; j < n_my_time_clusters; ++j ) {
+        if ( centroid[ 3 ] > starts_time_clusters[ j ]
+          && centroid[ 3 ] <= endings_time_clusters[ j ] ) {
+          pos_t = j;
+          break;
+        }
+      }
+
+      lo start = pos_x > 0 ? pos_x - 1 : pos_x;
+      lo end = pos_x < static_cast< lo >( space_bounds_x.size( ) ) - 2
+        ? pos_x + 1
+        : pos_x;
+      for ( lo j = start; j <= end; ++j ) {
+        if ( ( centroid[ 0 ] >= space_bounds_x[ j ] )
+          && ( centroid[ 0 ] < space_bounds_x[ j + 1 ] ) ) {
+          pos_x = j;
+          break;
+        }
+      }
+
+      start = pos_y > 0 ? pos_y - 1 : pos_y;
+      end = pos_y < static_cast< lo >( space_bounds_y.size( ) ) - 2 ? pos_y + 1
+                                                                    : pos_y;
+      for ( lo j = start; j <= end; ++j ) {
+        if ( ( centroid[ 1 ] >= space_bounds_y[ j ] )
+          && ( centroid[ 1 ] < space_bounds_y[ j + 1 ] ) ) {
+          pos_y = j;
+          break;
+        }
+      }
+
+      start = pos_z > 0 ? pos_z - 1 : pos_z;
+      end = pos_z < static_cast< lo >( space_bounds_z.size( ) ) - 2 ? pos_z + 1
+                                                                    : pos_z;
+      for ( lo j = start; j <= end; ++j ) {
+        if ( ( centroid[ 2 ] >= space_bounds_z[ j ] )
+          && ( centroid[ 2 ] < space_bounds_z[ j + 1 ] ) ) {
+          pos_z = j;
+          break;
+        }
+      }
+      // if the element was found in a time cluster update the counter
+      if ( pos_t > -1 ) {
+        // remember the position in which the element was found (by storing this
+        // information as a "global position" it is easier to find the
+        // corresponding box later)
+        lo global_pos = ( pos_t + leaves_start_index ) * t_stride
+          + pos_x * x_stride + pos_y * y_stride + pos_z;
+        boxes_of_nearfield_elements[ i ] = global_pos;
+      }
+    }
+  }
+}
+
 void besthea::mesh::distributed_spacetime_cluster_tree::decompose_line(
   sc center, sc half_size, sc left_bound, lo n_ref, lo curr_level,
   std::vector< sc > & steps ) {
@@ -905,11 +1453,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     std::vector< std::pair< general_spacetime_cluster *,
       scheduling_time_cluster * > > & cluster_pairs ) {
   // compute number of space clusters at the level of children
-  lo n_space_clusters = 1;
-  for ( lo i = 0; i < n_space_div; ++i ) {
-    n_space_clusters *= 2;
-  }
-
+  lo n_space_clusters = 1 << n_space_div;
   // vector to store the pairs of children which are constructed below.
   std::vector<
     std::pair< general_spacetime_cluster *, scheduling_time_cluster * > >
@@ -1095,6 +1639,19 @@ void besthea::mesh::distributed_spacetime_cluster_tree::collect_local_leaves(
   }
 }
 
+void besthea::mesh::distributed_spacetime_cluster_tree::
+  collect_non_local_leaves( general_spacetime_cluster & root,
+    std::vector< general_spacetime_cluster * > & non_local_leaves ) const {
+  std::vector< general_spacetime_cluster * > * children = root.get_children( );
+  if ( children != nullptr ) {
+    for ( auto it : *children ) {
+      collect_non_local_leaves( *it, non_local_leaves );
+    }
+  } else if ( _my_rank != root.get_process_id( ) ) {
+    non_local_leaves.push_back( &root );
+  }
+}
+
 void besthea::mesh::distributed_spacetime_cluster_tree::collect_real_leaves(
   general_spacetime_cluster & st_root, scheduling_time_cluster & t_root,
   std::vector< general_spacetime_cluster * > & leaves ) {
@@ -1129,8 +1686,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::collect_real_leaves(
   }
   // if t_root is a leaf in the global tree structure, the corresponding
   // space-time clusters are leaves and have to be refined if their meshes are
-  // available. Clusters whose mesh is not available are not added to the vector
-  // leaves.
+  // available. Clusters whose mesh is not available are not added to the
+  // vector leaves.
   else if ( t_root.is_global_leaf( ) && t_root.mesh_is_available( ) ) {
     leaves.push_back( &st_root );
   }
@@ -1162,8 +1719,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
 
   lo n_space_clusters_fine = fine_box_bounds[ 0 ].size( ) - 1;
   // get the spatial cluster bounds using the box coordinates and the
-  // fine_box_bounds. this ensures that the cluster bounds are exactly the same
-  // as in the routine get_n_elements_in_subdivisioning
+  // fine_box_bounds. this ensures that the cluster bounds are exactly the
+  // same as in the routine get_n_elements_in_subdivisioning
 
   sc left = fine_box_bounds[ 0 ][ coord[ 1 ] * n_space_clusters_fine
     / n_space_clusters ];
@@ -1249,9 +1806,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
         elems_thread[ omp_get_thread_num( ) ].push_back(
           _spacetime_mesh.local_2_global( start_idx, i ) );
         // check if the temporal component of the element is a new timestep
-        // (the check with > is safe, due to the computation of the centroid in
-        // get_centroid. since the elements are sorted with respect to time the
-        // right number of time elements is determined.)
+        // (the check with > is safe, due to the computation of the centroid
+        // in get_centroid. since the elements are sorted with respect to time
+        // the right number of time elements is determined.)
         if ( timesteps_thread[ omp_get_thread_num( ) ].size( ) == 0 ) {
           timesteps_thread[ omp_get_thread_num( ) ].push_back( centroid[ 3 ] );
         }
@@ -1281,9 +1838,112 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
   }
 
   cluster.set_n_time_elements( timesteps_union.size( ) );
-  cluster.compute_node_mapping( );
-  cluster.set_n_space_nodes( );
   status = 0;
+}
+
+void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements_new(
+  const std::vector< general_spacetime_cluster * > & leaves,
+  const lo global_dist_tree_depth, const std::vector< lo > & space_levels,
+  const std::vector< lo > & boxes_of_local_elements, lo & status ) {
+  // compute the number of spatial boxes per dimension at level dist_tree_depth
+  // and the strides to compute global indices of boxes
+  lo n_space_clusters_per_dim = 1 << space_levels[ global_dist_tree_depth ];
+  lo y_stride = n_space_clusters_per_dim;
+  lo x_stride = n_space_clusters_per_dim * n_space_clusters_per_dim;
+  lo t_stride = x_stride * n_space_clusters_per_dim;
+  // first we have to assign to each id the corresponding non empty box (or
+  // boxes, in case that leaf is an early leaf)
+  std::unordered_map< lo, general_spacetime_cluster * > index_to_cluster;
+  lo sum = 0;
+  for ( auto leaf : leaves ) {
+    sum += leaf->get_n_elements( );
+    const std::vector< slou > box_coordinates = leaf->get_box_coordinate( );
+    // while going through the leaves we also check for exceptional cases,
+    // reserve space for the elements and set the "elements_are_local" status of
+    // the leaf
+    if ( box_coordinates[ 0 ] <= 1 ) {
+      status = 3;
+      return;
+    }
+    leaf->reserve_elements( leaf->get_n_elements( ) );
+    if ( leaf->get_process_id( ) == _my_rank ) {
+      leaf->set_elements_are_local( true );
+    }
+    // continue with construction of assignment map
+    if ( box_coordinates[ 0 ] == global_dist_tree_depth ) {
+      // compute the index and update the map
+      lo box_index = box_coordinates[ 4 ] * t_stride
+        + box_coordinates[ 1 ] * x_stride + box_coordinates[ 2 ] * y_stride
+        + box_coordinates[ 3 ];
+      index_to_cluster[ box_index ] = leaf;
+    } else {
+      // compute indices of all potential children and add an entry to the map
+      // for each one
+      lo level_diff = global_dist_tree_depth - box_coordinates[ 0 ];
+      lo space_level_diff = space_levels[ global_dist_tree_depth ]
+        - space_levels[ box_coordinates[ 0 ] ];
+      lo n_time_descendants = 1 << level_diff;
+      lo time_multiplicator = n_time_descendants;
+      lo n_space_descendants_per_dim = 1 << space_level_diff;
+      lo space_multiplicator = n_space_descendants_per_dim;
+      std::vector< lo > start_indices_descendant
+        = { box_coordinates[ 1 ] * space_multiplicator,
+            box_coordinates[ 2 ] * space_multiplicator,
+            box_coordinates[ 3 ] * space_multiplicator,
+            box_coordinates[ 4 ] * time_multiplicator };
+      for ( lo i_t = 0; i_t < n_time_descendants; ++i_t ) {
+        for ( lo i_x = 0; i_x < n_space_descendants_per_dim; ++i_x ) {
+          for ( lo i_y = 0; i_y < n_space_descendants_per_dim; ++i_y ) {
+            for ( lo i_z = 0; i_z < n_space_descendants_per_dim; ++i_z ) {
+              lo box_index = ( start_indices_descendant[ 3 ] + i_t ) * t_stride
+                + ( start_indices_descendant[ 0 ] + i_x ) * x_stride
+                + ( start_indices_descendant[ 1 ] + i_y ) * y_stride
+                + ( start_indices_descendant[ 2 ] + i_z );
+              index_to_cluster[ box_index ] = leaf;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // now we can assign the elements to cluster by going through
+  // boxes_of_local_elements
+  lo start_index = _spacetime_mesh.get_local_start_idx( );
+  for ( size_t i = 0; i < boxes_of_local_elements.size( ); ++i ) {
+    index_to_cluster.at( boxes_of_local_elements[ i ] )
+      ->add_element( _spacetime_mesh.local_2_global( start_index, i ) );
+  }
+
+  // we have to do the same for the nearfield elements
+  if ( _spacetime_mesh.get_nearfield_mesh( ) != nullptr ) {
+    std::vector< lo > boxes_of_nearfield_elements;
+    assign_nearfield_elements_to_boxes(
+      n_space_clusters_per_dim, boxes_of_nearfield_elements );
+    start_index = _spacetime_mesh.get_nearfield_start_idx( );
+    for ( size_t i = 0; i < boxes_of_nearfield_elements.size( ); ++i ) {
+      index_to_cluster.at( boxes_of_nearfield_elements[ i ] )
+        ->add_element( _spacetime_mesh.local_2_global( start_index, i ) );
+    }
+  }
+
+  lo n_global_space_elements
+    = ( _spacetime_mesh.get_local_mesh( ) )->get_n_spatial_elements( );
+  // finally, we go through all leaf clusters to determine the number of time
+  // elements contained in them, and to check for consistency.
+  for ( auto leaf : leaves ) {
+    if ( leaf->get_all_elements( ).size( )
+      != static_cast< size_t >( leaf->get_n_elements( ) ) ) {
+      status = 1;
+      return;
+    }
+    lo start_element = leaf->get_element( 0 );
+    lo start_time_element = start_element / n_global_space_elements;
+    lo end_element = leaf->get_element( leaf->get_n_elements( ) - 1 );
+    lo end_time_element = end_element / n_global_space_elements;
+    lo n_time_elements = end_time_element - start_time_element + 1;
+    leaf->set_n_time_elements( n_time_elements );
+  }
 }
 
 // void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements2(
@@ -1349,7 +2009,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
 //  }
 //}
 //
-// void besthea::mesh::distributed_spacetime_cluster_tree::insert_local_element(
+// void
+// besthea::mesh::distributed_spacetime_cluster_tree::insert_local_element(
 //  lo elem_idx, general_spacetime_cluster & root, vector_type & space_center,
 //  vector_type & half_size, linear_algebra::coordinates< 4 > & centroid,
 //  std::vector< sc > & boundary ) {
@@ -1429,7 +2090,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
 //      start_idx = _spacetime_mesh.get_nearfield_start_idx( );
 //      // elements are local is set to false by default -> not set here
 //    }
-//    root.add_element( _spacetime_mesh.local_2_global( start_idx, elem_idx ) );
+//    root.add_element( _spacetime_mesh.local_2_global( start_idx, elem_idx )
+//    );
 //  }
 //}
 
@@ -1448,6 +2110,11 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
     if ( n_space_div > _local_max_space_level ) {
       _local_max_space_level = n_space_div;
     }
+    // compute also the node mapping and set the number of space nodes for the
+    // leaf cluster
+    root.compute_node_mapping( );
+    root.set_n_space_nodes( );
+
     return;
   }
 
@@ -1505,6 +2172,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
   lo n_time_elements_left = 0;
   lo n_time_elements_right = 0;
 
+  std::vector< lo > clusters_of_elements( root.get_n_elements( ) );
   if ( split_space ) {
     for ( lo i = 0; i < root.get_n_elements( ); ++i ) {
       elem_idx
@@ -1516,81 +2184,97 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
         && el_centroid[ 2 ] >= space_center( 2 )
         && el_centroid[ 3 ] < time_center ) {
         ++oct_sizes[ 0 ];
+        clusters_of_elements[ i ] = 0;
       } else if ( el_centroid[ 0 ] < space_center( 0 )
         && el_centroid[ 1 ] >= space_center( 1 )
         && el_centroid[ 2 ] >= space_center( 2 )
         && el_centroid[ 3 ] < time_center ) {
         ++oct_sizes[ 1 ];
+        clusters_of_elements[ i ] = 1;
       } else if ( el_centroid[ 0 ] < space_center( 0 )
         && el_centroid[ 1 ] < space_center( 1 )
         && el_centroid[ 2 ] >= space_center( 2 )
         && el_centroid[ 3 ] < time_center ) {
         ++oct_sizes[ 2 ];
+        clusters_of_elements[ i ] = 2;
       } else if ( el_centroid[ 0 ] >= space_center( 0 )
         && el_centroid[ 1 ] < space_center( 1 )
         && el_centroid[ 2 ] >= space_center( 2 )
         && el_centroid[ 3 ] < time_center ) {
         ++oct_sizes[ 3 ];
+        clusters_of_elements[ i ] = 3;
       } else if ( el_centroid[ 0 ] >= space_center( 0 )
         && el_centroid[ 1 ] >= space_center( 1 )
         && el_centroid[ 2 ] < space_center( 2 )
         && el_centroid[ 3 ] < time_center ) {
         ++oct_sizes[ 4 ];
+        clusters_of_elements[ i ] = 4;
       } else if ( el_centroid[ 0 ] < space_center( 0 )
         && el_centroid[ 1 ] >= space_center( 1 )
         && el_centroid[ 2 ] < space_center( 2 )
         && el_centroid[ 3 ] < time_center ) {
         ++oct_sizes[ 5 ];
+        clusters_of_elements[ i ] = 5;
       } else if ( el_centroid[ 0 ] < space_center( 0 )
         && el_centroid[ 1 ] < space_center( 1 )
         && el_centroid[ 2 ] < space_center( 2 )
         && el_centroid[ 3 ] < time_center ) {
         ++oct_sizes[ 6 ];
+        clusters_of_elements[ i ] = 6;
       } else if ( el_centroid[ 0 ] >= space_center( 0 )
         && el_centroid[ 1 ] < space_center( 1 )
         && el_centroid[ 2 ] < space_center( 2 )
         && el_centroid[ 3 ] < time_center ) {
         ++oct_sizes[ 7 ];
+        clusters_of_elements[ i ] = 7;
       } else if ( el_centroid[ 0 ] >= space_center( 0 )
         && el_centroid[ 1 ] >= space_center( 1 )
         && el_centroid[ 2 ] >= space_center( 2 )
         && el_centroid[ 3 ] >= time_center ) {
         ++oct_sizes[ 8 ];
+        clusters_of_elements[ i ] = 8;
       } else if ( el_centroid[ 0 ] < space_center( 0 )
         && el_centroid[ 1 ] >= space_center( 1 )
         && el_centroid[ 2 ] >= space_center( 2 )
         && el_centroid[ 3 ] >= time_center ) {
         ++oct_sizes[ 9 ];
+        clusters_of_elements[ i ] = 9;
       } else if ( el_centroid[ 0 ] < space_center( 0 )
         && el_centroid[ 1 ] < space_center( 1 )
         && el_centroid[ 2 ] >= space_center( 2 )
         && el_centroid[ 3 ] >= time_center ) {
         ++oct_sizes[ 10 ];
+        clusters_of_elements[ i ] = 10;
       } else if ( el_centroid[ 0 ] >= space_center( 0 )
         && el_centroid[ 1 ] < space_center( 1 )
         && el_centroid[ 2 ] >= space_center( 2 )
         && el_centroid[ 3 ] >= time_center ) {
         ++oct_sizes[ 11 ];
+        clusters_of_elements[ i ] = 11;
       } else if ( el_centroid[ 0 ] >= space_center( 0 )
         && el_centroid[ 1 ] >= space_center( 1 )
         && el_centroid[ 2 ] < space_center( 2 )
         && el_centroid[ 3 ] >= time_center ) {
         ++oct_sizes[ 12 ];
+        clusters_of_elements[ i ] = 12;
       } else if ( el_centroid[ 0 ] < space_center( 0 )
         && el_centroid[ 1 ] >= space_center( 1 )
         && el_centroid[ 2 ] < space_center( 2 )
         && el_centroid[ 3 ] >= time_center ) {
         ++oct_sizes[ 13 ];
+        clusters_of_elements[ i ] = 13;
       } else if ( el_centroid[ 0 ] < space_center( 0 )
         && el_centroid[ 1 ] < space_center( 1 )
         && el_centroid[ 2 ] < space_center( 2 )
         && el_centroid[ 3 ] >= time_center ) {
         ++oct_sizes[ 14 ];
+        clusters_of_elements[ i ] = 14;
       } else if ( el_centroid[ 0 ] >= space_center( 0 )
         && el_centroid[ 1 ] < space_center( 1 )
         && el_centroid[ 2 ] < space_center( 2 )
         && el_centroid[ 3 ] >= time_center ) {
         ++oct_sizes[ 15 ];
+        clusters_of_elements[ i ] = 15;
       }
       // check if the temporal splitting point has been set or has to be set
       // NOTE: this check is only reasonable for pure spacetime tensor meshes
@@ -1677,91 +2361,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
 
     // finally, assign elements to clusters
     for ( lo i = 0; i < root.get_n_elements( ); ++i ) {
-      elem_idx
-        = _spacetime_mesh.global_2_local( start_idx, root.get_element( i ) );
-      current_mesh->get_centroid( elem_idx, el_centroid );
-
-      if ( el_centroid[ 0 ] >= space_center( 0 )
-        && el_centroid[ 1 ] >= space_center( 1 )
-        && el_centroid[ 2 ] >= space_center( 2 )
-        && el_centroid[ 3 ] < time_center ) {
-        clusters[ 0 ]->add_element( root.get_element( i ) );
-      } else if ( el_centroid[ 0 ] < space_center( 0 )
-        && el_centroid[ 1 ] >= space_center( 1 )
-        && el_centroid[ 2 ] >= space_center( 2 )
-        && el_centroid[ 3 ] < time_center ) {
-        clusters[ 1 ]->add_element( root.get_element( i ) );
-      } else if ( el_centroid[ 0 ] < space_center( 0 )
-        && el_centroid[ 1 ] < space_center( 1 )
-        && el_centroid[ 2 ] >= space_center( 2 )
-        && el_centroid[ 3 ] < time_center ) {
-        clusters[ 2 ]->add_element( root.get_element( i ) );
-      } else if ( el_centroid[ 0 ] >= space_center( 0 )
-        && el_centroid[ 1 ] < space_center( 1 )
-        && el_centroid[ 2 ] >= space_center( 2 )
-        && el_centroid[ 3 ] < time_center ) {
-        clusters[ 3 ]->add_element( root.get_element( i ) );
-      } else if ( el_centroid[ 0 ] >= space_center( 0 )
-        && el_centroid[ 1 ] >= space_center( 1 )
-        && el_centroid[ 2 ] < space_center( 2 )
-        && el_centroid[ 3 ] < time_center ) {
-        clusters[ 4 ]->add_element( root.get_element( i ) );
-      } else if ( el_centroid[ 0 ] < space_center( 0 )
-        && el_centroid[ 1 ] >= space_center( 1 )
-        && el_centroid[ 2 ] < space_center( 2 )
-        && el_centroid[ 3 ] < time_center ) {
-        clusters[ 5 ]->add_element( root.get_element( i ) );
-      } else if ( el_centroid[ 0 ] < space_center( 0 )
-        && el_centroid[ 1 ] < space_center( 1 )
-        && el_centroid[ 2 ] < space_center( 2 )
-        && el_centroid[ 3 ] < time_center ) {
-        clusters[ 6 ]->add_element( root.get_element( i ) );
-      } else if ( el_centroid[ 0 ] >= space_center( 0 )
-        && el_centroid[ 1 ] < space_center( 1 )
-        && el_centroid[ 2 ] < space_center( 2 )
-        && el_centroid[ 3 ] < time_center ) {
-        clusters[ 7 ]->add_element( root.get_element( i ) );
-      } else if ( el_centroid[ 0 ] >= space_center( 0 )
-        && el_centroid[ 1 ] >= space_center( 1 )
-        && el_centroid[ 2 ] >= space_center( 2 )
-        && el_centroid[ 3 ] >= time_center ) {
-        clusters[ 8 ]->add_element( root.get_element( i ) );
-      } else if ( el_centroid[ 0 ] < space_center( 0 )
-        && el_centroid[ 1 ] >= space_center( 1 )
-        && el_centroid[ 2 ] >= space_center( 2 )
-        && el_centroid[ 3 ] >= time_center ) {
-        clusters[ 9 ]->add_element( root.get_element( i ) );
-      } else if ( el_centroid[ 0 ] < space_center( 0 )
-        && el_centroid[ 1 ] < space_center( 1 )
-        && el_centroid[ 2 ] >= space_center( 2 )
-        && el_centroid[ 3 ] >= time_center ) {
-        clusters[ 10 ]->add_element( root.get_element( i ) );
-      } else if ( el_centroid[ 0 ] >= space_center( 0 )
-        && el_centroid[ 1 ] < space_center( 1 )
-        && el_centroid[ 2 ] >= space_center( 2 )
-        && el_centroid[ 3 ] >= time_center ) {
-        clusters[ 11 ]->add_element( root.get_element( i ) );
-      } else if ( el_centroid[ 0 ] >= space_center( 0 )
-        && el_centroid[ 1 ] >= space_center( 1 )
-        && el_centroid[ 2 ] < space_center( 2 )
-        && el_centroid[ 3 ] >= time_center ) {
-        clusters[ 12 ]->add_element( root.get_element( i ) );
-      } else if ( el_centroid[ 0 ] < space_center( 0 )
-        && el_centroid[ 1 ] >= space_center( 1 )
-        && el_centroid[ 2 ] < space_center( 2 )
-        && el_centroid[ 3 ] >= time_center ) {
-        clusters[ 13 ]->add_element( root.get_element( i ) );
-      } else if ( el_centroid[ 0 ] < space_center( 0 )
-        && el_centroid[ 1 ] < space_center( 1 )
-        && el_centroid[ 2 ] < space_center( 2 )
-        && el_centroid[ 3 ] >= time_center ) {
-        clusters[ 14 ]->add_element( root.get_element( i ) );
-      } else if ( el_centroid[ 0 ] >= space_center( 0 )
-        && el_centroid[ 1 ] < space_center( 1 )
-        && el_centroid[ 2 ] < space_center( 2 )
-        && el_centroid[ 3 ] >= time_center ) {
-        clusters[ 15 ]->add_element( root.get_element( i ) );
-      }
+      clusters[ clusters_of_elements[ i ] ]->add_element(
+        root.get_element( i ) );
     }
 
     root.set_n_children( n_clusters );
@@ -1775,6 +2376,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
       }
     }
   } else {
+    std::vector< lo > clusters_of_elements( root.get_n_elements( ) );
     for ( lo i = 0; i < root.get_n_elements( ); ++i ) {
       // get elem idx in local mesh indexing
       elem_idx
@@ -1782,8 +2384,10 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
       current_mesh->get_centroid( elem_idx, el_centroid );
       if ( el_centroid[ 3 ] >= time_center ) {
         oct_sizes[ 1 ] += 1;
+        clusters_of_elements[ i ] = 1;
       } else {
         oct_sizes[ 0 ] += 1;
+        clusters_of_elements[ i ] = 0;
       }
       // set the temporal splitting point as in the previous case
       if ( !set_temporal_splitting_point ) {
@@ -1852,16 +2456,12 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
       right_child->set_elements_are_local( elements_are_local );
     }
 
+    // assign elements to clusters
+    clusters[ 0 ] = left_child;
+    clusters[ 1 ] = right_child;
     for ( lo i = 0; i < root.get_n_elements( ); ++i ) {
-      // get elem idx in local mesh indexing
-      elem_idx
-        = _spacetime_mesh.global_2_local( start_idx, root.get_element( i ) );
-      current_mesh->get_centroid( elem_idx, el_centroid );
-      if ( el_centroid[ 3 ] >= time_center ) {
-        right_child->add_element( root.get_element( i ) );
-      } else {
-        left_child->add_element( root.get_element( i ) );
-      }
+      clusters[ clusters_of_elements[ i ] ]->add_element(
+        root.get_element( i ) );
     }
     root.set_n_children( n_clusters );
 
@@ -2266,8 +2866,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::print_information(
       box_size[ box_dim ] /= initial_scaling_factor;
     }
     for ( lo i = 0; i <= global_max_space_level; ++i ) {
-      // find a spacetime level where the spatial components of boxes are on the
-      // current spatial level
+      // find a spacetime level where the spatial components of boxes are on
+      // the current spatial level
       lo spacetime_level;
       if ( i == 0 ) {
         spacetime_level = 0;

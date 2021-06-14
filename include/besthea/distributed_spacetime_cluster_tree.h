@@ -193,6 +193,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    */
   void build_tree( lo & status );
 
+  void build_tree_new( lo & status );
+
   /**
    * Expands the distribution tree included in @p _spacetime_mesh by adding
    * relevant time clusters which appear as components of spacetime clusters in
@@ -326,6 +328,26 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     const std::vector< std::vector< sc > > & fine_box_bounds,
     std::vector< lo > & elems_in_clusters );
 
+  void get_n_elements_in_fine_subdivisioning( lo n_space_div,
+    std::vector< lo > & elems_in_clusters,
+    std::vector< lo > & boxes_of_local_elements );
+
+  void prepare_data_for_element_counting(
+    const std::vector< scheduling_time_cluster * > & temporal_leaf_clusters,
+    const lo n_space_clusters_per_dim, lo & leaves_start_index,
+    std::vector< sc > & starts_time_intervals,
+    std::vector< sc > & endings_time_intervals,
+    std::vector< sc > & spatial_step_sizes, std::vector< sc > & space_bounds_x,
+    std::vector< sc > & space_bounds_y, std::vector< sc > & space_bounds_z );
+
+  void assign_nearfield_elements_to_boxes( const lo n_space_clusters_per_dim,
+    std::vector< lo > & boxes_of_nearfield_elements );
+
+  void sum_up_elements_in_boxes( const lo time_level, const lo space_level,
+    const std::vector< lo > & elems_per_subdivisioning_child_level,
+    const bool space_refined,
+    std::vector< lo > & elems_per_subdivisioning_this_level ) const;
+
   /**
    * Recursively splits an interval into subintervals.
    * @param[in] center Center of the interval to be split.
@@ -392,6 +414,9 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    */
   void collect_local_leaves( general_spacetime_cluster & root );
 
+  void collect_non_local_leaves( general_spacetime_cluster & root,
+    std::vector< general_spacetime_cluster * > & non_local_leaves ) const;
+
   /**
    * Collects space-time leaf clusters in the local part of the distributed tree
    * which are leaves in the global tree (i.e. real leaves). The leaves include
@@ -425,12 +450,18 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   void fill_elements( general_spacetime_cluster & cluster,
     const std::vector< std::vector< sc > > & fine_box_bounds, lo & status );
 
+  void fill_elements_new(
+    const std::vector< general_spacetime_cluster * > & leaves,
+    const lo global_dist_tree_depth, const std::vector< lo > & space_levels,
+    const std::vector< lo > & boxes_of_local_elements, lo & status );
+
   // void fill_elements2( std::vector< general_spacetime_cluster * > & leaves,
   //  spacetime_tensor_mesh const * current_mesh );
 
   // void insert_local_element( lo elem_idx, general_spacetime_cluster & root,
   //  vector_type & space_center, vector_type & half_size,
-  //  linear_algebra::coordinates< 4 > & centroid, std::vector< sc > & boundary
+  //  linear_algebra::coordinates< 4 > & centroid, std::vector< sc > &
+  //  boundary
   //  );
 
   /**
@@ -438,8 +469,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @param[in] root Root to the subtree.
    * @param[in] split_space Indicates whether to split space when
    *                        constructing the children of root.
-   * @todo check correctness of determination of temporal cluster data when more
-   * general meshes are used.
+   * @todo check correctness of determination of temporal cluster data when
+   * more general meshes are used.
    * @note The member variables @p _real_max_levels and
    * @p _local_max_space_level are updated in this routine.
    *
