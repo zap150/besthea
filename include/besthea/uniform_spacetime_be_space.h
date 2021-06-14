@@ -79,6 +79,8 @@ class besthea::bem::uniform_spacetime_be_space
    */
   uniform_spacetime_be_space( st_mesh_type & spacetime_mesh );
 
+  uniform_spacetime_be_space( st_mesh_type && ) = delete;
+
   /**
    * Returns const reference of the mesh.
    */
