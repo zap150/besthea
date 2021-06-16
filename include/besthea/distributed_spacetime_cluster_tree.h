@@ -181,6 +181,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    */
   void print_information( const int root_process );
 
+  void print_spatial_grids( const lo root_proc_id ) const;
+
  private:
   /**
    * Builts the spacetime cluster tree in a communicative way in the upper part
@@ -617,6 +619,10 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   void receive_leaf_info(
     const std::vector< scheduling_time_cluster * > & receive_cluster_vector,
     const lo communication_offset ) const;
+
+  void determine_grid_image_vector( general_spacetime_cluster & current_cluster,
+    const lo print_level, const lo n_space_clusters_per_dim,
+    std::vector< lo > & image_vector ) const;
 
   /**
    * Aux for printing
