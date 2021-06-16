@@ -333,9 +333,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   // compute the spatial half sizes of the first parent box, for which m2m
   // coefficients are computed
-  h_par_no_pad[ 0 ] /= ( sc )( 1 << first_parent_m2m_level_space );
-  h_par_no_pad[ 1 ] /= ( sc )( 1 << first_parent_m2m_level_space );
-  h_par_no_pad[ 2 ] /= ( sc )( 1 << first_parent_m2m_level_space );
+  h_par_no_pad[ 0 ] /= (sc) ( 1 << first_parent_m2m_level_space );
+  h_par_no_pad[ 1 ] /= (sc) ( 1 << first_parent_m2m_level_space );
+  h_par_no_pad[ 2 ] /= (sc) ( 1 << first_parent_m2m_level_space );
 
   for ( lo curr_level = first_parent_m2m_level_space;
         curr_level < max_space_level; ++curr_level ) {
@@ -510,7 +510,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   }
 
   if ( _all_poly_vals_mult_coll.size( )
-    != ( lou )( _spat_order + 1 ) * ( _spat_order + 1 ) * cheb_nodes.size( )
+    != (lou) ( _spat_order + 1 ) * ( _spat_order + 1 ) * cheb_nodes.size( )
       * cheb_nodes.size( ) ) {
     _all_poly_vals_mult_coll.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
       * cheb_nodes.size( ) * cheb_nodes.size( ) );
@@ -545,15 +545,20 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // compute the nearfield ratios (two versions) on each process.
   sc local_nearfield_ratio = compute_nearfield_ratio( );
   sc local_nonzero_nearfield_ratio = compute_nonzero_nearfield_ratio( );
-  sc global_nearfield_ratio( 0 ), global_nonzero_nearfield_ratio( 0 );
+  sc local_nearfield_ratio_adaptive_part
+    = compute_nearfield_ratio_adaptivity_part( );
+  sc global_nearfield_ratio( 0 ), global_nonzero_nearfield_ratio( 0 ),
+    global_nearfield_ratio_adaptive_part( 0 );
   // gather the nearfield ratios at the root process
   int n_processes;
   MPI_Comm_size( *_comm, &n_processes );
   sc * all_local_nonzero_nearfield_ratios = nullptr;
   sc * all_local_nearfield_ratios = nullptr;
+  sc * all_local_nearfield_ratios_adaptive_part = nullptr;
   if ( _my_rank == root_process ) {
     all_local_nonzero_nearfield_ratios = new sc[ n_processes ];
     all_local_nearfield_ratios = new sc[ n_processes ];
+    all_local_nearfield_ratios_adaptive_part = new sc[ n_processes ];
   }
 
   MPI_Gather( &local_nearfield_ratio, 1, get_scalar_type< sc >::MPI_SC( ),
@@ -562,15 +567,22 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   MPI_Gather( &local_nonzero_nearfield_ratio, 1,
     get_scalar_type< sc >::MPI_SC( ), all_local_nonzero_nearfield_ratios, 1,
     get_scalar_type< sc >::MPI_SC( ), root_process, *_comm );
+  MPI_Gather( &local_nearfield_ratio_adaptive_part, 1,
+    get_scalar_type< sc >::MPI_SC( ), all_local_nearfield_ratios_adaptive_part,
+    1, get_scalar_type< sc >::MPI_SC( ), root_process, *_comm );
   if ( _my_rank == root_process ) {
     for ( lo i = 0; i < n_processes; ++i ) {
       global_nearfield_ratio += all_local_nearfield_ratios[ i ];
       global_nonzero_nearfield_ratio += all_local_nonzero_nearfield_ratios[ i ];
+      global_nearfield_ratio_adaptive_part
+        += all_local_nearfield_ratios_adaptive_part[ i ];
     }
     std::cout << "nearfield ratio (including zeros) = "
               << global_nearfield_ratio << std::endl;
     std::cout << "nearfield ratio (counting non-zero entries only) = "
               << global_nonzero_nearfield_ratio << std::endl;
+    std::cout << "nearfield ratio for adaptive part = "
+              << global_nearfield_ratio_adaptive_part << std::endl;
   }
   // count the fmm operations levelwise
   std::vector< lou > n_s2m_operations, n_m2m_operations, n_m2l_operations,
@@ -671,11 +683,15 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< source_space >( );
     sc total_storage_nearfield = 0.0;
     sc total_storage_contributions = 0.0;
+    sc total_storage_adaptive_part = 0.0;
     for ( int i = 0; i < n_processes; ++i ) {
       sc local_storage_nearfield
         = n_target_dofs * n_source_dofs * all_local_nearfield_ratios[ i ];
       local_storage_nearfield
         *= 8. / 1024. / 1024. / 1024.;  // get memory for double entries in GiB.
+      total_storage_adaptive_part += n_target_dofs * n_source_dofs
+        * all_local_nearfield_ratios_adaptive_part[ i ] * 8. / 1024. / 1024.
+        / 1024.;
       sc local_storage_contributions
         = ( all_n_moments[ i ] + all_n_moments_receive[ i ]
             + all_n_local_contributions[ i ] )
@@ -691,6 +707,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               << total_storage_nearfield
               << " GiB, moment and local contributions: "
               << total_storage_contributions << " GiB." << std::endl;
+    std::cout
+      << "total storage corresponding to nearfield matrices in adaptive part: "
+      << total_storage_adaptive_part << " GiB" << std::endl;
     std::cout << "storage per allocated vector (source): "
               << n_source_dofs * 8. / 1024. / 1024. / 1024. << " GiB."
               << std::endl;
@@ -2450,7 +2469,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
-  source_space >::compute_nonzero_nearfield_ratio( ) {
+  source_space >::compute_nonzero_nearfield_ratio( ) const {
   lou n_nearfield_entries = 0;
 
   // get the local and nearfield mesh (needed to determine correct
@@ -2537,14 +2556,14 @@ sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
   lou n_global_tar_space_dofs
     = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< target_space >( );
   return n_nearfield_entries
-    / ( ( sc )( ( n_global_tar_space_dofs * n_global_src_space_dofs
-                  * ( n_global_time_elements + 1 ) )
+    / ( (sc) ( ( n_global_tar_space_dofs * n_global_src_space_dofs
+                 * ( n_global_time_elements + 1 ) )
       / ( 2 * n_global_time_elements ) ) );
 }
 
 template< class kernel_type, class target_space, class source_space >
 sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
-  source_space >::compute_nearfield_ratio( ) {
+  source_space >::compute_nearfield_ratio( ) const {
   lou n_nearfield_entries = 0;
   for ( auto it : _n_list ) {
     const std::vector< general_spacetime_cluster * > * st_targets
@@ -2573,13 +2592,55 @@ sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
 }
 
 template< class kernel_type, class target_space, class source_space >
+sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
+  source_space >::compute_nearfield_ratio_adaptivity_part( ) const {
+  lou n_nearfield_entries = 0;
+  for ( auto it : _n_list ) {
+    const std::vector< general_spacetime_cluster * > * st_targets
+      = it->get_associated_spacetime_clusters( );
+    lou n_associated_leaves = it->get_n_associated_leaves( );
+    for ( lou i = 0; i < n_associated_leaves; ++i ) {
+      general_spacetime_cluster * st_target = ( *st_targets )[ i ];
+      sc tar_time_center, tar_time_half_size;
+      vector_type dummy( 3, false );
+      st_target->get_center( dummy, tar_time_center );
+      st_target->get_half_size( dummy, tar_time_half_size );
+      lo n_target_dofs = st_target->get_n_dofs< target_space >( );
+      std::vector< general_spacetime_cluster * > * st_nearfield_list
+        = st_target->get_nearfield_list( );
+      for ( lou src_index = 0; src_index < st_nearfield_list->size( );
+            ++src_index ) {
+        general_spacetime_cluster * st_source
+          = ( *st_nearfield_list )[ src_index ];
+        sc src_time_center, src_time_half_size;
+        st_source->get_center( dummy, src_time_center );
+        st_source->get_half_size( dummy, src_time_half_size );
+        // only count entries if the clusters are separated in time
+        if ( ( tar_time_center - tar_time_half_size
+               - 1e-8 * tar_time_half_size )
+          > src_time_center + src_time_half_size ) {
+          n_nearfield_entries
+            += n_target_dofs * st_source->get_n_dofs< source_space >( );
+        }
+      }
+    }
+  }
+  lou n_global_target_dofs
+    = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< target_space >( );
+  lou n_global_source_dofs
+    = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< source_space >( );
+  return n_nearfield_entries
+    / ( (sc) n_global_target_dofs * n_global_source_dofs );
+}
+
+template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space,
   source_space >::count_fmm_operations_levelwise( std::vector< lou > &
                                                     n_s2m_operations,
   std::vector< lou > & n_m2m_operations, std::vector< lou > & n_m2l_operations,
   std::vector< lou > & n_l2l_operations,
-  std::vector< lou > & n_l2t_operations ) {
+  std::vector< lou > & n_l2t_operations ) const {
   lo n_max_levels = _distributed_spacetime_tree->get_max_levels( );
   // count the number of s2m operations
   n_s2m_operations.resize( n_max_levels );
@@ -3905,7 +3966,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         ++i ) {
     call_m2l_operations( ( *ready_interaction_list )[ i ], current_cluster,
       verbose, verbose_file );
-    current_cluster->set_m2l_counter( ( slou )( i + 1 ) );
+    current_cluster->set_m2l_counter( (slou) ( i + 1 ) );
   }
   // check if all the m2l operations have been executed yet
   if ( current_cluster->get_m2l_counter( )

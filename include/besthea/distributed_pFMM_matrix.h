@@ -1055,7 +1055,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * a meaningful result (due to the comparison with the global number of
    * entries).
    */
-  sc compute_nearfield_ratio( );
+  sc compute_nearfield_ratio( ) const;
+
+  sc compute_nearfield_ratio_adaptivity_part( ) const;
 
   /**
    * Returns the ratio of non-zero entries of the nearfield blocks of the
@@ -1065,7 +1067,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * a meaningful result (due to the comparison with the global number of
    * entries).
    */
-  sc compute_nonzero_nearfield_ratio( );
+  sc compute_nonzero_nearfield_ratio( ) const;
 
   /**
    * Counts the number of all FMM operations levelwise
@@ -1075,7 +1077,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     std::vector< lou > & n_m2m_operations,
     std::vector< lou > & n_m2l_operations,
     std::vector< lou > & n_l2l_operations,
-    std::vector< lou > & n_l2t_operations );
+    std::vector< lou > & n_l2t_operations ) const;
 
   /**
    * Task in the M-list
