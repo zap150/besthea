@@ -51,7 +51,11 @@ Figures 5.2 and 5.3 were generated using the following parameters:
 * `--spat_order 6`
 * `--measure_tasks 1`
 
-The measured execution times of process `p` are written to `./task_timer/process_p.m` and can be visualized using the matlab routine (TODO: should we add that?)
+The measured execution times of process `p` are written to `./task_timer/process_p.m`. To plot the times of process `p` in a figure in the style of Figure 5.2 use Matlab to run `./task_timer/process_p.m` and to call the function `plot_tasks` provided in 
+```
+BESTHEA/examples/distributed_tensor_dirichlet/plot_tasks.m
+```
+as described in the file's documentation.
 
 ## Example 3: Scalability
 
@@ -85,6 +89,8 @@ The results in Table 5.3 were generated using:
 * `--temp_order 3`
 * `--spat_order 12`
 
-TODO: the visualization is currently not featured in the example. Should we add that?
+Figure 5.5 can be generated using EnSight. For this purpose one has to provide an additional target directory to the executable `distributed_tensor_dirichlet` via the additional option
 
+* `--ensight_dir TARGET_DIRECTORY`.
 
+All files needed for the visualization of the approximated Neumann datum (in addition to the projections of the Neumann and Dirichlet data) are stored in this directory.
