@@ -57,7 +57,7 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
  private:
   struct element {
     std::array< besthea::linear_algebra::coordinates< 3 >, 4 > _nodes;
-    static constexpr double _eps = 1e-6;
+    static constexpr double _eps = 1e-8;
 
     element( ) : _nodes( ){ };
 
@@ -77,12 +77,14 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
             double diff = _nodes[ i ][ k ] - that._nodes[ j ][ k ];
             dist2 += diff * diff;
           }
+          // std::cout << dist2 << std::endl;
           if ( dist2 < _eps * _eps ) {
             ++n_nodes;
           }
         }
       }
-      return ( n_nodes == 0 );
+      // std::cout << std::endl;
+      return ( n_nodes != 4 );
     }
 
     std::array< element, 8 > refine( ) {
@@ -120,6 +122,63 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
       element el7( { node13, node14, node24, node34 } );
       element el8( { node13, node23, node24, node34 } );
       return { el1, el2, el3, el4, el5, el6, el7, el8 };
+    }
+
+    besthea::linear_algebra::coordinates< 3 > centroid( ) {
+      besthea::linear_algebra::coordinates< 3 > x1 = _nodes[ 0 ];
+      besthea::linear_algebra::coordinates< 3 > x2 = _nodes[ 1 ];
+      besthea::linear_algebra::coordinates< 3 > x3 = _nodes[ 2 ];
+      besthea::linear_algebra::coordinates< 3 > x4 = _nodes[ 3 ];
+      sc c0 = ( x1[ 0 ] + x2[ 0 ] + x3[ 0 ] + x4[ 0 ] ) / 4.0;
+      sc c1 = ( x1[ 1 ] + x2[ 1 ] + x3[ 1 ] + x4[ 1 ] ) / 4.0;
+      sc c2 = ( x1[ 2 ] + x2[ 2 ] + x3[ 2 ] + x4[ 2 ] ) / 4.0;
+
+      besthea::linear_algebra::coordinates< 3 > c = { c0, c1, c2 };
+      return c;
+    }
+
+    sc radius( ) {
+      besthea::linear_algebra::coordinates< 3 > c = centroid( );
+      besthea::linear_algebra::coordinates< 3 > diff;
+      sc max_d = 0;
+      for ( lo i = 0; i < 4; ++i ) {
+        diff[ 0 ] = c[ 0 ] - _nodes[ i ][ 0 ];
+        diff[ 1 ] = c[ 1 ] - _nodes[ i ][ 1 ];
+        diff[ 2 ] = c[ 2 ] - _nodes[ i ][ 2 ];
+        sc d = diff.norm( );
+        if ( d > max_d )
+          max_d = d;
+      }
+      return max_d;
+    }
+
+    sc area( ) {
+      linear_algebra::coordinates< 3 > x21;
+      linear_algebra::coordinates< 3 > x31;
+      linear_algebra::coordinates< 3 > x41;
+      linear_algebra::coordinates< 3 > cross;
+      sc dot;
+
+      x21[ 0 ] = _nodes[ 1 ][ 0 ] - _nodes[ 0 ][ 0 ];
+      x21[ 1 ] = _nodes[ 1 ][ 1 ] - _nodes[ 0 ][ 1 ];
+      x21[ 2 ] = _nodes[ 1 ][ 2 ] - _nodes[ 0 ][ 2 ];
+
+      x31[ 0 ] = _nodes[ 2 ][ 0 ] - _nodes[ 0 ][ 0 ];
+      x31[ 1 ] = _nodes[ 2 ][ 1 ] - _nodes[ 0 ][ 1 ];
+      x31[ 2 ] = _nodes[ 2 ][ 2 ] - _nodes[ 0 ][ 2 ];
+
+      x41[ 0 ] = _nodes[ 3 ][ 0 ] - _nodes[ 0 ][ 0 ];
+      x41[ 1 ] = _nodes[ 3 ][ 1 ] - _nodes[ 0 ][ 1 ];
+      x41[ 2 ] = _nodes[ 3 ][ 2 ] - _nodes[ 0 ][ 2 ];
+
+      cross[ 0 ] = x21[ 1 ] * x31[ 2 ] - x21[ 2 ] * x31[ 1 ];
+      cross[ 1 ] = x21[ 2 ] * x31[ 0 ] - x21[ 0 ] * x31[ 2 ];
+      cross[ 2 ] = x21[ 0 ] * x31[ 1 ] - x21[ 1 ] * x31[ 0 ];
+
+      dot
+        = x41[ 0 ] * cross[ 0 ] + x41[ 1 ] * cross[ 1 ] + x41[ 2 ] * cross[ 2 ];
+
+      return ( std::abs( dot ) / 6.0 );
     }
 
     using pair = std::pair< element, element >;
@@ -211,9 +270,7 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
    * @param[in] kernel Spacetime kernel antiderivative object.
    * @param[in] test_space Test boundary element space.
    * @param[in] trial_space Trial boundary element space.
-   * @param[in] order_singular Line quadrature order for regularized
-   * quadrature.
-   * @param[in] order_regular Triangle quadrature order for regular
+   * @param[in] order_regular Tetrahedra quadrature order for regular
    * quadrature.
    */
   tetrahedral_spacetime_be_assembler( kernel_type & kernel,
@@ -297,32 +354,37 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
     quadrature_wrapper & my_quadrature ) const;
 
   /**
+   * Calculates quadrature points in the reference tetrahedron based on its
+   * recursive refinement.
+   *
+   * @param my_quadrature Structure holding the quadrature nodes.
+   */
+  void create_quadrature_points(
+    quadrature_wrapper & my_quadrature, int n_shared_vertices ) const;
+
+  /**
    * Maps the quadrature nodes from reference tetrahedron to one if its
    * subtetrahedra.
-   * @param[in] x1 Coordinates of the first node of the test element.
-   * @param[in] x2 Coordinates of the second node of the test element.
-   * @param[in] x3 Coordinates of the third node of the test element.
-   * @param[in] x4 Coordinates of the fourth node of the test element.
-   * @param[in] y1 Coordinates of the first node of the trial element.
-   * @param[in] y2 Coordinates of the second node of the trial element.
-   * @param[in] y3 Coordinates of the third node of the trial element.
-   * @param[in] y4 Coordinates of the fourth node of the trial element.
+   * @param[in] el1 First sub-element.
+   * @param[in] el2 Second sub-elemen.
    * @param[in] type_int Type of the configuration (number of vertices shared).
-   * @param[in,out] test_q_points Reference to the vector storing quadrature
+   * @param[out] x1 Reference to the vector storing quadrature
    * points in the test element.
-   * @param[in,out] trial_q_points Reference to the vector storing quadrature
+   * @param[out] x2 Reference to the vector storing quadrature
+   * points in the test element.
+   * @param[out] x3 Reference to the vector storing quadrature
+   * points in the test element.
+   * @param[out] y1 Reference to the vector storing quadrature
    * points in the trial element.
-   * @param[in,out] test_w
+   * @param[out] y2 Reference to the vector storing quadrature
+   * points in the trial element.
+   * @param[out] y3 Reference to the vector storing quadrature
+   * points in the trial element.
    */
-  // void tetrahedral_to_tetrahedral_refined(
-  //   const linear_algebra::coordinates< 4 > & x1,
-  //   const linear_algebra::coordinates< 4 > & x2,
-  //   const linear_algebra::coordinates< 4 > & x3,
-  //   const linear_algebra::coordinates< 4 > & x4,
-  //   const linear_algebra::coordinates< 4 > & y1,
-  //   const linear_algebra::coordinates< 4 > & y2,
-  //   const linear_algebra::coordinates< 4 > & y3,
-  //   const linear_algebra::coordinates< 4 > & y4, int type_int );
+  void reference_to_subreference( const element & el1, const element & el2,
+    int type_int, std::vector< sc > & x1, std::vector< sc > & x2,
+    std::vector< sc > & x3, std::vector< sc > & y1, std::vector< sc > & y2,
+    std::vector< sc > & y3 ) const;
 
   kernel_type * _kernel;  //!< Kernel temporal antiderivative.
 
