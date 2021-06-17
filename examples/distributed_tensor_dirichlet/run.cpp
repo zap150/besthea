@@ -107,6 +107,12 @@ struct config {
               << std::endl;
     std::cout << "  Spatial expansion order:               " << spat_order
               << std::endl;
+    std::cout << "  Measure task execution:                ";
+    if ( measure_tasks > 0 ) {
+      std::cout << "yes" << std::endl;
+    } else {
+      std::cout << "no" << std::endl;
+    }
   }
 
   // spatial mesh data
@@ -124,6 +130,7 @@ struct config {
   int trunc_space = 2;
   int temp_order = 4;
   int spat_order = 12;
+  lo measure_tasks = 0;
 };  // struct config
 
 namespace {
@@ -177,7 +184,13 @@ namespace {
         "Temporal expansion order used for the kernel expansion in the FMM." )
       | lyra::opt( c.spat_order, "Spatial expansion order" )[ "--spat_order" ](
         "Spatial expansion order used for the kernel expansion in the "
-        "FMM" );
+        "FMM" )
+      | lyra::opt(
+        c.measure_tasks, "Measure task execution" )[ "--measure_tasks" ](
+        "If the value of this integer is greater than zero, each process "
+        "measures the execution times of the executed tasks in a "
+        "multiplication of the FMM and stores them in the directory "
+        "./task_timer/ (default 0)" );
 
     auto result = cli.parse( { argc, argv } );
 
@@ -422,6 +435,10 @@ int main( int argc, char * argv[] ) {
         distributed_space_p0, distributed_space_p0, &comm, order_sing,
         order_reg, c.temp_order, c.spat_order, cauchy_data::_alpha );
       distributed_assembler_v.assemble( *V );
+      // activate task measurement if it is desired
+      if ( c.measure_tasks > 0 ) {
+        V->set_task_timer( true );
+      }
       MPI_Barrier( comm );
       if ( my_rank == 0 ) {
         t.measure( );
