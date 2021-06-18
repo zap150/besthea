@@ -8,7 +8,7 @@ n_threads = size(M, 2);
 figure;
 axis([0 total_t 0 n_threads * 15]);
 yticks(5: 15 :n_threads * 15);
-yticklabels({1:n_threads});
+yticklabels({0:n_threads-1});
 xlabel("Time [us]");
 ylabel("Thread no.");
 hold on;
@@ -72,22 +72,25 @@ end
 
 axis([0 total_t 0 n_threads * 15]);
 yticks(5: 15 :n_threads * 15);
-yticklabels({1:n_threads});
-xlabel("Time [us]",'FontSize',12);
+yticklabels({0:n_threads-1});
+xlabel("Time [\mus]",'FontSize',12);
 ylabel("Thread no.",'FontSize',12);
 
 
 x0=10;
 y0=10;
-width=800;
+%width=800; % gcc
+width=1024; % 
 %width = 350;
-height=350;
-height=350/3;
+%height=350;
+%height=350/3; % gcc
+height=400;
 set(gcf,'position',[x0,y0,width,height])
 set(gca, 'OuterPosition', [0,0,1,1]);
 ax = gca;
 outerpos = ax.OuterPosition;
-ti = ax.TightInset; 
+ti = ax.TightInset
+
 left = outerpos(1) + ti(1);
 bottom = outerpos(2) + ti(2);
 

@@ -131,6 +131,7 @@ struct config {
   int temp_order = 4;
   int spat_order = 12;
   lo measure_tasks = 0;
+  sc gmres_prec = 1e-8;
   std::string ensight_dir = "";
 };  // struct config
 
@@ -192,6 +193,8 @@ namespace {
         "measures the execution times of the executed tasks in a "
         "multiplication of the FMM and stores them in the directory "
         "./task_timer/ (default 0)" )
+      | lyra::opt( c.gmres_prec, "GMRES relative precision" )[ "--gmres_prec" ](
+        "Relative precision of the GMRES solver (default 1e-8) " )
       | lyra::opt(
         c.ensight_dir, "Directory for ensight files" )[ "--ensight_dir" ](
         "If this option is provided, the result is stored in Ensight format in "
@@ -239,7 +242,7 @@ int main( int argc, char * argv[] ) {
   // refine time in each refinement step twice:
   lo temp_refine_factor = 2;
   // GMRES parameters: precision and maximal number of iterations
-  sc gmres_prec = 1e-8;
+  sc gmres_prec = c.gmres_prec;
   lo gmres_iter = 250;
   // print information about setup
   if ( my_rank == 0 ) {
@@ -272,8 +275,7 @@ int main( int argc, char * argv[] ) {
 
   // directory to store the files of the distributed space-time mesh which is
   // constructed in the following.
-  std::string geometry_dir
-    = "./distributed_tensor_dirichlet/temp_geometry_files/";
+  std::string geometry_dir = "./temp_geometry_files/";
   std::filesystem::create_directory( geometry_dir );
 
   // parameters for distributed spacetime mesh
