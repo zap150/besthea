@@ -331,24 +331,21 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
 
         if ( adm ) {
           // push element pair into the ready_elems list
-          // std::cout << "adm on level " << level + 1 << std::endl;
 
           ready_elems.push_back( std::make_tuple(
             new_elements_1[ i ], new_elements_2[ j ], level + 1 ) );
         } else if ( ( !adm ) && ( level + 1 < _singular_refinements ) ) {
-          // if ( n_shared_nodes < 4 && n_shared_nodes > 0 ) {
-          // push into the ready_elems list (for now)
+          if ( n_shared_nodes < 4 && n_shared_nodes > 0 ) {
+            // push into the ready_elems list (for now)
 
-          // ready_elems.push_back( std::make_tuple(
-          //  new_elements_1[ i ], new_elements_2[ j ], level + 1 ) );
-          //} else {
-          // std::cout << level << ": " << i << "  " << j << std::endl;
-          // std::cout << "refining on level " << level << std::endl;
-          // further refine the pair of (for now identical) elements
-          refine_reference_recursively( std::make_tuple( new_elements_1[ i ],
-                                          new_elements_2[ j ], level + 1 ),
-            ready_elems );
-          //}
+            ready_elems.push_back( std::make_tuple(
+              new_elements_1[ i ], new_elements_2[ j ], level + 1 ) );
+          } else {
+            // further refine the pair of (for now identical) elements
+            refine_reference_recursively( std::make_tuple( new_elements_1[ i ],
+                                            new_elements_2[ j ], level + 1 ),
+              ready_elems );
+          }
         } else {
           // push the pair of nonidentical elements into ready_elems list, do
           // nothing with identical ones
@@ -372,11 +369,12 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
   //     } else if ( ( i == j ) && ( level == _singular_refinements ) ) {
   //       continue;
   //     } else {
-  //       // generate quadrature points & weights for both el_i, el_j and store
+  //       // generate quadrature points & weights for both el_i, el_j and
+  //       store
   //       // them at the end of four separate unrolled vectors
 
-  //       // modified version of tetrahedral_to_geometry to map from reference
-  //       to
+  //       // modified version of tetrahedral_to_geometry to map from
+  //       reference to
   //       // current
   //     }
   //   }
@@ -398,10 +396,8 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
   for ( auto & it : ready_elems ) {
     element & el1 = std::get< 0 >( it );
     element & el2 = std::get< 1 >( it );
-    // auto & nodes1 = el1._nodes;
-    // auto & nodes2 = el2._nodes;
 
-    sc area2 = el1.area( ) * el2.area( );
+    sc area2 = el1.area( ) * el2.area( ) * 36.0;
     std::vector< sc > x1, x2, x3, y1, y2, y3;
     reference_to_subreference(
       el1, el2, n_shared_vertices, x1, x2, x3, y1, y2, y3 );
