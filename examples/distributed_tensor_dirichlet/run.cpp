@@ -107,6 +107,12 @@ struct config {
               << std::endl;
     std::cout << "  Spatial expansion order:               " << spat_order
               << std::endl;
+    std::cout << "  Measure task execution:                ";
+    if ( measure_tasks > 0 ) {
+      std::cout << "yes" << std::endl;
+    } else {
+      std::cout << "no" << std::endl;
+    }
   }
 
   // spatial mesh data
@@ -124,6 +130,9 @@ struct config {
   int trunc_space = 2;
   int temp_order = 4;
   int spat_order = 12;
+  lo measure_tasks = 0;
+  sc gmres_prec = 1e-8;
+  std::string ensight_dir = "";
 };  // struct config
 
 namespace {
@@ -177,7 +186,19 @@ namespace {
         "Temporal expansion order used for the kernel expansion in the FMM." )
       | lyra::opt( c.spat_order, "Spatial expansion order" )[ "--spat_order" ](
         "Spatial expansion order used for the kernel expansion in the "
-        "FMM" );
+        "FMM" )
+      | lyra::opt(
+        c.measure_tasks, "Measure task execution" )[ "--measure_tasks" ](
+        "If the value of this integer is greater than zero, each process "
+        "measures the execution times of the executed tasks in a "
+        "multiplication of the FMM and stores them in the directory "
+        "./task_timer/ (default 0)" )
+      | lyra::opt( c.gmres_prec, "GMRES relative precision" )[ "--gmres_prec" ](
+        "Relative precision of the GMRES solver (default 1e-8) " )
+      | lyra::opt(
+        c.ensight_dir, "Directory for ensight files" )[ "--ensight_dir" ](
+        "If this option is provided, the result is stored in Ensight format in "
+        "the corresponding directory for visualization" );
 
     auto result = cli.parse( { argc, argv } );
 
@@ -221,7 +242,7 @@ int main( int argc, char * argv[] ) {
   // refine time in each refinement step twice:
   lo temp_refine_factor = 2;
   // GMRES parameters: precision and maximal number of iterations
-  sc gmres_prec = 1e-8;
+  sc gmres_prec = c.gmres_prec;
   lo gmres_iter = 250;
   // print information about setup
   if ( my_rank == 0 ) {
@@ -254,8 +275,7 @@ int main( int argc, char * argv[] ) {
 
   // directory to store the files of the distributed space-time mesh which is
   // constructed in the following.
-  std::string geometry_dir
-    = "./distributed_tensor_dirichlet/temp_geometry_files/";
+  std::string geometry_dir = "./temp_geometry_files/";
   std::filesystem::create_directory( geometry_dir );
 
   // parameters for distributed spacetime mesh
@@ -422,6 +442,10 @@ int main( int argc, char * argv[] ) {
         distributed_space_p0, distributed_space_p0, &comm, order_sing,
         order_reg, c.temp_order, c.spat_order, cauchy_data::_alpha );
       distributed_assembler_v.assemble( *V );
+      // activate task measurement if it is desired
+      if ( c.measure_tasks > 0 ) {
+        V->set_task_timer( true );
+      }
       MPI_Barrier( comm );
       if ( my_rank == 0 ) {
         t.measure( );
@@ -462,6 +486,31 @@ int main( int argc, char * argv[] ) {
                   << std::endl;
       }
       delete V;
+      if ( c.ensight_dir != "" ) {
+        if ( my_rank == 0 ) {
+          t.reset( "Printing EnSight surface" );
+        }
+        std::vector< std::string > node_labels{ "Dirichlet_projection" };
+        std::vector< std::string > elem_labels{ "Neumann_projection",
+          "Neumann_result" };
+        std::vector< distributed_block_vector * > node_data{
+          &dirichlet_projection
+        };
+        std::vector< distributed_block_vector * > elem_data{
+          &neumann_projection, &approx_neumann_datum
+        };
+        if ( my_rank == 0 ) {
+          std::filesystem::create_directory( c.ensight_dir );
+        }
+        distributed_mesh.print_ensight_case(
+          c.ensight_dir, &node_labels, &elem_labels );
+        distributed_mesh.print_ensight_geometry( c.ensight_dir );
+        distributed_mesh.print_ensight_datafiles(
+          c.ensight_dir, &node_labels, &node_data, &elem_labels, &elem_data );
+        if ( my_rank == 0 ) {
+          t.measure( );
+        }
+      }
     }
   }
   MPI_Finalize( );

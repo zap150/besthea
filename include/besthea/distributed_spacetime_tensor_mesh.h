@@ -63,6 +63,12 @@ namespace besthea {
   }
 }
 
+namespace besthea {
+  namespace linear_algebra {
+    class distributed_block_vector;
+  }
+}
+
 /**
  * Class serving as a container holding spacetime tensor product meshes
  * distributed among MPI processes.
@@ -279,6 +285,64 @@ class besthea::mesh::distributed_spacetime_tensor_mesh
    */
   template< class space_type >
   lo get_n_dofs( ) const;
+
+  /**
+   * Prints the EnSight Gold case file.
+   * @param[in] directory Directory to which the case file is saved.
+   * @param[in] node_labels Labels for nodal data.
+   * @param[in] element_labels Labels for elemental data.
+   * @param[in] selected_timesteps Contains the global indices of the timesteps
+   *                               for which data is printed. In case no vector
+   *                               is provided all timesteps are printed.
+   * @param[in] root_process  MPI rank of the process that takes care of
+   *                          printing (default = 0).
+   */
+  bool print_ensight_case( const std::string & directory,
+    const std::vector< std::string > * node_labels = nullptr,
+    const std::vector< std::string > * element_labels = nullptr,
+    const std::vector< lo > * selected_timesteps = nullptr,
+    const int root_process = 0 ) const;
+
+  /**
+   * Prints the EnSight Gold geometry file.
+   * @param[in] directory Directory to which the geometry file is saved.
+   * @param[in] root_process  MPI rank of the process that takes care of
+   *                          printing (default = 0).
+   */
+  bool print_ensight_geometry(
+    const std::string & directory, const int root_process = 0 ) const {
+    bool return_value;
+    if ( _my_rank == 0 ) {
+      return_value = _space_mesh->print_ensight_geometry( directory );
+    }
+    MPI_Bcast( &return_value, 1, MPI_CXX_BOOL, 0, *_comm );
+    return return_value;
+  }
+
+  /**
+   * Prints the EnSight Variable files for given element and node data for some
+   * selected timesteps.
+   * @param[in] directory Directory that datafiles are printed to.
+   * @param[in] node_labels Labels for nodal data.
+   * @param[in] node_data Scalar nodal data.
+   * @param[in] element_labels Labels for elemental data.
+   * @param[in] element_data Scalar elemental data.
+   * @param[in] selected_timesteps Contains the global indices of the timesteps
+   *                               for which data is printed. In case no vector
+   *                               is provided all timesteps are printed.
+   * @param[in] root_process  MPI rank of the process that takes care of
+   *                          printing (default = 0).
+   */
+  bool print_ensight_datafiles( const std::string & directory,
+    const std::vector< std::string > * node_labels = nullptr,
+    const std::vector< linear_algebra::distributed_block_vector * > * node_data
+    = nullptr,
+    const std::vector< std::string > * element_labels = nullptr,
+    const std::vector< linear_algebra::distributed_block_vector * > *
+      element_data
+    = nullptr,
+    const std::vector< lo > * selected_timesteps = nullptr,
+    const int root_process = 0 ) const;
 
  protected:
   /**

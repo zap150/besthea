@@ -30,10 +30,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/distributed_spacetime_tensor_mesh.h"
 
+#include "besthea/distributed_block_vector.h"
 #include "besthea/scheduling_time_cluster.h"
 #include "besthea/tree_structure.h"
 
 #include <cmath>
+#include <iomanip>
 #include <iostream>
 #include <set>
 
@@ -301,4 +303,262 @@ besthea::mesh::distributed_spacetime_tensor_mesh::get_my_timesteps( ) const {
     my_timesteps[ n_nearfield_elems + i - _local_start_idx ] = i;
   }
   return my_timesteps;
+}
+
+bool besthea::mesh::distributed_spacetime_tensor_mesh::print_ensight_case(
+  const std::string & directory, const std::vector< std::string > * node_labels,
+  const std::vector< std::string > * element_labels,
+  const std::vector< lo > * selected_timesteps, const int root_process ) const {
+  // let the root process gather the centers of all selected timesteps
+  // in the distributed mesh
+  std::vector< lo > const * timesteps_to_consider;
+  std::vector< lo > help_vector;
+  if ( selected_timesteps == nullptr ) {
+    help_vector.resize( _n_global_time_elements );
+    for ( lo i = 0; i < _n_global_time_elements; ++i ) {
+      help_vector[ i ] = i;
+    }
+    timesteps_to_consider = &help_vector;
+  } else {
+    timesteps_to_consider = selected_timesteps;
+  }
+
+  std::vector< lo > my_part_of_selected_timesteps;
+  for ( lou i = 0; i < timesteps_to_consider->size( ); ++i ) {
+    if ( ( *timesteps_to_consider )[ i ] >= _local_start_idx
+      && ( *timesteps_to_consider )[ i ]
+        < _local_start_idx + _time_mesh->get_n_elements( ) ) {
+      my_part_of_selected_timesteps.push_back( global_2_local_time(
+        _local_start_idx, ( *timesteps_to_consider )[ i ] ) );
+    }
+  }
+  int n_my_selected_timesteps
+    = static_cast< int >( my_part_of_selected_timesteps.size( ) );
+
+  std::vector< sc > my_selected_time_centers( n_my_selected_timesteps, 0.0 );
+  for ( lo i = 0; i < n_my_selected_timesteps; ++i ) {
+    my_selected_time_centers[ i ]
+      = _time_mesh->get_centroid( my_part_of_selected_timesteps[ i ] );
+  }
+
+  std::vector< sc > all_selected_time_centers;
+  std::vector< int > individual_sizes;
+  std::vector< int > displacements;
+  if ( _my_rank == root_process ) {
+    all_selected_time_centers.resize( timesteps_to_consider->size( ) );
+    individual_sizes.resize( _n_processes );
+  }
+  // first, determine how many selected timesteps each process has
+  MPI_Gather( &n_my_selected_timesteps, 1, MPI_INT, individual_sizes.data( ), 1,
+    MPI_INT, root_process, *_comm );
+  // compute the displacement for the right access in all_selected_time_centers
+  if ( _my_rank == root_process ) {
+    displacements.resize( _n_processes );
+    displacements[ 0 ] = 0;
+    for ( lo i = 1; i < _n_processes; ++i ) {
+      displacements[ i ] = displacements[ i - 1 ] + individual_sizes[ i - 1 ];
+    }
+  }
+  // now get the centers of the selected timesteps from each process
+  MPI_Gatherv( my_selected_time_centers.data( ),
+    my_selected_time_centers.size( ), get_scalar_type< sc >::MPI_SC( ),
+    all_selected_time_centers.data( ), individual_sizes.data( ),
+    displacements.data( ), get_scalar_type< sc >::MPI_SC( ), root_process,
+    *_comm );
+
+  bool return_value = true;
+  if ( _my_rank == root_process ) {
+    std::string filename = directory + "/output.case";
+
+    std::ofstream case_file( filename.c_str( ) );
+
+    if ( !case_file.is_open( ) ) {
+      std::cout << "File '" << filename << "' could not be opened!"
+                << std::endl;
+      return_value = false;
+    } else {
+      lo n_timesteps = timesteps_to_consider->size( );
+
+      // std::cout << "Printing '" << filename << "' ... ";
+      // std::cout.flush( );
+
+      case_file << "FORMAT\n"
+                << "type: ensight gold\n\n"
+
+                << "GEOMETRY\n"
+                << "model: mesh.geo"
+                << "\n\n";
+
+      int n_nodal = node_labels ? node_labels->size( ) : 0;
+      int n_element = element_labels ? element_labels->size( ) : 0;
+
+      if ( n_nodal > 0 || n_element > 0 ) {
+        case_file << "VARIABLE\n";
+      }
+
+      for ( lo i = 0; i < n_nodal; ++i ) {
+        case_file << "scalar per node: " << ( *node_labels )[ i ]
+                  << " node_data_" << i;
+        if ( n_timesteps > 0 ) {
+          case_file << ".****";
+        }
+        case_file << "\n";
+      }
+
+      for ( lo i = 0; i < n_element; ++i ) {
+        case_file << "scalar per element: " << ( *element_labels )[ i ]
+                  << " elem_data_" << i;
+        if ( n_timesteps > 0 ) {
+          case_file << ".****";
+        }
+        case_file << "\n";
+      }
+
+      if ( n_timesteps > 0 ) {
+        case_file << "\n"
+                  << "TIME\n"
+                  << "time set: 1\n"
+                  << "number of steps: " << n_timesteps << "\n"
+                  << "filename start number: 0\n"
+                  << "filename increment: 1\n"
+                  << "time values:\n";
+
+        for ( lo i = 0; i < n_timesteps; ++i ) {
+          case_file << std::setw( 12 ) << std::setprecision( 5 )
+                    << all_selected_time_centers[ i ] << "\n";
+        }
+      }
+
+      case_file.close( );
+    }
+  }
+  // the root process tells the other processes if the operation was successfull
+  MPI_Bcast( &return_value, 1, MPI_CXX_BOOL, root_process, *_comm );
+  return return_value;
+}
+
+bool besthea::mesh::distributed_spacetime_tensor_mesh::print_ensight_datafiles(
+  const std::string & directory, const std::vector< std::string > * node_labels,
+  const std::vector< linear_algebra::distributed_block_vector * > * node_data,
+  const std::vector< std::string > * element_labels,
+  const std::vector< linear_algebra::distributed_block_vector * > *
+    element_data,
+  const std::vector< lo > * selected_timesteps, const int root_process ) const {
+  bool return_value = true;
+  lo n_nodal = node_data ? node_data->size( ) : 0;
+  lo n_elem = element_data ? element_data->size( ) : 0;
+  std::vector< linear_algebra::vector * > node_data_for_one_ts;
+  std::vector< linear_algebra::vector * > elem_data_for_one_ts;
+  std::vector< linear_algebra::vector > root_node_buffers;
+  std::vector< linear_algebra::vector > root_element_buffers;
+
+  lo n_global_space_nodes = _space_mesh->get_n_nodes( );
+  lo n_global_space_elements = _space_mesh->get_n_elements( );
+
+  if ( _my_rank == root_process ) {
+    node_data_for_one_ts.resize( n_nodal );
+    elem_data_for_one_ts.resize( n_elem );
+    root_node_buffers.resize( n_nodal );
+    for ( lo i = 0; i < n_nodal; ++i ) {
+      root_node_buffers[ i ].resize( n_global_space_nodes );
+    }
+    root_element_buffers.resize( n_elem );
+    for ( lo i = 0; i < n_elem; ++i ) {
+      root_element_buffers[ i ].resize( n_global_space_elements );
+    }
+  }
+
+  std::vector< lo > const * timesteps_to_consider;
+  std::vector< lo > help_vector;
+  if ( selected_timesteps == nullptr ) {
+    help_vector.resize( _n_global_time_elements );
+    for ( lo i = 0; i < _n_global_time_elements; ++i ) {
+      help_vector[ i ] = i;
+    }
+    timesteps_to_consider = &help_vector;
+  } else {
+    timesteps_to_consider = selected_timesteps;
+  }
+
+  lou ts = 0;
+  while ( return_value == true && ts < timesteps_to_consider->size( ) ) {
+    // get the appropriate blocks of the distributed nodal vectors (using MPI
+    // communication if necessary)
+    lo curr_timestep = ( *timesteps_to_consider )[ ts ];
+    for ( lo i = 0; i < n_nodal; ++i ) {
+      if ( _my_rank == root_process ) {
+        if ( ( *node_data )[ i ]->am_i_owner( curr_timestep ) ) {
+          node_data_for_one_ts[ i ]
+            = &( *node_data )[ i ]->get_block( curr_timestep );
+        } else {
+          MPI_Status receive_status;
+          MPI_Recv( root_node_buffers[ i ].data( ), n_global_space_nodes,
+            get_scalar_type< sc >::MPI_SC( ),
+            ( *node_data )[ i ]->get_primary_owner( curr_timestep ), ts, *_comm,
+            &receive_status );
+          node_data_for_one_ts[ i ] = &root_node_buffers[ i ];
+        }
+      } else {
+        std::vector< int > curr_owners
+          = ( *node_data )[ i ]->get_owners( )[ curr_timestep ];
+        bool root_process_is_owner = false;
+        for ( lou k = 0; k < curr_owners.size( ); ++k ) {
+          if ( curr_owners[ k ] == root_process ) {
+            root_process_is_owner = true;
+          }
+        }
+        if ( !root_process_is_owner
+          && _my_rank
+            == ( *node_data )[ i ]->get_primary_owner( curr_timestep ) ) {
+          MPI_Send( ( *node_data )[ i ]->get_block( curr_timestep ).data( ),
+            n_global_space_nodes, get_scalar_type< sc >::MPI_SC( ),
+            root_process, ts, *_comm );
+        }
+      }
+    }
+    // same for the element vectors
+    for ( lo i = 0; i < n_elem; ++i ) {
+      if ( _my_rank == root_process ) {
+        if ( ( *element_data )[ i ]->am_i_owner( curr_timestep ) ) {
+          elem_data_for_one_ts[ i ]
+            = &( *element_data )[ i ]->get_block( curr_timestep );
+        } else {
+          MPI_Status receive_status;
+          MPI_Recv( root_element_buffers[ i ].data( ), n_global_space_elements,
+            get_scalar_type< sc >::MPI_SC( ),
+            ( *element_data )[ i ]->get_primary_owner( curr_timestep ), ts,
+            *_comm, &receive_status );
+          elem_data_for_one_ts[ i ] = &root_element_buffers[ i ];
+        }
+      } else {
+        std::vector< int > curr_owners
+          = ( *element_data )[ i ]->get_owners( )[ curr_timestep ];
+        bool root_process_is_owner = false;
+        for ( lou k = 0; k < curr_owners.size( ); ++k ) {
+          if ( curr_owners[ k ] == root_process ) {
+            root_process_is_owner = true;
+          }
+        }
+        if ( !root_process_is_owner
+          && _my_rank
+            == ( *element_data )[ i ]->get_primary_owner( curr_timestep ) ) {
+          MPI_Send( ( *element_data )[ i ]->get_block( curr_timestep ).data( ),
+            n_global_space_elements, get_scalar_type< sc >::MPI_SC( ),
+            root_process, ts, *_comm );
+        }
+      }
+    }
+    // print the datafiles for the current timestep.
+    // note: while there may be jumps between selected timesteps, we still
+    // number the resulting files consecutively (not with respect to the
+    // original indices of the timesteps)
+    if ( _my_rank == root_process ) {
+      return_value
+        = _space_mesh->print_ensight_datafiles( directory, node_labels,
+          &node_data_for_one_ts, element_labels, &elem_data_for_one_ts, ts );
+    }
+    MPI_Bcast( &return_value, 1, MPI_CXX_BOOL, 0, *_comm );
+    ++ts;
+  }
+  return return_value;
 }
