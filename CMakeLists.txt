@@ -180,7 +180,7 @@ target_compile_definitions(besthea PUBLIC
 #install(FILES ${besthea_INCLUDES}
 #  DESTINATION "${CMAKE_BINARY_DIR}/include/besthea")
 
-option(BUILD_EXAMPLES "Build examples using the library" OFF)
+option(BUILD_EXAMPLES "Build examples using the library" ON)
 
 if(BUILD_EXAMPLES)
   add_subdirectory(examples)
