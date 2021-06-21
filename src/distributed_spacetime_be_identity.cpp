@@ -32,6 +32,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
+#include "besthea/block_vector.h"
+#include "besthea/distributed_block_vector.h"
 #include "besthea/distributed_fast_spacetime_be_space.h"
 
 template< class test_space_type, class trial_space_type >
@@ -62,10 +64,12 @@ void besthea::bem::distributed_spacetime_be_identity< test_space_type,
 }
 
 template< class test_space_type, class trial_space_type >
-void besthea::bem::distributed_spacetime_be_identity< test_space_type,
-  trial_space_type >::apply( [[maybe_unused]] const block_vector_type & x,
-  [[maybe_unused]] block_vector_type & y, [[maybe_unused]] bool trans,
-  [[maybe_unused]] sc alpha, [[maybe_unused]] sc beta ) const {
+void besthea::bem::
+  distributed_spacetime_be_identity< test_space_type, trial_space_type >::apply(
+    [[maybe_unused]] const linear_algebra::block_vector & x,
+    [[maybe_unused]] linear_algebra::block_vector & y,
+    [[maybe_unused]] bool trans, [[maybe_unused]] sc alpha,
+    [[maybe_unused]] sc beta ) const {
   std::cout << "ERROR: Apply is not implemented for block vectors (only for "
                "distributed block vectors)"
             << std::endl;
@@ -73,8 +77,9 @@ void besthea::bem::distributed_spacetime_be_identity< test_space_type,
 
 template< class test_space_type, class trial_space_type >
 void besthea::bem::distributed_spacetime_be_identity< test_space_type,
-  trial_space_type >::apply( const distributed_block_vector_type & x,
-  distributed_block_vector_type & y, bool trans, sc alpha, sc beta ) const {
+  trial_space_type >::apply( const linear_algebra::distributed_block_vector & x,
+  linear_algebra::distributed_block_vector & y, bool trans, sc alpha,
+  sc beta ) const {
   if ( this->_data.get_n_rows( ) > 0 ) {
     lo local_start_idx = this->_test_space->get_mesh( ).get_local_start_idx( );
     for ( lou local_time_index = 0; local_time_index < this->_timesteps.size( );

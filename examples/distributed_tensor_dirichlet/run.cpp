@@ -487,58 +487,27 @@ int main( int argc, char * argv[] ) {
       }
       delete V;
       if ( c.ensight_dir != "" ) {
-        // copy the distributed block vectors to regular block vectors for
-        // printing
-        vector temp_copy( n_global_timesteps * n_global_space_elements );
-        // first for the approximated neumann datum
-        approx_neumann_datum.copy_to_vector( temp_copy );
-        block_vector copy_approx_neumann_datum;
-        if ( my_rank == 0 ) {
-          copy_approx_neumann_datum.copy_from_vector(
-            n_global_timesteps, n_global_space_elements, temp_copy );
-        }
-        // same for the neumann projection and dirichlet projection
-        neumann_projection.copy_to_vector( temp_copy );
-        block_vector copy_neumann_projection;
-        if ( my_rank == 0 ) {
-          copy_neumann_projection.copy_from_vector(
-            n_global_timesteps, n_global_space_elements, temp_copy );
-        }
-        temp_copy.resize( n_global_timesteps * n_global_space_nodes );
-        dirichlet_projection.copy_to_vector( temp_copy );
-        block_vector copy_dirichlet_projection;
-        if ( my_rank == 0 ) {
-          copy_dirichlet_projection.copy_from_vector(
-            n_global_timesteps, n_global_space_nodes, temp_copy );
-        }
-        // rank 0 prints the surface data in ensight format
         if ( my_rank == 0 ) {
           t.reset( "Printing EnSight surface" );
-          std::vector< std::string > node_labels{ "Dirichlet_projection" };
-          std::vector< std::string > elem_labels{ "Neumann_projection",
-            "Neumann_result" };
-          std::vector< block_vector * > node_data{ &copy_dirichlet_projection };
-          std::vector< block_vector * > elem_data{ &copy_neumann_projection,
-            &copy_approx_neumann_datum };
+        }
+        std::vector< std::string > node_labels{ "Dirichlet_projection" };
+        std::vector< std::string > elem_labels{ "Neumann_projection",
+          "Neumann_result" };
+        std::vector< distributed_block_vector * > node_data{
+          &dirichlet_projection
+        };
+        std::vector< distributed_block_vector * > elem_data{
+          &neumann_projection, &approx_neumann_datum
+        };
+        if ( my_rank == 0 ) {
           std::filesystem::create_directory( c.ensight_dir );
-
-          // create a local copy of the space-time mesh for printing
-          triangular_surface_mesh space_mesh( c.spatial_file );
-          if ( c.space_init_refine > 0 ) {
-            space_mesh.refine( c.space_init_refine );
-          }
-          uniform_spacetime_tensor_mesh spacetime_mesh(
-            space_mesh, c.end_time, c.n_timeslices );
-          if ( c.refine > 0 ) {
-            spacetime_mesh.refine( c.refine, temp_refine_factor );
-          }
-
-          // call the appropriate routines for printing
-          spacetime_mesh.print_ensight_case(
-            c.ensight_dir, &node_labels, &elem_labels );
-          spacetime_mesh.print_ensight_geometry( c.ensight_dir );
-          spacetime_mesh.print_ensight_datafiles(
-            c.ensight_dir, &node_labels, &node_data, &elem_labels, &elem_data );
+        }
+        distributed_mesh.print_ensight_case(
+          c.ensight_dir, &node_labels, &elem_labels );
+        distributed_mesh.print_ensight_geometry( c.ensight_dir );
+        distributed_mesh.print_ensight_datafiles(
+          c.ensight_dir, &node_labels, &node_data, &elem_labels, &elem_data );
+        if ( my_rank == 0 ) {
           t.measure( );
         }
       }
