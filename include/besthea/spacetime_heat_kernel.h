@@ -79,11 +79,16 @@ class besthea::bem::spacetime_heat_kernel
 #pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( DATA_WIDTH )
   sc do_evaluate( sc xy1, sc xy2, sc xy3, [[maybe_unused]] const sc * nx,
     [[maybe_unused]] const sc * ny, sc ttau ) const {
-    sc norm2 = xy1 * xy1 + xy2 * xy2 + xy3 * xy3;
+    sc value = 0.0;
 
-    sc value = _one
-      / ( _eight * _pi_sqrt_pi * _alpha_sqrt_alpha * ttau * std::sqrt( ttau ) )
-      * std::exp( -norm2 / ( _four * _alpha * ttau ) );
+    if ( ttau > _eps ) {
+      sc norm2 = xy1 * xy1 + xy2 * xy2 + xy3 * xy3;
+
+      value = _one
+        / ( _eight * _pi_sqrt_pi * _alpha_sqrt_alpha * ttau
+          * std::sqrt( ttau ) )
+        * std::exp( -norm2 / ( _four * _alpha * ttau ) );
+    }
 
     return value;
   }

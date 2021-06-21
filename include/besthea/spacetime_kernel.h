@@ -90,6 +90,9 @@ class besthea::bem::spacetime_kernel {
     sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, sc ttau ) const {
     return derived( )->do_evaluate( xy1, xy2, xy3, nx, ny, ttau );
   }
+
+ protected:
+  static constexpr sc _eps{ 1e-12 };  //!< Auxiliary variable
 };
 
 #endif /* INCLUDE_BESTHEA_SPACETIME_KERNEL_H_ */
