@@ -128,21 +128,6 @@ void besthea::mesh::tree_structure::assign_slices_to_clusters(
 
 void besthea::mesh::tree_structure::reduce_2_essential( ) {
   determine_essential_clusters( _my_process_id, *_root );
-  // if only the leaves should be kept, which are leaves in the original tree
-  // structure the following code can be used
-  // ###########################################################################
-  // remove all leaves with status 0 from _leaves
-  // std::vector< scheduling_time_cluster* > new_leaves;
-  // for ( lou i = 0; i < _leaves.size( ); ++ i ) {
-  //   lo leaf_index = _leaves[ i ]->get_global_index( );
-  //   if ( status_map[ leaf_index ] > 0 ) {
-  //     new_leaves.push_back( _leaves[ i ] );
-  //   }
-  // }
-  // new_leaves.shrink_to_fit( );
-  // _leaves = std::move( new_leaves );
-  // ###########################################################################
-
   // traverse the tree structure and reduce it by eliminating all
   // non-essential clusters. In addition, correct the nearfield, interaction
   // lists and children of all clusters and reset _levels and _leaves.
@@ -225,7 +210,8 @@ void besthea::mesh::tree_structure::init_fmm_lists(
     m2l_list.push_back( &root );
   }
 
-  // add the cluster to the n-list, if it is a leaf
+  // add the cluster to the n-list, if it is associated with spacetime leaf
+  // clusters
   if ( root.get_process_id( ) == _my_process_id
     && root.get_n_associated_leaves( ) > 0 ) {
     n_list.push_back( &root );
@@ -591,10 +577,17 @@ bool besthea::mesh::tree_structure::subtree_contains_local_cluster(
 
 void besthea::mesh::tree_structure::determine_cluster_communication_lists(
   scheduling_time_cluster * root,
-  std::set< std::pair< lo, scheduling_time_cluster * > > & subtree_send_list,
-  std::set< std::pair< lo, scheduling_time_cluster * > > & subtree_receive_list,
-  std::set< std::pair< lo, scheduling_time_cluster * > > & leaf_info_send_list,
-  std::set< std::pair< lo, scheduling_time_cluster * > > &
+  std::set< std::pair< lo, scheduling_time_cluster * >,
+    compare_pairs_of_process_ids_and_scheduling_time_clusters > &
+    subtree_send_list,
+  std::set< std::pair< lo, scheduling_time_cluster * >,
+    compare_pairs_of_process_ids_and_scheduling_time_clusters > &
+    subtree_receive_list,
+  std::set< std::pair< lo, scheduling_time_cluster * >,
+    compare_pairs_of_process_ids_and_scheduling_time_clusters > &
+    leaf_info_send_list,
+  std::set< std::pair< lo, scheduling_time_cluster * >,
+    compare_pairs_of_process_ids_and_scheduling_time_clusters > &
     leaf_info_receive_list ) const {
   if ( root->get_n_children( ) > 0 ) {
     for ( auto it_child : *( root->get_children( ) ) ) {
@@ -667,7 +660,7 @@ void besthea::mesh::tree_structure::determine_cluster_communication_lists(
   }
 }
 
-void besthea::mesh::tree_structure::clear_cluster_lists(
+void besthea::mesh::tree_structure::clear_nearfield_send_and_interaction_lists(
   scheduling_time_cluster * root ) {
   // call the routine recursively for non-leaf clusters which were in the tree
   // before the expansion
@@ -680,7 +673,19 @@ void besthea::mesh::tree_structure::clear_cluster_lists(
   if ( root->get_n_children( ) > 0 ) {
     std::vector< scheduling_time_cluster * > * children = root->get_children( );
     for ( auto it = children->begin( ); it != children->end( ); ++it ) {
-      clear_cluster_lists( *it );
+      clear_nearfield_send_and_interaction_lists( *it );
+    }
+  }
+}
+
+void besthea::mesh::tree_structure::clear_lists_of_associated_clusters(
+  scheduling_time_cluster & current_cluster ) {
+  if ( current_cluster.get_associated_spacetime_clusters( ) != nullptr ) {
+    current_cluster.get_associated_spacetime_clusters( )->clear( );
+  }
+  if ( current_cluster.get_n_children( ) > 0 ) {
+    for ( auto child : *current_cluster.get_children( ) ) {
+      clear_lists_of_associated_clusters( *child );
     }
   }
 }
@@ -739,8 +744,7 @@ void besthea::mesh::tree_structure::prepare_essential_reduction(
       _levels = current_level + 1;
     }
     // check if the nearfield contains clusters which are not essential and
-    // remove them in case. If the resulting nearfield is empty delete the
-    // container
+    // remove them in the affirmative case.
     std::vector< scheduling_time_cluster * > * nearfield
       = root.get_nearfield_list( );
     auto it = nearfield->begin( );
@@ -751,10 +755,7 @@ void besthea::mesh::tree_structure::prepare_essential_reduction(
         ++it;
       }
     }
-    if ( nearfield->size( ) == 0 ) {
-      root.delete_nearfield( );
-    }
-    // same for the send list
+    // same for the send list. If the resulting send list is empty, delete it.
     std::vector< scheduling_time_cluster * > * send_list
       = root.get_send_list( );
     if ( send_list != nullptr ) {
@@ -813,8 +814,7 @@ void besthea::mesh::tree_structure::execute_essential_reduction(
 
 void besthea::mesh::tree_structure::determine_essential_clusters(
   const lo my_process_id, scheduling_time_cluster & root ) const {
-  // traverse the tree and add the status of each cluster to the map, using
-  // the clusters global id as key.
+  // traverse the tree and set the status of each cluster
   if ( root.get_n_children( ) > 0 ) {
     std::vector< scheduling_time_cluster * > * children = root.get_children( );
     for ( lou i = 0; i < children->size( ); ++i ) {
@@ -996,6 +996,31 @@ bool besthea::mesh::tree_structure::compare_clusters_top_down_right_2_left(
     ret_val = true;
   }
   return ret_val;
+}
+
+void besthea::mesh::tree_structure::remove_clusters_with_no_association(
+  scheduling_time_cluster & current_cluster ) {
+  // each scheduling cluster with essential status > 1 should be associated with
+  // a group of space-time clusters. Otherwise we can delete it.
+  if ( current_cluster.get_n_children( ) > 0 ) {
+    std::vector< scheduling_time_cluster * > * children
+      = current_cluster.get_children( );
+    auto it = children->begin( );
+    while ( it != children->end( ) ) {
+      if ( ( *it )->get_essential_status( ) > 1
+        && ( ( *it )->get_associated_spacetime_clusters( ) == nullptr ) ) {
+        delete ( *it );
+        it = children->erase( it );
+      } else {
+        remove_clusters_with_no_association( *( *it ) );
+        ++it;
+      }
+    }
+    if ( children->size( ) == 0 ) {
+      current_cluster.delete_children( );
+      current_cluster.set_global_leaf_status( true );
+    }
+  }
 }
 
 void besthea::mesh::tree_structure::count_number_of_contributions(

@@ -46,7 +46,8 @@ namespace besthea {
   }
 }
 
-// forward declaration of fast_spacetime_be_space and basis functions
+// forward declaration of distributed_fast_spacetime_be_space and basis
+// functions
 namespace besthea {
   namespace bem {
     template< class basis_type >
@@ -148,8 +149,8 @@ class besthea::mesh::general_spacetime_cluster {
   /**
    * Returns the distributed spacetime mesh associated with the cluster.
    */
-  const distributed_spacetime_tensor_mesh * get_mesh( ) const {
-    return &_mesh;
+  const distributed_spacetime_tensor_mesh & get_mesh( ) const {
+    return _mesh;
   }
 
   /**
@@ -854,6 +855,18 @@ class besthea::mesh::general_spacetime_cluster {
     int rotation, bool swap, std::vector< lo > & indices ) const;
 
   /**
+   * Computes a selected component of the surface curls of p1 basis functions
+   * associated to the triangles of the space-time elements contained in the
+   * cluster.
+   * @param[out] surface_curls_along_dim  Vector in which the surface curls are
+   *                                      stored.
+   * @tparam dim Used to select the component of the surface curls (0,1 or 2).
+   */
+  template< slou dim >
+  void compute_surface_curls_p1_along_dim(
+    std::vector< sc > & surface_curls_along_dim ) const;
+
+  /**
    * Prints info of the object.
    */
   void print( ) {
@@ -963,7 +976,8 @@ class besthea::mesh::general_spacetime_cluster {
                              //!< scheduling_time_cluster
 };
 
-/** specialization for p0 basis functions */
+/** specialization of @ref besthea::mesh::general_spacetime_cluster::get_n_dofs
+ * for p0 basis functions */
 template<>
 inline lo besthea::mesh::general_spacetime_cluster::get_n_dofs< besthea::bem::
     distributed_fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >( )
@@ -971,7 +985,8 @@ inline lo besthea::mesh::general_spacetime_cluster::get_n_dofs< besthea::bem::
   return _n_elements;
 }
 
-/** specialization for p1 basis functions
+/** specialization of @ref besthea::mesh::general_spacetime_cluster::get_n_dofs
+ * for p1 basis functions
  */
 template<>
 inline lo besthea::mesh::general_spacetime_cluster::get_n_dofs< besthea::bem::
@@ -980,7 +995,9 @@ inline lo besthea::mesh::general_spacetime_cluster::get_n_dofs< besthea::bem::
   return _n_time_elements * _n_space_nodes;
 }
 
-/** specialization for p0 basis functions */
+/** specialization of
+ * @ref besthea::mesh::general_spacetime_cluster::get_n_space_dofs for p0 basis
+ * functions */
 template<>
 inline lo besthea::mesh::general_spacetime_cluster::get_n_space_dofs< besthea::
     bem::distributed_fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >( )
@@ -988,7 +1005,9 @@ inline lo besthea::mesh::general_spacetime_cluster::get_n_space_dofs< besthea::
   return _n_space_elements;
 }
 
-/** specialization for p1 basis functions */
+/** specialization of
+ * @ref besthea::mesh::general_spacetime_cluster::get_n_space_dofs for p1 basis
+ * functions */
 template<>
 inline lo besthea::mesh::general_spacetime_cluster::get_n_space_dofs< besthea::
     bem::distributed_fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >( )
@@ -996,7 +1015,9 @@ inline lo besthea::mesh::general_spacetime_cluster::get_n_space_dofs< besthea::
   return _n_space_nodes;
 }
 
-/** specialization for p0 basis functions */
+/** specialization of
+ * @ref besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs
+ * for p0 basis functions */
 template<>
 inline void
 besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs<
@@ -1007,7 +1028,9 @@ besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs<
   indices[ 0 ] = i_loc_elem;
 }
 
-/** specialization for p1 basis functions */
+/** specialization of
+ * @ref besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs
+ * for p1 basis functions */
 template<>
 inline void
 besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs<
@@ -1055,5 +1078,4 @@ besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs<
       break;
   }
 }
-
 #endif /* INCLUDE_BESTHEA_GENERAL_SPACETIME_CLUSTER_H_ */

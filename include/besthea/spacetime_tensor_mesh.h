@@ -425,7 +425,7 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * return.
    */
   void get_spatial_centroid(
-    lo i_elem, linear_algebra::coordinates< 3 > & centroid ) {
+    lo i_elem, linear_algebra::coordinates< 3 > & centroid ) const {
     linear_algebra::coordinates< 3 > x1, x2, x3;
     _space_mesh->get_nodes( i_elem, x1, x2, x3 );
     centroid[ 0 ] = ( x1[ 0 ] + x2[ 0 ] + x3[ 0 ] ) / 3.0;
@@ -577,6 +577,7 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * Returns the index of the space element corresponding to the given
    * spacetime element
    * @param[in] i_element Index of the spacetime element.
+   * @todo rename: hard to distinguish get_spatial_element and get_space_element
    */
   lo get_space_element( lo i_element ) const {
     return i_element % get_n_spatial_elements( );

@@ -45,8 +45,8 @@ besthea::bem::uniform_spacetime_be_identity< test_space_type,
     _order_regular( order_regular ) {
   auto & test_basis = _test_space->get_basis( );
   auto & trial_basis = _trial_space->get_basis( );
-  auto mesh = _test_space->get_mesh( );
-  set_block_dim( mesh->get_n_temporal_elements( ) );
+  const auto & st_mesh = _test_space->get_mesh( );
+  set_block_dim( st_mesh.get_n_temporal_elements( ) );
   set_dim_domain( trial_basis.dimension_global( ) );
   set_dim_range( test_basis.dimension_global( ) );
 }
@@ -90,13 +90,13 @@ void besthea::bem::uniform_spacetime_be_identity< test_space_type,
   std::vector< los > & jj, std::vector< sc > & vv ) const {
   auto & test_basis = _test_space->get_basis( );
   auto & trial_basis = _trial_space->get_basis( );
-  auto mesh = _test_space->get_mesh( );
-  sc timestep = mesh->get_timestep( );
+  const auto & st_mesh = _test_space->get_mesh( );
+  sc timestep = st_mesh.get_timestep( );
 
   lo n_loc_rows = test_basis.dimension_local( );
   lo n_loc_columns = trial_basis.dimension_local( );
 
-  lo n_elements = mesh->get_n_spatial_elements( );
+  lo n_elements = st_mesh.get_n_spatial_elements( );
   std::vector< lo > test_l2g( n_loc_rows );
   std::vector< lo > trial_l2g( n_loc_columns );
   ii.reserve( n_elements * n_loc_rows * n_loc_columns );
@@ -114,8 +114,8 @@ void besthea::bem::uniform_spacetime_be_identity< test_space_type,
   sc value, test, trial, area;
   linear_algebra::coordinates< 3 > n;
   for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
-    mesh->get_spatial_normal( i_elem, n );
-    area = mesh->spatial_area( i_elem );
+    st_mesh.get_spatial_normal( i_elem, n );
+    area = st_mesh.spatial_area( i_elem );
 
     test_basis.local_to_global( i_elem, test_l2g );
     trial_basis.local_to_global( i_elem, trial_l2g );
@@ -142,7 +142,7 @@ template< class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_identity< test_space_type,
   trial_space_type >::apply( const block_vector_type & x, block_vector_type & y,
   bool trans, sc alpha, sc beta ) const {
-  lo block_dim = _test_space->get_mesh( )->get_n_temporal_elements( );
+  lo block_dim = ( _test_space->get_mesh( ) ).get_n_temporal_elements( );
   for ( lo diag = 0; diag < block_dim; ++diag ) {
     _data.apply( x.get_block( diag ), y.get_block( diag ), trans, alpha, beta );
   }
@@ -152,7 +152,7 @@ template< class test_space_type, class trial_space_type >
 void besthea::bem::uniform_spacetime_be_identity< test_space_type,
   trial_space_type >::apply( const distributed_block_vector_type & x,
   distributed_block_vector_type & y, bool trans, sc alpha, sc beta ) const {
-  lo block_dim = _test_space->get_mesh( )->get_n_temporal_elements( );
+  lo block_dim = ( _test_space->get_mesh( ) ).get_n_temporal_elements( );
   for ( lo diag = 0; diag < block_dim; ++diag ) {
     if ( y.am_i_owner( diag ) && x.am_i_owner( diag ) ) {
       _data.apply(

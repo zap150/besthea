@@ -29,7 +29,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file chebyshev_evaluator.h
- * @brief Evaluation of Lagrange polynomials.
+ * @brief Contains a class which allows to evaluate 1D Chebyshev polynomials and
+ * their first derivatives in the standard interval [-1,1].
+ * @note updated documentation
  */
 
 #ifndef INCLUDE_BESTHEA_CHEBYSHEV_EVALUATOR_H_
@@ -47,7 +49,8 @@ namespace besthea {
 }
 
 /**
- * Class for the evaluation of Lagrange polynomials for Chebyshev nodes
+ * Class for the evaluation of 1D Chebyshev polynomials and their first
+ * derivatives in the standard interval [-1,1].
  */
 class besthea::bem::chebyshev_evaluator {
  public:
@@ -55,7 +58,7 @@ class besthea::bem::chebyshev_evaluator {
 
   /**
    * Constructor.
-   * @param[in] order highest order of evaluated chebyshev polynomials
+   * @param[in] order Highest order of the evaluated Chebyshev polynomials.
    */
   chebyshev_evaluator( const lo order ) : _order( order ) {
   }
@@ -63,7 +66,8 @@ class besthea::bem::chebyshev_evaluator {
   chebyshev_evaluator( const chebyshev_evaluator & that ) = delete;
 
   /**
-   * Sets the highest order of the polynomials.
+   * Sets the order up to which Chebyshev polynomials and their derivatives are
+   * evaluated by the corresponding evaluation routines.
    * @param[in] order Highest order of the evaluated Chebyshev polynomials.
    */
   void set_order( int order ) {
@@ -71,20 +75,27 @@ class besthea::bem::chebyshev_evaluator {
   }
 
   /**
-   * Evaluate all Chebyshev polynomials up to given order for points in [-1, 1].
-   * @param[in] eval_points Points in [-1, 1] where polynomial is evaluated.
-   * @param[in,out]  all_values  Resulting values (at input size should be at
-   *                             least (@p _order + 1) * size @p eval_points).
+   * Evaluate the Chebyshev polynomials of order {0,..., @p _order } for points
+   * in the interval [-1,1].
+   * @param[in] eval_points Points in [-1, 1] where polynomials are evaluated.
+   * @param[in,out]  all_values Resulting values. At input the size of this
+   *                            vector should be at least
+   *                            ( @p _order + 1) * size( @p eval_points ).
+   * @note If n evaluation points are provided, @p all_values [ i * n + j ] is
+   * the value of the i-th Chebyshev polynomial evaluated at the j-th point for
+   * all i in {0, ..., @p _order } and j in {0, ..., n-1}.
    */
   void evaluate(
     const vector_type & eval_points, vector_type & all_values ) const {
-    // initialize values to 1;
     const lo sz = eval_points.size( );
+    // Chebyshev polynomial T_0(x) = 1.
     for ( lo i = 0; i < sz; ++i ) all_values[ i ] = 1.0;
     if ( _order > 0 ) {
+      // Chebyshev polynomial T_1(x) = x.
       for ( lo i = 0; i < sz; ++i ) {
         all_values[ sz + i ] = eval_points[ i ];
       }
+      // Recursion formula to compute other polynomial values.
       for ( lo j = 2; j <= _order; ++j ) {
         for ( lo i = 0; i < sz; ++i ) {
           all_values[ j * sz + i ]
@@ -96,26 +107,33 @@ class besthea::bem::chebyshev_evaluator {
   }
 
   /**
-   * Evaluate derivatives of all Chebyshev polynomial up to given order for
-   * points in [-1, 1].
-   * @param[in] eval_points Points in [-1, 1] where polynomial is evaluated.
-   * @param[in,out]  all_values  Resulting values (at input size should be at
-   *                             least (@p _order + 1) * size @p eval_points).
+   * Evaluate derivatives of all Chebyshev polynomial up to the given order for
+   * points in the interval [-1, 1].
+   * @param[in] eval_points Points in [-1, 1] where polynomials are evaluated.
+   * @param[in,out] all_values Resulting values. At input the size of this
+   *                           vector should be at least
+   *                           ( @p _order + 1) * size( @p eval_points ).
+   * @note If n evaluation points are provided, @p all_values [ i * n + j ] is
+   * the value of the i-th Chebyshev polynomial's derivative evaluated at the
+   * j-th point for all i in {0, ..., @p _order } and j in {0, ..., n-1}.
    */
   void evaluate_derivative(
     const vector_type & eval_points, vector_type & all_values ) const {
-    // initialize values to 1;
     const lo sz = eval_points.size( );
+    // Derivative T_0'(x) = 0.
     for ( lo i = 0; i < sz; ++i ) all_values[ i ] = 0.0;
     if ( _order > 0 ) {
+      // Derivative T_1'(x) = 1.
       for ( lo i = 0; i < sz; ++i ) {
         all_values[ sz + i ] = 1.0;
       }
     }
     if ( _order > 1 ) {
+      // Derivative T_2'(x) = 4x.
       for ( lo i = 0; i < sz; ++i ) {
         all_values[ 2 * sz + i ] = 4.0 * eval_points[ i ];
       }
+      // Recursion formula to compute other values of polynomial derivatives.
       for ( lo j = 3; j <= _order; ++j ) {
         for ( lo i = 0; i < sz; ++i ) {
           all_values[ j * sz + i ] = ( 2.0 * j ) / ( j - 1 ) * eval_points[ i ]
@@ -128,7 +146,9 @@ class besthea::bem::chebyshev_evaluator {
   }
 
  private:
-  lo _order;  //!< highest order of evaluated chebyshev polynomials
+  lo _order;  //!< Highest order of evaluated Chebyshev polynomials, i.e. all
+              //!< polynomials with orders in { 0,..., @p _order } are
+              //!< evaluated.
 };
 
 #endif /* INCLUDE_BESTHEA_CHEBYSHEV_EVALUATOR_H_ */

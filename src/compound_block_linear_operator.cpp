@@ -54,8 +54,8 @@ void besthea::linear_algebra::compound_block_linear_operator::apply(
   }
 
   std::vector< block_vector_type > aux( 2 );
-  aux[ 0 ].resize( x.get_block_size( ) );
-  aux[ 1 ].resize( x.get_block_size( ) );
+  aux[ 0 ].resize( x.get_n_blocks( ) );
+  aux[ 1 ].resize( x.get_n_blocks( ) );
   aux[ 0 ].resize_blocks( _maximal_dimension, false );
   aux[ 1 ].resize_blocks( _maximal_dimension, false );
   const block_vector_type * src;
@@ -120,8 +120,8 @@ void besthea::linear_algebra::compound_block_linear_operator::apply(
 
   std::vector< distributed_block_vector_type > aux( 2 );
   std::vector< lo > my_blocks = x.get_my_blocks( );
-  aux[ 0 ].resize( my_blocks, x.get_block_size( ) );
-  aux[ 1 ].resize( my_blocks, x.get_block_size( ) );
+  aux[ 0 ].resize( my_blocks, x.get_n_blocks( ) );
+  aux[ 1 ].resize( my_blocks, x.get_n_blocks( ) );
   aux[ 0 ].resize_blocks( _maximal_dimension, false );
   aux[ 1 ].resize_blocks( _maximal_dimension, false );
   const distributed_block_vector_type * src;

@@ -35,12 +35,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDE_BESTHEA_DISTRIBUTED_FAST_SPACETIME_BE_SPACE_H_
 #define INCLUDE_BESTHEA_DISTRIBUTED_FAST_SPACETIME_BE_SPACE_H_
 
-#include "besthea/block_vector.h"
+#include "besthea/distributed_block_vector.h"
 #include "besthea/distributed_spacetime_cluster_tree.h"
 #include "besthea/distributed_spacetime_tensor_mesh.h"
 #include "besthea/settings.h"
 #include "besthea/spacetime_be_space.h"
-#include "besthea/spacetime_cluster_tree.h"
 #include "besthea/spacetime_tensor_mesh.h"
 #include "besthea/temporal_mesh.h"
 #include "besthea/triangular_surface_mesh.h"
@@ -57,7 +56,8 @@ namespace besthea {
  */
 template< class basis_type >
 class besthea::bem::distributed_fast_spacetime_be_space
-  : public besthea::bem::spacetime_be_space< basis_type > {
+  : public besthea::bem::spacetime_be_space< basis_type,
+      besthea::linear_algebra::distributed_block_vector > {
   /**
    * Wraps the mapped quadrature point so that they can be private for OpenMP
    * threads
@@ -90,8 +90,6 @@ class besthea::bem::distributed_fast_spacetime_be_space
   using s_mesh_type
     = besthea::mesh::triangular_surface_mesh;        //!< Spatial mesh type.
   using t_mesh_type = besthea::mesh::temporal_mesh;  //!< Temporal mesh type.
-  using block_vector_type
-    = besthea::linear_algebra::block_vector;  //!< Block vector type.
 
  public:
   /**
@@ -150,7 +148,7 @@ class besthea::bem::distributed_fast_spacetime_be_space
    */
   virtual void L2_projection(
     sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-    block_vector_type & projection, int order_matrix = 2,
+    linear_algebra::distributed_block_vector & projection, int order_matrix = 2,
     int order_rhs_spatial = 5, int order_rhs_temporal = 4 ) const override;
 
   /**
@@ -165,8 +163,8 @@ class besthea::bem::distributed_fast_spacetime_be_space
    */
   virtual sc L2_relative_error(
     sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
-    const block_vector_type & approximation, int order_rhs_spatial = 5,
-    int order_rhs_temporal = 4 ) const override;
+    const linear_algebra::distributed_block_vector & approximation,
+    int order_rhs_spatial = 5, int order_rhs_temporal = 4 ) const override;
 
   /**
    * Projects a function to the boundary element space. ONLY USE SPECIALIZED

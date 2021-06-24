@@ -131,7 +131,7 @@ void besthea::mesh::time_cluster_tree::print_cluster_bounds(
 }
 
 std::vector< lo > besthea::mesh::time_cluster_tree::compute_process_assignments(
-  const lo n_processes, const lo strategy ) const {
+  const lo n_processes, const lo strategy, lo & status ) const {
   // determine the minimal level of all leaf clusters
   // for the assignment of processes only the clusters up to this level are
   // considered
@@ -148,10 +148,12 @@ std::vector< lo > besthea::mesh::time_cluster_tree::compute_process_assignments(
 
   if ( trunc_level <= 1 ) {
     std::cout << "Error: Temporal cluster tree is too coarse!" << std::endl;
+    status = 1;
     return std::vector< lo >( 1, -1 );
   } else if ( thresh_level > trunc_level ) {
     std::cout << "Error: The number of processes is higher than the number of "
               << "clusters at the level of the earliest leaf!" << std::endl;
+    status = 2;
     return std::vector< lo >( 1, -1 );
   } else {
     // Create a vector to store the assignment in a levelwise format.
@@ -405,6 +407,7 @@ std::vector< lo > besthea::mesh::time_cluster_tree::compute_process_assignments(
     convert_assignment_vector_2_tree_format( *_root, levelwise_assignment,
       thresh_level, trunc_level, n_processes, -1, assigned_clusters,
       process_pointers, process_assignment );
+    status = 0;
     return process_assignment;
   }
 }
@@ -413,6 +416,8 @@ void besthea::mesh::time_cluster_tree::build_tree(
   time_cluster & root, lo level ) {
   // stop recursion if maximum number of levels is reached or root contains less
   // than _n_min_elems elements
+  // note: the input value of level corresponds to the level of the potential
+  // children of root
   if ( level > _levels - 1 || root.get_n_elements( ) < _n_min_elems ) {
     root.set_n_children( 0 );
     if ( root.get_n_elements( ) > _n_max_elems_leaf ) {
@@ -434,22 +439,38 @@ void besthea::mesh::time_cluster_tree::build_tree(
   lo n_right = 0;
   lo elem_idx = 0;
 
-  // count the number of elements in each subcluster
+  // count the number of elements in each subcluster and compute the splitting
+  // point
+  sc temporal_splitting_point = center;
+  linear_algebra::coordinates< 1 > node1;
+  linear_algebra::coordinates< 1 > node2;
   for ( lo i = 0; i < root_n_elems; ++i ) {
     elem_idx = root.get_element( i );
     el_centroid = _mesh.get_centroid( elem_idx );
+    _mesh.get_nodes( elem_idx, node1, node2 );
     if ( el_centroid <= center ) {
       ++n_left;
+      if ( node2[ 0 ] > center ) {
+        temporal_splitting_point = node2[ 0 ];
+      }
     } else {
       ++n_right;
+      if ( node1[ 0 ] < center ) {
+        temporal_splitting_point = node1[ 0 ];
+      }
     }
   }
 
+  sc left_center = ( center - half_size + temporal_splitting_point ) / 2.0;
+  sc left_half_size = ( temporal_splitting_point - center + half_size ) / 2.0;
+  sc right_center = ( center + half_size + temporal_splitting_point ) / 2.0;
+  sc right_half_size = ( center + half_size - temporal_splitting_point ) / 2.0;
+
   time_cluster * left_cluster = new time_cluster(
-    center - half_size / 2, half_size / 2, n_left, &root, level, _mesh );
+    left_center, left_half_size, n_left, &root, level, _mesh );
 
   time_cluster * right_cluster = new time_cluster(
-    center + half_size / 2, half_size / 2, n_right, &root, level, _mesh );
+    right_center, right_half_size, n_right, &root, level, _mesh );
 
   // add elements to each subcluster
   for ( lo i = 0; i < root_n_elems; ++i ) {

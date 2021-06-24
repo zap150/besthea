@@ -63,13 +63,13 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
     block_lower_triangular_toeplitz_matrix & global_matrix ) const {
   auto & test_basis = _test_space->get_basis( );
   auto & trial_basis = _trial_space->get_basis( );
-  auto test_mesh = _test_space->get_mesh( );
-  auto trial_mesh = _trial_space->get_mesh( );
+  const auto & test_mesh = _test_space->get_mesh( );
+  const auto & trial_mesh = _trial_space->get_mesh( );
 
   // number of temporal elements and timestep should be the same for test and
   // trial meshes
-  lo n_timesteps = test_mesh->get_n_temporal_elements( );
-  sc timestep = test_mesh->get_timestep( );
+  lo n_timesteps = test_mesh.get_n_temporal_elements( );
+  sc timestep = test_mesh.get_timestep( );
   lo n_rows = test_basis.dimension_global( );
   lo n_columns = trial_basis.dimension_global( );
   global_matrix.resize( n_timesteps );
@@ -78,8 +78,8 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   lo n_loc_rows = test_basis.dimension_local( );
   lo n_loc_columns = trial_basis.dimension_local( );
 
-  lo n_test_elements = test_mesh->get_n_spatial_elements( );
-  lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
+  lo n_test_elements = test_mesh.get_n_spatial_elements( );
+  lo n_trial_elements = trial_mesh.get_n_spatial_elements( );
   sc ttau;
 
 #pragma omp parallel
@@ -121,9 +121,9 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 
 #pragma omp for schedule( dynamic )
       for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
-        test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
-        test_mesh->get_spatial_normal( i_test, nx );
-        test_area = test_mesh->spatial_area( i_test );
+        test_mesh.get_spatial_nodes( i_test, x1, x2, x3 );
+        test_mesh.get_spatial_normal( i_test, nx );
+        test_area = test_mesh.spatial_area( i_test );
         for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
           if ( delta == 0 ) {
             get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
@@ -132,9 +132,9 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
             rot_test = 0;
             rot_trial = 0;
           }
-          trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
-          trial_mesh->get_spatial_normal( i_trial, ny );
-          trial_area = trial_mesh->spatial_area( i_trial );
+          trial_mesh.get_spatial_nodes( i_trial, y1, y2, y3 );
+          trial_mesh.get_spatial_normal( i_trial, ny );
+          trial_area = trial_mesh.spatial_area( i_trial );
 
           test_basis.local_to_global(
             i_test, n_shared_vertices, rot_test, false, test_l2g );
@@ -284,16 +284,16 @@ void besthea::bem::uniform_spacetime_be_assembler<
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
   assemble( besthea::linear_algebra::block_lower_triangular_toeplitz_matrix &
       global_matrix ) const {
-  auto test_mesh = _test_space->get_mesh( );
-  auto trial_mesh = _trial_space->get_mesh( );
+  const auto & test_mesh = _test_space->get_mesh( );
+  const auto & trial_mesh = _trial_space->get_mesh( );
 
-  lo n_test_elements = test_mesh->get_n_spatial_elements( );
-  lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
+  lo n_test_elements = test_mesh.get_n_spatial_elements( );
+  lo n_trial_elements = trial_mesh.get_n_spatial_elements( );
 
   // number of temporal elements and timestep should be the same for test and
   // trial meshes
-  lo n_timesteps = test_mesh->get_n_temporal_elements( );
-  sc timestep = test_mesh->get_timestep( );
+  lo n_timesteps = test_mesh.get_n_temporal_elements( );
+  sc timestep = test_mesh.get_timestep( );
   lo n_rows = n_test_elements;
   lo n_columns = n_trial_elements;
   global_matrix.resize( n_timesteps );
@@ -328,8 +328,8 @@ void besthea::bem::uniform_spacetime_be_assembler<
 
 #pragma omp for schedule( dynamic )
       for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
-        test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
-        test_area = test_mesh->spatial_area( i_test );
+        test_mesh.get_spatial_nodes( i_test, x1, x2, x3 );
+        test_area = test_mesh.spatial_area( i_test );
         for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
           if ( delta == 0 ) {
             get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
@@ -338,8 +338,8 @@ void besthea::bem::uniform_spacetime_be_assembler<
             rot_test = 0;
             rot_trial = 0;
           }
-          trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
-          trial_area = trial_mesh->spatial_area( i_trial );
+          trial_mesh.get_spatial_nodes( i_trial, y1, y2, y3 );
+          trial_area = trial_mesh.spatial_area( i_trial );
 
           triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices,
             rot_test, rot_trial, my_quadrature );
@@ -439,16 +439,16 @@ void besthea::bem::uniform_spacetime_be_assembler<
   assemble( besthea::linear_algebra::block_lower_triangular_toeplitz_matrix &
       global_matrix ) const {
   auto & trial_basis = _trial_space->get_basis( );
-  auto test_mesh = _test_space->get_mesh( );
-  auto trial_mesh = _trial_space->get_mesh( );
+  const auto & test_mesh = _test_space->get_mesh( );
+  const auto & trial_mesh = _trial_space->get_mesh( );
 
-  lo n_test_elements = test_mesh->get_n_spatial_elements( );
-  lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
+  lo n_test_elements = test_mesh.get_n_spatial_elements( );
+  lo n_trial_elements = trial_mesh.get_n_spatial_elements( );
 
   // number of temporal elements and timestep should be the same for test and
   // trial meshes
-  lo n_timesteps = test_mesh->get_n_temporal_elements( );
-  sc timestep = test_mesh->get_timestep( );
+  lo n_timesteps = test_mesh.get_n_temporal_elements( );
+  sc timestep = test_mesh.get_timestep( );
   lo n_rows = n_test_elements;
   lo n_columns = trial_basis.dimension_global( );
   global_matrix.resize( n_timesteps );
@@ -491,8 +491,8 @@ void besthea::bem::uniform_spacetime_be_assembler<
 
 #pragma omp for schedule( dynamic )
       for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
-        test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
-        test_area = test_mesh->spatial_area( i_test );
+        test_mesh.get_spatial_nodes( i_test, x1, x2, x3 );
+        test_area = test_mesh.spatial_area( i_test );
         for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
           if ( delta == 0 ) {
             get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
@@ -501,9 +501,9 @@ void besthea::bem::uniform_spacetime_be_assembler<
             rot_test = 0;
             rot_trial = 0;
           }
-          trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
-          trial_mesh->get_spatial_normal( i_trial, ny );
-          trial_area = trial_mesh->spatial_area( i_trial );
+          trial_mesh.get_spatial_nodes( i_trial, y1, y2, y3 );
+          trial_mesh.get_spatial_normal( i_trial, ny );
+          trial_area = trial_mesh.spatial_area( i_trial );
 
           trial_basis.local_to_global(
             i_trial, n_shared_vertices, rot_trial, true, trial_l2g );
@@ -641,20 +641,20 @@ void besthea::bem::uniform_spacetime_be_assembler<
       global_matrix ) const {
   auto & test_basis = _test_space->get_basis( );
   auto & trial_basis = _trial_space->get_basis( );
-  auto test_mesh = _test_space->get_mesh( );
-  auto trial_mesh = _trial_space->get_mesh( );
+  const auto & test_mesh = _test_space->get_mesh( );
+  const auto & trial_mesh = _trial_space->get_mesh( );
 
   // number of temporal elements and timestep should be the same for test and
   // trial meshes
-  lo n_timesteps = test_mesh->get_n_temporal_elements( );
-  sc timestep = test_mesh->get_timestep( );
+  lo n_timesteps = test_mesh.get_n_temporal_elements( );
+  sc timestep = test_mesh.get_timestep( );
   lo n_rows = test_basis.dimension_global( );
   lo n_columns = trial_basis.dimension_global( );
   global_matrix.resize( n_timesteps );
   global_matrix.resize_blocks( n_rows, n_columns );
 
-  lo n_test_elements = test_mesh->get_n_spatial_elements( );
-  lo n_trial_elements = trial_mesh->get_n_spatial_elements( );
+  lo n_test_elements = test_mesh.get_n_spatial_elements( );
+  lo n_trial_elements = trial_mesh.get_n_spatial_elements( );
   sc ttau;
 
 #pragma omp parallel
@@ -704,9 +704,9 @@ void besthea::bem::uniform_spacetime_be_assembler<
 
 #pragma omp for schedule( dynamic )
       for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
-        test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
-        test_mesh->get_spatial_normal( i_test, nx );
-        test_area = test_mesh->spatial_area( i_test );
+        test_mesh.get_spatial_nodes( i_test, x1, x2, x3 );
+        test_mesh.get_spatial_normal( i_test, nx );
+        test_area = test_mesh.spatial_area( i_test );
         for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
           if ( delta == 0 ) {
             get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
@@ -716,9 +716,9 @@ void besthea::bem::uniform_spacetime_be_assembler<
             rot_trial = 0;
           }
 
-          trial_mesh->get_spatial_nodes( i_trial, y1, y2, y3 );
-          trial_mesh->get_spatial_normal( i_trial, ny );
-          areas = test_area * trial_mesh->spatial_area( i_trial );
+          trial_mesh.get_spatial_nodes( i_trial, y1, y2, y3 );
+          trial_mesh.get_spatial_normal( i_trial, ny );
+          areas = test_area * trial_mesh.spatial_area( i_trial );
 
           test_basis.local_to_global(
             i_test, n_shared_vertices, rot_test, false, test_l2g );
@@ -1313,8 +1313,8 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   linear_algebra::indices< 3 > test_elem;
   linear_algebra::indices< 3 > trial_elem;
 
-  _test_space->get_mesh( )->get_spatial_element( i_test, test_elem );
-  _trial_space->get_mesh( )->get_spatial_element( i_trial, trial_elem );
+  ( _test_space->get_mesh( ) ).get_spatial_element( i_test, test_elem );
+  ( _trial_space->get_mesh( ) ).get_spatial_element( i_trial, trial_elem );
 
   // check for shared edge
   for ( int i_rot_test = 0; i_rot_test < 3; ++i_rot_test ) {

@@ -45,452 +45,12 @@ using besthea::mesh::scheduling_time_cluster;
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::apply( const block_vector & x, block_vector & y,
-  bool trans, sc alpha, sc beta ) const {
+  target_space, source_space >::apply( const block_vector & /*x*/,
+  block_vector & /*y*/, bool /*trans*/, sc /*alpha*/, sc /*beta*/ ) const {
   // generic method not implemented
-  std::cout << "apply: NOT IMPLEMENTED" << std::endl;
-}
-
-//! template specialization for single layer p0p0 matrix
-template<>
-void besthea::linear_algebra::distributed_pFMM_matrix<
-  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p0 >,
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p0 > >::apply( const block_vector & x,
-  block_vector & y, bool trans, sc alpha, sc beta ) const {
-  apply_sl_dl( x, y, trans, alpha, beta );
-}
-
-//! template specialization for double layer p0p1 matrix
-template<>
-void besthea::linear_algebra::distributed_pFMM_matrix<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p0 >,
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p1 > >::apply( const block_vector & x,
-  block_vector & y, bool trans, sc alpha, sc beta ) const {
-  apply_sl_dl( x, y, trans, alpha, beta );
-}
-
-//! template specialization for double layer p1p0 matrix
-template<>
-void besthea::linear_algebra::distributed_pFMM_matrix<
-  besthea::bem::spacetime_heat_adl_kernel_antiderivative,
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p1 >,
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p0 > >::apply( const block_vector & x,
-  block_vector & y, bool trans, sc alpha, sc beta ) const {
-  apply_sl_dl( x, y, trans, alpha, beta );
-}
-
-template< class kernel_type, class target_space, class source_space >
-void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::apply_sl_dl( const block_vector & x,
-  block_vector & y, bool trans, sc alpha, sc beta ) const {
-  // Specialization for the single and double layer operators
-
-  //############################################################################
-  //#### multiply the global result vector by beta ####
-  // @todo discuss: should the multiplication be done like this or only in a
-  // local part of the result vector?
-#pragma omp parallel for schedule( static )
-  for ( lo i = 0; i < y.get_block_size( ); ++i ) {
-    for ( lo j = 0; j < y.get_size_of_block( ); ++j ) {
-      y.set( i, j, y.get( i, j ) * beta );
-    }
-  }
-
-  //############################################################################
-  //#### setup phase ####
-  // reset the contributions of all clusters to zero
-  _scheduling_tree_structure->clear_moment_contributions(
-    *_scheduling_tree_structure->get_root( ) );
-  _scheduling_tree_structure->clear_local_contributions(
-    *_scheduling_tree_structure->get_root( ) );
-
-  // reset the dependency data of all the clusters in the 4 lists.
-  reset_scheduling_clusters_dependency_data( );
-
-  // @todo allocate buffers which are reused in computations to avoid
-  // reallocation
-  // std::vector< full_matrix > buffer_matrices;
-  // buffer_matrices.resize( 8 );
-  // for ( auto it = buffer_matrices.begin( ); it != buffer_matrices.end( );
-  //       ++it ) {
-  // ( *it ).resize( _temp_order + 1, _spat_contribution_size );
-  // }
-  // vector_type buffer_for_gaussians( ( _m2l_integration_order + 1 )
-  //     * ( _m2l_integration_order + 1 ) * ( _temp_order + 1 )
-  //     * ( _temp_order + 1 ), false );
-  // vector_type buffer_for_coeffs( ( _spat_order + 1 ) * ( _spat_order + 1 )
-  //     * ( _temp_order + 1 ) * ( _temp_order + 1 ), false );
-  // full_matrix aux_buffer_0( ( _temp_order + 1 ) * ( _temp_order + 1 ),
-  //   _spat_contribution_size, false );
-  // full_matrix aux_buffer_1( ( _temp_order + 1 ) * ( _temp_order + 1 ),
-  //   _spat_contribution_size, false );
-
-  // initialize data which is used to check for received data.
-  int outcount = 0;
-  std::vector< int > array_of_indices( _receive_data_information.size( ) );
-  for ( lou i = 0; i < _receive_data_information.size( ); ++i ) {
-    array_of_indices[ i ] = 0;
-  }
-  // copy the 4 FMM lists to avoid reallocating them in each application
-  std::list< mesh::scheduling_time_cluster * > m_list = _m_list;
-  std::list< mesh::scheduling_time_cluster * > m2l_list = _m2l_list;
-  std::list< mesh::scheduling_time_cluster * > l_list = _l_list;
-  std::list< mesh::scheduling_time_cluster * > n_list = _n_list;
-
-  // @todo: add appropriate verbose mode if desired
-  bool verbose = false;
-  // std::string verbose_file = verbose_dir + "/process_";
-  std::string verbose_file = "verbose/process_";
-  verbose_file += std::to_string( _my_rank );
-  if ( verbose ) {
-    std::filesystem::create_directory( "./verbose/" );
-    // remove existing verbose file and write to new one
-    remove( verbose_file.c_str( ) );
-  }
-
-  //############################################################################
-  //#### distributed pFMM ####
-  // allocate a global result vector. Only the entries corresponding to clusters
-  // assigned to the current process are computed.
-  block_vector y_pFMM( y.get_block_size( ), y.get_size_of_block( ), true );
-
-  // auxiliary arrays for OpenMP dependencis (in OpenMP 4.5 must not be members)
-  auto first = m2l_list.begin( );
-  auto last = m2l_list.end( );
-  char * aux_dep_m2l = new char[ std::distance( first, last ) ];
-  std::fill( aux_dep_m2l, aux_dep_m2l + sizeof( aux_dep_m2l ), 0 );
-
-  char * aux_dep_m2l_send = new char[ std::distance( first, last ) ];
-  std::fill(
-    aux_dep_m2l_send, aux_dep_m2l_send + sizeof( aux_dep_m2l_send ), 0 );
-
-  first = l_list.begin( );
-  last = l_list.end( );
-  char * aux_dep_l = new char[ std::distance( first, last ) ];
-  std::fill( aux_dep_l, aux_dep_l + sizeof( aux_dep_l ), 0 );
-
-  first = m_list.begin( );
-  last = m_list.end( );
-  char * aux_dep_m = new char[ std::distance( first, last ) ];
-  std::fill( aux_dep_m, aux_dep_m + sizeof( aux_dep_m ), 0 );
-
-  // allocate buffers for m2l computation
-  _aux_buffer_0.resize( omp_get_max_threads( ) );
-  _aux_buffer_1.resize( omp_get_max_threads( ) );
-  // start the main "job scheduling" algorithm
-  // the "master" thread checks for new available data, spawns tasks, and
-  // removes clusters from lists
-#pragma omp parallel
-  {
-    _aux_buffer_0[ omp_get_thread_num( ) ].resize(
-      ( _temp_order + 1 ) * ( _temp_order + 1 ), _spat_contribution_size );
-    _aux_buffer_1[ omp_get_thread_num( ) ].resize(
-      ( _temp_order + 1 ) * ( _temp_order + 1 ), _spat_contribution_size );
-
-//    besthea::tools::timer t;
-//    t.reset();
-#pragma omp single
-    {
-      // start the receive operationss
-      std::vector< MPI_Request > array_of_requests(
-        _receive_data_information.size( ) );
-      start_receive_operations( array_of_requests );
-      while ( true ) {
-        if ( m_list.empty( ) && m2l_list.empty( ) && l_list.empty( )
-          && n_list.empty( ) ) {
-          break;
-        }
-        // check if data has been received since the last iteration
-        if ( outcount != MPI_UNDEFINED ) {
-          check_for_received_data(
-            array_of_requests, array_of_indices, outcount );
-        }
-
-        // we have to do this here to spawn tasks with correct dependencies
-        if ( outcount != MPI_UNDEFINED && outcount > 0 ) {
-          for ( lo i = 0; i < outcount; ++i ) {
-            lou current_index = array_of_indices[ i ];
-            scheduling_time_cluster * current_cluster
-              = _receive_data_information[ current_index ].first;
-            if ( verbose ) {
-              std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
-              if ( outfile.is_open( ) ) {
-                outfile << "received data of cluster "
-                        << current_cluster->get_global_index( )
-                        << " from process "
-                        << _receive_data_information[ current_index ].second
-                        << std::endl;
-                outfile.close( );
-              }
-            }
-            // distinguish which data has been received
-            if ( current_index < _n_moments_to_receive_upward ) {
-              // received data are moments in the upward path. add up
-              // moments and update dependencies.
-              lo idx = current_cluster->get_pos_in_m_list( );
-
-              // task depends on previously generated M-list tasks to prevent
-              // collision in m2m operations
-#pragma omp task depend( inout : aux_dep_m [idx:1] ) priority( 1000 )
-              upward_path_task( current_index, current_cluster );
-            } else if ( current_index
-              < _n_moments_to_receive_upward + _n_moments_to_receive_m2l ) {
-              // received data are moments for m2l. update dependencies.
-              std::vector< scheduling_time_cluster * > * send_list
-                = current_cluster->get_send_list( );
-              if ( send_list != nullptr ) {
-                for ( auto it = send_list->begin( ); it != send_list->end( );
-                      ++it ) {
-                  lo tar_process_id = ( *it )->get_process_id( );
-                  if ( tar_process_id == _my_rank ) {
-                    lo idx_receiver = ( *it )->get_pos_in_m2l_list( );
-                    // task depends on previously generated m2l-list task to
-                    // avoid collision when adding to ready interaction list
-#pragma omp task depend( inout                                 \
-                         : aux_dep_m2l_send [idx_receiver:1] ) \
-  priority( 1000 )
-                    ( *it )->update_ready_interaction_size( );
-                  }
-                }
-              }
-            } else {
-              // received data are local contributions. update dependencies.
-#pragma omp task priority( 1000 )
-              current_cluster->set_downward_path_status( 2 );
-            }
-          }
-        }
-
-        // check if there is a cluster in one of the 4 lists whose operations
-        // are ready to be executed.
-        char status = 0;
-        std::list< scheduling_time_cluster * >::iterator it_current_cluster;
-        find_cluster_in_m_list( m_list, it_current_cluster, status );
-        if ( status == 0 ) {
-          // search in l list if no cluster was found yet
-          find_cluster_in_l_list( l_list, it_current_cluster, status );
-          if ( status == 0 ) {
-            // search in m2l list if no cluster was found yet
-            find_cluster_in_m2l_list( m2l_list, it_current_cluster, status );
-            if ( status == 0 ) {
-              // take the first cluster from the n-list if it is not empty
-              if ( n_list.size( ) != 0 ) {
-                it_current_cluster = n_list.begin( );
-                status = 4;
-              }
-            }
-          }
-        }
-
-        // if verbose mode is chosen, write info about next operation to file
-        if ( verbose && status != 0 ) {
-          std::stringstream outss;
-          outss << "executing ";
-          switch ( status ) {
-            case 1:
-              outss << "m-list operations ";
-              break;
-            case 2:
-              outss << "l-list operations ";
-              break;
-            case 3:
-              outss << "m2l-list operations ";
-              break;
-            case 4:
-              outss << "n-list operations ";
-              break;
-          }
-          outss << "for cluster "
-                << ( *it_current_cluster )->get_global_index( );
-          std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
-          if ( outfile.is_open( ) ) {
-            outfile << outss.str( ) << std::endl;
-            outfile.close( );
-          }
-        }
-
-        scheduling_time_cluster * current_cluster = *it_current_cluster;
-
-        // start the appropriate fmm operations according to status
-        switch ( status ) {
-          case 1: {
-            // M-list task
-            m_list.erase( it_current_cluster );
-
-            lo idx_m_parent
-              = current_cluster->get_parent( )->get_pos_in_m_list( );
-            lo idx_m = current_cluster->get_pos_in_m_list( );
-
-            std::vector< scheduling_time_cluster * > * send_list
-              = current_cluster->get_send_list( );
-            lo send_list_size = 0;
-            if ( send_list != nullptr ) {
-              send_list_size = send_list->size( );
-            }
-            if ( idx_m_parent != -1 ) {
-              // m-list task depends on previously generated tasks
-              // with the same parent (so the parent's m2m operations do not
-              // collide)
-              switch ( send_list_size ) {
-                // m-list task depends on previously generated tasks with the
-                // same cluster in the send-list (so the receiving does not
-                // collide)
-                case 0: {
-#pragma omp task depend( inout                                               \
-                         : aux_dep_m [idx_m_parent:1], aux_dep_m [idx_m:1] ) \
-  priority( 500 )
-                  m_list_task( x, current_cluster, verbose, verbose_file );
-                  break;
-                }
-                case 1: {
-                  lo idx_receiver_1
-                    = send_list->at( 0 )->get_pos_in_m2l_list( );
-#pragma omp task depend( inout                                               \
-                         : aux_dep_m [idx_m_parent:1], aux_dep_m [idx_m:1] ) \
-  depend( inout                                                              \
-          : aux_dep_m2l_send [idx_receiver_1:1] ) priority( 500 )
-                  m_list_task( x, current_cluster, verbose, verbose_file );
-                  break;
-                }
-                case 2: {
-                  lo idx_receiver_1
-                    = send_list->at( 0 )->get_pos_in_m2l_list( );
-                  lo idx_receiver_2
-                    = send_list->at( 1 )->get_pos_in_m2l_list( );
-
-#pragma omp task depend( inout                                               \
-                         : aux_dep_m [idx_m_parent:1], aux_dep_m [idx_m:1] ) \
-  depend( inout                                                              \
-          : aux_dep_m2l_send [idx_receiver_1:1] )                            \
-    depend( inout                                                            \
-            : aux_dep_m2l_send[ idx_receiver_2 ] ) priority( 500 )
-                  m_list_task( x, current_cluster, verbose, verbose_file );
-                  break;
-                }
-              }
-            } else {
-              // parent is not in the m list, no dependency needed
-              switch ( send_list->size( ) ) {
-                // m-list task depends on previously generated tasks with the
-                // same cluster in the send-list (so the receiver's m2l
-                // operations do not collide)
-                case 0: {
-#pragma omp task depend( inout : aux_dep_m [idx_m:1] ) priority( 500 )
-                  m_list_task( x, current_cluster, verbose, verbose_file );
-                  break;
-                }
-                case 1: {
-                  lo idx_receiver_1
-                    = send_list->at( 0 )->get_pos_in_m2l_list( );
-#pragma omp task depend( \
-  inout                  \
-  : aux_dep_m2l_send [idx_receiver_1:1], aux_dep_m [idx_m:1] ) priority( 500 )
-                  m_list_task( x, current_cluster, verbose, verbose_file );
-                  break;
-                }
-                case 2: {
-                  lo idx_receiver_1
-                    = send_list->at( 0 )->get_pos_in_m2l_list( );
-                  lo idx_receiver_2
-                    = send_list->at( 1 )->get_pos_in_m2l_list( );
-
-#pragma omp task depend(                                       \
-  inout                                                        \
-  : aux_dep_m2l_send [idx_receiver_1:1], aux_dep_m [idx_m:1] ) \
-  depend( inout                                                \
-          : aux_dep_m2l_send [idx_receiver_2:1] ) priority( 500 )
-                  m_list_task( x, current_cluster, verbose, verbose_file );
-                  break;
-                }
-              }
-            }
-            break;
-          }
-
-          case 2: {
-            // L-list task
-            lo idx_l = current_cluster->get_pos_in_l_list( );
-            l_list.erase( it_current_cluster );
-            // l-list task depends on previously generated m2l tasks processing
-            // the same cluster in the l-list (to prevent collision with m2l
-            // tasks)
-#pragma omp task depend( inout : aux_dep_l [idx_l:1] ) priority( 400 )
-            l_list_task( y_pFMM, current_cluster, verbose, verbose_file );
-            break;
-          }
-          case 3: {
-            // M2l-list task
-
-            lo idx_l = current_cluster->get_pos_in_l_list( );
-            lou ready_int_list_size
-              = current_cluster->get_ready_interaction_list_size( );
-            if ( ready_int_list_size
-              == current_cluster->get_interaction_list( )->size( ) ) {
-              m2l_list.erase( it_current_cluster );
-            }
-            if ( idx_l == -1 ) {
-              // cluster is not in the L-list, have to depend only on the
-              // previously generated tasks processing the same cluster in the
-              // m2l list
-#pragma omp task priority( 300 )
-              m2l_list_task( y_pFMM, current_cluster, verbose, verbose_file );
-            } else {
-              // cluster depends additionally on the previously generated task
-              // with the same position in the L-list
-#pragma omp task depend( inout : aux_dep_l [idx_l:1] ) priority( 300 )
-              m2l_list_task( y_pFMM, current_cluster, verbose, verbose_file );
-            }
-            break;
-          }
-          case 4: {
-            // nearfiel task
-            n_list.erase( it_current_cluster );
-            // no dependencies, possible collisions are treated by atomic
-            // operations
-#pragma omp task priority( 200 )
-            apply_nearfield_operations(
-              current_cluster, x, trans, y_pFMM, verbose, verbose_file );
-            break;
-          }
-        }
-        if ( verbose ) {
-          std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
-          if ( outfile.is_open( ) ) {
-            outfile << std::endl;
-            outfile.close( );
-          }
-        }
-      }
-    }
-  }
-
-  //############################################################################
-  //### communicate the result with an Allreduce operation for each timestep ###
-  // @todo: Can we do this in a less cumbersome way?! Is a global reduction even
-  // necessary?
-  for ( lo block_idx = 0; block_idx < y_pFMM.get_block_size( ); ++block_idx ) {
-    MPI_Allreduce( MPI_IN_PLACE, y_pFMM.get_block( block_idx ).data( ),
-      y_pFMM.get_size_of_block( ), get_scalar_type< sc >::MPI_SC( ), MPI_SUM,
-      *_comm );
-  }
-  // Scale the global update y_pFMM by alpha and add it to the global vector y.
-  y.add( y_pFMM, alpha );
-  // if ( _my_rank == 0 ) {
-  //   std::cout << "application executed" << std::endl;
-  // }
-
-  delete[] aux_dep_m;
-  delete[] aux_dep_l;
-  delete[] aux_dep_m2l;
-  delete[] aux_dep_m2l_send;
+  std::cout << "apply: NOT IMPLEMENTED for standard block vectors. Please use "
+               "distributed block vectors!"
+            << std::endl;
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -523,6 +83,50 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     _scheduling_tree_structure->compare_clusters_top_down_right_2_left );
   _l_list.sort(
     _scheduling_tree_structure->compare_clusters_top_down_right_2_left );
+
+  // allocate the timers
+  for ( auto & it : _m_task_times ) {
+    it.reserve( 2 * _m_list.size( ) );
+  }
+  for ( auto & it : _m2l_task_times ) {
+    it.reserve( 2 * _m2l_list.size( ) );
+  }
+  for ( auto & it : _l_task_times ) {
+    it.reserve( 2 * _l_list.size( ) );
+  }
+  for ( auto & it : _n_task_times ) {
+    it.reserve( 2 * _n_list.size( ) );
+  }
+  for ( auto & it : _m_subtask_times ) {
+    it.reserve( 4 * _m_list.size( ) );
+  }
+  for ( auto & it : _m2l_subtask_times ) {
+    it.reserve( 4 * _m2l_list.size( ) );
+  }
+  for ( auto & it : _l_subtask_times ) {
+    it.reserve( 4 * _l_list.size( ) );
+  }
+  for ( auto & it : _n_subtask_times ) {
+    it.reserve( 4 * _n_list.size( ) );
+  }
+  for ( auto & it : _mpi_send_m2l ) {
+    it.reserve( _m2l_list.size( ) );
+  }
+  for ( auto & it : _mpi_send_m_parent ) {
+    it.reserve( _m_list.size( ) );
+  }
+  for ( auto & it : _mpi_send_l_children ) {
+    it.reserve( _l_list.size( ) );
+  }
+  for ( auto & it : _mpi_recv_m2l ) {
+    it.reserve( _m2l_list.size( ) );
+  }
+  for ( auto & it : _mpi_recv_m_parent ) {
+    it.reserve( _m_list.size( ) );
+  }
+  for ( auto & it : _mpi_recv_l_children ) {
+    it.reserve( _l_list.size( ) );
+  }
 
   // set the positions of clusters in the lists
   lo counter = 0;
@@ -644,21 +248,32 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   _m2m_coeffs_s_dim_1_right.resize( max_space_level );
   _m2m_coeffs_s_dim_2_left.resize( max_space_level );
   _m2m_coeffs_s_dim_2_right.resize( max_space_level );
-  auto it1 = _m2m_coeffs_s_dim_0_left.begin( );
-  auto it2 = _m2m_coeffs_s_dim_0_right.begin( );
-  auto it3 = _m2m_coeffs_s_dim_1_left.begin( );
-  auto it4 = _m2m_coeffs_s_dim_1_right.begin( );
-  auto it5 = _m2m_coeffs_s_dim_2_left.begin( );
-  auto it6 = _m2m_coeffs_s_dim_2_right.begin( );
 
-  for ( ; it1 != _m2m_coeffs_s_dim_0_left.end( );
-        ++it1, ++it2, ++it3, ++it4, ++it5, ++it6 ) {
-    ( *it1 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
-    ( *it2 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
-    ( *it3 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
-    ( *it4 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
-    ( *it5 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
-    ( *it6 ).resize( ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+  // Allocate storage for the required m2m coefficients. We do not need m2m
+  // matrices for all spatial levels, but only for those corresponding to
+  // space-time levels >= 2. This is considered in the following.
+  lo initial_space_refinement
+    = _distributed_spacetime_tree->get_initial_space_refinement( );
+  lo start_space_refinement
+    = _distributed_spacetime_tree->get_start_space_refinement( );
+  lo first_parent_m2m_level_space = initial_space_refinement;
+  if ( start_space_refinement <= 2 ) {
+    first_parent_m2m_level_space += 1;
+  }
+
+  for ( lo i = first_parent_m2m_level_space; i < max_space_level; ++i ) {
+    _m2m_coeffs_s_dim_0_left[ i ].resize(
+      ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    _m2m_coeffs_s_dim_0_right[ i ].resize(
+      ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    _m2m_coeffs_s_dim_1_left[ i ].resize(
+      ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    _m2m_coeffs_s_dim_1_right[ i ].resize(
+      ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    _m2m_coeffs_s_dim_2_left[ i ].resize(
+      ( _spat_order + 1 ) * ( _spat_order + 1 ) );
+    _m2m_coeffs_s_dim_2_right[ i ].resize(
+      ( _spat_order + 1 ) * ( _spat_order + 1 ) );
   }
 
   std::vector< sc > paddings_refinementwise( max_space_level + 1, 0.0 );
@@ -667,18 +282,16 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // paddings_levelwise contains the padding levelwise with respect to the
   // clusters levels. we need the padding with respect to the number of
   // refinements in space.
-  lo initial_space_refinement
-    = _distributed_spacetime_tree->get_initial_space_refinement( );
   if ( initial_space_refinement > 0 ) {
     // padding is only computed starting from the spatial refinement level
     // initial_space_refinement. set it to this value for all lower levels
-    for ( lo i = 0; i < initial_space_refinement; ++i ) {
+    for ( lo i = 0; i <= initial_space_refinement; ++i ) {
       paddings_refinementwise[ i ] = paddings_levelwise[ 0 ];
     }
     // get the correct padding from paddings_levelwise (spatial refinement
     // every second step)
-    lo current_idx = 0;
-    for ( lo i = initial_space_refinement; i <= max_space_level; ++i ) {
+    lo current_idx = start_space_refinement;
+    for ( lo i = initial_space_refinement + 1; i <= max_space_level; ++i ) {
       // note: by construction current_idx should never be out of bound for
       // paddings_levelwise
       paddings_refinementwise[ i ] = paddings_levelwise.at( current_idx );
@@ -687,7 +300,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   } else {
     paddings_refinementwise[ 0 ] = paddings_levelwise[ 0 ];
     // the level of the first spatial refinement is known
-    lo current_idx = _distributed_spacetime_tree->get_start_space_refinement( );
+    lo current_idx = start_space_refinement;
     for ( lo i = 1; i <= max_space_level; ++i ) {
       paddings_refinementwise[ i ] = paddings_levelwise.at( current_idx );
       current_idx += 2;
@@ -718,7 +331,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   vector_type nodes_l_child_dim_2( _spat_order + 1, false );
   vector_type nodes_r_child_dim_2( _spat_order + 1, false );
 
-  for ( lo curr_level = 0; curr_level < max_space_level; ++curr_level ) {
+  // compute the spatial half sizes of the first parent box, for which m2m
+  // coefficients are computed
+  h_par_no_pad[ 0 ] /= (sc) ( 1 << first_parent_m2m_level_space );
+  h_par_no_pad[ 1 ] /= (sc) ( 1 << first_parent_m2m_level_space );
+  h_par_no_pad[ 2 ] /= (sc) ( 1 << first_parent_m2m_level_space );
+
+  for ( lo curr_level = first_parent_m2m_level_space;
+        curr_level < max_space_level; ++curr_level ) {
     h_child_no_pad[ 0 ] = h_par_no_pad[ 0 ] / 2.0;
     h_child_no_pad[ 1 ] = h_par_no_pad[ 1 ] / 2.0;
     h_child_no_pad[ 2 ] = h_par_no_pad[ 2 ] / 2.0;
@@ -890,7 +510,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   }
 
   if ( _all_poly_vals_mult_coll.size( )
-    != ( lou )( _spat_order + 1 ) * ( _spat_order + 1 ) * cheb_nodes.size( )
+    != (lou) ( _spat_order + 1 ) * ( _spat_order + 1 ) * cheb_nodes.size( )
       * cheb_nodes.size( ) ) {
     _all_poly_vals_mult_coll.resize( ( _spat_order + 1 ) * ( _spat_order + 1 )
       * cheb_nodes.size( ) * cheb_nodes.size( ) );
@@ -913,144 +533,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 }
 
 template< class kernel_type, class target_space, class source_space >
-bool besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::mkl_fgmres_solve_parallel( const block_vector &
-                                                             rhs,
-  block_vector & solution, sc & relative_residual_error, lo & n_iterations,
-  lo n_iterations_until_restart, bool trans, int root_id ) const {
-  lo size = _dim_domain * _block_dim;
-
-  if ( _dim_domain != _dim_range || size != rhs.size( )
-    || size != solution.size( ) ) {
-    std::cout << "Check dimensions!" << std::endl;
-    return false;
-  }
-
-  if ( n_iterations_until_restart == 0 ) {
-    n_iterations_until_restart = n_iterations;
-  }
-
-  lo rci;  // indicates current status in FGMRES
-  // the following data is only relevant for process root_id, but declared for
-  // all for simplicity
-  lo iter;
-  lo ipar[ 128 ];
-  sc dpar[ 128 ];
-  std::vector< sc > tmp;
-  vector_type * rhs_contiguous = nullptr;
-  vector_type * solution_contiguous = nullptr;
-  sc * tmp_data = nullptr;
-  if ( _my_rank == root_id ) {
-    // allocate a buffer for the mkl routines
-    tmp.resize( ( 2 * n_iterations_until_restart + 1 ) * size
-      + n_iterations_until_restart * ( n_iterations_until_restart + 9 ) / 2
-      + 1 );
-    tmp_data = tmp.data( );
-
-    rhs_contiguous = new vector_type( size );
-    solution_contiguous = new vector_type( size );
-    rhs.copy_to_vector( *rhs_contiguous );
-    solution.copy_to_vector( *solution_contiguous );
-
-    dfgmres_init( &size, solution_contiguous->data( ), rhs_contiguous->data( ),
-      &rci, ipar, dpar, tmp_data );
-    if ( rci ) {
-      std::cout << "Failed to initialize MKL FGMRES." << std::endl;
-      delete rhs_contiguous;
-      delete solution_contiguous;
-      return false;
-    }
-
-    ipar[ 0 ] = size;          // size of the problem
-    ipar[ 4 ] = n_iterations;  // maximum number of iterations
-    ipar[ 7 ] = 1;             // perform the iteration stopping test
-    ipar[ 8 ] = 1;             // do the residual stopping test
-    ipar[ 9 ] = 0;             // do not request user stopping test
-    ipar[ 10 ] = 0;            // non-preconditioned
-    ipar[ 11 ] = 1;  // perform test for zero norm of generated direction
-    ipar[ 14 ]
-      = n_iterations_until_restart;  // number of iterations before restart
-
-    dpar[ 0 ] = relative_residual_error;  // relative tolerance
-
-    dfgmres_check( &size, solution_contiguous->data( ), rhs_contiguous->data( ),
-      &rci, ipar, dpar, tmp_data );
-    if ( rci ) {
-      std::cout << "MKL parameters incorrect." << std::endl;
-      delete rhs_contiguous;
-      delete solution_contiguous;
-      return false;
-    }
-  }
-
-  block_vector tmp_1( _block_dim, _dim_domain );
-  block_vector tmp_2( _block_dim, _dim_domain );
-
-  while ( true ) {
-    if ( _my_rank == root_id ) {
-      dfgmres( &size, solution_contiguous->data( ), rhs_contiguous->data( ),
-        &rci, ipar, dpar, tmp_data );
-    }
-    // broadcast rci to decide whether to apply the operator or not
-    MPI_Bcast( &rci, 1, get_index_type< lo >::MPI_LO( ), root_id, *_comm );
-    if ( rci == 1 ) {  // apply operator
-      if ( _my_rank == root_id ) {
-        tmp_1.copy_from_raw(
-          _block_dim, _dim_domain, tmp_data + ipar[ 21 ] - 1 );
-      }
-      // broadcast block vector tmp_1 to all processes.
-      for ( lo i = 0; i < _block_dim; ++i ) {
-        MPI_Bcast( tmp_1.get_block( i ).data( ), _dim_domain,
-          get_scalar_type< sc >::MPI_SC( ), root_id, *_comm );
-      }
-      apply( tmp_1, tmp_2, trans, 1.0, 0.0 );
-      if ( _my_rank == root_id ) {
-        tmp_2.copy_to_raw( tmp_data + ipar[ 22 ] - 1 );
-      }
-      continue;
-    } else if ( rci == 0 ) {  // success, no further applications needed
-      if ( _my_rank == root_id ) {
-        dfgmres_get( &size, solution_contiguous->data( ),
-          rhs_contiguous->data( ), &rci, ipar, dpar, tmp_data, &iter );
-        solution.copy_from_vector(
-          _block_dim, _dim_domain, *solution_contiguous );
-        n_iterations = iter;
-        relative_residual_error = dpar[ 4 ] / dpar[ 2 ];
-      }
-      // broadcast solution, n_iterations and relative_residual_error to all
-      // processes (for the sake of completeness)
-      for ( lo i = 0; i < _block_dim; ++i ) {
-        MPI_Bcast( solution.get_block( i ).data( ), _dim_domain,
-          get_scalar_type< sc >::MPI_SC( ), root_id, *_comm );
-      }
-      MPI_Bcast( &relative_residual_error, 1, get_scalar_type< sc >::MPI_SC( ),
-        root_id, *_comm );
-      MPI_Bcast(
-        &n_iterations, 1, get_index_type< lo >::MPI_LO( ), root_id, *_comm );
-      break;
-    } else {
-      std::cout << "Only RCI codes 0,1 supported." << std::endl;
-      if ( _my_rank == root_id ) {
-        delete rhs_contiguous;
-        delete solution_contiguous;
-      }
-      return false;
-    }
-  }
-  if ( _my_rank == root_id ) {
-    delete rhs_contiguous;
-    delete solution_contiguous;
-  }
-  return true;
-}
-
-template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::print_information( const int root_process ) {
+  target_space, source_space >::print_information( const int root_process,
+  const bool print_tree_information ) {
   // first print some information of the underlying distributed space time
   // tree
-  _distributed_spacetime_tree->print_information( root_process );
-
+  if ( print_tree_information ) {
+    _distributed_spacetime_tree->print_information( root_process );
+  }
   // print rough nearfield percentage
   // compute the nearfield ratios (two versions) on each process.
   sc local_nearfield_ratio = compute_nearfield_ratio( );
@@ -1175,13 +665,15 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     std::cout << "#############################################################"
               << "###########################" << std::endl;
     std::cout << "rough memory estimates per process: " << std::endl;
-    lo n_global_elements
-      = _distributed_spacetime_tree->get_mesh( ).get_n_elements( );
+    lo n_target_dofs
+      = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< target_space >( );
+    lo n_source_dofs
+      = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< source_space >( );
     sc total_storage_nearfield = 0.0;
     sc total_storage_contributions = 0.0;
     for ( int i = 0; i < n_processes; ++i ) {
-      sc local_storage_nearfield = n_global_elements * n_global_elements
-        * all_local_nearfield_ratios[ i ];
+      sc local_storage_nearfield
+        = n_target_dofs * n_source_dofs * all_local_nearfield_ratios[ i ];
       local_storage_nearfield
         *= 8. / 1024. / 1024. / 1024.;  // get memory for double entries in GiB.
       sc local_storage_contributions
@@ -1199,8 +691,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               << total_storage_nearfield
               << " GiB, moment and local contributions: "
               << total_storage_contributions << " GiB." << std::endl;
-    std::cout << "storage per allocated vector: "
-              << n_global_elements * 8. / 1024. / 1024. / 1024. << " GiB."
+    std::cout << "storage per allocated vector (source): "
+              << n_source_dofs * 8. / 1024. / 1024. / 1024. << " GiB."
+              << std::endl;
+    std::cout << "storage per allocated vector (target): "
+              << n_target_dofs * 8. / 1024. / 1024. / 1024. << " GiB."
               << std::endl;
     delete[] all_local_nearfield_ratios;
     delete[] all_local_nonzero_nearfield_ratios;
@@ -1212,214 +707,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::call_s2m_operations( const block_vector &
-                                                       sources,
-  besthea::mesh::scheduling_time_cluster * time_cluster, bool verbose,
-  const std::string & verbose_file ) const {
-  // execute only for associated spacetime leaves
-  if ( time_cluster->get_n_associated_leaves( ) > 0 ) {
-    if ( verbose ) {
-      std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
-      if ( outfile.is_open( ) ) {
-        outfile << "call S2M for cluster " << time_cluster->get_global_index( )
-                << std::endl;
-        outfile.close( );
-      }
-    }
-    std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
-      = time_cluster->get_associated_spacetime_clusters( );
-    // there is an implicit taskgroup after this taskloop
-#pragma omp taskloop shared( sources )
-    for ( lou i = 0; i < time_cluster->get_n_associated_leaves( ); ++i ) {
-      general_spacetime_cluster * current_cluster
-        = ( *associated_spacetime_clusters )[ i ];
-
-      apply_s2m_operation( sources, current_cluster );
-    }
-  }
-}
-
-template< class kernel_type, class target_space, class source_space >
-void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::apply_s2m_operation( const block_vector &
-                                                       source_vector,
-  general_spacetime_cluster * source_cluster ) const {
-  std::cout << "S2M operation not implemented " << std::endl;
-}
-
-//! template specialization for single layer p0p0 matrix
-template<>
-void besthea::linear_algebra::distributed_pFMM_matrix<
-  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p0 >,
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p0 > >::apply_s2m_operation( const block_vector &
-                                                           source_vector,
-  general_spacetime_cluster * source_cluster ) const {
-  apply_s2m_operation_p0( source_vector, source_cluster );
-}
-
-//! template specialization for double layer p0p1 matrix
-template<>
-void besthea::linear_algebra::distributed_pFMM_matrix<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p0 >,
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p1 > >::apply_s2m_operation( const block_vector &
-                                                           source_vector,
-  general_spacetime_cluster * source_cluster ) const {
-  apply_s2m_operations_p1_normal_drv( source_vector, source_cluster );
-}
-
-//! template specialization for adjoint double layer p1p0 matrix
-template<>
-void besthea::linear_algebra::distributed_pFMM_matrix<
-  besthea::bem::spacetime_heat_adl_kernel_antiderivative,
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p1 >,
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p0 > >::apply_s2m_operation( const block_vector &
-                                                           source_vector,
-  general_spacetime_cluster * source_cluster ) const {
-  apply_s2m_operation_p0( source_vector, source_cluster );
-}
-
-template< class kernel_type, class target_space, class source_space >
-void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::apply_s2m_operation_p0( const block_vector &
-                                                          source_vector,
-  general_spacetime_cluster * source_cluster ) const {
-  lo n_time_elements = source_cluster->get_n_time_elements( );
-  lo n_space_elements = source_cluster->get_n_space_elements( );
-  full_matrix sources( n_time_elements, n_space_elements, false );
-  full_matrix aux_matrix( n_time_elements, _spat_contribution_size, false );
-
-  // get references of current moment and all required matrices
-  sc * moment = source_cluster->get_pointer_to_moment( );
-
-  full_matrix T;
-  compute_chebyshev_quadrature_p0( source_cluster, T );
-  full_matrix L;
-  compute_lagrange_quadrature( source_cluster, L );
-
-  // get the relevant entries of the block vector x and store them in sources
-  const std::vector< lo > & spacetime_elements
-    = source_cluster->get_all_elements( );
-  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
-    = source_cluster->get_mesh( );
-  // a cluster for which an S2M operation is executed is always local!
-  const mesh::spacetime_tensor_mesh * local_mesh
-    = distributed_mesh->get_local_mesh( );
-  lo local_start_idx = distributed_mesh->get_local_start_idx( );
-  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
-    // use that the spacetime elements are sorted in time, i.e. a consecutive
-    // group of n_space_elements elements has the same temporal component to
-    // determine the local time index only once
-    lo local_time_index
-      = local_mesh->get_time_element( distributed_mesh->global_2_local(
-        local_start_idx, spacetime_elements[ i_time * n_space_elements ] ) );
-    for ( lo i_space = 0; i_space < n_space_elements; ++i_space ) {
-      lo global_space_index = local_mesh->get_space_element(
-        distributed_mesh->global_2_local( local_start_idx,
-          spacetime_elements[ i_time * n_space_elements + i_space ] ) );
-      // for the spatial mesh no transformation from local 2 global is
-      // necessary since there is just one global space mesh at the moment.
-      sources( i_time, i_space )
-        = source_vector.get( distributed_mesh->local_2_global_time(
-                               local_start_idx, local_time_index ),
-          global_space_index );
-    }
-  }
-  // compute D = Q * T and then the moment mu = L * D
-  aux_matrix.multiply( sources, T );
-  // mu = L * D with explicit cblas routine call
-  lo n_rows_lagrange = L.get_n_rows( );
-  lo n_cols_aux_matrix = aux_matrix.get_n_columns( );
-  lo n_rows_aux_matrix = aux_matrix.get_n_rows( );
-  lo lda = n_rows_lagrange;
-  lo ldb = n_rows_aux_matrix;
-  sc alpha = 1.0;
-  sc beta = 0.0;
-  cblas_dgemm( CblasColMajor, CblasNoTrans, CblasNoTrans, n_rows_lagrange,
-    n_cols_aux_matrix, n_rows_aux_matrix, alpha, L.data( ), lda,
-    aux_matrix.data( ), ldb, beta, moment, n_rows_lagrange );
-}
-
-template< class kernel_type, class target_space, class source_space >
-void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space,
-  source_space >::apply_s2m_operations_p1_normal_drv( const block_vector &
-                                                        source_vector,
-  general_spacetime_cluster * source_cluster ) const {
-  lo n_time_elements = source_cluster->get_n_time_elements( );
-  lo n_space_elements = source_cluster->get_n_space_elements( );
-  lo n_space_nodes = source_cluster->get_n_space_nodes( );
-  full_matrix sources( n_time_elements, n_space_nodes, false );
-  full_matrix aux_matrix( n_time_elements, _spat_contribution_size, false );
-
-  // get references of current moment and all required matrices
-  sc * moment = source_cluster->get_pointer_to_moment( );
-  full_matrix T_drv;
-  compute_normal_drv_chebyshev_quadrature_p1( source_cluster, T_drv );
-  full_matrix L;
-  compute_lagrange_quadrature( source_cluster, L );
-
-  // get the relevant entries of the block vector x and store them in sources
-  const std::vector< lo > & spacetime_elements
-    = source_cluster->get_all_elements( );
-  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
-    = source_cluster->get_mesh( );
-  // a cluster for which an S2M operation is executed is always local!
-  const mesh::spacetime_tensor_mesh * local_mesh
-    = distributed_mesh->get_local_mesh( );
-  lo local_start_idx = distributed_mesh->get_local_start_idx( );
-
-  const std::vector< lo > & local_2_global_nodes
-    = source_cluster->get_local_2_global_nodes( );
-  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
-    // use that the spacetime elements are sorted in time, i.e. a consecutive
-    // group of n_space_elements elements has the same temporal component to
-    // determine the local time index only once
-    lo local_time_index
-      = local_mesh->get_time_element( distributed_mesh->global_2_local(
-        local_start_idx, spacetime_elements[ i_time * n_space_elements ] ) );
-    for ( lo i_space = 0; i_space < n_space_nodes; ++i_space ) {
-      // local_2_global_nodes gives the indices of the spacetime nodes. take
-      // the rest from division by the number of global spatial nodes to get
-      // the spatial node index
-      lo global_space_index
-        = local_2_global_nodes[ i_space ] % local_mesh->get_n_spatial_nodes( );
-      // for the spatial mesh no transformation from local 2 global is
-      // necessary since there is just one global space mesh at the moment.
-      sources( i_time, i_space )
-        = source_vector.get( distributed_mesh->local_2_global_time(
-                               local_start_idx, local_time_index ),
-          global_space_index );
-    }
-  }
-  // compute D = Q * T_drv and then the moment mu = L * D
-  aux_matrix.multiply( sources, T_drv );
-  // mu = L * D with explicit cblas routine call
-  lo n_rows_lagrange = L.get_n_rows( );
-  lo n_cols_aux_matrix = aux_matrix.get_n_columns( );
-  lo n_rows_aux_matrix = aux_matrix.get_n_rows( );
-  lo lda = n_rows_lagrange;
-  lo ldb = n_rows_aux_matrix;
-  sc alpha = 1.0;
-  sc beta = 0.0;
-  cblas_dgemm( CblasColMajor, CblasNoTrans, CblasNoTrans, n_rows_lagrange,
-    n_cols_aux_matrix, n_rows_aux_matrix, alpha, L.data( ), lda,
-    aux_matrix.data( ), ldb, beta, moment, n_rows_lagrange );
-}
-
-template< class kernel_type, class target_space, class source_space >
-void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::call_m2m_operations( scheduling_time_cluster *
-                                                       time_cluster,
+                                                       t_cluster,
   bool verbose, const std::string & verbose_file ) const {
-  scheduling_time_cluster * parent_cluster = time_cluster->get_parent( );
+  scheduling_time_cluster * parent_cluster = t_cluster->get_parent( );
   // m2m operations are only executed if the parent is active in the upward
   // path
   if ( parent_cluster->is_active_in_upward_path( ) ) {
@@ -1428,14 +719,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       {
         std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
         if ( outfile.is_open( ) ) {
-          outfile << "call M2M for cluster "
-                  << time_cluster->get_global_index( ) << " at level "
-                  << time_cluster->get_level( ) << std::endl;
+          outfile << "call M2M for cluster " << t_cluster->get_global_index( )
+                  << " at level " << t_cluster->get_level( ) << std::endl;
           outfile.close( );
         }
       }
     }
-    slou configuration = time_cluster->get_configuration( );
+    slou configuration = t_cluster->get_configuration( );
     std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
       = parent_cluster->get_associated_spacetime_clusters( );
     lou n_associated_leaves = parent_cluster->get_n_associated_leaves( );
@@ -1447,10 +737,18 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 #pragma omp taskloop
     for ( lou i = n_associated_leaves;
           i < associated_spacetime_clusters->size( ); ++i ) {
+      if ( _measure_tasks ) {
+        _m_subtask_times.at( omp_get_thread_num( ) )
+          .push_back( _global_timer.get_time_from_start< time_type >( ) );
+      }
       general_spacetime_cluster * current_cluster
         = ( *associated_spacetime_clusters )[ i ];
 
       apply_grouped_m2m_operation( current_cluster, configuration );
+      if ( _measure_tasks ) {
+        _m_subtask_times.at( omp_get_thread_num( ) )
+          .push_back( _global_timer.get_time_from_start< time_type >( ) );
+      }
     }
   }
 }
@@ -1712,6 +1010,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // there is an implicit taskgroup after this taskloop
 #pragma omp taskloop
   for ( lou i = 0; i < associated_spacetime_targets->size( ); ++i ) {
+    if ( _measure_tasks ) {
+      _m2l_subtask_times.at( omp_get_thread_num( ) )
+        .push_back( _global_timer.get_time_from_start< time_type >( ) );
+    }
     //      for ( auto spacetime_tar : *associated_spacetime_targets ) {
     std::vector< general_spacetime_cluster * > * spacetime_interaction_list
       = ( *associated_spacetime_targets )[ i ]->get_interaction_list( );
@@ -1722,6 +1024,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         apply_m2l_operation(
           spacetime_src, ( *associated_spacetime_targets )[ i ] );
       }
+    }
+    if ( _measure_tasks ) {
+      _m2l_subtask_times.at( omp_get_thread_num( ) )
+        .push_back( _global_timer.get_time_from_start< time_type >( ) );
     }
   }
 }
@@ -1895,9 +1201,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::call_l2l_operations( scheduling_time_cluster *
-                                                       time_cluster,
+                                                       t_cluster,
   bool verbose, const std::string & verbose_file ) const {
-  scheduling_time_cluster * parent_cluster = time_cluster->get_parent( );
+  scheduling_time_cluster * parent_cluster = t_cluster->get_parent( );
   // m2m operations are only executed if the parent is active in the upward
   // path
   if ( verbose ) {
@@ -1905,13 +1211,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     {
       std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
       if ( outfile.is_open( ) ) {
-        outfile << "call L2L for cluster " << time_cluster->get_global_index( )
-                << " at level " << time_cluster->get_level( ) << std::endl;
+        outfile << "call L2L for cluster " << t_cluster->get_global_index( )
+                << " at level " << t_cluster->get_level( ) << std::endl;
         outfile.close( );
       }
     }
   }
-  slou configuration = time_cluster->get_configuration( );
+  slou configuration = t_cluster->get_configuration( );
   std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
     = parent_cluster->get_associated_spacetime_clusters( );
   lou n_associated_leaves = parent_cluster->get_n_associated_leaves( );
@@ -1921,8 +1227,16 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 #pragma omp taskloop
   for ( lou i = n_associated_leaves; i < associated_spacetime_clusters->size( );
         ++i ) {
+    if ( _measure_tasks ) {
+      _l_subtask_times.at( omp_get_thread_num( ) )
+        .push_back( _global_timer.get_time_from_start< time_type >( ) );
+    }
     apply_grouped_l2l_operation(
       ( *associated_spacetime_clusters )[ i ], configuration );
+    if ( _measure_tasks ) {
+      _l_subtask_times.at( omp_get_thread_num( ) )
+        .push_back( _global_timer.get_time_from_start< time_type >( ) );
+    }
   }
 }
 
@@ -1994,7 +1308,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     for ( int i = 0; i < ( _temp_order + 1 ) * _spat_contribution_size; ++i ) {
       buffer_array[ i ] = 0.0;
     }
-    apply_temporal_m2m_operation(
+    apply_temporal_l2l_operation(
       parent_local_contribution, temporal_l2l_matrix, buffer_array.data( ) );
 
     for ( auto child : *children ) {
@@ -2156,289 +1470,44 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 }
 
 template< class kernel_type, class target_space, class source_space >
+template< slou run_count >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space,
   source_space >::call_l2t_operations( mesh::scheduling_time_cluster *
-                                         time_cluster,
-  block_vector & output_vector, bool verbose,
-  const std::string & verbose_file ) const {
-  // execute only for associated spacetime leaves
-  if ( time_cluster->get_n_associated_leaves( ) > 0 ) {
-    if ( verbose ) {
-      std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
-      if ( outfile.is_open( ) ) {
-        outfile << "call L2T for cluster " << time_cluster->get_global_index( )
-                << std::endl;
-        outfile.close( );
-      }
-    }
-    std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
-      = time_cluster->get_associated_spacetime_clusters( );
-    lou i;
-    lou n = time_cluster->get_n_associated_leaves( );
-    // there is an implicit taskgroup after this taskloop
-#pragma omp taskloop shared( output_vector, associated_spacetime_clusters )
-    for ( i = 0; i < n; ++i ) {
-      apply_l2t_operation(
-        ( *associated_spacetime_clusters )[ i ], output_vector );
-    }
-  }
-}
-
-template< class kernel_type, class target_space, class source_space >
-void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space,
-  source_space >::call_l2t_operations( mesh::scheduling_time_cluster *
-                                         time_cluster,
+                                         t_cluster,
   distributed_block_vector & output_vector, bool verbose,
   const std::string & verbose_file ) const {
   // execute only for associated spacetime leaves
-  if ( time_cluster->get_n_associated_leaves( ) > 0 ) {
+  if ( t_cluster->get_n_associated_leaves( ) > 0 ) {
     if ( verbose ) {
 #pragma omp critical( verbose )
       {
         std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
         if ( outfile.is_open( ) ) {
-          outfile << "call L2T for cluster "
-                  << time_cluster->get_global_index( ) << " at level "
-                  << time_cluster->get_level( ) << std::endl;
+          outfile << "call L2T for cluster " << t_cluster->get_global_index( )
+                  << " at level " << t_cluster->get_level( ) << std::endl;
           outfile.close( );
         }
       }
     }
     std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
-      = time_cluster->get_associated_spacetime_clusters( );
-    lou i;
-    lou n = time_cluster->get_n_associated_leaves( );
+      = t_cluster->get_associated_spacetime_clusters( );
+    lou i = 0;
+    lou n = t_cluster->get_n_associated_leaves( );
     // there is an implicit taskgroup after this taskloop
 #pragma omp taskloop shared( output_vector, associated_spacetime_clusters )
     for ( i = 0; i < n; ++i ) {
-      apply_l2t_operation(
+      if ( _measure_tasks ) {
+        _l_subtask_times.at( omp_get_thread_num( ) )
+          .push_back( _global_timer.get_time_from_start< time_type >( ) );
+      }
+      apply_l2t_operation< run_count >(
         ( *associated_spacetime_clusters )[ i ], output_vector );
+      if ( _measure_tasks ) {
+        _l_subtask_times.at( omp_get_thread_num( ) )
+          .push_back( _global_timer.get_time_from_start< time_type >( ) );
+      }
     }
-  }
-}
-
-template< class kernel_type, class target_space, class source_space >
-void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space,
-  source_space >::apply_l2t_operation( const mesh::general_spacetime_cluster *
-                                         cluster,
-  block_vector & output_vector ) const {
-  std::cout << "L2T operation not implemented!" << std::endl;
-}
-
-//! template specialization for single layer p0p0 matrix
-template<>
-void besthea::linear_algebra::distributed_pFMM_matrix<
-  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p0 >,
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p0 > >::
-  apply_l2t_operation( const mesh::general_spacetime_cluster * cluster,
-    block_vector & output_vector ) const {
-  apply_l2t_operation_p0( cluster, output_vector );
-}
-
-//! template specialization for double layer p0p1 matrix
-template<>
-void besthea::linear_algebra::distributed_pFMM_matrix<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p0 >,
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p1 > >::
-  apply_l2t_operation( const mesh::general_spacetime_cluster * cluster,
-    block_vector & output_vector ) const {
-  apply_l2t_operation_p0( cluster, output_vector );
-}
-
-//! template specialization for adjoint double layer p1p0 matrix
-template<>
-void besthea::linear_algebra::distributed_pFMM_matrix<
-  besthea::bem::spacetime_heat_adl_kernel_antiderivative,
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p1 >,
-  besthea::bem::distributed_fast_spacetime_be_space<
-    besthea::bem::basis_tri_p0 > >::
-  apply_l2t_operation( const mesh::general_spacetime_cluster * cluster,
-    block_vector & output_vector ) const {
-  apply_l2t_operation_p1_normal_drv( cluster, output_vector );
-}
-
-template< class kernel_type, class target_space, class source_space >
-void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::
-  apply_l2t_operation_p0( const mesh::general_spacetime_cluster * cluster,
-    block_vector & output_vector ) const {
-  lo n_time_elements = cluster->get_n_time_elements( );
-  lo n_space_elements = cluster->get_n_space_elements( );
-  full_matrix targets( n_time_elements, n_space_elements, false );
-  full_matrix aux_matrix( n_time_elements, _spat_contribution_size, false );
-
-  // get references local contribution and all required matrices
-  const sc * local_contribution = cluster->get_pointer_to_local_contribution( );
-
-  full_matrix T;
-  compute_chebyshev_quadrature_p0( cluster, T );
-  full_matrix L;
-  compute_lagrange_quadrature( cluster, L );
-
-  // compute D = trans(L) * lambda and then the result Y = D * trans(T)
-  //  D = trans(L) * lambda with explicit cblas routine call:
-  lo n_cols_lagrange = L.get_n_columns( );
-  lo n_cols_local = _spat_contribution_size;
-  lo n_rows_lagrange = L.get_n_rows( );
-  lo lda = n_rows_lagrange;
-  lo ldb = n_rows_lagrange;
-  sc alpha = 1.0;
-  sc beta = 0.0;
-  cblas_dgemm( CblasColMajor, CblasTrans, CblasNoTrans, n_cols_lagrange,
-    n_cols_local, n_rows_lagrange, alpha, L.data( ), lda, local_contribution,
-    ldb, beta, aux_matrix.data( ), n_cols_lagrange );
-  // compute Y = D * trans(T)
-  targets.multiply( aux_matrix, T, false, true );
-
-  // add the results to the correct positions of the output vector
-  const std::vector< lo > & spacetime_elements = cluster->get_all_elements( );
-  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
-    = cluster->get_mesh( );
-  // a cluster for which an S2M operation is executed is always local!
-  const mesh::spacetime_tensor_mesh * local_mesh
-    = distributed_mesh->get_local_mesh( );
-  lo local_start_idx = distributed_mesh->get_local_start_idx( );
-
-  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
-    lo local_time_index
-      = local_mesh->get_time_element( distributed_mesh->global_2_local(
-        local_start_idx, spacetime_elements[ i_time * n_space_elements ] ) );
-    for ( lo i_space = 0; i_space < n_space_elements; ++i_space ) {
-      lo global_space_index = local_mesh->get_space_element(
-        distributed_mesh->global_2_local( local_start_idx,
-          spacetime_elements[ i_time * n_space_elements + i_space ] ) );
-      // for the spatial mesh no transformation from local 2 global is
-      // necessary since there is just one global space mesh at the moment.
-      output_vector.add_atomic( distributed_mesh->local_2_global_time(
-                                  local_start_idx, local_time_index ),
-        global_space_index, targets( i_time, i_space ) );
-    }
-  }
-}
-
-template< class kernel_type, class target_space, class source_space >
-void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::
-  apply_l2t_operation_p1_normal_drv(
-    const mesh::general_spacetime_cluster * cluster,
-    block_vector & output_vector ) const {
-  lo n_time_elements = cluster->get_n_time_elements( );
-  lo n_space_elements = cluster->get_n_space_elements( );
-  lo n_space_nodes = cluster->get_n_space_nodes( );
-  full_matrix targets( n_time_elements, n_space_nodes, false );
-  full_matrix aux_matrix( n_time_elements, _spat_contribution_size, false );
-
-  // get references local contribution and all required matrices
-  const sc * local_contribution = cluster->get_pointer_to_local_contribution( );
-  full_matrix T_drv;
-  compute_normal_drv_chebyshev_quadrature_p1( cluster, T_drv );
-  full_matrix L;
-  compute_lagrange_quadrature( cluster, L );
-
-  // compute D = trans(L) * lambda and then the result Y = D * trans(T)
-  //  D = trans(L) * lambda with explicit cblas routine call:
-  lo n_cols_lagrange = L.get_n_columns( );
-  lo n_cols_local = _spat_contribution_size;
-  lo n_rows_lagrange = L.get_n_rows( );
-  lo lda = n_rows_lagrange;
-  lo ldb = n_rows_lagrange;
-  sc alpha = 1.0;
-  sc beta = 0.0;
-  cblas_dgemm( CblasColMajor, CblasTrans, CblasNoTrans, n_cols_lagrange,
-    n_cols_local, n_rows_lagrange, alpha, L.data( ), lda, local_contribution,
-    ldb, beta, aux_matrix.data( ), n_cols_lagrange );
-  // compute Y = D * trans(T)
-  targets.multiply( aux_matrix, T_drv, false, true );
-
-  // add the results to the correct positions of the output vector
-  const std::vector< lo > & spacetime_elements = cluster->get_all_elements( );
-  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
-    = cluster->get_mesh( );
-  // a cluster for which an S2M operation is executed is always local!
-  const mesh::spacetime_tensor_mesh * local_mesh
-    = distributed_mesh->get_local_mesh( );
-  lo local_start_idx = distributed_mesh->get_local_start_idx( );
-
-  const std::vector< lo > & local_2_global_nodes
-    = cluster->get_local_2_global_nodes( );
-
-  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
-    lo local_time_index
-      = local_mesh->get_time_element( distributed_mesh->global_2_local(
-        local_start_idx, spacetime_elements[ i_time * n_space_elements ] ) );
-    for ( lo i_space = 0; i_space < n_space_nodes; ++i_space ) {
-      // local_2_global_nodes gives the indices of the spacetime nodes. take
-      // the rest from division by the number of global spatial nodes to get
-      // the spatial node index
-      lo global_space_index
-        = local_2_global_nodes[ i_space ] % local_mesh->get_n_spatial_nodes( );
-      // for the spatial mesh no transformation from local 2 global is
-      // necessary since there is just one global space mesh at the moment.
-      output_vector.add_atomic( distributed_mesh->local_2_global_time(
-                                  local_start_idx, local_time_index ),
-        global_space_index, targets( i_time, i_space ) );
-    }
-  }
-}
-
-template< class kernel_type, class target_space, class source_space >
-void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::
-  apply_nearfield_operations( const mesh::scheduling_time_cluster * cluster,
-    const block_vector & sources, bool trans, block_vector & output_vector,
-    bool verbose, const std::string & verbose_file ) const {
-  if ( verbose ) {
-    std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
-    if ( outfile.is_open( ) ) {
-      outfile << "apply NF for cluster " << cluster->get_global_index( );
-      outfile.close( );
-    }
-  }
-  vector_type local_sources;
-  const std::vector< general_spacetime_cluster * > *
-    associated_spacetime_targets
-    = cluster->get_associated_spacetime_clusters( );
-  lou n_associated_leaves = cluster->get_n_associated_leaves( );
-  // there is an implicit taskgroup after this taskloop
-#pragma omp taskloop shared( output_vector, _clusterwise_nearfield_matrices )
-  for ( lou i = 0; i < n_associated_leaves; ++i ) {
-    general_spacetime_cluster * current_spacetime_target
-      = ( *associated_spacetime_targets )[ i ];
-    // construct a local result_vector
-    vector_type local_result(
-      current_spacetime_target->get_n_dofs< target_space >( ), true );
-    // get the nearfield list of the current spacetime target cluster and
-    // apply the nearfield operations for all the clusters in this list.
-    std::vector< general_spacetime_cluster * > * spacetime_nearfield_list
-      = current_spacetime_target->get_nearfield_list( );
-    for ( lou src_index = 0; src_index < spacetime_nearfield_list->size( );
-          ++src_index ) {
-      general_spacetime_cluster * current_spacetime_source
-        = ( *spacetime_nearfield_list )[ src_index ];
-      local_sources.resize(
-        current_spacetime_source->get_n_dofs< source_space >( ) );
-      // get the sources corresponding to the current spacetime source cluster
-      sources.get_local_part< source_space >(
-        current_spacetime_source, local_sources );
-
-      full_matrix * current_block = _clusterwise_nearfield_matrices.at(
-        current_spacetime_target )[ src_index ];
-      // apply the nearfield matrix and add the result to local_result
-      current_block->apply( local_sources, local_result, trans, 1.0, 1.0 );
-    }
-    // add the local result to the output vector
-    output_vector.add_local_part< target_space >(
-      current_spacetime_target, local_result );
   }
 }
 
@@ -2536,6 +1605,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         int buffer_size
           = src_cluster->get_associated_spacetime_clusters( )->size( )
           * _contribution_size;
+
+        if ( _measure_tasks ) {
+          _mpi_send_m2l.at( omp_get_thread_num( ) )
+            .push_back( _global_timer.get_time_from_start< time_type >( ) );
+        }
         MPI_Request req;
         MPI_Isend( moment_buffer, buffer_size, get_scalar_type< sc >::MPI_SC( ),
           tar_process_id, tag, *_comm, &req );
@@ -2579,6 +1653,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       int buffer_size
         = parent_cluster->get_associated_spacetime_clusters( )->size( )
         * _contribution_size;
+
+      if ( _measure_tasks ) {
+        _mpi_send_m_parent.at( omp_get_thread_num( ) )
+          .push_back( _global_timer.get_time_from_start< time_type >( ) );
+      }
+
       MPI_Request req;
       MPI_Isend( moment_buffer, buffer_size, get_scalar_type< sc >::MPI_SC( ),
         parent_process_id, tag, *_comm, &req );
@@ -2618,6 +1698,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         int buffer_size
           = parent_cluster->get_associated_spacetime_clusters( )->size( )
           * _contribution_size;
+
+        if ( _measure_tasks ) {
+          _mpi_send_l_children.at( omp_get_thread_num( ) )
+            .push_back( _global_timer.get_time_from_start< time_type >( ) );
+        }
+
         MPI_Request req;
         MPI_Isend( local_contribution_buffer, buffer_size,
           get_scalar_type< sc >::MPI_SC( ), child_process_id, tag, *_comm,
@@ -2721,18 +1807,18 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   vector_type cheb_dim_1( ( _spat_order + 1 ) * size_quad );
   vector_type cheb_dim_2( ( _spat_order + 1 ) * size_quad );
 
-  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
+  const mesh::distributed_spacetime_tensor_mesh & distributed_mesh
     = source_cluster->get_mesh( );
   const mesh::spacetime_tensor_mesh * local_mesh
-    = distributed_mesh->get_local_mesh( );
-  lo local_start_idx = distributed_mesh->get_local_start_idx( );
+    = distributed_mesh.get_local_mesh( );
+  lo local_start_idx = distributed_mesh.get_local_start_idx( );
 
   for ( lo i = 0; i < n_space_elems; ++i ) {
     // we use that the elements in the cluster are tensor products of spatial
     // elements and timesteps, and are sorted w.r.t. the timesteps. In
     // particular we get all spatial elements in the cluster by considering
     // the first n_space_elems spacetime elements.
-    lo local_elem_idx = distributed_mesh->global_2_local(
+    lo local_elem_idx = distributed_mesh.global_2_local(
       local_start_idx, source_cluster->get_element( i ) );
     lo local_elem_idx_space = local_mesh->get_space_element( local_elem_idx );
 
@@ -2815,14 +1901,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     = source_cluster->get_elems_2_local_nodes( );
   linear_algebra::coordinates< 3 > normal;
 
-  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
+  const mesh::distributed_spacetime_tensor_mesh & distributed_mesh
     = source_cluster->get_mesh( );
   const mesh::spacetime_tensor_mesh * local_mesh
-    = distributed_mesh->get_local_mesh( );
-  lo local_start_idx = distributed_mesh->get_local_start_idx( );
+    = distributed_mesh.get_local_mesh( );
+  lo local_start_idx = distributed_mesh.get_local_start_idx( );
 
   for ( lo i = 0; i < n_space_elems; ++i ) {
-    lo local_elem_idx = distributed_mesh->global_2_local(
+    lo local_elem_idx = distributed_mesh.global_2_local(
       local_start_idx, source_cluster->get_element( i ) );
     lo local_elem_idx_space = local_mesh->get_space_element( local_elem_idx );
     local_mesh->get_spatial_normal( local_elem_idx_space, normal );
@@ -2894,6 +1980,151 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::
+  compute_chebyshev_times_normal_quadrature_p1_along_dimension(
+    const mesh::general_spacetime_cluster * source_cluster, const slou dim,
+    full_matrix & T_normal_along_dim ) const {
+  lo n_space_elems = source_cluster->get_n_space_elements( );
+  lo n_space_nodes = source_cluster->get_n_space_nodes( );
+  T_normal_along_dim.resize( n_space_nodes, _spat_contribution_size );
+  T_normal_along_dim.fill( 0.0 );
+  // get some info on the current cluster
+  vector_type cluster_center_space( 3 );
+  vector_type cluster_half_space( 3 );
+  sc dummy;
+  source_cluster->get_center( cluster_center_space, dummy );
+  source_cluster->get_half_size( cluster_half_space, dummy );
+  sc padding = _distributed_spacetime_tree
+                 ->get_spatial_paddings( )[ source_cluster->get_level( ) ];
+  sc start_0 = cluster_center_space[ 0 ] - cluster_half_space[ 0 ] - padding;
+  sc end_0 = cluster_center_space[ 0 ] + cluster_half_space[ 0 ] + padding;
+  sc start_1 = cluster_center_space[ 1 ] - cluster_half_space[ 1 ] - padding;
+  sc end_1 = cluster_center_space[ 1 ] + cluster_half_space[ 1 ] + padding;
+  sc start_2 = cluster_center_space[ 2 ] - cluster_half_space[ 2 ] - padding;
+  sc end_2 = cluster_center_space[ 2 ] + cluster_half_space[ 2 ] + padding;
+
+  // init quadrature data
+  quadrature_wrapper my_quadrature;
+  init_quadrature_polynomials( my_quadrature );
+  lo size_quad = my_quadrature._wy_cheb.size( );
+  sc * wy = my_quadrature._wy_cheb.data( );
+  linear_algebra::coordinates< 3 > y1, y2, y3;
+
+  // for storing the result of the Chebyshev evaluation in quadrature points
+  vector_type cheb_dim_0( ( _spat_order + 1 ) * size_quad );
+  vector_type cheb_dim_1( ( _spat_order + 1 ) * size_quad );
+  vector_type cheb_dim_2( ( _spat_order + 1 ) * size_quad );
+
+  sc * y1_ref = my_quadrature._y1_ref_cheb.data( );
+  sc * y2_ref = my_quadrature._y2_ref_cheb.data( );
+
+  const std::vector< lo > & elems_2_local_nodes
+    = source_cluster->get_elems_2_local_nodes( );
+  linear_algebra::coordinates< 3 > normal;
+
+  const mesh::distributed_spacetime_tensor_mesh & distributed_mesh
+    = source_cluster->get_mesh( );
+  const mesh::spacetime_tensor_mesh * local_mesh
+    = distributed_mesh.get_local_mesh( );
+  lo local_start_idx = distributed_mesh.get_local_start_idx( );
+
+  for ( lo i = 0; i < n_space_elems; ++i ) {
+    lo local_elem_idx = distributed_mesh.global_2_local(
+      local_start_idx, source_cluster->get_element( i ) );
+    lo local_elem_idx_space = local_mesh->get_space_element( local_elem_idx );
+    local_mesh->get_spatial_normal( local_elem_idx_space, normal );
+    local_mesh->get_spatial_nodes( local_elem_idx_space, y1, y2, y3 );
+    sc elem_area = local_mesh->spatial_area( local_elem_idx_space );
+
+    triangle_to_geometry( y1, y2, y3, my_quadrature );
+
+    cluster_to_polynomials(
+      my_quadrature, start_0, end_0, start_1, end_1, start_2, end_2 );
+
+    _chebyshev.evaluate( my_quadrature._y1_polynomial, cheb_dim_0 );
+    _chebyshev.evaluate( my_quadrature._y2_polynomial, cheb_dim_1 );
+    _chebyshev.evaluate( my_quadrature._y3_polynomial, cheb_dim_2 );
+
+    lo current_index = 0;
+    for ( lo beta0 = 0; beta0 <= _spat_order; ++beta0 ) {
+      for ( lo beta1 = 0; beta1 <= _spat_order - beta0; ++beta1 ) {
+        for ( lo beta2 = 0; beta2 <= _spat_order - beta0 - beta1; ++beta2 ) {
+          sc value1 = 0.0;
+          sc value2 = 0.0;
+          sc value3 = 0.0;
+          for ( lo j = 0; j < size_quad; ++j ) {
+            sc weight_poly = cheb_dim_0[ beta0 * size_quad + j ]
+              * cheb_dim_1[ beta1 * size_quad + j ]
+              * cheb_dim_2[ beta2 * size_quad + j ] * wy[ j ] * elem_area;
+            value1 += weight_poly * ( (sc) 1.0 - y1_ref[ j ] - y2_ref[ j ] );
+            value2 += weight_poly * y1_ref[ j ];
+            value3 += weight_poly * y2_ref[ j ];
+          }
+          T_normal_along_dim.add_atomic(
+            source_cluster->local_spacetime_node_idx_2_local_space_node_idx(
+              elems_2_local_nodes[ 6 * i ] ),
+            current_index, value1 * normal[ dim ] );
+          T_normal_along_dim.add_atomic(
+            source_cluster->local_spacetime_node_idx_2_local_space_node_idx(
+              elems_2_local_nodes[ 6 * i + 1 ] ),
+            current_index, value2 * normal[ dim ] );
+          T_normal_along_dim.add_atomic(
+            source_cluster->local_spacetime_node_idx_2_local_space_node_idx(
+              elems_2_local_nodes[ 6 * i + 2 ] ),
+            current_index, value3 * normal[ dim ] );
+          ++current_index;
+        }
+      }
+    }
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+template< slou dim >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::
+  compute_chebyshev_times_p1_surface_curls_along_dimension(
+    const mesh::general_spacetime_cluster * source_cluster,
+    full_matrix & T_curl_along_dim ) const {
+  // get the chebyshev quadratures for p0 functions
+  full_matrix T;
+  compute_chebyshev_quadrature_p0( source_cluster, T );
+  // get the surface curls along the current dimension
+  std::vector< sc > surf_curls_curr_dim;
+  source_cluster->compute_surface_curls_p1_along_dim< dim >(
+    surf_curls_curr_dim );
+  // get cluster information and resize T_curl_along_dim
+  lo n_space_elements = source_cluster->get_n_space_elements( );
+  lo n_space_nodes = source_cluster->get_n_space_nodes( );
+  const std::vector< lo > & elems_2_local_nodes
+    = source_cluster->get_elems_2_local_nodes( );
+  T_curl_along_dim.resize( n_space_nodes, _spat_contribution_size );
+  // compute T_curl_along_dim from T and surface_curls
+  for ( lo i_beta = 0; i_beta < _spat_contribution_size; ++i_beta ) {
+    for ( lo i_space_el = 0; i_space_el < n_space_elements; ++i_space_el ) {
+      T_curl_along_dim.add_atomic(
+        source_cluster->local_spacetime_node_idx_2_local_space_node_idx(
+          elems_2_local_nodes[ 6 * i_space_el ] ),
+        i_beta,
+        surf_curls_curr_dim[ 3 * i_space_el ] * T.get( i_space_el, i_beta ) );
+      T_curl_along_dim.add_atomic(
+        source_cluster->local_spacetime_node_idx_2_local_space_node_idx(
+          elems_2_local_nodes[ 6 * i_space_el + 1 ] ),
+        i_beta,
+        surf_curls_curr_dim[ 3 * i_space_el + 1 ]
+          * T.get( i_space_el, i_beta ) );
+      T_curl_along_dim.add_atomic(
+        source_cluster->local_spacetime_node_idx_2_local_space_node_idx(
+          elems_2_local_nodes[ 6 * i_space_el + 2 ] ),
+        i_beta,
+        surf_curls_curr_dim[ 3 * i_space_el + 2 ]
+          * T.get( i_space_el, i_beta ) );
+    }
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::
   compute_lagrange_quadrature(
     const mesh::general_spacetime_cluster * source_cluster,
     full_matrix & L ) const {
@@ -2915,11 +2146,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     + source_cluster->get_time_half_size( );
   sc cluster_size = cluster_t_end - cluster_t_start;
 
-  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
+  const mesh::distributed_spacetime_tensor_mesh & distributed_mesh
     = source_cluster->get_mesh( );
   const mesh::spacetime_tensor_mesh * local_mesh
-    = distributed_mesh->get_local_mesh( );
-  lo local_start_idx = distributed_mesh->get_local_start_idx( );
+    = distributed_mesh.get_local_mesh( );
+  lo local_start_idx = distributed_mesh.get_local_start_idx( );
 
   linear_algebra::coordinates< 1 > elem_t_start;
   linear_algebra::coordinates< 1 > elem_t_end;
@@ -2928,7 +2159,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     // elements and timesteps, and are sorted w.r.t. the timesteps. In
     // particular we get all temporal elements in the cluster by considering
     // every n_spat_elems spacetime element.
-    lo local_elem_idx = distributed_mesh->global_2_local(
+    lo local_elem_idx = distributed_mesh.global_2_local(
       local_start_idx, source_cluster->get_element( i * n_spat_elems ) );
     lo local_elem_idx_time = local_mesh->get_time_element( local_elem_idx );
 
@@ -2960,6 +2191,60 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::
+  compute_lagrange_drv_quadrature(
+    const mesh::general_spacetime_cluster * source_cluster,
+    full_matrix & L_drv ) const {
+  lo n_temp_elems = source_cluster->get_n_time_elements( );
+  lo n_spat_elems = source_cluster->get_n_space_elements( );
+  L_drv.resize( _temp_order + 1, n_temp_elems );
+
+  vector_type eval_points( 2 );
+  vector_type evaluation( 2 );
+
+  sc cluster_t_start = source_cluster->get_time_center( )
+    - source_cluster->get_time_half_size( );
+  sc cluster_t_end = source_cluster->get_time_center( )
+    + source_cluster->get_time_half_size( );
+  sc cluster_size = cluster_t_end - cluster_t_start;
+
+  const mesh::distributed_spacetime_tensor_mesh & distributed_mesh
+    = source_cluster->get_mesh( );
+  // this function should only be called for clusters which are local, i.e.
+  // whose elemnts are in the local mesh
+  const mesh::spacetime_tensor_mesh * local_mesh
+    = distributed_mesh.get_local_mesh( );
+  lo local_start_idx = distributed_mesh.get_local_start_idx( );
+
+  linear_algebra::coordinates< 1 > elem_t_start;
+  linear_algebra::coordinates< 1 > elem_t_end;
+  for ( lo i = 0; i < n_temp_elems; ++i ) {
+    // we use that the elements in the cluster are tensor products of spatial
+    // elements and timesteps, and are sorted w.r.t. the timesteps. In
+    // particular we get all temporal elements in the cluster by considering
+    // every n_spat_elems spacetime element.
+    lo local_elem_idx = distributed_mesh.global_2_local(
+      local_start_idx, source_cluster->get_element( i * n_spat_elems ) );
+    lo local_elem_idx_time = local_mesh->get_time_element( local_elem_idx );
+
+    local_mesh->get_temporal_nodes(
+      local_elem_idx_time, elem_t_start, elem_t_end );
+    // compute the end points of the current element in relative
+    // coordinates with respect to the time cluster and transform them to
+    // [-1,1]
+    eval_points[ 0 ]
+      = -1.0 + 2.0 * ( elem_t_start[ 0 ] - cluster_t_start ) / cluster_size;
+    eval_points[ 1 ]
+      = -1.0 + 2.0 * ( elem_t_end[ 0 ] - cluster_t_start ) / cluster_size;
+    for ( lo j = 0; j <= _temp_order; ++j ) {
+      _lagrange.evaluate( j, eval_points, evaluation );
+      L_drv.set( j, i, evaluation[ 1 ] - evaluation[ 0 ] );
+    }
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::compute_coupling_coeffs( const vector_type &
                                                            src_time_nodes,
   const vector_type & tar_time_nodes, const sc half_size, const sc center_diff,
@@ -2977,7 +2262,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   for ( lo a = 0; a <= _temp_order; ++a ) {
     for ( lo b = 0; b <= _temp_order; ++b ) {
       sc h_delta_ab = h_alpha / ( tar_time_nodes[ a ] - src_time_nodes[ b ] );
-      lou i;
+      lou i = 0;
 #pragma omp simd aligned( cheb_nodes_sum_coll_data, buffer_for_gaussians_data \
                           : DATA_ALIGN ) simdlen( DATA_WIDTH )
       for ( i = 0; i < _cheb_nodes_sum_coll.size( ); ++i ) {
@@ -3005,12 +2290,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             = alpha * ( _spat_order + 1 ) * _cheb_nodes_sum_coll.size( )
             + beta * _cheb_nodes_sum_coll.size( );
           const sc * curr_ptr = all_poly_vals_mult_coll_data;  // + start_idx;
-#pragma omp simd aligned( buffer_for_gaussians_data,curr_ptr : DATA_ALIGN ) reduction( + : val )
-          for ( lou idx = 0; idx < _cheb_nodes_sum_coll.size( ); ++idx ) {
-            val += buffer_for_gaussians_data[ index_gaussian ]
+          std::vector< sc, besthea::allocator_type< sc > >::size_type idx;
+#pragma omp simd aligned( buffer_for_gaussians_data,curr_ptr : DATA_ALIGN ) reduction( + : val ) simdlen( DATA_WIDTH )
+          for ( idx = 0; idx < _cheb_nodes_sum_coll.size( ); ++idx ) {
+            val += buffer_for_gaussians_data[ index_gaussian + idx ]
               * curr_ptr[ start_idx + idx ];
-            ++index_gaussian;
           }
+          index_gaussian += idx;
           coupling_coeffs[ index_integral ] += val;
 
           sc mul_factor_ab = mul_factor
@@ -3189,7 +2475,7 @@ sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
     for ( lou i = 0; i < n_associated_leaves; ++i ) {
       // consider all associated st target clusters
       general_spacetime_cluster * st_target = ( *st_targets )[ i ];
-      lo n_tar_elements_space = st_target->get_n_space_elements( );
+      lo n_tar_space_dofs = st_target->get_n_space_dofs< target_space >( );
       lo n_tar_elements_time = st_target->get_n_time_elements( );
       lo n_tar_elements = st_target->get_n_elements( );
       std::vector< general_spacetime_cluster * > * st_nearfield_list
@@ -3205,7 +2491,7 @@ sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
         } else {
           src_mesh = nearfield_mesh;
         }
-        lo n_src_elements_space = st_source->get_n_space_elements( );
+        lo n_src_space_dofs = st_source->get_n_space_dofs< source_space >( );
         lo n_src_elements_time = st_source->get_n_time_elements( );
         lo n_src_elements = st_source->get_n_elements( );
         // depending on the configuration in time update the number of
@@ -3220,7 +2506,7 @@ sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
               st_source->get_element( n_src_elements - 1 ) );
             lo tar_max_time_idx = tar_mesh->get_time_element(
               st_target->get_element( n_tar_elements - 1 ) );
-            n_nearfield_entries += n_src_elements_space * n_tar_elements_space
+            n_nearfield_entries += n_src_space_dofs * n_tar_space_dofs
               * ( ( n_src_elements_time * ( n_src_elements_time + 1 ) ) / 2
                 + n_src_elements_time
                   * ( tar_max_time_idx - src_max_time_idx ) );
@@ -3234,11 +2520,11 @@ sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
             = src_mesh->get_time_element( st_source->get_element( 0 ) );
           lo tar_min_time_idx
             = tar_mesh->get_time_element( st_target->get_element( 0 ) );
-          n_nearfield_entries += n_src_elements_space * n_tar_elements_space
+          n_nearfield_entries += n_src_space_dofs * n_tar_space_dofs
             * ( ( n_tar_elements_time * ( n_tar_elements_time + 1 ) ) / 2
               + n_tar_elements_time * ( tar_min_time_idx - src_min_time_idx ) );
         } else {
-          n_nearfield_entries += n_src_elements_space * n_tar_elements_space
+          n_nearfield_entries += n_src_space_dofs * n_tar_space_dofs
             * n_src_elements_time * n_tar_elements_time;
         }
       }
@@ -3246,12 +2532,14 @@ sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
   }
   lou n_global_time_elements
     = _distributed_spacetime_tree->get_mesh( ).get_n_temporal_elements( );
-  lou n_global_elements
-    = _distributed_spacetime_tree->get_mesh( ).get_n_elements( );
-  lou n_global_space_elements = n_global_elements / n_global_time_elements;
+  lou n_global_src_space_dofs
+    = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< source_space >( );
+  lou n_global_tar_space_dofs
+    = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< target_space >( );
   return n_nearfield_entries
-    / ( (sc) n_global_space_elements * n_global_space_elements
-      * ( n_global_time_elements * ( n_global_time_elements + 1 ) / 2 ) );
+    / ( (sc) ( ( n_global_tar_space_dofs * n_global_src_space_dofs
+                 * ( n_global_time_elements + 1 ) )
+      / ( 2 * n_global_time_elements ) ) );
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -3264,20 +2552,24 @@ sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
     lou n_associated_leaves = it->get_n_associated_leaves( );
     for ( lou i = 0; i < n_associated_leaves; ++i ) {
       general_spacetime_cluster * st_target = ( *st_targets )[ i ];
-      lo n_target_elements = st_target->get_n_elements( );
+      lo n_target_dofs = st_target->get_n_dofs< target_space >( );
       std::vector< general_spacetime_cluster * > * st_nearfield_list
         = st_target->get_nearfield_list( );
       for ( lou src_index = 0; src_index < st_nearfield_list->size( );
             ++src_index ) {
         general_spacetime_cluster * st_source
           = ( *st_nearfield_list )[ src_index ];
-        n_nearfield_entries += n_target_elements * st_source->get_n_elements( );
+        n_nearfield_entries
+          += n_target_dofs * st_source->get_n_dofs< source_space >( );
       }
     }
   }
-  lou n_global_elements
-    = _distributed_spacetime_tree->get_mesh( ).get_n_elements( );
-  return n_nearfield_entries / ( (sc) n_global_elements * n_global_elements );
+  lou n_global_target_dofs
+    = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< target_space >( );
+  lou n_global_source_dofs
+    = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< source_space >( );
+  return n_nearfield_entries
+    / ( (sc) n_global_target_dofs * n_global_source_dofs );
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -3358,42 +2650,15 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 }
 
 template< class kernel_type, class target_space, class source_space >
-void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::m_list_task( const block_vector & x,
-  besthea::mesh::scheduling_time_cluster * current_cluster, bool verbose,
-  const std::string & verbose_file ) const {
-  call_s2m_operations( x, current_cluster, verbose, verbose_file );
-  provide_moments_for_m2l( current_cluster, verbose, verbose_file );
-  call_m2m_operations( current_cluster, verbose, verbose_file );
-
-  provide_moments_to_parents( current_cluster, verbose, verbose_file );
-}
-
-template< class kernel_type, class target_space, class source_space >
-void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::l_list_task( block_vector & y_pFMM,
-  besthea::mesh::scheduling_time_cluster * current_cluster, bool verbose,
-  const std::string & verbose_file ) const {
-  call_l2l_operations( current_cluster, verbose, verbose_file );
-  // check if all the m2l operations have been executed yet
-  if ( current_cluster->get_interaction_list( ) == nullptr
-    || current_cluster->get_m2l_counter( )
-      == current_cluster->get_interaction_list( )->size( ) ) {
-    // set status of parent's local contributions to completed
-    current_cluster->set_downward_path_status( 2 );
-    call_l2t_operations( current_cluster, y_pFMM, verbose, verbose_file );
-    provide_local_contributions_to_children(
-      current_cluster, verbose, verbose_file );
-  } else {
-    current_cluster->set_downward_path_status( 1 );
-  }
-}
-
-template< class kernel_type, class target_space, class source_space >
+template< slou run_count >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::l_list_task( distributed_block_vector & y_pFMM,
   besthea::mesh::scheduling_time_cluster * current_cluster, bool verbose,
   const std::string & verbose_file ) const {
+  if ( _measure_tasks ) {
+    _l_task_times.at( omp_get_thread_num( ) )
+      .push_back( _global_timer.get_time_from_start< time_type >( ) );
+  }
   call_l2l_operations( current_cluster, verbose, verbose_file );
   // check if all the m2l operations have been executed yet
   if ( current_cluster->get_interaction_list( ) == nullptr
@@ -3401,50 +2666,31 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       == current_cluster->get_interaction_list( )->size( ) ) {
     // set status of parent's local contributions to completed
     current_cluster->set_downward_path_status( 2 );
-    call_l2t_operations( current_cluster, y_pFMM, verbose, verbose_file );
+    call_l2t_operations< run_count >(
+      current_cluster, y_pFMM, verbose, verbose_file );
     provide_local_contributions_to_children(
       current_cluster, verbose, verbose_file );
   } else {
     current_cluster->set_downward_path_status( 1 );
   }
-}
-
-template< class kernel_type, class target_space, class source_space >
-void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::m2l_list_task( block_vector & y_pFMM,
-  besthea::mesh::scheduling_time_cluster * current_cluster, bool verbose,
-  const std::string & verbose_file ) const {
-  std::vector< scheduling_time_cluster * > * ready_interaction_list
-    = current_cluster->get_interaction_list( );
-  //  for ( slou i = current_cluster->get_m2l_counter( );
-  for ( slou i = 0; i < current_cluster->get_ready_interaction_list_size( );
-        ++i ) {
-    call_m2l_operations( ( *ready_interaction_list )[ i ], current_cluster,
-      verbose, verbose_file );
-    current_cluster->set_m2l_counter( ( slou )( i + 1 ) );
-  }
-  // check if all the m2l operations have been executed yet
-  if ( current_cluster->get_m2l_counter( )
-    == current_cluster->get_interaction_list( )->size( ) ) {
-    if ( current_cluster->get_downward_path_status( ) == 1 ) {
-      // set status of parent's local contributions to completed
-      current_cluster->set_downward_path_status( 2 );
-      call_l2t_operations( current_cluster, y_pFMM, verbose, verbose_file );
-      provide_local_contributions_to_children(
-        current_cluster, verbose, verbose_file );
-    }
+  reduce_nn_operations( );
+  if ( _measure_tasks ) {
+    _l_task_times.at( omp_get_thread_num( ) )
+      .push_back( _global_timer.get_time_from_start< time_type >( ) );
   }
 }
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::apply( const distributed_block_vector & x,
-  distributed_block_vector & y, bool trans, sc alpha, sc beta ) const {
+  target_space, source_space >::apply( const distributed_block_vector & /*x*/,
+  distributed_block_vector & /*y*/, bool /*trans*/, sc /*alpha*/,
+  sc /*beta*/ ) const {
   // generic method not implemented
   std::cout << "apply: NOT IMPLEMENTED" << std::endl;
 }
 
-//! template specialization for single layer p0p0 matrix
+//! template specialization of @ref distributed_pFMM_matrix::apply for single
+//! layer p0p0 matrix
 template<>
 void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
@@ -3456,7 +2702,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
   apply_sl_dl( x, y, trans, alpha, beta );
 }
 
-//! template specialization for double layer p0p1 matrix
+//! template specialization of @ref distributed_pFMM_matrix::apply for double
+//! layer p0p1 matrix
 template<>
 void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
@@ -3468,7 +2715,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
   apply_sl_dl( x, y, trans, alpha, beta );
 }
 
-//! template specialization for double layer p1p0 matrix
+//! template specialization of @ref distributed_pFMM_matrix::apply for double
+//! layer p1p0 matrix
 template<>
 void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_adl_kernel_antiderivative,
@@ -3480,16 +2728,91 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
   apply_sl_dl( x, y, trans, alpha, beta );
 }
 
+//! template specialization of @ref distributed_pFMM_matrix::apply for
+//! hypersingular p1p1 matrix
+template<>
+void besthea::linear_algebra::distributed_pFMM_matrix<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >::apply( const distributed_block_vector & x,
+  distributed_block_vector & y, bool trans, sc alpha, sc beta ) const {
+  apply_hs( x, y, trans, alpha, beta );
+}
+
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::apply_sl_dl( const distributed_block_vector & x,
   distributed_block_vector & y, bool trans, sc alpha, sc beta ) const {
   // Specialization for the single and double layer operators
-
+  _global_timer.reset( );
   //############################################################################
   //#### multiply the global result vector by beta ####
   y.scale( beta );
 
+  // allocate a global result vector to store the result of the pFMM procedure.
+  std::vector< lo > my_blocks = y.get_my_blocks( );
+  distributed_block_vector y_pFMM( my_blocks, y.get_n_blocks( ),
+    y.get_size_of_block( ), true, MPI_COMM_WORLD );
+
+  // apply pFMM procedure
+  apply_pFMM_procedure< 0 >( x, y_pFMM, trans );
+
+  y.add( y_pFMM, alpha );
+
+  MPI_Barrier( y.get_comm( ) );
+  y.synchronize_shared_parts( );
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::apply_hs( const distributed_block_vector & x,
+  distributed_block_vector & y, bool trans, sc alpha, sc beta ) const {
+  // Specialization for the single and double layer operators
+  _global_timer.reset( );
+  //############################################################################
+  //#### multiply the global result vector by beta ####
+  y.scale( beta );
+
+  // allocate a global result vector to store the result of the pFMM procedure.
+  std::vector< lo > my_blocks = y.get_my_blocks( );
+  distributed_block_vector y_pFMM(
+    my_blocks, y.get_n_blocks( ), y.get_size_of_block( ), true, y.get_comm( ) );
+
+  // apply pFMM procedure
+  // We use barriers between pFMM procedures to be on the safe side. The problem
+  // is that processes don't check whether their messages have been sent. An
+  // unsent message would be deleted when starting a new pFMM procedure
+  // first 3 runs for curl terms
+  apply_pFMM_procedure< 0 >( x, y_pFMM, trans );
+  MPI_Barrier( y.get_comm( ) );
+  apply_pFMM_procedure< 1 >( x, y_pFMM, trans );
+  MPI_Barrier( y.get_comm( ) );
+  apply_pFMM_procedure< 2 >( x, y_pFMM, trans );
+  MPI_Barrier( y.get_comm( ) );
+  // add scaled result to y, before overwriting y_pFMM and starting next 3 runs
+  y.add( y_pFMM, alpha );
+  y_pFMM.fill( 0.0 );
+  apply_pFMM_procedure< 3 >( x, y_pFMM, trans );
+  MPI_Barrier( y.get_comm( ) );
+  apply_pFMM_procedure< 4 >( x, y_pFMM, trans );
+  MPI_Barrier( y.get_comm( ) );
+  apply_pFMM_procedure< 5 >( x, y_pFMM, trans );
+  MPI_Barrier( y.get_comm( ) );
+  // add scaled result to y and synchronize y
+  y.add( y_pFMM, -alpha );
+  MPI_Barrier( y.get_comm( ) );
+  y.synchronize_shared_parts( );
+}
+
+template< class kernel_type, class target_space, class source_space >
+template< slou run_count >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space,
+  source_space >::apply_pFMM_procedure( const distributed_block_vector & x,
+  distributed_block_vector & y_pFMM, bool trans ) const {
+  //#### distributed pFMM ####
   //############################################################################
   //#### setup phase ####
   // reset the contributions of all clusters to zero
@@ -3511,50 +2834,48 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   std::list< mesh::scheduling_time_cluster * > m_list = _m_list;
   std::list< mesh::scheduling_time_cluster * > m2l_list = _m2l_list;
   std::list< mesh::scheduling_time_cluster * > l_list = _l_list;
-  std::list< mesh::scheduling_time_cluster * > n_list = _n_list;
+  std::list< mesh::scheduling_time_cluster * > n_list;
+  // in case of the hypersingular operator, the n_list is only initialized in
+  // the first run. All nearfield operations are executed in this run. for all
+  // other operators run_count equals zero by default, so the list is filled.
+  if ( run_count == 0 ) {
+    n_list = _n_list;
+  }
 
-  // @todo: add appropriate verbose mode if desired
-  bool verbose = true;
   // std::string verbose_file = verbose_dir + "/process_";
   std::string verbose_file = "verbose/process_";
   verbose_file += std::to_string( _my_rank );
-  if ( verbose ) {
+  if ( _verbose ) {
     std::filesystem::create_directory( "./verbose/" );
     // remove existing verbose file and write to new one
     remove( verbose_file.c_str( ) );
   }
+  // auxiliary arrays for OpenMP dependencies
+  // (must not be members in OpenMP 4.5)
+  char * aux_dep_m2l = new char[ m2l_list.size( ) ];
+  std::fill( aux_dep_m2l, aux_dep_m2l + m2l_list.size( ), 0 );
 
-  //############################################################################
-  //#### distributed pFMM ####
-  // allocate a global result vector. Only the entries corresponding to clusters
-  // assigned to the current process are computed.
-  std::vector< lo > my_blocks = y.get_my_blocks( );
-  distributed_block_vector y_pFMM( my_blocks, y.get_block_size( ),
-    y.get_size_of_block( ), true, MPI_COMM_WORLD );
+  char * aux_dep_m2l_send = new char[ m2l_list.size( ) ];
+  std::fill( aux_dep_m2l_send, aux_dep_m2l_send + m2l_list.size( ), 0 );
 
-  // auxiliary arrays for OpenMP dependencis (in OpenMP 4.5 must not be members)
-  auto first = m2l_list.begin( );
-  auto last = m2l_list.end( );
-  char * aux_dep_m2l = new char[ std::distance( first, last ) ];
-  std::fill( aux_dep_m2l, aux_dep_m2l + sizeof( aux_dep_m2l ), 0 );
+  char * aux_dep_l = new char[ l_list.size( ) ];
+  std::fill( aux_dep_l, aux_dep_l + l_list.size( ), 0 );
 
-  char * aux_dep_m2l_send = new char[ std::distance( first, last ) ];
-  std::fill(
-    aux_dep_m2l_send, aux_dep_m2l_send + sizeof( aux_dep_m2l_send ), 0 );
-
-  first = l_list.begin( );
-  last = l_list.end( );
-  char * aux_dep_l = new char[ std::distance( first, last ) ];
-  std::fill( aux_dep_l, aux_dep_l + sizeof( aux_dep_l ), 0 );
-
-  first = m_list.begin( );
-  last = m_list.end( );
-  char * aux_dep_m = new char[ std::distance( first, last ) ];
-  std::fill( aux_dep_m, aux_dep_m + sizeof( aux_dep_m ), 0 );
+  char * aux_dep_m = new char[ m_list.size( ) ];
+  std::fill( aux_dep_m, aux_dep_m + m_list.size( ), 0 );
 
   // allocate buffers for m2l computation
   _aux_buffer_0.resize( omp_get_max_threads( ) );
   _aux_buffer_1.resize( omp_get_max_threads( ) );
+
+  // reset the number of non-nearfield ops
+  _non_nf_op_count = 0;
+
+  // set loop timer start
+  time_type::rep loop_start = 0;
+  if ( _measure_tasks ) {
+    loop_start = _global_timer.get_time_from_start< time_type >( );
+  }
 
   // start the main "job scheduling" algorithm
   // the "master" thread checks for new available data, spawns tasks, and
@@ -3566,11 +2887,24 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     _aux_buffer_1[ omp_get_thread_num( ) ].resize(
       ( _temp_order + 1 ) * ( _temp_order + 1 ), _spat_contribution_size );
 
-//    besthea::tools::timer t;
-//    t.reset();
+    _m_task_times.at( omp_get_thread_num( ) ).resize( 0 );
+    _m2l_task_times.at( omp_get_thread_num( ) ).resize( 0 );
+    _l_task_times.at( omp_get_thread_num( ) ).resize( 0 );
+    _n_task_times.at( omp_get_thread_num( ) ).resize( 0 );
+    _m_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
+    _m2l_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
+    _l_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
+    _n_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
+    _mpi_send_m2l.at( omp_get_thread_num( ) ).resize( 0 );
+    _mpi_send_m_parent.at( omp_get_thread_num( ) ).resize( 0 );
+    _mpi_send_l_children.at( omp_get_thread_num( ) ).resize( 0 );
+    _mpi_recv_m2l.at( omp_get_thread_num( ) ).resize( 0 );
+    _mpi_recv_m_parent.at( omp_get_thread_num( ) ).resize( 0 );
+    _mpi_recv_l_children.at( omp_get_thread_num( ) ).resize( 0 );
+
 #pragma omp single
     {
-      // start the receive operationss
+      // start the receive operations
       std::vector< MPI_Request > array_of_requests(
         _receive_data_information.size( ) );
       start_receive_operations( array_of_requests );
@@ -3579,19 +2913,21 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           && n_list.empty( ) ) {
           break;
         }
+
         // check if data has been received since the last iteration
         if ( outcount != MPI_UNDEFINED ) {
           check_for_received_data(
             array_of_requests, array_of_indices, outcount );
         }
 
+        // processing of received data
         // we have to do this here to spawn tasks with correct dependencies
         if ( outcount != MPI_UNDEFINED && outcount > 0 ) {
           for ( lo i = 0; i < outcount; ++i ) {
             lou current_index = array_of_indices[ i ];
             scheduling_time_cluster * current_cluster
               = _receive_data_information[ current_index ].first;
-            if ( verbose ) {
+            if ( _verbose ) {
 #pragma omp critical( verbose )
               {
                 std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
@@ -3608,6 +2944,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             }
             // distinguish which data has been received
             if ( current_index < _n_moments_to_receive_upward ) {
+              if ( _measure_tasks ) {
+                _mpi_recv_m_parent.at( omp_get_thread_num( ) )
+                  .push_back(
+                    _global_timer.get_time_from_start< time_type >( ) );
+              }
+
               // received data are moments in the upward path. add up
               // moments and update dependencies.
               lo idx = current_cluster->get_pos_in_m_list( );
@@ -3618,6 +2960,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               upward_path_task( current_index, current_cluster );
             } else if ( current_index
               < _n_moments_to_receive_upward + _n_moments_to_receive_m2l ) {
+              if ( _measure_tasks ) {
+                _mpi_recv_m2l.at( omp_get_thread_num( ) )
+                  .push_back(
+                    _global_timer.get_time_from_start< time_type >( ) );
+              }
               // received data are moments for m2l. update dependencies.
               std::vector< scheduling_time_cluster * > * send_list
                 = current_cluster->get_send_list( );
@@ -3638,6 +2985,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                 }
               }
             } else {
+              if ( _measure_tasks ) {
+                _mpi_recv_l_children.at( omp_get_thread_num( ) )
+                  .push_back(
+                    _global_timer.get_time_from_start< time_type >( ) );
+              }
               // received data are local contributions. update dependencies.
 #pragma omp task priority( 1000 )
               current_cluster->set_downward_path_status( 2 );
@@ -3658,16 +3010,28 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             find_cluster_in_m2l_list( m2l_list, it_current_cluster, status );
             if ( status == 0 ) {
               // take the first cluster from the n-list if it is not empty
-              if ( n_list.size( ) != 0 ) {
+              if ( n_list.size( ) != 0 && get_nn_operations( ) < 1 ) {
                 it_current_cluster = n_list.begin( );
                 status = 4;
               }
+            } else {
+              add_nn_operations( );
             }
+          } else {
+            add_nn_operations( );
           }
+        } else {
+          add_nn_operations( );
+        }
+
+        // interrupt the scheduling task if there is enough work to do so it can
+        // join the remaining tasks
+        if ( get_nn_operations( ) > 0 && status == 0 ) {
+#pragma omp taskyield
         }
 
         // if verbose mode is chosen, write info about next operation to file
-        if ( verbose && status != 0 ) {
+        if ( _verbose && status != 0 ) {
 #pragma omp critical( verbose )
           {
             std::stringstream outss;
@@ -3727,26 +3091,22 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 #pragma omp task depend( inout                                               \
                          : aux_dep_m [idx_m_parent:1], aux_dep_m [idx_m:1] ) \
   priority( 500 )
-                  m_list_task( x, current_cluster, verbose, verbose_file );
+                  m_list_task< run_count >(
+                    x, current_cluster, _verbose, verbose_file );
                   break;
                 }
                 case 1: {
-                  // lo idx_receiver_1 = send_list->at( 0 )->get_pos_in_m_list(
-                  // );
                   lo idx_receiver_1
                     = send_list->at( 0 )->get_pos_in_m2l_list( );
 #pragma omp task depend( inout                                               \
                          : aux_dep_m [idx_m_parent:1], aux_dep_m [idx_m:1] ) \
   depend( inout                                                              \
           : aux_dep_m2l_send [idx_receiver_1:1] ) priority( 500 )
-                  m_list_task( x, current_cluster, verbose, verbose_file );
+                  m_list_task< run_count >(
+                    x, current_cluster, _verbose, verbose_file );
                   break;
                 }
                 case 2: {
-                  // lo idx_receiver_1 = send_list->at( 0 )->get_pos_in_m_list(
-                  // );
-                  // lo idx_receiver_2
-                  //= send_list->at( 1 )->get_pos_in_m_list( );
                   lo idx_receiver_1
                     = send_list->at( 0 )->get_pos_in_m2l_list( );
                   lo idx_receiver_2
@@ -3758,7 +3118,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           : aux_dep_m2l_send [idx_receiver_1:1] )                            \
     depend( inout                                                            \
             : aux_dep_m2l_send[ idx_receiver_2 ] ) priority( 500 )
-                  m_list_task( x, current_cluster, verbose, verbose_file );
+                  m_list_task< run_count >(
+                    x, current_cluster, _verbose, verbose_file );
                   break;
                 }
               }
@@ -3770,25 +3131,22 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                 // operations do not collide)
                 case 0: {
 #pragma omp task depend( inout : aux_dep_m [idx_m:1] ) priority( 500 )
-                  m_list_task( x, current_cluster, verbose, verbose_file );
+                  m_list_task< run_count >(
+                    x, current_cluster, _verbose, verbose_file );
                   break;
                 }
                 case 1: {
-                  // lo idx_receiver_1 = send_list->at( 0 )->get_pos_in_m_list(
-                  // );
                   lo idx_receiver_1
                     = send_list->at( 0 )->get_pos_in_m2l_list( );
 
 #pragma omp task depend( \
   inout                  \
   : aux_dep_m2l_send [idx_receiver_1:1], aux_dep_m [idx_m:1] ) priority( 500 )
-                  m_list_task( x, current_cluster, verbose, verbose_file );
+                  m_list_task< run_count >(
+                    x, current_cluster, _verbose, verbose_file );
                   break;
                 }
                 case 2: {
-                  // lo idx_receiver_1 = send_list->at( 0 )->get_pos_in_m_list(
-                  // ); lo idx_receiver_2 = send_list->at( 1
-                  // )->get_pos_in_m_list( );
                   lo idx_receiver_1
                     = send_list->at( 0 )->get_pos_in_m2l_list( );
                   lo idx_receiver_2
@@ -3799,7 +3157,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   : aux_dep_m2l_send [idx_receiver_1:1], aux_dep_m [idx_m:1] ) \
   depend( inout                                                \
           : aux_dep_m2l_send [idx_receiver_2:1] ) priority( 500 )
-                  m_list_task( x, current_cluster, verbose, verbose_file );
+                  m_list_task< run_count >(
+                    x, current_cluster, _verbose, verbose_file );
                   break;
                 }
               }
@@ -3815,7 +3174,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             // the same cluster in the l-list (to prevent collision with m2l
             // tasks)
 #pragma omp task depend( inout : aux_dep_l [idx_l:1] ) priority( 400 )
-            l_list_task( y_pFMM, current_cluster, verbose, verbose_file );
+            l_list_task< run_count >(
+              y_pFMM, current_cluster, _verbose, verbose_file );
             break;
           }
           case 3: {
@@ -3832,58 +3192,47 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               // cluster is not in the L-list, have to depend only on the
               // previously generated tasks processing the same cluster in the
               // m2l list
-// #pragma omp task depend( inout : aux_dep_m2l [idx_m2l:1] ) priority( 300 )
-//               m2l_list_task( y_pFMM, current_cluster, verbose, verbose_file
-//               );
 #pragma omp task priority( 300 )
-              m2l_list_task( y_pFMM, current_cluster, verbose, verbose_file );
+              m2l_list_task< run_count >(
+                y_pFMM, current_cluster, _verbose, verbose_file );
             } else {
 // cluster depends additionally on the previously generated task
 // with the same position in the L-list
-// #pragma omp task depend( inout                       \
-//                          : aux_dep_m2l [idx_m2l:1] ) \
-//   depend( inout                                      \
-//           : aux_dep_l [idx_l:1] ) priority( 300 )
 #pragma omp task depend( inout : aux_dep_l [idx_l:1] ) priority( 300 )
-              m2l_list_task( y_pFMM, current_cluster, verbose, verbose_file );
+              m2l_list_task< run_count >(
+                y_pFMM, current_cluster, _verbose, verbose_file );
             }
             break;
           }
           case 4: {
-            // nearfiel task
+            // nearfield task
             n_list.erase( it_current_cluster );
 // no dependencies, possible collisions are treated by atomic
 // operations
 #pragma omp task priority( 200 )
             apply_nearfield_operations(
-              current_cluster, x, trans, y_pFMM, verbose, verbose_file );
+              current_cluster, x, trans, y_pFMM, _verbose, verbose_file );
             break;
           }
         }
-        // @todo: is the following output of a new line useful at all?
-        //         if ( verbose ) {
-        // #pragma omp critical( verbose )
-        //           {
-        //             std::ofstream outfile( verbose_file.c_str( ),
-        //             std::ios::app ); if ( outfile.is_open( ) ) {
-        //               outfile << std::endl;
-        //               outfile.close( );
-        //             }
-        //           }
-        //         }
       }
     }
   }
-
-  y.add( y_pFMM, alpha );
-
-  MPI_Barrier( y.get_comm( ) );
-  y.synchronize_shared_parts( );
-
+  // set loop timer end
+  time_type::rep loop_end = 0;
+  if ( _measure_tasks ) {
+    loop_end = _global_timer.get_time_from_start< time_type >( );
+  }
   delete[] aux_dep_m;
   delete[] aux_dep_l;
   delete[] aux_dep_m2l;
   delete[] aux_dep_m2l_send;
+
+  // print out task timing
+  if ( _measure_tasks ) {
+    save_times( loop_end - loop_start,
+      _global_timer.get_time_from_start< time_type >( ) );
+  }
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -3904,60 +3253,80 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 }
 
 template< class kernel_type, class target_space, class source_space >
+template< slou run_count >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::m_list_task( const distributed_block_vector & x,
   besthea::mesh::scheduling_time_cluster * current_cluster, bool verbose,
   const std::string & verbose_file ) const {
-  call_s2m_operations( x, current_cluster, verbose, verbose_file );
+  if ( _measure_tasks ) {
+    _m_task_times.at( omp_get_thread_num( ) )
+      .push_back( _global_timer.get_time_from_start< time_type >( ) );
+  }
+  call_s2m_operations< run_count >( x, current_cluster, verbose, verbose_file );
   provide_moments_for_m2l( current_cluster, verbose, verbose_file );
   call_m2m_operations( current_cluster, verbose, verbose_file );
 
   provide_moments_to_parents( current_cluster, verbose, verbose_file );
+  reduce_nn_operations( );
+  if ( _measure_tasks ) {
+    _m_task_times.at( omp_get_thread_num( ) )
+      .push_back( _global_timer.get_time_from_start< time_type >( ) );
+  }
 }
 
 template< class kernel_type, class target_space, class source_space >
+template< slou run_count >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space,
   source_space >::call_s2m_operations( const distributed_block_vector & sources,
-  besthea::mesh::scheduling_time_cluster * time_cluster, bool verbose,
+  besthea::mesh::scheduling_time_cluster * t_cluster, bool verbose,
   const std::string & verbose_file ) const {
   // execute only for associated spacetime leaves
-  if ( time_cluster->get_n_associated_leaves( ) > 0 ) {
+  if ( t_cluster->get_n_associated_leaves( ) > 0 ) {
     if ( verbose ) {
 #pragma omp critical( verbose )
       {
         std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
         if ( outfile.is_open( ) ) {
-          outfile << "call S2M for cluster "
-                  << time_cluster->get_global_index( ) << " at level "
-                  << time_cluster->get_level( ) << std::endl;
+          outfile << "call S2M for cluster " << t_cluster->get_global_index( )
+                  << " at level " << t_cluster->get_level( ) << std::endl;
           outfile.close( );
         }
       }
     }
     std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
-      = time_cluster->get_associated_spacetime_clusters( );
+      = t_cluster->get_associated_spacetime_clusters( );
     // there is an implicit taskgroup after this taskloop
 #pragma omp taskloop shared( sources )
-    for ( lou i = 0; i < time_cluster->get_n_associated_leaves( ); ++i ) {
+    for ( lou i = 0; i < t_cluster->get_n_associated_leaves( ); ++i ) {
+      if ( _measure_tasks ) {
+        _m_subtask_times.at( omp_get_thread_num( ) )
+          .push_back( _global_timer.get_time_from_start< time_type >( ) );
+      }
       general_spacetime_cluster * current_cluster
         = ( *associated_spacetime_clusters )[ i ];
 
-      apply_s2m_operation( sources, current_cluster );
+      apply_s2m_operation< run_count >( sources, current_cluster );
+      if ( _measure_tasks ) {
+        _m_subtask_times.at( omp_get_thread_num( ) )
+          .push_back( _global_timer.get_time_from_start< time_type >( ) );
+      }
     }
   }
 }
 
 template< class kernel_type, class target_space, class source_space >
+template< slou run_count >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space,
   source_space >::apply_s2m_operation( const distributed_block_vector &
-                                         source_vector,
-  general_spacetime_cluster * source_cluster ) const {
+  /*source_vector*/,
+  general_spacetime_cluster * /*source_cluster*/ ) const {
   std::cout << "S2M operation not implemented " << std::endl;
 }
 
 //! template specialization for single layer p0p0 matrix
+template<>
 template<>
 void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
@@ -3965,12 +3334,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
     besthea::bem::basis_tri_p0 >,
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 > >::
-  apply_s2m_operation( const distributed_block_vector & source_vector,
+  apply_s2m_operation< 0 >( const distributed_block_vector & source_vector,
     general_spacetime_cluster * source_cluster ) const {
   apply_s2m_operation_p0( source_vector, source_cluster );
 }
 
 //! template specialization for double layer p0p1 matrix
+template<>
 template<>
 void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
@@ -3978,12 +3348,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
     besthea::bem::basis_tri_p0 >,
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p1 > >::
-  apply_s2m_operation( const distributed_block_vector & source_vector,
+  apply_s2m_operation< 0 >( const distributed_block_vector & source_vector,
     general_spacetime_cluster * source_cluster ) const {
   apply_s2m_operations_p1_normal_drv( source_vector, source_cluster );
 }
 
 //! template specialization for adjoint double layer p1p0 matrix
+template<>
 template<>
 void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_adl_kernel_antiderivative,
@@ -3991,9 +3362,93 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
     besthea::bem::basis_tri_p1 >,
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 > >::
-  apply_s2m_operation( const distributed_block_vector & source_vector,
+  apply_s2m_operation< 0 >( const distributed_block_vector & source_vector,
     general_spacetime_cluster * source_cluster ) const {
   apply_s2m_operation_p0( source_vector, source_cluster );
+}
+
+//! template specialization for hypersingular p1p1 matrix, run_count = 0
+template<>
+template<>
+void besthea::linear_algebra::distributed_pFMM_matrix<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >::
+  apply_s2m_operation< 0 >( const distributed_block_vector & source_vector,
+    general_spacetime_cluster * source_cluster ) const {
+  apply_s2m_operation_curl_p1_hs< 0 >( source_vector, source_cluster );
+}
+
+//! template specialization for hypersingular p1p1 matrix, run_count = 1
+template<>
+template<>
+void besthea::linear_algebra::distributed_pFMM_matrix<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >::
+  apply_s2m_operation< 1 >( const distributed_block_vector & source_vector,
+    general_spacetime_cluster * source_cluster ) const {
+  apply_s2m_operation_curl_p1_hs< 1 >( source_vector, source_cluster );
+}
+
+//! template specialization for hypersingular p1p1 matrix, run_count = 2
+template<>
+template<>
+void besthea::linear_algebra::distributed_pFMM_matrix<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >::
+  apply_s2m_operation< 2 >( const distributed_block_vector & source_vector,
+    general_spacetime_cluster * source_cluster ) const {
+  apply_s2m_operation_curl_p1_hs< 2 >( source_vector, source_cluster );
+}
+
+//! template specialization for hypersingular p1p1 matrix, run_count = 3
+template<>
+template<>
+void besthea::linear_algebra::distributed_pFMM_matrix<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >::
+  apply_s2m_operation< 3 >( const distributed_block_vector & source_vector,
+    general_spacetime_cluster * source_cluster ) const {
+  apply_s2m_operation_p1_normal_hs( source_vector, source_cluster, 0 );
+}
+
+//! template specialization for hypersingular p1p1 matrix, run_count = 4
+template<>
+template<>
+void besthea::linear_algebra::distributed_pFMM_matrix<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >::
+  apply_s2m_operation< 4 >( const distributed_block_vector & source_vector,
+    general_spacetime_cluster * source_cluster ) const {
+  apply_s2m_operation_p1_normal_hs( source_vector, source_cluster, 1 );
+}
+
+//! template specialization for hypersingular p1p1 matrix, run_count = 5
+template<>
+template<>
+void besthea::linear_algebra::distributed_pFMM_matrix<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >::
+  apply_s2m_operation< 5 >( const distributed_block_vector & source_vector,
+    general_spacetime_cluster * source_cluster ) const {
+  apply_s2m_operation_p1_normal_hs( source_vector, source_cluster, 2 );
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -4003,8 +3458,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                                             source_vector,
   general_spacetime_cluster * source_cluster ) const {
   lo n_time_elements = source_cluster->get_n_time_elements( );
-  lo n_space_elements = source_cluster->get_n_space_elements( );
-  full_matrix sources( n_time_elements, n_space_elements, false );
+  full_matrix sources;
   full_matrix aux_matrix( n_time_elements, _spat_contribution_size, false );
 
   // get references of current moment and all required matrices
@@ -4015,34 +3469,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   full_matrix L;
   compute_lagrange_quadrature( source_cluster, L );
 
-  // get the relevant entries of the block vector x and store them in sources
-  const std::vector< lo > & spacetime_elements
-    = source_cluster->get_all_elements( );
-  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
-    = source_cluster->get_mesh( );
-  // a cluster for which an S2M operation is executed is always local!
-  const mesh::spacetime_tensor_mesh * local_mesh
-    = distributed_mesh->get_local_mesh( );
-  lo local_start_idx = distributed_mesh->get_local_start_idx( );
-  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
-    // use that the spacetime elements are sorted in time, i.e. a consecutive
-    // group of n_space_elements elements has the same temporal component to
-    // determine the local time index only once
-    lo local_time_index
-      = local_mesh->get_time_element( distributed_mesh->global_2_local(
-        local_start_idx, spacetime_elements[ i_time * n_space_elements ] ) );
-    for ( lo i_space = 0; i_space < n_space_elements; ++i_space ) {
-      lo global_space_index = local_mesh->get_space_element(
-        distributed_mesh->global_2_local( local_start_idx,
-          spacetime_elements[ i_time * n_space_elements + i_space ] ) );
-      // for the spatial mesh no transformation from local 2 global is
-      // necessary since there is just one global space mesh at the moment.
-      sources( i_time, i_space )
-        = source_vector.get( distributed_mesh->local_2_global_time(
-                               local_start_idx, local_time_index ),
-          global_space_index );
-    }
-  }
+  // get the relevant entries of the source vector and store them in sources
+  source_vector.get_local_part< source_space >( source_cluster, sources );
+
   // compute D = Q * T and then the moment mu = L * D
   aux_matrix.multiply( sources, T );
   // mu = L * D with explicit cblas routine call
@@ -4065,9 +3494,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     const distributed_block_vector & source_vector,
     general_spacetime_cluster * source_cluster ) const {
   lo n_time_elements = source_cluster->get_n_time_elements( );
-  lo n_space_elements = source_cluster->get_n_space_elements( );
-  lo n_space_nodes = source_cluster->get_n_space_nodes( );
-  full_matrix sources( n_time_elements, n_space_nodes, false );
+  full_matrix sources;
   full_matrix aux_matrix( n_time_elements, _spat_contribution_size, false );
 
   // get references of current moment and all required matrices
@@ -4077,39 +3504,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   full_matrix L;
   compute_lagrange_quadrature( source_cluster, L );
 
-  // get the relevant entries of the block vector x and store them in sources
-  const std::vector< lo > & spacetime_elements
-    = source_cluster->get_all_elements( );
-  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
-    = source_cluster->get_mesh( );
-  // a cluster for which an S2M operation is executed is always local!
-  const mesh::spacetime_tensor_mesh * local_mesh
-    = distributed_mesh->get_local_mesh( );
-  lo local_start_idx = distributed_mesh->get_local_start_idx( );
+  // get the relevant entries of the source vector and store them in sources
+  source_vector.get_local_part< source_space >( source_cluster, sources );
 
-  const std::vector< lo > & local_2_global_nodes
-    = source_cluster->get_local_2_global_nodes( );
-  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
-    // use that the spacetime elements are sorted in time, i.e. a consecutive
-    // group of n_space_elements elements has the same temporal component to
-    // determine the local time index only once
-    lo local_time_index
-      = local_mesh->get_time_element( distributed_mesh->global_2_local(
-        local_start_idx, spacetime_elements[ i_time * n_space_elements ] ) );
-    for ( lo i_space = 0; i_space < n_space_nodes; ++i_space ) {
-      // local_2_global_nodes gives the indices of the spacetime nodes. take
-      // the rest from division by the number of global spatial nodes to get
-      // the spatial node index
-      lo global_space_index
-        = local_2_global_nodes[ i_space ] % local_mesh->get_n_spatial_nodes( );
-      // for the spatial mesh no transformation from local 2 global is
-      // necessary since there is just one global space mesh at the moment.
-      sources( i_time, i_space )
-        = source_vector.get( distributed_mesh->local_2_global_time(
-                               local_start_idx, local_time_index ),
-          global_space_index );
-    }
-  }
   // compute D = Q * T_drv and then the moment mu = L * D
   aux_matrix.multiply( sources, T_drv );
   // mu = L * D with explicit cblas routine call
@@ -4126,15 +3523,91 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 }
 
 template< class kernel_type, class target_space, class source_space >
+template< slou dim >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::
+  apply_s2m_operation_curl_p1_hs(
+    const distributed_block_vector & source_vector,
+    general_spacetime_cluster * source_cluster ) const {
+  lo n_time_elements = source_cluster->get_n_time_elements( );
+  full_matrix sources;
+  full_matrix aux_matrix( n_time_elements, _spat_contribution_size, false );
+  // get the relevant entries of the source vector and store them in sources
+  source_vector.get_local_part< source_space >( source_cluster, sources );
+
+  // get references of current moment and all required matrices
+  sc * moment = source_cluster->get_pointer_to_moment( );
+
+  full_matrix L;
+  compute_lagrange_quadrature( source_cluster, L );
+  full_matrix T_curl_along_dim;
+
+  compute_chebyshev_times_p1_surface_curls_along_dimension< dim >(
+    source_cluster, T_curl_along_dim );
+
+  // compute D = Q * T_curl_along_dim and then the moment mu = _alpha * L * D
+  aux_matrix.multiply( sources, T_curl_along_dim );
+  // mu = L * D with explicit cblas routine call
+  lo n_rows_lagrange = L.get_n_rows( );
+  lo n_cols_aux_matrix = aux_matrix.get_n_columns( );
+  lo n_rows_aux_matrix = aux_matrix.get_n_rows( );
+  lo lda = n_rows_lagrange;
+  lo ldb = n_rows_aux_matrix;
+  sc alpha = _alpha;  // heat capacity constant;
+  sc beta = 0.0;
+  cblas_dgemm( CblasColMajor, CblasNoTrans, CblasNoTrans, n_rows_lagrange,
+    n_cols_aux_matrix, n_rows_aux_matrix, alpha, L.data( ), lda,
+    aux_matrix.data( ), ldb, beta, moment, n_rows_lagrange );
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::
+  apply_s2m_operation_p1_normal_hs(
+    const distributed_block_vector & source_vector,
+    general_spacetime_cluster * source_cluster, const slou dimension ) const {
+  lo n_time_elements = source_cluster->get_n_time_elements( );
+  full_matrix sources;
+  full_matrix aux_matrix( n_time_elements, _spat_contribution_size, false );
+  // get the relevant entries of the source vector and store them in sources
+  source_vector.get_local_part< source_space >( source_cluster, sources );
+
+  // get references of current moment and all required matrices
+  sc * moment = source_cluster->get_pointer_to_moment( );
+
+  full_matrix L_drv;
+  compute_lagrange_drv_quadrature( source_cluster, L_drv );
+  full_matrix T_normal_dim;
+  compute_chebyshev_times_normal_quadrature_p1_along_dimension(
+    source_cluster, dimension, T_normal_dim );
+
+  // compute D = Q * T_normal_dim and then the moment mu = _alpha * L_drv * D
+  aux_matrix.multiply( sources, T_normal_dim );
+  // mu = _alpha * L_drv * D with explicit cblas routine call
+  lo n_rows_lagrange = L_drv.get_n_rows( );
+  lo n_cols_aux_matrix = aux_matrix.get_n_columns( );
+  lo n_rows_aux_matrix = aux_matrix.get_n_rows( );
+  lo lda = n_rows_lagrange;
+  lo ldb = n_rows_aux_matrix;
+  sc alpha = _alpha;  // heat capacity constant
+  sc beta = 0.0;
+  cblas_dgemm( CblasColMajor, CblasNoTrans, CblasNoTrans, n_rows_lagrange,
+    n_cols_aux_matrix, n_rows_aux_matrix, alpha, L_drv.data( ), lda,
+    aux_matrix.data( ), ldb, beta, moment, n_rows_lagrange );
+}
+
+template< class kernel_type, class target_space, class source_space >
+template< slou run_count >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space,
   source_space >::apply_l2t_operation( const mesh::general_spacetime_cluster *
-                                         cluster,
-  distributed_block_vector & output_vector ) const {
+  /*cluster*/,
+  distributed_block_vector & /*output_vector*/ ) const {
   std::cout << "L2T operation not implemented!" << std::endl;
 }
 
 //! template specialization for single layer p0p0 matrix
+template<>
 template<>
 void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
@@ -4142,12 +3615,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
     besthea::bem::basis_tri_p0 >,
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 > >::
-  apply_l2t_operation( const mesh::general_spacetime_cluster * cluster,
+  apply_l2t_operation< 0 >( const mesh::general_spacetime_cluster * cluster,
     distributed_block_vector & output_vector ) const {
   apply_l2t_operation_p0( cluster, output_vector );
 }
 
 //! template specialization for double layer p0p1 matrix
+template<>
 template<>
 void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
@@ -4155,12 +3629,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
     besthea::bem::basis_tri_p0 >,
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p1 > >::
-  apply_l2t_operation( const mesh::general_spacetime_cluster * cluster,
+  apply_l2t_operation< 0 >( const mesh::general_spacetime_cluster * cluster,
     distributed_block_vector & output_vector ) const {
   apply_l2t_operation_p0( cluster, output_vector );
 }
 
 //! template specialization for adjoint double layer p1p0 matrix
+template<>
 template<>
 void besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_adl_kernel_antiderivative,
@@ -4168,9 +3643,93 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
     besthea::bem::basis_tri_p1 >,
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 > >::
-  apply_l2t_operation( const mesh::general_spacetime_cluster * cluster,
+  apply_l2t_operation< 0 >( const mesh::general_spacetime_cluster * cluster,
     distributed_block_vector & output_vector ) const {
   apply_l2t_operation_p1_normal_drv( cluster, output_vector );
+}
+
+//! template specialization for hypersingular p1p1 matrix, run_count = 0
+template<>
+template<>
+void besthea::linear_algebra::distributed_pFMM_matrix<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >::
+  apply_l2t_operation< 0 >( const mesh::general_spacetime_cluster * cluster,
+    distributed_block_vector & output_vector ) const {
+  apply_l2t_operation_curl_p1_hs< 0 >( cluster, output_vector );
+}
+
+//! template specialization for hypersingular p1p1 matrix, run_count = 0
+template<>
+template<>
+void besthea::linear_algebra::distributed_pFMM_matrix<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >::
+  apply_l2t_operation< 1 >( const mesh::general_spacetime_cluster * cluster,
+    distributed_block_vector & output_vector ) const {
+  apply_l2t_operation_curl_p1_hs< 1 >( cluster, output_vector );
+}
+
+//! template specialization for hypersingular p1p1 matrix, run_count = 0
+template<>
+template<>
+void besthea::linear_algebra::distributed_pFMM_matrix<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >::
+  apply_l2t_operation< 2 >( const mesh::general_spacetime_cluster * cluster,
+    distributed_block_vector & output_vector ) const {
+  apply_l2t_operation_curl_p1_hs< 2 >( cluster, output_vector );
+}
+
+//! template specialization for hypersingular p1p1 matrix, run_count = 0
+template<>
+template<>
+void besthea::linear_algebra::distributed_pFMM_matrix<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >::
+  apply_l2t_operation< 3 >( const mesh::general_spacetime_cluster * cluster,
+    distributed_block_vector & output_vector ) const {
+  apply_l2t_operation_p1_normal_hs( cluster, 0, output_vector );
+}
+
+//! template specialization for hypersingular p1p1 matrix, run_count = 0
+template<>
+template<>
+void besthea::linear_algebra::distributed_pFMM_matrix<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >::
+  apply_l2t_operation< 4 >( const mesh::general_spacetime_cluster * cluster,
+    distributed_block_vector & output_vector ) const {
+  apply_l2t_operation_p1_normal_hs( cluster, 1, output_vector );
+}
+
+//! template specialization for hypersingular p1p1 matrix, run_count = 0
+template<>
+template<>
+void besthea::linear_algebra::distributed_pFMM_matrix<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >::
+  apply_l2t_operation< 5 >( const mesh::general_spacetime_cluster * cluster,
+    distributed_block_vector & output_vector ) const {
+  apply_l2t_operation_p1_normal_hs( cluster, 2, output_vector );
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -4207,30 +3766,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   targets.multiply( aux_matrix, T, false, true );
 
   // add the results to the correct positions of the output vector
-  const std::vector< lo > & spacetime_elements = cluster->get_all_elements( );
-  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
-    = cluster->get_mesh( );
-  // a cluster for which an S2M operation is executed is always local!
-  const mesh::spacetime_tensor_mesh * local_mesh
-    = distributed_mesh->get_local_mesh( );
-  lo local_start_idx = distributed_mesh->get_local_start_idx( );
-
-  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
-    lo local_time_index
-      = local_mesh->get_time_element( distributed_mesh->global_2_local(
-        local_start_idx, spacetime_elements[ i_time * n_space_elements ] ) );
-    for ( lo i_space = 0; i_space < n_space_elements; ++i_space ) {
-      lo global_space_index = local_mesh->get_space_element(
-        distributed_mesh->global_2_local( local_start_idx,
-          spacetime_elements[ i_time * n_space_elements + i_space ] ) );
-      // for the spatial mesh no transformation from local 2 global is
-      // necessary since there is just one global space mesh at the moment.
-
-      output_vector.add_atomic( distributed_mesh->local_2_global_time(
-                                  local_start_idx, local_time_index ),
-        global_space_index, targets( i_time, i_space ) );
-    }
-  }
+  output_vector.add_local_part< target_space >( cluster, targets );
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -4240,7 +3776,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     const mesh::general_spacetime_cluster * cluster,
     distributed_block_vector & output_vector ) const {
   lo n_time_elements = cluster->get_n_time_elements( );
-  lo n_space_elements = cluster->get_n_space_elements( );
   lo n_space_nodes = cluster->get_n_space_nodes( );
   full_matrix targets( n_time_elements, n_space_nodes, false );
   full_matrix aux_matrix( n_time_elements, _spat_contribution_size, false );
@@ -4252,7 +3787,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   full_matrix L;
   compute_lagrange_quadrature( cluster, L );
 
-  // compute D = trans(L) * lambda and then the result Y = D * trans(T)
+  // compute D = trans(L) * lambda and then the result Y = D * trans(T_drv)
   //  D = trans(L) * lambda with explicit cblas routine call:
   lo n_cols_lagrange = L.get_n_columns( );
   lo n_cols_local = _spat_contribution_size;
@@ -4264,46 +3799,105 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   cblas_dgemm( CblasColMajor, CblasTrans, CblasNoTrans, n_cols_lagrange,
     n_cols_local, n_rows_lagrange, alpha, L.data( ), lda, local_contribution,
     ldb, beta, aux_matrix.data( ), n_cols_lagrange );
-  // compute Y = D * trans(T)
+  // compute Y = D * trans(T_drv)
   targets.multiply( aux_matrix, T_drv, false, true );
 
   // add the results to the correct positions of the output vector
-  const std::vector< lo > & spacetime_elements = cluster->get_all_elements( );
-  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
-    = cluster->get_mesh( );
-  // a cluster for which an S2M operation is executed is always local!
-  const mesh::spacetime_tensor_mesh * local_mesh
-    = distributed_mesh->get_local_mesh( );
-  lo local_start_idx = distributed_mesh->get_local_start_idx( );
-
-  const std::vector< lo > & local_2_global_nodes
-    = cluster->get_local_2_global_nodes( );
-
-  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
-    lo local_time_index
-      = local_mesh->get_time_element( distributed_mesh->global_2_local(
-        local_start_idx, spacetime_elements[ i_time * n_space_elements ] ) );
-    for ( lo i_space = 0; i_space < n_space_nodes; ++i_space ) {
-      // local_2_global_nodes gives the indices of the spacetime nodes. take
-      // the rest from division by the number of global spatial nodes to get
-      // the spatial node index
-      lo global_space_index
-        = local_2_global_nodes[ i_space ] % local_mesh->get_n_spatial_nodes( );
-      // for the spatial mesh no transformation from local 2 global is
-      // necessary since there is just one global space mesh at the moment.
-      output_vector.add_atomic( distributed_mesh->local_2_global_time(
-                                  local_start_idx, local_time_index ),
-        global_space_index, targets( i_time, i_space ) );
-    }
-  }
+  output_vector.add_local_part< target_space >( cluster, targets );
 }
 
 template< class kernel_type, class target_space, class source_space >
+template< slou dim >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::
+  apply_l2t_operation_curl_p1_hs(
+    const mesh::general_spacetime_cluster * cluster,
+    distributed_block_vector & output_vector ) const {
+  lo n_time_elements = cluster->get_n_time_elements( );
+  lo n_space_nodes = cluster->get_n_space_nodes( );
+  full_matrix targets( n_time_elements, n_space_nodes, false );
+  full_matrix aux_matrix( n_time_elements, _spat_contribution_size, false );
+
+  // get references local contribution and all required matrices
+  const sc * local_contribution = cluster->get_pointer_to_local_contribution( );
+
+  full_matrix L;
+  compute_lagrange_quadrature( cluster, L );
+  full_matrix T_curl_along_dim;
+  compute_chebyshev_times_p1_surface_curls_along_dimension< dim >(
+    cluster, T_curl_along_dim );
+
+  // compute D = _alpha * trans(L) * lambda and then the result
+  // Y = D * trans(T_curl_along_dim)
+  //  D = _alpha * trans(L) * lambda with explicit cblas routine call:
+  lo n_cols_lagrange = L.get_n_columns( );
+  lo n_cols_local = _spat_contribution_size;
+  lo n_rows_lagrange = L.get_n_rows( );
+  lo lda = n_rows_lagrange;
+  lo ldb = n_rows_lagrange;
+  sc alpha = _alpha;  // heat capacity constant
+  sc beta = 0.0;
+  cblas_dgemm( CblasColMajor, CblasTrans, CblasNoTrans, n_cols_lagrange,
+    n_cols_local, n_rows_lagrange, alpha, L.data( ), lda, local_contribution,
+    ldb, beta, aux_matrix.data( ), n_cols_lagrange );
+  // compute Y = D * trans(T_curl_along_dim)
+  targets.multiply( aux_matrix, T_curl_along_dim, false, true );
+
+  // add the results to the correct positions of the output vector
+  output_vector.add_local_part< target_space >( cluster, targets );
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::
+  apply_l2t_operation_p1_normal_hs(
+    const mesh::general_spacetime_cluster * cluster, const slou dimension,
+    distributed_block_vector & output_vector ) const {
+  lo n_time_elements = cluster->get_n_time_elements( );
+  lo n_space_nodes = cluster->get_n_space_nodes( );
+  full_matrix targets( n_time_elements, n_space_nodes, false );
+  full_matrix aux_matrix( n_time_elements, _spat_contribution_size, false );
+
+  // get references local contribution and all required matrices
+  const sc * local_contribution = cluster->get_pointer_to_local_contribution( );
+
+  full_matrix L;
+  compute_lagrange_quadrature( cluster, L );
+  full_matrix T_normal_dim;
+  compute_chebyshev_times_normal_quadrature_p1_along_dimension(
+    cluster, dimension, T_normal_dim );
+
+  // compute D = trans(L) * lambda and then the result
+  // Y = D * trans(T_normal_dim)
+  //  D = trans(L) * lambda with explicit cblas routine call:
+  lo n_cols_lagrange = L.get_n_columns( );
+  lo n_cols_local = _spat_contribution_size;
+  lo n_rows_lagrange = L.get_n_rows( );
+  lo lda = n_rows_lagrange;
+  lo ldb = n_rows_lagrange;
+  sc alpha = 1.0;
+  sc beta = 0.0;
+  cblas_dgemm( CblasColMajor, CblasTrans, CblasNoTrans, n_cols_lagrange,
+    n_cols_local, n_rows_lagrange, alpha, L.data( ), lda, local_contribution,
+    ldb, beta, aux_matrix.data( ), n_cols_lagrange );
+  // compute Y = D * trans(T_normal_dim)
+  targets.multiply( aux_matrix, T_normal_dim, false, true );
+
+  // add the results to the correct positions of the output vector
+  output_vector.add_local_part< target_space >( cluster, targets );
+}
+
+template< class kernel_type, class target_space, class source_space >
+template< slou run_count >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::m2l_list_task( distributed_block_vector &
                                                  y_pFMM,
   besthea::mesh::scheduling_time_cluster * current_cluster, bool verbose,
   const std::string & verbose_file ) const {
+  if ( _measure_tasks ) {
+    _m2l_task_times.at( omp_get_thread_num( ) )
+      .push_back( _global_timer.get_time_from_start< time_type >( ) );
+  }
   std::vector< scheduling_time_cluster * > * ready_interaction_list
     = current_cluster->get_interaction_list( );
   //  for ( slou i = current_cluster->get_m2l_counter( );
@@ -4311,7 +3905,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         ++i ) {
     call_m2l_operations( ( *ready_interaction_list )[ i ], current_cluster,
       verbose, verbose_file );
-    current_cluster->set_m2l_counter( ( slou )( i + 1 ) );
+    current_cluster->set_m2l_counter( (slou) ( i + 1 ) );
   }
   // check if all the m2l operations have been executed yet
   if ( current_cluster->get_m2l_counter( )
@@ -4319,10 +3913,16 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     if ( current_cluster->get_downward_path_status( ) == 1 ) {
       // set status of parent's local contributions to completed
       current_cluster->set_downward_path_status( 2 );
-      call_l2t_operations( current_cluster, y_pFMM, verbose, verbose_file );
+      call_l2t_operations< run_count >(
+        current_cluster, y_pFMM, verbose, verbose_file );
       provide_local_contributions_to_children(
         current_cluster, verbose, verbose_file );
     }
+  }
+  reduce_nn_operations( );
+  if ( _measure_tasks ) {
+    _m2l_task_times.at( omp_get_thread_num( ) )
+      .push_back( _global_timer.get_time_from_start< time_type >( ) );
   }
 }
 
@@ -4333,6 +3933,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     const distributed_block_vector & sources, bool trans,
     distributed_block_vector & output_vector, bool verbose,
     const std::string & verbose_file ) const {
+  if ( _measure_tasks ) {
+    _n_task_times.at( omp_get_thread_num( ) )
+      .push_back( _global_timer.get_time_from_start< time_type >( ) );
+  }
   if ( verbose ) {
 #pragma omp critical( verbose )
     {
@@ -4350,9 +3954,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     associated_spacetime_targets
     = cluster->get_associated_spacetime_clusters( );
   lou n_associated_leaves = cluster->get_n_associated_leaves( );
-  // there is an implicit taskgroup after this taskloop
+
+// there is an implicit taskgroup after this taskloop
 #pragma omp taskloop shared( output_vector, _clusterwise_nearfield_matrices )
   for ( lou i = 0; i < n_associated_leaves; ++i ) {
+    if ( _measure_tasks ) {
+      _n_subtask_times.at( omp_get_thread_num( ) )
+        .push_back( _global_timer.get_time_from_start< time_type >( ) );
+    }
     general_spacetime_cluster * current_spacetime_target
       = ( *associated_spacetime_targets )[ i ];
     // construct a local result_vector
@@ -4362,6 +3971,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     // apply the nearfield operations for all the clusters in this list.
     std::vector< general_spacetime_cluster * > * spacetime_nearfield_list
       = current_spacetime_target->get_nearfield_list( );
+
     for ( lou src_index = 0; src_index < spacetime_nearfield_list->size( );
           ++src_index ) {
       general_spacetime_cluster * current_spacetime_source
@@ -4380,7 +3990,337 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     // add the local result to the output vector
     output_vector.add_local_part< target_space >(
       current_spacetime_target, local_result );
+    if ( _measure_tasks ) {
+      _n_subtask_times.at( omp_get_thread_num( ) )
+        .push_back( _global_timer.get_time_from_start< time_type >( ) );
+    }
   }
+
+  if ( _measure_tasks ) {
+    _n_task_times.at( omp_get_thread_num( ) )
+      .push_back( _global_timer.get_time_from_start< time_type >( ) );
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::save_times( time_type::rep total_loop_duration,
+  time_type::rep total_apply_duration ) const {
+  std::filesystem::create_directory( "./task_timer/" );
+
+  std::string timer_file = "task_timer/process_";
+  timer_file += std::to_string( _my_rank );
+  timer_file += ".m";
+  remove( timer_file.c_str( ) );
+
+  std::ofstream outfile( timer_file.c_str( ), std::ios::app );
+
+  outfile << "% Total apply duration [us]: " << std::endl;
+  outfile << "T = " << total_apply_duration << ";" << std::endl;
+
+  if ( outfile.is_open( ) ) {
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      // compute thread total execution time in individual tasks
+      time_type::rep us_m_sub = 0;
+      time_type::rep us_m2l_sub = 0;
+      time_type::rep us_l_sub = 0;
+      time_type::rep us_n_sub = 0;
+      time_type::rep total_time = 0;
+      for ( std::size_t j = 0; j < _m_subtask_times.at( i ).size( ) / 2; ++j ) {
+        us_m_sub += _m_subtask_times.at( i ).at( 2 * j + 1 )
+          - _m_subtask_times.at( i ).at( 2 * j );
+      }
+      for ( std::size_t j = 0; j < _m2l_subtask_times.at( i ).size( ) / 2;
+            ++j ) {
+        us_m2l_sub += _m2l_subtask_times.at( i ).at( 2 * j + 1 )
+          - _m2l_subtask_times.at( i ).at( 2 * j );
+      }
+      for ( std::size_t j = 0; j < _l_subtask_times.at( i ).size( ) / 2; ++j ) {
+        us_l_sub += _l_subtask_times.at( i ).at( 2 * j + 1 )
+          - _l_subtask_times.at( i ).at( 2 * j );
+      }
+      for ( std::size_t j = 0; j < _n_subtask_times.at( i ).size( ) / 2; ++j ) {
+        us_n_sub += _n_subtask_times.at( i ).at( 2 * j + 1 )
+          - _n_subtask_times.at( i ).at( 2 * j );
+      }
+      total_time = us_m_sub + us_m2l_sub + us_l_sub + us_n_sub;
+      double perc_subtasks_apply
+        = (double) total_time / (double) total_apply_duration;
+      double perc_subtasks_loop
+        = (double) total_time / (double) total_loop_duration;
+
+      outfile << "% Thread " << i << ": " << std::endl;
+
+      outfile << "% M subtasks duration: " << us_m_sub << " us" << std::endl;
+      outfile << "% M2L subtasks duration: " << us_m2l_sub << " us"
+              << std::endl;
+      outfile << "% L subtasks duration: " << us_l_sub << " us" << std::endl;
+      outfile << "% N subtasks duration: " << us_n_sub << " us" << std::endl;
+      outfile << "% Sum: " << us_m_sub + us_m2l_sub + us_l_sub + us_n_sub
+              << " us (" << perc_subtasks_loop * 100.0 << " % [loop], "
+              << perc_subtasks_apply * 100.0 << " % [total])\n\n";
+
+      // output main tasks
+      outfile << "% M tasks: " << std::endl;
+      outfile << "M" << i << " = [";
+      auto it = _m_task_times.at( i ).begin( );
+      for ( ; it != _m_task_times.at( i ).end( ); ++it ) {
+        outfile << *it << ", " << *( ++it ) << "; ";
+      }
+      outfile << " ];";
+      outfile << std::endl;
+
+      outfile << "% M2L tasks: " << std::endl;
+      outfile << "M2L" << i << " = [";
+      it = _m2l_task_times.at( i ).begin( );
+      for ( ; it != _m2l_task_times.at( i ).end( ); ++it ) {
+        outfile << *it << ", " << *( ++it ) << "; ";
+      }
+      outfile << " ];";
+      outfile << std::endl;
+
+      outfile << std::endl << std::endl;
+      outfile << "% L tasks: " << std::endl;
+      outfile << "L" << i << " = [";
+      it = _l_task_times.at( i ).begin( );
+      for ( ; it != _l_task_times.at( i ).end( ); ++it ) {
+        outfile << *it << ", " << *( ++it ) << "; ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      outfile << "% N tasks: " << std::endl;
+      outfile << "N" << i << " = [";
+      it = _n_task_times.at( i ).begin( );
+      for ( ; it != _n_task_times.at( i ).end( ); ++it ) {
+        outfile << *it << ", " << *( ++it ) << "; ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      // output subtasks
+      outfile << "% M subtasks: " << std::endl;
+      outfile << "Ms" << i << " = [";
+      it = _m_subtask_times.at( i ).begin( );
+      for ( ; it != _m_subtask_times.at( i ).end( ); ++it ) {
+        outfile << *it << ", " << *( ++it ) << "; ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      outfile << "% M2L subtasks: " << std::endl;
+      it = _m2l_subtask_times.at( i ).begin( );
+      outfile << "M2Ls" << i << " = [";
+      for ( ; it != _m2l_subtask_times.at( i ).end( ); ++it ) {
+        outfile << *it << ", " << *( ++it ) << "; ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      outfile << "% L subtasks: " << std::endl;
+      it = _l_subtask_times.at( i ).begin( );
+      outfile << "Ls" << i << " = [";
+      for ( ; it != _l_subtask_times.at( i ).end( ); ++it ) {
+        outfile << *it << ", " << *( ++it ) << "; ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      outfile << "% N subtasks: " << std::endl;
+      it = _n_subtask_times.at( i ).begin( );
+      outfile << "Ns" << i << " = [";
+      for ( ; it != _n_subtask_times.at( i ).end( ); ++it ) {
+        outfile << *it << ", " << *( ++it ) << "; ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      // output MPI communication
+      outfile << "% M2L send: " << std::endl;
+      it = _mpi_send_m2l.at( i ).begin( );
+      outfile << "M2L_send" << i << " = [";
+      for ( ; it != _mpi_send_m2l.at( i ).end( ); ++it ) {
+        outfile << *it << ", ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      outfile << "% parent send: " << std::endl;
+      it = _mpi_send_m_parent.at( i ).begin( );
+      outfile << "parent_send" << i << " = [";
+      for ( ; it != _mpi_send_m_parent.at( i ).end( ); ++it ) {
+        outfile << *it << ", ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      outfile << "% local send: " << std::endl;
+      it = _mpi_send_l_children.at( i ).begin( );
+      outfile << "local_send" << i << " = [";
+      for ( ; it != _mpi_send_l_children.at( i ).end( ); ++it ) {
+        outfile << *it << ", ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      outfile << "% M2L receive: " << std::endl;
+      it = _mpi_recv_m2l.at( i ).begin( );
+      outfile << "M2L_recv" << i << " = [";
+      for ( ; it != _mpi_recv_m2l.at( i ).end( ); ++it ) {
+        outfile << *it << ", ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      outfile << "% parent receive: " << std::endl;
+      it = _mpi_recv_m_parent.at( i ).begin( );
+      outfile << "parent_recv" << i << " = [";
+      for ( ; it != _mpi_recv_m_parent.at( i ).end( ); ++it ) {
+        outfile << *it << ", ";
+      }
+      outfile << " ];";
+      outfile << std::endl << std::endl;
+
+      outfile << "% local receive: " << std::endl;
+      it = _mpi_recv_l_children.at( i ).begin( );
+      outfile << "local_recv" << i << " = [";
+      for ( ; it != _mpi_recv_l_children.at( i ).end( ); ++it ) {
+        outfile << *it << ", ";
+      }
+      outfile << " ];";
+      outfile << std::endl << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" << std::endl;
+    }
+    outfile << "M = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "M" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "M2L = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "M2L" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "L = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "L" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "N = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "N" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+
+    outfile << "Ms = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "Ms" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "M2Ls = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "M2Ls" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "Ls = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "Ls" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "Ns = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "Ns" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "M2L_send = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "M2L_send" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "parent_send = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "parent_send" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "local_send = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "local_send" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "M2L_recv = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "M2L_recv" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "parent_recv = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "parent_recv" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+    outfile << "local_recv = { ";
+    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
+      outfile << "local_recv" << i << ", ";
+    }
+    outfile << "};" << std::endl;
+
+    outfile.close( );
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::sort_clusters_in_nearfield( ) {
+  lo counter = 0;
+  std::vector< lo > total_sizes_outer( _n_list.size( ), 0 );
+  std::unordered_map< mesh::scheduling_time_cluster *, lo > sizes;
+  for ( auto it : _n_list ) {
+    std::vector< general_spacetime_cluster * > * associated_spacetime_targets
+      = it->get_associated_spacetime_clusters( );
+    lou n_associated_leaves = it->get_n_associated_leaves( );
+    std::vector< lo > total_sizes( n_associated_leaves, 0 );
+    for ( lou i = 0; i < n_associated_leaves; ++i ) {
+      general_spacetime_cluster * current_spacetime_target
+        = ( *associated_spacetime_targets )[ i ];
+      std::vector< general_spacetime_cluster * > * spacetime_nearfield_list
+        = current_spacetime_target->get_nearfield_list( );
+      for ( lou src_index = 0; src_index < spacetime_nearfield_list->size( );
+            ++src_index ) {
+        full_matrix * current_block = _clusterwise_nearfield_matrices.at(
+          current_spacetime_target )[ src_index ];
+        lo n_rows = current_block->get_n_rows( );
+        lo n_cols = current_block->get_n_columns( );
+        total_sizes[ i ] += n_rows * n_cols;
+        total_sizes_outer[ counter ] += n_rows * n_cols;
+      }
+    }
+
+    // sort within nearfield cluster
+    std::vector< lo > permutation_index( total_sizes.size( ), 0 );
+    for ( lo i = 0; i != permutation_index.size( ); i++ ) {
+      permutation_index[ i ] = i;
+    }
+    sort( permutation_index.begin( ), permutation_index.end( ),
+      [ & ]( const lo & a, const lo & b ) {
+        return ( total_sizes[ a ] > total_sizes[ b ] );
+      } );
+
+    std::vector< general_spacetime_cluster * > aux_copy( n_associated_leaves );
+    for ( lou i = 0; i < n_associated_leaves; ++i ) {
+      aux_copy[ i ] = ( *associated_spacetime_targets )[ i ];
+    }
+
+    for ( lou i = 0; i < n_associated_leaves; ++i ) {
+      ( *associated_spacetime_targets )[ i ]
+        = aux_copy[ permutation_index[ i ] ];
+    }
+    sizes.insert( { it, total_sizes_outer[ counter ] } );
+    ++counter;
+  }
+
+  // sort nearfield clusters
+  _n_list.sort( [ &sizes ]( mesh::scheduling_time_cluster * lhs,
+                  mesh::scheduling_time_cluster * rhs ) {
+    return ( sizes[ lhs ] > sizes[ rhs ] );
+  } );
 }
 
 template class besthea::linear_algebra::distributed_pFMM_matrix<
@@ -4403,3 +4343,10 @@ template class besthea::linear_algebra::distributed_pFMM_matrix<
     besthea::bem::basis_tri_p1 >,
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 > >;
+
+template class besthea::linear_algebra::distributed_pFMM_matrix<
+  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >;

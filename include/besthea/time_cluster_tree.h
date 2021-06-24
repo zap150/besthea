@@ -185,11 +185,16 @@ class besthea::mesh::time_cluster_tree {
    *
    * @param[in] n_processes Number of processes.
    * @param[in] strategy  Indicates which strategy is used (default 2).
-   * \return A vector representing the distribution of the clusters. It contains
-   * the process ids according to the tree format.
+   * @param[in,out] status  Indicates if the process assignment was successful
+   *                        (status 0). If the temporal tree has less than 2
+   *                        levels, status is set to 1 (too coarse!). If there
+   *                        are too many processes for the assignment, status is
+   *                        set to 2.
+   * \return  A vector representing the distribution of the clusters. It
+   *          contains the process ids according to the tree format.
    */
   std::vector< lo > compute_process_assignments(
-    const lo n_processes, const lo strategy ) const;
+    const lo n_processes, const lo strategy, lo & status ) const;
 
   /**
    * Computes the process assignments and prints them to a binary file
@@ -198,11 +203,15 @@ class besthea::mesh::time_cluster_tree {
    *                      strategies to assign the processes. See documentation
    *                      of @ref compute_process_assignments for details.
    * @param[in] filename Name of the output file.
+   * @param[out] status  Indicates if the process assignment was successful
+   *                     (status 0). If the temporal tree has less than 2
+   * levels, status is set to 1 (too coarse!). If there are too many processes
+   * for the assignment, status is set to 2.
    */
   void print_process_assignments( const lo n_processes, const lo strategy,
-    const std::string filename ) const {
+    const std::string filename, lo & status ) const {
     write_vector_to_bin_file(
-      compute_process_assignments( n_processes, strategy ), filename );
+      compute_process_assignments( n_processes, strategy, status ), filename );
   }
 
   /**
@@ -278,7 +287,7 @@ class besthea::mesh::time_cluster_tree {
    *                                  which was last assigned.
    * @param[in,out] process_assignment  Vector of process assignments in the
    *                                    tree structure format.
-   * @note This method is solely used by @ref compute_process_assignments .
+   * @note This method is solely used by @ref compute_process_assignments.
    */
   void convert_assignment_vector_2_tree_format( const time_cluster & root,
     const std::vector< lo > & levelwise_assignment, const lo thresh_level,
