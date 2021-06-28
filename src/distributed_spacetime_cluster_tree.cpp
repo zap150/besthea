@@ -59,7 +59,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   sc xmin, xmax, ymin, ymax, zmin, zmax;
   // this is now a local computation since space mesh is replicated on all MPI
   // processes
-  compute_bounding_box( xmin, xmax, ymin, ymax, zmin, zmax );
+  compute_cubic_bounding_box( xmin, xmax, ymin, ymax, zmin, zmax );
   _bounding_box_size.resize( 4 );
   _bounding_box_size[ 0 ] = ( xmax - xmin ) / 2.0;
   _bounding_box_size[ 1 ] = ( ymax - ymin ) / 2.0;
@@ -438,13 +438,24 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree_new(
 
   // split the spatial box into subintervals according to the spatial size of
   // the boxes at the space-time level dist_tree_depth_coll
-  vector_type space_center( 3 );
-  vector_type space_half_size( 3 );
-  sc time_center, time_half_size;
-  _root->get_center( space_center, time_center );
-  _root->get_half_size( space_half_size, time_half_size );
 
+  // check whether there are really coarse elements in the spatial mesh and
+  // print a warning if that is the case
+  vector_type space_half_size( 3 );
+  sc time_half_size;
+  _root->get_half_size( space_half_size, time_half_size );
   lo max_space_level = space_levels[ dist_tree_depth_coll - 1 ];
+  sc cluster_half_size_at_max_level
+    = space_half_size[ 0 ] / ( (sc) ( 1 << max_space_level ) );
+  if ( _my_rank == 0 ) {
+    if ( _spacetime_mesh.get_spatial_surface_mesh( )->get_max_diameter( )
+      > cluster_half_size_at_max_level ) {
+      std::cout << "WARNING: Clusters containing elements with large spatial "
+                   "sizes (diameters > cluster half size) detected in "
+                   "communicative tree construction phase!"
+                << std::endl;
+    }
+  }
 
   std::vector< std::vector< lo > > levelwise_elems_per_subdivisioning;
   levelwise_elems_per_subdivisioning.resize( dist_tree_depth_coll );
@@ -482,6 +493,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree_new(
     // no initial spatial refinement is necessary. construct the root at level
     // 0 directly (as copy of _root with different level)
     std::vector< slou > coordinates = { 0, 0, 0, 0, 0 };
+    vector_type space_center( 3 );
+    sc time_center;
+    _root->get_center( space_center, time_center );
     general_spacetime_cluster * spacetime_root = new general_spacetime_cluster(
       space_center, time_center, space_half_size, time_half_size,
       _spacetime_mesh.get_n_elements( ), _root, 0, 0, coordinates, 0, 0, 0, 0,
@@ -1573,8 +1587,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   cluster_pairs = std::move( new_cluster_pairs );
 }
 
-void besthea::mesh::distributed_spacetime_cluster_tree::compute_bounding_box(
-  sc & xmin, sc & xmax, sc & ymin, sc & ymax, sc & zmin, sc & zmax ) {
+void besthea::mesh::distributed_spacetime_cluster_tree::
+  compute_cubic_bounding_box(
+    sc & xmin, sc & xmax, sc & ymin, sc & ymax, sc & zmin, sc & zmax ) {
   // only local computation since spatial mesh is now duplicated
   xmin = ymin = zmin = std::numeric_limits< sc >::max( );
   xmax = ymax = zmax = std::numeric_limits< sc >::min( );
@@ -2097,9 +2112,16 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements_new(
 
 void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
   general_spacetime_cluster & root, const bool split_space ) {
+  // first get the spatial half size of the current cluster, than decide whether
+  // to refine it further or not
+  sc time_half_size;
+  vector_type space_half_size( 3 );
+  root.get_half_size( space_half_size, time_half_size );
   if ( root.get_level( ) + 1 > _max_levels - 1
-    || root.get_n_elements( ) < _n_min_elems
-    || root.get_n_time_elements( ) == 1 ) {
+    || root.get_n_elements( ) < _n_min_elems || root.get_n_time_elements( ) == 1
+    || root.get_max_element_space_diameter( ) > space_half_size[ 0 ] ) {
+    // note: max_element_space_diameter of a cluster is only set for clusters
+    // built in this routine (build_subtree). The default value is -1.0.
     root.set_n_children( 0 );
     root.set_global_leaf_status( true );
     if ( root.get_level( ) + 1 > _real_max_levels ) {
@@ -2133,10 +2155,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
   const std::vector< slou > parent_coord = root.get_box_coordinate( );
 
   vector_type space_center( 3 );
-  vector_type space_half_size( 3 );
-  sc time_center, time_half_size;
+
+  sc time_center;
   root.get_center( space_center, time_center );
-  root.get_half_size( space_half_size, time_half_size );
 
   lo n_space_div, n_time_div;
   root.get_n_divs( n_space_div, n_time_div );
@@ -2147,8 +2168,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
   for ( lo i = 0; i < 16; ++i ) {
     oct_sizes[ i ] = 0;
   }
-
-  general_spacetime_cluster * clusters[ 16 ];
 
   vector_type new_space_center( 3 );
   vector_type new_space_half_size( 3 );
@@ -2174,10 +2193,13 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
 
   std::vector< lo > clusters_of_elements( root.get_n_elements( ) );
   if ( split_space ) {
+    std::vector< general_spacetime_cluster * > clusters( 16, nullptr );
+    std::vector< sc > max_space_diameters( 16, 0.0 );
     for ( lo i = 0; i < root.get_n_elements( ); ++i ) {
       elem_idx
         = _spacetime_mesh.global_2_local( start_idx, root.get_element( i ) );
       current_mesh->get_centroid( elem_idx, el_centroid );
+      sc elem_diameter = current_mesh->get_spatial_diameter( elem_idx );
 
       if ( el_centroid[ 0 ] >= space_center( 0 )
         && el_centroid[ 1 ] >= space_center( 1 )
@@ -2185,96 +2207,144 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
         && el_centroid[ 3 ] < time_center ) {
         ++oct_sizes[ 0 ];
         clusters_of_elements[ i ] = 0;
+        if ( elem_diameter > max_space_diameters[ 0 ] ) {
+          max_space_diameters[ 0 ] = elem_diameter;
+        }
       } else if ( el_centroid[ 0 ] < space_center( 0 )
         && el_centroid[ 1 ] >= space_center( 1 )
         && el_centroid[ 2 ] >= space_center( 2 )
         && el_centroid[ 3 ] < time_center ) {
         ++oct_sizes[ 1 ];
         clusters_of_elements[ i ] = 1;
+        if ( elem_diameter > max_space_diameters[ 1 ] ) {
+          max_space_diameters[ 1 ] = elem_diameter;
+        }
       } else if ( el_centroid[ 0 ] < space_center( 0 )
         && el_centroid[ 1 ] < space_center( 1 )
         && el_centroid[ 2 ] >= space_center( 2 )
         && el_centroid[ 3 ] < time_center ) {
         ++oct_sizes[ 2 ];
         clusters_of_elements[ i ] = 2;
+        if ( elem_diameter > max_space_diameters[ 2 ] ) {
+          max_space_diameters[ 2 ] = elem_diameter;
+        }
       } else if ( el_centroid[ 0 ] >= space_center( 0 )
         && el_centroid[ 1 ] < space_center( 1 )
         && el_centroid[ 2 ] >= space_center( 2 )
         && el_centroid[ 3 ] < time_center ) {
         ++oct_sizes[ 3 ];
         clusters_of_elements[ i ] = 3;
+        if ( elem_diameter > max_space_diameters[ 3 ] ) {
+          max_space_diameters[ 3 ] = elem_diameter;
+        }
       } else if ( el_centroid[ 0 ] >= space_center( 0 )
         && el_centroid[ 1 ] >= space_center( 1 )
         && el_centroid[ 2 ] < space_center( 2 )
         && el_centroid[ 3 ] < time_center ) {
         ++oct_sizes[ 4 ];
         clusters_of_elements[ i ] = 4;
+        if ( elem_diameter > max_space_diameters[ 4 ] ) {
+          max_space_diameters[ 4 ] = elem_diameter;
+        }
       } else if ( el_centroid[ 0 ] < space_center( 0 )
         && el_centroid[ 1 ] >= space_center( 1 )
         && el_centroid[ 2 ] < space_center( 2 )
         && el_centroid[ 3 ] < time_center ) {
         ++oct_sizes[ 5 ];
         clusters_of_elements[ i ] = 5;
+        if ( elem_diameter > max_space_diameters[ 5 ] ) {
+          max_space_diameters[ 5 ] = elem_diameter;
+        }
       } else if ( el_centroid[ 0 ] < space_center( 0 )
         && el_centroid[ 1 ] < space_center( 1 )
         && el_centroid[ 2 ] < space_center( 2 )
         && el_centroid[ 3 ] < time_center ) {
         ++oct_sizes[ 6 ];
         clusters_of_elements[ i ] = 6;
+        if ( elem_diameter > max_space_diameters[ 6 ] ) {
+          max_space_diameters[ 6 ] = elem_diameter;
+        }
       } else if ( el_centroid[ 0 ] >= space_center( 0 )
         && el_centroid[ 1 ] < space_center( 1 )
         && el_centroid[ 2 ] < space_center( 2 )
         && el_centroid[ 3 ] < time_center ) {
         ++oct_sizes[ 7 ];
         clusters_of_elements[ i ] = 7;
+        if ( elem_diameter > max_space_diameters[ 7 ] ) {
+          max_space_diameters[ 7 ] = elem_diameter;
+        }
       } else if ( el_centroid[ 0 ] >= space_center( 0 )
         && el_centroid[ 1 ] >= space_center( 1 )
         && el_centroid[ 2 ] >= space_center( 2 )
         && el_centroid[ 3 ] >= time_center ) {
         ++oct_sizes[ 8 ];
         clusters_of_elements[ i ] = 8;
+        if ( elem_diameter > max_space_diameters[ 8 ] ) {
+          max_space_diameters[ 8 ] = elem_diameter;
+        }
       } else if ( el_centroid[ 0 ] < space_center( 0 )
         && el_centroid[ 1 ] >= space_center( 1 )
         && el_centroid[ 2 ] >= space_center( 2 )
         && el_centroid[ 3 ] >= time_center ) {
         ++oct_sizes[ 9 ];
         clusters_of_elements[ i ] = 9;
+        if ( elem_diameter > max_space_diameters[ 9 ] ) {
+          max_space_diameters[ 9 ] = elem_diameter;
+        }
       } else if ( el_centroid[ 0 ] < space_center( 0 )
         && el_centroid[ 1 ] < space_center( 1 )
         && el_centroid[ 2 ] >= space_center( 2 )
         && el_centroid[ 3 ] >= time_center ) {
         ++oct_sizes[ 10 ];
         clusters_of_elements[ i ] = 10;
+        if ( elem_diameter > max_space_diameters[ 10 ] ) {
+          max_space_diameters[ 10 ] = elem_diameter;
+        }
       } else if ( el_centroid[ 0 ] >= space_center( 0 )
         && el_centroid[ 1 ] < space_center( 1 )
         && el_centroid[ 2 ] >= space_center( 2 )
         && el_centroid[ 3 ] >= time_center ) {
         ++oct_sizes[ 11 ];
         clusters_of_elements[ i ] = 11;
+        if ( elem_diameter > max_space_diameters[ 11 ] ) {
+          max_space_diameters[ 11 ] = elem_diameter;
+        }
       } else if ( el_centroid[ 0 ] >= space_center( 0 )
         && el_centroid[ 1 ] >= space_center( 1 )
         && el_centroid[ 2 ] < space_center( 2 )
         && el_centroid[ 3 ] >= time_center ) {
         ++oct_sizes[ 12 ];
         clusters_of_elements[ i ] = 12;
+        if ( elem_diameter > max_space_diameters[ 12 ] ) {
+          max_space_diameters[ 12 ] = elem_diameter;
+        }
       } else if ( el_centroid[ 0 ] < space_center( 0 )
         && el_centroid[ 1 ] >= space_center( 1 )
         && el_centroid[ 2 ] < space_center( 2 )
         && el_centroid[ 3 ] >= time_center ) {
         ++oct_sizes[ 13 ];
         clusters_of_elements[ i ] = 13;
+        if ( elem_diameter > max_space_diameters[ 13 ] ) {
+          max_space_diameters[ 13 ] = elem_diameter;
+        }
       } else if ( el_centroid[ 0 ] < space_center( 0 )
         && el_centroid[ 1 ] < space_center( 1 )
         && el_centroid[ 2 ] < space_center( 2 )
         && el_centroid[ 3 ] >= time_center ) {
         ++oct_sizes[ 14 ];
         clusters_of_elements[ i ] = 14;
+        if ( elem_diameter > max_space_diameters[ 14 ] ) {
+          max_space_diameters[ 14 ] = elem_diameter;
+        }
       } else if ( el_centroid[ 0 ] >= space_center( 0 )
         && el_centroid[ 1 ] < space_center( 1 )
         && el_centroid[ 2 ] < space_center( 2 )
         && el_centroid[ 3 ] >= time_center ) {
         ++oct_sizes[ 15 ];
         clusters_of_elements[ i ] = 15;
+        if ( elem_diameter > max_space_diameters[ 15 ] ) {
+          max_space_diameters[ 15 ] = elem_diameter;
+        }
       }
       // check if the temporal splitting point has been set or has to be set
       // NOTE: this check is only reasonable for pure spacetime tensor meshes
@@ -2338,8 +2408,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
           n_time_div + 1, _spacetime_mesh, root.get_process_id( ), true );
         clusters[ i ]->set_n_time_elements( n_time_elements_left );
         clusters[ i ]->set_elements_are_local( elements_are_local );
-      } else {
-        clusters[ i ] = nullptr;
+        clusters[ i ]->set_max_element_space_diameter(
+          max_space_diameters[ i ] );
       }
       if ( oct_sizes[ i + 8 ] > 0 ) {
         ++n_clusters;
@@ -2354,8 +2424,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
           n_time_div + 1, _spacetime_mesh, root.get_process_id( ), true );
         clusters[ i + 8 ]->set_n_time_elements( n_time_elements_right );
         clusters[ i + 8 ]->set_elements_are_local( elements_are_local );
-      } else {
-        clusters[ i + 8 ] = nullptr;
+        clusters[ i + 8 ]->set_max_element_space_diameter(
+          max_space_diameters[ i + 8 ] );
       }
     }
 
@@ -2374,6 +2444,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
       }
     }
   } else {
+    std::vector< general_spacetime_cluster * > clusters( 2, nullptr );
     std::vector< lo > clusters_of_elements( root.get_n_elements( ) );
     for ( lo i = 0; i < root.get_n_elements( ); ++i ) {
       // get elem idx in local mesh indexing
@@ -2437,6 +2508,10 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
         _spacetime_mesh, root.get_process_id( ), true );
       left_child->set_n_time_elements( n_time_elements_left );
       left_child->set_elements_are_local( elements_are_local );
+      // the spatial part stays the same (in particular the maximal diameter of
+      // all elements)
+      left_child->set_max_element_space_diameter(
+        root.get_max_element_space_diameter( ) );
     }
 
     // right temporal cluster
@@ -2452,6 +2527,10 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
           _spacetime_mesh, root.get_process_id( ), true );
       right_child->set_n_time_elements( n_time_elements_right );
       right_child->set_elements_are_local( elements_are_local );
+      // the spatial part stays the same (in particular the maximal diameter of
+      // all elements)
+      right_child->set_max_element_space_diameter(
+        root.get_max_element_space_diameter( ) );
     }
 
     // assign elements to clusters

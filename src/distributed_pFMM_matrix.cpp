@@ -1036,12 +1036,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     //      for ( auto spacetime_tar : *associated_spacetime_targets ) {
     std::vector< general_spacetime_cluster * > * spacetime_interaction_list
       = ( *associated_spacetime_targets )[ i ]->get_interaction_list( );
-
-    for ( auto spacetime_src : *spacetime_interaction_list ) {
-      if ( spacetime_src->get_global_time_index( )
-        == src_cluster->get_global_index( ) ) {
-        apply_m2l_operation(
-          spacetime_src, ( *associated_spacetime_targets )[ i ] );
+    if ( spacetime_interaction_list != nullptr ) {
+      for ( auto spacetime_src : *spacetime_interaction_list ) {
+        if ( spacetime_src->get_global_time_index( )
+          == src_cluster->get_global_index( ) ) {
+          apply_m2l_operation(
+            spacetime_src, ( *associated_spacetime_targets )[ i ] );
+        }
       }
     }
     if ( _measure_tasks ) {
@@ -2680,8 +2681,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     std::vector< general_spacetime_cluster * > * associated_st_targets
       = it->get_associated_spacetime_clusters( );
     for ( auto spacetime_tar : *associated_st_targets ) {
-      n_m2l_operations[ it->get_level( ) ]
-        += spacetime_tar->get_interaction_list( )->size( );
+      if ( spacetime_tar->get_interaction_list( ) != nullptr ) {
+        n_m2l_operations[ it->get_level( ) ]
+          += spacetime_tar->get_interaction_list( )->size( );
+      }
     }
     if ( !it->get_parent( )->is_active_in_downward_path( ) ) {
       if ( it->get_n_associated_leaves( ) > 0 ) {

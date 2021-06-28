@@ -94,7 +94,7 @@ void besthea::mesh::triangular_surface_mesh::from_tetrahedral(
     _elements[ 3 * i_element + 2 ] = volume_to_surface[ element[ 2 ] ];
   }
 
-  init_normals_and_areas( );
+  init_normals_diameters_and_areas( );
   init_edges( );
   init_node_to_elements( );
 }
@@ -154,7 +154,7 @@ bool besthea::mesh::triangular_surface_mesh::load( const std::string & file ) {
 
   filestream.close( );
 
-  init_normals_and_areas( );
+  init_normals_diameters_and_areas( );
   init_edges( );
   init_node_to_elements( );
 
@@ -174,15 +174,19 @@ void besthea::mesh::triangular_surface_mesh::init_node_to_elements( ) {
   }
 }
 
-void besthea::mesh::triangular_surface_mesh::init_normals_and_areas( ) {
+void besthea::mesh::triangular_surface_mesh::
+  init_normals_diameters_and_areas( ) {
   _areas.resize( _n_elements );
   _normals.resize( 3 * _n_elements );
+  _diameters.resize( _n_elements );
 
   linear_algebra::coordinates< 3 > x21;
   linear_algebra::coordinates< 3 > x31;
+  linear_algebra::coordinates< 3 > x32;
   linear_algebra::coordinates< 3 > cross;
   sc norm;
 
+  _max_diameter = 0.0;
   for ( lo i_elem = 0; i_elem < _n_elements; ++i_elem ) {
     x21[ 0 ] = _nodes[ 3 * _elements[ 3 * i_elem + 1 ] ]
       - _nodes[ 3 * _elements[ 3 * i_elem ] ];
@@ -198,6 +202,13 @@ void besthea::mesh::triangular_surface_mesh::init_normals_and_areas( ) {
     x31[ 2 ] = _nodes[ 3 * _elements[ 3 * i_elem + 2 ] + 2 ]
       - _nodes[ 3 * _elements[ 3 * i_elem ] + 2 ];
 
+    x32[ 0 ] = _nodes[ 3 * _elements[ 3 * i_elem + 2 ] ]
+      - _nodes[ 3 * _elements[ 3 * i_elem + 1 ] ];
+    x32[ 1 ] = _nodes[ 3 * _elements[ 3 * i_elem + 2 ] + 1 ]
+      - _nodes[ 3 * _elements[ 3 * i_elem + 1 ] + 1 ];
+    x32[ 2 ] = _nodes[ 3 * _elements[ 3 * i_elem + 2 ] + 2 ]
+      - _nodes[ 3 * _elements[ 3 * i_elem + 1 ] + 2 ];
+
     cross[ 0 ] = x21[ 1 ] * x31[ 2 ] - x21[ 2 ] * x31[ 1 ];
     cross[ 1 ] = x21[ 2 ] * x31[ 0 ] - x21[ 0 ] * x31[ 2 ];
     cross[ 2 ] = x21[ 0 ] * x31[ 1 ] - x21[ 1 ] * x31[ 0 ];
@@ -209,6 +220,22 @@ void besthea::mesh::triangular_surface_mesh::init_normals_and_areas( ) {
     _normals[ 3 * i_elem ] = cross[ 0 ] / norm;
     _normals[ 3 * i_elem + 1 ] = cross[ 1 ] / norm;
     _normals[ 3 * i_elem + 2 ] = cross[ 2 ] / norm;
+
+    // compute the diameter of the current element
+    sc diameter_sq = x21.norm_squared( );
+    sc temp_edge_length_sq = x31.norm_squared( );
+    if ( temp_edge_length_sq > diameter_sq ) {
+      diameter_sq = temp_edge_length_sq;
+    }
+    temp_edge_length_sq = x32.norm_squared( );
+    if ( temp_edge_length_sq > diameter_sq ) {
+      diameter_sq = temp_edge_length_sq;
+    }
+    _diameters[ i_elem ] = std::sqrt( diameter_sq );
+    // update _max_diameter if necessary
+    if ( _diameters[ i_elem ] > _max_diameter ) {
+      _max_diameter = _diameters[ i_elem ];
+    }
   }
 }
 
@@ -377,7 +404,7 @@ void besthea::mesh::triangular_surface_mesh::refine( int level ) {
     _orientation.second.swap( new_orientation_second );
   }
 
-  init_normals_and_areas( );
+  init_normals_diameters_and_areas( );
   init_node_to_elements( );
 }
 
@@ -392,7 +419,7 @@ void besthea::mesh::triangular_surface_mesh::scale( sc factor ) {
     _nodes[ 3 * i_node + 2 ]
       = ( _nodes[ 3 * i_node + 2 ] - centroid[ 2 ] ) * factor + centroid[ 2 ];
   }
-  init_normals_and_areas( );
+  init_normals_diameters_and_areas( );
 }
 
 void besthea::mesh::triangular_surface_mesh::init_edges( ) {

@@ -102,6 +102,7 @@ class besthea::mesh::general_spacetime_cluster {
       _space_center( space_center ),
       _time_half_size( time_half_size ),
       _space_half_size( space_half_size ),
+      _max_element_space_diameter( -1.0 ),
       _n_space_nodes( 0 ),
       _parent( parent ),
       _children( nullptr ),
@@ -111,7 +112,6 @@ class besthea::mesh::general_spacetime_cluster {
       _level( level ),
       _octant( octant ),
       _left_right( left_right ),
-      _padding( 0.0 ),
       _box_coordinate( coordinate ),
       _global_time_index( global_time_index ),
       _process_id( process_id ),
@@ -151,6 +151,21 @@ class besthea::mesh::general_spacetime_cluster {
    */
   const distributed_spacetime_tensor_mesh & get_mesh( ) const {
     return _mesh;
+  }
+
+  /**
+   * Sets @ref _max_element_space_diameter to a given value.
+   * @param[in] diam  Diameter to be set.
+   */
+  void set_max_element_space_diameter( sc diam ) {
+    _max_element_space_diameter = diam;
+  }
+
+  /**
+   * Returns the value of @ref _max_element_space_diameter.
+   */
+  sc get_max_element_space_diameter( ) const {
+    return _max_element_space_diameter;
   }
 
   /**
@@ -332,14 +347,14 @@ class besthea::mesh::general_spacetime_cluster {
     slou spatial_nearfield_limit ) const {
     std::vector< slou > src_box_coordinate = src_cluster->get_box_coordinate( );
     slou x_diff = ( _box_coordinate[ 1 ] > src_box_coordinate[ 1 ] )
-      ? ( slou )( _box_coordinate[ 1 ] - src_box_coordinate[ 1 ] )
-      : ( slou )( src_box_coordinate[ 1 ] - _box_coordinate[ 1 ] );
+      ? (slou) ( _box_coordinate[ 1 ] - src_box_coordinate[ 1 ] )
+      : (slou) ( src_box_coordinate[ 1 ] - _box_coordinate[ 1 ] );
     slou y_diff = ( _box_coordinate[ 2 ] > src_box_coordinate[ 2 ] )
-      ? ( slou )( _box_coordinate[ 2 ] - src_box_coordinate[ 2 ] )
-      : ( slou )( src_box_coordinate[ 2 ] - _box_coordinate[ 2 ] );
+      ? (slou) ( _box_coordinate[ 2 ] - src_box_coordinate[ 2 ] )
+      : (slou) ( src_box_coordinate[ 2 ] - _box_coordinate[ 2 ] );
     slou z_diff = ( _box_coordinate[ 3 ] > src_box_coordinate[ 3 ] )
-      ? ( slou )( _box_coordinate[ 3 ] - src_box_coordinate[ 3 ] )
-      : ( slou )( src_box_coordinate[ 3 ] - _box_coordinate[ 3 ] );
+      ? (slou) ( _box_coordinate[ 3 ] - src_box_coordinate[ 3 ] )
+      : (slou) ( src_box_coordinate[ 3 ] - _box_coordinate[ 3 ] );
     return ( x_diff <= spatial_nearfield_limit
       && y_diff <= spatial_nearfield_limit
       && z_diff <= spatial_nearfield_limit );
@@ -929,8 +944,11 @@ class besthea::mesh::general_spacetime_cluster {
   sc _time_half_size;         //!< temporal half size of the cluster
   vector_type _space_half_size;  //!< half sizes of the cluster's faces (in [x,
                                  //!< y, z] directions)
-  std::vector< lo > _elements;   //!< indices of the cluster's elements within
-                                 //!< global spacetime tensor mesh
+  sc _max_element_space_diameter;  //!< maximal spatial diameter of the elements
+                                   //!< contained in the cluster. Default value
+                                   //!< is -1.0.
+  std::vector< lo > _elements;     //!< indices of the cluster's elements within
+                                   //!< global spacetime tensor mesh
 
   std::vector< lo > _elems_2_local_nodes;   //!< mapping from element nodes
                                             //!< vertices to local node list
@@ -951,7 +969,6 @@ class besthea::mesh::general_spacetime_cluster {
   lo _level;                 //!< level within the cluster tree
   short _octant;             //!< octant of the parent cluster
   short _left_right;         //!< left (0), or right (1) child of the parent
-  sc _padding;               //!< padding of the cluster
   std::vector< slou >
     _box_coordinate;  //!< coordinates of the box within boxes on given level
   lo _global_time_index;  //!< Global index of the temporal component of the

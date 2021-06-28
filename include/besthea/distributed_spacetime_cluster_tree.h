@@ -287,7 +287,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     std::unordered_map< lo, bool > & refine_map );
 
   /**
-   * Computes the bounding box of the underlying mesh.
+   * Computes a cubic bounding box of the underlying mesh.
    *
    * First the minimal axis parallel rectangular box in which the mesh is
    * contained is computed. This box is extended to a cube, by expanding
@@ -299,7 +299,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @param[in,out] zmin Minimum z coordinate of element's centroids.
    * @param[in,out] zmax Maximum z coordinate of element's centroids.
    */
-  void compute_bounding_box(
+  void compute_cubic_bounding_box(
     sc & xmin, sc & xmax, sc & ymin, sc & ymax, sc & zmin, sc & zmax );
 
   /**
