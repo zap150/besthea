@@ -181,11 +181,17 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    */
   void print_information( const int root_process );
 
+  /**
+   * Prints a grid of the spatial clusters in the tree for each space-time
+   * level.
+   * @warning This makes sense only for space-time meshes with a uniform
+   * structure in time.
+   */
   void print_spatial_grids( const lo root_proc_id ) const;
 
  private:
   /**
-   * Builts the spacetime cluster tree in a communicative way in the upper part
+   * Builds the spacetime cluster tree in a communicative way in the upper part
    * (where clusters can contain elements located in meshes of two or more
    * processes) and in a non-communicative way in the lower part.
    * @param[in] status  Indicates if the tree has been built correctly
@@ -195,6 +201,15 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    */
   void build_tree( lo & status );
 
+  /**
+   * Builds the spacetime cluster tree in a communicative way in the upper part
+   * (where clusters can contain elements located in meshes of two or more
+   * processes) and in a non-communicative way in the lower part.
+   * @param[in] status  Indicates if the tree has been built correctly
+   *                    (status 0). Status 1 means that for some cluster the
+   *                    number of assigned elements did not match with the
+   *                    predetermined value.
+   */
   void build_tree_new( lo & status );
 
   /**
@@ -330,10 +345,56 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     const std::vector< std::vector< sc > > & fine_box_bounds,
     std::vector< lo > & elems_in_clusters );
 
+  /**
+   * Collectively computes the number of elements in a subdivisioning of the
+   * space-time bounding box corresponding to the leaves in the distribution
+   * tree.
+   * @param[in] n_space_div Number of spatial refinements used for the
+   *                        subdivisioning.
+   * @param[out] elems_in_clusters  Vector containing the number of elements in
+   * the individual subclusters of the subdivisioning (ordered as
+   * pos_t * n_space_clusters * n_space_clusters * n_space_clusters
+   * + pos_x * n_space_clusters * n_space_clusters + pos_y * n_space_clusters
+   * + pos_z).
+   * @param[out] boxes_of_local_elements For each element in the local mesh this
+   *                                     vector contains the index of the
+   *                                     cluster in which it lies.
+   * @note If the distribution tree contains early leaf clusters they are
+   *       refined artificially for the counting process. Thus, the clusters in
+   *       the subdivisioning correspond to a regular refinement.
+   */
   void get_n_elements_in_fine_subdivisioning( lo n_space_div,
     std::vector< lo > & elems_in_clusters,
     std::vector< lo > & boxes_of_local_elements );
 
+  /**
+   * Initializes some data which is needed for counting elements in (and
+   * assigning elements to) clusters in some subdivisioning of the space-time
+   * bounding box.
+   * @param[in] temporal_leaf_clusters  Temporal leaf clusters corresponding to
+   *                                    the mesh of the elements elements
+   *                                    (nearfield mesh or local mesh)
+   * @param[in] n_space_clusters_per_dim  Number of space clusters along each
+   *                                      spatial dimension in the
+   *                                      subdivisioning.
+   * @param[out] leaves_start_index Temporal index of the first cluster in
+   *                                @p temporal_leaf_clusters. If this is an
+   *                                early cluster, the temporal index of its
+   *                                leftmost (artificially refined) successor is
+   *                                returned.
+   * @param[out] starts_time_intervals  Start time of the provided time
+   *                                    clusters.
+   * @param[out] endings_time_intervals End time of the provided time clusters.
+   * @param[out] spatial_step_sizes Spatial step sizes for each spatial
+                                    dimension.
+   * @param[out] space_bounds_x Bounds of the spatial clusters of the
+   *                            subdivisioning along x axis.
+   * @param[out] space_bounds_y Bounds of the spatial clusters of the
+   *                            subdivisioning along y axis.
+   * @param[out] space_bounds_z Bounds of the spatial clusters of the
+   *                            subdivisioning along z axis.
+
+   */
   void prepare_data_for_element_counting(
     const std::vector< scheduling_time_cluster * > & temporal_leaf_clusters,
     const lo n_space_clusters_per_dim, lo & leaves_start_index,
@@ -342,9 +403,37 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     std::vector< sc > & spatial_step_sizes, std::vector< sc > & space_bounds_x,
     std::vector< sc > & space_bounds_y, std::vector< sc > & space_bounds_z );
 
+  /**
+   * Assigns the elements contained in the nearfield mesh of
+   * @ref _spacetime_mesh to the appropriate clusters in the tree.
+   * @param[in] n_space_clusters_per_dim Number of space clusters along each
+   *                                      spatial dimension in the fine
+   *                                      subdivisioning from *
+   *                                  @ref get_n_elements_in_fine_subdivisioning
+   * @param[in] boxes_of_nearfield_elements For each element in the nearfield
+   *                                        mesh this vector contains the index
+   *                                        of the cluster in which it lies.
+   */
   void assign_nearfield_elements_to_boxes( const lo n_space_clusters_per_dim,
     std::vector< lo > & boxes_of_nearfield_elements );
 
+  /**
+   * Computes the number of elements in all clusters of a certain level of the
+   * tree by summing up the numbers of their children.
+   * @param[in] time_level  Level of the clusters at the parent level.
+   * @param[in] space_level Number of spatial refinements of the clusters at the
+   *                        parent level.
+   * @param[in] elems_per_subdivisioning_child_level  Number of elements in the
+   *                                                  clusters at child level.
+   * @param[in] space_refined Indicates if the child clusters are refined with
+   *                          respect to space and time (true) or only with
+   *                          respect to time.
+   * @param[out] elems_per_subdivisioning_this_level  Number of elements in the
+   *                                                  clusters at parent level.
+   *
+   * @note This routine is an auxiliary routine for the construction of the
+   * upper part of the space-time cluster tree.
+   */
   void sum_up_elements_in_boxes( const lo time_level, const lo space_level,
     const std::vector< lo > & elems_per_subdivisioning_child_level,
     const bool space_refined,
@@ -410,12 +499,20 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
       scheduling_time_cluster * > > & cluster_pairs );
 
   /**
-   * Collect the leaves of the cluster tree which are owned by the current MPI
+   * Collects the leaves of the cluster tree which are owned by the current MPI
    * process, i.e. local. The routine is based on a tree traversal.
    * @param[in] root Current cluster in the tree traversal.
    */
   void collect_local_leaves( general_spacetime_cluster & root );
 
+  /**
+   * Collects the leaves of the cluster tree which correspond to elements in the
+   * nearfield mesh of the current process. The routine is based on a tree
+   * traversal.
+   * @param[in] root Current cluster in the tree traversal.
+   * @param[out]  non_local_leaves  Non local leaves are added to this vector in
+   *                                the order in which they are detected.
+   */
   void collect_non_local_leaves( general_spacetime_cluster & root,
     std::vector< general_spacetime_cluster * > & non_local_leaves ) const;
 
@@ -452,6 +549,20 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   void fill_elements( general_spacetime_cluster & cluster,
     const std::vector< std::vector< sc > > & fine_box_bounds, lo & status );
 
+  /**
+   * Assigns elements to the leaf clusters in the upper part of the tree in the
+   * first part of the tree assembly.
+   * @param[in] leaves  Vector containing all the space-time leaf clusters in
+   *                    the upper part of the tree.
+   * @param[in] global_dist_tree_depth  Depth of the global distribution tree.
+   * @param[in] space_levels  For each space-time level this vector contains the
+   *                          associated space level.
+   * @param[in] boxes_of_local_elements For each element in the nearfield mesh
+   *                                    this vector contains the index of the
+   *                                    cluster in which the element is located.
+   * @param[in,out] status If a leaf at levels <= 1 is found the status is set
+   *                       to 3, otherwise it is not changed.
+   */
   void fill_elements_new(
     const std::vector< general_spacetime_cluster * > & leaves,
     const lo global_dist_tree_depth, const std::vector< lo > & space_levels,
@@ -620,6 +731,21 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     const std::vector< scheduling_time_cluster * > & receive_cluster_vector,
     const lo communication_offset ) const;
 
+  /**
+   * Auxiliary routine for @ref print_spatial_grids. Based on a recursive tree
+   * traversal.
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   * @param[in] print_level Space-time level for which the grid image vector is
+   * determined.
+   * @param[in] n_space_clusters_per_dim Number of spatial clusters per
+   * dimension at level @p print_level.
+   * @param[out] image_vector For each cluster in the spatial grid it contains
+   * an entry (0 if there is no cluster associated with the spatial cluster at
+   * this position, 1 if all clusters are non-leaves, 2 if there is at least one
+   * leaf). The boxes are numerated by
+   * i_x + i_y * n_space_cluster_per_dim
+   * + i_z * n_space_cluster_per_dim * n_space_cluster_per_dim
+   */
   void determine_grid_image_vector( general_spacetime_cluster & current_cluster,
     const lo print_level, const lo n_space_clusters_per_dim,
     std::vector< lo > & image_vector ) const;

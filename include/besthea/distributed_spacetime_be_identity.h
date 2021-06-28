@@ -44,17 +44,22 @@ namespace besthea {
   }
 }
 
+namespace besthea {
+  namespace linear_algebra {
+    class block_vector;
+    class distributed_block_vector;
+  }
+}
+
+/**
+ * Class realizing a spacetime boundary element identity on distributed
+ * space-time tensor meshes.
+ */
 template< class test_space_type, class trial_space_type >
 class besthea::bem::distributed_spacetime_be_identity
   : public besthea::bem::spacetime_be_identity< test_space_type,
       trial_space_type > {
  public:
-  using block_vector_type
-    = besthea::linear_algebra::block_vector;  //!< Block vector type.
-  using distributed_block_vector_type
-    = besthea::linear_algebra::distributed_block_vector;  //!< Block vector
-                                                          //!< type.
-
   /**
    * Constructor.
    * @param[in] test_space Test boundary element space.
@@ -82,8 +87,10 @@ class besthea::bem::distributed_spacetime_be_identity
    * @note This routine is just a dummy here. Please use the corresponding
    * version with distributed block vectors.
    */
-  virtual void apply( const block_vector_type & x, block_vector_type & y,
-    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
+  virtual void apply( [[maybe_unused]] const linear_algebra::block_vector & x,
+    [[maybe_unused]] linear_algebra::block_vector & y,
+    [[maybe_unused]] bool trans = false, [[maybe_unused]] sc alpha = 1.0,
+    [[maybe_unused]] sc beta = 0.0 ) const override;
 
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
@@ -93,9 +100,9 @@ class besthea::bem::distributed_spacetime_be_identity
    * @param[in] alpha
    * @param[in] beta
    */
-  virtual void apply( const distributed_block_vector_type & x,
-    distributed_block_vector_type & y, bool trans = false, sc alpha = 1.0,
-    sc beta = 0.0 ) const override;
+  virtual void apply( const linear_algebra::distributed_block_vector & x,
+    linear_algebra::distributed_block_vector & y, bool trans = false,
+    sc alpha = 1.0, sc beta = 0.0 ) const override;
 };
 
 #endif /* INCLUDE_BESTHEA_DISTRIBUTED_SPACETIME_BE_IDENTITY_H_ */

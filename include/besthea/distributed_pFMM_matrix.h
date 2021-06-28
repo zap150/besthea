@@ -1057,6 +1057,15 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   sc compute_nearfield_ratio( ) const;
 
+  /**
+   * Returns the ratio of entries of the nearfield blocks of the pFMM matrix
+   * handled by this process, which could be substituted by adaptive FMM
+   * operations, and entries of the global, non-approximated matrix.
+   * @note Zeros in nearfield blocks and the full matrix are counted.
+   * @warning If executed in parallel, the results should be added up to get
+   * a meaningful result (due to the comparison with the global number of
+   * entries).
+   */
   sc compute_nearfield_ratio_adaptivity_part( ) const;
 
   /**
