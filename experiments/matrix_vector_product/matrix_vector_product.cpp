@@ -29,8 +29,8 @@ int main( int argc, char * argv[] ) {
   std::string mesh_file_24 = "../../besthea/examples/mesh_files/cube_24.txt";
   sc heat_capacity_constant = 1.0;
 
-  bool doMem    = true;
-  bool doFlyCpu = true;
+  bool doMem    = false;
+  bool doFlyCpu = false;
   bool doFlyGpu = true;
   bool doV = true;
   bool doK = true;

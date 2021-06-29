@@ -61,6 +61,11 @@ namespace besthea::bem::onthefly::helpers {
 
   struct gpu_threads_per_block;
 
+  template<typename T>
+  struct soa3_a;
+  template<typename T>
+  struct soa3_b;
+
   /*!
    * Translates quadrature order to quadrature size -- number of quadrature
    * nodes.
@@ -218,6 +223,20 @@ struct besthea::bem::onthefly::helpers::timer_collection {
   double get_gpu_time_const( );
   double get_gpu_time_scaling( );
   double get_gpu_time_all( );
+};
+
+template<typename T>
+struct besthea::bem::onthefly::helpers::soa3_a {
+  T * xs;
+  T * ys;
+  T * zs;
+};
+
+template<typename T>
+struct besthea::bem::onthefly::helpers::soa3_b {
+  T * e1;
+  T * e2;
+  T * e3;
 };
 
 #endif /* INCLUDE_BESTHEA_GPU_ONTHEFLY_HELPERS_H_ */
