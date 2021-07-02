@@ -68,8 +68,8 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
       : _nodes{ x1, x2, x3, x4 } {
     }
 
-    bool admissible( const element & that, lo & n_nodes ) {
-      n_nodes = 0;
+    lo admissible( const element & that ) {
+      lo n_nodes = 0;
       for ( int i = 0; i < 4; ++i ) {
         for ( int j = 0; j < 4; ++j ) {
           double dist2 = 0.0;
@@ -77,14 +77,13 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
             double diff = _nodes[ i ][ k ] - that._nodes[ j ][ k ];
             dist2 += diff * diff;
           }
-          // std::cout << dist2 << std::endl;
           if ( dist2 < _eps * _eps ) {
             ++n_nodes;
           }
         }
       }
-      // std::cout << std::endl;
-      return ( n_nodes != 4 );
+
+      return n_nodes;
     }
 
     std::array< element, 8 > refine( ) {
@@ -187,10 +186,9 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
   typedef std::tuple< element, element, int > ElementPair;
 
   /**
-   * Wraps the mapped quadrature point so that they can be private for OpenMP
-   * threads
+   * Quadrature nodes in the reference element.
    */
-  struct quadrature_wrapper {
+  struct quadrature_wrapper_ref {
     std::array< std::vector< sc, besthea::allocator_type< sc > >, 5 >
       _x1_ref;  //!< First coordinates of quadrature nodes in
                 //!< (0,1)x(0,1-x1)x(0,1-x1-x2) to be mapped to the test element
@@ -217,6 +215,16 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
     std::array< std::vector< sc, besthea::allocator_type< sc > >, 5 >
       _w;  //!< Quadrature weights including transformation Jacobians
 
+    std::list< ElementPair >
+      _ready_elems;  //!< Auxiliary vector used in generation of
+                     //!< quadrature points for nonadmissible elements.
+  };
+
+  /**
+   * Wraps the mapped quadrature point so that they can be private for OpenMP
+   * threads
+   */
+  struct quadrature_wrapper {
     std::vector< sc, besthea::allocator_type< sc > >
       _x1;  //!< First coordinates of quadrature nodes in the test element
     std::vector< sc, besthea::allocator_type< sc > >
@@ -237,10 +245,6 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
 
     std::vector< sc, besthea::allocator_type< sc > >
       _kernel_values;  //!< Buffer for storing kernel values.
-
-    std::list< ElementPair >
-      _ready_elems;  //!< Auxiliary vector used in generation of
-                     //!< quadrature points for nonadmissible elements.
   };
 
   /*
@@ -295,15 +299,25 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
  private:
   /**
    * Initializes quadrature structures.
+   * @param[in] ref_quadrature Quadrature data on reference element.
    * @param[out] my_quadrature Wrapper holding quadrature data.
    */
-  void init_quadrature( quadrature_wrapper & my_quadrature ) const;
+  void init_quadrature( const quadrature_wrapper_ref & ref_quadrature,
+    quadrature_wrapper & my_quadrature ) const;
+
+  /**
+   * Initializes quadrature structures in reference elements.
+   * @param[out] ref_quadrature Wrapper holding quadrature data.
+   */
+  void init_quadrature_ref( quadrature_wrapper_ref & ref_quadrature ) const;
 
   /**
    * Initializes quadrature structures.
-   * @param[out] my_quadrature Wrapper holding quadrature data.
+   * @param[out] ref_quadrature Wrapper holding quadrature data on reference
+   * elements.
    */
-  void init_quadrature_shared_4( quadrature_wrapper & my_quadrature ) const;
+  void init_quadrature_shared_4(
+    quadrature_wrapper_ref & ref_quadrature ) const;
 
   /**
    * Recursively refines the reference element to create quadrature points for
@@ -339,7 +353,9 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
    * @param[in] type_int Type of the configuration (number of vertices shared).
    * @param[in] perm_test Permutation of the test element.
    * @param[in] perm_trial Permutation of the trial element.
-   * @param[in,out] my_quadrature Structure holding the quadrature nodes.
+   * @param[in] ref_quadrature Structure hodling the quadrature nodes in the
+   * reference elements.
+   * @param[out] my_quadrature Structure holding the quadrature nodes.
    */
   void tetrahedra_to_geometry( const linear_algebra::coordinates< 4 > & x1,
     const linear_algebra::coordinates< 4 > & x2,
@@ -351,16 +367,17 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
     const linear_algebra::coordinates< 4 > & y4, int type_int,
     const besthea::linear_algebra::indices< 4 > & perm_test,
     const besthea::linear_algebra::indices< 4 > & perm_trial,
+    const quadrature_wrapper_ref & ref_quadrature,
     quadrature_wrapper & my_quadrature ) const;
 
   /**
    * Calculates quadrature points in the reference tetrahedron based on its
    * recursive refinement.
    *
-   * @param my_quadrature Structure holding the quadrature nodes.
+   * @param ref_quadrature Structure holding the quadrature nodes.
    */
   void create_quadrature_points(
-    quadrature_wrapper & my_quadrature, int n_shared_vertices ) const;
+    quadrature_wrapper_ref & ref_quadrature, int n_shared_vertices ) const;
 
   /**
    * Maps the quadrature nodes from reference tetrahedron to one if its
