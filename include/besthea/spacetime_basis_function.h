@@ -108,6 +108,19 @@ class besthea::bem::spacetime_basis_function {
   }
 
   /**
+   * Provides global indices for local contributions with permutations.
+   * @param[in] i_elem Element index.
+   * @param[in] perm Permutation vector
+   * @param[out] indices Global indices for local contributions.
+   * @remark Example: In case of p1 basis functions the global indices of the
+   * nodes of the tetrahedron with index \p i_elem are returned.
+   */
+  void local_to_global( lo i_elem, linear_algebra::indices< 4 > & perm,
+    std::vector< lo > & indices ) const {
+    derived( )->do_local_to_global( i_elem, perm, indices );
+  }
+
+  /**
    * Evaluates a basis function in a point in a tetrahedron. The point is given
    * by coordinates in the reference tetrahedron
    * (\f$ (x_1,x_2,x_3) \in (0,1)\times(0,1-x_1)\times(0,1-x_1-x_2) \f$).

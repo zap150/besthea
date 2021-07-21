@@ -41,12 +41,14 @@ template< class kernel_type, class test_space_type, class trial_space_type >
 besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::tetrahedral_spacetime_be_assembler( kernel_type & kernel,
   test_space_type & test_space, trial_space_type & trial_space,
-  int singular_refinements, int order_regular )
+  int singular_refinements, int order_regular, int order_singular )
   : _kernel( &kernel ),
     _test_space( &test_space ),
     _trial_space( &trial_space ),
     _singular_refinements( singular_refinements ),
-    _order_regular( order_regular ) {
+    _order_regular( order_regular ),
+    _order_singular( order_singular ) {
+  _admissibles.resize( singular_refinements );
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -130,12 +132,14 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
         tetrahedra_to_geometry( x1, x2, x3, x4, y1, y2, y3, y4,
           n_shared_vertices, perm_test, perm_trial, ref_quadrature,
           my_quadrature );
+        // n_shared_vertices = 0;
         x1_ref = ref_quadrature._x1_ref[ n_shared_vertices ].data( );
         x2_ref = ref_quadrature._x2_ref[ n_shared_vertices ].data( );
         x3_ref = ref_quadrature._x3_ref[ n_shared_vertices ].data( );
         y1_ref = ref_quadrature._y1_ref[ n_shared_vertices ].data( );
         y2_ref = ref_quadrature._y2_ref[ n_shared_vertices ].data( );
         y3_ref = ref_quadrature._y3_ref[ n_shared_vertices ].data( );
+
         w = ref_quadrature._w[ n_shared_vertices ].data( );
         size = ref_quadrature._w[ n_shared_vertices ].size( );
 
@@ -168,11 +172,14 @@ simdlen( DATA_WIDTH )
 
               value += kernel_data[ i_quad ] * test * trial;
             }
+            // std::cout << value * test_area * trial_area << " ";
             global_matrix.add_atomic( test_l2g[ i_loc_test ],
               trial_l2g[ i_loc_trial ], value * test_area * trial_area );
           }
-        }
 
+          // std::cout << std::endl;
+        }
+        // exit( 0 );
       }  // i_trial
     }    // i_test
   }      // omp parallel
@@ -189,7 +196,7 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
   for ( int i_shared = 1; i_shared <= 4; ++i_shared ) {
     size = std::max( size, ref_quadrature._w[ i_shared ].size( ) );
   }
-
+  // std::cout << size << std::endl;
   my_quadrature._x1.resize( size );
   my_quadrature._x2.resize( size );
   my_quadrature._x3.resize( size );
@@ -244,6 +251,9 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
   }
 
   init_quadrature_shared_4( ref_quadrature );
+  init_quadrature_shared_3( ref_quadrature );
+  init_quadrature_shared_2( ref_quadrature );
+  init_quadrature_shared_1( ref_quadrature );
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -254,19 +264,89 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
   element tetra( { 0.0, 0.0, 0.0 }, { 1.0, 0.0, 0.0 }, { 0.0, 1.0, 0.0 },
     { 0.0, 0.0, 1.0 } );
 
-  ElementPair initial_pair = { tetra, tetra, 0 };
+  element_pair initial_pair = { tetra, tetra, 0 };
 
+  ref_quadrature._ready_elems.resize( 0 );
   refine_reference_recursively( initial_pair, ref_quadrature._ready_elems );
 
   create_quadrature_points( ref_quadrature, 4 );
-  // std::cout << my_quadrature._ready_elems.size( ) << std::endl;
+
+  // for ( auto it : _admissibles ) {
+  //   std::cout << it << std::endl;
+  // }
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
-  test_space_type, trial_space_type >::refine_reference_recursively( ElementPair
-                                                                       el,
-  std::list< ElementPair > & ready_elems ) const {
+  test_space_type,
+  trial_space_type >::init_quadrature_shared_3( quadrature_wrapper_ref &
+    ref_quadrature ) const {
+  element tetra1( { 0.0, 0.0, 0.0 }, { 1.0, 0.0, 0.0 }, { 0.0, 1.0, 0.0 },
+    { 0.0, 0.0, 1.0 } );
+  element tetra2( { 0.0, 0.0, 0.0 }, { 1.0, 0.0, 0.0 }, { 0.0, 1.0, 0.0 },
+    { 0.0, 0.0, -1.0 } );
+
+  element_pair initial_pair = { tetra1, tetra2, 0 };
+
+  ref_quadrature._ready_elems.resize( 0 );
+  refine_reference_recursively( initial_pair, ref_quadrature._ready_elems );
+
+  create_quadrature_points( ref_quadrature, 3 );
+
+  // for ( auto it : _admissibles ) {
+  //   std::cout << it << std::endl;
+  // }
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
+  test_space_type,
+  trial_space_type >::init_quadrature_shared_2( quadrature_wrapper_ref &
+    ref_quadrature ) const {
+  element tetra1( { 0.0, 0.0, 0.0 }, { 1.0, 0.0, 0.0 }, { 0.0, 1.0, 0.0 },
+    { 0.0, 0.0, 1.0 } );
+  element tetra2( { 0.0, 0.0, 0.0 }, { 1.0, 0.0, 0.0 }, { 0.0, -1.0, 0.0 },
+    { 0.0, 0.0, -1.0 } );
+
+  element_pair initial_pair = { tetra1, tetra2, 0 };
+
+  ref_quadrature._ready_elems.resize( 0 );
+  refine_reference_recursively( initial_pair, ref_quadrature._ready_elems );
+
+  create_quadrature_points( ref_quadrature, 2 );
+
+  // for ( auto it : _admissibles ) {
+  //   std::cout << it << std::endl;
+  // }
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
+  test_space_type,
+  trial_space_type >::init_quadrature_shared_1( quadrature_wrapper_ref &
+    ref_quadrature ) const {
+  element tetra1( { 0.0, 0.0, 0.0 }, { 1.0, 0.0, 0.0 }, { 0.0, 1.0, 0.0 },
+    { 0.0, 0.0, 1.0 } );
+  element tetra2( { 0.0, 0.0, 0.0 }, { -1.0, 0.0, 0.0 }, { 0.0, -1.0, 0.0 },
+    { 0.0, 0.0, -1.0 } );
+
+  element_pair initial_pair = { tetra1, tetra2, 0 };
+
+  ref_quadrature._ready_elems.resize( 0 );
+  refine_reference_recursively( initial_pair, ref_quadrature._ready_elems );
+
+  create_quadrature_points( ref_quadrature, 1 );
+
+  // for ( auto it : _admissibles ) {
+  //   std::cout << it << std::endl;
+  // }
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
+  test_space_type,
+  trial_space_type >::refine_reference_recursively( element_pair el,
+  std::list< element_pair > & ready_elems ) const {
   int level = std::get< 2 >( el );
   if ( level < _singular_refinements ) {
     // std::cout << level << std::endl;
@@ -279,32 +359,38 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
     for ( lo i = 0; i < 8; ++i ) {
       for ( lo j = 0; j < 8; ++j ) {
         n_shared_nodes = new_elements_1[ i ].admissible( new_elements_2[ j ] );
-        bool adm = n_shared_nodes != 4;
+        bool adm = ( n_shared_nodes < 1 );
 
         if ( adm ) {
           // push element pair into the ready_elems list
-
           ready_elems.push_back( std::make_tuple(
             new_elements_1[ i ], new_elements_2[ j ], level + 1 ) );
+          _admissibles.at( level ) += 1;
         } else if ( ( !adm ) && ( level + 1 < _singular_refinements ) ) {
-          if ( n_shared_nodes < 4 && n_shared_nodes > 0 ) {
+          if ( n_shared_nodes < 1 && n_shared_nodes > 0 ) {
             // push into the ready_elems list (for now)
-
+            // only for debugging purposes, can be deleted later
             ready_elems.push_back( std::make_tuple(
               new_elements_1[ i ], new_elements_2[ j ], level + 1 ) );
+            _admissibles.at( level ) += 1;
           } else {
-            // further refine the pair of (for now identical) elements
+            // further refine the pair of nonadmissible elements
             refine_reference_recursively( std::make_tuple( new_elements_1[ i ],
                                             new_elements_2[ j ], level + 1 ),
               ready_elems );
           }
         } else {
-          // push the pair of nonidentical elements into ready_elems list, do
-          // nothing with identical ones
-          if ( n_shared_nodes < 4 ) {
+          // push the pair of admissible elements into ready_elems list, do
+          // nothing with nonadmissible ones
+          // only for debugging purposes, can be delete later
+
+          // can be later used to include also pairs with 1, 2, 3 shared
+          // vertices
+          if ( n_shared_nodes < 1 ) {
             // push into the ready_elems list (for now)
             ready_elems.push_back( std::make_tuple(
               new_elements_1[ i ], new_elements_2[ j ], level + 1 ) );
+            _admissibles.at( level ) += 1;
           }
         }
       }
@@ -339,32 +425,67 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
   trial_space_type >::create_quadrature_points( quadrature_wrapper_ref &
                                                   ref_quadrature,
   int n_shared_vertices ) const {
-  std::list< ElementPair > & ready_elems = ref_quadrature._ready_elems;
+  std::list< element_pair > & ready_elems = ref_quadrature._ready_elems;
 
   const std::vector< sc, besthea::allocator_type< sc > > & tetra_w
-    = quadrature::tetrahedron_w( _order_regular );
-  lo tetra_size = tetra_w.size( );
+    = quadrature::tetrahedron_w( _order_singular );
 
   for ( auto & it : ready_elems ) {
     element & el1 = std::get< 0 >( it );
     element & el2 = std::get< 1 >( it );
 
-    sc area2 = el1.area( ) * el2.area( ) * 36.0;
+    sc mult = el1.area( ) * el2.area( ) * 36.0;
     std::vector< sc > x1, x2, x3, y1, y2, y3;
     reference_to_subreference(
       el1, el2, n_shared_vertices, x1, x2, x3, y1, y2, y3 );
 
-    for ( lo i_x = 0; i_x < x1.size( ); ++i_x ) {
-      for ( lo i_y = 0; i_y < y1.size( ); ++i_y ) {
+    for ( lou i_x = 0; i_x < x1.size( ); ++i_x ) {
+      for ( lou i_y = 0; i_y < y1.size( ); ++i_y ) {
         ref_quadrature._x1_ref[ n_shared_vertices ].push_back( x1[ i_x ] );
-        ref_quadrature._x2_ref[ n_shared_vertices ].push_back( x1[ i_x ] );
-        ref_quadrature._x3_ref[ n_shared_vertices ].push_back( x1[ i_x ] );
-        ref_quadrature._y1_ref[ n_shared_vertices ].push_back( y1[ i_y ] );
-        ref_quadrature._y2_ref[ n_shared_vertices ].push_back( y1[ i_y ] );
-        ref_quadrature._y3_ref[ n_shared_vertices ].push_back( y1[ i_y ] );
+        ref_quadrature._x2_ref[ n_shared_vertices ].push_back( x2[ i_x ] );
+        ref_quadrature._x3_ref[ n_shared_vertices ].push_back( x3[ i_x ] );
         ref_quadrature._w[ n_shared_vertices ].push_back(
-          tetra_w[ i_x ] * tetra_w[ i_y ] * area2 );
+          tetra_w[ i_x ] * tetra_w[ i_y ] * mult );
       }
+    }
+
+    switch ( n_shared_vertices ) {
+      case 4:
+        for ( lou i_x = 0; i_x < x1.size( ); ++i_x ) {
+          for ( lou i_y = 0; i_y < y1.size( ); ++i_y ) {
+            ref_quadrature._y1_ref[ n_shared_vertices ].push_back( y1[ i_y ] );
+            ref_quadrature._y2_ref[ n_shared_vertices ].push_back( y2[ i_y ] );
+            ref_quadrature._y3_ref[ n_shared_vertices ].push_back( y3[ i_y ] );
+          }
+        }
+        break;
+      case 3:
+        for ( lou i_x = 0; i_x < x1.size( ); ++i_x ) {
+          for ( lou i_y = 0; i_y < y1.size( ); ++i_y ) {
+            ref_quadrature._y1_ref[ n_shared_vertices ].push_back( y1[ i_y ] );
+            ref_quadrature._y2_ref[ n_shared_vertices ].push_back( y2[ i_y ] );
+            ref_quadrature._y3_ref[ n_shared_vertices ].push_back( -y3[ i_y ] );
+          }
+        }
+        break;
+      case 2:
+        for ( lou i_x = 0; i_x < x1.size( ); ++i_x ) {
+          for ( lou i_y = 0; i_y < y1.size( ); ++i_y ) {
+            ref_quadrature._y1_ref[ n_shared_vertices ].push_back( y1[ i_y ] );
+            ref_quadrature._y2_ref[ n_shared_vertices ].push_back( -y2[ i_y ] );
+            ref_quadrature._y3_ref[ n_shared_vertices ].push_back( -y3[ i_y ] );
+          }
+        }
+        break;
+      case 1:
+        for ( lou i_x = 0; i_x < x1.size( ); ++i_x ) {
+          for ( lou i_y = 0; i_y < y1.size( ); ++i_y ) {
+            ref_quadrature._y1_ref[ n_shared_vertices ].push_back( -y1[ i_y ] );
+            ref_quadrature._y2_ref[ n_shared_vertices ].push_back( -y2[ i_y ] );
+            ref_quadrature._y3_ref[ n_shared_vertices ].push_back( -y3[ i_y ] );
+          }
+        }
+        break;
     }
   }
 }
@@ -377,11 +498,11 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
   std::vector< sc > & x2, std::vector< sc > & x3, std::vector< sc > & y1,
   std::vector< sc > & y2, std::vector< sc > & y3 ) const {
   const std::vector< sc, besthea::allocator_type< sc > > & tetra_x1
-    = quadrature::tetrahedron_x1( _order_regular );
+    = quadrature::tetrahedron_x1( _order_singular );
   const std::vector< sc, besthea::allocator_type< sc > > & tetra_x2
-    = quadrature::tetrahedron_x2( _order_regular );
+    = quadrature::tetrahedron_x2( _order_singular );
   const std::vector< sc, besthea::allocator_type< sc > > & tetra_x3
-    = quadrature::tetrahedron_x3( _order_regular );
+    = quadrature::tetrahedron_x3( _order_singular );
 
   lo size = tetra_x1.size( );
 
@@ -397,8 +518,8 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
   const besthea::linear_algebra::coordinates< 3 > & sub_x2 = nodes1[ 1 ];
   const besthea::linear_algebra::coordinates< 3 > & sub_x3 = nodes1[ 2 ];
   const besthea::linear_algebra::coordinates< 3 > & sub_x4 = nodes1[ 3 ];
-  auto & nodes2 = el2._nodes;
 
+  auto & nodes2 = el2._nodes;
   const besthea::linear_algebra::coordinates< 3 > & sub_y1 = nodes2[ 0 ];
   const besthea::linear_algebra::coordinates< 3 > & sub_y2 = nodes2[ 1 ];
   const besthea::linear_algebra::coordinates< 3 > & sub_y3 = nodes2[ 2 ];
@@ -451,16 +572,19 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
   const sc * y3rot = nullptr;
   const sc * y4rot = nullptr;
 
-  // TODO with perm_test, perm_trial
-  x1rot = x1.data( );
-  x2rot = x2.data( );
-  x3rot = x3.data( );
-  x4rot = x4.data( );
+  std::vector< sc * > x_data = { (sc *) x1.data( ), (sc *) x2.data( ),
+    (sc *) x3.data( ), (sc *) x4.data( ) };
+  x1rot = x_data[ perm_test[ 0 ] ];  // = x1.data( );
+  x2rot = x_data[ perm_test[ 1 ] ];  // = x2.data( );
+  x3rot = x_data[ perm_test[ 2 ] ];  // = x3.data( );
+  x4rot = x_data[ perm_test[ 3 ] ];  // = x4.data( );
 
-  y1rot = y1.data( );
-  y2rot = y2.data( );
-  y3rot = y3.data( );
-  y4rot = y4.data( );
+  std::vector< sc * > y_data = { (sc *) y1.data( ), (sc *) y2.data( ),
+    (sc *) y3.data( ), (sc *) y4.data( ) };
+  y1rot = y_data[ perm_trial[ 0 ] ];  // = y1.data( );
+  y2rot = y_data[ perm_trial[ 1 ] ];  // = y2.data( );
+  y3rot = y_data[ perm_trial[ 2 ] ];  // = y3.data( );
+  y4rot = y_data[ perm_trial[ 3 ] ];  // = y4.data( );
 
   const sc * x1_ref = ref_quadrature._x1_ref[ n_shared_vertices ].data( );
   const sc * x2_ref = ref_quadrature._x2_ref[ n_shared_vertices ].data( );
@@ -479,8 +603,7 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
   sc * tau_mapped = my_quadrature._tau.data( );
 
   lo size = ref_quadrature._w[ n_shared_vertices ].size( );
-  // if ( n_shared_vertices == 0 )
-  //  std::cout << size << std::endl;
+
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, t_mapped      \
                           : DATA_ALIGN ) aligned( x1_ref, x2_ref, x3_ref \
                                                   : DATA_ALIGN )         \
@@ -525,42 +648,75 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
   test_space_type, trial_space_type >::get_type( lo i_test, lo i_trial,
   int & n_shared_vertices, besthea::linear_algebra::indices< 4 > & perm_test,
   besthea::linear_algebra::indices< 4 > & perm_trial ) const {
-  // check for identical
   for ( int i = 0; i < 4; ++i ) {
     perm_test[ i ] = i;
     perm_trial[ i ] = i;
   }
+  n_shared_vertices = 0;
 
   if ( i_test == i_trial ) {
     n_shared_vertices = 4;
     return;
   }
-  n_shared_vertices = 0;
-  return;
+
   linear_algebra::indices< 4 > test_elem;
   linear_algebra::indices< 4 > trial_elem;
 
   _test_space->get_mesh( )->get_element( i_test, test_elem );
   _trial_space->get_mesh( )->get_element( i_trial, trial_elem );
 
-  lo counter = 0;
   for ( lo i = 0; i < 4; ++i ) {
     for ( lo j = 0; j < 4; ++j ) {
       if ( test_elem[ i ] == trial_elem[ j ] ) {
-        perm_test[ n_shared_vertices ] = i;
-        perm_test[ i ] = n_shared_vertices;
-        perm_trial[ n_shared_vertices ] = j;
-        perm_trial[ j ] = n_shared_vertices;
         ++n_shared_vertices;
       }
     }
   }
 
-  // for ( int i = 0; i < 4; ++i ) {
-  //   perm_test[ i ] = i;
-  //   perm_trial[ i ] = i;
-  // }
-  // return;
+  if ( n_shared_vertices == 0 ) {
+    return;
+  }
+
+  std::array< int, 4 > idx_test;
+  std::array< int, 4 > idx_trial;
+  std::array< int, 4 > non_shared_test = { 1, 1, 1, 1 };
+  std::array< int, 4 > non_shared_trial = { 1, 1, 1, 1 };
+
+  int counter = 0;
+
+  for ( lo i = 0; i < 4; ++i ) {
+    for ( lo j = 0; j < 4; ++j ) {
+      if ( test_elem[ i ] == trial_elem[ j ] ) {
+        idx_test[ counter ] = i;
+        idx_trial[ counter ] = j;
+        non_shared_test[ i ] = 0;
+        non_shared_trial[ j ] = 0;
+        ++counter;
+      }
+    }
+  }
+
+  for ( lo i = 0; i < n_shared_vertices; ++i ) {
+    perm_test[ i ] = idx_test[ i ];
+    perm_trial[ i ] = idx_trial[ i ];
+  }
+
+  counter = n_shared_vertices;
+  for ( int i = 0; i < 4; ++i ) {
+    if ( non_shared_test[ i ] == 1 ) {
+      perm_test[ counter ] = i;
+      ++counter;
+    }
+  }
+
+  counter = n_shared_vertices;
+  for ( int i = 0; i < 4; ++i ) {
+    if ( non_shared_trial[ i ] == 1 ) {
+      perm_trial[ counter ] = i;
+      ++counter;
+    }
+  }
+
   // END TO REMOVE
 }
 

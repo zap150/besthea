@@ -37,10 +37,14 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/full_matrix.h"
 #include "besthea/tetrahedral_spacetime_be_space.h"
+#include "besthea/timer.h"
 
 #include <array>
 #include <list>
+#include <map>
+#include <set>
 #include <tuple>
+#include <utility>
 
 namespace besthea {
   namespace bem {
@@ -183,7 +187,7 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
     using pair = std::pair< element, element >;
   };
 
-  typedef std::tuple< element, element, int > ElementPair;
+  typedef std::tuple< element, element, int > element_pair;
 
   /**
    * Quadrature nodes in the reference element.
@@ -215,7 +219,7 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
     std::array< std::vector< sc, besthea::allocator_type< sc > >, 5 >
       _w;  //!< Quadrature weights including transformation Jacobians
 
-    std::list< ElementPair >
+    std::list< element_pair >
       _ready_elems;  //!< Auxiliary vector used in generation of
                      //!< quadrature points for nonadmissible elements.
   };
@@ -279,7 +283,8 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
    */
   tetrahedral_spacetime_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
-    int singular_refinements, int order_regular = 4 );
+    int singular_refinements = 3, int order_regular = 4,
+    int order_singular = 2 );
 
   tetrahedral_spacetime_be_assembler(
     const tetrahedral_spacetime_be_assembler & that )
@@ -320,13 +325,37 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
     quadrature_wrapper_ref & ref_quadrature ) const;
 
   /**
+   * Initializes quadrature structures.
+   * @param[out] ref_quadrature Wrapper holding quadrature data on reference
+   * elements.
+   */
+  void init_quadrature_shared_3(
+    quadrature_wrapper_ref & ref_quadrature ) const;
+
+  /**
+   * Initializes quadrature structures.
+   * @param[out] ref_quadrature Wrapper holding quadrature data on reference
+   * elements.
+   */
+  void init_quadrature_shared_2(
+    quadrature_wrapper_ref & ref_quadrature ) const;
+
+  /**
+   * Initializes quadrature structures.
+   * @param[out] ref_quadrature Wrapper holding quadrature data on reference
+   * elements.
+   */
+  void init_quadrature_shared_1(
+    quadrature_wrapper_ref & ref_quadrature ) const;
+
+  /**
    * Recursively refines the reference element to create quadrature points for
    * non-disjoint elements.
    * @param[in] el Tuple consisting of pair of subelements and refinement
    * level.
    */
   void refine_reference_recursively(
-    ElementPair el, std::list< ElementPair > & _ready_elems ) const;
+    element_pair el, std::list< element_pair > & _ready_elems ) const;
 
   /**
    * Determines the configuration of two tetrahedral elements.
@@ -414,6 +443,11 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
 
   int _order_regular;  //!< Tetrahedron quadrature order for the regular
                        //!< integrals.
+
+  int _order_singular;  //! Quadrature order for the singular elements treated
+                        //! by subdivision.
+
+  mutable std::vector< lo > _admissibles;  // just for debugging
 };
 
 #endif /* INCLUDE_BESTHEA_TETRAHEDRAL_SPACETIME_BE_ASSEMBLER_H_ */

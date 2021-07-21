@@ -79,6 +79,8 @@ class besthea::bem::spacetime_constant_kernel
   sc do_evaluate( [[maybe_unused]] sc xy1, [[maybe_unused]] sc xy2,
     [[maybe_unused]] sc xy3, [[maybe_unused]] const sc * nx,
     [[maybe_unused]] const sc * ny, [[maybe_unused]] sc ttau ) const {
+    // return _alpha;
+
     return _alpha;
   }
 

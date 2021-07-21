@@ -88,6 +88,16 @@ class besthea::bem::spacetime_basis_tetra_p1
    */
   void do_local_to_global( lo i_elem, std::vector< lo > & indices ) const;
 
+  // /**
+  //  * Provides the global indices of the 4 nodes of the tetrahedron with given
+  //  * index and permutation.
+  //  * @param[in] i_elem Index of the tetrahedron.
+  //  * @param[in] perm Permutation vector
+  //  * @param[out] indices Global indices of the nodes of the tetrahedron.
+  //  */
+  // void do_local_to_global( lo i_elem, linear_algebra::indices< 4 > & perm,
+  //   std::vector< lo > & indices ) const;
+
   /**
    * Evaluates a basis function in a point in a tetrahedron. The point is given
    * by coordinates in the reference tetrahedron
@@ -134,9 +144,10 @@ class besthea::bem::spacetime_basis_tetra_p1
 #pragma omp declare simd uniform( this, i_elem, i_fun, n, perm ) \
   simdlen( DATA_WIDTH )
   sc do_evaluate( [[maybe_unused]] lo i_elem, lo i_fun, sc x1_ref, sc x2_ref,
-    sc x3_ref, [[maybe_unused]] const sc * n,
-    [[maybe_unused]] const lo * perm ) const {
+    sc x3_ref, [[maybe_unused]] const sc * n, const lo * perm ) const {
     sc value = 0.0;
+
+    i_fun = perm[ i_fun ];
 
     if ( i_fun == 0 ) {
       value = 1 - x1_ref - x2_ref - x3_ref;
