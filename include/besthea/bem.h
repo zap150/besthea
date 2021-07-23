@@ -57,6 +57,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/spacetime_heat_kernel_normal_derivative.h"
 #include "besthea/spacetime_heat_sl_kernel_antiderivative.h"
 #include "besthea/tetrahedral_spacetime_be_assembler.h"
+#include "besthea/tetrahedral_spacetime_be_evaluator.h"
 #include "besthea/tetrahedral_spacetime_be_identity.h"
 #include "besthea/tetrahedral_spacetime_be_space.h"
 #include "besthea/uniform_spacetime_be_assembler.h"
