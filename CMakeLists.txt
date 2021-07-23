@@ -77,6 +77,7 @@ set(besthea_INCLUDES
   include/besthea/spacetime_heat_initial_m0_kernel_antiderivative.h
   include/besthea/spacetime_heat_initial_m1_kernel_antiderivative.h
   include/besthea/spacetime_heat_kernel.h
+  include/besthea/spacetime_heat_kernel_normal_derivative.h
   include/besthea/spacetime_heat_kernel_antiderivative.h
   include/besthea/spacetime_heat_sl_kernel_antiderivative.h
   include/besthea/spacetime_initial_kernel_antiderivative.h

@@ -123,6 +123,14 @@ class besthea::linear_algebra::full_matrix
   void random_fill_diag( sc lower, sc upper );
 
   /*!
+   * @brief Removes data from the matrix.
+   */
+  void clear( ) {
+    _data.clear( );
+    _data.shrink_to_fit( );
+  }
+
+  /*!
    * @brief Returns the (i,j)-th element of the matrix.
    * @param[in] i Row index.
    * @param[in] j Column index.

@@ -34,6 +34,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/spacetime_basis_tetra_p1.h"
 #include "besthea/spacetime_constant_kernel.h"
 #include "besthea/spacetime_heat_kernel.h"
+#include "besthea/spacetime_heat_kernel_normal_derivative.h"
 
 #include <algorithm>
 
@@ -41,7 +42,7 @@ template< class kernel_type, class test_space_type, class trial_space_type >
 besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type, test_space_type,
   trial_space_type >::tetrahedral_spacetime_be_assembler( kernel_type & kernel,
   test_space_type & test_space, trial_space_type & trial_space,
-  int singular_refinements, int order_regular, int order_singular )
+  int order_regular, int order_singular, int singular_refinements )
   : _kernel( &kernel ),
     _test_space( &test_space ),
     _trial_space( &trial_space ),
@@ -86,6 +87,7 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
 
     linear_algebra::coordinates< 4 > x1, x2, x3, x4;
     linear_algebra::coordinates< 4 > y1, y2, y3, y4;
+    linear_algebra::coordinates< 3 > ny;
     linear_algebra::indices< 4 > perm_test, perm_trial;
     int n_shared_vertices = 0;
     lo size;
@@ -95,7 +97,7 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
     lo * perm_trial_data = perm_trial.data( );
 
     sc * nx_data = nullptr;
-    sc * ny_data = nullptr;
+    sc * ny_data = ny.data( );  // nullptr;
 
     quadrature_wrapper my_quadrature;
     init_quadrature( ref_quadrature, my_quadrature );
@@ -122,6 +124,7 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
       test_area = test_mesh->area( i_test );
       for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
         trial_mesh->get_nodes( i_trial, y1, y2, y3, y4 );
+        trial_mesh->get_spatial_normal( i_trial, ny );
         trial_area = trial_mesh->area( i_trial );
 
         get_type( i_test, i_trial, n_shared_vertices, perm_test, perm_trial );
@@ -714,6 +717,13 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
 
 template class besthea::bem::tetrahedral_spacetime_be_assembler<
   besthea::bem::spacetime_heat_kernel,
+  besthea::bem::tetrahedral_spacetime_be_space<
+    besthea::bem::spacetime_basis_tetra_p1 >,
+  besthea::bem::tetrahedral_spacetime_be_space<
+    besthea::bem::spacetime_basis_tetra_p1 > >;
+
+template class besthea::bem::tetrahedral_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_kernel_normal_derivative,
   besthea::bem::tetrahedral_spacetime_be_space<
     besthea::bem::spacetime_basis_tetra_p1 >,
   besthea::bem::tetrahedral_spacetime_be_space<

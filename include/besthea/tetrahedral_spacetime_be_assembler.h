@@ -283,8 +283,7 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
    */
   tetrahedral_spacetime_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
-    int singular_refinements = 3, int order_regular = 4,
-    int order_singular = 2 );
+    int order_regular, int order_singular, int singular_refinements );
 
   tetrahedral_spacetime_be_assembler(
     const tetrahedral_spacetime_be_assembler & that )
