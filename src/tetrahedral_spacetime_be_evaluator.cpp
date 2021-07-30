@@ -30,8 +30,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/tetrahedral_spacetime_be_evaluator.h"
 
-#include "besthea/basis_tetra_p1.h"
 #include "besthea/quadrature.h"
+#include "besthea/spacetime_basis_tetra_p1.h"
 #include "besthea/spacetime_heat_kernel.h"
 #include "besthea/spacetime_heat_kernel_normal_derivative.h"
 #include "besthea/tetrahedral_spacetime_be_space.h"
@@ -70,7 +70,15 @@ void besthea::bem::
     linear_algebra::coordinates< 4 > y1, y2, y3, y4;
     linear_algebra::coordinates< 3 > ny;
     std::vector< lo > l2g( loc_dim );
-    sc density_value;
+
+    sc * y1_ref = my_quadrature._y1_ref.data( );
+    sc * y2_ref = my_quadrature._y2_ref.data( );
+    sc * y3_ref = my_quadrature._y3_ref.data( );
+    sc * y1_mapped = my_quadrature._y1.data( );
+    sc * y2_mapped = my_quadrature._y2.data( );
+    sc * y3_mapped = my_quadrature._y3.data( );
+    sc * tau_mapped = my_quadrature._tau.data( );
+    sc * w = my_quadrature._wy.data( );
 
 #pragma omp for schedule( dynamic, 8 )
     for ( lo i_point = 0; i_point < n_points; ++i_point ) {
@@ -79,13 +87,16 @@ void besthea::bem::
       const auto & x2 = point[ 1 ];
       const auto & x3 = point[ 2 ];
       const auto & t = point[ 3 ];
-      auto & res = result[ i_point ];
-      res = 0.0;
+
+      // init
+      result[ i_point ] = 0.0;
 
       if ( t <= 0.0 ) {
         // potential vanishes
         continue;
       }
+
+      sc res = 0.0;
 
       for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
         mesh->get_nodes( i_elem, y1, y2, y3, y4 );
@@ -94,26 +105,28 @@ void besthea::bem::
         basis.local_to_global( i_elem, l2g );
         tetrahedron_to_geometry( y1, y2, y3, y4, my_quadrature );
 
+#pragma omp simd aligned(                                                \
+  y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, y3_ref, tau_mapped, w \
+  : DATA_ALIGN ) reduction(+ : res) simdlen( DATA_WIDTH )
         for ( lo i_quad = 0; i_quad < size_quad; ++i_quad ) {
-          sc kernel = _kernel->evaluate( x1 - my_quadrature._y1[ i_quad ],
-            x2 - my_quadrature._y2[ i_quad ], x3 - my_quadrature._y3[ i_quad ],
-            nullptr, ny.data( ), t - my_quadrature._tau[ i_quad ] );
+          sc kernel = _kernel->evaluate( x1 - y1_mapped[ i_quad ],
+            x2 - y2_mapped[ i_quad ], x3 - y3_mapped[ i_quad ], nullptr,
+            ny.data( ), t - tau_mapped[ i_quad ] );
 
           for ( lo i_loc = 0; i_loc < loc_dim; ++i_loc ) {
-            sc basis_value
-              = basis.evaluate( i_elem, i_loc, my_quadrature._y1_ref[ i_quad ],
-                  my_quadrature._y2_ref[ i_quad ],
-                  my_quadrature._y3_ref[ i_quad ] )
-              * my_quadrature._wy[ i_quad ] * area * kernel;
+            sc basis_value = basis.evaluate( i_elem, i_loc, y1_ref[ i_quad ],
+                               y2_ref[ i_quad ], y3_ref[ i_quad ] )
+              * w[ i_quad ] * area * kernel;
 
             // adding value
-            density_value = density.get( l2g[ i_loc ] );
-            res += density_value * basis_value;
+            res += density.get( l2g[ i_loc ] ) * basis_value;
           }  // i_loc
         }    // i_quad
-      }      // i_elem
-    }        // for i_point
-  }          // omp parallel
+        // save result
+        result[ i_point ] = res;
+      }  // i_elem
+    }    // for i_point
+  }      // omp parallel
 }
 
 template< class kernel_type, class space_type >
@@ -172,9 +185,9 @@ void besthea::bem::tetrahedral_spacetime_be_evaluator< kernel_type,
 template class besthea::bem::tetrahedral_spacetime_be_evaluator<
   besthea::bem::spacetime_heat_kernel,
   besthea::bem::tetrahedral_spacetime_be_space<
-    besthea::bem::basis_tetra_p1 > >;
+    besthea::bem::spacetime_basis_tetra_p1 > >;
 
 template class besthea::bem::tetrahedral_spacetime_be_evaluator<
   besthea::bem::spacetime_heat_kernel_normal_derivative,
   besthea::bem::tetrahedral_spacetime_be_space<
-    besthea::bem::basis_tetra_p1 > >;
+    besthea::bem::spacetime_basis_tetra_p1 > >;

@@ -80,9 +80,6 @@ class besthea::bem::tetrahedral_spacetime_be_evaluator {
     std::vector< sc, besthea::allocator_type< sc > >
       _tau;  //!< Temporal coordinates of quadrature nodes in the spatial
              //!< element
-
-    std::vector< sc, besthea::allocator_type< sc > >
-      _kernel_values;  //!< Buffer for storing kernel values.
   };
 
  public:
