@@ -257,6 +257,13 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
   init_quadrature_shared_3( ref_quadrature );
   init_quadrature_shared_2( ref_quadrature );
   init_quadrature_shared_1( ref_quadrature );
+
+  std::cout << "Quadrature over tensor product of tetrahedra:" << std::endl;
+  std::cout << "  disjoint:  " << ref_quadrature._w[ 0 ].size( ) << std::endl;
+  std::cout << "  vertex:    " << ref_quadrature._w[ 1 ].size( ) << std::endl;
+  std::cout << "  edge:      " << ref_quadrature._w[ 2 ].size( ) << std::endl;
+  std::cout << "  face:      " << ref_quadrature._w[ 3 ].size( ) << std::endl;
+  std::cout << "  identical: " << ref_quadrature._w[ 4 ].size( ) << std::endl;
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
