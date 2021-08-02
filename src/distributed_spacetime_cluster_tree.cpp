@@ -133,33 +133,9 @@ besthea::mesh::distributed_spacetime_cluster_tree::
                 << std::endl;
     }
     return;
-  } else if ( status == 3 ) {
-    if ( _my_rank == 0 ) {
-      std::cout << "ERROR: Found a space-time leaf cluster at level 0 or 1"
-                << std::endl;
-      std::cout
-        << "This means that the space-time mesh is (locally) too coarse."
-        << std::endl;
-    }
-    return;
   }
-  // if not, check whether the depth of the space-time tree is greater than or
-  // equal to the depth of the distribution tree. If not, abort too
   _max_levels = std::min( _max_levels, _real_max_levels );
-  // note: _real_max_levels is global, since communication takes place in build
-  // tree routine
-  if ( _max_levels < get_distribution_tree( )->get_levels( ) ) {
-    status = 2;
-    if ( _my_rank == 0 ) {
-      std::cout << "ERROR: Depth of local spacetime tree (" << _max_levels - 1
-                << ") is less than depth of local distribution tree ("
-                << get_distribution_tree( )->get_levels( ) - 1 << ")!"
-                << std::endl;
-    }
-    return;
-  }
 
-  // otherwise, continue with the tree construction
   // collect the leaves in the local part of the spacetime cluster
   collect_local_leaves( *_root );
 
@@ -195,6 +171,22 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   MPI_Allreduce( MPI_IN_PLACE, _spatial_paddings.data( ),
     _spatial_paddings.size( ), get_scalar_type< sc >::MPI_SC( ), MPI_MAX,
     *_comm );
+
+  // check whether there are clusters which are padded a lot (more than 50 %)
+  // and print a warning if necessary
+  if ( _my_rank == 0 ) {
+    bool extensive_padding = false;
+    sc current_cluster_half_size = space_half_sizes[ 0 ];
+    for ( lo i = 0; i < _max_levels; ++i ) {
+      extensive_padding
+        = ( current_cluster_half_size / 2.0 < _spatial_paddings[ i ] );
+    }
+    if ( extensive_padding ) {
+      std::cout << "Warning: Extensive padding detected in construction of "
+                   "distributed space-time tree!"
+                << std::endl;
+    }
+  }
 
   // reduce the distribution tree locally: Remove clusters whose essential
   // status is at least 2 (essential in the distribution and space-time tree),
@@ -362,8 +354,12 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
     // get global number of elements per cluster
     get_n_elements_in_subdivisioning( n_space_div, child_level,
       time_clusters_on_level, fine_box_bounds, n_elems_per_subdivisioning );
+    lo current_status;
     split_clusters_levelwise( split_space, n_space_div, n_time_div,
-      n_elems_per_subdivisioning, cluster_pairs );
+      n_elems_per_subdivisioning, cluster_pairs, current_status );
+    if ( current_status == -1 ) {
+      status = -1;
+    }
     // replace time_cluster_on_level with the appropriate vector for the next
     // level
     std::vector< scheduling_time_cluster * > time_clusters_next_level;
@@ -410,7 +406,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
 
 void besthea::mesh::distributed_spacetime_cluster_tree::build_tree_new(
   lo & status ) {
-  status = 0;
   tree_structure * dist_tree = get_distribution_tree( );
   lo dist_tree_depth = dist_tree->get_levels( );
   lo dist_tree_depth_coll;
@@ -436,32 +431,15 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree_new(
     space_levels[ j ] = current_space_level;
   }
 
-  // split the spatial box into subintervals according to the spatial size of
-  // the boxes at the space-time level dist_tree_depth_coll
-
-  // check whether there are really coarse elements in the spatial mesh and
-  // print a warning if that is the case
+  //// split the spatial box into subintervals according to the spatial size of
+  //// the boxes at the space-time level dist_tree_depth_coll
   vector_type space_half_size( 3 );
   sc time_half_size;
   _root->get_half_size( space_half_size, time_half_size );
   lo max_space_level = space_levels[ dist_tree_depth_coll - 1 ];
-  sc cluster_half_size_at_max_level
-    = space_half_size[ 0 ] / ( (sc) ( 1 << max_space_level ) );
-  if ( _my_rank == 0 ) {
-    if ( _spacetime_mesh.get_spatial_surface_mesh( )->get_max_diameter( )
-      > cluster_half_size_at_max_level ) {
-      std::cout << "WARNING: Clusters containing elements with large spatial "
-                   "sizes (diameters > cluster half size) detected in "
-                   "communicative tree construction phase!"
-                << std::endl;
-    }
-  }
-
   std::vector< std::vector< lo > > levelwise_elems_per_subdivisioning;
   levelwise_elems_per_subdivisioning.resize( dist_tree_depth_coll );
-
   std::vector< lo > boxes_of_local_elements;
-
   // communicatively determine the number of elements in boxes at the level
   // dist_tree_depth_coll
   get_n_elements_in_fine_subdivisioning( max_space_level,
@@ -520,9 +498,13 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree_new(
   // top to bottom)
   for ( lo child_level = 1; child_level < dist_tree_depth_coll;
         ++child_level ) {
+    lo current_status = 0;
     split_clusters_levelwise( split_space, space_levels[ child_level ],
       child_level, levelwise_elems_per_subdivisioning[ child_level ],
-      cluster_pairs );
+      cluster_pairs, current_status );
+    if ( current_status == -1 ) {
+      status = current_status;
+    }
     // replace time_cluster_on_level with the appropriate vector for the next
     // level
     if ( !split_space && child_level + 1 >= _start_space_refinement ) {
@@ -534,6 +516,19 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree_new(
   }
 
   MPI_Barrier( *_comm );
+  if ( _my_rank == 0 ) {
+    MPI_Reduce( MPI_IN_PLACE, &status, 1, get_index_type< lou >::MPI_LO( ),
+      MPI_MIN, 0, *_comm );
+  } else {
+    MPI_Reduce( &status, nullptr, 1, get_index_type< lou >::MPI_LO( ), MPI_MIN,
+      0, *_comm );
+  }
+  if ( _my_rank == 0 && status == -1 ) {
+    std::cout
+      << "Note: Some scarsely populated space-time clusters were refined in "
+         "the construction of the upper part of the space-time cluster tree."
+      << std::endl;
+  }
 
   std::vector< general_spacetime_cluster * > leaves;
   // collect the real leaves of the local spacetime cluster tree
@@ -544,7 +539,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree_new(
   fill_elements_new( leaves, dist_tree_depth_coll - 1, space_levels,
     boxes_of_local_elements, status );
 
-  if ( status == 0 ) {
+  if ( status <= 0 ) {
     for ( auto it : leaves ) {
       build_subtree( *it, split_space_levelwise[ it->get_level( ) + 1 ] );
     }
@@ -1465,7 +1460,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   split_clusters_levelwise( bool split_space, lo n_space_div, lo n_time_div,
     std::vector< lo > & elems_in_clusters,
     std::vector< std::pair< general_spacetime_cluster *,
-      scheduling_time_cluster * > > & cluster_pairs ) {
+      scheduling_time_cluster * > > & cluster_pairs,
+    lo & status ) {
   // compute number of space clusters at the level of children
   lo n_space_clusters = 1 << n_space_div;
   // vector to store the pairs of children which are constructed below.
@@ -1475,7 +1471,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   // reserve a fair amount of entries
   // (assuming <~ 5 children in time, 2 in space due to surface mesh)
   new_cluster_pairs.reserve( cluster_pairs.size( ) * 10 );
-
   // refine all space-time clusters whose children are locally essential
   for ( lou i = 0; i < cluster_pairs.size( ); ++i ) {
     // get current spacetime cluster and time cluster
@@ -1483,10 +1478,14 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     const std::vector< slou > parent_coord = st_cluster->get_box_coordinate( );
     scheduling_time_cluster * t_cluster = cluster_pairs[ i ].second;
 
-    // split the cluster only if it contains enough elements and the temporal
-    // component is a non-leaf
-    if ( st_cluster->get_n_elements( ) >= _n_min_elems
-      && t_cluster->get_n_children( ) > 0 ) {
+    // split the space-time cluster if the temporal component is a non-leaf.
+    // Note: Clusters containing less than _n_min_elems elements are also
+    // refined to avoid generating leaves which cannot be handled well directly
+    // in the parallelization routine.
+    if ( t_cluster->get_n_children( ) > 0 ) {
+      if ( st_cluster->get_n_elements( ) < _n_min_elems ) {
+        status = -1;
+      }
       std::vector< scheduling_time_cluster * > * t_children
         = t_cluster->get_children( );
       for ( auto t_child : *t_children ) {
@@ -1576,9 +1575,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
           }
         }
       }
-    } else if ( st_cluster->get_n_elements( ) < _n_min_elems ) {
-      // mark st_cluster as a global leaf in the distributed tree.
-      st_cluster->set_global_leaf_status( true );
     }
   }
   // replace the old vector of cluster pairs by the one which was newly
@@ -1711,11 +1707,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::collect_real_leaves(
 void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
   general_spacetime_cluster & cluster,
   const std::vector< std::vector< sc > > & fine_box_bounds, lo & status ) {
-  if ( cluster.get_level( ) <= 1 ) {
-    status = 3;
-    return;
-  }
-  // assert( cluster.get_level( ) > 1 );
+  assert( cluster.get_level( ) > 1 );
   lo n_space_div, n_time_div;
   cluster.get_n_divs( n_space_div, n_time_div );
   lo n_space_clusters = 1;
@@ -1853,7 +1845,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
   }
 
   cluster.set_n_time_elements( timesteps_union.size( ) );
-  status = 0;
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements_new(
@@ -1876,10 +1867,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements_new(
     // while going through the leaves we also check for exceptional cases,
     // reserve space for the elements and set the "elements_are_local" status of
     // the leaf
-    if ( box_coordinates[ 0 ] <= 1 ) {
-      status = 3;
-      return;
-    }
+    assert( box_coordinates[ 0 ] > 1 );
     leaf->reserve_elements( leaf->get_n_elements( ) );
     if ( leaf->get_process_id( ) == _my_rank ) {
       leaf->set_elements_are_local( true );

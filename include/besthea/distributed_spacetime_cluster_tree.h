@@ -490,13 +490,17 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    *                                essential non-leaf cluster. The vector is
    *                                overwritten by the vector of pairs of
    *                                children.
+   * @param[out] status If clusters containing few elements (<_n_min_elems) are
+   *                    refined by the routine  @p status is set to 1, otherwise
+   *                    it is set to 0.
    * @todo What to do with early space-time leaf clusters?
    * @todo Check if documentation is ok.
    */
   void split_clusters_levelwise( bool split_space, lo n_space_div,
     lo n_time_div, std::vector< lo > & elems_in_clusters,
     std::vector< std::pair< general_spacetime_cluster *,
-      scheduling_time_cluster * > > & cluster_pairs );
+      scheduling_time_cluster * > > & cluster_pairs,
+    lo & status );
 
   /**
    * Collects the leaves of the cluster tree which are owned by the current MPI
