@@ -407,6 +407,12 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     _measure_tasks = measure_tasks;
   }
 
+  /*!
+   * Auxiliary method that sorts clusters within the _n_list to improve shared
+   * memory scalability during matrix vector multiplication.
+   */
+  void sort_clusters_in_nearfield( );
+
  private:
   /**
    * Calls all S2M operations associated with a given scheduling time cluster.

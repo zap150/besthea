@@ -1726,8 +1726,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
 
   lo n_space_clusters_fine = fine_box_bounds[ 0 ].size( ) - 1;
   // get the spatial cluster bounds using the box coordinates and the
-  // fine_box_bounds. this ensures that the cluster bounds are exactly the
-  // same as in the routine get_n_elements_in_subdivisioning
+  // fine_box_bounds. this ensures that the cluster bounds are exactly the same
+  // as in the routine get_n_elements_in_subdivisioning
 
   sc left = fine_box_bounds[ 0 ][ coord[ 1 ] * n_space_clusters_fine
     / n_space_clusters ];

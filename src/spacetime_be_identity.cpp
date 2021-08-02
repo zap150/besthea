@@ -227,7 +227,7 @@ void besthea::bem::spacetime_be_identity<
                "Please use distributed_spacetime_be_identity"
             << std::endl;
 }
-/*! \endcond end of the block skipped by doxygen. */
+/** \endcond (end of the block that doxygen should skip) */
 
 template< class test_space_type, class trial_space_type >
 void besthea::bem::spacetime_be_identity< test_space_type,

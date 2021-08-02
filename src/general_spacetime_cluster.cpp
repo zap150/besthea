@@ -202,4 +202,4 @@ template void besthea::mesh::general_spacetime_cluster::
 /** template specialization for dimension 2 */
 template void besthea::mesh::general_spacetime_cluster::
   compute_surface_curls_p1_along_dim< 2 >( std::vector< sc > & ) const;
-/** \endcond */
+/** \endcond (end doxygen skip this)*/
