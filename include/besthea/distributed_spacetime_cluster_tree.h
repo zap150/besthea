@@ -305,7 +305,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * Computes a cubic bounding box of the underlying mesh.
    *
    * First the minimal axis parallel rectangular box in which the mesh is
-   * contained is computed. This box is extended to a cube, by expanding
+   * contained is computed. This box is extended to a cube by expanding
    * the shorter sides of the box by increasing the upper bound.
    * @param[in,out] xmin Minimum x coordinate of element's centroids.
    * @param[in,out] xmax Maximum x coordinate of element's centroids.

@@ -37,7 +37,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/settings.h"
 #include "besthea/space_cluster.h"
-#include "besthea/triangular_surface_mesh.h"
+#include "besthea/tetrahedral_volume_mesh.h"
 #include "besthea/vector.h"
 
 #include <map>
@@ -64,7 +64,7 @@ class besthea::mesh::space_cluster_tree {
    *                        split into octants
    */
   space_cluster_tree(
-    const triangular_surface_mesh & mesh, lo levels, lo n_min_elems );
+    const tetrahedral_volume_mesh & mesh, lo levels, lo n_min_elems );
 
   /**
    * Destructor.
@@ -76,7 +76,7 @@ class besthea::mesh::space_cluster_tree {
   /**
    * Returns neighbors of a given cluster based on the limit number of clusters.
    *
-   * @param[in] cluster Reference to the space cluster whos neighbors should be
+   * @param[in] cluster Reference to the space cluster whose neighbors should be
    * found.
    * @param[in] limit Number of clusters which should be considered neighbors in
    * each direction.
@@ -140,49 +140,49 @@ class besthea::mesh::space_cluster_tree {
   }
 
   /**
-   * Returns the root of the tree.
+   * Returns @ref _root.
    */
   space_cluster * get_root( ) {
     return _root;
   }
 
   /**
-   * Returns the number of levels in the tree.
+   * Returns @ref _levels.
    */
   lo get_levels( ) const {
     return _levels;
   }
 
   /**
-   * Returns the maximal number of elements in a leaf cluster
+   * Returns @ref _n_max_elems_leaf.
    */
   lo get_n_max_elems_leaf( ) const {
     return _n_max_elems_leaf;
   }
 
   /**
-   * Returns the vector of levelwise paddings.
+   * Returns @ref _paddings.
    */
   const std::vector< sc > & get_paddings( ) const {
     return _paddings;
   }
 
   /**
-   * Returns size of the underlying mesh bounding box.
+   * Returns @ref _bounding_box_size.
    */
   const std::vector< sc > & get_bounding_box( ) const {
     return _bounding_box_size;
   }
 
   /**
-   * Returns clusters without descendants.
+   * Returns @ref _leaves.
    */
   std::vector< space_cluster * > & get_leaves( ) {
     return _leaves;
   }
 
   /**
-   * Prints levels of the tree.
+   * Prints the tree levelwise together with some additional information.
    */
   void print( ) {
     // print cluster information recursively
@@ -198,57 +198,39 @@ class besthea::mesh::space_cluster_tree {
   }
 
  private:
-  space_cluster * _root;                  //!< root cluster of the tree
-  const triangular_surface_mesh & _mesh;  //!< underlying mesh
-  lo _levels;                             //!< number of levels in the tree
-  lo _real_max_levels;  //!< auxiliary value to determine number of real tree
-                        //!< levels (depending on _n_min_elems)
-  lo _n_min_elems;  //!< minimum number of elements so that cluster can be split
-                    //!< into octants
-  lo _n_max_elems_leaf;  //!< maximal number of elements in a leaf cluster after
-                         //!< construction.
-  std::vector< std::vector< space_cluster * > >
-    _non_empty_nodes;           //!< vectors of nonempty tree
-                                //!< nodes in each level
-  std::vector< sc > _paddings;  //!< vector of paddings on each level
-  lo _n_nonempty_nodes;         //!< number of nonempty clusters in the tree
-  std::vector< std::vector< lo > >
-    _idx_2_coord;  //!< auxiliary mapping from octant indexing to coordinates
-  std::map< std::vector< slou >, space_cluster * >
-    _coord_2_cluster;  //!< map from cluster coordinates to its location in
-                       //!< memory
-  std::vector< sc > _bounding_box_size;  //!< size of the mesh bounding box;
-  std::vector< space_cluster * >
-    _leaves;  //!< vector of all clusters without descendants
-
   /**
-   * Computes the bounding box of the underlying mesh.
+   * Computes a cubic bounding box of the underlying mesh.
+   *
+   * First the minimal axis parallel rectangular box in which the mesh is
+   * contained is computed. This box is extended to a cube by expanding
+   * the shorter sides of the box by increasing the upper bound.
    * @param[in,out] xmin Minimum x coordinate of element's centroids.
    * @param[in,out] xmax Maximum x coordinate of element's centroids.
    * @param[in,out] ymin Minimum y coordinate of element's centroids.
    * @param[in,out] ymax Maximum y coordinate of element's centroids.
    * @param[in,out] zmin Minimum z coordinate of element's centroids.
    * @param[in,out] zmax Maximum z coordinate of element's centroids.
+   * @todo Instead of computing the bounding box for the surface and then again
+   * for the volume one could load it the second time.
    */
-  void compute_bounding_box(
+  void compute_cubic_bounding_box(
     sc & xmin, sc & xmax, sc & ymin, sc & ymax, sc & zmin, sc & zmax );
 
   /**
-   * Builds tree recursively
+   * Builds the tree recursively.
    * @param[in] root Node to stem from.
-   * @param[in] level Current level.
    */
-  void build_tree( space_cluster & root, lo level );
+  void build_tree( space_cluster & root );
 
   /**
-   * Recursively computes padding of clusters in the tree.
+   * Computes the padding of clusters in the tree recursively.
    * @param[in] root Node to stem from.
    */
   sc compute_padding( space_cluster & root );
 
   /**
    * Collects all clusters without descendants and stores them in the internal
-   * _leaves vector.
+   * vector @ref _leaves.
    * @param[in] root Root cluster of the tree.
    */
   void collect_leaves( space_cluster & root );
@@ -267,6 +249,29 @@ class besthea::mesh::space_cluster_tree {
         }
     }
   }
+
+  space_cluster * _root;                  //!< root cluster of the tree
+  const tetrahedral_volume_mesh & _mesh;  //!< underlying mesh
+  lo _levels;                             //!< number of levels in the tree
+  lo _real_max_levels;  //!< auxiliary value to determine number of real tree
+                        //!< levels (depending on _n_min_elems)
+  lo _n_min_elems;  //!< minimum number of elements so that cluster can be split
+                    //!< into octants
+  lo _n_max_elems_leaf;  //!< maximal number of elements in a leaf cluster after
+                         //!< construction.
+  std::vector< std::vector< space_cluster * > >
+    _non_empty_nodes_per_level;  //!< vectors of nonempty tree
+                                 //!< nodes in each level
+  std::vector< sc > _paddings;   //!< vector of paddings on each level
+  lo _n_nonempty_nodes;          //!< number of nonempty clusters in the tree
+  std::vector< std::vector< lo > >
+    _idx_2_coord;  //!< auxiliary mapping from octant indexing to coordinates
+  std::map< std::vector< slou >, space_cluster * >
+    _coord_2_cluster;  //!< map from cluster coordinates to its location in
+                       //!< memory
+  std::vector< sc > _bounding_box_size;  //!< size of the mesh bounding box;
+  std::vector< space_cluster * >
+    _leaves;  //!< vector of all clusters without descendants
 };
 
 #endif /* INCLUDE_BESTHEA_SPACE_CLUSTER_TREE_H_ */

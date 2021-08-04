@@ -37,7 +37,9 @@ set(besthea_INCLUDES
   include/besthea/coordinates.h
   include/besthea/distributed_block_vector.h
   include/besthea/distributed_fast_spacetime_be_assembler.h
+  include/besthea/distributed_fast_spacetime_initial_be_assembler.h
   include/besthea/distributed_fast_spacetime_be_space.h
+  include/besthea/distributed_initial_pFMM_matrix.h
   include/besthea/distributed_pFMM_matrix.h
   include/besthea/distributed_spacetime_be_identity.h
   include/besthea/distributed_spacetime_cluster_tree.h
@@ -61,6 +63,8 @@ set(besthea_INCLUDES
   include/besthea/quadrature.h
   include/besthea/scheduling_time_cluster.h
   include/besthea/settings.h
+  include/besthea/space_cluster.h
+  include/besthea/space_cluster_tree.h
   include/besthea/spacetime_be_identity.h
   include/besthea/spacetime_be_space.h
   include/besthea/spacetime_heat_adl_kernel_antiderivative.h
@@ -115,7 +119,9 @@ set(besthea_SOURCES
   src/coordinates.cpp
   src/distributed_block_vector.cpp
   src/distributed_fast_spacetime_be_assembler.cpp
+  src/distributed_fast_spacetime_initial_be_assembler.cpp
   src/distributed_fast_spacetime_be_space.cpp
+  src/distributed_initial_pFMM_matrix.cpp
   src/distributed_pFMM_matrix.cpp
   src/distributed_spacetime_be_identity.cpp
   src/distributed_spacetime_cluster_tree.cpp
@@ -130,6 +136,7 @@ set(besthea_SOURCES
   src/mkl_cg_inverse.cpp
   src/mkl_fgmres_inverse.cpp
   src/quadrature.cpp
+  src/space_cluster_tree.cpp
   src/spacetime_be_identity.cpp
   src/spacetime_be_space.cpp
   src/spacetime_mesh_generator.cpp
