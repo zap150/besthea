@@ -72,8 +72,8 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
       : _nodes{ x1, x2, x3, x4 } {
     }
 
-    lo admissible( const element & that ) {
-      lo n_nodes = 0;
+    int admissible( const element & that ) {
+      int n_nodes = 0;
       for ( int i = 0; i < 4; ++i ) {
         for ( int j = 0; j < 4; ++j ) {
           double dist2 = 0.0;

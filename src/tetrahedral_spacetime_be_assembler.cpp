@@ -87,6 +87,7 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
 
     linear_algebra::coordinates< 4 > x1, x2, x3, x4;
     linear_algebra::coordinates< 4 > y1, y2, y3, y4;
+    linear_algebra::coordinates< 3 > nx;
     linear_algebra::coordinates< 3 > ny;
     linear_algebra::indices< 4 > perm_test, perm_trial;
     int n_shared_vertices = 0;
@@ -96,8 +97,8 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
     lo * perm_test_data = perm_test.data( );
     lo * perm_trial_data = perm_trial.data( );
 
-    sc * nx_data = nullptr;
-    sc * ny_data = ny.data( );  // nullptr;
+    sc * nx_data = nx.data( );
+    sc * ny_data = ny.data( );
 
     quadrature_wrapper my_quadrature;
     init_quadrature( ref_quadrature, my_quadrature );
@@ -121,6 +122,7 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
 #pragma omp for schedule( dynamic )
     for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
       test_mesh->get_nodes( i_test, x1, x2, x3, x4 );
+      test_mesh->get_spatial_normal( i_test, nx );
       test_area = test_mesh->area( i_test );
       for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
         trial_mesh->get_nodes( i_trial, y1, y2, y3, y4 );
@@ -164,28 +166,24 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
                 ++i_loc_trial ) {
             value = 0.0;
 #pragma omp simd aligned( x1_ref, x2_ref, x3_ref, y1_ref, y2_ref, y3_ref, \
-kernel_data : DATA_ALIGN ) private( test, trial ) reduction( + : value ) \
-simdlen( DATA_WIDTH )
+kernel_data, perm_test_data, perm_trial_data : DATA_ALIGN ) \
+private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
             for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-              test = test_basis.evaluate( i_test, i_loc_test, x1_ref[ i_quad ],
-                x2_ref[ i_quad ], x3_ref[ i_quad ], nx_data, perm_test_data );
-              trial = trial_basis.evaluate( i_trial, i_loc_trial,
-                y1_ref[ i_quad ], y2_ref[ i_quad ], y3_ref[ i_quad ], ny_data,
-                perm_trial_data );
+              test = test_basis.evaluate( i_test, perm_test_data[ i_loc_test ],
+                x1_ref[ i_quad ], x2_ref[ i_quad ], x3_ref[ i_quad ] );
+              trial
+                = trial_basis.evaluate( i_trial, perm_trial_data[ i_loc_trial ],
+                  y1_ref[ i_quad ], y2_ref[ i_quad ], y3_ref[ i_quad ] );
 
               value += kernel_data[ i_quad ] * test * trial;
             }
-            // std::cout << value * test_area * trial_area << " ";
             global_matrix.add_atomic( test_l2g[ i_loc_test ],
               trial_l2g[ i_loc_trial ], value * test_area * trial_area );
-          }
-
-          // std::cout << std::endl;
-        }
-        // exit( 0 );
-      }  // i_trial
-    }    // i_test
-  }      // omp parallel
+          }  // i_loc_trial
+        }    // i_loc_test
+      }      // i_trial
+    }        // i_test
+  }          // omp parallel
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -280,10 +278,6 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
   refine_reference_recursively( initial_pair, ref_quadrature._ready_elems );
 
   create_quadrature_points( ref_quadrature, 4 );
-
-  // for ( auto it : _admissibles ) {
-  //   std::cout << it << std::endl;
-  // }
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -302,10 +296,6 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
   refine_reference_recursively( initial_pair, ref_quadrature._ready_elems );
 
   create_quadrature_points( ref_quadrature, 3 );
-
-  // for ( auto it : _admissibles ) {
-  //   std::cout << it << std::endl;
-  // }
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -324,10 +314,6 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
   refine_reference_recursively( initial_pair, ref_quadrature._ready_elems );
 
   create_quadrature_points( ref_quadrature, 2 );
-
-  // for ( auto it : _admissibles ) {
-  //   std::cout << it << std::endl;
-  // }
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -346,10 +332,6 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
   refine_reference_recursively( initial_pair, ref_quadrature._ready_elems );
 
   create_quadrature_points( ref_quadrature, 1 );
-
-  // for ( auto it : _admissibles ) {
-  //   std::cout << it << std::endl;
-  // }
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -364,7 +346,10 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
     new_elements_1 = std::get< 0 >( el ).refine( );
     new_elements_2 = std::get< 1 >( el ).refine( );
 
-    lo n_shared_nodes = 0;
+    int n_shared_nodes = 0;
+    // number of vertices nonadmissible pairs can share and contribute to the
+    // integration after reaching the maximum level, can be se to 0-3
+    int max_shared_nodes = 3;
 
     for ( lo i = 0; i < 8; ++i ) {
       for ( lo j = 0; j < 8; ++j ) {
@@ -382,13 +367,10 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
                                           new_elements_2[ j ], level + 1 ),
             ready_elems );
         } else {
-          // push the pair of admissible elements into ready_elems list, do
-          // nothing with nonadmissible ones
-          // only for debugging purposes, can be delete later
+          // non-disjoint element pairs which will not be further refined
+          // except for identical pairs, all can be used, needs testing
 
-          // can be later used to include also pairs with 1, 2, 3 shared
-          // vertices
-          if ( n_shared_nodes < 4 ) {
+          if ( n_shared_nodes <= max_shared_nodes ) {
             // push into the ready_elems list (for now)
             ready_elems.push_back( std::make_tuple(
               new_elements_1[ i ], new_elements_2[ j ], level + 1 ) );
@@ -398,27 +380,6 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
       }
     }
   }
-
-  // std::array< element, 8 > new_elements;
-  // new_elements = el.refine( );
-
-  // for ( lo i = 0; i < 8; ++i ) {
-  //   for ( lo j = 0; j < 8; ++j ) {
-  //     if ( ( i == j ) && ( level < _singular_refinements ) ) {
-  //       refine_reference_recursively( new_elements[ i ], level + 1 );
-  //     } else if ( ( i == j ) && ( level == _singular_refinements ) ) {
-  //       continue;
-  //     } else {
-  //       // generate quadrature points & weights for both el_i, el_j and
-  //       store
-  //       // them at the end of four separate unrolled vectors
-
-  //       // modified version of tetrahedral_to_geometry to map from
-  //       reference to
-  //       // current
-  //     }
-  //   }
-  // }
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -499,12 +460,9 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
   const element & el2, int type_int, std::vector< sc > & x1,
   std::vector< sc > & x2, std::vector< sc > & x3, std::vector< sc > & y1,
   std::vector< sc > & y2, std::vector< sc > & y3 ) const {
-  const std::vector< sc, besthea::allocator_type< sc > > & tetra_x1
-    = quadrature::tetrahedron_x1( _order_singular );
-  const std::vector< sc, besthea::allocator_type< sc > > & tetra_x2
-    = quadrature::tetrahedron_x2( _order_singular );
-  const std::vector< sc, besthea::allocator_type< sc > > & tetra_x3
-    = quadrature::tetrahedron_x3( _order_singular );
+  const auto & tetra_x1 = quadrature::tetrahedron_x1( _order_singular );
+  const auto & tetra_x2 = quadrature::tetrahedron_x2( _order_singular );
+  const auto & tetra_x3 = quadrature::tetrahedron_x3( _order_singular );
 
   lo size = tetra_x1.size( );
 
@@ -719,7 +677,18 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
     }
   }
 
-  // END TO REMOVE
+  /*
+  for ( int i = 0; i < n_shared_vertices; ++i ) {
+    if ( test_elem[ perm_test[ i ] ] != trial_elem[ perm_trial[ i ] ] ) {
+      test_elem.print( );
+      trial_elem.print( );
+      std::cout << n_shared_vertices << std::endl;
+      perm_test.print( );
+      perm_trial.print( );
+      std::cin.get( );
+    }
+  }
+  */
 }
 
 template class besthea::bem::tetrahedral_spacetime_be_assembler<

@@ -55,13 +55,3 @@ void besthea::bem::spacetime_basis_tetra_p1::do_local_to_global(
   indices[ 2 ] = element[ 2 ];
   indices[ 3 ] = element[ 3 ];
 }
-
-// void besthea::bem::spacetime_basis_tetra_p1::do_local_to_global( lo i_elem,
-//   linear_algebra::indices< 4 > & perm, std::vector< lo > & indices ) const {
-//   linear_algebra::indices< 4 > element;
-//   _mesh->get_element( i_elem, element );
-//   indices[ 0 ] = element[ perm[ 0 ] ];
-//   indices[ 1 ] = element[ perm[ 1 ] ];
-//   indices[ 2 ] = element[ perm[ 2 ] ];
-//   indices[ 3 ] = element[ perm[ 3 ] ];
-// }
