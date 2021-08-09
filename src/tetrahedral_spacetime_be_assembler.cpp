@@ -94,9 +94,6 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
     lo size;
     sc test_area, trial_area, test, trial, value;
 
-    lo * perm_test_data = perm_test.data( );
-    lo * perm_trial_data = perm_trial.data( );
-
     sc * nx_data = nx.data( );
     sc * ny_data = ny.data( );
 
@@ -166,7 +163,7 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
                 ++i_loc_trial ) {
             value = 0.0;
 #pragma omp simd aligned( x1_ref, x2_ref, x3_ref, y1_ref, y2_ref, y3_ref, \
-kernel_data, perm_test_data, perm_trial_data : DATA_ALIGN ) \
+kernel_data : DATA_ALIGN ) \
 private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
             for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
               test = test_basis.evaluate( i_test, i_loc_test, x1_ref[ i_quad ],
