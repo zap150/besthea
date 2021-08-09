@@ -263,7 +263,7 @@ class besthea::mesh::scheduling_time_cluster {
 
   /**
    * Returns the configuration of the cluster with respect to its parent, i.e.
-   * the value of _left_right
+   * the value of @ref _left_right
    */
   short get_configuration( ) const {
     return _left_right;
@@ -861,17 +861,6 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Determines whether the current cluster is the left child of its parent.
-   * @note If the current cluster is the root of the tree \p false is returned.
-   */
-  bool is_left_child( ) const {
-    if ( _parent == nullptr )
-      return false;
-    else
-      return ( this == _parent->_children->front( ) );
-  }
-
-  /**
    * Allocates an array containing all the moments of the associated
    * spacetime clusters. In addition, for each associated spacetime cluster it
    * sets the pointer to the appropriate moment.
@@ -1074,7 +1063,7 @@ class besthea::mesh::scheduling_time_cluster {
   sc _half_size;                      //!< Half size of the cluster.
   scheduling_time_cluster * _parent;  //!< Parent of the cluster.
   short _left_right;  //!< Indicates if the child is the left (0), or right (1)
-                      //!< child of its parent.
+                      //!< child of its parent (-1 for root).
   std::vector< scheduling_time_cluster * > *
     _children;       //!< Children of the cluster.
   lo _level;         //!< Level within the cluster tree.

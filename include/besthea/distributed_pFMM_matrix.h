@@ -372,7 +372,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   /**
    * Compute the spatial m2m coefficients for all local spatial levels.
    */
-  void compute_spatial_m2m_coeffs( );
+  void initialize_spatial_m2m_coeffs( );
 
   /**
    * Compute Chebyshev nodes and evaluate them.

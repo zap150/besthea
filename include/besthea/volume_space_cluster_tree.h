@@ -32,27 +32,27 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * @brief Octree of spatial clusters
  */
 
-#ifndef INCLUDE_BESTHEA_SPACE_CLUSTER_TREE_H_
-#define INCLUDE_BESTHEA_SPACE_CLUSTER_TREE_H_
+#ifndef INCLUDE_BESTHEA_VOLUME_SPACE_CLUSTER_TREE_H_
+#define INCLUDE_BESTHEA_VOLUME_SPACE_CLUSTER_TREE_H_
 
 #include "besthea/settings.h"
-#include "besthea/space_cluster.h"
 #include "besthea/tetrahedral_volume_mesh.h"
 #include "besthea/vector.h"
+#include "besthea/volume_space_cluster.h"
 
 #include <map>
 #include <optional>
 
 namespace besthea {
   namespace mesh {
-    class space_cluster_tree;
+    class volume_space_cluster_tree;
   }
 }
 
 /**
  * Class representing an octree of spatial clusters.
  */
-class besthea::mesh::space_cluster_tree {
+class besthea::mesh::volume_space_cluster_tree {
  public:
   using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
 
@@ -61,15 +61,17 @@ class besthea::mesh::space_cluster_tree {
    * @param[in] mesh Reference to the underlying mesh.
    * @param[in] levels Maximum number of levels in the tree.
    * @param[in] n_min_elems Minimum number of elements so that cluster can be
-   *                        split into octants
+   * split into octants
+   * @param[in] print_warnings  If true, potential warnings are printed during
+   * the tree construction
    */
-  space_cluster_tree(
-    const tetrahedral_volume_mesh & mesh, lo levels, lo n_min_elems );
+  volume_space_cluster_tree( const tetrahedral_volume_mesh & mesh, lo levels,
+    lo n_min_elems, bool print_warnings );
 
   /**
    * Destructor.
    */
-  virtual ~space_cluster_tree( ) {
+  virtual ~volume_space_cluster_tree( ) {
     delete _root;
   }
 
@@ -83,8 +85,8 @@ class besthea::mesh::space_cluster_tree {
    * @param[in,out] neighbors Reference to the std::vector in which the pointers
    * to the neighbors should be included.
    */
-  void find_neighbors( space_cluster & cluster, slou limit,
-    std::vector< space_cluster * > & neighbors ) const;
+  void find_neighbors( volume_space_cluster & cluster, slou limit,
+    std::vector< volume_space_cluster * > & neighbors ) const;
 
   /**
    * Prints cluster centers and half_sizes to visualizable datafile tree.vtu.
@@ -142,7 +144,7 @@ class besthea::mesh::space_cluster_tree {
   /**
    * Returns @ref _root.
    */
-  space_cluster * get_root( ) {
+  volume_space_cluster * get_root( ) {
     return _root;
   }
 
@@ -177,7 +179,7 @@ class besthea::mesh::space_cluster_tree {
   /**
    * Returns @ref _leaves.
    */
-  std::vector< space_cluster * > & get_leaves( ) {
+  std::vector< volume_space_cluster * > & get_leaves( ) {
     return _leaves;
   }
 
@@ -220,28 +222,37 @@ class besthea::mesh::space_cluster_tree {
    * Builds the tree recursively.
    * @param[in] root Node to stem from.
    */
-  void build_tree( space_cluster & root );
+  void build_tree( volume_space_cluster & root );
 
   /**
    * Computes the padding of clusters in the tree recursively.
    * @param[in] root Node to stem from.
    */
-  sc compute_padding( space_cluster & root );
+  sc compute_padding( volume_space_cluster & root );
 
   /**
    * Collects all clusters without descendants and stores them in the internal
    * vector @ref _leaves.
    * @param[in] root Root cluster of the tree.
    */
-  void collect_leaves( space_cluster & root );
+  void collect_leaves( volume_space_cluster & root );
+
+  /**
+   * Traverses the cluster tree recursively and allocates and initializes the
+   * moments for all clusters.
+   * @param[in] current_cluster  Current cluster in the tree traversal.
+   * @param[in] contribution_size Size of the moment of a cluster.
+   */
+  void initialize_moment_contributions(
+    volume_space_cluster & root, lou contribution_size );
 
   /**
    * Aux for printing
    */
-  void print_internal( space_cluster * root ) {
+  void print_internal( volume_space_cluster * root ) {
     if ( root != nullptr ) {
       root->print( );
-      std::vector< space_cluster * > * children = root->get_children( );
+      std::vector< volume_space_cluster * > * children = root->get_children( );
       if ( children != nullptr )
         for ( auto it = children->begin( ); it != children->end( ); ++it ) {
           for ( lo i = 0; i < ( *it )->get_level( ); ++i ) std::cout << " ";
@@ -250,7 +261,7 @@ class besthea::mesh::space_cluster_tree {
     }
   }
 
-  space_cluster * _root;                  //!< root cluster of the tree
+  volume_space_cluster * _root;           //!< root cluster of the tree
   const tetrahedral_volume_mesh & _mesh;  //!< underlying mesh
   lo _levels;                             //!< number of levels in the tree
   lo _real_max_levels;  //!< auxiliary value to determine number of real tree
@@ -259,19 +270,19 @@ class besthea::mesh::space_cluster_tree {
                     //!< into octants
   lo _n_max_elems_leaf;  //!< maximal number of elements in a leaf cluster after
                          //!< construction.
-  std::vector< std::vector< space_cluster * > >
+  std::vector< std::vector< volume_space_cluster * > >
     _non_empty_nodes_per_level;  //!< vectors of nonempty tree
                                  //!< nodes in each level
   std::vector< sc > _paddings;   //!< vector of paddings on each level
   lo _n_nonempty_nodes;          //!< number of nonempty clusters in the tree
   std::vector< std::vector< lo > >
     _idx_2_coord;  //!< auxiliary mapping from octant indexing to coordinates
-  std::map< std::vector< slou >, space_cluster * >
+  std::map< std::vector< slou >, volume_space_cluster * >
     _coord_2_cluster;  //!< map from cluster coordinates to its location in
                        //!< memory
   std::vector< sc > _bounding_box_size;  //!< size of the mesh bounding box;
-  std::vector< space_cluster * >
+  std::vector< volume_space_cluster * >
     _leaves;  //!< vector of all clusters without descendants
 };
 
-#endif /* INCLUDE_BESTHEA_SPACE_CLUSTER_TREE_H_ */
+#endif /* INCLUDE_BESTHEA_VOLUME_SPACE_CLUSTER_TREE_H_ */

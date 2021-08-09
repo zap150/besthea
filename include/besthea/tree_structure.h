@@ -165,6 +165,9 @@ class besthea::mesh::tree_structure {
    */
   void reduce_2_essential( );
 
+  bool subtree_contains_local_spacetime_leaves(
+    scheduling_time_cluster & subtree_root );
+
   /**
    * Traverses the tree recursively and adds all relevant clusters assigned to
    * the process @p _my_process_id to the 4 lists for scheduling operations in

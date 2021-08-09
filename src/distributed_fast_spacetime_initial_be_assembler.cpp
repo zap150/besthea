@@ -47,17 +47,17 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using besthea::mesh::distributed_spacetime_tensor_mesh;
 using besthea::mesh::general_spacetime_cluster;
-using besthea::mesh::space_cluster;
-using besthea::mesh::space_cluster_tree;
 using besthea::mesh::spacetime_tensor_mesh;
 using besthea::mesh::tree_structure;
+using besthea::mesh::volume_space_cluster;
+using besthea::mesh::volume_space_cluster_tree;
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
   test_space_type, trial_space_type >::
   distributed_fast_spacetime_initial_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
-    MPI_Comm * comm, mesh::space_cluster_tree & space_source_tree,
+    MPI_Comm * comm, mesh::volume_space_cluster_tree & space_source_tree,
     int order_regular_tri, int order_regular_tetra, int temp_order,
     int spat_order, sc alpha )
   : _kernel( &kernel ),
@@ -101,7 +101,7 @@ void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
   global_matrix.resize( n_timesteps, n_rows, n_columns );
   // ###########################################################################
   // TODO: adapt this appropriately
-  // global_matrix.compute_spatial_m2m_coeffs( );
+  global_matrix.initialize_spatial_m2m_coeffs( );
 
   // initialize_moment_and_local_contributions( );
 
@@ -182,7 +182,8 @@ void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
   test_space_type,
   trial_space_type >::assemble_nearfield_matrix( general_spacetime_cluster *
                                                    target_cluster,
-  space_cluster * source_cluster, full_matrix_type & nearfield_matrix ) const {
+  volume_space_cluster * source_cluster,
+  full_matrix_type & nearfield_matrix ) const {
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >

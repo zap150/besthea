@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2020, VSB - Technical University of Ostrava and Graz University of
+Copyright (c) 2021, VSB - Technical University of Ostrava and Graz University of
 Technology
 All rights reserved.
 
@@ -28,30 +28,28 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file mesh_structures.h
- * @brief
+/** @file fmm_routines.h
+ * @brief Provides fmm routines used for pFMM matrices and initial pFMM
+ * matrices.
  */
 
-#ifndef INCLUDE_BESTHEA_MESH_STRUCTURES_H_
-#define INCLUDE_BESTHEA_MESH_STRUCTURES_H_
+#ifndef INCLUDE_FMM_ROUTINES_H_
+#define INCLUDE_FMM_ROUTINES_H_
 
-#include "besthea/distributed_spacetime_cluster_tree.h"
-#include "besthea/distributed_spacetime_tensor_mesh.h"
-#include "besthea/general_spacetime_cluster.h"
-#include "besthea/mesh.h"
-#include "besthea/scheduling_time_cluster.h"
-#include "besthea/spacetime_mesh_generator.h"
-#include "besthea/spacetime_slice.h"
-#include "besthea/spacetime_tensor_mesh.h"
-#include "besthea/temporal_mesh.h"
-#include "besthea/tetrahedral_spacetime_mesh.h"
-#include "besthea/tetrahedral_volume_mesh.h"
-#include "besthea/time_cluster.h"
-#include "besthea/time_cluster_tree.h"
-#include "besthea/tree_structure.h"
-#include "besthea/triangular_surface_mesh.h"
-#include "besthea/uniform_spacetime_tensor_mesh.h"
-#include "besthea/volume_space_cluster.h"
-#include "besthea/volume_space_cluster_tree.h"
+#include "besthea/settings.h"
 
-#endif /* INCLUDE_BESTHEA_MESH_STRUCTURES_H_ */
+namespace besthea {
+  namespace linear_algebra {
+    class vector;
+  }
+}
+
+#include <vector>
+
+void compute_spatial_m2m_coeffs( const lo max_space_level, const lo spat_order,
+  const sc spat_half_size_bounding_box_unpadded,
+  const std::vector< sc > & spatial_paddings_per_space_level,
+  std::vector< besthea::linear_algebra::vector > & m2m_coeffs_s_left,
+  std::vector< besthea::linear_algebra::vector > & m2m_coeffs_s_right );
+
+#endif /* INCLUDE_FMM_ROUTINES_H_ */

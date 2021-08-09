@@ -98,7 +98,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   global_matrix.resize( n_timesteps, n_rows, n_columns );
   // ###########################################################################
 
-  global_matrix.compute_spatial_m2m_coeffs( );
+  global_matrix.initialize_spatial_m2m_coeffs( );
 
   initialize_moment_and_local_contributions( );
 

@@ -124,6 +124,12 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   }
 
   /**
+   * Computes and returns the spatial padding for each spatial level from
+   * @ref _spatial_paddings
+   */
+  std::vector< sc > get_spatial_paddings_per_spatial_level( ) const;
+
+  /**
    * Returns the effective number of levels in the cluster tree.
    */
   lo get_max_levels( ) const {
@@ -136,6 +142,13 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    */
   lo get_local_max_space_level( ) const {
     return _local_max_space_level;
+  }
+
+  /**
+   * Returns @ref _global_max_space_level.
+   */
+  lo get_global_max_space_level( ) const {
+    return _global_max_space_level;
   }
 
   /**
@@ -795,6 +808,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   lo _local_max_space_level;     //!< bound for the maximal number of spatial
                                  //!< refinements in the local part of the
                                  //!< distributed tree.
+  lo _global_max_space_level;    //!< maximal spatial level in the global
+                                 //!< distributed tree
 
   // sc _s_t_coeff;  //!< coefficient to determine the coupling of the spatial
   //!< and temporal levels

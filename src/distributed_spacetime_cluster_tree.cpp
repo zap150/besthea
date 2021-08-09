@@ -47,6 +47,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     _real_max_levels( 0 ),
     _spacetime_mesh( spacetime_mesh ),
     _local_max_space_level( 0 ),
+    _global_max_space_level( 0 ),
     //_s_t_coeff( st_coeff ),
     _n_min_elems( n_min_elems ),
     _spatial_paddings( _max_levels, 0.0 ),
@@ -135,6 +136,8 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     return;
   }
   _max_levels = std::min( _max_levels, _real_max_levels );
+  MPI_Allreduce( &_local_max_space_level, &_global_max_space_level, 1,
+    get_index_type< lo >::MPI_LO( ), MPI_MAX, *_comm );
 
   // collect the leaves in the local part of the spacetime cluster
   collect_local_leaves( *_root );
@@ -176,10 +179,15 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   // and print a warning if necessary
   if ( _my_rank == 0 ) {
     bool extensive_padding = false;
+    std::vector< sc > paddings_per_spatial_level
+      = get_spatial_paddings_per_spatial_level( );
     sc current_cluster_half_size = space_half_sizes[ 0 ];
-    for ( lo i = 0; i < _max_levels; ++i ) {
+    lo i = 0;
+    while ( extensive_padding == false && i < _max_levels ) {
       extensive_padding
-        = ( current_cluster_half_size / 2.0 < _spatial_paddings[ i ] );
+        = ( current_cluster_half_size / 2.0 < paddings_per_spatial_level[ i ] );
+      current_cluster_half_size /= 2.0;
+      ++i;
     }
     if ( extensive_padding ) {
       std::cout << "Warning: Extensive padding detected in construction of "
@@ -2912,11 +2920,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::print_information(
     std::cout << "first space refinement level = " << _start_space_refinement
               << std::endl;
   }
-  lo global_max_space_level;
-  MPI_Reduce( &_local_max_space_level, &global_max_space_level, 1,
-    get_index_type< lo >::MPI_LO( ), MPI_MAX, root_process, *_comm );
   if ( _my_rank == root_process ) {
-    std::cout << "maximal space level = " << global_max_space_level
+    std::cout << "maximal space level = " << _global_max_space_level
               << std::endl;
     // compute and print half sizes of spatial boxes in each level
     std::cout << "half sizes of spatial boxes in each spatial level: "
@@ -2926,7 +2931,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::print_information(
     for ( lou box_dim = 0; box_dim < 3; ++box_dim ) {
       box_size[ box_dim ] /= initial_scaling_factor;
     }
-    for ( lo i = 0; i <= global_max_space_level; ++i ) {
+    for ( lo i = 0; i <= _global_max_space_level; ++i ) {
       // find a spacetime level where the spatial components of boxes are on
       // the current spatial level
       lo spacetime_level;
@@ -3066,4 +3071,37 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
       image_vector[ box_index ] = 1;
     }
   }
+}
+
+std::vector< sc > besthea::mesh::distributed_spacetime_cluster_tree::
+  get_spatial_paddings_per_spatial_level( ) const {
+  // compute the global maximal
+
+  std::vector< sc > paddings_per_spatial_level( _global_max_space_level + 1 );
+  if ( _initial_space_refinement > 0 ) {
+    // padding is only computed starting from the spatial refinement level
+    // initial_space_refinement. set it to this value for all lower levels
+    for ( lo i = 0; i <= _initial_space_refinement; ++i ) {
+      paddings_per_spatial_level[ i ] = _spatial_paddings[ 0 ];
+    }
+    // get the correct padding from paddings_levelwise (spatial refinement
+    // every second step)
+    lo current_idx = _start_space_refinement;
+    for ( lo i = _initial_space_refinement + 1; i <= _global_max_space_level;
+          ++i ) {
+      // note: by construction current_idx should never be out of bound for
+      // paddings_levelwise
+      paddings_per_spatial_level[ i ] = _spatial_paddings.at( current_idx );
+      current_idx += 2;
+    }
+  } else {
+    paddings_per_spatial_level[ 0 ] = _spatial_paddings[ 0 ];
+    // the level of the first spatial refinement is known
+    lo current_idx = _start_space_refinement;
+    for ( lo i = 1; i <= _global_max_space_level; ++i ) {
+      paddings_per_spatial_level[ i ] = _spatial_paddings.at( current_idx );
+      current_idx += 2;
+    }
+  }
+  return paddings_per_spatial_level;
 }

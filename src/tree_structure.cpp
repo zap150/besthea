@@ -140,6 +140,24 @@ void besthea::mesh::tree_structure::reduce_2_essential( ) {
   collect_leaves( *_root );
 }
 
+bool besthea::mesh::tree_structure::subtree_contains_local_spacetime_leaves(
+  scheduling_time_cluster & subtree_root ) {
+  bool return_value = false;
+  if ( subtree_root.get_process_id( ) == _my_process_id
+    && subtree_root.get_n_associated_leaves( ) > 0 ) {
+    return_value = true;
+  } else if ( subtree_root.get_n_children( ) > 0 ) {
+    std::vector< scheduling_time_cluster * > * children
+      = subtree_root.get_children( );
+    auto child_it = children->begin( );
+    while ( return_value == false && child_it != children->end( ) ) {
+      return_value = subtree_contains_local_spacetime_leaves( **child_it );
+      ++child_it;
+    }
+  }
+  return return_value;
+}
+
 void besthea::mesh::tree_structure::initialize_moment_contributions(
   scheduling_time_cluster & root, lou contribution_size ) {
   if ( root.is_active_in_upward_path( ) ) {

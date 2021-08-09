@@ -28,7 +28,7 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "besthea/space_cluster_tree.h"
+#include "besthea/volume_space_cluster_tree.h"
 
 #include <cstdlib>
 #include <fstream>
@@ -39,8 +39,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sstream>
 #include <string>
 
-besthea::mesh::space_cluster_tree::space_cluster_tree(
-  const tetrahedral_volume_mesh & mesh, lo levels, lo n_min_elems )
+besthea::mesh::volume_space_cluster_tree::volume_space_cluster_tree(
+  const tetrahedral_volume_mesh & mesh, lo levels, lo n_min_elems,
+  bool print_warnings )
   : _mesh( mesh ),
     _levels( levels ),
     _real_max_levels( 0 ),
@@ -66,10 +67,11 @@ besthea::mesh::space_cluster_tree::space_cluster_tree(
 
   // create a root cluster and call the recursive tree building routine
   std::vector< slou > coordinates = { 0, 0, 0, 0 };
-  _root = new space_cluster( center, half_sizes, _mesh.get_n_elements( ),
+  _root = new volume_space_cluster( center, half_sizes, _mesh.get_n_elements( ),
     nullptr, 0, 0, coordinates, _mesh );
   _coord_2_cluster.insert(
-    std::pair< std::vector< slou >, space_cluster * >( coordinates, _root ) );
+    std::pair< std::vector< slou >, volume_space_cluster * >(
+      coordinates, _root ) );
 
   for ( lo i = 0; i < _mesh.get_n_elements( ); ++i ) {
     _root->add_element( i );
@@ -85,11 +87,30 @@ besthea::mesh::space_cluster_tree::space_cluster_tree(
   _paddings.resize( _levels );
   _paddings.shrink_to_fit( );
 
+  if ( print_warnings ) {
+    // check whether there are clusters which are padded a lot (more than 50 %)
+    // and print a warning if necessary
+    bool extensive_padding = false;
+    sc current_cluster_half_size = half_sizes[ 0 ];
+    lo i = 0;
+    while ( extensive_padding == false && i < _levels ) {
+      extensive_padding = ( current_cluster_half_size / 2.0 < _paddings[ i ] );
+      current_cluster_half_size /= 2.0;
+      ++i;
+    }
+    if ( extensive_padding ) {
+      std::cout << "Warning: Extensive padding detected in construction of "
+                   "volume space tree!"
+                << std::endl;
+    }
+  }
+
   // collect all clusters without descendants
   collect_leaves( *_root );
 }
 
-void besthea::mesh::space_cluster_tree::build_tree( space_cluster & root ) {
+void besthea::mesh::volume_space_cluster_tree::build_tree(
+  volume_space_cluster & root ) {
   // stop recursion if maximum number of tree levels is reached
   if ( root.get_level( ) == _levels - 1
     || root.get_n_elements( ) < _n_min_elems ) {
@@ -114,7 +135,7 @@ void besthea::mesh::space_cluster_tree::build_tree( space_cluster & root ) {
   root.get_half_size( half_size );
   lo elem_idx = 0;
   lo oct_sizes[ 8 ] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-  space_cluster * clusters[ 8 ];
+  volume_space_cluster * clusters[ 8 ];
 
   // first count the number of elements in octants for data preallocation
   std::vector< lo > clusters_of_elements( root.get_n_elements( ) );
@@ -176,12 +197,12 @@ void besthea::mesh::space_cluster_tree::build_tree( space_cluster & root ) {
       std::vector< slou > coordinates
         = { static_cast< slou >( root.get_level( ) + 1 ), coord_x, coord_y,
             coord_z };
-      clusters[ i ] = new space_cluster( new_center, new_half_size,
+      clusters[ i ] = new volume_space_cluster( new_center, new_half_size,
         oct_sizes[ i ], &root, root.get_level( ) + 1, i, coordinates, _mesh );
       _non_empty_nodes_per_level[ root.get_level( ) + 1 ].push_back(
         clusters[ i ] );
       _coord_2_cluster.insert(
-        std::pair< std::vector< slou >, space_cluster * >(
+        std::pair< std::vector< slou >, volume_space_cluster * >(
           coordinates, clusters[ i ] ) );
       ++_n_nonempty_nodes;
     } else {
@@ -209,7 +230,7 @@ void besthea::mesh::space_cluster_tree::build_tree( space_cluster & root ) {
   root.shrink_children( );
 }
 
-void besthea::mesh::space_cluster_tree::compute_cubic_bounding_box(
+void besthea::mesh::volume_space_cluster_tree::compute_cubic_bounding_box(
   sc & xmin, sc & xmax, sc & ymin, sc & ymax, sc & zmin, sc & zmax ) {
   xmin = ymin = zmin = std::numeric_limits< sc >::max( );
   xmax = ymax = zmax = std::numeric_limits< sc >::min( );
@@ -262,8 +283,9 @@ void besthea::mesh::space_cluster_tree::compute_cubic_bounding_box(
   }
 }
 
-sc besthea::mesh::space_cluster_tree::compute_padding( space_cluster & root ) {
-  std::vector< space_cluster * > * children = root.get_children( );
+sc besthea::mesh::volume_space_cluster_tree::compute_padding(
+  volume_space_cluster & root ) {
+  std::vector< volume_space_cluster * > * children = root.get_children( );
   sc padding = -1.0;
   sc tmp_padding;
 
@@ -288,8 +310,9 @@ sc besthea::mesh::space_cluster_tree::compute_padding( space_cluster & root ) {
   return padding;
 }
 
-void besthea::mesh::space_cluster_tree::find_neighbors( space_cluster & cluster,
-  slou limit, std::vector< space_cluster * > & neighbors ) const {
+void besthea::mesh::volume_space_cluster_tree::find_neighbors(
+  volume_space_cluster & cluster, slou limit,
+  std::vector< volume_space_cluster * > & neighbors ) const {
   const std::vector< slou > coordinates = cluster.get_box_coordinate( );
 
   slou cluster_level = static_cast< slou >( cluster.get_level( ) );
@@ -318,7 +341,7 @@ void besthea::mesh::space_cluster_tree::find_neighbors( space_cluster & cluster,
   }
 }
 
-bool besthea::mesh::space_cluster_tree::print_tree(
+bool besthea::mesh::volume_space_cluster_tree::print_tree(
   const std::string & directory, bool include_padding, lo level,
   std::optional< lo > suffix ) const {
   std::stringstream file;
@@ -449,13 +472,24 @@ bool besthea::mesh::space_cluster_tree::print_tree(
   return true;
 }
 
-void besthea::mesh::space_cluster_tree::collect_leaves( space_cluster & root ) {
+void besthea::mesh::volume_space_cluster_tree::collect_leaves(
+  volume_space_cluster & root ) {
   if ( root.get_n_children( ) == 0 ) {
     _leaves.push_back( &root );
   } else {
     for ( auto it = root.get_children( )->begin( );
           it != root.get_children( )->end( ); ++it ) {
       collect_leaves( **it );
+    }
+  }
+}
+
+void besthea::mesh::volume_space_cluster_tree::initialize_moment_contributions(
+  volume_space_cluster & current_cluster, lou contribution_size ) {
+  current_cluster.resize_moments( contribution_size );
+  if ( current_cluster.get_n_children( ) > 0 ) {
+    for ( auto child : *current_cluster.get_children( ) ) {
+      initialize_moment_contributions( *child, contribution_size );
     }
   }
 }

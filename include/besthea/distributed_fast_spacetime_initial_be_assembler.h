@@ -42,10 +42,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/lagrange_interpolant.h"
 #include "besthea/quadrature.h"
 #include "besthea/settings.h"
-#include "besthea/space_cluster.h"
-#include "besthea/space_cluster_tree.h"
 #include "besthea/tree_structure.h"
 #include "besthea/vector.h"
+#include "besthea/volume_space_cluster.h"
+#include "besthea/volume_space_cluster_tree.h"
 
 #include <mpi.h>
 #include <omp.h>
@@ -191,7 +191,7 @@ class besthea::bem::distributed_fast_spacetime_initial_be_assembler {
    */
   distributed_fast_spacetime_initial_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
-    MPI_Comm * comm, mesh::space_cluster_tree & space_source_tree,
+    MPI_Comm * comm, mesh::volume_space_cluster_tree & space_source_tree,
     int order_regular_tri = 4, int order_regular_tetra = 4, int temp_order = 5,
     int spat_order = 5, sc alpha = 1.0 );
 
@@ -240,7 +240,7 @@ class besthea::bem::distributed_fast_spacetime_initial_be_assembler {
    */
   void assemble_nearfield_matrix(
     mesh::general_spacetime_cluster * target_cluster,
-    mesh::space_cluster * source_cluster,
+    mesh::volume_space_cluster * source_cluster,
     full_matrix_type & nearfield_matrix ) const;
 
   /**
@@ -322,7 +322,7 @@ class besthea::bem::distributed_fast_spacetime_initial_be_assembler {
                                   //!< @ref distributed_fast_spacetime_be_space.
   trial_space_type * _trial_space;  //!< Finite element trial space. Has to be a
                                     //!< @ref fe_space.
-  mesh::space_cluster_tree *
+  mesh::volume_space_cluster_tree *
     _space_source_tree;      //!< Space cluster tree corresponding to the volume
                              //!< mesh associated with the trial fe space.
   int _order_regular_tri;    //!< Triangle quadrature order for the regular

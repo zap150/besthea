@@ -312,7 +312,7 @@ class besthea::mesh::distributed_spacetime_tensor_mesh
   bool print_ensight_geometry(
     const std::string & directory, const int root_process = 0 ) const {
     bool return_value;
-    if ( _my_rank == 0 ) {
+    if ( _my_rank == root_process ) {
       return_value = _space_mesh->print_ensight_geometry( directory );
     }
     MPI_Bcast( &return_value, 1, MPI_CXX_BOOL, 0, *_comm );

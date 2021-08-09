@@ -28,12 +28,12 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file space_cluster.h
+/** @file volume_space_cluster.h
  * @brief Cubic cluster of spatial elements.
  */
 
-#ifndef INCLUDE_BESTHEA_SPACE_CLUSTER_H_
-#define INCLUDE_BESTHEA_SPACE_CLUSTER_H_
+#ifndef INCLUDE_BESTHEA_VOLUME_SPACE_CLUSTER_H_
+#define INCLUDE_BESTHEA_VOLUME_SPACE_CLUSTER_H_
 
 // #include "besthea/fast_spacetime_be_space.h"
 #include "besthea/full_matrix.h"
@@ -46,7 +46,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace besthea {
   namespace mesh {
-    class space_cluster;
+    class volume_space_cluster;
   }
 }
 
@@ -64,7 +64,7 @@ namespace besthea {
  * Class representing a cubic spatial cluster containing elements in a
  * tetrahedral volume mesh in 3 dimensions.
  */
-class besthea::mesh::space_cluster {
+class besthea::mesh::volume_space_cluster {
  public:
   using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
   using full_matrix_type
@@ -81,9 +81,10 @@ class besthea::mesh::space_cluster {
    * @param[in] coordinate Coordinates of the box within boxes on given level.
    * @param[in] mesh Reference to the underlying spatial surface mesh.
    */
-  space_cluster( const vector_type & center, const vector_type & half_size,
-    lo n_elements, space_cluster * parent, lo level, short octant,
-    std::vector< slou > & coordinate, const tetrahedral_volume_mesh & mesh )
+  volume_space_cluster( const vector_type & center,
+    const vector_type & half_size, lo n_elements, volume_space_cluster * parent,
+    lo level, short octant, std::vector< slou > & coordinate,
+    const tetrahedral_volume_mesh & mesh )
     : _n_elements( n_elements ),
       _center( center ),
       _half_size( half_size ),
@@ -97,12 +98,12 @@ class besthea::mesh::space_cluster {
     _box_coordinate.shrink_to_fit( );
   }
 
-  space_cluster( const space_cluster & that ) = delete;
+  volume_space_cluster( const volume_space_cluster & that ) = delete;
 
   /**
    * Destructor.
    */
-  virtual ~space_cluster( ) {
+  virtual ~volume_space_cluster( ) {
     if ( _children != nullptr ) {
       for ( auto it = _children->begin( ); it != _children->end( ); ++it ) {
         if ( *it != nullptr ) {
@@ -125,9 +126,9 @@ class besthea::mesh::space_cluster {
    * Adds a child to the current cluster's list of children.
    * @param[in] child Child cluster.
    */
-  void add_child( space_cluster * child ) {
+  void add_child( volume_space_cluster * child ) {
     if ( _children == nullptr ) {
-      _children = new std::vector< space_cluster * >( );
+      _children = new std::vector< volume_space_cluster * >( );
     }
     _children->push_back( child );
   }
@@ -135,7 +136,7 @@ class besthea::mesh::space_cluster {
   /**
    * Returns the list of children
    */
-  std::vector< space_cluster * > * get_children( ) {
+  std::vector< volume_space_cluster * > * get_children( ) {
     return _children;
   }
 
@@ -207,7 +208,7 @@ class besthea::mesh::space_cluster {
    */
   void set_n_children( lo n_children ) {
     if ( n_children > 0 ) {
-      _children = new std::vector< space_cluster * >( );
+      _children = new std::vector< volume_space_cluster * >( );
       _children->reserve( n_children );
     } else {
       _children = nullptr;
@@ -349,7 +350,7 @@ class besthea::mesh::space_cluster {
   /**
    * Returns a pointer to the cluster's parent.
    */
-  space_cluster * get_parent( ) const {
+  volume_space_cluster * get_parent( ) const {
     return _parent;
   }
 
@@ -363,21 +364,21 @@ class besthea::mesh::space_cluster {
   /**
    * Returns @ref _mesh.
    */
-  const tetrahedral_volume_mesh & get_mesh( ) {
+  const tetrahedral_volume_mesh & get_mesh( ) const {
     return _mesh;
   }
 
   /**
    * Returns @ref _elems_2_local_nodes.
    */
-  const std::vector< lo > & get_elems_2_local_nodes( ) {
+  const std::vector< lo > & get_elems_2_local_nodes( ) const {
     return _elems_2_local_nodes;
   }
 
   /**
    * Returns @ref _local_2_global_nodes.
    */
-  const std::vector< lo > & get_local_2_global_nodes( ) {
+  const std::vector< lo > & get_local_2_global_nodes( ) const {
     return _local_2_global_nodes;
   }
 
@@ -451,6 +452,27 @@ class besthea::mesh::space_cluster {
   }
 
   /**
+   * Allocates @ref _moments as an array of scalar values of given size.
+   */
+  void resize_moments( const lou moment_size ) {
+    _moments.resize( moment_size );
+  }
+
+  /**
+   * Returns a reference to @ref _moments.
+   */
+  vector_type & get_moments( ) {
+    return _moments;
+  }
+
+  /**
+   * Returns a reference to @ref _moments (immutable).
+   */
+  const vector_type & get_moments( ) const {
+    return _moments;
+  }
+
+  /**
    * Prints info of the object.
    */
   void print( ) {
@@ -469,8 +491,9 @@ class besthea::mesh::space_cluster {
   // TODO: this probably will have to be optimized to reduce memory consumption
   std::vector< lo >
     _elements;  //!< Indices of the cluster's elements within the spatial mesh
-  space_cluster * _parent;                     //!< Parent of the cluster
-  std::vector< space_cluster * > * _children;  //!< Children of the cluster
+  volume_space_cluster * _parent;  //!< Parent of the cluster
+  std::vector< volume_space_cluster * > *
+    _children;  //!< Children of the cluster
   const tetrahedral_volume_mesh &
     _mesh;        //!< Spatial volume mesh associated with the cluster.
   lo _level;      //!< Level within the spatial cluster tree.
@@ -485,6 +508,7 @@ class besthea::mesh::space_cluster {
                            //!< of the j-th node of the i-th element is stored.
   std::vector< lo > _local_2_global_nodes;  //!< Mapping from the local nodes
                                             //!< to the global ones in the mesh.
+  vector_type _moments;  //!< Vector storing the moments of the volume cluster.
 };
 
-#endif /* INCLUDE_BESTHEA_SPACE_CLUSTER_H_ */
+#endif /* INCLUDE_BESTHEA_VOLUME_SPACE_CLUSTER_H_ */

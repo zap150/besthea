@@ -30,6 +30,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/vector.h"
 
+#include "besthea/basis_tetra_p1.h"
+#include "besthea/fe_space.h"
+#include "besthea/volume_space_cluster.h"
+
 #include <algorithm>
 #include <random>
 
@@ -69,7 +73,7 @@ void besthea::linear_algebra::vector::random_fill( sc lower, sc upper ) {
   std::mt19937 gen( rd( ) );
   std::uniform_real_distribution< sc > dis( lower, upper );
   std::generate(
-    _data.begin( ), _data.end( ), [&gen, &dis]( ) { return dis( gen ); } );
+    _data.begin( ), _data.end( ), [ &gen, &dis ]( ) { return dis( gen ); } );
 }
 
 void besthea::linear_algebra::vector::copy_from_raw(
@@ -82,4 +86,17 @@ void besthea::linear_algebra::vector::copy_from_raw(
 
 void besthea::linear_algebra::vector::copy_to_raw( sc * data ) const {
   std::copy( _data.begin( ), _data.end( ), data );
+}
+
+template<>
+void besthea::linear_algebra::vector::get_local_part<
+  besthea::bem::fe_space< besthea::bem::basis_tetra_p1 > >(
+  besthea::mesh::volume_space_cluster * cluster,
+  besthea::linear_algebra::vector & local_vector ) const {
+  lo n_nodes = cluster->get_n_nodes( );
+  std::vector< lo > local_2_global_nodes = cluster->get_local_2_global_nodes( );
+  local_vector.resize( n_nodes, false );
+  for ( lo i = 0; i < n_nodes; ++i ) {
+    local_vector[ i ] = get( local_2_global_nodes[ i ] );
+  }
 }
