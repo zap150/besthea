@@ -169,16 +169,16 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
 kernel_data, perm_test_data, perm_trial_data : DATA_ALIGN ) \
 private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
             for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
-              test = test_basis.evaluate( i_test, perm_test_data[ i_loc_test ],
-                x1_ref[ i_quad ], x2_ref[ i_quad ], x3_ref[ i_quad ] );
-              trial
-                = trial_basis.evaluate( i_trial, perm_trial_data[ i_loc_trial ],
-                  y1_ref[ i_quad ], y2_ref[ i_quad ], y3_ref[ i_quad ] );
+              test = test_basis.evaluate( i_test, i_loc_test, x1_ref[ i_quad ],
+                x2_ref[ i_quad ], x3_ref[ i_quad ] );
+              trial = trial_basis.evaluate( i_trial, i_loc_trial,
+                y1_ref[ i_quad ], y2_ref[ i_quad ], y3_ref[ i_quad ] );
 
               value += kernel_data[ i_quad ] * test * trial;
             }
-            global_matrix.add_atomic( test_l2g[ i_loc_test ],
-              trial_l2g[ i_loc_trial ], value * test_area * trial_area );
+            global_matrix.add_atomic( test_l2g[ perm_test[ i_loc_test ] ],
+              trial_l2g[ perm_trial[ i_loc_trial ] ],
+              value * test_area * trial_area );
           }  // i_loc_trial
         }    // i_loc_test
       }      // i_trial
