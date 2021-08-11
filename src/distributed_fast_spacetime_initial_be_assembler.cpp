@@ -86,7 +86,8 @@ void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
                                                    global_matrix,
   bool info_mode ) const {
   global_matrix.set_MPI_communicator( _comm );
-  global_matrix.set_trees( _test_space->get_tree( ), _space_source_tree );
+  global_matrix.set_trees_and_operation_lists(
+    _test_space->get_tree( ), _space_source_tree );
   // TODO:
   // global_matrix.set_order( _spat_order, _temp_order, _order_regular );
   global_matrix.set_alpha( _alpha );

@@ -167,6 +167,13 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   }
 
   /**
+   * Returns the value of @ref _spatial_nearfield_limit.
+   */
+  lo get_spatial_nearfield_limit( ) const {
+    return _spatial_nearfield_limit;
+  }
+
+  /**
    * Returns the associated MPI communicator.
    */
   const MPI_Comm * get_MPI_comm( ) const {
@@ -201,6 +208,17 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * structure in time.
    */
   void print_spatial_grids( const lo root_proc_id ) const;
+
+  /**
+   * Collects the leaves of the cluster tree which are owned by the current MPI
+   * process, i.e. local. The routine is based on a tree traversal. It can also
+   * be used to find local leaves of a subtree.
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   * @param[in,out] leaf_vector Vector to which the detected local leaves are
+   * added.
+   */
+  void collect_local_leaves( general_spacetime_cluster & current_cluster,
+    std::vector< general_spacetime_cluster * > & leaf_vector ) const;
 
  private:
   /**
@@ -514,13 +532,6 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     std::vector< std::pair< general_spacetime_cluster *,
       scheduling_time_cluster * > > & cluster_pairs,
     lo & status );
-
-  /**
-   * Collects the leaves of the cluster tree which are owned by the current MPI
-   * process, i.e. local. The routine is based on a tree traversal.
-   * @param[in] root Current cluster in the tree traversal.
-   */
-  void collect_local_leaves( general_spacetime_cluster & root );
 
   /**
    * Collects the leaves of the cluster tree which correspond to elements in the

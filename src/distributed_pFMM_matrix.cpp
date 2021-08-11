@@ -2070,7 +2070,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         buffer_for_gaussians_data[ index_gaussian + i ] = std::exp( -h_delta_ab
           * ( scaled_center_diff + cheb_nodes_sum_coll_data[ i ] )
           * ( scaled_center_diff + cheb_nodes_sum_coll_data[ i ] ) );
-        //++index_gaussian;
       }
       index_gaussian += i;
     }
@@ -2103,9 +2102,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           sc mul_factor_ab = mul_factor
             / std::sqrt( 4.0 * M_PI * _alpha
               * ( tar_time_nodes[ a ] - src_time_nodes[ b ] ) );
-          // gamma = 2 for all alpha and beta ( wrong, correction in
-          //                    case of
-          // alpha == 0 or beta == 0 )
+          // In the multiplicative factor a factor of 2 (gamma) is used for all
+          // alpha and beta. For alpha == 0 or beta == 0 a correction is
+          // required)
           // an attempt to compute this in a separate loop with precomputed
           // mul_factor_ab was slower
           if ( alpha == 0 ) {
@@ -2121,22 +2120,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       }
     }
   }
-
-  // TODO: activate (and check!) this to avoid if clauses in the above loop
-  //   for ( lo k = 0; k <= _spat_order; ++ k ) {
-  //     lou index_temp = 0;
-  //     for ( lo a = 0; a <= _temp_order; ++ a ) {
-  //       for ( lo b = 0; b <= _temp_order; ++ b ) {
-  //         //corrections for alpha = 0
-  //         coupling_coeffs[ ( _temp_order + 1 ) * ( _temp_order + 1 ) * k
-  //                           + index_temp ] *= 0.5;
-  //         //corrections for beta = 0
-  //         coupling_coeffs[ ( _temp_order + 1 ) * ( _temp_order + 1 ) *
-  //                           ( _spat_order + 1 ) * k + index_temp ] *= 0.5;
-  //         ++ index_temp;
-  //       }
-  //     }
-  //   }
 }
 
 template< class kernel_type, class target_space, class source_space >

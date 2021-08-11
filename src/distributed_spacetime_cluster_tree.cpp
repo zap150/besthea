@@ -140,7 +140,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     get_index_type< lo >::MPI_LO( ), MPI_MAX, *_comm );
 
   // collect the leaves in the local part of the spacetime cluster
-  collect_local_leaves( *_root );
+  collect_local_leaves( *_root, _local_leaves );
 
   _spatial_paddings.resize( _max_levels );
   _spatial_paddings.shrink_to_fit( );
@@ -1647,14 +1647,16 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::collect_local_leaves(
-  general_spacetime_cluster & root ) {
-  std::vector< general_spacetime_cluster * > * children = root.get_children( );
+  general_spacetime_cluster & current_cluster,
+  std::vector< general_spacetime_cluster * > & leaf_vector ) const {
+  std::vector< general_spacetime_cluster * > * children
+    = current_cluster.get_children( );
   if ( children != nullptr ) {
     for ( auto it : *children ) {
-      collect_local_leaves( *it );
+      collect_local_leaves( *it, leaf_vector );
     }
-  } else if ( _my_rank == root.get_process_id( ) ) {
-    _local_leaves.push_back( &root );
+  } else if ( _my_rank == current_cluster.get_process_id( ) ) {
+    leaf_vector.push_back( &current_cluster );
   }
 }
 

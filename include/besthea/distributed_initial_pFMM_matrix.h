@@ -228,12 +228,13 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
 
   /**
    * Sets the underlying distributed space-time target tree and space source
-   * tree.
+   * tree. In addition this routine initializes nearfield and interaction lists,
+   * first on a temporal level and then for all clusters in the space-time tree.
    * @param[in] spacetime_target_tree  The distributed spacetime tree used as
    * target tree.
    * @param[in] space_source_tree The space cluster tree used as source tree.
    */
-  void set_trees(
+  void set_trees_and_operation_lists(
     mesh::distributed_spacetime_cluster_tree * spacetime_target_tree,
     mesh::volume_space_cluster_tree * space_source_tree );
 
@@ -326,17 +327,28 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
   void determine_interacting_time_clusters(
     mesh::scheduling_time_cluster & current_cluster );
 
+  void initialize_nearfield_and_interaction_lists( );
+
   void compute_moments_upward_path( const vector & sources,
-    mesh::volume_space_cluster & current_cluster ) const;
+    mesh::volume_space_cluster * current_cluster ) const;
+
+  void apply_all_m2l_operations( ) const;
 
   void apply_s2m_operation(
-    const vector & sources, mesh::volume_space_cluster & leaf ) const;
+    const vector & sources, mesh::volume_space_cluster * leaf ) const;
 
   void apply_grouped_m2m_operation(
-    mesh::volume_space_cluster & parent_cluster ) const;
+    mesh::volume_space_cluster * parent_cluster ) const;
+
+  void apply_m2l_operation( const mesh::volume_space_cluster * s_src_cluster,
+    mesh::general_spacetime_cluster * st_tar_cluster ) const;
+
+  void compute_coupling_coeffs_initial_op( const vector_type & tar_time_nodes,
+    const sc spat_half_size, const sc spat_center_diff,
+    vector_type & buffer_for_gaussians, vector_type & coupling_coeffs ) const;
 
   void compute_chebyshev_quadrature_p1(
-    const mesh::volume_space_cluster & source_cluster,
+    const mesh::volume_space_cluster * source_cluster,
     full_matrix & T_vol ) const;
 
   /*
@@ -901,6 +913,18 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
   mutable std::vector< full_matrix >
     _aux_buffer_1;  //!< Auxiliary vector used to store intermediate results in
                     //!< M2L operations.
+
+  std::vector< std::pair< mesh::general_spacetime_cluster *,
+    std::vector< mesh::volume_space_cluster * > > >
+    _interaction_list_vector;  //!< A vector of pairs. Each pair consists of a
+                               //!< target space-time cluster and an associated
+                               //!< interaction list of volume space clusters.
+
+  std::vector< std::pair< mesh::general_spacetime_cluster *,
+    std::vector< mesh::volume_space_cluster * > > >
+    _nearfield_list_vector;  //!< A vector of pairs. Each pair consists of a
+                             //!< target space-time cluster and an associated
+                             //!< nearfield list of volume space clusters.
 };
 
 /** Typedef for the distributed initial potential M0 p0-p1 PFMM matrix */

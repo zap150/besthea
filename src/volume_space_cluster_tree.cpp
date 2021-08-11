@@ -310,34 +310,74 @@ sc besthea::mesh::volume_space_cluster_tree::compute_padding(
   return padding;
 }
 
-void besthea::mesh::volume_space_cluster_tree::find_neighbors(
-  volume_space_cluster & cluster, slou limit,
+void besthea::mesh::volume_space_cluster_tree::find_neighbors( const lo level,
+  const std::vector< slou > & target_grid_coordinates, slou limit,
   std::vector< volume_space_cluster * > & neighbors ) const {
-  const std::vector< slou > coordinates = cluster.get_box_coordinate( );
-
-  slou cluster_level = static_cast< slou >( cluster.get_level( ) );
-  std::vector< slou > current_coordinates( 4 );
-
-  // compute lower bounds of following loops manually to avoid overflow
-  slou i_low
-    = (slou) ( (lo) coordinates[ 1 ] - limit > 0 ? coordinates[ 1 ] - limit
-                                                 : 0 );
-  slou j_low
-    = (slou) ( (lo) coordinates[ 2 ] - limit > 0 ? coordinates[ 2 ] - limit
-                                                 : 0 );
-  slou k_low
-    = (slou) ( (lo) coordinates[ 3 ] - limit > 0 ? coordinates[ 3 ] - limit
-                                                 : 0 );
-  for ( slou i = i_low; i < coordinates[ 1 ] + limit + 1; ++i ) {
-    for ( slou j = j_low; j < coordinates[ 2 ] + limit + 1; ++j ) {
-      for ( slou k = k_low; k < coordinates[ 3 ] + limit + 1; ++k ) {
-        current_coordinates = { cluster_level, i, j, k };
-        if ( _coord_2_cluster.count( current_coordinates ) > 0 ) {
-          neighbors.push_back(
-            _coord_2_cluster.find( current_coordinates )->second );
+  // search for clusters in a local neighborhood of the given grid coordinates.
+  // determine the search bounds first
+  slou max_coordinate = (slou) ( 1 << level );
+  slou i_x_low = (slou) ( (lo) target_grid_coordinates[ 0 ] - limit > 0
+      ? target_grid_coordinates[ 1 ] - limit
+      : 0 );
+  slou i_x_up
+    = (slou) ( target_grid_coordinates[ 0 ] + limit + 1 < max_coordinate
+        ? target_grid_coordinates[ 0 ] + limit + 1
+        : max_coordinate );
+  slou i_y_low = (slou) ( (lo) target_grid_coordinates[ 1 ] - limit > 0
+      ? target_grid_coordinates[ 1 ] - limit
+      : 0 );
+  slou i_y_up
+    = (slou) ( target_grid_coordinates[ 1 ] + limit + 1 < max_coordinate
+        ? target_grid_coordinates[ 1 ] + limit + 1
+        : max_coordinate );
+  slou i_z_low = (slou) ( (lo) target_grid_coordinates[ 2 ] - limit > 0
+      ? target_grid_coordinates[ 2 ] - limit
+      : 0 );
+  slou i_z_up
+    = (slou) ( target_grid_coordinates[ 2 ] + limit + 1 < max_coordinate
+        ? target_grid_coordinates[ 2 ] + limit + 1
+        : max_coordinate );
+  // compute the strides to switch from cluster coordinates to indices in the
+  // grid vectors
+  lo x_stride = 1 << ( 2 * level );
+  lo y_stride = 1 << level;
+  // now go through the grid vector at the current level and add all encountered
+  // clusters to two auxiliary vectors.
+  std::vector< volume_space_cluster * > neighbors_coarser_level;
+  for ( slou i_x = i_x_low; i_x < i_x_up; ++i_x ) {
+    for ( slou i_y = i_y_low; i_y < i_y_up; ++i_y ) {
+      for ( slou i_z = i_z_low; i_z < i_z_up; ++i_z ) {
+        lo grid_index = x_stride * i_x + y_stride * i_y + i_z;
+        volume_space_cluster * neighbor
+          = _levelwise_cluster_grids[ level ][ grid_index ];
+        if ( neighbor != nullptr ) {
+          // add the neighbor to the appropriate list
+          if ( neighbor->get_level( ) == level ) {
+            // neighbors from the same level can be added directly to the list
+            // of neighbors
+            neighbors.push_back( neighbor );
+          } else {
+            // coarser neighbors are added uniquely to a separate list
+            bool neighbor_is_new = true;
+            auto previous_neighbor_it = neighbors_coarser_level.begin( );
+            while ( neighbor_is_new
+              && previous_neighbor_it != neighbors_coarser_level.end( ) ) {
+              if ( *previous_neighbor_it == neighbor ) {
+                neighbor_is_new = false;
+              }
+              ++previous_neighbor_it;
+            }
+            if ( neighbor_is_new ) {
+              neighbors_coarser_level.push_back( neighbor );
+            }
+          }
         }
       }
     }
+  }
+  // add the coarser neighbors to the output list
+  for ( auto coarse_neighbor : neighbors_coarser_level ) {
+    neighbors.push_back( coarse_neighbor );
   }
 }
 
@@ -490,6 +530,78 @@ void besthea::mesh::volume_space_cluster_tree::initialize_moment_contributions(
   if ( current_cluster.get_n_children( ) > 0 ) {
     for ( auto child : *current_cluster.get_children( ) ) {
       initialize_moment_contributions( *child, contribution_size );
+    }
+  }
+}
+
+void besthea::mesh::volume_space_cluster_tree::
+  initialize_levelwise_cluster_grids( ) {
+  _levelwise_cluster_grids.resize( _levels );
+  lo n_grid_clusters = 1;
+  for ( lo i = 0; i < _levels; ++i ) {
+    // resize all grid vectors and initialize them with nullptrs.
+    _levelwise_cluster_grids[ i ].resize( n_grid_clusters );
+    std::fill( _levelwise_cluster_grids[ i ].begin( ),
+      _levelwise_cluster_grids[ i ].end( ), nullptr );
+    n_grid_clusters *= 8;
+  }
+  // fill the cluster grids recursively by a tree traversal
+  fill_levelwise_cluster_grids_recursively( *_root );
+}
+
+void besthea::mesh::volume_space_cluster_tree::
+  fill_levelwise_cluster_grids_recursively(
+    volume_space_cluster & current_cluster ) {
+  std::vector< slou > cluster_coords = current_cluster.get_box_coordinate( );
+  // the first entry of cluster_coords is the level, the other ones the grid
+  // coordinates
+  lo x_stride = 1 << ( 2 * cluster_coords[ 0 ] );
+  lo y_stride = 1 << ( cluster_coords[ 0 ] );
+  _levelwise_cluster_grids[ cluster_coords[ 0 ] ][ cluster_coords[ 3 ]
+    + cluster_coords[ 2 ] * y_stride + x_stride * cluster_coords[ 1 ] ]
+    = &current_cluster;
+  if ( current_cluster.get_n_children( ) > 0 ) {
+    for ( auto child : *current_cluster.get_children( ) ) {
+      fill_levelwise_cluster_grids_recursively( *child );
+    }
+  } else if ( cluster_coords[ 0 ] < _levels - 1 ) {
+    // fill the entries of cluster grids which would correspond to descendants
+    // of the current cluster.
+    // remember the grid coordinates of the previous level in each step (only
+    // the last 3 box coordinates need to be remembered)
+    std::vector< std::vector< slou > > parent_level_coordinates
+      = { { cluster_coords[ 1 ], cluster_coords[ 2 ], cluster_coords[ 3 ] } };
+    for ( lo child_level = cluster_coords[ 0 ] + 1; child_level < _levels;
+          ++child_level ) {
+      // compute the coordinates of all descendants that the clusters in
+      // parent_level_coordinates would have
+      std::vector< std::vector< slou > > child_level_coordinates;
+      child_level_coordinates.reserve( 8 * parent_level_coordinates.size( ) );
+      for ( size_t i = 0; i < parent_level_coordinates.size( ); ++i ) {
+        for ( slou i_x = 0; i_x < 2; ++i_x ) {
+          for ( slou i_y = 0; i_y < 2; ++i_y ) {
+            for ( slou i_z = 0; i_z < 2; ++i_z ) {
+              slou child_x_coord = static_cast< slou >(
+                2 * parent_level_coordinates[ i ][ 0 ] + i_x );
+              slou child_y_coord = static_cast< slou >(
+                2 * parent_level_coordinates[ i ][ 1 ] + i_y );
+              slou child_z_coord = static_cast< slou >(
+                2 * parent_level_coordinates[ i ][ 2 ] + i_z );
+              child_level_coordinates.push_back(
+                { child_x_coord, child_y_coord, child_z_coord } );
+            }
+          }
+        }
+      }
+      lo x_stride = 1 << ( 2 * child_level );
+      lo y_stride = 1 << ( child_level );
+      for ( size_t i = 0; i < child_level_coordinates.size( ); ++i ) {
+        std::vector< slou > child_coords = child_level_coordinates[ i ];
+        _levelwise_cluster_grids[ child_level ][ child_coords[ 2 ]
+          + child_coords[ 1 ] * y_stride + child_coords[ 0 ] * x_stride ]
+          = &current_cluster;
+      }
+      parent_level_coordinates.swap( child_level_coordinates );
     }
   }
 }

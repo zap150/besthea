@@ -78,14 +78,16 @@ class besthea::mesh::volume_space_cluster_tree {
   /**
    * Returns neighbors of a given cluster based on the limit number of clusters.
    *
-   * @param[in] cluster Reference to the space cluster whose neighbors should be
-   * found.
+   * @param[in] level Level on which neighbors are searched.
+   * @param[in] target_grid_coordinates Coordinates determining the cluster
+   * whose neighbors are searched. (only 3 coordinates: x,y,z)
    * @param[in] limit Number of clusters which should be considered neighbors in
    * each direction.
    * @param[in,out] neighbors Reference to the std::vector in which the pointers
    * to the neighbors should be included.
    */
-  void find_neighbors( volume_space_cluster & cluster, slou limit,
+  void find_neighbors( const lo level,
+    const std::vector< slou > & target_grid_coordinates, slou limit,
     std::vector< volume_space_cluster * > & neighbors ) const;
 
   /**
@@ -244,7 +246,12 @@ class besthea::mesh::volume_space_cluster_tree {
    * @param[in] contribution_size Size of the moment of a cluster.
    */
   void initialize_moment_contributions(
-    volume_space_cluster & root, lou contribution_size );
+    volume_space_cluster & current_cluster, lou contribution_size );
+
+  void initialize_levelwise_cluster_grids( );
+
+  void fill_levelwise_cluster_grids_recursively(
+    volume_space_cluster & current_cluster );
 
   /**
    * Aux for printing
@@ -283,6 +290,20 @@ class besthea::mesh::volume_space_cluster_tree {
   std::vector< sc > _bounding_box_size;  //!< size of the mesh bounding box;
   std::vector< volume_space_cluster * >
     _leaves;  //!< vector of all clusters without descendants
+
+  std::vector< std::vector< volume_space_cluster * > >
+    _levelwise_cluster_grids;  //!< For each level a cluster grid vector is
+                               //!< stored. In this vector the clusters from a
+                               //!< certain level l of the tree are arranged
+                               //!< along the appropriate regular grid. A
+                               //!< pointer to a cluster with grid coordinates
+                               //!< (x,y,z) is stored at position
+                               //!< x*4^l + y*2^l + z in the grid vector at
+                               //!< level l. If there is an early leaf cluster X
+                               //!< at some level in the tree all the entries on
+                               //!< finer levels which would correspond to
+                               //!< descendants of X point to X itself.
+                               //!< Nullpointers mark non-existing clusters.
 };
 
 #endif /* INCLUDE_BESTHEA_VOLUME_SPACE_CLUSTER_TREE_H_ */

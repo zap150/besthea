@@ -72,14 +72,95 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
+  target_space, source_space >::initialize_nearfield_and_interaction_lists( ) {
+  // Initialize first the nearfield lists vector: determine all nearfields of
+  // space-time leaf clusters associated with temporal clusters in the list
+  // _time_clusters_for_nf.
+  for ( auto nf_time_cluster : _time_clusters_for_nf ) {
+    lo n_associated_leaves = nf_time_cluster->get_n_associated_leaves( );
+    const std::vector< general_spacetime_cluster * > * associated_clusters
+      = nf_time_cluster->get_associated_spacetime_clusters( );
+    for ( lo i = 0; i < n_associated_leaves; ++i ) {
+      general_spacetime_cluster * spacetime_leaf
+        = ( *associated_clusters )[ i ];
+      std::vector< slou > cluster_coords
+        = spacetime_leaf->get_box_coordinate( );
+      std::vector< slou > spatial_grid_coords
+        = { cluster_coords[ 1 ], cluster_coords[ 2 ], cluster_coords[ 3 ] };
+      std::vector< volume_space_cluster * > neighbors;
+      lo spat_level, dummy;
+      spacetime_leaf->get_n_divs( spat_level, dummy );
+      _space_source_tree->find_neighbors( spat_level, spatial_grid_coords,
+        _distributed_spacetime_target_tree->get_spatial_nearfield_limit( ),
+        neighbors );
+      if ( neighbors.size( ) > 0 ) {
+        neighbors.shrink_to_fit( );
+        _nearfield_list_vector.push_back( { spacetime_leaf, neighbors } );
+      }
+    }
+  }
+  // Next, initialize the interaction list vectors by traversing similarly the
+  // space-time clusters associated with temporal clusters in the list
+  // _time_clusters_for_m2l (and update the nearfield list vector when
+  // encountering exceptional situations)
+  for ( auto m2l_time_cluster : _time_clusters_for_m2l ) {
+    const std::vector< general_spacetime_cluster * > * associated_clusters
+      = m2l_time_cluster->get_associated_spacetime_clusters( );
+    for ( size_t i = 0; i < associated_clusters->size( ); ++i ) {
+      general_spacetime_cluster * st_cluster = ( *associated_clusters )[ i ];
+      std::vector< slou > cluster_coords = st_cluster->get_box_coordinate( );
+      std::vector< slou > spatial_grid_coords
+        = { cluster_coords[ 1 ], cluster_coords[ 2 ], cluster_coords[ 3 ] };
+      std::vector< volume_space_cluster * > neighbors;
+      lo spat_level, dummy;
+      st_cluster->get_n_divs( spat_level, dummy );
+      _space_source_tree->find_neighbors( spat_level, spatial_grid_coords,
+        _distributed_spacetime_target_tree->get_spatial_nearfield_limit( ),
+        neighbors );
+      std::vector< volume_space_cluster * > clusters_requiring_nearfield_ops;
+      // If neighboring volume cluster at lower levels exist, they are
+      // positioned at the end of the vector neighbors. For such clusters
+      // nearfield operations have to be executed.
+      auto it = neighbors.rbegin( );
+      while ( it != neighbors.rend( ) && ( *it )->get_level( ) < spat_level ) {
+        clusters_requiring_nearfield_ops.push_back( *it );
+        ++it;
+        // remove the detected early volume leaf cluster from the neighbors
+        neighbors.pop_back( );
+      }
+      if ( neighbors.size( ) > 0 ) {
+        neighbors.shrink_to_fit( );
+        _interaction_list_vector.push_back( { st_cluster, neighbors } );
+      }
+      if ( clusters_requiring_nearfield_ops.size( ) > 0 ) {
+        clusters_requiring_nearfield_ops.shrink_to_fit( );
+        // get all leaf descendants of the current st_cluster
+        std::vector< general_spacetime_cluster * > local_leaf_descendants;
+        _distributed_spacetime_target_tree->collect_local_leaves(
+          *st_cluster, local_leaf_descendants );
+        // Add all leaf descendants with the corresponding list of nearfield
+        // volume clusters to the nearfield list vector.
+        // Note: The newly added space-time leaves are guaranteed to be
+        // different from the ones already in the list by construction.
+        for ( auto st_leaf : local_leaf_descendants ) {
+          _nearfield_list_vector.push_back(
+            { st_leaf, clusters_requiring_nearfield_ops } );
+        }
+      }
+    }
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space, source_space >::compute_moments_upward_path( const vector &
                                                                sources,
-  mesh::volume_space_cluster & current_cluster ) const {
-  if ( current_cluster.get_n_children( ) > 0 ) {
+  mesh::volume_space_cluster * current_cluster ) const {
+  if ( current_cluster->get_n_children( ) > 0 ) {
     std::vector< volume_space_cluster * > * children
-      = current_cluster.get_children( );
+      = current_cluster->get_children( );
     for ( auto child : *children ) {
-      compute_moments_upward_path( sources, *child );
+      compute_moments_upward_path( sources, child );
     }
     apply_grouped_m2m_operation( current_cluster );
   } else {
@@ -89,23 +170,34 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
+  target_space, source_space >::apply_all_m2l_operations( ) const {
+  for ( size_t i = 0; i < _interaction_list_vector.size( ); ++i ) {
+    general_spacetime_cluster * st_target = _interaction_list_vector[ i ].first;
+    for ( auto space_source_cluster : _interaction_list_vector[ i ].second ) {
+      apply_m2l_operation( space_source_cluster, st_target );
+    }
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space, source_space >::apply_s2m_operation( const vector & sources,
-  mesh::volume_space_cluster & leaf ) const {
+  mesh::volume_space_cluster * leaf ) const {
   full_matrix T_vol;
   compute_chebyshev_quadrature_p1( leaf, T_vol );
-  vector moments = leaf.get_moments( );
+  vector moments = leaf->get_moments( );
   vector sources_in_leaf;
-  sources_in_leaf.get_local_part< source_space >( &leaf, sources_in_leaf );
+  sources_in_leaf.get_local_part< source_space >( leaf, sources_in_leaf );
   T_vol.apply( sources_in_leaf, moments );
 }
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space,
-  source_space >::apply_grouped_m2m_operation( mesh::volume_space_cluster &
+  source_space >::apply_grouped_m2m_operation( mesh::volume_space_cluster *
     parent_cluster ) const {
   std::vector< mesh::volume_space_cluster * > * children
-    = parent_cluster.get_children( );
+    = parent_cluster->get_children( );
   // declare auxiliary vectors lambda_1/2 to store intermediate results in m2m
   // operations
   lo n_coeffs_s
@@ -113,8 +205,8 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   vector_type lambda_1( n_coeffs_s, true );
   vector_type lambda_2( n_coeffs_s, true );
 
-  lo parent_level = parent_cluster.get_level( );
-  vector_type & parent_moment = parent_cluster.get_moments( );
+  lo parent_level = parent_cluster->get_level( );
+  vector_type & parent_moment = parent_cluster->get_moments( );
   for ( auto child : *children ) {
     // execute the m2m operation for each child
     short child_octant = child->get_octant( );
@@ -228,21 +320,235 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
+  target_space,
+  source_space >::apply_m2l_operation( const mesh::volume_space_cluster *
+                                         s_src_cluster,
+  mesh::general_spacetime_cluster * st_tar_cluster ) const {
+  // allocate some buffers to store intermediate results
+  // buffer to store intermediate results in computation of m2l coefficients
+  vector_type buffer_for_gaussians(
+    ( _spat_order + 1 ) * ( _spat_order + 1 ) * ( _temp_order + 1 ) );
+  // buffer to store m2l coefficients.
+  vector_type buffer_for_coeffs(
+    ( _spat_order + 1 ) * ( _spat_order + 1 ) * ( _temp_order + 1 ) );
+  // buffer matrices to store intermediate m2l results.
+  lo thread_num = omp_get_thread_num( );
+
+  _aux_buffer_0[ thread_num ].fill( 0.0 );
+  _aux_buffer_1[ thread_num ].fill( 0.0 );
+
+  // get geometrical data of the clusters
+  vector_type half_size_space( 3, false );
+  s_src_cluster->get_half_size( half_size_space );
+  sc tar_half_size_time = st_tar_cluster->get_time_half_size( );
+  sc tar_center_time;
+  vector_type src_center_space( 3, false );
+  vector_type tar_center_space( 3, false );
+  s_src_cluster->get_center( src_center_space );
+  st_tar_cluster->get_center( tar_center_space, tar_center_time );
+
+  // initialize temporal interpolation nodes in target cluster
+  vector_type tar_time_nodes( _temp_order + 1, false );
+  const vector_type & time_nodes = _lagrange.get_nodes( );
+  for ( lo i = 0; i <= _temp_order; ++i ) {
+    tar_time_nodes[ i ]
+      = tar_center_time + tar_half_size_time * time_nodes[ i ];
+  }
+
+  // get spatial properties ( difference of cluster, half length )
+  vector_type center_diff_space( tar_center_space );
+  for ( lo i = 0; i < 3; ++i ) {
+    center_diff_space[ i ] -= src_center_space[ i ];
+  }
+
+  sc padding_space = _maximal_spatial_paddings[ s_src_cluster->get_level( ) ];
+  for ( lo i = 0; i < 3; ++i ) {
+    half_size_space[ i ] += padding_space;
+  }
+
+  // compute coupling coefficients for dimension 2
+  compute_coupling_coeffs_initial_op( tar_time_nodes, half_size_space[ 2 ],
+    center_diff_space[ 2 ], buffer_for_gaussians, buffer_for_coeffs );
+
+  const vector_type src_moment = s_src_cluster->get_moments( );
+  sc * tar_local = st_tar_cluster->get_pointer_to_local_contribution( );
+  // efficient m2l operation similar to Tausch, 2009, p. 3558
+  // help variables for accessing right values in coefficient buffer
+  lo hlp_acs_alpha = ( _spat_order + 1 ) * ( _temp_order + 1 );
+  lo hlp_acs_beta = ( _temp_order + 1 );
+
+  sc * aux_buffer_0_data = _aux_buffer_0[ thread_num ].data( );
+  sc * buffer_for_coeffs_data = buffer_for_coeffs.data( );
+
+  // compute first intermediate product and store it in aux_buffer_0
+  lo buffer_0_index = 0;
+  for ( lo alpha2 = 0; alpha2 <= _spat_order; ++alpha2 ) {
+    lo moment_index = 0;
+    for ( lo beta0 = 0; beta0 <= _spat_order - alpha2; ++beta0 ) {
+      for ( lo beta1 = 0; beta1 <= _spat_order - alpha2 - beta0; ++beta1 ) {
+        for ( lo beta2 = 0; beta2 <= _spat_order - beta0 - beta1; ++beta2 ) {
+          // no need for reduction, in a single inner cycle data are written on
+          // unique positions
+          for ( lo a = 0; a <= _temp_order; ++a ) {
+            aux_buffer_0_data[ buffer_0_index * hlp_acs_beta + a ]
+              += buffer_for_coeffs_data[ alpha2 * hlp_acs_alpha
+                   + beta2 * hlp_acs_beta + a ]
+              * src_moment[ moment_index ];
+          }
+          ++moment_index;
+        }
+        ++buffer_0_index;
+      }
+      // correction for moment index; this is necessary since beta1 does not
+      // run until _spat_order - beta0 as it does in src_moment;
+      moment_index += ( ( alpha2 + 1 ) * alpha2 ) / 2;
+    }
+  }
+  // update coefficients and compute 2nd intermediate product in aux_buffer_1
+  compute_coupling_coeffs_initial_op( tar_time_nodes, half_size_space[ 1 ],
+    center_diff_space[ 1 ], buffer_for_gaussians, buffer_for_coeffs );
+
+  sc * aux_buffer_1_data = _aux_buffer_1[ thread_num ].data( );
+
+  lo buffer_1_index = 0;
+  for ( lo alpha1 = 0; alpha1 <= _spat_order; ++alpha1 ) {
+    buffer_0_index = 0;
+    for ( lo alpha2 = 0; alpha2 <= _spat_order - alpha1; ++alpha2 ) {
+      for ( lo beta0 = 0; beta0 <= _spat_order - alpha1 - alpha2; ++beta0 ) {
+        for ( lo beta1 = 0; beta1 <= _spat_order - beta0 - alpha2; ++beta1 ) {
+          for ( lo a = 0; a <= _temp_order; ++a ) {
+            aux_buffer_1_data[ buffer_1_index * hlp_acs_beta + a ]
+              += buffer_for_coeffs_data[ alpha1 * hlp_acs_alpha
+                   + beta1 * hlp_acs_beta + a ]
+              * aux_buffer_0_data[ buffer_0_index * hlp_acs_beta + a ];
+          }
+          ++buffer_0_index;
+        }
+        ++buffer_1_index;
+      }
+      // correction for buffer_0 index; this is necessary since beta0 does not
+      // run until _spat_order - alpha2 as it does in aux_buffer_0;
+      buffer_0_index += ( ( alpha1 + 1 ) * alpha1 ) / 2;
+    }
+  }
+
+  // update coefficients and update targets local contribution with m2l result
+  compute_coupling_coeffs_initial_op( tar_time_nodes, half_size_space[ 0 ],
+    center_diff_space[ 0 ], buffer_for_gaussians, buffer_for_coeffs );
+  int local_index = 0;
+  for ( lo alpha0 = 0; alpha0 <= _spat_order; ++alpha0 ) {
+    buffer_1_index = 0;
+    for ( lo alpha1 = 0; alpha1 <= _spat_order - alpha0; ++alpha1 ) {
+      for ( lo alpha2 = 0; alpha2 <= _spat_order - alpha0 - alpha1; ++alpha2 ) {
+        for ( lo beta0 = 0; beta0 <= _spat_order - alpha1 - alpha2; ++beta0 ) {
+          for ( lo a = 0; a <= _temp_order; ++a ) {
+            tar_local[ a + local_index * ( _temp_order + 1 ) ]
+              += buffer_for_coeffs_data[ alpha0 * hlp_acs_alpha
+                   + beta0 * hlp_acs_beta + a ]
+              * aux_buffer_1_data[ buffer_1_index * hlp_acs_beta + a ];
+          }
+          ++buffer_1_index;
+        }
+        ++local_index;
+      }
+      // correction for buffer_1 index; this is necessary since alpha0 does
+      // not run until _spat_order - alpha1 as it does in aux_buffer_1;
+      buffer_1_index += ( ( alpha0 + 1 ) * alpha0 ) / 2;
+    }
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
+  target_space,
+  source_space >::compute_coupling_coeffs_initial_op( const vector_type &
+                                                        tar_time_nodes,
+  const sc spat_half_size, const sc spat_center_diff,
+  vector_type & buffer_for_gaussians, vector_type & coupling_coeffs ) const {
+  // evaluate the gaussian kernel for the numerical integration
+  sc h_alpha = spat_half_size * spat_half_size / ( 4.0 * _alpha );
+  sc scaled_center_diff = spat_center_diff / spat_half_size;
+  lou index_gaussian = 0;
+
+  sc * buffer_for_gaussians_data = buffer_for_gaussians.data( );
+  const sc * cheb_nodes_sum_coll_data = _cheb_nodes_sum_coll.data( );
+  const sc * all_poly_vals_mult_coll_data = _all_poly_vals_mult_coll.data( );
+
+  for ( lo a = 0; a <= _temp_order; ++a ) {
+    sc h_delta_a = h_alpha / ( tar_time_nodes[ a ] );
+    lou i = 0;
+#pragma omp simd aligned( cheb_nodes_sum_coll_data, buffer_for_gaussians_data \
+                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+    for ( i = 0; i < _cheb_nodes_sum_coll.size( ); ++i ) {
+      buffer_for_gaussians_data[ index_gaussian + i ] = std::exp( -h_delta_a
+        * ( scaled_center_diff + cheb_nodes_sum_coll_data[ i ] )
+        * ( scaled_center_diff + cheb_nodes_sum_coll_data[ i ] ) );
+    }
+    index_gaussian += i;
+  }
+
+  // compute the numerical integrals
+  sc mul_factor = 4.0 / ( _cheb_nodes_sum_coll.size( ) );
+  lou index_integral = 0;
+
+  for ( lo alpha = 0; alpha <= _spat_order; ++alpha ) {
+    for ( lo beta = 0; beta <= _spat_order; ++beta ) {
+      index_gaussian = 0;
+      for ( lo a = 0; a <= _temp_order; ++a ) {
+        sc val = 0.0;
+
+        lo start_idx
+          = alpha * ( _spat_order + 1 ) * _cheb_nodes_sum_coll.size( )
+          + beta * _cheb_nodes_sum_coll.size( );
+        const sc * curr_ptr = all_poly_vals_mult_coll_data;  // + start_idx;
+        std::vector< sc, besthea::allocator_type< sc > >::size_type idx;
+#pragma omp simd aligned( buffer_for_gaussians_data,curr_ptr : \
+                       DATA_ALIGN ) reduction( + : val ) simdlen( DATA_WIDTH )
+        for ( idx = 0; idx < _cheb_nodes_sum_coll.size( ); ++idx ) {
+          val += buffer_for_gaussians_data[ index_gaussian + idx ]
+            * curr_ptr[ start_idx + idx ];
+        }
+        index_gaussian += idx;
+        coupling_coeffs[ index_integral ] = val;
+
+        sc mul_factor_ab
+          = mul_factor / std::sqrt( 4.0 * M_PI * _alpha * tar_time_nodes[ a ] );
+        // In the multiplicative factor a factor of 2 (gamma) is used for all
+        // alpha and beta. For alpha == 0 or beta == 0 a correction is
+        // required)
+        // an attempt to compute this in a separate loop with precomputed
+        // mul_factor_ab was slower
+        if ( alpha == 0 ) {
+          mul_factor_ab *= 0.5;
+        }
+        if ( beta == 0 ) {
+          mul_factor_ab *= 0.5;
+        }
+        coupling_coeffs[ index_integral ] *= mul_factor_ab;
+
+        ++index_integral;
+      }
+    }
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space, source_space >::
   compute_chebyshev_quadrature_p1(
-    const mesh::volume_space_cluster & source_cluster,
+    const mesh::volume_space_cluster * source_cluster,
     full_matrix & T_vol ) const {
-  lo n_space_elems = source_cluster.get_n_elements( );
-  lo n_space_nodes = source_cluster.get_n_nodes( );
+  lo n_space_elems = source_cluster->get_n_elements( );
+  lo n_space_nodes = source_cluster->get_n_nodes( );
   T_vol.resize( _spat_contribution_size, n_space_nodes );
   T_vol.fill( 0.0 );
 
   // get some info on the current cluster
   vector_type cluster_center( 3 );
   vector_type cluster_half_size( 3 );
-  source_cluster.get_center( cluster_center );
-  source_cluster.get_half_size( cluster_half_size );
-  sc padding = _maximal_spatial_paddings[ source_cluster.get_level( ) ];
+  source_cluster->get_center( cluster_center );
+  source_cluster->get_half_size( cluster_half_size );
+  sc padding = _maximal_spatial_paddings[ source_cluster->get_level( ) ];
   sc start_0 = cluster_center[ 0 ] - cluster_half_size[ 0 ] - padding;
   sc end_0 = cluster_center[ 0 ] + cluster_half_size[ 0 ] + padding;
   sc start_1 = cluster_center[ 1 ] - cluster_half_size[ 1 ] - padding;
@@ -267,12 +573,12 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   sc * y3_ref = my_quadrature._y3_ref.data( );
 
   const std::vector< lo > & elems_2_local_nodes
-    = source_cluster.get_elems_2_local_nodes( );
+    = source_cluster->get_elems_2_local_nodes( );
 
   const mesh::tetrahedral_volume_mesh & volume_mesh
-    = source_cluster.get_mesh( );
+    = source_cluster->get_mesh( );
   for ( lo i = 0; i < n_space_elems; ++i ) {
-    lo elem_idx = source_cluster.get_element( i );
+    lo elem_idx = source_cluster->get_element( i );
     volume_mesh.get_nodes( elem_idx, y1, y2, y3, y4 );
     sc elem_volume = volume_mesh.area( elem_idx );
 
@@ -326,18 +632,12 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
-  target_space,
-  source_space >::set_trees( mesh::distributed_spacetime_cluster_tree *
-                               spacetime_target_tree,
-  mesh::volume_space_cluster_tree * space_source_tree ) {
+  target_space, source_space >::
+  set_trees_and_operation_lists(
+    mesh::distributed_spacetime_cluster_tree * spacetime_target_tree,
+    mesh::volume_space_cluster_tree * space_source_tree ) {
   _distributed_spacetime_target_tree = spacetime_target_tree;
   _space_source_tree = space_source_tree;
-
-  // determine the clusters in the target tree for which m2l or nearfield
-  // operations have to be executed
-  determine_interacting_time_clusters(
-    *_distributed_spacetime_target_tree->get_distribution_tree( )
-       ->get_root( ) );
 
   // determine the maximal spatial padding at each spatial level in both trees
   // initialize the vector with the paddings in the volume space tree.
@@ -350,6 +650,14 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
       _maximal_spatial_paddings[ i ] = spatial_paddings_target_tree[ i ];
     }
   }
+  // determine the clusters in the target tree for which m2l or nearfield
+  // operations have to be executed
+  determine_interacting_time_clusters(
+    *_distributed_spacetime_target_tree->get_distribution_tree( )
+       ->get_root( ) );
+  // determine the related nearfield and interaction lists of space-time
+  // clusters
+  initialize_nearfield_and_interaction_lists( );
 }
 
 template< class kernel_type, class target_space, class source_space >
