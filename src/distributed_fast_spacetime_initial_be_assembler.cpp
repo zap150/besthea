@@ -58,14 +58,15 @@ besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
   distributed_fast_spacetime_initial_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
     MPI_Comm * comm, mesh::volume_space_cluster_tree & space_source_tree,
-    int order_regular_tri, int order_regular_tetra, int temp_order,
-    int spat_order, sc alpha )
+    int order_regular_tri, int order_regular_tetra, int order_regular_line,
+    int temp_order, int spat_order, sc alpha )
   : _kernel( &kernel ),
     _test_space( &test_space ),
     _trial_space( &trial_space ),
     _space_source_tree( &space_source_tree ),
     _order_regular_tri( order_regular_tri ),
     _order_regular_tetra( order_regular_tetra ),
+    _order_regular_line( order_regular_line ),
     _temp_order( temp_order ),
     _spat_order( spat_order ),
     _m2l_integration_order( _spat_order ),
@@ -86,37 +87,35 @@ void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
                                                    global_matrix,
   bool info_mode ) const {
   global_matrix.set_MPI_communicator( _comm );
-  global_matrix.set_trees_and_operation_lists(
-    _test_space->get_tree( ), _space_source_tree );
-  // TODO:
-  // global_matrix.set_order( _spat_order, _temp_order, _order_regular );
-  global_matrix.set_alpha( _alpha );
-  global_matrix.set_m2l_integration_order( _m2l_integration_order );
 
+  // determine and set the dimensions of the matrix
   lo n_timesteps = _test_space->get_mesh( ).get_n_temporal_elements( );
-  // // size of individual blocks
   auto & test_basis = _test_space->get_basis( );
   auto & trial_basis = _trial_space->get_basis( );
-  lo n_rows = test_basis.dimension_global( );
+  lo n_loc_rows = test_basis.dimension_global( );
   lo n_columns = trial_basis.dimension_global( );
-  global_matrix.resize( n_timesteps, n_rows, n_columns );
+  global_matrix.resize( n_columns, n_loc_rows * n_timesteps );
+
+  // initialize additional data needed for the computation
+  global_matrix.set_orders( _spat_order, _temp_order, _order_regular_tri,
+    _order_regular_tetra, _order_regular_line );
+  global_matrix.set_alpha( _alpha );
+  global_matrix.set_m2l_integration_order( _m2l_integration_order );
   // ###########################################################################
-  // TODO: adapt this appropriately
+  global_matrix.initialize_fmm_data(
+    _test_space->get_tree( ), _space_source_tree );
+
   global_matrix.initialize_spatial_m2m_coeffs( );
 
-  // initialize_moment_and_local_contributions( );
+  initialize_moment_and_local_contributions( );
 
-  // // fill the m-list, m2l-list, n-list and l2l-list of the distributed pFMM
-  // // matrix and determine the receive information data.
-  // global_matrix.prepare_fmm( );
+  // precompute Chebyshev nodes and values
+  global_matrix.compute_chebyshev( );
 
-  // // precompute Chebyshev nodes and values
-  // global_matrix.compute_chebyshev( );
-
-  // // assemble the nearfield matrices of the pFMM matrix
-  // if ( !info_mode ) {
-  //   assemble_nearfield( global_matrix );
-  // }
+  // assemble the nearfield matrices of the pFMM matrix
+  if ( !info_mode ) {
+    assemble_nearfield( global_matrix );
+  }
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -259,7 +258,17 @@ template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
   test_space_type,
   trial_space_type >::initialize_moment_and_local_contributions( ) const {
-  // TODO: adapt
+  lou spat_contribution_size
+    = ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6;
+  // allocate memory to store moments for all volume clusters
+  _space_source_tree->initialize_moment_contributions(
+    *_space_source_tree->get_root( ), spat_contribution_size );
+
+  lou contribution_size = spat_contribution_size * ( _temp_order + 1 );
+  tree_structure * test_distribution_tree
+    = _test_space->get_tree( )->get_distribution_tree( );
+  test_distribution_tree->initialize_local_contributions_initial_op(
+    *test_distribution_tree->get_root( ), contribution_size );
 }
 
 template class besthea::bem::distributed_fast_spacetime_initial_be_assembler<

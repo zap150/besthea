@@ -261,6 +261,10 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   non_leaf_buffer.clear( );
   non_leaf_buffer.shrink_to_fit( );
   fill_nearfield_and_interaction_lists( *_root );
+  // determine auxiliary variables used to determine relevant clusters in the
+  // downward path of an initial pFMM matrix.
+  distribution_tree->determine_downward_path_initial_op_status_recursively(
+    *distribution_tree->get_root( ) );
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
@@ -1923,7 +1927,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements_new(
   // now we can assign the elements to cluster by going through
   // boxes_of_local_elements
   lo start_index = _spacetime_mesh.get_local_start_idx( );
-  for ( size_t i = 0; i < boxes_of_local_elements.size( ); ++i ) {
+  for ( lou i = 0; i < boxes_of_local_elements.size( ); ++i ) {
     index_to_cluster.at( boxes_of_local_elements[ i ] )
       ->add_element( _spacetime_mesh.local_2_global( start_index, i ) );
   }
@@ -1934,7 +1938,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements_new(
     assign_nearfield_elements_to_boxes(
       n_space_clusters_per_dim, boxes_of_nearfield_elements );
     start_index = _spacetime_mesh.get_nearfield_start_idx( );
-    for ( size_t i = 0; i < boxes_of_nearfield_elements.size( ); ++i ) {
+    for ( lou i = 0; i < boxes_of_nearfield_elements.size( ); ++i ) {
       index_to_cluster.at( boxes_of_nearfield_elements[ i ] )
         ->add_element( _spacetime_mesh.local_2_global( start_index, i ) );
     }
@@ -1946,7 +1950,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements_new(
   // elements contained in them, and to check for consistency.
   for ( auto leaf : leaves ) {
     if ( leaf->get_all_elements( ).size( )
-      != static_cast< size_t >( leaf->get_n_elements( ) ) ) {
+      != static_cast< lou >( leaf->get_n_elements( ) ) ) {
       status = 1;
       return;
     }

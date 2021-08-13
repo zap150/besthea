@@ -94,6 +94,7 @@ class besthea::mesh::scheduling_time_cluster {
       _essential_status( -1 ),
       _active_upward_path( false ),
       _active_downward_path( false ),
+      _status_initial_op_downward_path( 0 ),
       _upward_path_counter( -1 ),
       _m2l_counter( 0 ),
       _downward_path_status( 0 ),
@@ -561,6 +562,21 @@ class besthea::mesh::scheduling_time_cluster {
    */
   bool is_active_in_downward_path( ) const {
     return _active_downward_path;
+  }
+
+  /**
+   * Sets @ref _status_initial_op_downward_path.
+   * \param[in] new_status  Value to set.
+   */
+  void set_status_initial_op_downward_path( const char new_status ) {
+    _status_initial_op_downward_path = new_status;
+  }
+
+  /**
+   * Returns the value of @ref _status_initial_op_downward_path
+   */
+  char get_status_in_initial_op_downward_path( ) const {
+    return _status_initial_op_downward_path;
   }
 
   /**
@@ -1104,6 +1120,13 @@ class besthea::mesh::scheduling_time_cluster {
                                //!< upward path of the FMM.
   bool _active_downward_path;  //!< Indicates if the cluster is active in the
                                //!< downward path of the FMM.
+  char
+    _status_initial_op_downward_path;  //!< Indicates if the cluster is active
+                                       //!< in the downward path of the FMM for
+                                       //!< initial potential operators. This is
+                                       //!< the case if its subtree contains
+                                       //!< clusters associated with local
+                                       //!< space-time leaf clusters.
   lo _upward_path_counter;  //!< Used to keep track of the dependencies in the
                             //!< upward path. If it is 0, the dependencies are
                             //!< fulfilled.

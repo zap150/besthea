@@ -73,7 +73,7 @@ namespace besthea {
  */
 template< class kernel_type, class target_space, class source_space >
 class besthea::linear_algebra::distributed_initial_pFMM_matrix
-  : public besthea::linear_algebra::block_linear_operator {
+  : public besthea::linear_algebra::linear_operator {
  public:
   using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
 
@@ -179,11 +179,9 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * Destructor
    */
   virtual ~distributed_initial_pFMM_matrix( ) {
-    for ( auto it = _clusterwise_nearfield_matrices.begin( );
-          it != _clusterwise_nearfield_matrices.end( ); ++it ) {
-      // loop over all nearfield matrices associated with a given spacetime
-      // cluster and delete them.
-      for ( auto matrix : it->second ) {
+    // delete all allocated nearfield matrices
+    for ( auto matrix_vector : _clusterwise_nearfield_matrices ) {
+      for ( auto matrix : matrix_vector ) {
         delete matrix;
       }
     }
@@ -200,21 +198,20 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * @note This routine is just a dummy here. Please use the corresponding
    * version with distributed block vectors.
    */
-  virtual void apply( const block_vector & x, block_vector & y,
+  virtual void apply( const vector_type & x, vector_type & y,
     bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
 
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x using block vectors.
    * @param[in] x
    * @param[in,out] y
-   * @param[in] trans Flag for transpose of individual blocks (not the whole
-   * block matrix!).
+   * @param[in] trans Flag for transposition.
    * @param[in] alpha
    * @param[in] beta
+   * @warning Transposition is not supported.
    */
-  virtual void apply( const distributed_block_vector & x,
-    distributed_block_vector & y, bool trans = false, sc alpha = 1.0,
-    sc beta = 0.0 ) const;
+  void apply( const vector_type & x, distributed_block_vector & y,
+    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
 
   /**
    * Sets the MPI communicator associated with the distributed pFMM matrix and
@@ -227,14 +224,17 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
   }
 
   /**
-   * Sets the underlying distributed space-time target tree and space source
-   * tree. In addition this routine initializes nearfield and interaction lists,
-   * first on a temporal level and then for all clusters in the space-time tree.
+   * This routine initializes several data required for the execution of the
+   * FMM.
+   *
+   * In particular, nearfield and interaction lists are initialized (first on a
+   * temporal level and then for all clusters in the space-time tree) and the
+   * container to store the nearfield matrices is prepared.
    * @param[in] spacetime_target_tree  The distributed spacetime tree used as
    * target tree.
    * @param[in] space_source_tree The space cluster tree used as source tree.
    */
-  void set_trees_and_operation_lists(
+  void initialize_fmm_data(
     mesh::distributed_spacetime_cluster_tree * spacetime_target_tree,
     mesh::volume_space_cluster_tree * space_source_tree );
 
@@ -248,29 +248,32 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
 
   /**
    * Sets the dimension of the matrix.
-   * @param[in] block_dim Block dimension.
-   * @param[in] dim_domain Number of columns in a block.
-   * @param[in] dim_range Number of rows in a block.
+   * @param[in] dim_domain Number of columns in the matrix.
+   * @param[in] dim_range Number of rows in the matrix.
    * @note the member variables which are set are inherited from
-   *       @ref block_linear_operator.
+   * @ref linear_operator.
+   * @note The block structure in time in the rows is ignored. In particular,
+   * @p _dim_range is the total dimension of the range.
    */
-  void resize( lo block_dim, lo dim_domain, lo dim_range ) {
-    _block_dim = block_dim;
+  void resize( lo dim_domain, lo dim_range ) {
     _dim_domain = dim_domain;
     _dim_range = dim_range;
   }
 
   /**
    * Sets the order of the Lagrange and Chebyshev polynomials and the quadrature
-   * order for numerical integration.
+   * orders for numerical integration.
    * @param[in] spat_order Order of the Chebyshev polynomials.
    * @param[in] temp_order Order of the Lagrange polynomials.
    * @param[in] order_regular Quadrature order.
    */
-  void set_order( int spat_order, int temp_order, int order_regular ) {
+  void set_orders( int spat_order, int temp_order, int order_regular_tri,
+    int order_regular_tetra, int order_regular_line ) {
     _spat_order = spat_order;
     _temp_order = temp_order;
-    _order_regular = order_regular;
+    _order_regular_tri = order_regular_tri;
+    _order_regular_tetra = order_regular_tetra;
+    _order_regular_line = order_regular_line;
     _spat_contribution_size
       = ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6;
     _contribution_size = ( _temp_order + 1 ) * _spat_contribution_size;
@@ -287,10 +290,12 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
   }
 
   /**
-   * @todo Use this routine to determine the structures needed to execute the
-   * FMM.
+   * Resizes @ref _clusterwise_nearfield_matrices appropriately before the
+   * initialization of the matrices.
+   * @note This routine has to be called after
+   * @ref initialize_nearfield_and_interaction_lists
    */
-  void prepare_fmm( );
+  void resize_nearfield_matrix_container( );
 
   /**
    * Creates a nearfield matrix for two clusters
@@ -334,6 +339,10 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
 
   void apply_all_m2l_operations( ) const;
 
+  void evaluate_local_contributions_downward_path(
+    mesh::scheduling_time_cluster * current_cluster,
+    distributed_block_vector & y_pFMM ) const;
+
   void apply_s2m_operation(
     const vector & sources, mesh::volume_space_cluster * leaf ) const;
 
@@ -343,200 +352,10 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
   void apply_m2l_operation( const mesh::volume_space_cluster * s_src_cluster,
     mesh::general_spacetime_cluster * st_tar_cluster ) const;
 
-  void compute_coupling_coeffs_initial_op( const vector_type & tar_time_nodes,
-    const sc spat_half_size, const sc spat_center_diff,
-    vector_type & buffer_for_gaussians, vector_type & coupling_coeffs ) const;
+  void call_l2l_operations(
+    mesh::scheduling_time_cluster * child_cluster ) const;
 
-  void compute_chebyshev_quadrature_p1(
-    const mesh::volume_space_cluster * source_cluster,
-    full_matrix & T_vol ) const;
-
-  /*
-   * Calls all S2M operations associated with a given scheduling time cluster.
-   * @param[in] sources Global sources containing the once used for the S2M
-   *                    operation.
-   * @param[in] t_cluster  Considered scheduling time cluster.
-   * @param[in] verbose If true, the required time is written to file.
-   * @param[in] verbose_file  If @p verbose is true, this is used as output
-   *                          file.
-   * @tparam run_count  Run count of the corresponding pFMM procedure. It is
-   *                    used to choose the appropriate s2m operation for this
-   *                    run in case of the hypersingular operator.
-   */
-  // template< slou run_count >
-  // void call_s2m_operations( const distributed_block_vector & sources,
-  //   mesh::scheduling_time_cluster * t_cluster, bool verbose,
-  //   const std::string & verbose_file ) const;
-
-  /*
-   * Applies the appropriate S2M operation for the given source cluster and
-   * sources depending on the boundary integral operator.
-   * @param[in] source_vector Global sources containing the once used for the
-   *                          S2M operation.
-   * @param[in] source_cluster  Considered spacetime cluster.
-   * @tparam run_count  Run count of the corresponding pFMM procedure. It is
-   *                    used to choose the appropriate s2m operation for this
-   *                    run in case of the hypersingular operator.
-   */
-  // template< slou run_count >
-  // void apply_s2m_operation( const distributed_block_vector & source_vector,
-  //   mesh::general_spacetime_cluster * source_cluster ) const;
-
-  /*
-   * Applies the S2M operation for the given source cluster and sources for
-   * p0 basis functions (for single layer and adjoint double layer operators)
-   * @param[in] source_vector Global sources containing the once used for the
-   *                          S2M operation.
-   * @param[in] source_cluster  Considered spacetime cluster.
-   * @todo Use buffers instead of reallocating sources and aux buffer in every
-   * function call?
-   * @todo Store the quadratures of Chebyshev polynomials in space and
-   * Lagrange polynomials in time again?
-   */
-  // void apply_s2m_operation_p0( const distributed_block_vector &
-  // source_vector,
-  //   mesh::general_spacetime_cluster * source_cluster ) const;
-
-  /*
-   * Applies the S2M operation for the given source cluster and sources for
-   * p1 basis functions and normal derivatives of spatial polynomials (for
-   * double layer operator)
-   * @param[in] source_vector Global sources containing the once used for the
-   *                          S2M operation.
-   * @param[in] source_cluster  Considered spacetime cluster.
-   * @todo Use buffers instead of reallocating sources and aux buffer in every
-   * function call?
-   * @todo Store the quadratures of Chebyshev polynomials in space and
-   * Lagrange polynomials in time again?
-   */
-  // void apply_s2m_operations_p1_normal_drv(
-  //   const distributed_block_vector & source_vector,
-  //   mesh::general_spacetime_cluster * source_cluster ) const;
-
-  /*
-   * Applies the S2M operation for the given source cluster and sources for
-   * a selected component of the surface curls of p1 basis functions (for
-   * hypersingular operator)
-   * @param[in] source_vector Global sources containing the once used for the
-   *                          S2M operation.
-   * @param[in] source_cluster  Considered spacetime cluster.
-   * @tparam dim  Used to select the component of the surface curls (0,1 or
-   * 2).
-   * @todo Use buffers instead of reallocating sources and aux buffer in every
-   * function call?
-   */
-  // template< slou dim >
-  // void apply_s2m_operation_curl_p1_hs(
-  //   const distributed_block_vector & source_vector,
-  //   mesh::general_spacetime_cluster * source_cluster ) const;
-
-  /*
-   * Applies the S2M operation for the given source cluster and sources for p1
-   * basis functions and a selected component of the normal derivative of the
-   * Chebyshev polynomials, which are used for the expansion (for
-   * hypersingular operator)
-   * @param[in] source_vector Global sources containing the once used for the
-   *                          S2M operation.
-   * @param[in] source_cluster  Considered spacetime cluster.
-   * @param[in] dimension Used to select the component of the normal
-   * derivatives of the Chebyshev polynomials (0,1 or 2).
-   * @todo Use buffers instead of reallocating sources and aux buffer in every
-   * function call?
-   */
-  // void apply_s2m_operation_p1_normal_hs(
-  //   const distributed_block_vector & source_vector,
-  //   mesh::general_spacetime_cluster * source_cluster,
-  //   const slou dimension ) const;
-
-  /*
-   * Calls all M2M operations associated with a given scheduling time cluster.
-   * @param[in] t_cluster  Considered scheduling time cluster.
-   * @param[in] verbose If true, the required time is written to file.
-   * @param[in] verbose_file  If @p verbose is true, this is used as output
-   *                          file.
-   */
-  // void call_m2m_operations( mesh::scheduling_time_cluster * t_cluster,
-  //   bool verbose, const std::string & verbose_file ) const;
-
-  /*
-   * Applies the M2M operations for the given parent cluster and all its
-   * children for a given temporal configuration.
-   * @param[in] parent_cluster  Considered spacetime parent cluster.
-   * @param[in] child_configuration Indicates for which children the m2m
-   *                                operations are executed:
-   *                                - 0: left children w.r.t. to time.
-   *                                - 1: right chilren w.r.t. to time.
-   */
-  // void apply_grouped_m2m_operation(
-  //   mesh::general_spacetime_cluster * parent_cluster,
-  //   slou child_configuration ) const;
-
-  /*
-   * Applies the temporal m2m operation to a child_moment and adds the result
-   * to the parent moment.
-   * @param[in] child_moment  Array containing the moments of the child
-   * cluster.
-   * @param[in] temporal_m2m_matrix Matrix used for the temporal m2m
-   * operation.
-   * @param[in,out] parent_moment Array to which the result is added.
-   */
-  // void apply_temporal_m2m_operation( const sc * child_moment,
-  //   const full_matrix & temporal_m2m_matrix, sc * parent_moment ) const;
-
-  /*
-   * Applies the spatial m2m operation to a child_moment and adds the result
-   * to a given array.
-   * @param[in] child_moment  Array containing the moments of the child
-   * cluster.
-   * @param[in] n_space_div_parent  Number of refinements in space executed
-   * for the parent cluster.
-   * @param[in] octant  Configuration of the child cluster with respect to its
-   *                    parent in space.
-   * @param[in,out] output_array  Array to which the result is added.
-   * @note  @p n_space_div_parent and @p octant are used to determine the
-   *        appropriate m2m coefficients for the operation.
-   */
-  // void apply_spatial_m2m_operation( const sc * child_moment,
-  //   const lo n_space_div_parent, const slou octant,
-  //   std::vector< sc > & output_array ) const;
-
-  /*
-   * Calls all M2L operations associated with a given pair of scheduling time
-   * clusters.
-   * @param[in] src_cluster Scheduling time cluster which acts as source in
-   * M2L.
-   * @param[in] tar_cluster Scheduling time cluster which acts as target in
-   * M2L.
-   * @param[in] verbose If true, the required time is written to file.
-   * @param[in] verbose_file  If @p verbose is true, this is used as output
-   *                          file.
-   */
-  // void call_m2l_operations( mesh::scheduling_time_cluster * src_cluster,
-  //   mesh::scheduling_time_cluster * tar_cluster, bool verbose,
-  //   const std::string & verbose_file ) const;
-
-  /*
-   * Applies the M2L operation for given source and target clusters.
-   * @param[in] src_cluster Spacetime source cluster for the M2L operation.
-   * @param[in,out] tar_cluster Spacetime target cluster for the M2L
-   * operation.
-   * @todo add buffers instead of reallocation?
-   */
-  // void apply_m2l_operation( const mesh::general_spacetime_cluster *
-  // src_cluster,
-  //   mesh::general_spacetime_cluster * tar_cluster ) const;
-
-  /*
-   * Calls all L2L operations associated with a given scheduling time cluster.
-   * @param[in] t_cluster  Considered scheduling time cluster.
-   * @param[in] verbose If true, the required time is written to file.
-   * @param[in] verbose_file  If @p verbose is true, this is used as output
-   *                          file.
-   */
-  // void call_l2l_operations( mesh::scheduling_time_cluster * t_cluster,
-  //   bool verbose, const std::string & verbose_file ) const;
-
-  /*
+  /**
    * Applies the L2L operations for the given parent cluster and all its
    * children for a given temporal configuration.
    * @param[in] parent_cluster  Considered spacetime parent cluster.
@@ -545,31 +364,30 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    *                                - 0: left children w.r.t. to time.
    *                                - 1: right chilren w.r.t. to time.
    */
-  // void apply_grouped_l2l_operation(
-  //   mesh::general_spacetime_cluster * parent_cluster,
-  //   slou child_configuration ) const;
+  void apply_grouped_l2l_operation(
+    mesh::general_spacetime_cluster * parent_cluster,
+    slou child_configuration ) const;
 
-  /*
-   * Applies the temporal l2l operation to a child_moment and adds the result
-   * to the parent moment.
+  /**
+   * Applies the temporal l2l operation to a parent's local contribution and
+   * adds the result to a given array.
    * @param[in] parent_local_contribution Array containing the moments of the
    *                                      child cluster.
-   * @param[in] temporal_l2l_matrix Matrix used for the temporal l2l
-   * operation.
+   * @param[in] temporal_l2l_matrix Matrix used for the temporal l2l operation.
    * @param[in,out] child_local_contribution  Array to which the result is
    *                                          added.
    */
-  // void apply_temporal_l2l_operation( const sc * parent_local_contribution,
-  //   const full_matrix & temporal_l2l_matrix,
-  //   sc * child_local_contribution ) const;
+  void apply_temporal_l2l_operation( const sc * parent_local_contribution,
+    const full_matrix & temporal_l2l_matrix,
+    sc * child_local_contribution ) const;
 
-  /*
-   * Applies the spatial l2l operation to a child_moment and adds the result
-   * to a given array.
+  /**
+   * Applies the spatial l2l operation to a parent's local contribution and adds
+   * the result to a given array.
    * @param[in] parent_local Array containing the local
    *                                      contributions of the parent cluster.
-   * @param[in] n_space_div_parent  Number of refinements in space executed
-   * for the parent cluster.
+   * @param[in] n_space_div_parent  Number of refinements in space executed for
+   *                                the parent cluster.
    * @param[in] octant  Configuration of the child cluster with respect to its
    *                    parent in space.
    * @param[in,out] child_local  Array to which the result is
@@ -577,27 +395,18 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * @note  @p n_space_div_parent and @p octant are used to determine the
    *        appropriate l2l coefficients for the operation.
    */
-  // void apply_spatial_l2l_operation( const sc * parent_local,
-  //   const lo n_space_div_parent, const slou octant, sc * child_local )
-  //   const;
+  void apply_spatial_l2l_operation( const sc * parent_local,
+    const lo n_space_div_parent, const slou octant, sc * child_local ) const;
 
-  /*
+  /**
    * Calls all L2T operations associated with a given scheduling time cluster.
    * @param[in] t_cluster  Considered scheduling time cluster.
    * @param[in,out] output_vector Block vector to which the results are added.
-   * @param[in] verbose If true, the required time is written to file.
-   * @param[in] verbose_file  If @p verbose is true, this is used as output
-   *                          file.
-   * @tparam run_count  Run count of the corresponding pFMM procedure. It is
-   *                    used to choose the appropriate l2t operation for this
-   *                    run in case of the hypersingular operator.
    */
-  // template< slou run_count >
-  // void call_l2t_operations( mesh::scheduling_time_cluster * t_cluster,
-  //   distributed_block_vector & output_vector, bool verbose,
-  //   const std::string & verbose_file ) const;
+  void call_l2t_operations( mesh::scheduling_time_cluster * t_cluster,
+    distributed_block_vector & output_vector ) const;
 
-  /*
+  /**
    * Applies the appropriate L2T operation for the given target cluster
    * depending on the boundary integral operator and writes the result to the
    * appropriate part of the output vector.
@@ -606,132 +415,47 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    *                              the operation is added.
    * @todo Use buffers instead of reallocating targets and aux buffer in every
    * function call?
-   * @todo Store the quadratures of Chebyshev polynomials in space and
-   * Lagrange polynomials in time again?
-   * @tparam run_count  Run count of the corresponding pFMM procedure. It is
-   *                    used to choose the appropriate s2m operation for this
-   *                    run in case of the hypersingular operator.
    */
-  // template< slou run_count >
-  // void apply_l2t_operation( const mesh::general_spacetime_cluster *
-  // cluster,
-  //   distributed_block_vector & output_vector ) const;
+  void apply_l2t_operation( const mesh::general_spacetime_cluster * cluster,
+    distributed_block_vector & output_vector ) const;
 
-  /*
+  /**
    * Applies the L2T operation for the given target cluster for p0 basis
    * functions and writes the result to the appropriate part of the output
    * vector.
    * @param[in] cluster  Considered spacetime cluster.
    * @param[in,out] output_vector Global result vector to which the result of
    *                              the operation is added.
-   * @todo Use buffers instead of reallocating targets and aux buffer in every
-   * function call?
-   * @todo Store the quadratures of Chebyshev polynomials in space and
-   * Lagrange polynomials in time again?
+   * @todo This is a duplicate of
+   * @ref distributed_pFMM_matrix::apply_l2t_operations_p0. Can we restructure
+   * the code to get rid of duplication.
    */
-  // void apply_l2t_operation_p0( const mesh::general_spacetime_cluster *
-  // cluster,
-  //   distributed_block_vector & output_vector ) const;
+  void apply_l2t_operation_p0( const mesh::general_spacetime_cluster * cluster,
+    distributed_block_vector & output_vector ) const;
 
-  /*
+  /**
    * Applies the L2T operation for the given target cluster for p1 basis
-   * functions and normal derivatives of spatial polynomials (for adjoint
-   * double layer operator and hypersingular operator) functions and writes
-   * the result to the appropriate part of the output vector.
+   * functions and normal derivatives of spatial polynomials (for operator M1
+   * (normal trace of initial potential)) and writes the result to the
+   * appropriate part of the output vector.
    * @param[in] cluster  Considered spacetime cluster.
    * @param[in,out] output_vector Global result vector to which the result of
    *                              the operation is added.
-   * @todo Use buffers instead of reallocating targets and aux buffer in every
-   * function call?
-   * @todo Store the quadratures of Chebyshev polynomials in space and
-   * Lagrange polynomials in time again?
+   * @todo This is a duplicate of
+   * @ref distributed_pFMM_matrix::apply_l2t_operations_p1_normal_drv. Can we
+   * restructure the code to get rid of duplication.
    */
-  // void apply_l2t_operation_p1_normal_drv(
-  //   const mesh::general_spacetime_cluster * cluster,
-  //   distributed_block_vector & output_vector ) const;
+  void apply_l2t_operation_p1_normal_drv(
+    const mesh::general_spacetime_cluster * cluster,
+    distributed_block_vector & output_vector ) const;
 
-  /*
-   * Applies the L2T operation for the given target cluster for a selected
-   * component of the surface curls of p1 basis functions (for hypersingular
-   * operator) and writes the result to the appropriate part of the output
-   * vector.
-   * @param[in] cluster Considered spacetime cluster.
-   * @param[in,out] output_vector Global result vector to which the result of
-   *                              the operation is added.
-   * @tparam dim  Used to select the component of the surface curls (0,1 or
-   * 2).
-   * @todo Use buffers instead of reallocating targets and aux buffer in every
-   * function call?
-   */
-  // template< slou dim >
-  // void apply_l2t_operation_curl_p1_hs(
-  //   const mesh::general_spacetime_cluster * cluster,
-  //   distributed_block_vector & output_vector ) const;
+  void compute_coupling_coeffs_initial_op( const vector_type & tar_time_nodes,
+    const sc spat_half_size, const sc spat_center_diff,
+    vector_type & buffer_for_gaussians, vector_type & coupling_coeffs ) const;
 
-  /*
-   * Applies the L2T operation for the given target cluster for p1 basis
-   * functions and a selected component of the normal derivative of the
-   * Chebyshev polynomials, which are used for the expansion (for
-   * hypersingular operator), and writes the result to the appropriate part of
-   * the output vector.
-   * @param[in] cluster Considered spacetime cluster.
-   * @param[in] dimension Used to select the component of the normal
-   * derivatives of the Chebyshev polynomials (0,1 or 2).
-   * @param[in,out] output_vector Global result vector to which the result of
-   *                              the operation is added.
-   * @todo Use buffers instead of reallocating targets and aux buffer in every
-   * function call?
-   */
-  // void apply_l2t_operation_p1_normal_hs(
-  //   const mesh::general_spacetime_cluster * cluster, const slou dimension,
-  //   distributed_block_vector & output_vector ) const;
-
-  /*
-   * Executes all nearfield operations associated with a given scheduling time
-   * cluster.
-   * @param[in] cluster Time cluster whose associated nearfield operations
-   *                    are executed.
-   * @param[in] sources Global sources containing the once used for the
-   *                    nearfield operation.
-   * @param[in] trans If true, the transposed nearfield matrices are applied
-   *                  otherwise the standard nearfield matrices.
-   * @param[in,out] output_vector Vector to which the results are added.
-   * @param[in] verbose If true, the required time is written to file.
-   * @param[in] verbose_file  If @p verbose is true, this is used as output
-   *                          file.
-   */
-  // void apply_nearfield_operations(
-  //   const mesh::scheduling_time_cluster * cluster,
-  //   const distributed_block_vector & sources, bool trans,
-  //   distributed_block_vector & output_vector, bool verbose,
-  //   const std::string & verbose_file ) const;
-
-  /*
-   * Compute quadrature of the Chebyshev polynomials and p0 basis functions
-   * for the spatial part of a spacetime cluster
-   * @param[in] source_cluster  Cluster for whose spatial component the
-   *                            quadratures are computed.
-   * @param[out] T  Full matrix where the quadratures are stored. The elements
-   *                of the cluster vary along the rows, the order of the
-   *                polynomial along the columns of the matrix.
-   */
-  // void compute_chebyshev_quadrature_p0(
-  //   const mesh::general_spacetime_cluster * source_cluster,
-  //   full_matrix & T ) const;
-
-  /*
-   * Computes quadrature of the normal derivatives of the Chebyshev
-   * polynomials times p1 basis functions for the spatial part of a spacetime
-   * cluster.
-   * @param[in] source_cluster  Cluster for whose spatial component the
-   *                            quadratures are computed.
-   * @param[out] T_drv  Full matrix where the quadratures are stored. The
-   * nodes of the cluster vary along the rows, the order of the polynomial
-   * along the columns of the matrix.
-   */
-  // void compute_normal_drv_chebyshev_quadrature_p1(
-  //   const mesh::general_spacetime_cluster * source_cluster,
-  //   full_matrix & T_drv ) const;
+  void compute_chebyshev_quadrature_p1_volume(
+    const mesh::volume_space_cluster * source_cluster,
+    full_matrix & T_vol ) const;
 
   /**
    * Compute quadrature of the Lagrange polynomials and p0 basis functions for
@@ -741,35 +465,47 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * @param[out] L  Full matrix where the quadratures are stored. The temporal
    *                elements of the cluster vary along the columns, the order
    *                of the polynomial along the rows of the matrix.
+   * @todo This is a duplicate of
+   * @ref distributed_pFMM_matrix::compute_lagrange_quadrature. Can we
+   * restructure the code to get rid of duplication.
    */
   void compute_lagrange_quadrature(
     const mesh::general_spacetime_cluster * source_cluster,
     full_matrix & L ) const;
 
-  /*
-   * Computes coupling coefficients for the spacetime m2l operation for one of
-   * the three space dimensions implicitly given.
-   * @param[in] src_time_nodes  Interpolation nodes in time for the source
-   *                            cluster.
-   * @param[in] tar_time_nodes  Interpolation nodes in time for the target
-   *                            cluster.
-   * @param[in] half_size Half size in space of the current clusters along the
-   *                      dimension for which the coefficients are computed.
-   * @param[in] center_diff The appropriate component of the difference vector
-   *                        (target_center - source_center).
-   * @param[in] buffer_for_gaussians  Vector with size >= ( _spat_order + 1
-   * )^2
-   *                                  * ( _temp_order + 1 )^2 to store
-   *                                  intermediate results in the computation
-   *                                  of the m2l coefficients.
-   * @param[in,out] coupling_coeffs Vector with size >= ( _spat_order + 1 )^2
-   *                                * ( _temp_order + 1 )^2 to store m2l
-   *                                coefficients.
+  /**
+   * Compute quadrature of the Chebyshev polynomials and p0 basis functions for
+   * the spatial part of a spacetime cluster
+   * @param[in] source_cluster  Cluster for whose spatial component the
+   *                            quadratures are computed.
+   * @param[out] T  Full matrix where the quadratures are stored. The elements
+   *                of the cluster vary along the rows, the order of the
+   *                polynomial along the columns of the matrix.
+   * @todo This is almost a duplicate of
+   * @ref distributed_pFMM_matrix::compute_chebyshev_quadrature_p0. (different
+   * spatial padding is used) Can we restructure the code to get rid of
+   * duplication.
    */
-  // void compute_coupling_coeffs( const vector_type & src_time_nodes,
-  //   const vector_type & tar_time_nodes, const sc half_size,
-  //   const sc center_diff, vector_type & buffer_for_gaussians,
-  //   vector_type & coupling_coeffs ) const;
+  void compute_chebyshev_quadrature_p0(
+    const mesh::general_spacetime_cluster * source_cluster,
+    full_matrix & T ) const;
+
+  /**
+   * Computes quadrature of the normal derivatives of the Chebyshev polynomials
+   * times p1 basis functions for the spatial part of a spacetime cluster.
+   * @param[in] source_cluster  Cluster for whose spatial component the
+   *                            quadratures are computed.
+   * @param[out] T_drv  Full matrix where the quadratures are stored. The
+   * nodes of the cluster vary along the rows, the order of the polynomial
+   * along the columns of the matrix.
+   * @todo This is almost a duplicate of
+   * @ref distributed_pFMM_matrix::compute_normal_drv_chebyshev_quadrature_p1.
+   * (different spatial padding is used) Can we restructure the code to get rid
+   * of duplication.
+   */
+  void compute_normal_drv_chebyshev_quadrature_p1(
+    const mesh::general_spacetime_cluster * source_cluster,
+    full_matrix & T_drv ) const;
 
   /**
    * Initializes quadrature structures used to integrate Chebyshev polynomials
@@ -868,12 +604,6 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
                             //!< nearfield operations have to be
                             //!< executed.
 
-  std::unordered_map< mesh::general_spacetime_cluster *,
-    std::vector< full_matrix * > >
-    _clusterwise_nearfield_matrices;  //!< nearfield matrices for all the space-
-                                      //!< time leaf clusters and their
-                                      //!< nearfield clusters.
-
   std::vector< vector_type >
     _m2m_coeffs_s_left;  //!< left spatial m2m matrices stored levelwise.
   std::vector< vector_type >
@@ -882,11 +612,21 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
   int _temp_order;  //!< degree of interpolation polynomials in time for pFMM.
   int _spat_order;  //!< degree of Chebyshev polynomials for expansion in
                     //!< space in pFMM.
-  int _order_regular;  //!< Triangle quadrature order for the regular integrals.
-                       //!< Used for computation of quadratures in S2M steps.
-  int _m2l_integration_order;   //!< _m2l_integration_order + 1 quadrature
-                                //!< points are used for the approximation of
-                                //!< the m2l coefficients.
+  int _order_regular_tri;  //!< Triangle quadrature order for the regular
+                           //!< integrals. Polynomials on the triangle up to
+                           //!< this order are integrated exactly. (used e.g. in
+                           //!< computation of l2t matrices)
+  int _order_regular_tetra;    //!< Tetrahedron quadrature order for the regular
+                               //!< integrals. Polynomials on the tetrahedron up
+                               //!< to this order are integrated exactly. (used
+                               //!< e.g. in computation of s2m matrices)
+  int _order_regular_line;     //!< Line quadrature order for the regular
+                               //!< integrals. Polynomials on a 1D line up to
+                               //!< this order are integrated exactly. (used
+                               //!< e.g. in computation of l2t matrices)
+  int _m2l_integration_order;  //!< _m2l_integration_order + 1 quadrature
+                               //!< points are used for the approximation of
+                               //!< the m2l coefficients.
   int _spat_contribution_size;  //!< Spatial size of a contribution. It is
                                 //!< _spat_order + 3 choose 3
   int _contribution_size;       //!< Size of a contribution (moment or local
@@ -925,6 +665,16 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
     _nearfield_list_vector;  //!< A vector of pairs. Each pair consists of a
                              //!< target space-time cluster and an associated
                              //!< nearfield list of volume space clusters.
+
+  std::vector< std::vector< full_matrix * > >
+    _clusterwise_nearfield_matrices;  //!< nearfield
+                                      //!< matrices for all
+                                      //!< the pairs of
+                                      //!< leaf clusters and
+                                      //!< nearfield
+                                      //!< clusters in the
+                                      //!< nearfield list
+                                      //!< vector.
 };
 
 /** Typedef for the distributed initial potential M0 p0-p1 PFMM matrix */

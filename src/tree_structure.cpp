@@ -140,21 +140,34 @@ void besthea::mesh::tree_structure::reduce_2_essential( ) {
   collect_leaves( *_root );
 }
 
-bool besthea::mesh::tree_structure::subtree_contains_local_spacetime_leaves(
-  scheduling_time_cluster & subtree_root ) {
-  bool return_value = false;
-  if ( subtree_root.get_process_id( ) == _my_process_id
-    && subtree_root.get_n_associated_leaves( ) > 0 ) {
-    return_value = true;
-  } else if ( subtree_root.get_n_children( ) > 0 ) {
+char besthea::mesh::tree_structure::
+  determine_downward_path_initial_op_status_recursively(
+    scheduling_time_cluster & current_cluster ) {
+  char return_value = 0;
+  if ( current_cluster.get_process_id( ) == _my_process_id
+    && current_cluster.get_n_associated_leaves( ) > 0 ) {
+    return_value = 1;
+  } else if ( current_cluster.get_n_children( ) > 0 ) {
     std::vector< scheduling_time_cluster * > * children
-      = subtree_root.get_children( );
-    auto child_it = children->begin( );
-    while ( return_value == false && child_it != children->end( ) ) {
-      return_value = subtree_contains_local_spacetime_leaves( **child_it );
-      ++child_it;
+      = current_cluster.get_children( );
+    for ( auto child_it = children->begin( ); child_it != children->end( );
+          ++child_it ) {
+      char child_return_value
+        = determine_downward_path_initial_op_status_recursively( **child_it );
+      if ( child_return_value > return_value ) {
+        return_value = child_return_value;
+      }
     }
   }
+  // Check if the cluster's left end point is the starting point of the time
+  // interval (i.e. the cluster is the leftmost cluster on its level). If this
+  // is the case and return_value is > 0, return_value is changed to 2
+  lo level = current_cluster.get_level( );
+  lo global_index = current_cluster.get_global_index( );
+  if ( ( global_index == ( 1 << level ) - 1 ) && ( return_value > 0 ) ) {
+    return_value = 2;
+  }
+  current_cluster.set_status_initial_op_downward_path( return_value );
   return return_value;
 }
 
@@ -198,6 +211,18 @@ void besthea::mesh::tree_structure::clear_local_contributions(
   if ( root.get_n_children( ) > 0 ) {
     for ( auto child : *root.get_children( ) ) {
       clear_local_contributions( *child );
+    }
+  }
+}
+
+void besthea::mesh::tree_structure::initialize_local_contributions_initial_op(
+  scheduling_time_cluster & root, lou contribution_size ) {
+  if ( root.get_status_in_initial_op_downward_path( ) == 1 ) {
+    root.allocate_associated_local_contributions( contribution_size );
+  }
+  if ( root.get_n_children( ) > 0 ) {
+    for ( auto child : *root.get_children( ) ) {
+      initialize_local_contributions_initial_op( *child, contribution_size );
     }
   }
 }

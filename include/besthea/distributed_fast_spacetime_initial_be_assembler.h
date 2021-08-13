@@ -183,6 +183,8 @@ class besthea::bem::distributed_fast_spacetime_initial_be_assembler {
    * quadrature.
    * @param[in] order_regular_tetra Tetrahedron quadrature order for regular
    * quadrature.
+   * @param[in] order_regular_line  Line quadrature order for regular
+   * quadrature.
    * @param[in] temp_order Degree of Lagrange interpolation polynomials in time
    *                       for pFMM matrix.
    * @param[in] spat_order Largest degree of Chebyshev polynomials for expansion
@@ -192,8 +194,9 @@ class besthea::bem::distributed_fast_spacetime_initial_be_assembler {
   distributed_fast_spacetime_initial_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
     MPI_Comm * comm, mesh::volume_space_cluster_tree & space_source_tree,
-    int order_regular_tri = 4, int order_regular_tetra = 4, int temp_order = 5,
-    int spat_order = 5, sc alpha = 1.0 );
+    int order_regular_tri = 4, int order_regular_tetra = 4,
+    int order_regular_line = 4, int temp_order = 5, int spat_order = 5,
+    sc alpha = 1.0 );
 
   distributed_fast_spacetime_initial_be_assembler(
     const distributed_fast_spacetime_initial_be_assembler & that )
@@ -331,6 +334,9 @@ class besthea::bem::distributed_fast_spacetime_initial_be_assembler {
   int _order_regular_tetra;  //!< Tetrahedron quadrature order for the regular
                              //!< integrals. Polynomials on the tetrahedron up
                              //!< to this order are integrated exactly.
+  int _order_regular_line;   //!< Line quadrature order for the regular
+                             //!< integrals. Polynomials on a 1D line up to
+                             //!< this order are integrated exactly.
   int _temp_order;  //!< Degree of Lagrange interpolation polynomials in time
                     //!< for pFMM.
   int _spat_order;  //!< Largest degree of Chebyshev polynomials for expansion

@@ -68,8 +68,8 @@ class besthea::linear_algebra::block_linear_operator {
    * @param[in] dim_domain Dimension of domain per block.
    * @param[in] dim_range Dimension of range per block.
    * @remark Example: In case of block matrices, \p block_dim is the number of
-   * blocks in each row and column, \p dim_domain the number of rows per block
-   * and \p dim_range the number of columns per block.
+   * blocks in each row and column, \p dim_domain the number of columns per
+   * block and \p dim_range the number of rows per block.
    */
   block_linear_operator( lo block_dim, lo dim_domain, lo dim_range )
     : _block_dim( block_dim ),
@@ -386,8 +386,8 @@ class besthea::linear_algebra::block_linear_operator {
 
  protected:
   lo _block_dim;   //!< Number of blocks in a row (column).
-  lo _dim_domain;  //!< domain dimension (number of rows in a block)
-  lo _dim_range;   //!< range dimension (number of columns in a block)
+  lo _dim_domain;  //!< domain dimension (number of columns in a block)
+  lo _dim_range;   //!< range dimension (number of rows in a block)
 };
 
 #endif /* INCLUDE_BESTHEA_BLOCK_LINEAR_OPERATOR_H_ */

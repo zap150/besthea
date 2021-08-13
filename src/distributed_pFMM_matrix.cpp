@@ -1002,9 +1002,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::call_l2l_operations( scheduling_time_cluster *
                                                        t_cluster,
   bool verbose, const std::string & verbose_file ) const {
-  scheduling_time_cluster * parent_cluster = t_cluster->get_parent( );
-  // m2m operations are only executed if the parent is active in the upward
-  // path
   if ( verbose ) {
 #pragma omp critical( verbose )
     {
@@ -1016,6 +1013,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       }
     }
   }
+  scheduling_time_cluster * parent_cluster = t_cluster->get_parent( );
   slou configuration = t_cluster->get_configuration( );
   std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
     = parent_cluster->get_associated_spacetime_clusters( );

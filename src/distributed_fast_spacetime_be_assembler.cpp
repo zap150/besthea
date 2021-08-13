@@ -84,7 +84,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   bool info_mode ) const {
   global_matrix.set_MPI_communicator( _comm );
   global_matrix.set_trees( _test_space->get_tree( ) );
-  global_matrix.set_order( _spat_order, _temp_order, _order_regular );
+  global_matrix.set_orders( _spat_order, _temp_order, _order_regular );
   global_matrix.set_alpha( _alpha );
   global_matrix.set_m2l_integration_order( _m2l_integration_order );
 
@@ -95,7 +95,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   auto & trial_basis = _trial_space->get_basis( );
   lo n_rows = test_basis.dimension_global( );
   lo n_columns = trial_basis.dimension_global( );
-  global_matrix.resize( n_timesteps, n_rows, n_columns );
+  global_matrix.resize( n_timesteps, n_columns, n_rows );
   // ###########################################################################
 
   global_matrix.initialize_spatial_m2m_coeffs( );

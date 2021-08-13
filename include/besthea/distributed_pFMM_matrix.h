@@ -327,7 +327,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] temp_order Order of the Lagrange polynomials.
    * @param[in] order_regular Quadrature order.
    */
-  void set_order( int spat_order, int temp_order, int order_regular ) {
+  void set_orders( int spat_order, int temp_order, int order_regular ) {
     _spat_order = spat_order;
     _temp_order = temp_order;
     _order_regular = order_regular;
@@ -604,8 +604,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     slou child_configuration ) const;
 
   /**
-   * Applies the temporal l2l operation to a child_moment and adds the result
-   * to the parent moment.
+   * Applies the temporal l2l operation to a parent's local contribution and
+   * adds the result to a given array.
    * @param[in] parent_local_contribution Array containing the moments of the
    *                                      child cluster.
    * @param[in] temporal_l2l_matrix Matrix used for the temporal l2l operation.
@@ -617,8 +617,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     sc * child_local_contribution ) const;
 
   /**
-   * Applies the spatial l2l operation to a child_moment and adds the result
-   * to a given array.
+   * Applies the spatial l2l operation to a parent's local contribution and adds
+   * the result to a given array.
    * @param[in] parent_local Array containing the local
    *                                      contributions of the parent cluster.
    * @param[in] n_space_div_parent  Number of refinements in space executed for
@@ -686,8 +686,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   /**
    * Applies the L2T operation for the given target cluster for p1 basis
    * functions and normal derivatives of spatial polynomials (for adjoint double
-   * layer operator and hypersingular operator) functions and writes the result
-   * to the appropriate part of the output vector.
+   * layer operator and hypersingular operator) and writes the result to the
+   * appropriate part of the output vector.
    * @param[in] cluster  Considered spacetime cluster.
    * @param[in,out] output_vector Global result vector to which the result of
    *                              the operation is added.

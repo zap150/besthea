@@ -186,6 +186,15 @@ class besthea::mesh::volume_space_cluster_tree {
   }
 
   /**
+   * Traverses the cluster tree recursively and allocates and initializes the
+   * moments for all clusters.
+   * @param[in] current_cluster  Current cluster in the tree traversal.
+   * @param[in] contribution_size Size of the moment of a cluster.
+   */
+  void initialize_moment_contributions(
+    volume_space_cluster & current_cluster, lou contribution_size );
+
+  /**
    * Prints the tree levelwise together with some additional information.
    */
   void print( ) {
@@ -238,15 +247,6 @@ class besthea::mesh::volume_space_cluster_tree {
    * @param[in] root Root cluster of the tree.
    */
   void collect_leaves( volume_space_cluster & root );
-
-  /**
-   * Traverses the cluster tree recursively and allocates and initializes the
-   * moments for all clusters.
-   * @param[in] current_cluster  Current cluster in the tree traversal.
-   * @param[in] contribution_size Size of the moment of a cluster.
-   */
-  void initialize_moment_contributions(
-    volume_space_cluster & current_cluster, lou contribution_size );
 
   void initialize_levelwise_cluster_grids( );
 
