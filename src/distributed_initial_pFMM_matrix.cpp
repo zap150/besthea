@@ -163,6 +163,38 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
+  target_space, source_space >::apply_all_nearfield_operations( const vector &
+                                                                  x,
+  distributed_block_vector & y, const bool trans ) const {
+  for ( lou i_tar = 0; i_tar < _nearfield_list_vector.size( ); ++i_tar ) {
+    const mesh::general_spacetime_cluster * st_tar_cluster
+      = _nearfield_list_vector[ i_tar ].first;
+    // initialize a local vector where the results of the nearfield operations
+    // for the current cluster are stored.
+    vector_type local_result(
+      st_tar_cluster->get_n_dofs< target_space >( ), true );
+    vector_type local_sources;
+    for ( lou i_src = 0; i_src < _nearfield_list_vector[ i_tar ].second.size( );
+          ++i_src ) {
+      const mesh::volume_space_cluster * space_src_cluster
+        = _nearfield_list_vector[ i_tar ].second[ i_src ];
+      local_sources.resize( space_src_cluster->get_n_dofs< source_space >( ) );
+      // get the sources corresponding to the current spacetime source
+      // cluster
+      x.get_local_part< source_space >( space_src_cluster, local_sources );
+
+      full_matrix * current_block
+        = _clusterwise_nearfield_matrices[ i_tar ][ i_src ];
+      // apply the nearfield matrix and add the result to local_result
+      current_block->apply( local_sources, local_result, trans );
+    }
+    // add the local result to the output vector
+    y.add_local_part< target_space >( st_tar_cluster, local_result );
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space, source_space >::compute_moments_upward_path( const vector &
                                                                sources,
   mesh::volume_space_cluster * current_cluster ) const {
@@ -1566,12 +1598,24 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space, source_space >::apply( const vector_type & x,
   distributed_block_vector & y, bool trans, sc alpha, sc beta ) const {
-  // FMM part:
+  // first scaling
+  y.scale( beta );
+
+  // allocate a global result vector to store the result of the pFMM procedure.
+  std::vector< lo > my_blocks = y.get_my_blocks( );
+  distributed_block_vector y_pFMM(
+    my_blocks, y.get_n_blocks( ), y.get_size_of_block( ), true, y.get_comm( ) );
+
+  // farfield part (approximated with FMM)
   compute_moments_upward_path( x, _space_source_tree->get_root( ) );
   apply_all_m2l_operations( );
   evaluate_local_contributions_downward_path(
     _distributed_spacetime_target_tree->get_distribution_tree( )->get_root( ),
-    y );
+    y_pFMM );
+  // nearfield part
+  apply_all_nearfield_operations( x, y_pFMM, trans );
+
+  y.add( y_pFMM, alpha );
 }
 
 template class besthea::linear_algebra::distributed_initial_pFMM_matrix<

@@ -265,7 +265,7 @@ class besthea::linear_algebra::vector {
    * @warning The local vector must have the correct size.
    */
   template< class space_type >
-  void get_local_part( besthea::mesh::volume_space_cluster * cluster,
+  void get_local_part( const besthea::mesh::volume_space_cluster * cluster,
     besthea::linear_algebra::vector & local_vector ) const;
 
  protected:

@@ -122,9 +122,11 @@ template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
   test_space_type, trial_space_type >::assemble_nearfield( pfmm_matrix_type &
     global_matrix ) const {
-  //   const std::vector< general_spacetime_cluster * > & local_leaves
-  //     = _test_space->get_tree( )->get_local_leaves( );
+  const std::vector< std::pair< mesh::general_spacetime_cluster *,
+    std::vector< mesh::volume_space_cluster * > > > & nearfield_list_vector
+    = global_matrix.get_nearfield_list_vector( );
 
+  // todo: enable sorting for better performance
   //   // first, sort by size of matrices in the nearfield
   //   std::vector< lo > total_sizes( local_leaves.size( ), 0 );
   //   for ( std::vector< general_spacetime_cluster * >::size_type leaf_index =
@@ -152,38 +154,183 @@ void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
   //       return ( total_sizes[ a ] > total_sizes[ b ] );
   //     } );
 
-  // #pragma omp parallel for schedule( dynamic, 1 )
-  //   for ( std::vector< general_spacetime_cluster * >::size_type leaf_index =
-  //   0;
-  //         leaf_index < local_leaves.size( ); ++leaf_index ) {
-  //     general_spacetime_cluster * current_cluster
-  //       = local_leaves[ permutation_index[ leaf_index ] ];
-  //     std::vector< general_spacetime_cluster * > * nearfield_list
-  //       = current_cluster->get_nearfield_list( );
-  //     for ( std::vector< general_spacetime_cluster * >::size_type src_index =
-  //     0;
-  //           src_index < nearfield_list->size( ); ++src_index ) {
-  //       general_spacetime_cluster * nearfield_cluster
-  //         = ( *nearfield_list )[ src_index ];
-
-  //       full_matrix_type * block = global_matrix.create_nearfield_matrix(
-  //         permutation_index[ leaf_index ], src_index );
-  //       assemble_nearfield_matrix( current_cluster, nearfield_cluster, *block
-  //       );
-  //     }
-  //   }
-
-  //   // sort pointers in _n_list of the matrix for matrix-vector
-  //   multiplication global_matrix.sort_clusters_in_nearfield( );
+#pragma omp parallel for schedule( dynamic, 1 )
+  for ( lou leaf_index = 0; leaf_index < nearfield_list_vector.size( );
+        ++leaf_index ) {
+    mesh::general_spacetime_cluster * current_cluster
+      = nearfield_list_vector[ leaf_index ].first;
+    //  nearfield_list_vector[ permutation_index[ leaf_index ] ].first;
+    const std::vector< mesh::volume_space_cluster * > & nearfield_list
+      = nearfield_list_vector[ leaf_index ].second;
+    //  nearfield_list_vector[ permutation_index[ leaf_index ] ].second;
+    for ( lou src_index = 0; src_index < nearfield_list.size( ); ++src_index ) {
+      const volume_space_cluster * nearfield_cluster
+        = nearfield_list[ src_index ];
+      full_matrix_type * block
+        = global_matrix.create_nearfield_matrix( leaf_index, src_index );
+      // permutation_index[ leaf_index ], src_index );
+      assemble_nearfield_matrix( current_cluster, nearfield_cluster, *block );
+    }
+  }
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
-  test_space_type,
-  trial_space_type >::assemble_nearfield_matrix( general_spacetime_cluster *
-                                                   target_cluster,
-  volume_space_cluster * source_cluster,
-  full_matrix_type & nearfield_matrix ) const {
+  test_space_type, trial_space_type >::
+  assemble_nearfield_matrix( const general_spacetime_cluster * target_cluster,
+    const volume_space_cluster * source_cluster,
+    full_matrix_type & nearfield_matrix ) const {
+  auto & trial_basis = _trial_space->get_basis( );
+  const auto & trial_mesh = _trial_space->get_mesh( );
+
+  auto & test_basis = _test_space->get_basis( );
+  const distributed_spacetime_tensor_mesh & distributed_test_mesh
+    = _test_space->get_mesh( );
+  const spacetime_tensor_mesh * test_mesh;
+  lo test_mesh_start_idx;
+  if ( target_cluster->get_process_id( ) == _my_rank ) {
+    test_mesh = distributed_test_mesh.get_local_mesh( );
+    test_mesh_start_idx = distributed_test_mesh.get_local_start_idx( );
+  } else {
+    test_mesh = distributed_test_mesh.get_nearfield_mesh( );
+    test_mesh_start_idx = distributed_test_mesh.get_nearfield_start_idx( );
+  }
+
+  lo n_test_time_elem = target_cluster->get_n_time_elements( );
+  lo n_test_space_dofs = target_cluster->get_n_space_dofs< test_space_type >( );
+  lo n_test_space_elem = target_cluster->get_n_space_elements( );
+  std::vector< lo > test_elems = target_cluster->get_all_elements( );
+
+  lo n_trial_elem = source_cluster->get_n_elements( );
+  std::vector< lo > trial_elems = source_cluster->get_all_elements( );
+
+  lo n_loc_rows = test_basis.dimension_local( );
+  lo n_loc_columns = trial_basis.dimension_local( );
+
+  /////////////////////////////////
+
+  std::vector< lo > test_local_access( n_loc_rows );
+  std::vector< lo > trial_local_access( n_loc_columns );
+
+  sc test, trial, value, test_area, trial_area;
+
+  sc t0, t1;
+  linear_algebra::coordinates< 3 > x1, x2, x3;
+  linear_algebra::coordinates< 3 > y1, y2, y3, y4;
+  linear_algebra::coordinates< 3 > nx;
+
+  lo test_elem_spacetime, test_elem_time, gl_test_elem_space;
+  lo gl_trial_elem;
+
+  sc * nx_data = nx.data( );
+
+  quadrature_wrapper my_quadrature;
+  init_quadrature( my_quadrature );
+  sc * x1_ref = my_quadrature._x1_ref.data( );
+  ;
+  sc * x2_ref = my_quadrature._x2_ref.data( );
+  ;
+  sc * y1_ref = my_quadrature._y1_ref.data( );
+  sc * y2_ref = my_quadrature._y2_ref.data( );
+  sc * y3_ref = my_quadrature._y3_ref.data( );
+  sc * w = my_quadrature._w.data( );
+  sc * x1_mapped = my_quadrature._x1.data( );
+  sc * x2_mapped = my_quadrature._x2.data( );
+  sc * x3_mapped = my_quadrature._x3.data( );
+  sc * y1_mapped = my_quadrature._y1.data( );
+  sc * y2_mapped = my_quadrature._y2.data( );
+  sc * y3_mapped = my_quadrature._y3.data( );
+  sc * kernel_data = my_quadrature._kernel_values.data( );
+  lo size = my_quadrature._w.size( );
+
+  for ( lo i_test_time = 0; i_test_time <= n_test_time_elem; ++i_test_time ) {
+    for ( lo i_test_space = 0; i_test_space < n_test_space_elem;
+          ++i_test_space ) {
+      // get the index of the current spacetime test element and transform
+      // it to the local indices in the appropriate mesh (nearfield or
+      // local)
+      test_elem_spacetime
+        = distributed_test_mesh.global_2_local( test_mesh_start_idx,
+          test_elems[ i_test_time * n_test_space_elem + i_test_space ] );
+      // get the indices of the time element and space element of which
+      // the spacetime element consists and get some data.
+      test_elem_time = test_mesh->get_time_element( test_elem_spacetime );
+      test_mesh->get_temporal_nodes( test_elem_time, &t0, &t1 );
+      gl_test_elem_space = test_mesh->get_space_element( test_elem_spacetime );
+      test_mesh->get_spatial_nodes( gl_test_elem_space, x1, x2, x3 );
+      test_mesh->get_spatial_normal( gl_test_elem_space, nx );
+      test_area = test_mesh->spatial_area( gl_test_elem_space );
+
+      for ( lo i_trial = 0; i_trial < n_trial_elem; ++i_trial ) {
+        gl_trial_elem = trial_elems[ i_trial ];
+        trial_mesh.get_nodes( gl_trial_elem, y1, y2, y3, y4 );
+        trial_area = trial_mesh.area( gl_trial_elem );
+        // when determining the local space dofs, the relative position of the
+        // spatial surface test element and volume trial element is not regarded
+        // (i.e. routines are called with n_shared_vertices = 0, rotation = 0,
+        // swap = false)
+        target_cluster->local_elem_to_local_space_dofs< test_space_type >(
+          i_test_space, 0, 0, false, test_local_access );
+        // todo: need local elem to local dof for volume cluster instead of the
+        // following
+        source_cluster->local_elem_to_local_dofs< trial_space_type >(
+          i_trial, trial_local_access );
+
+        triangle_and_tetrahedron_to_geometry(
+          x1, x2, x3, y1, y2, y3, y4, my_quadrature );
+
+        // treat the first time-step separately
+        if ( test_mesh_start_idx == 0 && i_test_time == 0 ) {
+#pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
+                          y2_mapped, y3_mapped, kernel_data, w        \
+                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+          for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+            kernel_data[ i_quad ]
+              = _kernel->definite_integral_over_first_interval(
+                  x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                  x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                  x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, t1 )
+              * w[ i_quad ];
+          }
+        } else {
+#pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
+                          y2_mapped, y3_mapped, kernel_data, w        \
+                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+          for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+            kernel_data[ i_quad ]
+              = _kernel->definite_integral_over_regular_interval(
+                  x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                  x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                  x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, t0, t1 )
+              * w[ i_quad ];
+          }
+        }
+
+        for ( lo i_loc_test = 0; i_loc_test < n_loc_rows; ++i_loc_test ) {
+          for ( lo i_loc_trial = 0; i_loc_trial < n_loc_columns;
+                ++i_loc_trial ) {
+            value = 0.0;
+#pragma omp simd \
+    	aligned( x1_ref, x2_ref, y1_ref, y2_ref, y3_ref, kernel_data : DATA_ALIGN ) \
+    	private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
+            for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+              test = test_basis.evaluate( gl_test_elem_space, i_loc_test,
+                x1_ref[ i_quad ], x2_ref[ i_quad ], nx_data );
+              trial = trial_basis.evaluate( i_trial, i_loc_trial,
+                y1_ref[ i_quad ], y2_ref[ i_quad ], y3_ref[ i_quad ] );
+
+              value += kernel_data[ i_quad ] * test * trial;
+            }
+            value *= test_area * trial_area;
+
+            nearfield_matrix.add(
+              i_test_time * n_test_space_dofs + test_local_access[ i_loc_test ],
+              trial_local_access[ i_loc_trial ], value );
+          }
+        }
+      }
+    }
+  }
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >

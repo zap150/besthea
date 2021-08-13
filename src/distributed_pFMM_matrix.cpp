@@ -2579,8 +2579,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   // allocate a global result vector to store the result of the pFMM procedure.
   std::vector< lo > my_blocks = y.get_my_blocks( );
-  distributed_block_vector y_pFMM( my_blocks, y.get_n_blocks( ),
-    y.get_size_of_block( ), true, MPI_COMM_WORLD );
+  distributed_block_vector y_pFMM(
+    my_blocks, y.get_n_blocks( ), y.get_size_of_block( ), true, y.get_comm( ) );
 
   // apply pFMM procedure
   apply_pFMM_procedure< 0 >( x, y_pFMM, trans );

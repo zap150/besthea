@@ -91,7 +91,7 @@ void besthea::linear_algebra::vector::copy_to_raw( sc * data ) const {
 template<>
 void besthea::linear_algebra::vector::get_local_part<
   besthea::bem::fe_space< besthea::bem::basis_tetra_p1 > >(
-  besthea::mesh::volume_space_cluster * cluster,
+  const besthea::mesh::volume_space_cluster * cluster,
   besthea::linear_algebra::vector & local_vector ) const {
   lo n_nodes = cluster->get_n_nodes( );
   std::vector< lo > local_2_global_nodes = cluster->get_local_2_global_nodes( );

@@ -54,9 +54,9 @@ namespace besthea {
 namespace besthea {
   namespace bem {
     template< class basis_type >
-    class fast_spacetime_be_space;
-    class basis_tri_p1;
-    class basis_tri_p0;
+    class fe_space;
+
+    class basis_tetra_p1;
   }
 }
 
@@ -383,23 +383,18 @@ class besthea::mesh::volume_space_cluster {
   }
 
   /**
-   * Provides local indices for a given, possibly transformed element.
-   * In case of p0 elements only the element index is returned
-   * In case of p1 elements the local vertex indices are returned
+   * Provides local indices for a given element.
+   * In case of p1 elements the local vertex indices are returned.
    * @param[in] i_loc_elem Element index.
-   * @param[in] n_shared_vertices Number of shared vertices in current elements
-   * (regularized quadrature).
-   * @param[in] rotation Virtual element rotation (regularized quadrature).
-   * @param[in] swap Virtual element inversion (regularized quadrature).
    * @param[out] indices Local indices for the current (transformed) element.
+   * @note A permutation of indices (rotation, swap) is currently not supported.
    */
   template< class space_type >
-  void local_elem_to_local_dofs( lo i_loc_elem, int n_shared_vertices,
-    int rotation, bool swap, std::vector< lo > & indices ) const;
+  void local_elem_to_local_dofs(
+    lo i_loc_elem, std::vector< lo > & indices ) const;
 
   /**
    * Returns the degrees of freedom depending on the space.
-   * For p0 elements the number of elements in the cluster is returned.
    * For p1 elements the number of vertices in the cluster is returned.
    */
   template< class space_type >
@@ -448,6 +443,8 @@ class besthea::mesh::volume_space_cluster {
           = std::distance( _local_2_global_nodes.begin( ), idx_it );
         ++counter;
       }
+
+      _n_nodes = _local_2_global_nodes.size( );
     }
   }
 
@@ -484,10 +481,12 @@ class besthea::mesh::volume_space_cluster {
   }
 
  private:
-  lo _n_elements;          //!< Number of elements in the cluster
-  vector_type _center;     //!< Center of the cluster
+  lo _n_elements;  //!< Number of elements in the cluster.
+  lo _n_nodes;     //!< Number of nodes in the cluster. This is initialized in
+                   //!< @ref compute_node_mapping.
+  vector_type _center;     //!< Center of the cluster.
   vector_type _half_size;  //!< Half sizes of the cluster's faces (in [x, y, z]
-                           //!< directions)
+                           //!< directions).
   // TODO: this probably will have to be optimized to reduce memory consumption
   std::vector< lo >
     _elements;  //!< Indices of the cluster's elements within the spatial mesh
@@ -510,5 +509,27 @@ class besthea::mesh::volume_space_cluster {
                                             //!< to the global ones in the mesh.
   vector_type _moments;  //!< Vector storing the moments of the volume cluster.
 };
+
+/** specialization of
+ * @ref besthea::mesh::volume_space_cluster::get_n_dofs for p1 basis
+ * functions */
+template<>
+inline lo besthea::mesh::volume_space_cluster::get_n_dofs<
+  besthea::bem::fe_space< besthea::bem::basis_tetra_p1 > >( ) const {
+  return _n_nodes;
+}
+
+/** specialization of
+ * @ref besthea::mesh::volume_space_cluster::local_elem_to_local_dofs
+ * for p0 basis functions */
+template<>
+inline void besthea::mesh::volume_space_cluster::local_elem_to_local_dofs<
+  besthea::bem::fe_space< besthea::bem::basis_tetra_p1 > >(
+  lo i_loc_elem, std::vector< lo > & indices ) const {
+  indices[ 0 ] = _elems_2_local_nodes[ 4 * i_loc_elem ];
+  indices[ 1 ] = _elems_2_local_nodes[ 4 * i_loc_elem + 1 ];
+  indices[ 2 ] = _elems_2_local_nodes[ 4 * i_loc_elem + 2 ];
+  indices[ 3 ] = _elems_2_local_nodes[ 4 * i_loc_elem + 3 ];
+}
 
 #endif /* INCLUDE_BESTHEA_VOLUME_SPACE_CLUSTER_H_ */

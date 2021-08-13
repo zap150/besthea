@@ -242,8 +242,8 @@ class besthea::bem::distributed_fast_spacetime_initial_be_assembler {
    * @param[in,out] nearfield_matrix Reference to the matrix which is assembled.
    */
   void assemble_nearfield_matrix(
-    mesh::general_spacetime_cluster * target_cluster,
-    mesh::volume_space_cluster * source_cluster,
+    const mesh::general_spacetime_cluster * target_cluster,
+    const mesh::volume_space_cluster * source_cluster,
     full_matrix_type & nearfield_matrix ) const;
 
   /**

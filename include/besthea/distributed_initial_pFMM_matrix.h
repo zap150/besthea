@@ -290,6 +290,15 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
   }
 
   /**
+   * Returns a const reference to @ref _nearfield_list_vector.
+   */
+  const std::vector< std::pair< mesh::general_spacetime_cluster *,
+    std::vector< mesh::volume_space_cluster * > > > &
+  get_nearfield_list_vector( ) const {
+    return _nearfield_list_vector;
+  }
+
+  /**
    * Resizes @ref _clusterwise_nearfield_matrices appropriately before the
    * initialization of the matrices.
    * @note This routine has to be called after
@@ -333,6 +342,9 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
     mesh::scheduling_time_cluster & current_cluster );
 
   void initialize_nearfield_and_interaction_lists( );
+
+  void apply_all_nearfield_operations( const vector & x,
+    distributed_block_vector & y, const bool trans = false ) const;
 
   void compute_moments_upward_path( const vector & sources,
     mesh::volume_space_cluster * current_cluster ) const;
