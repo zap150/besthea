@@ -411,8 +411,7 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
    * Maps the quadrature nodes from reference tetrahedron to one if its
    * subtetrahedra.
    * @param[in] el1 First sub-element.
-   * @param[in] el2 Second sub-elemen.
-   * @param[in] type_int Type of the configuration (number of vertices shared).
+   * @param[in] el2 Second sub-element.
    * @param[out] x1 Reference to the vector storing quadrature
    * points in the test element.
    * @param[out] x2 Reference to the vector storing quadrature
@@ -427,8 +426,8 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
    * points in the trial element.
    */
   void reference_to_subreference( const element & el1, const element & el2,
-    int type_int, std::vector< sc > & x1, std::vector< sc > & x2,
-    std::vector< sc > & x3, std::vector< sc > & y1, std::vector< sc > & y2,
+    std::vector< sc > & x1, std::vector< sc > & x2, std::vector< sc > & x3,
+    std::vector< sc > & y1, std::vector< sc > & y2,
     std::vector< sc > & y3 ) const;
 
   kernel_type * _kernel;  //!< Kernel temporal antiderivative.

@@ -31,6 +31,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/tetrahedral_spacetime_be_assembler.h"
 
 #include "besthea/quadrature.h"
+#include "besthea/spacetime_basis_tetra_p0.h"
 #include "besthea/spacetime_basis_tetra_p1.h"
 #include "besthea/spacetime_constant_kernel.h"
 #include "besthea/spacetime_heat_kernel.h"
@@ -396,8 +397,7 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
 
     sc mult = el1.area( ) * el2.area( ) * 36.0;
     std::vector< sc > x1, x2, x3, y1, y2, y3;
-    reference_to_subreference(
-      el1, el2, n_shared_vertices, x1, x2, x3, y1, y2, y3 );
+    reference_to_subreference( el1, el2, x1, x2, x3, y1, y2, y3 );
 
     for ( lou i_x = 0; i_x < x1.size( ); ++i_x ) {
       for ( lou i_y = 0; i_y < y1.size( ); ++i_y ) {
@@ -454,9 +454,9 @@ template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
   test_space_type,
   trial_space_type >::reference_to_subreference( const element & el1,
-  const element & el2, int type_int, std::vector< sc > & x1,
-  std::vector< sc > & x2, std::vector< sc > & x3, std::vector< sc > & y1,
-  std::vector< sc > & y2, std::vector< sc > & y3 ) const {
+  const element & el2, std::vector< sc > & x1, std::vector< sc > & x2,
+  std::vector< sc > & x3, std::vector< sc > & y1, std::vector< sc > & y2,
+  std::vector< sc > & y3 ) const {
   const auto & tetra_x1 = quadrature::tetrahedron_x1( _order_singular );
   const auto & tetra_x2 = quadrature::tetrahedron_x2( _order_singular );
   const auto & tetra_x3 = quadrature::tetrahedron_x3( _order_singular );
@@ -691,6 +691,12 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
 template class besthea::bem::tetrahedral_spacetime_be_assembler<
   besthea::bem::spacetime_heat_kernel,
   besthea::bem::tetrahedral_spacetime_be_space<
+    besthea::bem::spacetime_basis_tetra_p0 >,
+  besthea::bem::tetrahedral_spacetime_be_space<
+    besthea::bem::spacetime_basis_tetra_p0 > >;
+template class besthea::bem::tetrahedral_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_kernel,
+  besthea::bem::tetrahedral_spacetime_be_space<
     besthea::bem::spacetime_basis_tetra_p1 >,
   besthea::bem::tetrahedral_spacetime_be_space<
     besthea::bem::spacetime_basis_tetra_p1 > >;
@@ -698,10 +704,22 @@ template class besthea::bem::tetrahedral_spacetime_be_assembler<
 template class besthea::bem::tetrahedral_spacetime_be_assembler<
   besthea::bem::spacetime_heat_kernel_normal_derivative,
   besthea::bem::tetrahedral_spacetime_be_space<
+    besthea::bem::spacetime_basis_tetra_p0 >,
+  besthea::bem::tetrahedral_spacetime_be_space<
+    besthea::bem::spacetime_basis_tetra_p0 > >;
+template class besthea::bem::tetrahedral_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_kernel_normal_derivative,
+  besthea::bem::tetrahedral_spacetime_be_space<
     besthea::bem::spacetime_basis_tetra_p1 >,
   besthea::bem::tetrahedral_spacetime_be_space<
     besthea::bem::spacetime_basis_tetra_p1 > >;
 
+template class besthea::bem::tetrahedral_spacetime_be_assembler<
+  besthea::bem::spacetime_constant_kernel,
+  besthea::bem::tetrahedral_spacetime_be_space<
+    besthea::bem::spacetime_basis_tetra_p0 >,
+  besthea::bem::tetrahedral_spacetime_be_space<
+    besthea::bem::spacetime_basis_tetra_p0 > >;
 template class besthea::bem::tetrahedral_spacetime_be_assembler<
   besthea::bem::spacetime_constant_kernel,
   besthea::bem::tetrahedral_spacetime_be_space<

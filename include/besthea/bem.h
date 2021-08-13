@@ -45,6 +45,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/fast_spacetime_be_assembler.h"
 #include "besthea/fast_spacetime_be_space.h"
 #include "besthea/fe_space.h"
+#include "besthea/spacetime_basis_tetra_p0.h"
 #include "besthea/spacetime_basis_tetra_p1.h"
 #include "besthea/spacetime_be_identity.h"
 #include "besthea/spacetime_constant_kernel.h"

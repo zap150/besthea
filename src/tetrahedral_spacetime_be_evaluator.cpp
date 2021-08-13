@@ -31,6 +31,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/tetrahedral_spacetime_be_evaluator.h"
 
 #include "besthea/quadrature.h"
+#include "besthea/spacetime_basis_tetra_p0.h"
 #include "besthea/spacetime_basis_tetra_p1.h"
 #include "besthea/spacetime_heat_kernel.h"
 #include "besthea/spacetime_heat_kernel_normal_derivative.h"
@@ -185,8 +186,16 @@ void besthea::bem::tetrahedral_spacetime_be_evaluator< kernel_type,
 template class besthea::bem::tetrahedral_spacetime_be_evaluator<
   besthea::bem::spacetime_heat_kernel,
   besthea::bem::tetrahedral_spacetime_be_space<
+    besthea::bem::spacetime_basis_tetra_p0 > >;
+template class besthea::bem::tetrahedral_spacetime_be_evaluator<
+  besthea::bem::spacetime_heat_kernel,
+  besthea::bem::tetrahedral_spacetime_be_space<
     besthea::bem::spacetime_basis_tetra_p1 > >;
 
+template class besthea::bem::tetrahedral_spacetime_be_evaluator<
+  besthea::bem::spacetime_heat_kernel_normal_derivative,
+  besthea::bem::tetrahedral_spacetime_be_space<
+    besthea::bem::spacetime_basis_tetra_p0 > >;
 template class besthea::bem::tetrahedral_spacetime_be_evaluator<
   besthea::bem::spacetime_heat_kernel_normal_derivative,
   besthea::bem::tetrahedral_spacetime_be_space<

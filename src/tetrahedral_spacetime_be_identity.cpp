@@ -31,6 +31,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/tetrahedral_spacetime_be_identity.h"
 
 #include "besthea/quadrature.h"
+#include "besthea/spacetime_basis_tetra_p0.h"
 #include "besthea/spacetime_basis_tetra_p1.h"
 
 template< class test_space_type, class trial_space_type >
@@ -143,11 +144,21 @@ void besthea::bem::tetrahedral_spacetime_be_identity< test_space_type,
 
 template class besthea::bem::tetrahedral_spacetime_be_identity<
   besthea::bem::tetrahedral_spacetime_be_space<
+    besthea::bem::spacetime_basis_tetra_p0 >,
+  besthea::bem::tetrahedral_spacetime_be_space<
+    besthea::bem::spacetime_basis_tetra_p0 > >;
+template class besthea::bem::tetrahedral_spacetime_be_identity<
+  besthea::bem::tetrahedral_spacetime_be_space<
     besthea::bem::spacetime_basis_tetra_p1 >,
   besthea::bem::tetrahedral_spacetime_be_space<
     besthea::bem::spacetime_basis_tetra_p1 > >;
 
 // Needed for L2 projection which is const
+template class besthea::bem::tetrahedral_spacetime_be_identity<
+  const besthea::bem::tetrahedral_spacetime_be_space<
+    besthea::bem::spacetime_basis_tetra_p0 >,
+  const besthea::bem::tetrahedral_spacetime_be_space<
+    besthea::bem::spacetime_basis_tetra_p0 > >;
 template class besthea::bem::tetrahedral_spacetime_be_identity<
   const besthea::bem::tetrahedral_spacetime_be_space<
     besthea::bem::spacetime_basis_tetra_p1 >,

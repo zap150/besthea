@@ -31,6 +31,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/tetrahedral_spacetime_be_space.h"
 
 #include "besthea/quadrature.h"
+#include "besthea/spacetime_basis_tetra_p0.h"
 #include "besthea/spacetime_basis_tetra_p1.h"
 #include "besthea/sparse_matrix.h"
 #include "besthea/tetrahedral_spacetime_be_identity.h"
@@ -265,5 +266,7 @@ void besthea::bem::tetrahedral_spacetime_be_space< basis_type >::
   }
 }
 
+template class besthea::bem::tetrahedral_spacetime_be_space<
+  besthea::bem::spacetime_basis_tetra_p0 >;
 template class besthea::bem::tetrahedral_spacetime_be_space<
   besthea::bem::spacetime_basis_tetra_p1 >;
