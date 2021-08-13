@@ -54,6 +54,30 @@ besthea::bem::tetrahedral_spacetime_be_space<
  */
 template<>
 void besthea::bem::tetrahedral_spacetime_be_space<
+  besthea::bem::spacetime_basis_tetra_p0 >::
+  interpolation(
+    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
+    vector_type & interpolation ) const {
+  lo n_elements = _mesh->get_n_elements( );
+
+  interpolation.resize( n_elements );
+  linear_algebra::coordinates< 4 > x;
+  linear_algebra::coordinates< 3 > n;
+
+  for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
+    _mesh->get_spatial_normal( i_elem, n );
+    _mesh->get_centroid( i_elem, x );
+    interpolation.set( i_elem, f( x[ 0 ], x[ 1 ], x[ 2 ], n, x[ 3 ] ) );
+  }
+}
+
+/**
+ * Projects a function to the piecewise linear finite element space.
+ * @param[in] f Function to be projected.
+ * @param[out] interpolation Interpolation vector.
+ */
+template<>
+void besthea::bem::tetrahedral_spacetime_be_space<
   besthea::bem::spacetime_basis_tetra_p1 >::
   interpolation(
     sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),

@@ -104,6 +104,25 @@ class besthea::bem::spacetime_basis_tetra_p0
     [[maybe_unused]] sc x3_ref ) const {
     return 1.0;
   }
+
+  /**
+   * Evaluates a basis function in a point in a tetrahedron. The point is given
+   * by coordinates in the reference tetrahedron
+   * (\f$ (x_1,x_2,x_3) \in (0,1)\times(0,1-x_1)\times(0,1-x_1-x_2) \f$).
+   * @param[in] i_elem Index of the tetrahedron.
+   * @param[in] i_fun Local basis function index.
+   * @param[in] x1_ref First coordinate of reference quadrature point.
+   * @param[in] x2_ref Second coordinate of reference quadrature point.
+   * @param[in] x3_ref Third coordinate of reference quadrature point.
+   * @param[in] perm Permutation of element vertices.
+   */
+#pragma omp declare simd uniform( this, i_elem, i_fun, perm ) \
+  simdlen( DATA_WIDTH )
+  sc do_evaluate( [[maybe_unused]] lo i_elem, [[maybe_unused]] lo i_fun,
+    [[maybe_unused]] sc x1_ref, [[maybe_unused]] sc x2_ref,
+    [[maybe_unused]] sc x3_ref, [[maybe_unused]] lo * perm ) const {
+    return 1.0;
+  }
 };
 
 #endif /* INCLUDE_BESTHEA_spacetime_basis_tetra_p0_H_ */

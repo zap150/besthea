@@ -91,6 +91,7 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
     linear_algebra::coordinates< 3 > nx;
     linear_algebra::coordinates< 3 > ny;
     linear_algebra::indices< 4 > perm_test, perm_trial;
+    linear_algebra::indices< 4 > iperm_test, iperm_trial;
     int n_shared_vertices = 0;
     lo size;
     sc test_area, trial_area, test, trial, value;
@@ -116,6 +117,8 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
     sc * y3_mapped = my_quadrature._y3.data( );
     sc * tau_mapped = my_quadrature._tau.data( );
     sc * kernel_data = my_quadrature._kernel_values.data( );
+    lo * iperm_test_data = iperm_test.data( );
+    lo * iperm_trial_data = iperm_trial.data( );
 
 #pragma omp for schedule( dynamic )
     for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
@@ -127,7 +130,16 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
         trial_mesh->get_spatial_normal( i_trial, ny );
         trial_area = trial_mesh->area( i_trial );
 
+        // test causality
+        int ti = 3;
+        if ( std::max( { x1[ ti ], x2[ ti ], x3[ ti ], x4[ ti ] } )
+          <= std::min( { y1[ ti ], y2[ ti ], y3[ ti ], y4[ ti ] } ) ) {
+          // continue;
+        }
+
         get_type( i_test, i_trial, n_shared_vertices, perm_test, perm_trial );
+        invert_permutation( perm_test, iperm_test );
+        invert_permutation( perm_trial, iperm_trial );
 
         test_basis.local_to_global( i_test, test_l2g );
         trial_basis.local_to_global( i_trial, trial_l2g );
@@ -168,15 +180,15 @@ kernel_data : DATA_ALIGN ) \
 private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
             for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
               test = test_basis.evaluate( i_test, i_loc_test, x1_ref[ i_quad ],
-                x2_ref[ i_quad ], x3_ref[ i_quad ] );
-              trial = trial_basis.evaluate( i_trial, i_loc_trial,
-                y1_ref[ i_quad ], y2_ref[ i_quad ], y3_ref[ i_quad ] );
+                x2_ref[ i_quad ], x3_ref[ i_quad ], iperm_test_data );
+              trial
+                = trial_basis.evaluate( i_trial, i_loc_trial, y1_ref[ i_quad ],
+                  y2_ref[ i_quad ], y3_ref[ i_quad ], iperm_trial_data );
 
               value += kernel_data[ i_quad ] * test * trial;
             }
-            global_matrix.add_atomic( test_l2g[ perm_test[ i_loc_test ] ],
-              trial_l2g[ perm_trial[ i_loc_trial ] ],
-              value * test_area * trial_area );
+            global_matrix.add_atomic( test_l2g[ i_loc_test ],
+              trial_l2g[ i_loc_trial ], value * test_area * trial_area );
           }  // i_loc_trial
         }    // i_loc_test
       }      // i_trial
@@ -686,6 +698,16 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
     }
   }
   */
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
+  test_space_type, trial_space_type >::
+  invert_permutation( const besthea::linear_algebra::indices< 4 > & in,
+    besthea::linear_algebra::indices< 4 > & out ) const {
+  for ( int i = 0; i < 4; ++i ) {
+    out[ in[ i ] ] = i;
+  }
 }
 
 template class besthea::bem::tetrahedral_spacetime_be_assembler<

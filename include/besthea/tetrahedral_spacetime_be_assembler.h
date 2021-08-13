@@ -306,8 +306,22 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
    * @param[in] ref_quadrature Quadrature data on reference element.
    * @param[out] my_quadrature Wrapper holding quadrature data.
    */
+
+  /**
+   * Inverts permutation.
+   * @param[in] ref_quadrature Quadrature data on reference element.
+   * @param[out] my_quadrature Wrapper holding quadrature data.
+   */
   void init_quadrature( const quadrature_wrapper_ref & ref_quadrature,
     quadrature_wrapper & my_quadrature ) const;
+
+  /**
+   * Inverts permutation.
+   * @param[in] in Original permutation.
+   * @param[out] out Inverted permutation.
+   */
+  void invert_permutation( const besthea::linear_algebra::indices< 4 > & in,
+    besthea::linear_algebra::indices< 4 > & out ) const;
 
   /**
    * Initializes quadrature structures in reference elements.
