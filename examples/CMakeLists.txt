@@ -1,11 +1,14 @@
+add_subdirectory(dirichlet)
 add_subdirectory(uniform_tensor_dirichlet)
 add_subdirectory(uniform_tensor_neumann)
-add_subdirectory(uniform_tensor_dirichlet_onthefly_cpu)
-add_subdirectory(uniform_tensor_neumann_onthefly_cpu)
+add_subdirectory(dirichlet_onthefly_cpu)
+add_subdirectory(neumann_onthefly_cpu)
 
 if(USE_CUDA)
-  add_subdirectory(uniform_tensor_dirichlet_onthefly_gpu)
-  add_subdirectory(uniform_tensor_neumann_onthefly_gpu)
+  add_subdirectory(experiment_matrix_solve)
+  add_subdirectory(experiment_matrix_vector_product)
+  add_subdirectory(dirichlet_onthefly_gpu)
+  add_subdirectory(neumann_onthefly_gpu)
 endif()
 
 install(FILES 
