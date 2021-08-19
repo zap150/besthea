@@ -211,10 +211,10 @@ class besthea::bem::distributed_fast_spacetime_initial_be_assembler {
    * Assembles the fast spacetime matrix.
    *
    * The nearfield matrices of @p global_matrix are assembled. Furthermore all
-   * structures needed for the application of the distributed pFMM matrix vector
-   * multiplication are initialized.
+   * structures needed for the application of the distributed initial pFMM
+   * matrix vector multiplication are initialized.
    * @param[out] global_matrix Assembled pFMM matrix.
-   * @todo adapt
+   * @param[in] info_mode If true, the nearfield matrices are not assembled.
    */
   void assemble(
     pfmm_matrix_type & global_matrix, bool info_mode = false ) const;

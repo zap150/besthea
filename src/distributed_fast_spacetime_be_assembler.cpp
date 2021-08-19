@@ -139,7 +139,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
     }
   }
   std::vector< lo > permutation_index( total_sizes.size( ), 0 );
-  for ( lo i = 0; i != permutation_index.size( ); i++ ) {
+  for ( lou i = 0; i != permutation_index.size( ); i++ ) {
     permutation_index[ i ] = i;
   }
   sort( permutation_index.begin( ), permutation_index.end( ),

@@ -132,23 +132,23 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   /**
    * Returns the effective number of levels in the cluster tree.
    */
-  lo get_max_levels( ) const {
-    return _max_levels;
+  lo get_n_levels( ) const {
+    return _n_levels;
   }
 
   /**
    * Returns the bound for the maximal number of refinements in space of the
    * clusters in the local part of the distributed tree.
    */
-  lo get_local_max_space_level( ) const {
-    return _local_max_space_level;
+  lo get_local_n_space_levels( ) const {
+    return _local_n_space_levels;
   }
 
   /**
-   * Returns @ref _global_max_space_level.
+   * Returns @ref _global_n_space_levels.
    */
-  lo get_global_max_space_level( ) const {
-    return _global_max_space_level;
+  lo get_global_n_space_levels( ) const {
+    return _global_n_space_levels;
   }
 
   /**
@@ -185,7 +185,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    */
   void print( ) {
     // print general tree information
-    std::cout << "number of levels of spacetime tree " << _real_max_levels
+    std::cout << "number of levels of spacetime tree " << _real_n_levels
               << std::endl;
     std::cout << "spatial padding: " << std::endl;
     for ( lou i = 0; i < _spatial_paddings.size( ); ++i ) {
@@ -612,8 +612,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    *                        constructing the children of root.
    * @todo check correctness of determination of temporal cluster data when
    * more general meshes are used.
-   * @note The member variables @p _real_max_levels and
-   * @p _local_max_space_level are updated in this routine.
+   * @note The member variables @p _real_n_levels and
+   * @p _local_n_space_levels are updated in this routine.
    *
    */
   void build_subtree(
@@ -793,9 +793,9 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
       }
   }
 
-  lo _max_levels;       //!< number of levels in the tree
-  lo _real_max_levels;  //!< auxiliary value to determine number of real tree
-                        //!< levels (depending on _n_min_elems)
+  lo _n_levels;       //!< number of levels in the tree
+  lo _real_n_levels;  //!< auxiliary value to determine number of real tree
+                      //!< levels (depending on _n_min_elems)
   distributed_spacetime_tensor_mesh &
     _spacetime_mesh;                  //!< underlying distributed spacetime mesh
                                       //!< @todo discuss: why reference and not
@@ -816,11 +816,10 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
                                  //!< level the spatial refinement starts
                                  //!< (relevant if
                                  //!< _initial_space_refinement == 0)
-  lo _local_max_space_level;     //!< bound for the maximal number of spatial
-                                 //!< refinements in the local part of the
-                                 //!< distributed tree.
-  lo _global_max_space_level;    //!< maximal spatial level in the global
-                                 //!< distributed tree
+  lo _local_n_space_levels;      //!< Number of spatial levels in the local
+                                 //!< space-time tree owned by the current rank
+  lo _global_n_space_levels;     //!< Number of spatial levels in the global
+                                 //!< space-time tree
 
   // sc _s_t_coeff;  //!< coefficient to determine the coupling of the spatial
   //!< and temporal levels

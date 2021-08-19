@@ -46,7 +46,32 @@ namespace besthea {
 
 #include <vector>
 
-void compute_spatial_m2m_coeffs( const lo max_space_level, const lo spat_order,
+/**
+ * Computes spatial M2M coefficients (corresponding to a Chebyshev expansion of
+ * some kernel) for a series of spatial clusters. The coefficients can be used
+ * for various M2M and L2L operations (e.g. for a
+ * @ref besthea::linear_algebra::distributed_pFMM_matrix or
+ * @ref besthea::linear_algebra::distributed_initial_pFMM_matrix )
+ *
+ * The coefficients are computed for 1D intervals. In case of cubic 3D
+ * spatial clusters the M2M coefficients coincide for all spatial dimensions.
+ * @param[in] n_space_levels Total number of spatial clusters. @p n_space_levels
+ * -1 M2M matrices are computed (for each parent-child combination).
+ * @param[in] spat_order  Spatial expansion order used in Chebyshev expansion.
+ * It determines the size of the moments.
+ * @param[in] spat_half_size_bounding_box_unpadded  Spatial half size of the
+ * largest spatial cluster, not including any padding. Typically it corresponds
+ * to the half size of the bounding box of the spatial computation domain.
+ * @param[in] spatial_paddings_per_space_level  Vector containing the spatial
+ * paddings for all @p n_space_levels spatial clusters.
+ * @param[in,out] m2m_coeffs_s_left Vector of vectors where the m2m coefficients
+ * of parents and their left children are stored for all @p n_space_levels - 1
+ * levels.
+ * @param[in,out] m2m_coeffs_s_right Vector of vectors where the m2m
+ * coefficients of parents and their right children are stored for all @p
+ * n_space_levels - 1 levels.
+ */
+void compute_spatial_m2m_coeffs( const lo n_space_levels, const lo spat_order,
   const sc spat_half_size_bounding_box_unpadded,
   const std::vector< sc > & spatial_paddings_per_space_level,
   std::vector< besthea::linear_algebra::vector > & m2m_coeffs_s_left,

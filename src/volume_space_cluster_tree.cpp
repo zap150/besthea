@@ -43,12 +43,12 @@ besthea::mesh::volume_space_cluster_tree::volume_space_cluster_tree(
   const tetrahedral_volume_mesh & mesh, lo levels, lo n_min_elems,
   bool print_warnings )
   : _mesh( mesh ),
-    _levels( levels ),
-    _real_max_levels( 0 ),
+    _max_n_levels( levels ),
+    _real_n_levels( 0 ),
     _n_min_elems( n_min_elems ),
     _n_max_elems_leaf( 0 ),
-    _non_empty_nodes_per_level( _levels ),
-    _paddings( _levels, 0.0 ),
+    _non_empty_nodes_per_level( _max_n_levels ),
+    _paddings( _max_n_levels, 0.0 ),
     _n_nonempty_nodes( 0 ) {
   sc xmin, xmax, ymin, ymax, zmin, zmax;
   compute_cubic_bounding_box( xmin, xmax, ymin, ymax, zmin, zmax );
@@ -81,10 +81,6 @@ besthea::mesh::volume_space_cluster_tree::volume_space_cluster_tree(
   ++_n_nonempty_nodes;
   this->build_tree( *_root );
   this->compute_padding( *_root );
-
-  _levels = std::min( _levels, _real_max_levels );
-
-  _paddings.resize( _levels );
   _paddings.shrink_to_fit( );
 
   if ( print_warnings ) {
@@ -93,8 +89,13 @@ besthea::mesh::volume_space_cluster_tree::volume_space_cluster_tree(
     bool extensive_padding = false;
     sc current_cluster_half_size = half_sizes[ 0 ];
     lo i = 0;
-    while ( extensive_padding == false && i < _levels ) {
+    while ( extensive_padding == false && i < _real_n_levels ) {
       extensive_padding = ( current_cluster_half_size / 2.0 < _paddings[ i ] );
+      if ( extensive_padding ) {
+        std::cout << "Warning: Level " << i << ": padding = " << _paddings[ i ]
+                  << ", cluster half size = " << current_cluster_half_size
+                  << std::endl;
+      }
       current_cluster_half_size /= 2.0;
       ++i;
     }
@@ -107,12 +108,14 @@ besthea::mesh::volume_space_cluster_tree::volume_space_cluster_tree(
 
   // collect all clusters without descendants
   collect_leaves( *_root );
+
+  initialize_levelwise_cluster_grids( );
 }
 
 void besthea::mesh::volume_space_cluster_tree::build_tree(
   volume_space_cluster & root ) {
   // stop recursion if maximum number of tree levels is reached
-  if ( root.get_level( ) == _levels - 1
+  if ( root.get_level( ) == _max_n_levels - 1
     || root.get_n_elements( ) < _n_min_elems ) {
     root.set_n_children( 0 );
     root.compute_node_mapping( );
@@ -120,8 +123,8 @@ void besthea::mesh::volume_space_cluster_tree::build_tree(
     if ( root.get_n_elements( ) > _n_max_elems_leaf ) {
       _n_max_elems_leaf = root.get_n_elements( );
     }
-    if ( root.get_level( ) + 1 > _real_max_levels ) {
-      _real_max_levels = root.get_level( ) + 1;
+    if ( root.get_level( ) + 1 > _real_n_levels ) {
+      _real_n_levels = root.get_level( ) + 1;
     }
 
     return;
@@ -534,11 +537,21 @@ void besthea::mesh::volume_space_cluster_tree::initialize_moment_contributions(
   }
 }
 
+void besthea::mesh::volume_space_cluster_tree::clear_moment_contributions(
+  volume_space_cluster & current_cluster ) const {
+  current_cluster.clear_moments( );
+  if ( current_cluster.get_n_children( ) > 0 ) {
+    for ( auto child : *current_cluster.get_children( ) ) {
+      clear_moment_contributions( *child );
+    }
+  }
+}
+
 void besthea::mesh::volume_space_cluster_tree::
   initialize_levelwise_cluster_grids( ) {
-  _levelwise_cluster_grids.resize( _levels );
+  _levelwise_cluster_grids.resize( _max_n_levels );
   lo n_grid_clusters = 1;
-  for ( lo i = 0; i < _levels; ++i ) {
+  for ( lo i = 0; i < _max_n_levels; ++i ) {
     // resize all grid vectors and initialize them with nullptrs.
     _levelwise_cluster_grids[ i ].resize( n_grid_clusters );
     std::fill( _levelwise_cluster_grids[ i ].begin( ),
@@ -564,14 +577,14 @@ void besthea::mesh::volume_space_cluster_tree::
     for ( auto child : *current_cluster.get_children( ) ) {
       fill_levelwise_cluster_grids_recursively( *child );
     }
-  } else if ( cluster_coords[ 0 ] < _levels - 1 ) {
+  } else if ( cluster_coords[ 0 ] < _max_n_levels - 1 ) {
     // fill the entries of cluster grids which would correspond to descendants
     // of the current cluster.
     // remember the grid coordinates of the previous level in each step (only
     // the last 3 box coordinates need to be remembered)
     std::vector< std::vector< slou > > parent_level_coordinates
       = { { cluster_coords[ 1 ], cluster_coords[ 2 ], cluster_coords[ 3 ] } };
-    for ( lo child_level = cluster_coords[ 0 ] + 1; child_level < _levels;
+    for ( lo child_level = cluster_coords[ 0 ] + 1; child_level < _max_n_levels;
           ++child_level ) {
       // compute the coordinates of all descendants that the clusters in
       // parent_level_coordinates would have

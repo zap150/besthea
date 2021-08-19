@@ -37,15 +37,15 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using besthea::linear_algebra::vector;
 
-void compute_spatial_m2m_coeffs( const lo max_space_level, const lo spat_order,
+void compute_spatial_m2m_coeffs( const lo n_space_levels, const lo spat_order,
   const sc spat_half_size_bounding_box_unpadded,
   const std::vector< sc > & spatial_paddings_per_space_level,
   std::vector< besthea::linear_algebra::vector > & m2m_coeffs_s_left,
   std::vector< besthea::linear_algebra::vector > & m2m_coeffs_s_right ) {
-  m2m_coeffs_s_left.resize( max_space_level );
-  m2m_coeffs_s_right.resize( max_space_level );
+  m2m_coeffs_s_left.resize( n_space_levels - 1 );
+  m2m_coeffs_s_right.resize( n_space_levels - 1 );
 
-  for ( lo i = 0; i < max_space_level; ++i ) {
+  for ( lo i = 0; i < n_space_levels - 1; ++i ) {
     m2m_coeffs_s_left[ i ].resize( ( spat_order + 1 ) * ( spat_order + 1 ) );
     m2m_coeffs_s_right[ i ].resize( ( spat_order + 1 ) * ( spat_order + 1 ) );
   }
@@ -69,7 +69,7 @@ void compute_spatial_m2m_coeffs( const lo max_space_level, const lo spat_order,
   sc h_par_no_pad = spat_half_size_bounding_box_unpadded;
   sc h_child_no_pad;
 
-  for ( lo curr_level = 0; curr_level < max_space_level; ++curr_level ) {
+  for ( lo curr_level = 0; curr_level < n_space_levels - 1; ++curr_level ) {
     h_child_no_pad = h_par_no_pad / 2.0;
     sc padding_par = spatial_paddings_per_space_level[ curr_level ];
     sc padding_child = spatial_paddings_per_space_level[ curr_level + 1 ];

@@ -86,6 +86,7 @@ class besthea::mesh::volume_space_cluster {
     lo level, short octant, std::vector< slou > & coordinate,
     const tetrahedral_volume_mesh & mesh )
     : _n_elements( n_elements ),
+      _n_nodes( -1 ),
       _center( center ),
       _half_size( half_size ),
       _parent( parent ),
@@ -230,7 +231,7 @@ class besthea::mesh::volume_space_cluster {
    * For parent cluster with center at (0, 0, 0) the following octant ordering
    * holds:
    *
-   * oct/coord	1 2 3 4 5 6 7 8
+   * oct/coord 0 1 2 3 4 5 6 7
    * 	x		+ - - + + - - +
    * 	y		+ + - - + + - -
    * 	z		+ + + + - - - -
@@ -456,6 +457,13 @@ class besthea::mesh::volume_space_cluster {
   }
 
   /**
+   * Resets the vector @ref _moments to 0.
+   */
+  void clear_moments( ) {
+    _moments.fill( 0.0 );
+  }
+
+  /**
    * Returns a reference to @ref _moments.
    */
   vector_type & get_moments( ) {
@@ -477,7 +485,16 @@ class besthea::mesh::volume_space_cluster {
     std::cout << ", center: (" << _center[ 0 ] << ", " << _center[ 1 ] << ", "
               << _center[ 2 ] << "), half size: (" << _half_size[ 0 ] << ", "
               << _half_size[ 1 ] << ", " << _half_size[ 1 ]
-              << "), elements: " << _n_elements << std::endl;
+              << "), elements: " << _n_elements;
+    std::cout << ", coordinates: " << _box_coordinate[ 0 ] << ", "
+              << _box_coordinate[ 1 ] << ", " << _box_coordinate[ 2 ] << ", "
+              << _box_coordinate[ 3 ];
+    std::cout << ", octant " << _octant;
+    std::cout << ", nodes:";
+    for ( auto node_idx : _local_2_global_nodes ) {
+      std::cout << " " << node_idx;
+    }
+    std::cout << std::endl;
   }
 
  private:

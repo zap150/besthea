@@ -233,6 +233,14 @@ class besthea::mesh::tree_structure {
    */
   void clear_local_contributions( scheduling_time_cluster & root );
 
+  /**
+   * Traverses the tree structure recursively and allocates and initializes the
+   * local contributions for all clusters which are active in the downward path
+   * of an initial pFMM operator.
+   * @param[in] root  Current cluster in the tree traversal.
+   * @param[in] contribution_size Size of the contribution of a single spacetime
+   * cluster.
+   */
   void initialize_local_contributions_initial_op(
     scheduling_time_cluster & root, lou contribution_size );
 

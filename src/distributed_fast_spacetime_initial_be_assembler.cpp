@@ -155,8 +155,8 @@ void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
   //     } );
 
 #pragma omp parallel for schedule( dynamic, 1 )
-  for ( lou leaf_index = 0; leaf_index < nearfield_list_vector.size( );
-        ++leaf_index ) {
+  for ( lo leaf_index = nearfield_list_vector.size( ) - 1; leaf_index > -1;
+        --leaf_index ) {
     mesh::general_spacetime_cluster * current_cluster
       = nearfield_list_vector[ leaf_index ].first;
     //  nearfield_list_vector[ permutation_index[ leaf_index ] ].first;
@@ -243,7 +243,7 @@ void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
   sc * kernel_data = my_quadrature._kernel_values.data( );
   lo size = my_quadrature._w.size( );
 
-  for ( lo i_test_time = 0; i_test_time <= n_test_time_elem; ++i_test_time ) {
+  for ( lo i_test_time = 0; i_test_time < n_test_time_elem; ++i_test_time ) {
     for ( lo i_test_space = 0; i_test_space < n_test_space_elem;
           ++i_test_space ) {
       // get the index of the current spacetime test element and transform
@@ -271,8 +271,6 @@ void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
         // swap = false)
         target_cluster->local_elem_to_local_space_dofs< test_space_type >(
           i_test_space, 0, 0, false, test_local_access );
-        // todo: need local elem to local dof for volume cluster instead of the
-        // following
         source_cluster->local_elem_to_local_dofs< trial_space_type >(
           i_trial, trial_local_access );
 
@@ -280,7 +278,7 @@ void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
           x1, x2, x3, y1, y2, y3, y4, my_quadrature );
 
         // treat the first time-step separately
-        if ( test_mesh_start_idx == 0 && i_test_time == 0 ) {
+        if ( test_mesh_start_idx == 0 && test_elem_time == 0 ) {
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
                           y2_mapped, y3_mapped, kernel_data, w        \
                           : DATA_ALIGN ) simdlen( DATA_WIDTH )
@@ -383,6 +381,59 @@ void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
   my_quadrature._y2.resize( size );
   my_quadrature._y3.resize( size );
   my_quadrature._kernel_values.resize( size );
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
+  test_space_type, trial_space_type >::
+  triangle_and_tetrahedron_to_geometry(
+    const linear_algebra::coordinates< 3 > & x1,
+    const linear_algebra::coordinates< 3 > & x2,
+    const linear_algebra::coordinates< 3 > & x3,
+    const linear_algebra::coordinates< 3 > & y1,
+    const linear_algebra::coordinates< 3 > & y2,
+    const linear_algebra::coordinates< 3 > & y3,
+    const linear_algebra::coordinates< 3 > & y4,
+    quadrature_wrapper & my_quadrature ) const {
+  const sc * y1_ref = my_quadrature._y1_ref.data( );
+  const sc * y2_ref = my_quadrature._y2_ref.data( );
+  const sc * y3_ref = my_quadrature._y3_ref.data( );
+  const sc * x1_ref = my_quadrature._x1_ref.data( );
+  const sc * x2_ref = my_quadrature._x2_ref.data( );
+  sc * y1_mapped = my_quadrature._y1.data( );
+  sc * y2_mapped = my_quadrature._y2.data( );
+  sc * y3_mapped = my_quadrature._y3.data( );
+  sc * x1_mapped = my_quadrature._x1.data( );
+  sc * x2_mapped = my_quadrature._x2.data( );
+  sc * x3_mapped = my_quadrature._x3.data( );
+
+  lo size = my_quadrature._w.size( );
+
+#pragma omp simd aligned(                                 \
+  y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, y3_ref \
+  : DATA_ALIGN ) simdlen( DATA_WIDTH )
+  for ( lo i = 0; i < size; ++i ) {
+    y1_mapped[ i ] = y1[ 0 ] + ( y2[ 0 ] - y1[ 0 ] ) * y1_ref[ i ]
+      + ( y3[ 0 ] - y1[ 0 ] ) * y2_ref[ i ]
+      + ( y4[ 0 ] - y1[ 0 ] ) * y3_ref[ i ];
+    y2_mapped[ i ] = y1[ 1 ] + ( y2[ 1 ] - y1[ 1 ] ) * y1_ref[ i ]
+      + ( y3[ 1 ] - y1[ 1 ] ) * y2_ref[ i ]
+      + ( y4[ 1 ] - y1[ 1 ] ) * y3_ref[ i ];
+    y3_mapped[ i ] = y1[ 2 ] + ( y2[ 2 ] - y1[ 2 ] ) * y1_ref[ i ]
+      + ( y3[ 2 ] - y1[ 2 ] ) * y2_ref[ i ]
+      + ( y4[ 2 ] - y1[ 2 ] ) * y3_ref[ i ];
+  }
+
+#pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, x1_ref, x2_ref \
+                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+  for ( lo i = 0; i < size; ++i ) {
+    x1_mapped[ i ] = x1[ 0 ] + ( x2[ 0 ] - x1[ 0 ] ) * x1_ref[ i ]
+      + ( x3[ 0 ] - x1[ 0 ] ) * x2_ref[ i ];
+    x2_mapped[ i ] = x1[ 1 ] + ( x2[ 1 ] - x1[ 1 ] ) * x1_ref[ i ]
+      + ( x3[ 1 ] - x1[ 1 ] ) * x2_ref[ i ];
+    x3_mapped[ i ] = x1[ 2 ] + ( x2[ 2 ] - x1[ 2 ] ) * x1_ref[ i ]
+      + ( x3[ 2 ] - x1[ 2 ] ) * x2_ref[ i ];
+  }
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >

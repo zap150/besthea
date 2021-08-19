@@ -164,8 +164,9 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space, source_space >::apply_all_nearfield_operations( const vector &
-                                                                  x,
-  distributed_block_vector & y, const bool trans ) const {
+                                                                  sources,
+  distributed_block_vector & output_vector ) const {
+  vector_type local_sources;
   for ( lou i_tar = 0; i_tar < _nearfield_list_vector.size( ); ++i_tar ) {
     const mesh::general_spacetime_cluster * st_tar_cluster
       = _nearfield_list_vector[ i_tar ].first;
@@ -181,15 +182,17 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
       local_sources.resize( space_src_cluster->get_n_dofs< source_space >( ) );
       // get the sources corresponding to the current spacetime source
       // cluster
-      x.get_local_part< source_space >( space_src_cluster, local_sources );
+      sources.get_local_part< source_space >(
+        space_src_cluster, local_sources );
 
       full_matrix * current_block
         = _clusterwise_nearfield_matrices[ i_tar ][ i_src ];
       // apply the nearfield matrix and add the result to local_result
-      current_block->apply( local_sources, local_result, trans );
+      current_block->apply( local_sources, local_result, false, 1.0, 1.0 );
     }
     // add the local result to the output vector
-    y.add_local_part< target_space >( st_tar_cluster, local_result );
+    output_vector.add_local_part< target_space >(
+      st_tar_cluster, local_result );
   }
 }
 
@@ -214,7 +217,8 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space, source_space >::apply_all_m2l_operations( ) const {
   for ( lou i = 0; i < _interaction_list_vector.size( ); ++i ) {
-    general_spacetime_cluster * st_target = _interaction_list_vector[ i ].first;
+    mesh::general_spacetime_cluster * st_target
+      = _interaction_list_vector[ i ].first;
     for ( auto space_source_cluster : _interaction_list_vector[ i ].second ) {
       apply_m2l_operation( space_source_cluster, st_target );
     }
@@ -226,7 +230,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space, source_space >::
   evaluate_local_contributions_downward_path(
     mesh::scheduling_time_cluster * current_cluster,
-    distributed_block_vector & y_pFMM ) const {
+    distributed_block_vector & output_vector ) const {
   char downpard_path_status
     = current_cluster->get_status_in_initial_op_downward_path( );
   if ( downpard_path_status == 1 ) {
@@ -236,11 +240,11 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
       && ( current_parent->get_status_in_initial_op_downward_path( ) == 1 ) ) {
       call_l2l_operations( current_cluster );
     }
-    call_l2t_operations( current_cluster, y_pFMM );
+    call_l2t_operations( current_cluster, output_vector );
   }
   if ( downpard_path_status > 0 && current_cluster->get_n_children( ) > 0 ) {
     for ( auto child : *current_cluster->get_children( ) ) {
-      evaluate_local_contributions_downward_path( child, y_pFMM );
+      evaluate_local_contributions_downward_path( child, output_vector );
     }
   }
 }
@@ -251,9 +255,9 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   mesh::volume_space_cluster * leaf ) const {
   full_matrix T_vol;
   compute_chebyshev_quadrature_p1_volume( leaf, T_vol );
-  vector moments = leaf->get_moments( );
+  vector & moments = leaf->get_moments( );
   vector sources_in_leaf;
-  sources_in_leaf.get_local_part< source_space >( leaf, sources_in_leaf );
+  sources.get_local_part< source_space >( leaf, sources_in_leaf );
   T_vol.apply( sources_in_leaf, moments );
 }
 
@@ -268,15 +272,15 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   // operations
   lo n_coeffs_s
     = ( _spat_order + 1 ) * ( _spat_order + 1 ) * ( _spat_order + 1 );
-  vector_type lambda_1( n_coeffs_s, true );
-  vector_type lambda_2( n_coeffs_s, true );
+  vector_type lambda_1( n_coeffs_s, false );
+  vector_type lambda_2( n_coeffs_s, false );
 
   lo parent_level = parent_cluster->get_level( );
   vector_type & parent_moment = parent_cluster->get_moments( );
   for ( auto child : *children ) {
     // execute the m2m operation for each child
     short child_octant = child->get_octant( );
-    const vector_type child_moment = child->get_moments( );
+    const vector_type & child_moment = child->get_moments( );
 
     const vector_type * m2m_coeffs_s_dim_0;
     const vector_type * m2m_coeffs_s_dim_1;
@@ -328,6 +332,9 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
         m2m_coeffs_s_dim_2 = nullptr;
     }
 
+    lambda_1.fill( 0.0 );
+    lambda_2.fill( 0.0 );
+
     for ( lo beta2 = 0; beta2 <= _spat_order; ++beta2 ) {
       lo child_index = 0;
       for ( lo alpha0 = 0; alpha0 <= _spat_order - beta2; ++alpha0 ) {
@@ -350,8 +357,8 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
       }
     }
 
-    // compute intermediate result lambda_1 ignoring zero entries for the sake
-    // of better readability
+    // compute intermediate result lambda_1 not exploiting zero entries for the
+    // sake of better readability
     for ( lo beta1 = 0; beta1 <= _spat_order; ++beta1 ) {
       for ( lo beta2 = 0; beta2 <= _spat_order - beta1; ++beta2 ) {
         for ( lo alpha0 = 0; alpha0 <= _spat_order - beta1 - beta2; ++alpha0 ) {
@@ -436,7 +443,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   compute_coupling_coeffs_initial_op( tar_time_nodes, half_size_space[ 2 ],
     center_diff_space[ 2 ], buffer_for_gaussians, buffer_for_coeffs );
 
-  const vector_type src_moment = s_src_cluster->get_moments( );
+  const vector_type & src_moment = s_src_cluster->get_moments( );
   sc * tar_local = st_tar_cluster->get_pointer_to_local_contribution( );
   // efficient m2l operation similar to Tausch, 2009, p. 3558
   // help variables for accessing right values in coefficient buffer
@@ -577,7 +584,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   // transform the nodes from [-1, 1] to the child interval and then back to
   // [-1, 1] with the transformation of the parent interval:
   for ( lo j = 0; j <= _temp_order; ++j ) {
-    nodes_child[ j ] = ( child_time_center + (child_time_half_size) *nodes[ j ]
+    nodes_child[ j ] = ( child_time_center + child_time_half_size * nodes[ j ]
                          - parent_time_center )
       / parent_time_half_size;
   }
@@ -955,7 +962,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
         index_gaussian += idx;
         coupling_coeffs[ index_integral ] = val;
 
-        sc mul_factor_ab
+        sc mul_factor_a
           = mul_factor / std::sqrt( 4.0 * M_PI * _alpha * tar_time_nodes[ a ] );
         // In the multiplicative factor a factor of 2 (gamma) is used for all
         // alpha and beta. For alpha == 0 or beta == 0 a correction is
@@ -963,12 +970,12 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
         // an attempt to compute this in a separate loop with precomputed
         // mul_factor_ab was slower
         if ( alpha == 0 ) {
-          mul_factor_ab *= 0.5;
+          mul_factor_a *= 0.5;
         }
         if ( beta == 0 ) {
-          mul_factor_ab *= 0.5;
+          mul_factor_a *= 0.5;
         }
-        coupling_coeffs[ index_integral ] *= mul_factor_ab;
+        coupling_coeffs[ index_integral ] *= mul_factor_a;
 
         ++index_integral;
       }
@@ -1003,8 +1010,8 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   // init quadrature data
   quadrature_wrapper my_quadrature;
   init_quadrature_polynomials_tetrahedron( my_quadrature );
-  lo size_quad = my_quadrature._w.size( );
-  sc * wy = my_quadrature._w.data( );
+  lo size_quad = my_quadrature._wy_cheb.size( );
+  sc * wy = my_quadrature._wy_cheb.data( );
   linear_algebra::coordinates< 3 > y1, y2, y3, y4;
 
   // for storing the result of the Chebyshev evaluation in quadrature points
@@ -1156,7 +1163,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
 
   // init quadrature data
   quadrature_wrapper my_quadrature;
-  init_quadrature_polynomials( my_quadrature );
+  init_quadrature_polynomials_triangle( my_quadrature );
   lo size_quad = my_quadrature._wy_cheb.size( );
   sc * wy = my_quadrature._wy_cheb.data( );
   linear_algebra::coordinates< 3 > y1, y2, y3;
@@ -1240,7 +1247,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
 
   // init quadrature data
   quadrature_wrapper my_quadrature;
-  init_quadrature_polynomials( my_quadrature );
+  init_quadrature_polynomials_triangle( my_quadrature );
   lo size_quad = my_quadrature._wy_cheb.size( );
   sc * wy = my_quadrature._wy_cheb.data( );
   linear_algebra::coordinates< 3 > y1, y2, y3;
@@ -1369,6 +1376,18 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   initialize_nearfield_and_interaction_lists( );
 
   resize_nearfield_matrix_container( );
+
+  // initialize the buffers used for the matrix-vector multiplication
+  _aux_buffer_0.resize( omp_get_max_threads( ) );
+  _aux_buffer_1.resize( omp_get_max_threads( ) );
+
+#pragma omp parallel
+  {
+    _aux_buffer_0[ omp_get_thread_num( ) ].resize(
+      ( _temp_order + 1 ), _spat_contribution_size );
+    _aux_buffer_1[ omp_get_thread_num( ) ].resize(
+      ( _temp_order + 1 ), _spat_contribution_size );
+  }
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -1392,11 +1411,11 @@ besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space, source_space >::initialize_spatial_m2m_coeffs( ) {
-  lo max_space_level
-    = _distributed_spacetime_target_tree->get_global_max_space_level( );
+  lo n_space_levels
+    = _distributed_spacetime_target_tree->get_global_n_space_levels( );
   vector_type root_half_size( 3, false );
   _space_source_tree->get_root( )->get_half_size( root_half_size );
-  compute_spatial_m2m_coeffs( max_space_level, _spat_order, root_half_size[ 0 ],
+  compute_spatial_m2m_coeffs( n_space_levels, _spat_order, root_half_size[ 0 ],
     _maximal_spatial_paddings, _m2m_coeffs_s_left, _m2m_coeffs_s_right );
 }
 
@@ -1459,7 +1478,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space,
-  source_space >::init_quadrature_polynomials( quadrature_wrapper &
+  source_space >::init_quadrature_polynomials_triangle( quadrature_wrapper &
     my_quadrature ) const {
   // calling copy constructor of std::vector
   my_quadrature._y1_ref_cheb
@@ -1490,9 +1509,10 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
     = bem::quadrature::tetrahedron_x2( _order_regular_tetra );
   my_quadrature._y3_ref
     = bem::quadrature::tetrahedron_x3( _order_regular_tetra );
-  my_quadrature._w = bem::quadrature::tetrahedron_w( _order_regular_tetra );
+  my_quadrature._wy_cheb
+    = bem::quadrature::tetrahedron_w( _order_regular_tetra );
 
-  lo size = my_quadrature._w.size( );
+  lo size = my_quadrature._wy_cheb.size( );
   my_quadrature._y1.resize( size );
   my_quadrature._y2.resize( size );
   my_quadrature._y3.resize( size );
@@ -1601,6 +1621,13 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   // first scaling
   y.scale( beta );
 
+  // (re)set all moment and local contributions to 0
+  mesh::tree_structure * scheduling_tree
+    = _distributed_spacetime_target_tree->get_distribution_tree( );
+  scheduling_tree->clear_local_contributions( *scheduling_tree->get_root( ) );
+  _space_source_tree->clear_moment_contributions(
+    *_space_source_tree->get_root( ) );
+
   // allocate a global result vector to store the result of the pFMM procedure.
   std::vector< lo > my_blocks = y.get_my_blocks( );
   distributed_block_vector y_pFMM(
@@ -1613,7 +1640,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
     _distributed_spacetime_target_tree->get_distribution_tree( )->get_root( ),
     y_pFMM );
   // nearfield part
-  apply_all_nearfield_operations( x, y_pFMM, trans );
+  apply_all_nearfield_operations( x, y_pFMM );
 
   y.add( y_pFMM, alpha );
 }

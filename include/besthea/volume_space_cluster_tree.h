@@ -28,7 +28,7 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file space_cluster_tree.h
+/** @file volume_space_cluster_tree.h
  * @brief Octree of spatial clusters
  */
 
@@ -137,7 +137,7 @@ class besthea::mesh::volume_space_cluster_tree {
   bool print_tree_separately(
     const std::string & directory, bool include_padding = false ) const {
     bool ret = true;
-    for ( lo i = 0; i < _levels; ++i ) {
+    for ( lo i = 0; i < _real_n_levels; ++i ) {
       ret = print_tree( directory, include_padding, i, i );
     }
     return ret;
@@ -151,10 +151,10 @@ class besthea::mesh::volume_space_cluster_tree {
   }
 
   /**
-   * Returns @ref _levels.
+   * Returns @ref _max_n_levels.
    */
-  lo get_levels( ) const {
-    return _levels;
+  lo get_max_n_levels( ) const {
+    return _max_n_levels;
   }
 
   /**
@@ -195,13 +195,23 @@ class besthea::mesh::volume_space_cluster_tree {
     volume_space_cluster & current_cluster, lou contribution_size );
 
   /**
+   * Traverses the cluster tree recursively and resets the moments of all
+   * clusters to 0.
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   */
+  void clear_moment_contributions(
+    volume_space_cluster & current_cluster ) const;
+
+  /**
    * Prints the tree levelwise together with some additional information.
    */
   void print( ) {
     // print cluster information recursively
     print_internal( _root );
     // print general tree information
-    std::cout << "number of levels: " << _levels << std::endl;
+    std::cout << "maximal allowed number of levels: " << _max_n_levels
+              << std::endl;
+    std::cout << "real number of levels: " << _real_n_levels << std::endl;
     // print vector of paddings
     std::cout << "padding: " << std::endl;
     for ( lou i = 0; i < _paddings.size( ); ++i ) {
@@ -248,8 +258,20 @@ class besthea::mesh::volume_space_cluster_tree {
    */
   void collect_leaves( volume_space_cluster & root );
 
+  /**
+   * Initializes @ref _levelwise_cluster_grids.
+   *
+   * It resizes @ref _levelwise_cluster_grids appropriately and fills it using
+   * the routine @ref fill_levelwise_cluster_grids_recursively.
+   */
   void initialize_levelwise_cluster_grids( );
 
+  /**
+   * Routine used to initialize @ref _levelwise_cluster_grids.
+   *
+   * The routine is based on a recursive tree traversal.
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   */
   void fill_levelwise_cluster_grids_recursively(
     volume_space_cluster & current_cluster );
 
@@ -270,9 +292,9 @@ class besthea::mesh::volume_space_cluster_tree {
 
   volume_space_cluster * _root;           //!< root cluster of the tree
   const tetrahedral_volume_mesh & _mesh;  //!< underlying mesh
-  lo _levels;                             //!< number of levels in the tree
-  lo _real_max_levels;  //!< auxiliary value to determine number of real tree
-                        //!< levels (depending on _n_min_elems)
+  lo _max_n_levels;   //!< maximal number of levels allowed in the tree
+  lo _real_n_levels;  //!< real number of levels in the tree
+                      //!< levels (depending on _n_min_elems)
   lo _n_min_elems;  //!< minimum number of elements so that cluster can be split
                     //!< into octants
   lo _n_max_elems_leaf;  //!< maximal number of elements in a leaf cluster after

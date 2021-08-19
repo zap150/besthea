@@ -107,7 +107,7 @@ class besthea::bem::spacetime_initial_kernel_antiderivative {
    * @param[in] xy2 Second coordinate of `x - y`.
    * @param[in] xy3 Third coordinate of `x - y`.
    * @param[in] n Normal.
-   * @param[in] t End of first interval in `t`.
+   * @param[in] t End of first time interval.
    */
 #pragma omp declare simd uniform( this, n, t ) simdlen( DATA_WIDTH )
   sc definite_integral_over_first_interval(
@@ -123,7 +123,8 @@ class besthea::bem::spacetime_initial_kernel_antiderivative {
    * @param[in] xy2 Second coordinate of `x - y`.
    * @param[in] xy3 Third coordinate of `x - y`.
    * @param[in] n Normal.
-   * @param[in] t1 End of first interval in `t`.
+   * @param[in] t0 Start of the time interval.
+   * @param[in] t1 End of the time interval.
    */
 #pragma omp declare simd uniform( this, n, t0, t1 ) simdlen( DATA_WIDTH )
   sc definite_integral_over_regular_interval(

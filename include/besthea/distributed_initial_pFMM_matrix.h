@@ -106,9 +106,6 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
                 //!< trial element
 
     std::vector< sc, besthea::allocator_type< sc > >
-      _w;  //!< Quadrature weights
-
-    std::vector< sc, besthea::allocator_type< sc > >
       _x1;  //!< First coordinates of quadrature nodes in the test element
     std::vector< sc, besthea::allocator_type< sc > >
       _x2;  //!< Second coordinates of quadrature nodes in the test element
@@ -145,7 +142,7 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
       _y3_polynomial;  //!< Coordinates for evaluation of the Chebyshev
                        //!< polynomials in the interval [-1,1] in z direction
     std::vector< sc, besthea::allocator_type< sc > >
-      _wy_cheb;  //!< Quadrature weights including
+      _wy_cheb;  //!< Quadrature weights (for quadrature in s2m/l2t routines)
   };
 
   /**
@@ -265,7 +262,9 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * orders for numerical integration.
    * @param[in] spat_order Order of the Chebyshev polynomials.
    * @param[in] temp_order Order of the Lagrange polynomials.
-   * @param[in] order_regular Quadrature order.
+   * @param[in] order_regular_tri Quadrature order used for triangles.
+   * @param[in] order_regular_tetra Quadrature order used for tetrahedra.
+   * @param[in] order_regular_line Quadrature order used for 1D lines.
    */
   void set_orders( int spat_order, int temp_order, int order_regular_tri,
     int order_regular_tetra, int order_regular_line ) {
@@ -326,44 +325,103 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    */
   void compute_chebyshev( );
 
-  /*
-   * Prints information about the underlying distributed spacetime cluster tree
-   * and the operations which have to be applied.
-   * @param[in] root_process  Process responsible for printing the information.
-   * @param[in] print_tree_information  If true, information is printed for the
-   *                                    distributed spacetime cluster tree
-   *                                    corresponding to the matrix.
-   */
-  // void print_information(
-  //   const int root_process, const bool print_tree_information = false );
-
  private:
+  /**
+   * Determines all time clusters in the scheduling tree associated with
+   * @ref _distributed_spacetime_target_tree which are admissible for m2l
+   * operations.
+   *
+   * The routine is based on a recursive tree traversal.
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   */
   void determine_interacting_time_clusters(
     mesh::scheduling_time_cluster & current_cluster );
 
+  /**
+   * Initializes the structures @ref _interaction_list_vector and
+   * @ref _nearfield_list_vector which contain the respective lists for the FMM
+   * operations.
+   */
   void initialize_nearfield_and_interaction_lists( );
 
-  void apply_all_nearfield_operations( const vector & x,
-    distributed_block_vector & y, const bool trans = false ) const;
+  /**
+   * Executes all nearfield operations assigned to the current MPI process.
+   * @param[in] sources Vector containing all the sources.
+   * @param[in,out] output_vector The results of the nearfield operations are
+   * added to the correct positions of this distributed vector.
+   */
+  void apply_all_nearfield_operations(
+    const vector & sources, distributed_block_vector & output_vector ) const;
 
+  /**
+   * Computes the moments of all volume space clusters in the respective source
+   * tree.
+   *
+   * The routine is based on a recursive tree traversal.
+   * @param[in] sources Vector containing all sources; used for S2M operations.
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   */
   void compute_moments_upward_path( const vector & sources,
     mesh::volume_space_cluster * current_cluster ) const;
 
+  /**
+   * Executes all M2L operations which are assigned to the current MPI process.
+   *
+   * The relevant pairs of target space-time clusters and source space clusters
+   * are given in @ref _interaction_list_vector.
+   */
   void apply_all_m2l_operations( ) const;
 
+  /**
+   * Executes all L2L and L2T operations in the downward path of the FMM for all
+   * clusters for which the current MPI process is responsible.
+   *
+   * The routine is based on a recursive tree traversal.
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   * @param[in,out] output_vector The results of L2T operations are added to the
+   * correct positions of this distributed vector.
+   */
   void evaluate_local_contributions_downward_path(
     mesh::scheduling_time_cluster * current_cluster,
-    distributed_block_vector & y_pFMM ) const;
+    distributed_block_vector & output_vector ) const;
 
+  /**
+   * Computes the moments for the provided space cluster.
+   * @param[in] sources Vector containing all sources; The relevant sources
+   * needed for the operation are determined by the routine.
+   * @param[in] leaf  Cluster whose moments are computed.
+   */
   void apply_s2m_operation(
     const vector & sources, mesh::volume_space_cluster * leaf ) const;
 
+  /**
+   * Computes the moments for the provided space clusters by executing M2M
+   * operations for all its children.
+   * @param[in] parent_cluster  Parent cluster whose moments are computed.
+   */
   void apply_grouped_m2m_operation(
     mesh::volume_space_cluster * parent_cluster ) const;
 
+  /**
+   * Executes an M2L operation for a given pair of target and source clusters.
+   *
+   * The resuling local contributions are added to the existing local
+   * contributions of the target cluster.
+   * @param[in] s_src_cluster Spatial source cluster.
+   * @param[in] st_tar_cluster  Space-time target cluster.
+   */
   void apply_m2l_operation( const mesh::volume_space_cluster * s_src_cluster,
     mesh::general_spacetime_cluster * st_tar_cluster ) const;
 
+  /**
+   * Executes all L2L operations for space-time child clusters associated with a
+   * given temporal cluster.
+   * @param[in] child_cluster Temporal cluster, for whose associated space-time
+   * clusters the L2L operations are executed.
+   * @todo This routine is essentially the same as
+   * @ref distributed_pFMM_matrix::call_l2l_operations. Can we get rid of the
+   * duplication?
+   */
   void call_l2l_operations(
     mesh::scheduling_time_cluster * child_cluster ) const;
 
@@ -374,7 +432,10 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * @param[in] child_configuration Indicates for which children the l2l
    *                                operations are executed:
    *                                - 0: left children w.r.t. to time.
-   *                                - 1: right chilren w.r.t. to time.
+   *                                - 1: right children w.r.t. to time.
+   * @todo This routine is essentially the same as
+   * @ref distributed_pFMM_matrix::apply_grouped_l2l_operation. Can we get rid
+   * of the duplication?
    */
   void apply_grouped_l2l_operation(
     mesh::general_spacetime_cluster * parent_cluster,
@@ -388,6 +449,9 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * @param[in] temporal_l2l_matrix Matrix used for the temporal l2l operation.
    * @param[in,out] child_local_contribution  Array to which the result is
    *                                          added.
+   * @todo This routine is essentially the same as
+   * @ref distributed_pFMM_matrix::apply_temporal_l2l_operation. Can we get rid
+   * of the duplication?
    */
   void apply_temporal_l2l_operation( const sc * parent_local_contribution,
     const full_matrix & temporal_l2l_matrix,
@@ -406,6 +470,9 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    *                                          added.
    * @note  @p n_space_div_parent and @p octant are used to determine the
    *        appropriate l2l coefficients for the operation.
+   * @todo This routine is essentially the same as
+   * @ref distributed_pFMM_matrix::apply_spatial_l2l_operation. Can we get rid
+   * of the duplication?
    */
   void apply_spatial_l2l_operation( const sc * parent_local,
     const lo n_space_div_parent, const slou octant, sc * child_local ) const;
@@ -414,6 +481,9 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * Calls all L2T operations associated with a given scheduling time cluster.
    * @param[in] t_cluster  Considered scheduling time cluster.
    * @param[in,out] output_vector Block vector to which the results are added.
+   * @todo This routine is essentially the same as
+   * @ref distributed_pFMM_matrix::call_l2t_operations. Can we get rid
+   * of the duplication?
    */
   void call_l2t_operations( mesh::scheduling_time_cluster * t_cluster,
     distributed_block_vector & output_vector ) const;
@@ -425,8 +495,9 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * @param[in] cluster  Considered spacetime cluster.
    * @param[in,out] output_vector Global result vector to which the result of
    *                              the operation is added.
-   * @todo Use buffers instead of reallocating targets and aux buffer in every
-   * function call?
+   * @todo This routine is essentially the same as
+   * @ref distributed_pFMM_matrix::apply_l2t_operation. Can we get rid
+   * of the duplication?
    */
   void apply_l2t_operation( const mesh::general_spacetime_cluster * cluster,
     distributed_block_vector & output_vector ) const;
@@ -439,7 +510,7 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * @param[in,out] output_vector Global result vector to which the result of
    *                              the operation is added.
    * @todo This is a duplicate of
-   * @ref distributed_pFMM_matrix::apply_l2t_operations_p0. Can we restructure
+   * @ref distributed_pFMM_matrix::apply_l2t_operation_p0. Can we restructure
    * the code to get rid of duplication.
    */
   void apply_l2t_operation_p0( const mesh::general_spacetime_cluster * cluster,
@@ -454,17 +525,41 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * @param[in,out] output_vector Global result vector to which the result of
    *                              the operation is added.
    * @todo This is a duplicate of
-   * @ref distributed_pFMM_matrix::apply_l2t_operations_p1_normal_drv. Can we
+   * @ref distributed_pFMM_matrix::apply_l2t_operation_p1_normal_drv. Can we
    * restructure the code to get rid of duplication.
    */
   void apply_l2t_operation_p1_normal_drv(
     const mesh::general_spacetime_cluster * cluster,
     distributed_block_vector & output_vector ) const;
 
+  /**
+   * Computes the coupling coefficients used for individual M2L operations
+   * between a target space-time cluster and a source space cluster.
+   * @param[in] tar_time_nodes  Vector of interpolation points in the target
+   * time interval.
+   * @param[in] spat_half_size  Spatial half size of the involved clusters.
+   * @param[in] spat_center_diff  Difference of the spatial centers of the
+   * involved clusters.
+   * @param[in] buffer_for_gaussians  Buffer vector to store intermediate
+   * results in the computation.
+   * @param[in,out] coupling_coeffs Vector in which the resulting coupling
+   * coefficients are stored.
+   * @note @p coupling_coeffs is not resized in the routine. Its size has to be
+   * ( @p _temp_order + 1 ) * ( @p _spat_order + 1 )^2.
+   */
   void compute_coupling_coeffs_initial_op( const vector_type & tar_time_nodes,
     const sc spat_half_size, const sc spat_center_diff,
     vector_type & buffer_for_gaussians, vector_type & coupling_coeffs ) const;
 
+  /**
+   * Computes integrals of Chebyshev polynomials and p1 tetrahedral
+   * basis functions for a given spatial volume cluster approximately. These are
+   * needed for S2M operations.
+   * @param[in] source_cluster  Spatial cluster used for the computations.
+   * @param[in,out] T_vol Matrix in which the resulting integrals are stored.
+   * The nodes of the cluster vary along the columns of the matrix, the order of
+   * the polynomials along the columns of the matrix.
+   */
   void compute_chebyshev_quadrature_p1_volume(
     const mesh::volume_space_cluster * source_cluster,
     full_matrix & T_vol ) const;
@@ -530,11 +625,36 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * @param[out] my_quadrature Wrapper holding quadrature data.
    * @todo This is redundant. Can we restructure the code?
    */
-  void init_quadrature_polynomials( quadrature_wrapper & my_quadrature ) const;
+  void init_quadrature_polynomials_triangle(
+    quadrature_wrapper & my_quadrature ) const;
 
+  /**
+   * Initializes quadrature structures used to integrate Chebyshev polynomials
+   * on tetrahedra.
+   *
+   * The quadrature points and weights on the reference tetrahedron are
+   * initialized. The other structures used for integration of Chebyshev
+   * polynomials are resized appropriately.
+   *
+   * @param[out] my_quadrature Wrapper holding quadrature data.
+   * @todo This is redundant. Can we restructure the code?
+   */
   void init_quadrature_polynomials_tetrahedron(
     quadrature_wrapper & my_quadrature ) const;
 
+  /**
+   * Maps all quadrature nodes (integration of Chebyshev polynomials) from the
+   * reference tetrahedron to the actual geometry.
+   *
+   * The quadrature nodes on the reference tetrahedron have to be given in
+   * @p my_quadrature. The results are stored in this structure too.
+   *
+   * @param[in] x1 Coordinates of the first node of the tetrahedron.
+   * @param[in] x2 Coordinates of the second node of the tetrahedron.
+   * @param[in] x3 Coordinates of the third node of the tetrahedron.
+   * @param[in] x4 Coordinates of the third node of the tetrahedron.
+   * @param[in,out] my_quadrature Structure holding the quadrature nodes.
+   */
   void tetrahedron_to_geometry( const linear_algebra::coordinates< 3 > & x1,
     const linear_algebra::coordinates< 3 > & x2,
     const linear_algebra::coordinates< 3 > & x3,
@@ -552,7 +672,6 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * @param[in] y2 Coordinates of the second node of the triangle.
    * @param[in] y3 Coordinates of the third node of the triangle.
    * @param[in,out] my_quadrature Structure holding the quadrature nodes.
-   * @todo Check if documentation makes sense in this context.
    */
   void triangle_to_geometry( const linear_algebra::coordinates< 3 > & y1,
     const linear_algebra::coordinates< 3 > & y2,
@@ -578,16 +697,6 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    */
   void cluster_to_polynomials( quadrature_wrapper & my_quadrature, sc x_start,
     sc x_end, sc y_start, sc y_end, sc z_start, sc z_end ) const;
-
-  /*
-   * Counts the number of all FMM operations levelwise
-   * @note m2m and l2l operations are counted for the levels of the children
-   */
-  // void count_fmm_operations_levelwise( std::vector< lou > & n_s2m_operations,
-  //   std::vector< lou > & n_m2m_operations,
-  //   std::vector< lou > & n_m2l_operations,
-  //   std::vector< lou > & n_l2l_operations,
-  //   std::vector< lou > & n_l2t_operations ) const;
 
   const MPI_Comm *
     _comm;       //!< MPI communicator associated with the pFMM matrix.

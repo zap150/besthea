@@ -237,14 +237,13 @@ besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::initialize_spatial_m2m_coeffs( ) {
-  lo max_space_level
-    = _distributed_spacetime_tree->get_local_max_space_level( );
+  lo n_space_levels = _distributed_spacetime_tree->get_local_n_space_levels( );
   vector_type root_half_size( 3, false );
   sc dummy_val;
   _distributed_spacetime_tree->get_root( )->get_half_size(
     root_half_size, dummy_val );
 
-  compute_spatial_m2m_coeffs( max_space_level, _spat_order, root_half_size[ 0 ],
+  compute_spatial_m2m_coeffs( n_space_levels, _spat_order, root_half_size[ 0 ],
     _distributed_spacetime_tree->get_spatial_paddings_per_spatial_level( ),
     _m2m_coeffs_s_dim_0_left, _m2m_coeffs_s_dim_0_right );
   // @todo Due to the cubic bounding boxes the m2m coefficients are the same
@@ -370,7 +369,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     n_m2l_operations, n_l2l_operations, n_l2t_operations );
   // collect the numbers of operations at the root process via reduce
   // operations
-  lo n_max_levels = _distributed_spacetime_tree->get_max_levels( );
+  lo n_max_levels = _distributed_spacetime_tree->get_n_levels( );
   if ( _my_rank == root_process ) {
     MPI_Reduce( MPI_IN_PLACE, n_s2m_operations.data( ), n_max_levels,
       get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
@@ -740,8 +739,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
   }
 
-  // compute intermediate result lambda_1 ignoring zero entries for the sake
-  // of better readability
+  // compute intermediate result lambda_1 not exploiting zero entries for the
+  // sake of better readability
   for ( lo beta1 = 0; beta1 <= _spat_order; ++beta1 ) {
     for ( lo beta2 = 0; beta2 <= _spat_order - beta1; ++beta2 ) {
       for ( lo alpha0 = 0; alpha0 <= _spat_order - beta1 - beta2; ++alpha0 ) {
@@ -1069,7 +1068,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // transform the nodes from [-1, 1] to the child interval and then back to
   // [-1, 1] with the transformation of the parent interval:
   for ( lo j = 0; j <= _temp_order; ++j ) {
-    nodes_child[ j ] = ( child_time_center + (child_time_half_size) *nodes[ j ]
+    nodes_child[ j ] = ( child_time_center + child_time_half_size * nodes[ j ]
                          - parent_time_center )
       / parent_time_half_size;
   }
@@ -2048,7 +2047,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                                                            src_time_nodes,
   const vector_type & tar_time_nodes, const sc half_size, const sc center_diff,
   vector_type & buffer_for_gaussians, vector_type & coupling_coeffs ) const {
-  coupling_coeffs.fill( 0.0 );
   // evaluate the gaussian kernel for the numerical integration
   sc h_alpha = half_size * half_size / ( 4.0 * _alpha );
   sc scaled_center_diff = center_diff / half_size;
@@ -2095,7 +2093,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               * curr_ptr[ start_idx + idx ];
           }
           index_gaussian += idx;
-          coupling_coeffs[ index_integral ] += val;
+          coupling_coeffs[ index_integral ] = val;
 
           sc mul_factor_ab = mul_factor
             / std::sqrt( 4.0 * M_PI * _alpha
@@ -2404,7 +2402,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   std::vector< lou > & n_m2m_operations, std::vector< lou > & n_m2l_operations,
   std::vector< lou > & n_l2l_operations,
   std::vector< lou > & n_l2t_operations ) const {
-  lo n_max_levels = _distributed_spacetime_tree->get_max_levels( );
+  lo n_max_levels = _distributed_spacetime_tree->get_n_levels( );
   // count the number of s2m operations
   n_s2m_operations.resize( n_max_levels );
   for ( lo i = 0; i < n_max_levels; ++i ) {
@@ -4121,7 +4119,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
     // sort within nearfield cluster
     std::vector< lo > permutation_index( total_sizes.size( ), 0 );
-    for ( lo i = 0; i != permutation_index.size( ); i++ ) {
+    for ( lou i = 0; i != permutation_index.size( ); i++ ) {
       permutation_index[ i ] = i;
     }
     sort( permutation_index.begin( ), permutation_index.end( ),
