@@ -37,7 +37,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/settings.h"
 #include "besthea/uniform_spacetime_tensor_mesh.h"
-#include "besthea/gpu_onthefly_helpers.h"
 
 #include <vector>
 
@@ -55,9 +54,15 @@ class besthea::mesh::uniform_spacetime_tensor_mesh_gpu {
    */
   struct mesh_raw_data {
     sc * d_element_areas;
-    besthea::bem::onthefly::helpers::soa3_a<sc> d_node_coords;
-    besthea::bem::onthefly::helpers::soa3_b<lo> d_element_nodes;
-    besthea::bem::onthefly::helpers::soa3_a<sc> d_element_normals;
+    sc * d_node_coords;      // XYZXYZXYZXYZ...
+    lo * d_element_nodes;    // 123123123123...
+    sc * d_element_normals;  // XYZXYZXYZXYZ
+    mesh_raw_data( )
+      : d_element_areas( nullptr ),
+        d_node_coords( nullptr ),
+        d_element_nodes( nullptr ),
+        d_element_normals( nullptr ) {
+    }
   };
 
   /*!

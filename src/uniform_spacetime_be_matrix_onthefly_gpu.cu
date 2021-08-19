@@ -493,35 +493,26 @@ __device__ void d_reduce_sum_2d_y_multiple(volatile sc * shmem_vals1,
 // 0 shared vertices, 0 rot_test, 0 rot_trial
 template<int quadr_order>
 __device__ void d_triangles_to_geometry_000_tst_shmem( lo i_tst,
-  const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata & mesh_metadata,
   const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data & mesh_data,
   ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & shmem_quadr_nodes_tst ) {
+  
+  const lo * tst_elem_nodes = mesh_data.d_element_nodes + 3 * i_tst;
 
-  const lo node1idx = mesh_data.d_element_nodes.e1[i_tst];
-  const lo node2idx = mesh_data.d_element_nodes.e2[i_tst];
-  const lo node3idx = mesh_data.d_element_nodes.e3[i_tst];
+  const sc * x1 = mesh_data.d_node_coords + 3 * tst_elem_nodes[0];
+  const sc * x2 = mesh_data.d_node_coords + 3 * tst_elem_nodes[1];
+  const sc * x3 = mesh_data.d_node_coords + 3 * tst_elem_nodes[2];
 
-  const sc & x1 = mesh_data.d_node_coords.xs[node1idx];
-  const sc & x2 = mesh_data.d_node_coords.xs[node2idx];
-  const sc & x3 = mesh_data.d_node_coords.xs[node3idx];
-  const sc & y1 = mesh_data.d_node_coords.ys[node1idx];
-  const sc & y2 = mesh_data.d_node_coords.ys[node2idx];
-  const sc & y3 = mesh_data.d_node_coords.ys[node3idx];
-  const sc & z1 = mesh_data.d_node_coords.zs[node1idx];
-  const sc & z2 = mesh_data.d_node_coords.zs[node2idx];
-  const sc & z3 = mesh_data.d_node_coords.zs[node3idx];
-
-  const sc * c1_ref = c_get_quadr_reference<quadr_order>()._x1_ref;
-  const sc * c2_ref = c_get_quadr_reference<quadr_order>()._x2_ref;
+  const sc * x1_ref = c_get_quadr_reference<quadr_order>()._x1_ref;
+  const sc * x2_ref = c_get_quadr_reference<quadr_order>()._x2_ref;
 
   constexpr int quadr_size = ns_gpu_helpers::qo2qs(quadr_order);
   for ( lo i = threadIdx.x; i < quadr_size; i += blockDim.x ) {
-    shmem_quadr_nodes_tst.xs[ i ] = x1 + ( x2 - x1 ) * c1_ref[ i ]
-                                       + ( x3 - x1 ) * c2_ref[ i ];
-    shmem_quadr_nodes_tst.ys[ i ] = y1 + ( y2 - y1 ) * c1_ref[ i ]
-                                       + ( y3 - y1 ) * c2_ref[ i ];
-    shmem_quadr_nodes_tst.zs[ i ] = z1 + ( z2 - z1 ) * c1_ref[ i ]
-                                       + ( z3 - z1 ) * c2_ref[ i ];
+    shmem_quadr_nodes_tst.xs[ i ] = x1[ 0 ] + ( x2[ 0 ] - x1[ 0 ] ) * x1_ref[ i ]
+                                            + ( x3[ 0 ] - x1[ 0 ] ) * x2_ref[ i ];
+    shmem_quadr_nodes_tst.ys[ i ] = x1[ 1 ] + ( x2[ 1 ] - x1[ 1 ] ) * x1_ref[ i ]
+                                            + ( x3[ 1 ] - x1[ 1 ] ) * x2_ref[ i ];
+    shmem_quadr_nodes_tst.zs[ i ] = x1[ 2 ] + ( x2[ 2 ] - x1[ 2 ] ) * x1_ref[ i ]
+                                            + ( x3[ 2 ] - x1[ 2 ] ) * x2_ref[ i ];
   }
 }
 
@@ -530,35 +521,26 @@ __device__ void d_triangles_to_geometry_000_tst_shmem( lo i_tst,
 // 0 shared vertices, 0 rot_test, 0 rot_trial
 template<int quadr_order>
 __device__ void d_triangles_to_geometry_000_tst( lo i_tst,
-  const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata & mesh_metadata,
   const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data & mesh_data,
-  ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & quadr_nodes_tst ) {
+  ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & shmem_quadr_nodes_tst ) {
+  
+  const lo * tst_elem_nodes = mesh_data.d_element_nodes + 3 * i_tst;
 
-  const lo node1idx = mesh_data.d_element_nodes.e1[i_tst];
-  const lo node2idx = mesh_data.d_element_nodes.e2[i_tst];
-  const lo node3idx = mesh_data.d_element_nodes.e3[i_tst];
+  const sc * x1 = mesh_data.d_node_coords + 3 * tst_elem_nodes[0];
+  const sc * x2 = mesh_data.d_node_coords + 3 * tst_elem_nodes[1];
+  const sc * x3 = mesh_data.d_node_coords + 3 * tst_elem_nodes[2];
 
-  const sc & x1 = mesh_data.d_node_coords.xs[node1idx];
-  const sc & x2 = mesh_data.d_node_coords.xs[node2idx];
-  const sc & x3 = mesh_data.d_node_coords.xs[node3idx];
-  const sc & y1 = mesh_data.d_node_coords.ys[node1idx];
-  const sc & y2 = mesh_data.d_node_coords.ys[node2idx];
-  const sc & y3 = mesh_data.d_node_coords.ys[node3idx];
-  const sc & z1 = mesh_data.d_node_coords.zs[node1idx];
-  const sc & z2 = mesh_data.d_node_coords.zs[node2idx];
-  const sc & z3 = mesh_data.d_node_coords.zs[node3idx];
-
-  const sc * c1_ref = c_get_quadr_reference<quadr_order>()._x1_ref;
-  const sc * c2_ref = c_get_quadr_reference<quadr_order>()._x2_ref;
+  const sc * x1_ref = c_get_quadr_reference<quadr_order>()._x1_ref;
+  const sc * x2_ref = c_get_quadr_reference<quadr_order>()._x2_ref;
 
   constexpr int quadr_size = ns_gpu_helpers::qo2qs(quadr_order);
   for ( lo i = 0; i < quadr_size; ++i ) {
-    quadr_nodes_tst.xs[ i ] = x1 + ( x2 - x1 ) * c1_ref[ i ]
-                                 + ( x3 - x1 ) * c2_ref[ i ];
-    quadr_nodes_tst.ys[ i ] = y1 + ( y2 - y1 ) * c1_ref[ i ]
-                                 + ( y3 - y1 ) * c2_ref[ i ];
-    quadr_nodes_tst.zs[ i ] = z1 + ( z2 - z1 ) * c1_ref[ i ]
-                                 + ( z3 - z1 ) * c2_ref[ i ];
+    shmem_quadr_nodes_tst.xs[ i ] = x1[ 0 ] + ( x2[ 0 ] - x1[ 0 ] ) * x1_ref[ i ]
+                                            + ( x3[ 0 ] - x1[ 0 ] ) * x2_ref[ i ];
+    shmem_quadr_nodes_tst.ys[ i ] = x1[ 1 ] + ( x2[ 1 ] - x1[ 1 ] ) * x1_ref[ i ]
+                                            + ( x3[ 1 ] - x1[ 1 ] ) * x2_ref[ i ];
+    shmem_quadr_nodes_tst.zs[ i ] = x1[ 2 ] + ( x2[ 2 ] - x1[ 2 ] ) * x1_ref[ i ]
+                                            + ( x3[ 2 ] - x1[ 2 ] ) * x2_ref[ i ];
   }
 }
 
@@ -567,35 +549,26 @@ __device__ void d_triangles_to_geometry_000_tst( lo i_tst,
 // 0 shared vertices, 0 rot_test, 0 rot_trial
 template<int quadr_order>
 __device__ void d_triangles_to_geometry_000_trl( lo i_trl,
-  const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata & mesh_metadata,
   const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data & mesh_data,
   ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & quadr_nodes_trl ) {
 
-  const lo node1idx = mesh_data.d_element_nodes.e1[i_trl];
-  const lo node2idx = mesh_data.d_element_nodes.e2[i_trl];
-  const lo node3idx = mesh_data.d_element_nodes.e3[i_trl];
+  const lo * trl_elem_nodes = mesh_data.d_element_nodes + 3 * i_trl;
 
-  const sc & x1 = mesh_data.d_node_coords.xs[node1idx];
-  const sc & x2 = mesh_data.d_node_coords.xs[node2idx];
-  const sc & x3 = mesh_data.d_node_coords.xs[node3idx];
-  const sc & y1 = mesh_data.d_node_coords.ys[node1idx];
-  const sc & y2 = mesh_data.d_node_coords.ys[node2idx];
-  const sc & y3 = mesh_data.d_node_coords.ys[node3idx];
-  const sc & z1 = mesh_data.d_node_coords.zs[node1idx];
-  const sc & z2 = mesh_data.d_node_coords.zs[node2idx];
-  const sc & z3 = mesh_data.d_node_coords.zs[node3idx];
+  const sc * y1 = mesh_data.d_node_coords + 3 * trl_elem_nodes[0];
+  const sc * y2 = mesh_data.d_node_coords + 3 * trl_elem_nodes[1];
+  const sc * y3 = mesh_data.d_node_coords + 3 * trl_elem_nodes[2];
 
-  const sc * c1_ref = c_get_quadr_reference<quadr_order>()._y1_ref;
-  const sc * c2_ref = c_get_quadr_reference<quadr_order>()._y2_ref;
+  const sc * y1_ref = c_get_quadr_reference<quadr_order>()._y1_ref;
+  const sc * y2_ref = c_get_quadr_reference<quadr_order>()._y2_ref;
   
   constexpr int quadr_size = ns_gpu_helpers::qo2qs(quadr_order);
   for ( lo i = 0; i < quadr_size; ++i ) {
-    quadr_nodes_trl.xs[ i ] = x1 + ( x2 - x1 ) * c1_ref[ i ]
-                                 + ( x3 - x1 ) * c2_ref[ i ];
-    quadr_nodes_trl.ys[ i ] = y1 + ( y2 - y1 ) * c1_ref[ i ]
-                                 + ( y3 - y1 ) * c2_ref[ i ];
-    quadr_nodes_trl.zs[ i ] = z1 + ( z2 - z1 ) * c1_ref[ i ]
-                                 + ( z3 - z1 ) * c2_ref[ i ];
+    quadr_nodes_trl.xs[ i ] = y1[ 0 ] + ( y2[ 0 ] - y1[ 0 ] ) * y1_ref[ i ]
+                                      + ( y3[ 0 ] - y1[ 0 ] ) * y2_ref[ i ];
+    quadr_nodes_trl.ys[ i ] = y1[ 1 ] + ( y2[ 1 ] - y1[ 1 ] ) * y1_ref[ i ]
+                                      + ( y3[ 1 ] - y1[ 1 ] ) * y2_ref[ i ];
+    quadr_nodes_trl.zs[ i ] = y1[ 2 ] + ( y2[ 2 ] - y1[ 2 ] ) * y1_ref[ i ]
+                                      + ( y3[ 2 ] - y1[ 2 ] ) * y2_ref[ i ];
   }
 }
 
@@ -724,27 +697,18 @@ __device__ void d_basis_tri_p1_evaluate_curl_00(
   lo i_elem, const sc * n, bool swap, sc * curls,
   const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data & mesh_data) {
 
-  const lo node1idx = mesh_data.d_element_nodes.e1[i_elem];
-  const lo node2idx = mesh_data.d_element_nodes.e2[i_elem];
-  const lo node3idx = mesh_data.d_element_nodes.e3[i_elem];
-
-  const sc & x1rot = mesh_data.d_node_coords.xs[node1idx];
-  const sc & y1rot = mesh_data.d_node_coords.ys[node1idx];
-  const sc & z1rot = mesh_data.d_node_coords.zs[node1idx];
-  const sc & x2rot = mesh_data.d_node_coords.xs[node2idx];
-  const sc & y2rot = mesh_data.d_node_coords.ys[node2idx];
-  const sc & z2rot = mesh_data.d_node_coords.zs[node2idx];
-  const sc & x3rot = mesh_data.d_node_coords.xs[node3idx];
-  const sc & y3rot = mesh_data.d_node_coords.ys[node3idx];
-  const sc & z3rot = mesh_data.d_node_coords.zs[node3idx];
+  const lo * elem_nodes = mesh_data.d_element_nodes + 3 * i_elem;
+  const sc * x1rot = mesh_data.d_node_coords + 3 * elem_nodes[0];
+  const sc * x2rot = mesh_data.d_node_coords + 3 * elem_nodes[1];
+  const sc * x3rot = mesh_data.d_node_coords + 3 * elem_nodes[2];
 
   // first two rows of R^\trans, third is n
-  sc a11 = y1rot - x1rot;
-  sc a12 = y2rot - x2rot;
-  sc a13 = y3rot - x3rot;
-  sc a21 = z1rot - x1rot;
-  sc a22 = z2rot - x2rot;
-  sc a23 = z3rot - x3rot;
+  sc a11 = x2rot[ 0 ] - x1rot[ 0 ];
+  sc a12 = x2rot[ 1 ] - x1rot[ 1 ];
+  sc a13 = x2rot[ 2 ] - x1rot[ 2 ];
+  sc a21 = x3rot[ 0 ] - x1rot[ 0 ];
+  sc a22 = x3rot[ 1 ] - x1rot[ 1 ];
+  sc a23 = x3rot[ 2 ] - x1rot[ 2 ];
 
   // determinant to invert the matrix
   sc det = n[ 0 ] * ( a12 * a23 - a13 * a22 )
@@ -855,7 +819,7 @@ __device__ void d_get_local_contributions_treg_sreg_dl_p0_p1(sc * values_out,
   sc ttau = timestep * delta;
   sc sqrt_ttau = sqrt(ttau);
 
-  const sc ny[3] = { mesh_data.d_element_normals.xs[i_trial], mesh_data.d_element_normals.ys[i_trial], mesh_data.d_element_normals.zs[i_trial] };
+  const sc * ny = mesh_data.d_element_normals + 3 * i_trial;
 
   const sc test_area = mesh_data.d_element_areas[i_test];
   const sc trial_area = mesh_data.d_element_areas[i_trial];
@@ -918,7 +882,7 @@ __device__ void d_get_local_contributions_treg_sreg_adl_p1_p0(sc * values_out,
   sc ttau = timestep * delta;
   sc sqrt_ttau = sqrt(ttau);
 
-  const sc nx[3] = { mesh_data.d_element_normals.xs[i_test], mesh_data.d_element_normals.ys[i_test], mesh_data.d_element_normals.zs[i_test] };
+  const sc * nx = mesh_data.d_element_normals + 3 * i_test;
 
   const sc test_area = mesh_data.d_element_areas[i_test];
   const sc trial_area = mesh_data.d_element_areas[i_trial];
@@ -981,8 +945,8 @@ __device__ void d_get_local_contributions_treg_sreg_hs_p1_p1(sc * values_out,
   sc ttau = timestep * delta;
   sc sqrt_ttau = sqrt(ttau);
   
-  const sc nx[3] = { mesh_data.d_element_normals.xs[i_test], mesh_data.d_element_normals.ys[i_test], mesh_data.d_element_normals.zs[i_test] };
-  const sc ny[3] = { mesh_data.d_element_normals.xs[i_trial], mesh_data.d_element_normals.ys[i_trial], mesh_data.d_element_normals.zs[i_trial] };
+  const sc * nx = mesh_data.d_element_normals + 3 * i_test;
+  const sc * ny = mesh_data.d_element_normals + 3 * i_trial;
 
   const sc test_area = mesh_data.d_element_areas[i_test];
   const sc trial_area = mesh_data.d_element_areas[i_trial];
@@ -1084,7 +1048,7 @@ __global__ void g_apply_gpu_treg_sreg_ver1
   const lo i_tst = i_tst_begin + blockIdx.x;
 
   shmem_y_vals[tid] = 0;
-  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_metadata, mesh_data, shmem_quadr_nodes_tst);
+  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_data, shmem_quadr_nodes_tst);
   __syncthreads();
 
   sc matrix_val;
@@ -1095,7 +1059,7 @@ __global__ void g_apply_gpu_treg_sreg_ver1
   ns_gpu_helpers::quadrature_nodes_raw<quadr_order> quadr_nodes_trl;
 
   for (lo i_trl = threadIdx.x; i_trl < n_elems; i_trl += blockDim.x) {
-    d_triangles_to_geometry_000_trl(i_trl, mesh_metadata, mesh_data, quadr_nodes_trl);
+    d_triangles_to_geometry_000_trl(i_trl, mesh_data, quadr_nodes_trl);
 
     const lo &row = i_tst;
     const lo &col = i_trl;
@@ -1155,7 +1119,7 @@ __global__ void g_apply_gpu_treg_sreg_ver1
   const lo i_tst = i_tst_begin + blockIdx.x;
 
   shmem_y_vals[tid] = 0;
-  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_metadata, mesh_data, shmem_quadr_nodes_tst);
+  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_data, shmem_quadr_nodes_tst);
   __syncthreads();
 
   sc matrix_vals[3] = {0,0,0};
@@ -1167,10 +1131,10 @@ __global__ void g_apply_gpu_treg_sreg_ver1
 
 
   for (lo i_trl = threadIdx.x; i_trl < n_elems; i_trl += blockDim.x) {
-    d_triangles_to_geometry_000_trl(i_trl, mesh_metadata, mesh_data, quadr_nodes_trl);
+    d_triangles_to_geometry_000_trl(i_trl, mesh_data, quadr_nodes_trl);
 
     const lo &row = i_tst;
-    lo cols[3] = { mesh_data.d_element_nodes.e1[i_trl], mesh_data.d_element_nodes.e2[i_trl], mesh_data.d_element_nodes.e3[i_trl] };
+    const lo * cols = mesh_data.d_element_nodes + 3 * i_trl;
 
     vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
     vals_next[0] = 0;   vals_next[1] = 0;   vals_next[2] = 0;
@@ -1234,7 +1198,7 @@ __global__ void g_apply_gpu_treg_sreg_ver1
   shmem_y_vals[0][tid] = 0;
   shmem_y_vals[1][tid] = 0;
   shmem_y_vals[2][tid] = 0;
-  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_metadata, mesh_data, shmem_quadr_nodes_tst);
+  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_data, shmem_quadr_nodes_tst);
   __syncthreads();
 
   sc matrix_vals[3];
@@ -1246,9 +1210,9 @@ __global__ void g_apply_gpu_treg_sreg_ver1
 
 
   for (lo i_trl = threadIdx.x; i_trl < n_elems; i_trl += blockDim.x) {
-    d_triangles_to_geometry_000_trl(i_trl, mesh_metadata, mesh_data, quadr_nodes_trl);
+    d_triangles_to_geometry_000_trl(i_trl, mesh_data, quadr_nodes_trl);
 
-    lo rows[3] = { mesh_data.d_element_nodes.e1[i_tst], mesh_data.d_element_nodes.e2[i_tst], mesh_data.d_element_nodes.e3[i_tst] };
+    const lo * rows = mesh_data.d_element_nodes + 3 * i_tst;
     const lo &col = i_trl;
 
     vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
@@ -1317,7 +1281,7 @@ __global__ void g_apply_gpu_treg_sreg_ver1
   shmem_y_vals[0][tid] = 0;
   shmem_y_vals[1][tid] = 0;
   shmem_y_vals[2][tid] = 0;
-  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_metadata, mesh_data, shmem_quadr_nodes_tst);
+  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_data, shmem_quadr_nodes_tst);
   __syncthreads();
 
   sc matrix_vals[9];
@@ -1330,10 +1294,10 @@ __global__ void g_apply_gpu_treg_sreg_ver1
 
 
   for (lo i_trl = threadIdx.x; i_trl < n_elems; i_trl += blockDim.x) {
-    d_triangles_to_geometry_000_trl(i_trl, mesh_metadata, mesh_data, quadr_nodes_trl);
+    d_triangles_to_geometry_000_trl(i_trl, mesh_data, quadr_nodes_trl);
 
-    lo rows[3] = { mesh_data.d_element_nodes.e1[i_tst], mesh_data.d_element_nodes.e2[i_tst], mesh_data.d_element_nodes.e3[i_tst] };
-    lo cols[3] = { mesh_data.d_element_nodes.e1[i_trl], mesh_data.d_element_nodes.e2[i_trl], mesh_data.d_element_nodes.e3[i_trl] };
+    const lo * rows = mesh_data.d_element_nodes + 3 * i_tst;
+    const lo * cols = mesh_data.d_element_nodes + 3 * i_trl;
 
     for(lo j = 0; j < 9; j++) vals_curr[j] = 0;
     for(lo j = 0; j < 9; j++) vals_next[j] = 0;
@@ -1411,7 +1375,7 @@ __global__ void g_apply_gpu_treg_sreg_ver2
   const lo i_tst = i_tst_begin + blockIdx.x;
   const lo &row = i_tst;
 
-  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_metadata, mesh_data, shmem_quadr_nodes_tst);
+  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_data, shmem_quadr_nodes_tst);
   __syncthreads();
 
   ns_gpu_helpers::quadrature_nodes_raw<quadr_order> quadr_nodes_trl;
@@ -1422,7 +1386,7 @@ __global__ void g_apply_gpu_treg_sreg_ver2
   sc val_next;
 
   for(lo i = threadIdx.x; i < n_elems; i += blockDim.x) {
-    d_triangles_to_geometry_000_trl(i, mesh_metadata, mesh_data, quadr_nodes_trl);
+    d_triangles_to_geometry_000_trl(i, mesh_data, quadr_nodes_trl);
 
     val_curr = 0;
     val_next = 0;
@@ -1500,7 +1464,7 @@ __global__ void g_apply_gpu_treg_sreg_ver2
   const lo i_tst = i_tst_begin + blockIdx.x;
   const lo &row = i_tst;
 
-  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_metadata, mesh_data, shmem_quadr_nodes_tst);
+  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_data, shmem_quadr_nodes_tst);
   __syncthreads();
 
   ns_gpu_helpers::quadrature_nodes_raw<quadr_order> quadr_nodes_trl;
@@ -1511,7 +1475,7 @@ __global__ void g_apply_gpu_treg_sreg_ver2
   sc vals_next[3];
 
   for(lo i = threadIdx.x; i < n_elems; i += blockDim.x) {
-    d_triangles_to_geometry_000_trl(i, mesh_metadata, mesh_data, quadr_nodes_trl);
+    d_triangles_to_geometry_000_trl(i, mesh_data, quadr_nodes_trl);
 
     vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
     vals_next[0] = 0;   vals_next[1] = 0;   vals_next[2] = 0;
@@ -1543,7 +1507,7 @@ __global__ void g_apply_gpu_treg_sreg_ver2
           sc y_val = 0;
           for(lo j = 0; j < curr_active_threads; j++) {
             lo i_trl = (i / blockDim.x) * blockDim.x + j;
-            lo cols[3] = { mesh_data.d_element_nodes.e1[i_trl], mesh_data.d_element_nodes.e2[i_trl], mesh_data.d_element_nodes.e3[i_trl] };
+            lo * cols = mesh_data.d_element_nodes + 3 * i_trl;
             y_val += shmem_matrix_vals[0][j] * x_perm[block_col + ld_x_perm * cols[0]];
             y_val += shmem_matrix_vals[1][j] * x_perm[block_col + ld_x_perm * cols[1]];
             y_val += shmem_matrix_vals[2][j] * x_perm[block_col + ld_x_perm * cols[2]];
@@ -1588,9 +1552,9 @@ __global__ void g_apply_gpu_treg_sreg_ver2
   const lo &n_elems = mesh_metadata.n_elems;
   const unsigned int &tid = threadIdx.x;
   const lo i_tst = i_tst_begin + blockIdx.x;
-  lo rows[3] = { mesh_data.d_element_nodes.e1[i_tst], mesh_data.d_element_nodes.e2[i_tst], mesh_data.d_element_nodes.e3[i_tst] };
+  const lo * rows = mesh_data.d_element_nodes + 3 * i_tst;
 
-  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_metadata, mesh_data, shmem_quadr_nodes_tst);
+  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_data, shmem_quadr_nodes_tst);
   __syncthreads();
 
   ns_gpu_helpers::quadrature_nodes_raw<quadr_order> quadr_nodes_trl;
@@ -1601,7 +1565,7 @@ __global__ void g_apply_gpu_treg_sreg_ver2
   sc vals_next[3];
 
   for(lo i = threadIdx.x; i < n_elems; i += blockDim.x) {
-    d_triangles_to_geometry_000_trl(i, mesh_metadata, mesh_data, quadr_nodes_trl);
+    d_triangles_to_geometry_000_trl(i, mesh_data, quadr_nodes_trl);
 
     vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
     vals_next[0] = 0;   vals_next[1] = 0;   vals_next[2] = 0;
@@ -1678,9 +1642,9 @@ __global__ void g_apply_gpu_treg_sreg_ver2
   const lo &n_elems = mesh_metadata.n_elems;
   const unsigned int &tid = threadIdx.x;
   const lo i_tst = i_tst_begin + blockIdx.x;
-  lo rows[3] = { mesh_data.d_element_nodes.e1[i_tst], mesh_data.d_element_nodes.e2[i_tst], mesh_data.d_element_nodes.e3[i_tst] };
+  const lo * rows = mesh_data.d_element_nodes + 3 * i_tst;
 
-  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_metadata, mesh_data, shmem_quadr_nodes_tst);
+  d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_data, shmem_quadr_nodes_tst);
   __syncthreads();
 
   ns_gpu_helpers::quadrature_nodes_raw<quadr_order> quadr_nodes_trl;
@@ -1691,7 +1655,7 @@ __global__ void g_apply_gpu_treg_sreg_ver2
   sc vals_next[9];
 
   for(lo i = threadIdx.x; i < n_elems; i += blockDim.x) {
-    d_triangles_to_geometry_000_trl(i, mesh_metadata, mesh_data, quadr_nodes_trl);
+    d_triangles_to_geometry_000_trl(i, mesh_data, quadr_nodes_trl);
 
     for(lo j = 0; j < 9; j++) vals_curr[j] = 0;
     for(lo j = 0; j < 9; j++) vals_next[j] = 0;
@@ -1722,7 +1686,7 @@ __global__ void g_apply_gpu_treg_sreg_ver2
           sc y_vals[3] = {0,0,0};
           for(lo j = 0; j < curr_active_threads; j++) {
             lo i_trl = (i / blockDim.x) * blockDim.x + j;
-            lo cols[3] = { mesh_data.d_element_nodes.e1[i_trl], mesh_data.d_element_nodes.e2[i_trl], mesh_data.d_element_nodes.e3[i_trl] };
+            lo * cols = mesh_data.d_element_nodes + 3 * i_trl;
             sc x_vals[3];
             x_vals[0] = x_perm[block_col + ld_x_perm * cols[0]];
             x_vals[1] = x_perm[block_col + ld_x_perm * cols[1]];
@@ -1781,7 +1745,7 @@ __global__ void g_apply_gpu_treg_sreg_ver3
   
   shmem_y_vals[tid] = 0;
   if(tid < blockDim.x)
-    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_metadata, mesh_data, shmem_quadr_nodes_tst[tid]);
+    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_data, shmem_quadr_nodes_tst[tid]);
   __syncthreads();
 
   sc matrix_val;
@@ -1791,7 +1755,7 @@ __global__ void g_apply_gpu_treg_sreg_ver3
 
   for(lo i_trl = threadIdx.y; i_trl < n_elems; i_trl += blockDim.y) {
     if(tid < blockDim.y)
-      d_triangles_to_geometry_000_trl((i_trl / blockDim.y) * blockDim.y + tid, mesh_metadata, mesh_data, shmem_quadr_nodes_trl[tid]);
+      d_triangles_to_geometry_000_trl((i_trl / blockDim.y) * blockDim.y + tid, mesh_data, shmem_quadr_nodes_trl[tid]);
     __syncthreads();
 
     const lo &row = i_tst;
@@ -1853,7 +1817,7 @@ __global__ void g_apply_gpu_treg_sreg_ver3
   
   shmem_y_vals[tid] = 0;
   if(tid < blockDim.x)
-    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_metadata, mesh_data, shmem_quadr_nodes_tst[tid]);
+    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_data, shmem_quadr_nodes_tst[tid]);
   __syncthreads();
 
   sc matrix_vals[3];
@@ -1863,11 +1827,11 @@ __global__ void g_apply_gpu_treg_sreg_ver3
 
   for(lo i_trl = threadIdx.y; i_trl < n_elems; i_trl += blockDim.y) {
     if(tid < blockDim.y)
-      d_triangles_to_geometry_000_trl((i_trl / blockDim.y) * blockDim.y + tid, mesh_metadata, mesh_data, shmem_quadr_nodes_trl[tid]);
+      d_triangles_to_geometry_000_trl((i_trl / blockDim.y) * blockDim.y + tid, mesh_data, shmem_quadr_nodes_trl[tid]);
     __syncthreads();
 
     const lo &row = i_tst;
-    const lo cols[3] = { mesh_data.d_element_nodes.e1[i_trl], mesh_data.d_element_nodes.e2[i_trl], mesh_data.d_element_nodes.e3[i_trl] };
+    const lo * cols = mesh_data.d_element_nodes + 3 * i_trl;
 
     vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
     vals_next[0] = 0;   vals_next[1] = 0;   vals_next[2] = 0;
@@ -1936,7 +1900,7 @@ __global__ void g_apply_gpu_treg_sreg_ver3
   shmem_y_vals[1][tid] = 0;
   shmem_y_vals[2][tid] = 0;
   if(tid < blockDim.x)
-    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_metadata, mesh_data, shmem_quadr_nodes_tst[tid]);
+    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_data, shmem_quadr_nodes_tst[tid]);
   __syncthreads();
 
   sc matrix_vals[3];
@@ -1946,10 +1910,10 @@ __global__ void g_apply_gpu_treg_sreg_ver3
 
   for(lo i_trl = threadIdx.y; i_trl < n_elems; i_trl += blockDim.y) {
     if(tid < blockDim.y)
-      d_triangles_to_geometry_000_trl((i_trl / blockDim.y) * blockDim.y + tid, mesh_metadata, mesh_data, shmem_quadr_nodes_trl[tid]);
+      d_triangles_to_geometry_000_trl((i_trl / blockDim.y) * blockDim.y + tid, mesh_data, shmem_quadr_nodes_trl[tid]);
     __syncthreads();
 
-    const lo rows[3] = { mesh_data.d_element_nodes.e1[i_tst], mesh_data.d_element_nodes.e2[i_tst], mesh_data.d_element_nodes.e3[i_tst] };
+    const lo * rows = mesh_data.d_element_nodes + 3 * i_tst;
     const lo &col = i_trl;
 
     vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
@@ -2021,7 +1985,7 @@ __global__ void g_apply_gpu_treg_sreg_ver3
   shmem_y_vals[1][tid] = 0;
   shmem_y_vals[2][tid] = 0;
   if(tid < blockDim.x)
-    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_metadata, mesh_data, shmem_quadr_nodes_tst[tid]);
+    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_data, shmem_quadr_nodes_tst[tid]);
   __syncthreads();
 
   sc matrix_vals[9];
@@ -2032,11 +1996,11 @@ __global__ void g_apply_gpu_treg_sreg_ver3
 
   for(lo i_trl = threadIdx.y; i_trl < n_elems; i_trl += blockDim.y) {
     if(tid < blockDim.y)
-      d_triangles_to_geometry_000_trl((i_trl / blockDim.y) * blockDim.y + tid, mesh_metadata, mesh_data, shmem_quadr_nodes_trl[tid]);
+      d_triangles_to_geometry_000_trl((i_trl / blockDim.y) * blockDim.y + tid, mesh_data, shmem_quadr_nodes_trl[tid]);
     __syncthreads();
 
-    const lo rows[3] = { mesh_data.d_element_nodes.e1[i_tst], mesh_data.d_element_nodes.e2[i_tst], mesh_data.d_element_nodes.e3[i_tst] };
-    const lo cols[3] = { mesh_data.d_element_nodes.e1[i_trl], mesh_data.d_element_nodes.e2[i_trl], mesh_data.d_element_nodes.e3[i_trl] };
+    const lo * rows = mesh_data.d_element_nodes + 3 * i_tst;
+    const lo * cols = mesh_data.d_element_nodes + 3 * i_trl;
 
     for(lo j = 0; j < 9; j++) vals_curr[j] = 0;
     for(lo j = 0; j < 9; j++) vals_next[j] = 0;
@@ -2112,7 +2076,7 @@ __global__ void g_apply_gpu_treg_sreg_ver4
   const lo &row = i_tst;
   
   if(tid < blockDim.x)
-    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_metadata, mesh_data, shmem_quadr_nodes_tst[tid]);
+    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_data, shmem_quadr_nodes_tst[tid]);
   __syncthreads();
 
   sc val_prev;
@@ -2121,7 +2085,7 @@ __global__ void g_apply_gpu_treg_sreg_ver4
 
   for(lo i = threadIdx.y; i < n_elems; i += blockDim.y) {
     if(tid < blockDim.y)
-      d_triangles_to_geometry_000_trl((i / blockDim.y) * blockDim.y + tid, mesh_metadata, mesh_data, shmem_quadr_nodes_trl[tid]);
+      d_triangles_to_geometry_000_trl((i / blockDim.y) * blockDim.y + tid, mesh_data, shmem_quadr_nodes_trl[tid]);
     __syncthreads();
 
     val_curr = 0;
@@ -2194,7 +2158,7 @@ __global__ void g_apply_gpu_treg_sreg_ver4
   const lo &row = i_tst;
   
   if(tid < blockDim.x)
-    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_metadata, mesh_data, shmem_quadr_nodes_tst[tid]);
+    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_data, shmem_quadr_nodes_tst[tid]);
   __syncthreads();
 
   sc vals_prev[3];
@@ -2203,7 +2167,7 @@ __global__ void g_apply_gpu_treg_sreg_ver4
 
   for(lo i = threadIdx.y; i < n_elems; i += blockDim.y) {
     if(tid < blockDim.y)
-      d_triangles_to_geometry_000_trl((i / blockDim.y) * blockDim.y + tid, mesh_metadata, mesh_data, shmem_quadr_nodes_trl[tid]);
+      d_triangles_to_geometry_000_trl((i / blockDim.y) * blockDim.y + tid, mesh_data, shmem_quadr_nodes_trl[tid]);
     __syncthreads();
 
     vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
@@ -2232,7 +2196,7 @@ __global__ void g_apply_gpu_treg_sreg_ver4
           sc y_val = 0.0;
           for(int j = 0; j < curr_active_threads; j++) {
             lo i_trl = (i / blockDim.y) * blockDim.y + j;
-            lo cols[3] = { mesh_data.d_element_nodes.e1[i_trl], mesh_data.d_element_nodes.e2[i_trl], mesh_data.d_element_nodes.e3[i_trl] };
+            lo * cols = mesh_data.d_element_nodes + 3 * i_trl;
             y_val += shmem_matrix_vals[0][j * blockDim.x + threadIdx.x] * x_perm[block_col + ld_x_perm * cols[0]];
             y_val += shmem_matrix_vals[1][j * blockDim.x + threadIdx.x] * x_perm[block_col + ld_x_perm * cols[1]];
             y_val += shmem_matrix_vals[2][j * blockDim.x + threadIdx.x] * x_perm[block_col + ld_x_perm * cols[2]];
@@ -2276,10 +2240,10 @@ __global__ void g_apply_gpu_treg_sreg_ver4
   const lo &n_blocks = mesh_metadata.n_temporal_elements;
   const lo &n_elems = mesh_metadata.n_elems;
   const lo i_tst = i_tst_begin + blockIdx.x * blockDim.x + threadIdx.x;
-  lo rows[3] = { mesh_data.d_element_nodes.e1[i_tst], mesh_data.d_element_nodes.e2[i_tst], mesh_data.d_element_nodes.e3[i_tst] };
+  const lo * rows = mesh_data.d_element_nodes + 3 * i_tst;
   
   if(tid < blockDim.x)
-    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_metadata, mesh_data, shmem_quadr_nodes_tst[tid]);
+    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_data, shmem_quadr_nodes_tst[tid]);
   __syncthreads();
 
   sc vals_prev[3];
@@ -2288,7 +2252,7 @@ __global__ void g_apply_gpu_treg_sreg_ver4
 
   for(lo i = threadIdx.y; i < n_elems; i += blockDim.y) {
     if(tid < blockDim.y)
-      d_triangles_to_geometry_000_trl((i / blockDim.y) * blockDim.y + tid, mesh_metadata, mesh_data, shmem_quadr_nodes_trl[tid]);
+      d_triangles_to_geometry_000_trl((i / blockDim.y) * blockDim.y + tid, mesh_data, shmem_quadr_nodes_trl[tid]);
     __syncthreads();
 
     vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
@@ -2361,10 +2325,10 @@ __global__ void g_apply_gpu_treg_sreg_ver4
   const lo &n_blocks = mesh_metadata.n_temporal_elements;
   const lo &n_elems = mesh_metadata.n_elems;
   const lo i_tst = i_tst_begin + blockIdx.x * blockDim.x + threadIdx.x;
-  lo rows[3] = { mesh_data.d_element_nodes.e1[i_tst], mesh_data.d_element_nodes.e2[i_tst], mesh_data.d_element_nodes.e3[i_tst] };
+  const lo * rows = mesh_data.d_element_nodes + 3 * i_tst;
   
   if(tid < blockDim.x)
-    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_metadata, mesh_data, shmem_quadr_nodes_tst[tid]);
+    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_data, shmem_quadr_nodes_tst[tid]);
   __syncthreads();
 
   sc vals_prev[9];
@@ -2373,7 +2337,7 @@ __global__ void g_apply_gpu_treg_sreg_ver4
 
   for(lo i = threadIdx.y; i < n_elems; i += blockDim.y) {
     if(tid < blockDim.y)
-      d_triangles_to_geometry_000_trl((i / blockDim.y) * blockDim.y + tid, mesh_metadata, mesh_data, shmem_quadr_nodes_trl[tid]);
+      d_triangles_to_geometry_000_trl((i / blockDim.y) * blockDim.y + tid, mesh_data, shmem_quadr_nodes_trl[tid]);
     __syncthreads();
 
     for(lo j = 0; j < 9; j++) vals_curr[j] = 0;
@@ -2401,7 +2365,7 @@ __global__ void g_apply_gpu_treg_sreg_ver4
           sc y_vals[3] = {0,0,0};
           for(int j = 0; j < curr_active_threads; j++) {
             lo i_trl = (i / blockDim.y) * blockDim.y + j;
-            lo cols[3] = { mesh_data.d_element_nodes.e1[i_trl], mesh_data.d_element_nodes.e2[i_trl], mesh_data.d_element_nodes.e3[i_trl] };
+            lo * cols = mesh_data.d_element_nodes + 3 * i_trl;
             sc x_vals[3];
             x_vals[0] = x_perm[block_col + ld_x_perm * cols[0]];
             x_vals[1] = x_perm[block_col + ld_x_perm * cols[1]];
