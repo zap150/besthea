@@ -166,6 +166,16 @@ public:
     [[maybe_unused]] bool trans = false, [[maybe_unused]] sc alpha = 1.0,
     [[maybe_unused]] sc beta = 0.0 ) const override {};
 
+  /*!
+   * Returns quadrature order used for the regular integrals
+   */
+  int get_quadr_order_regular() const { return _order_regular; }
+  
+  /*!
+   * Returns quadrature order used for the singular integrals
+   */
+  int get_quadr_order_singular() const { return _order_singular; }
+
 protected:
 
   /*!

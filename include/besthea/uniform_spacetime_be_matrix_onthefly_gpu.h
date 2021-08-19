@@ -124,6 +124,11 @@ class besthea::bem::onthefly::
     [[maybe_unused]] distributed_block_vector_type & y,
     [[maybe_unused]] bool trans = false, [[maybe_unused]] sc alpha = 1.0,
     [[maybe_unused]] sc beta = 0.0 ) const override{ };
+  
+  /*!
+   * Returns the used version of the GPU algorithm
+   */
+  int get_gpu_algorithm_version() const { return gpu_kernel_version; }
 
  private:
   /*!
