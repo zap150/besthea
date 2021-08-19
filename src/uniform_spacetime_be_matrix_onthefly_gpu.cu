@@ -139,14 +139,16 @@ besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   uniform_spacetime_be_matrix_onthefly_gpu( kernel_type & kernel,
   test_space_type & test_space, trial_space_type & trial_space,
   const besthea::mesh::uniform_spacetime_tensor_mesh_gpu & gpu_mesh,
-  int order_singular, int order_regular, int gpu_kernel_version )
+  int order_singular, int order_regular, int gpu_kernel_version,
+  bool loadbalancing_use_cpu_ )
   : uniform_spacetime_be_matrix_onthefly_cpu
       <kernel_type, test_space_type, trial_space_type>(
-        kernel, test_space, trial_space, order_singular, order_regular),
+        kernel, test_space, trial_space, order_singular, order_regular ),
     gpu_mesh(&gpu_mesh),
     n_gpus(gpu_mesh.get_n_gpus()),
     gpu_kernel_version(gpu_kernel_version),
-    load_distr(nullptr) {
+    load_distr(nullptr),
+    loadbalancing_use_cpu(loadbalancing_use_cpu_) {
 
   // quadrature inited in base class constructor
 
@@ -256,7 +258,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   }
   this->load_distr =
     new besthea::bem::onthefly::helpers::apply_load_distribution(
-      n_gpus, gpu_mesh->get_metadata().n_elems, gpu_chunk_size);
+      n_gpus, gpu_mesh->get_metadata().n_elems, gpu_chunk_size, loadbalancing_use_cpu);
 
 
 

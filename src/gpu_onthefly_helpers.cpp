@@ -139,11 +139,12 @@ void besthea::bem::onthefly::helpers::gpu_apply_vectors_data::free() {
 
 
 besthea::bem::onthefly::helpers::apply_load_distribution::
-  apply_load_distribution(int n_gpus_, lo n_elems_, lo gpu_chunk_size_) {
+  apply_load_distribution(int n_gpus_, lo n_elems_, lo gpu_chunk_size_, bool use_cpu_) {
 
   this->n_gpus = n_gpus_;
   this->n_elems = n_elems_;
   this->gpu_chunk_size = gpu_chunk_size_;
+  this->use_cpu = use_cpu_;
   
   this->cpu_n_tst_elems_target = (double)std::min((lo)omp_get_max_threads(), n_elems / 2);
   this->cpu_n_tst_elems = adjust_cpu_count(this->cpu_n_tst_elems_target);
@@ -216,6 +217,9 @@ void besthea::bem::onthefly::helpers::apply_load_distribution::adapt(
 
 lo besthea::bem::onthefly::helpers::apply_load_distribution::
   adjust_cpu_count(double suggested) const {
+  
+  if(!use_cpu)
+    return 0;
 
   suggested = std::clamp(suggested, 0.0, (double)n_elems);
 

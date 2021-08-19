@@ -158,12 +158,13 @@ class besthea::bem::onthefly::helpers::apply_load_distribution {
   lo cpu_n_tst_elems;
   double cpu_n_tst_elems_target;
   std::vector< lo > gpu_i_tst_begins;
-  int n_gpus;
   lo n_elems;
   lo gpu_chunk_size;
+  int n_gpus;
+  bool use_cpu;
 
  public:
-  apply_load_distribution( int n_gpus, lo n_elems, lo gpu_chunk_size );
+  apply_load_distribution( int n_gpus_, lo n_elems_, lo gpu_chunk_size_, bool use_cpu_ );
   void update_gpu_begins( );
   void adapt( double cpu_time_const, double cpu_time_scaling,
     double gpu_time_const, double gpu_time_scaling, double inertia = 0.0 );

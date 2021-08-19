@@ -78,7 +78,8 @@ class besthea::bem::onthefly::
   uniform_spacetime_be_matrix_onthefly_gpu( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
     const besthea::mesh::uniform_spacetime_tensor_mesh_gpu & gpu_mesh,
-    int order_singular = 4, int order_regular = 4, int gpu_kernel_version = 2 );
+    int order_singular = 4, int order_regular = 4, int gpu_kernel_version = 2,
+    bool loadbalancing_use_cpu_ = false );
 
   uniform_spacetime_be_matrix_onthefly_gpu(
     const uniform_spacetime_be_matrix_onthefly_gpu & that )
@@ -130,6 +131,11 @@ class besthea::bem::onthefly::
    */
   int get_gpu_algorithm_version() const { return gpu_kernel_version; }
 
+  /*!
+   * Returns whether CPU is used for fully regular component
+   */
+  bool get_does_loadbalancing_use_cpu() const { return loadbalancing_use_cpu; }
+
  private:
   /*!
    * Allocates GPU vectors, load distrubution and initializes GPU qudrature.
@@ -170,6 +176,7 @@ class besthea::bem::onthefly::
     vectors_data;  //!< GPU-resident vectors
   besthea::bem::onthefly::helpers::apply_load_distribution *
     load_distr;  //!< Object handling CPU-GPU load distribution
+  bool loadbalancing_use_cpu; //!< Indicates wheather to use CPU for fully regular component
 };
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_MATRIX_ONTHEFLY_GPU_H_ */
