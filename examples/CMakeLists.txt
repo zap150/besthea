@@ -5,8 +5,6 @@ add_subdirectory(dirichlet_onthefly_cpu)
 add_subdirectory(neumann_onthefly_cpu)
 
 if(USE_CUDA)
-  add_subdirectory(experiment_matrix_solve)
-  add_subdirectory(experiment_matrix_vector_product)
   add_subdirectory(dirichlet_onthefly_gpu)
   add_subdirectory(neumann_onthefly_gpu)
 endif()
