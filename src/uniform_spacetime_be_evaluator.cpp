@@ -32,7 +32,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
-#include "besthea/fast_spacetime_be_space.h"
 #include "besthea/quadrature.h"
 #include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_hs_kernel_antiderivative.h"
@@ -57,12 +56,12 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
   space_type >::evaluate( const std::vector< sc > & x,
   const block_vector_type & density, block_vector_type & result ) const {
   auto & basis = _space->get_basis( );
-  auto mesh = _space->get_mesh( );
+  const auto & st_mesh = _space->get_mesh( );
 
-  lo n_timesteps = mesh->get_n_temporal_elements( );
-  sc timestep = mesh->temporal_length( 0 );
+  lo n_timesteps = st_mesh.get_n_temporal_elements( );
+  sc timestep = st_mesh.temporal_length( 0 );
   lo n_points = x.size( ) / 3;
-  lo n_elements = mesh->get_n_spatial_elements( );
+  lo n_elements = st_mesh.get_n_spatial_elements( );
   lo loc_dim = basis.dimension_local( );
 
   result.resize( n_timesteps );
@@ -155,9 +154,9 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
         ttau = ( delta + 0.5 ) * timestep;
 
         for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
-          mesh->get_spatial_nodes( i_elem, y1, y2, y3 );
-          mesh->get_spatial_normal( i_elem, ny );
-          area = mesh->spatial_area( i_elem );
+          st_mesh.get_spatial_nodes( i_elem, y1, y2, y3 );
+          st_mesh.get_spatial_normal( i_elem, ny );
+          area = st_mesh.spatial_area( i_elem );
           basis.local_to_global( i_elem, l2g );
           triangle_to_geometry( y1, y2, y3, my_quadrature );
 
@@ -255,6 +254,132 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
 }
 
 template< class kernel_type, class space_type >
+void besthea::bem::uniform_spacetime_be_evaluator< kernel_type, space_type >::
+  evaluate( const std::vector< linear_algebra::coordinates< 4 > > & xt,
+    const block_vector_type & density, vector_type & result ) const {
+  auto & basis = _space->get_basis( );
+  const auto & st_mesh = _space->get_mesh( );
+
+  sc timestep = st_mesh.temporal_length( 0 );
+  lo n_points = xt.size( );
+  lo n_elements = st_mesh.get_n_spatial_elements( );
+  lo loc_dim = basis.dimension_local( );
+
+  result.resize( n_points, false );
+
+#pragma omp parallel
+  {
+    quadrature_wrapper my_quadrature;
+    init_quadrature( my_quadrature );
+    lo size_quad = my_quadrature._wy.size( );
+    linear_algebra::coordinates< 3 > y1, y2, y3, ny;
+    std::vector< lo > l2g( loc_dim );
+    sc density_value;
+
+#pragma omp for schedule( dynamic, 8 )
+    for ( lo i_point = 0; i_point < n_points; ++i_point ) {
+      const auto & point = xt[ i_point ];
+      const auto & x1 = point[ 0 ];
+      const auto & x2 = point[ 1 ];
+      const auto & x3 = point[ 2 ];
+      const auto & t = point[ 3 ];
+      auto & res = result[ i_point ];
+      res = 0.0;
+
+      if ( t <= 0.0 ) {
+        // potential vanishes
+        continue;
+      }
+
+      // last whole temporal interval to integrate over
+      los dmax
+        = std::floor( t / timestep - 1.0 );  // negative in first interval
+      lo k = dmax + 1;
+      // difference to last temporal node
+      sc diff = t - k * timestep;
+
+      // adding full intervals
+      for ( lo delta = 0; delta <= k; ++delta ) {
+        sc ttau = delta * timestep + diff;
+
+        for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
+          st_mesh.get_spatial_nodes( i_elem, y1, y2, y3 );
+          st_mesh.get_spatial_normal( i_elem, ny );
+          sc area = st_mesh.spatial_area( i_elem );
+          basis.local_to_global( i_elem, l2g );
+          triangle_to_geometry( y1, y2, y3, my_quadrature );
+
+          for ( lo i_quad = 0; i_quad < size_quad; ++i_quad ) {
+            sc kernel;
+            if ( ttau > 0.0 ) {
+              kernel
+                = _kernel->anti_tau_regular( x1 - my_quadrature._y1[ i_quad ],
+                  x2 - my_quadrature._y2[ i_quad ],
+                  x3 - my_quadrature._y3[ i_quad ], nullptr, ny.data( ), ttau );
+            } else {
+              kernel
+                = _kernel->anti_tau_limit( x1 - my_quadrature._y1[ i_quad ],
+                  x2 - my_quadrature._y2[ i_quad ],
+                  x3 - my_quadrature._y3[ i_quad ], nullptr, ny.data( ) );
+            }
+
+            for ( lo i_loc = 0; i_loc < loc_dim; ++i_loc ) {
+              sc basis_value = basis.evaluate( i_elem, i_loc,
+                                 my_quadrature._y1_ref[ i_quad ],
+                                 my_quadrature._y2_ref[ i_quad ], ny.data( ) )
+                * my_quadrature._wy[ i_quad ] * area * kernel;
+
+              // adding value
+              if ( delta < k ) {
+                density_value = density.get( k - delta - 1, l2g[ i_loc ] );
+                res += density_value * basis_value;
+              }
+              // subtracting value
+              if ( delta > 0 ) {
+                density_value = density.get( k - delta, l2g[ i_loc ] );
+                res -= density_value * basis_value;
+              }
+            }  // i_loc
+          }    // i_quad
+        }      // i_elem
+      }        // delta
+
+      // adding last part
+      if ( diff > 0.0 ) {
+        for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
+          st_mesh.get_spatial_nodes( i_elem, y1, y2, y3 );
+          st_mesh.get_spatial_normal( i_elem, ny );
+          sc area = st_mesh.spatial_area( i_elem );
+          basis.local_to_global( i_elem, l2g );
+          triangle_to_geometry( y1, y2, y3, my_quadrature );
+
+          for ( lo i_quad = 0; i_quad < size_quad; ++i_quad ) {
+            sc kernel
+              = _kernel->anti_tau_limit( x1 - my_quadrature._y1[ i_quad ],
+                  x2 - my_quadrature._y2[ i_quad ],
+                  x3 - my_quadrature._y3[ i_quad ], nullptr, ny.data( ) )
+              - _kernel->anti_tau_regular( x1 - my_quadrature._y1[ i_quad ],
+                x2 - my_quadrature._y2[ i_quad ],
+                x3 - my_quadrature._y3[ i_quad ], nullptr, ny.data( ), diff );
+
+            for ( lo i_loc = 0; i_loc < loc_dim; ++i_loc ) {
+              sc basis_value = basis.evaluate( i_elem, i_loc,
+                my_quadrature._y1_ref[ i_quad ],
+                my_quadrature._y2_ref[ i_quad ], ny.data( ) );
+              sc density_value = density.get( dmax + 1, l2g[ i_loc ] );
+              res += my_quadrature._wy[ i_quad ] * density_value * basis_value
+                * area * kernel;
+            }  // i_loc
+          }    // i_quad
+        }      // i_elem
+      }        // diff > 0.0
+
+    }  // for i_point
+
+  }  // omp parallel
+}
+
+template< class kernel_type, class space_type >
 void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
   space_type >::init_quadrature( quadrature_wrapper & my_quadrature ) const {
   // calling copy constructor of std::vector
@@ -315,17 +440,3 @@ template class besthea::bem::uniform_spacetime_be_evaluator<
 template class besthea::bem::uniform_spacetime_be_evaluator<
   besthea::bem::spacetime_heat_dl_kernel_antiderivative,
   besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
-
-template class besthea::bem::uniform_spacetime_be_evaluator<
-  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
-template class besthea::bem::uniform_spacetime_be_evaluator<
-  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
-
-template class besthea::bem::uniform_spacetime_be_evaluator<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
-template class besthea::bem::uniform_spacetime_be_evaluator<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >;

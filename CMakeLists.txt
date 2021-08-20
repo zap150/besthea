@@ -16,9 +16,7 @@ enable_MPI()
 enable_OpenMP()
 enable_Boost()
 enable_Eigen()
-if(BUILD_EXAMPLES)
-  enable_Lyra()
-endif()
+enable_Lyra()
 
 set(besthea_INCLUDES
   include/besthea/basis_function.h
@@ -44,10 +42,9 @@ set(besthea_INCLUDES
   include/besthea/distributed_fast_spacetime_be_assembler.h
   include/besthea/distributed_fast_spacetime_be_space.h
   include/besthea/distributed_pFMM_matrix.h
+  include/besthea/distributed_spacetime_be_identity.h
   include/besthea/distributed_spacetime_cluster_tree.h
   include/besthea/distributed_spacetime_tensor_mesh.h
-  include/besthea/fast_spacetime_be_assembler.h
-  include/besthea/fast_spacetime_be_space.h
   include/besthea/fe_identity.h
   include/besthea/fe_space.h
   include/besthea/full_matrix.h
@@ -58,23 +55,17 @@ set(besthea_INCLUDES
   include/besthea/lagrange_interpolant.h
   include/besthea/linear_algebra.h
   include/besthea/linear_operator.h
-  include/besthea/local_vector_routines.h
   include/besthea/mainpage.h
   include/besthea/matrix.h
   include/besthea/mesh.h
   include/besthea/mesh_structures.h
   include/besthea/mkl_cg_inverse.h
   include/besthea/mkl_fgmres_inverse.h
-  include/besthea/pFMM_matrix.h
   include/besthea/quadrature.h
   include/besthea/scheduling_time_cluster.h
   include/besthea/settings.h
-  include/besthea/space_cluster.h
-  include/besthea/space_cluster_tree.h
   include/besthea/spacetime_be_identity.h
   include/besthea/spacetime_be_space.h
-  include/besthea/spacetime_cluster.h
-  include/besthea/spacetime_cluster_tree.h
   include/besthea/spacetime_heat_adl_kernel_antiderivative.h
   include/besthea/spacetime_heat_dl_kernel_antiderivative.h
   include/besthea/spacetime_heat_hs_kernel_antiderivative.h
@@ -141,25 +132,22 @@ set(besthea_SOURCES
   src/distributed_fast_spacetime_be_assembler.cpp
   src/distributed_fast_spacetime_be_space.cpp
   src/distributed_pFMM_matrix.cpp
+  src/distributed_spacetime_be_identity.cpp
   src/distributed_spacetime_cluster_tree.cpp
   src/distributed_spacetime_tensor_mesh.cpp
-  src/fast_spacetime_be_assembler.cpp
-  src/fast_spacetime_be_space.cpp
   src/fe_identity.cpp
   src/fe_space.cpp
   src/full_matrix.cpp
+  src/general_spacetime_cluster.cpp
   src/indices.cpp
   src/io_routines.cpp
   src/linear_operator.cpp
   src/mkl_cg_inverse.cpp
   src/mkl_fgmres_inverse.cpp
-  src/pFMM_matrix.cpp
   src/quadrature.cpp
   src/settings.cpp
-  src/space_cluster_tree.cpp
   src/spacetime_be_identity.cpp
   src/spacetime_be_space.cpp
-  src/spacetime_cluster_tree.cpp
   src/spacetime_mesh_generator.cpp
   src/spacetime_tensor_mesh.cpp
   src/sparse_matrix.cpp
@@ -202,6 +190,7 @@ target_include_directories(besthea PUBLIC ${besthea_INCLUDE_DIRS})
 target_include_directories(besthea SYSTEM PUBLIC
   ${Boost_INCLUDE_DIRS}
   ${Eigen_INCLUDE_DIRS}
+  ${Lyra_INCLUDE_DIRS}
   ${MKL_INCLUDE_DIRS}
   ${MPI_INCLUDE_DIRS}
   ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
@@ -223,12 +212,11 @@ if(USE_CUDA)
     BESTHEA_USE_CUDA)
 endif()
 
+#install (TARGETS besthea ARCHIVE DESTINATION "${CMAKE_BINARY_DIR}/lib")
+#install(FILES ${besthea_INCLUDES}
+#  DESTINATION "${CMAKE_BINARY_DIR}/include/besthea")
 
-install (TARGETS besthea ARCHIVE DESTINATION "${CMAKE_BINARY_DIR}/lib")
-install(FILES ${besthea_INCLUDES}
-  DESTINATION "${CMAKE_BINARY_DIR}/include/besthea")
-
-option(BUILD_EXAMPLES "Build examples using the library" OFF)
+option(BUILD_EXAMPLES "Build examples using the library" ON)
 
 if(BUILD_EXAMPLES)
   add_subdirectory(examples)

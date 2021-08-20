@@ -53,7 +53,8 @@ namespace besthea {
 template< class kernel_type, class space_type >
 class besthea::bem::uniform_spacetime_be_evaluator {
   using block_vector_type
-    = linear_algebra::block_vector;  //!< Block vector type.
+    = linear_algebra::block_vector;            //!< Block vector type.
+  using vector_type = linear_algebra::vector;  //!< Vector type.
 
  private:
   /**
@@ -113,6 +114,15 @@ class besthea::bem::uniform_spacetime_be_evaluator {
    */
   void evaluate( const std::vector< sc > & x, const block_vector_type & density,
     block_vector_type & result ) const;
+
+  /**
+   * Returns the potential evaluated in (x,t).
+   * @param[in] xt Spacetime point coordinates.
+   * @param[in] density Density of the potential.
+   * @param[out] result Result in the given points.
+   */
+  void evaluate( const std::vector< linear_algebra::coordinates< 4 > > & xt,
+    const block_vector_type & density, vector_type & result ) const;
 
  private:
   /**

@@ -8,14 +8,55 @@ endmacro()
 
 macro(setup_compiler)
   if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
+    message(STATUS "Using GNU ${CMAKE_CXX_COMPILER_VERSION} toolchain")
+
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8.3)
       message(FATAL_ERROR "GCC compiler is too old, besthea can be"
         " compiled only with g++ 8.3.0 or higher")
     endif()
 
+    # cant use add_compile_options, because cmake adds the options
+    # to the cuda compiler as well, which does not understand them
     string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -pedantic-errors")
+    # add_compile_options(-Wall -Wextra -pedantic-errors)
+
+    # GNU cannot vectorise complicated loops
+    #add_compile_options(-fopt-info-omp-vec-optimized-missed)
+
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES AppleClang)
+    message(STATUS "Using AppleClang ${CMAKE_CXX_COMPILER_VERSION} toolchain")
+
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12)
+      message(FATAL_ERROR "Clang compiler is too old, besthea can be"
+        " compiled only with AppleClang 12 or higher")
+    endif()
+
+    add_compile_options(-Wall -Wextra -pedantic-errors)
+    # Clang cannot vectorise complicated loops
+    add_compile_options(-Wno-pass-failed)
+
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang
+    AND NOT CMAKE_CXX_COMPILER_ID MATCHES AppleClang)
+    message(STATUS "Using Clang ${CMAKE_CXX_COMPILER_VERSION} toolchain")
+
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7)
+      message(FATAL_ERROR "Clang compiler is too old, besthea can be"
+        " compiled only with clang++ 7 or higher")
+    endif()
+
+    add_compile_options(-Wall -Wextra -pedantic-errors)
+    # Clang cannot vectorise complicated loops
+    add_compile_options(-Wno-pass-failed)
+    #add_compile_options(
+    #  -Rpass="vect" -Rpass-missed="vect" -Rpass-analysis="vect")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 11)
+      # TODO: get rid of this warning (don't understand it)
+      add_compile_options(-Wno-dtor-name)
+    endif()
 
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
+    message(STATUS "Using Intel ${CMAKE_CXX_COMPILER_VERSION} toolchain")
+
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.0.1)
       message(FATAL_ERROR "Intel compiler is too old, besthea can be"
         " compiled only with icpc 19.0.1 or higher")
@@ -23,8 +64,9 @@ macro(setup_compiler)
 
     # cant use add_compile_options, because cmake adds the options
     # to the cuda compiler as well, which does not understand them
-
     string(APPEND CMAKE_CXX_FLAGS " -w3")
+    #add_compile_options(-w3)
+    #add_compile_options(-qopt-report=5 -qopt-report-phase=vec)
     # attribute appears more than once
     string(APPEND CMAKE_CXX_FLAGS " -diag-disable 2620")
     # parameter was never referenced
@@ -91,8 +133,15 @@ macro(enable_OpenMP)
     string(APPEND CMAKE_CXX_FLAGS " -fopenmp")
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
     string(APPEND CMAKE_CXX_FLAGS " -qopenmp")
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES AppleClang)
+    string(APPEND CMAKE_CXX_FLAGS " -Xclang -fopenmp")
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang AND NOT CMAKE_CXX_COMPILER_ID MATCHES AppleClang)
+    string(APPEND CMAKE_CXX_FLAGS " -fopenmp")
   endif()
+
   if(USE_CUDA)
+    # now cuda host compiler is g++, so -fopenmp is enough
+    # in the future, when other cuda host compilers are supported, similar else-ifs will need to be there as above
     string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -fopenmp")
   endif()
 endmacro()

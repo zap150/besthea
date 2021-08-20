@@ -38,8 +38,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/io_routines.h"
 #include "besthea/scheduling_time_cluster.h"
 #include "besthea/settings.h"
-#include "besthea/spacetime_cluster.h"
-#include "besthea/spacetime_cluster_tree.h"
 
 #include <iostream>
 #include <list>
@@ -253,6 +251,14 @@ class besthea::mesh::tree_structure {
   static bool compare_clusters_top_down_right_2_left(
     scheduling_time_cluster * first, scheduling_time_cluster * second );
 
+  /**
+   * Counts the number of contributions of the associated spacetime clusters of
+   * all clusters in the tree structure.
+   *
+   * This is an auxiliary routine which helps to estimate the memory
+   * requirements of the farfield part of distributed pFMM matrices in
+   * @ref distributed_pFMM_matrix.h.
+   */
   void count_number_of_contributions( scheduling_time_cluster * root,
     lo & n_moments, lo & n_moments_receive, lo & n_local_contributions );
 
@@ -433,33 +439,59 @@ class besthea::mesh::tree_structure {
    *
    * The routine is based on a tree traversal.
    * @param[in] root  Current cluster in the tree traversal.
-   * @param[in,out] subtree_send_list Vector storing the clusters and process
-   *                                  ids for which subtree data has to be sent.
-   * @param[in,out] subtree_receive_list  Vector storing the clusters and
-   *                                      process ids for which subtree data has
+   * @param[in,out] subtree_send_list Set storing process ids and pointers of
+   *                                  clusters for which subtree data has to be
+   *                                  sent.
+   * @param[in,out] subtree_receive_list  Set storing process ids and pointers
+   *                                      of clusters for which subtree data has
    *                                      to be received.
-   * @param[in,out] leaf_info_send_list Vector storing the clusters and process
-   *                                    ids for which leaf information has to be
-   *                                    sent.
-   * @param[in,out] leaf_info_receive_list  Vector storing the clusters and
-   *                                        process ids for which leaf
+   * @param[in,out] leaf_info_send_list Set storing process ids and pointers of
+   *                                    clusters for which leaf information has
+   *                                    to be sent.
+   * @param[in,out] leaf_info_receive_list  Set storing process ids and pointers
+   *                                        of clusters for which leaf
    *                                        information has to be received.
+   * @note We call this routine after executing
+   * @ref remove_clusters_with_no_association. This routine gets rid of
+   * unnecessary scheduling time clusters, and updates the global leaf status of
+   * clusters which turn into leaves in this process. Such clusters are also
+   * added to the send and receive list, even though this would not be
+   * necessary.
    */
   void determine_cluster_communication_lists( scheduling_time_cluster * root,
-    std::set< std::pair< lo, scheduling_time_cluster * > > & subtree_send_list,
-    std::set< std::pair< lo, scheduling_time_cluster * > > &
+    std::set< std::pair< lo, scheduling_time_cluster * >,
+      compare_pairs_of_process_ids_and_scheduling_time_clusters > &
+      subtree_send_list,
+    std::set< std::pair< lo, scheduling_time_cluster * >,
+      compare_pairs_of_process_ids_and_scheduling_time_clusters > &
       subtree_receive_list,
-    std::set< std::pair< lo, scheduling_time_cluster * > > &
+    std::set< std::pair< lo, scheduling_time_cluster * >,
+      compare_pairs_of_process_ids_and_scheduling_time_clusters > &
       leaf_info_send_list,
-    std::set< std::pair< lo, scheduling_time_cluster * > > &
+    std::set< std::pair< lo, scheduling_time_cluster * >,
+      compare_pairs_of_process_ids_and_scheduling_time_clusters > &
       leaf_info_receive_list ) const;
 
   /**
    * Clears the nearfield, interaction and send list of all clusters in the
-   * tree. The method relies on a tree traversal.
+   * tree.
+   *
+   * The method relies on a tree traversal.
    * @param[in] root  Current cluster in the tree traversal.
    */
-  void clear_cluster_lists( scheduling_time_cluster * root );
+  void clear_nearfield_send_and_interaction_lists(
+    scheduling_time_cluster * root );
+
+  /**
+   * Clears the lists of associated spacetime clusters of all clusters in the
+   * tree structure.
+   *
+   * The method relies on a recursive tree traversal.
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   */
+  void clear_lists_of_associated_clusters(
+    scheduling_time_cluster & current_cluster );
+
   /**
    * Determines if clusters are active in the upward or downward path (needed
    * for FMM).
@@ -474,7 +506,7 @@ class besthea::mesh::tree_structure {
    * root and another essential cluster). In addition, @p _levels is reset. The
    * method is based on a tree traversal.
    * @param[in] root  Current cluster in the tree traversal.
-   * @note This method is solely used by @ref reduce_2_essential .
+   * @note This method is solely used by @ref reduce_2_essential.
    */
   void prepare_essential_reduction( scheduling_time_cluster & root );
 
@@ -514,11 +546,22 @@ class besthea::mesh::tree_structure {
    * @note The locally essential tree should also contain clusters which are
    * contained in a path from the root of the tree structure to a cluster which
    * meets one of the above requirements. Such clusters are not detected here,
-   * but in the routine @ref prepare_essential_reduction .
-   * @note This method is solely used by @ref reduce_2_essential .
+   * but in the routine @ref prepare_essential_reduction.
+   * @note This method is solely used by @ref reduce_2_essential.
    */
   void determine_essential_clusters(
     const lo my_process_id, scheduling_time_cluster & root ) const;
+
+  /**
+   * Removes scheduling cluster from the tree structure which are not associated
+   * with any space-time clusters.
+   *
+   * The clusters are not only removed but deleted. The routine is based on a
+   * recursive tree traversal.
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   */
+  void remove_clusters_with_no_association(
+    scheduling_time_cluster & current_cluster );
 
   /**
    * Aux for printing

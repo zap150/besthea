@@ -31,29 +31,28 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/block_vector.h"
 
 #include "besthea/general_spacetime_cluster.h"
-#include "besthea/spacetime_cluster.h"
 
 besthea::linear_algebra::block_vector::block_vector( )
-  : _block_size( 0 ), _size( 0 ), _data( ) {
+  : _n_blocks( 0 ), _size( 0 ), _data( ) {
 }
 
 besthea::linear_algebra::block_vector::block_vector(
-  lo block_size, std::initializer_list< sc > list )
-  : _block_size( block_size ),
+  lo n_blocks, std::initializer_list< sc > list )
+  : _n_blocks( n_blocks ),
     _size( list.size( ) ),
-    //    _data( block_size, list ) { // Why does this work??
-    _data( block_size, vector_type( list ) ) {
+    //    _data( n_blocks, list ) { // Why does this work??
+    _data( n_blocks, vector_type( list ) ) {
 }
 
 besthea::linear_algebra::block_vector::block_vector(
-  lo block_size, lo size, bool zero )
-  : _block_size( block_size ),
+  lo n_blocks, lo size, bool zero )
+  : _n_blocks( n_blocks ),
     _size( size ),
-    _data( block_size, vector_type( size, zero ) ) {
+    _data( n_blocks, vector_type( size, zero ) ) {
 }
 
 besthea::linear_algebra::block_vector::block_vector( const block_vector & that )
-  : _block_size( that._block_size ), _size( that._size ), _data( that._data ) {
+  : _n_blocks( that._n_blocks ), _size( that._size ), _data( that._data ) {
 }
 
 besthea::linear_algebra::block_vector::~block_vector( ) {
@@ -67,9 +66,9 @@ void besthea::linear_algebra::block_vector::print(
 }
 
 void besthea::linear_algebra::block_vector::copy( block_vector const & that ) {
-  resize( that.get_block_size( ) );
+  resize( that.get_n_blocks( ) );
   resize_blocks( that.get_size_of_block( ) );
-  for ( lo i = 0; i < _block_size; ++i ) {
+  for ( lo i = 0; i < _n_blocks; ++i ) {
     _data[ i ].copy( that._data[ i ] );
   }
 }
@@ -78,7 +77,7 @@ void besthea::linear_algebra::block_vector::copy_permute( const block_vector & t
   resize_match_perm(that, false);
 
   constexpr lo tile_size = 128; // chosen experimentally, the best for double on 1 thread on Barbora
-  lo bb_max = (that._block_size - 1) / tile_size;
+  lo bb_max = (that._n_blocks - 1) / tile_size;
   lo ii_max = (that._size - 1) / tile_size;
 
   for (lo bb = 0; bb < bb_max; bb++) {
@@ -102,7 +101,7 @@ void besthea::linear_algebra::block_vector::copy_permute( const block_vector & t
       }
     }
   }
-  for (lo B = tile_size * bb_max; B < that._block_size; B++) {
+  for (lo B = tile_size * bb_max; B < that._n_blocks; B++) {
     for(lo I = 0; I < that._size; I++) {
       sc val = that.get(B, I);
       this->set(I, B, alpha * val);
@@ -125,20 +124,20 @@ void besthea::linear_algebra::block_vector::copy_permute( const block_vector & t
 }
 
 void besthea::linear_algebra::block_vector::copy_from_raw(
-    lo block_size, lo size, const sc * data ) {
-  if ( block_size != _block_size ) {
-    resize( block_size );
+  lo n_blocks, lo size, const sc * data ) {
+  if ( n_blocks != _n_blocks ) {
+    resize( n_blocks );
   }
   if ( size != _size ) {
     resize_blocks( size, false );
   }
-  for ( lo i = 0; i < block_size; ++i ) {
+  for ( lo i = 0; i < n_blocks; ++i ) {
     _data[ i ].copy_from_raw( size, data + i * size );
   }
 }
 
 void besthea::linear_algebra::block_vector::copy_to_raw( sc * data ) const {
-  for ( lo i = 0; i < _block_size; ++i ) {
+  for ( lo i = 0; i < _n_blocks; ++i ) {
     _data[ i ].copy_to_raw( data + i * _size );
   }
 }
@@ -185,7 +184,7 @@ void besthea::linear_algebra::block_vector::copy_from_raw_permute(
 void besthea::linear_algebra::block_vector::copy_to_raw_permute( sc * data, sc alpha ) const {
 
   constexpr lo tile_size = 128;
-  lo bb_max = (_block_size - 1) / tile_size;
+  lo bb_max = (_n_blocks - 1) / tile_size;
   lo ii_max = (_size - 1) / tile_size;
 
   for (lo bb = 0; bb < bb_max; bb++) {
@@ -197,7 +196,7 @@ void besthea::linear_algebra::block_vector::copy_to_raw_permute( sc * data, sc a
         for (lo i = 0; i < tile_size; i++) {
           lo I = II + i;
           sc val = get(B, I);
-          data[I * _block_size + B] = alpha * val;
+          data[I * _n_blocks + B] = alpha * val;
         }
       }
     }
@@ -205,45 +204,45 @@ void besthea::linear_algebra::block_vector::copy_to_raw_permute( sc * data, sc a
       for (lo b = 0; b < tile_size; b++) {
         lo B = BB + b;
         sc val = get(B, I);
-        data[I * _block_size + B] = alpha * val;
+        data[I * _n_blocks + B] = alpha * val;
       }
     }
   }
-  for (lo B = tile_size * bb_max; B < _block_size; B++) {
+  for (lo B = tile_size * bb_max; B < _n_blocks; B++) {
     for(lo I = 0; I < _size; I++) {
       sc val = get(B, I);
-      data[I * _block_size + B] = alpha * val;
+      data[I * _n_blocks + B] = alpha * val;
     }
   }
 
 }
 
 void besthea::linear_algebra::block_vector::copy_from_vector(
-  lo block_size, lo size, const vector_type & data ) {
-  if ( block_size != _block_size ) {
-    resize( block_size );
+  lo n_blocks, lo size, const vector_type & data ) {
+  if ( n_blocks != _n_blocks ) {
+    resize( n_blocks );
   }
   if ( size != _size ) {
     resize_blocks( size, false );
   }
-  for ( lo i = 0; i < block_size; ++i ) {
+  for ( lo i = 0; i < n_blocks; ++i ) {
     _data[ i ].copy_from_raw( size, data.data( ) + i * size );
   }
 }
 
 void besthea::linear_algebra::block_vector::copy_to_vector(
   vector_type & data ) const {
-  if ( data.size( ) != _block_size * _size ) {
-    data.resize( _block_size * _size, false );
+  if ( data.size( ) != _n_blocks * _size ) {
+    data.resize( _n_blocks * _size, false );
   }
-  for ( lo i = 0; i < _block_size; ++i ) {
+  for ( lo i = 0; i < _n_blocks; ++i ) {
     _data[ i ].copy_to_raw( data.data( ) + i * _size );
   }
 }
 
 void besthea::linear_algebra::block_vector::add_permute( const block_vector & that, sc alpha ) {
   constexpr lo tile_size = 128; // chosen experimentally, the best for double on 1 thread on Barbora
-  lo bb_max = (that._block_size - 1) / tile_size;
+  lo bb_max = (that._n_blocks - 1) / tile_size;
   lo ii_max = (that._size - 1) / tile_size;
 
   for (lo bb = 0; bb < bb_max; bb++) {
@@ -267,257 +266,11 @@ void besthea::linear_algebra::block_vector::add_permute( const block_vector & th
       }
     }
   }
-  for (lo B = tile_size * bb_max; B < that._block_size; B++) {
+  for (lo B = tile_size * bb_max; B < that._n_blocks; B++) {
     for(lo I = 0; I < that._size; I++) {
       sc val = that.get(B, I);
       this->add(I, B, alpha * val);
     }
   }
 
-}
-
-template<>
-void besthea::linear_algebra::block_vector::get_local_part<
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >(
-  besthea::mesh::spacetime_cluster * cluster,
-  besthea::linear_algebra::vector & local_vector ) const {
-  lo n_time_elements = cluster->get_time_cluster( ).get_n_elements( );
-  const std::vector< lo > & time_elements
-    = cluster->get_time_cluster( ).get_all_elements( );
-  lo n_space_elements = cluster->get_space_cluster( ).get_n_elements( );
-  const std::vector< lo > & space_elements
-    = cluster->get_space_cluster( ).get_all_elements( );
-
-  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
-    for ( lo i_space = 0; i_space < n_space_elements; ++i_space ) {
-      local_vector[ i_time * n_space_elements + i_space ]
-        = this->get( time_elements[ i_time ], space_elements[ i_space ] );
-    }
-  }
-}
-
-template<>
-void besthea::linear_algebra::block_vector::get_local_part<
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >(
-  besthea::mesh::spacetime_cluster * cluster,
-  besthea::linear_algebra::vector & local_vector ) const {
-  lo n_time_elements = cluster->get_time_cluster( ).get_n_elements( );
-  const std::vector< lo > & time_elements
-    = cluster->get_time_cluster( ).get_all_elements( );
-  lo n_space_nodes = cluster->get_space_cluster( ).get_n_nodes( );
-  const std::vector< lo > & local_2_global_nodes
-    = cluster->get_space_cluster( ).get_local_2_global_nodes( );
-
-  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
-    for ( lo i_space = 0; i_space < n_space_nodes; ++i_space ) {
-      local_vector[ i_time * n_space_nodes + i_space ]
-        = this->get( time_elements[ i_time ], local_2_global_nodes[ i_space ] );
-    }
-  }
-}
-
-template<>
-void besthea::linear_algebra::block_vector::get_local_part< besthea::bem::
-    distributed_fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >(
-  besthea::mesh::general_spacetime_cluster * cluster,
-  besthea::linear_algebra::vector & local_vector ) const {
-  lo n_time_elements = cluster->get_n_time_elements( );
-  lo n_space_elements = cluster->get_n_space_elements( );
-
-  const std::vector< lo > & spacetime_elements = cluster->get_all_elements( );
-
-  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
-    = cluster->get_mesh( );
-  const mesh::spacetime_tensor_mesh * cluster_mesh;
-  lo mesh_start_idx;
-  if ( cluster->get_elements_are_local( ) ) {
-    cluster_mesh = distributed_mesh->get_local_mesh( );
-    mesh_start_idx = distributed_mesh->get_local_start_idx( );
-  } else {
-    cluster_mesh = distributed_mesh->get_nearfield_mesh( );
-    mesh_start_idx = distributed_mesh->get_nearfield_start_idx( );
-  }
-  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
-    // use that the spacetime elements are sorted in time, i.e. a consecutive
-    // group of n_space_elements elements has the same temporal component to
-    // determine the local time index only once
-    lo local_time_index
-      = cluster_mesh->get_time_element( distributed_mesh->global_2_local(
-        mesh_start_idx, spacetime_elements[ i_time * n_space_elements ] ) );
-    lo global_time_index = distributed_mesh->local_2_global_time(
-      mesh_start_idx, local_time_index );
-    for ( lo i_space = 0; i_space < n_space_elements; ++i_space ) {
-      lo global_space_index = cluster_mesh->get_space_element(
-        distributed_mesh->global_2_local( mesh_start_idx,
-          spacetime_elements[ i_time * n_space_elements + i_space ] ) );
-      // for the spatial mesh no transformation from local 2 global is
-      // necessary since there is just one global space mesh at the moment.
-      local_vector[ i_time * n_space_elements + i_space ]
-        = get( global_time_index, global_space_index );
-    }
-  }
-}
-
-template<>
-void besthea::linear_algebra::block_vector::get_local_part< besthea::bem::
-    distributed_fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >(
-  besthea::mesh::general_spacetime_cluster * cluster,
-  besthea::linear_algebra::vector & local_vector ) const {
-  lo n_time_elements = cluster->get_n_time_elements( );
-  lo n_space_elements = cluster->get_n_space_elements( );
-  lo n_space_nodes = cluster->get_n_space_nodes( );
-
-  const std::vector< lo > & spacetime_elements = cluster->get_all_elements( );
-  const std::vector< lo > & local_2_global_nodes
-    = cluster->get_local_2_global_nodes( );
-
-  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
-    = cluster->get_mesh( );
-  const mesh::spacetime_tensor_mesh * cluster_mesh;
-  lo mesh_start_idx;
-  if ( cluster->get_elements_are_local( ) ) {
-    cluster_mesh = distributed_mesh->get_local_mesh( );
-    mesh_start_idx = distributed_mesh->get_local_start_idx( );
-  } else {
-    cluster_mesh = distributed_mesh->get_nearfield_mesh( );
-    mesh_start_idx = distributed_mesh->get_nearfield_start_idx( );
-  }
-
-  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
-    // use that the spacetime elements are sorted in time, i.e. a consecutive
-    // group of n_space_elements elements has the same temporal component to
-    // determine the local time index only once
-    lo local_time_index
-      = cluster_mesh->get_time_element( distributed_mesh->global_2_local(
-        mesh_start_idx, spacetime_elements[ i_time * n_space_elements ] ) );
-    lo global_time_index = distributed_mesh->local_2_global_time(
-      mesh_start_idx, local_time_index );
-    for ( lo i_space = 0; i_space < n_space_nodes; ++i_space ) {
-      // local_2_global_nodes gives the indices of the spacetime nodes. take
-      // the rest from division by the number of global spatial nodes to get the
-      // spatial node index
-      lo global_space_index = local_2_global_nodes[ i_space ]
-        % cluster_mesh->get_n_spatial_nodes( );
-      // for the spatial mesh no transformation from local 2 global is
-      // necessary since there is just one global space mesh at the moment.
-      local_vector[ i_time * n_space_nodes + i_space ]
-        = get( global_time_index, global_space_index );
-    }
-  }
-}
-
-template<>
-void besthea::linear_algebra::block_vector::add_local_part<
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >(
-  besthea::mesh::spacetime_cluster * cluster,
-  const besthea::linear_algebra::vector & local_vector ) {
-  lo n_time_elements = cluster->get_time_cluster( ).get_n_elements( );
-  const std::vector< lo > & time_elements
-    = cluster->get_time_cluster( ).get_all_elements( );
-  lo n_space_elements = cluster->get_space_cluster( ).get_n_elements( );
-  const std::vector< lo > & space_elements
-    = cluster->get_space_cluster( ).get_all_elements( );
-
-  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
-    for ( lo i_space = 0; i_space < n_space_elements; ++i_space ) {
-      this->add_atomic( time_elements[ i_time ], space_elements[ i_space ],
-        local_vector[ i_time * n_space_elements + i_space ] );
-    }
-  }
-}
-
-template<>
-void besthea::linear_algebra::block_vector::add_local_part<
-  besthea::bem::fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >(
-  besthea::mesh::spacetime_cluster * cluster,
-  const besthea::linear_algebra::vector & local_vector ) {
-  lo n_time_elements = cluster->get_time_cluster( ).get_n_elements( );
-  const std::vector< lo > & time_elements
-    = cluster->get_time_cluster( ).get_all_elements( );
-  lo n_space_nodes = cluster->get_space_cluster( ).get_n_nodes( );
-  const std::vector< lo > & local_2_global_nodes
-    = cluster->get_space_cluster( ).get_local_2_global_nodes( );
-
-  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
-    for ( lo i_space = 0; i_space < n_space_nodes; ++i_space ) {
-      this->add_atomic( time_elements[ i_time ],
-        local_2_global_nodes[ i_space ],
-        local_vector[ i_time * n_space_nodes + i_space ] );
-    }
-  }
-}
-
-template<>
-void besthea::linear_algebra::block_vector::add_local_part< besthea::bem::
-    distributed_fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >(
-  besthea::mesh::general_spacetime_cluster * cluster,
-  const besthea::linear_algebra::vector & local_vector ) {
-  lo n_time_elements = cluster->get_n_time_elements( );
-  lo n_space_elements = cluster->get_n_space_elements( );
-  const std::vector< lo > & spacetime_elements = cluster->get_all_elements( );
-  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
-    = cluster->get_mesh( );
-  const mesh::spacetime_tensor_mesh * local_mesh
-    = distributed_mesh->get_local_mesh( );
-  lo local_start_idx = distributed_mesh->get_local_start_idx( );
-  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
-    // use that the spacetime elements are sorted in time, i.e. a consecutive
-    // group of n_space_elements elements has the same temporal component to
-    // determine the local time index only once
-    lo local_time_index
-      = local_mesh->get_time_element( distributed_mesh->global_2_local(
-        local_start_idx, spacetime_elements[ i_time * n_space_elements ] ) );
-    lo global_time_index = distributed_mesh->local_2_global_time(
-      local_start_idx, local_time_index );
-    for ( lo i_space = 0; i_space < n_space_elements; ++i_space ) {
-      lo global_space_index = local_mesh->get_space_element(
-        distributed_mesh->global_2_local( local_start_idx,
-          spacetime_elements[ i_time * n_space_elements + i_space ] ) );
-      // for the spatial mesh no transformation from local 2 global is
-      // necessary since there is just one global space mesh at the moment.
-      add_atomic( global_time_index, global_space_index,
-        local_vector[ i_time * n_space_elements + i_space ] );
-    }
-  }
-}
-
-template<>
-void besthea::linear_algebra::block_vector::add_local_part< besthea::bem::
-    distributed_fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >(
-  besthea::mesh::general_spacetime_cluster * cluster,
-  const besthea::linear_algebra::vector & local_vector ) {
-  lo n_time_elements = cluster->get_n_time_elements( );
-  lo n_space_elements = cluster->get_n_space_elements( );
-  lo n_space_nodes = cluster->get_n_space_nodes( );
-  const std::vector< lo > & spacetime_elements = cluster->get_all_elements( );
-  const mesh::distributed_spacetime_tensor_mesh * distributed_mesh
-    = cluster->get_mesh( );
-  const mesh::spacetime_tensor_mesh * local_mesh
-    = distributed_mesh->get_local_mesh( );
-  lo local_start_idx = distributed_mesh->get_local_start_idx( );
-
-  const std::vector< lo > & local_2_global_nodes
-    = cluster->get_local_2_global_nodes( );
-
-  for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
-    // use that the spacetime elements are sorted in time, i.e. a consecutive
-    // group of n_space_elements elements has the same temporal component to
-    // determine the local time index only once
-    lo local_time_index
-      = local_mesh->get_time_element( distributed_mesh->global_2_local(
-        local_start_idx, spacetime_elements[ i_time * n_space_elements ] ) );
-    lo global_time_index = distributed_mesh->local_2_global_time(
-      local_start_idx, local_time_index );
-    for ( lo i_space = 0; i_space < n_space_nodes; ++i_space ) {
-      // local_2_global_nodes gives the indices of the spacetime nodes. take
-      // the rest from division by the number of global spatial nodes to get the
-      // spatial node index
-      lo global_space_index
-        = local_2_global_nodes[ i_space ] % local_mesh->get_n_spatial_nodes( );
-      // for the spatial mesh no transformation from local 2 global is
-      // necessary since there is just one global space mesh at the moment.
-      add_atomic( global_time_index, global_space_index,
-        local_vector[ i_time * n_space_nodes + i_space ] );
-    }
-  }
 }

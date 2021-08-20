@@ -952,6 +952,8 @@ bool besthea::mesh::triangular_surface_mesh::save(
     return false;
   }
 
+  file.precision( std::numeric_limits< sc >::max_digits10 );
+
   file << "3\n"
        << "3\n\n"
        << _n_nodes << "\n";

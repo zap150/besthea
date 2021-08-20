@@ -28,7 +28,7 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file uniform_spacetime_be_identity.h
+/** @file spacetime_be_identity.h
  * @brief Discretized identity operator.
  */
 
@@ -87,7 +87,7 @@ class besthea::bem::spacetime_be_identity
   void print_info( ) const {
     std::cout << "besthea::bem::spacetime_be_identity" << std::endl;
     std::cout << "  number of blocks: "
-              << _test_space->get_mesh( )->get_n_temporal_elements( )
+              << ( _test_space->get_mesh( ) ).get_n_temporal_elements( )
               << std::endl;
     std::cout << "  dimension of each block: " << _data.get_n_rows( ) << " x "
               << _data.get_n_columns( ) << std::endl;
@@ -101,7 +101,7 @@ class besthea::bem::spacetime_be_identity
    * @param[in] alpha
    * @param[in] beta
    */
-  void apply( const block_vector_type & x, block_vector_type & y,
+  virtual void apply( const block_vector_type & x, block_vector_type & y,
     bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
 
   /*!
@@ -112,11 +112,11 @@ class besthea::bem::spacetime_be_identity
    * @param[in] alpha
    * @param[in] beta
    */
-  void apply( const distributed_block_vector_type & x,
+  virtual void apply( const distributed_block_vector_type & x,
     distributed_block_vector_type & y, bool trans = false, sc alpha = 1.0,
     sc beta = 0.0 ) const;
 
- private:
+ protected:
   /**
    * Assembles the triplets for the sparse identity matrix.
    * @param[in] ii Row indices.
@@ -127,9 +127,10 @@ class besthea::bem::spacetime_be_identity
     std::vector< sc > & vv ) const;
 
   /**
-   * Packs timesteps into _timesteps.
+   * Collects the sizes of the timesteps of the temporal mesh associated with
+   * the test (and trial) space and stores them in @ref _timesteps.
    */
-  void assemble_timesteps( );
+  virtual void assemble_timesteps( );
 
   matrix_type _data;  //!< Raw matrix data.
 

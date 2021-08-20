@@ -61,11 +61,11 @@ void besthea::bem::uniform_spacetime_initial_assembler< kernel_type,
     global_matrix ) const {
   auto & test_basis = _test_space->get_basis( );
   auto & trial_basis = _trial_space->get_basis( );
-  auto test_mesh = _test_space->get_mesh( );
-  auto trial_mesh = _trial_space->get_mesh( );
+  const auto & test_mesh = _test_space->get_mesh( );
+  const auto & trial_mesh = _trial_space->get_mesh( );
 
-  lo n_timesteps = test_mesh->get_n_temporal_elements( );
-  sc timestep = test_mesh->get_timestep( );
+  lo n_timesteps = test_mesh.get_n_temporal_elements( );
+  sc timestep = test_mesh.get_timestep( );
   lo n_rows = test_basis.dimension_global( );
   lo n_columns = trial_basis.dimension_global( );
   global_matrix.resize( n_timesteps );
@@ -74,8 +74,8 @@ void besthea::bem::uniform_spacetime_initial_assembler< kernel_type,
   lo n_loc_rows = test_basis.dimension_local( );
   lo n_loc_columns = trial_basis.dimension_local( );
 
-  lo n_test_elements = test_mesh->get_n_spatial_elements( );
-  lo n_trial_elements = trial_mesh->get_n_elements( );
+  lo n_test_elements = test_mesh.get_n_spatial_elements( );
+  lo n_trial_elements = trial_mesh.get_n_elements( );
   sc t;
 
 #pragma omp parallel
@@ -116,12 +116,12 @@ void besthea::bem::uniform_spacetime_initial_assembler< kernel_type,
 
 #pragma omp for schedule( dynamic )
       for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
-        test_mesh->get_spatial_nodes( i_test, x1, x2, x3 );
-        test_mesh->get_spatial_normal( i_test, nx );
-        test_area = test_mesh->spatial_area( i_test );
+        test_mesh.get_spatial_nodes( i_test, x1, x2, x3 );
+        test_mesh.get_spatial_normal( i_test, nx );
+        test_area = test_mesh.spatial_area( i_test );
         for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
-          trial_mesh->get_nodes( i_trial, y1, y2, y3, y4 );
-          trial_area = trial_mesh->area( i_trial );
+          trial_mesh.get_nodes( i_trial, y1, y2, y3, y4 );
+          trial_area = trial_mesh.area( i_trial );
 
           test_basis.local_to_global( i_test, test_l2g );
           trial_basis.local_to_global( i_trial, trial_l2g );

@@ -2423,20 +2423,20 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
     return;
   }
 
-  if(x.get_block_size() != this->get_block_dim() ||
+  if(x.get_n_blocks() != this->get_block_dim() ||
      x.get_size_of_block() != this->get_dim_domain()) {
     std::cerr << "BESTHEA Error: x block vector dimension ("
-      << x.get_block_size() << "*" << x.get_size_of_block()
+      << x.get_n_blocks() << "*" << x.get_size_of_block()
       << ") does not match block matrix domain dimension ("
       << this->get_block_dim() << "*" << this->get_dim_domain()
       << ").\n";
     throw std::runtime_error("BESTHEA Exception: incompatible matrix and vector dimensions");
   }
 
-  if(y.get_block_size() != this->get_block_dim() ||
+  if(y.get_n_blocks() != this->get_block_dim() ||
      y.get_size_of_block() != this->get_dim_range()) {
     std::cerr << "BESTHEA Error: y block vector dimension ("
-      << y.get_block_size() << "*" << y.get_size_of_block()
+      << y.get_n_blocks() << "*" << y.get_size_of_block()
       << ") does not match block matrix range dimension ("
       << this->get_block_dim() << "*" << this->get_dim_range()
       << "). Apply will not be performed.\n";
@@ -2571,10 +2571,10 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
     timers.gpu_copyin[gpu_idx].start_submit();
     cudaMemcpy2DAsync(vectors_data.d_x[gpu_idx], vectors_data.pitch_x[gpu_idx],
       vectors_data.h_x, x.get_size_of_block() * sizeof(sc),
-      x.get_size_of_block() * sizeof(sc), x.get_block_size(),
+      x.get_size_of_block() * sizeof(sc), x.get_n_blocks(),
       cudaMemcpyHostToDevice);
     cudaMemset2DAsync(vectors_data.d_y[gpu_idx], vectors_data.pitch_y[gpu_idx],
-      0, y.get_size_of_block() * sizeof(sc), y.get_block_size());
+      0, y.get_size_of_block() * sizeof(sc), y.get_n_blocks());
     timers.gpu_copyin[gpu_idx].stop_submit();
 
     cudaError_t err = cudaGetLastError();
@@ -2732,7 +2732,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
       vectors_data.d_y[gpu_idx],
       vectors_data.pitch_y[gpu_idx],
       y.get_size_of_block() * sizeof(sc),
-      y.get_block_size(),
+      y.get_n_blocks(),
       cudaMemcpyDeviceToHost);
     timers.gpu_copyout[gpu_idx].stop_submit();
 
@@ -2780,7 +2780,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   }
 
 #pragma omp parallel for
-  for(lo b = 0; b < y.get_block_size(); b++) {
+  for(lo b = 0; b < y.get_n_blocks(); b++) {
     vector_type &y_block = y.get_block(b);
 
     for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {

@@ -163,6 +163,9 @@ struct get_index_type< long > {
   }
 };
 
+/**
+ * Returns indexing MPI datatype based on the template C++ type.
+ */
 template<>
 struct get_index_type< unsigned long > {
   /**
@@ -174,8 +177,10 @@ struct get_index_type< unsigned long > {
 };
 
 // create custom OpenMP reuductions
+// replaced initializer(omp_priv(omp_orig))
 #pragma omp declare reduction( lo_vec_plus : std::vector<lo> : \
-   std::transform(omp_in.begin(), omp_in.end(), omp_out.begin(), \
-    omp_out.begin(), std::plus<lo>()) ) initializer(omp_priv(omp_orig))
+  std::transform(omp_in.begin(), omp_in.end(), omp_out.begin(), \
+  omp_out.begin(), std::plus<lo>()) ) \
+  initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
 
 #endif /* INCLUDE_BESTHEA_SETTINGS_H_ */

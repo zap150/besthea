@@ -86,12 +86,12 @@ void besthea::bem::fe_identity< test_space_type,
   std::vector< los > & jj, std::vector< sc > & vv ) const {
   auto & test_basis = _test_space->get_basis( );
   auto & trial_basis = _trial_space->get_basis( );
-  auto mesh = _test_space->get_mesh( );
+  const auto & vol_mesh = _test_space->get_mesh( );
 
   lo n_loc_rows = test_basis.dimension_local( );
   lo n_loc_columns = trial_basis.dimension_local( );
 
-  lo n_elements = mesh->get_n_elements( );
+  lo n_elements = vol_mesh.get_n_elements( );
   std::vector< lo > test_l2g( n_loc_rows );
   std::vector< lo > trial_l2g( n_loc_columns );
   ii.reserve( n_elements * n_loc_rows * n_loc_columns );
@@ -110,7 +110,7 @@ void besthea::bem::fe_identity< test_space_type,
 
   sc value, test, trial, area;
   for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
-    area = mesh->area( i_elem );
+    area = vol_mesh.area( i_elem );
 
     test_basis.local_to_global( i_elem, test_l2g );
     trial_basis.local_to_global( i_elem, trial_l2g );

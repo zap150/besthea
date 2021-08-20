@@ -36,8 +36,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/sparse_matrix.h"
 
 template< class basis_type >
-besthea::bem::fe_space< basis_type >::fe_space( mesh_type & mesh )
-  : _basis( mesh ), _mesh( &mesh ) {
+besthea::bem::fe_space< basis_type >::fe_space( const mesh_type & mesh )
+  : _basis( mesh ), _mesh( mesh ) {
 }
 
 template< class basis_type >
@@ -46,7 +46,8 @@ besthea::bem::fe_space< basis_type >::~fe_space( ) {
 
 template< class basis_type >
 void besthea::bem::fe_space< basis_type >::interpolation(
-  sc ( *f )( sc, sc, sc ), vector_type & interpolation ) const {
+  [[maybe_unused]] sc ( *f )( sc, sc, sc ),
+  vector_type & /*interpolation*/ ) const {
   std::cout << "Only use specialized templates in descendant classes!"
             << std::endl;
 }
@@ -59,13 +60,13 @@ void besthea::bem::fe_space< basis_type >::interpolation(
 template<>
 void besthea::bem::fe_space< besthea::bem::basis_tetra_p1 >::interpolation(
   sc ( *f )( sc, sc, sc ), vector_type & interpolation ) const {
-  lo n_nodes = _mesh->get_n_nodes( );
+  lo n_nodes = _mesh.get_n_nodes( );
 
   interpolation.resize( n_nodes );
   linear_algebra::coordinates< 3 > x;
 
   for ( lo i_node = 0; i_node < n_nodes; ++i_node ) {
-    _mesh->get_node( i_node, x );
+    _mesh.get_node( i_node, x );
     interpolation.set( i_node, f( x[ 0 ], x[ 1 ], x[ 2 ] ) );
   }
 }
@@ -114,7 +115,7 @@ void besthea::bem::fe_space< basis_type >::L2_projection(
   lo global_dim = _basis.dimension_global( );
   besthea::linear_algebra::vector rhs( global_dim, true );
 
-  lo n_elements = _mesh->get_n_elements( );
+  lo n_elements = _mesh.get_n_elements( );
 
   projection.resize( global_dim );
 
@@ -138,10 +139,10 @@ void besthea::bem::fe_space< basis_type >::L2_projection(
   lo * l2g_data = l2g.data( );
 
   for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
-    _mesh->get_nodes( i_elem, x1, x2, x3, x4 );
+    _mesh.get_nodes( i_elem, x1, x2, x3, x4 );
     tetrahedron_to_geometry( x1, x2, x3, x4, my_quadrature );
     _basis.local_to_global( i_elem, l2g );
-    area = _mesh->area( i_elem );
+    area = _mesh.area( i_elem );
 
     for ( lo i_x = 0; i_x < size_x; ++i_x ) {
       fun_val = f( x1_mapped[ i_x ], x2_mapped[ i_x ], x3_mapped[ i_x ] )
@@ -163,7 +164,7 @@ template< class basis_type >
 sc besthea::bem::fe_space< basis_type >::L2_relative_error(
   sc ( *f )( sc, sc, sc ), const vector_type & approximation,
   int order_rhs ) const {
-  lo n_elements = _mesh->get_n_elements( );
+  lo n_elements = _mesh.get_n_elements( );
 
   lo local_dim = _basis.dimension_local( );
   std::vector< lo > l2g( local_dim );
@@ -189,10 +190,10 @@ sc besthea::bem::fe_space< basis_type >::L2_relative_error(
   const sc * approximation_data = approximation.data( );
 
   for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
-    _mesh->get_nodes( i_elem, x1, x2, x3, x4 );
+    _mesh.get_nodes( i_elem, x1, x2, x3, x4 );
     this->tetrahedron_to_geometry( x1, x2, x3, x4, my_quadrature );
     this->_basis.local_to_global( i_elem, l2g );
-    area = _mesh->area( i_elem );
+    area = _mesh.area( i_elem );
     for ( lo i_x = 0; i_x < size_x; ++i_x ) {
       local_value = 0.0;
       for ( lo i_loc = 0; i_loc < local_dim; ++i_loc ) {

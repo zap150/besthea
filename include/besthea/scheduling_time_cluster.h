@@ -493,11 +493,18 @@ class besthea::mesh::scheduling_time_cluster {
     _ready_interaction_list_size = 0;
   }
 
+  /**
+   * Increases the value of @ref _ready_interaction_list_size by 1.
+   */
   void update_ready_interaction_size( ) {
 #pragma omp atomic update
     _ready_interaction_list_size++;
   }
 
+  /**
+   * Returns the number of clusters ready for interaction, i.e. the value of
+   * @ref _ready_interaction_list_size.
+   */
   lou get_ready_interaction_list_size( ) {
     lou size;
 #pragma omp atomic read
@@ -566,7 +573,7 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Returns the value of @p _upward_path_counter .
+   * Returns the value of @p _upward_path_counter.
    */
   lo get_upward_path_counter( ) const {
     lo counter;
@@ -584,7 +591,7 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Returns the value of @p _m2l_counter .
+   * Returns the value of @p _m2l_counter.
    */
   lou get_m2l_counter( ) const {
     lou counter;
@@ -612,7 +619,7 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Returns the value of @p _downward_path_status .
+   * Returns the value of @p _downward_path_status.
    */
   char get_downward_path_status( ) const {
     char status;
@@ -1103,7 +1110,7 @@ class besthea::mesh::scheduling_time_cluster {
                            //!< The status is assigned when the tree containing
                            //!< the cluster is reduced to the locally essential
                            //!< tree, see
-                           //!< @ref tree_structure::reduce_2_essential .
+                           //!< @ref tree_structure::reduce_2_essential.
   bool _active_upward_path;    //!< Indicates if the cluster is active in the
                                //!< upward path of the FMM.
   bool _active_downward_path;  //!< Indicates if the cluster is active in the
@@ -1163,6 +1170,36 @@ class besthea::mesh::scheduling_time_cluster {
   lou _ready_interaction_list_size;  //!< size of the ready interaction list
                                      //!< (stored as variable due to possible
                                      //!< data races)
+};
+
+/**
+ * Struct that realizes a comparison (<) between pairs consisting of process ids
+ * (lo) and scheduling time clusters.
+ */
+struct compare_pairs_of_process_ids_and_scheduling_time_clusters {
+  /**
+   * Operator realizing the comparison < between pairs consisting of process ids
+   * (lo) and scheduling time clusters
+   *
+   * (a, I) < (b, J) if the process ids satisfy a < b or
+   * (a == b) and I's global index < J's global index
+   * @param[in] first_pair  First pair considered in the comparison
+   * @param[in] second_pair Second pair considered in the comparison
+   * @return True if first_pair is smaller than second pair.
+   */
+  bool operator( )(
+    const std::pair< lo, besthea::mesh::scheduling_time_cluster * > first_pair,
+    const std::pair< lo, besthea::mesh::scheduling_time_cluster * >
+      second_pair ) const {
+    bool compare_value = false;
+    if ( first_pair.first < second_pair.first
+      || ( first_pair.first == second_pair.first
+        && first_pair.second->get_global_index( )
+          < second_pair.second->get_global_index( ) ) ) {
+      compare_value = true;
+    }
+    return compare_value;
+  }
 };
 
 #endif /* INCLUDE_BESTHEA_SCHEDULING_TIME_CLUSTER_H_ */

@@ -543,8 +543,8 @@ void besthea::mesh::tetrahedral_volume_mesh::init_surface_nodes( ) {
   for ( const lo & node : _surface_elements ) {
     _is_surface_node[ node ] = true;
   }
-  for ( const bool & is_surface_node : _is_surface_node ) {
-    if ( is_surface_node ) {
+  for ( std::size_t i = 0; i < _is_surface_node.size( ); ++i ) {
+    if ( _is_surface_node[ i ] ) {
       ++_n_surface_nodes;
     }
   }
@@ -621,7 +621,6 @@ bool besthea::mesh::tetrahedral_volume_mesh::print_ensight_case(
               << "filename start number: 0\n"
               << "filename increment: 1\n"
               << "time values:\n";
-
     sc t = 0.5 * timestep_size;
     for ( lo i = 0; i < n_timesteps; ++i ) {
       case_file << std::setw( 12 ) << std::setprecision( 5 ) << t << "\n";

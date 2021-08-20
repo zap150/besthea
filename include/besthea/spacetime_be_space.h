@@ -35,7 +35,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDE_BESTHEA_SPACETIME_BE_SPACE_H_
 #define INCLUDE_BESTHEA_SPACETIME_BE_SPACE_H_
 
-#include "besthea/block_vector.h"
 #include "besthea/coordinates.h"
 #include "besthea/mesh.h"
 #include "besthea/settings.h"
@@ -44,7 +43,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace besthea {
   namespace bem {
-    template< class basis_type >
+    template< class basis_type, class block_vector_type >
     class spacetime_be_space;
   }
 }
@@ -52,11 +51,9 @@ namespace besthea {
 /**
  * Superclass of all boundary element spaces.
  */
-template< class basis_type >
+template< class basis_type, class block_vector_type >
 class besthea::bem::spacetime_be_space {
-  using block_vector_type
-    = besthea::linear_algebra::block_vector;  //!< Block vector type.
-  using mesh_type = besthea::mesh::mesh;      //!< Spacetime mesh type.
+  using mesh_type = besthea::mesh::mesh;  //!< Spacetime mesh type.
 
  protected:
   /**
@@ -98,6 +95,8 @@ class besthea::bem::spacetime_be_space {
    * Constructor
    */
   spacetime_be_space( const mesh_type & mesh );
+
+  spacetime_be_space( const mesh_type && ) = delete;
 
   /**
    * Destructor.
@@ -191,12 +190,12 @@ class besthea::bem::spacetime_be_space {
 
   /**
    * Maps the quadrature nodes from reference interval to the actual time.
-   * @param[in] d Index of time interval.
-   * @param[in] timestep Timestep size.
+   * @param[in] time_interval_begin Left endpoint of time interval.
+   * @param[in] time_interval_end Right endpoint of time interval.
    * @param[in,out] my_quadrature Structure holding the quadrature nodes.
    */
-  void line_to_time(
-    lo d, sc timestep, quadrature_wrapper & my_quadrature ) const;
+  void line_to_time( sc time_interval_begin, sc time_interval_end,
+    quadrature_wrapper & my_quadrature ) const;
 
   basis_type _basis;  //!< spatial basis function (temporal is constant)
 };
