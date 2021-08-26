@@ -71,9 +71,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
-  target_space,
-  source_space >::initialize_nearfield_and_interaction_lists( const slou
-    spatial_nearfield_limit ) {
+  target_space, source_space >::initialize_nearfield_and_interaction_lists( ) {
   // Initialize first the nearfield lists vector: determine all nearfields of
   // space-time leaf clusters associated with temporal clusters in the list
   // _time_clusters_for_nf.
@@ -91,6 +89,8 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
       std::vector< volume_space_cluster * > neighbors;
       lo spat_level, dummy;
       spacetime_leaf->get_n_divs( spat_level, dummy );
+      slou spatial_nearfield_limit
+        = _distributed_spacetime_target_tree->get_spatial_nearfield_limit( );
       _space_source_tree->find_neighbors(
         spat_level, spatial_grid_coords, spatial_nearfield_limit, neighbors );
       if ( neighbors.size( ) > 0 ) {
@@ -114,6 +114,8 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
       std::vector< volume_space_cluster * > neighbors;
       lo spat_level, dummy;
       st_cluster->get_n_divs( spat_level, dummy );
+      slou spatial_nearfield_limit
+        = _distributed_spacetime_target_tree->get_spatial_nearfield_limit( );
       _space_source_tree->find_neighbors(
         spat_level, spatial_grid_coords, spatial_nearfield_limit, neighbors );
       std::vector< volume_space_cluster * > clusters_requiring_nearfield_ops;
@@ -1350,8 +1352,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space, source_space >::
   initialize_fmm_data(
     mesh::distributed_spacetime_cluster_tree * spacetime_target_tree,
-    mesh::volume_space_cluster_tree * space_source_tree,
-    const slou spatial_nearfield_limit ) {
+    mesh::volume_space_cluster_tree * space_source_tree ) {
   _distributed_spacetime_target_tree = spacetime_target_tree;
   _space_source_tree = space_source_tree;
 
@@ -1374,7 +1375,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
        ->get_root( ) );
   // determine the related nearfield and interaction lists of space-time
   // clusters
-  initialize_nearfield_and_interaction_lists( spatial_nearfield_limit );
+  initialize_nearfield_and_interaction_lists( );
 
   resize_nearfield_matrix_container( );
 

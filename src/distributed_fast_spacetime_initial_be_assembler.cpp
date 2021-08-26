@@ -58,14 +58,12 @@ besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
   distributed_fast_spacetime_initial_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
     MPI_Comm * comm, mesh::volume_space_cluster_tree & space_source_tree,
-    slou spatial_nearfield_limit, int order_regular_tri,
-    int order_regular_tetra, int order_regular_line, int temp_order,
-    int spat_order, sc alpha )
+    int order_regular_tri, int order_regular_tetra, int order_regular_line,
+    int temp_order, int spat_order, sc alpha )
   : _kernel( &kernel ),
     _test_space( &test_space ),
     _trial_space( &trial_space ),
     _space_source_tree( &space_source_tree ),
-    _spatial_nearfield_limit( spatial_nearfield_limit ),
     _order_regular_tri( order_regular_tri ),
     _order_regular_tetra( order_regular_tetra ),
     _order_regular_line( order_regular_line ),
@@ -105,7 +103,7 @@ void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
   global_matrix.set_m2l_integration_order( _m2l_integration_order );
   // ###########################################################################
   global_matrix.initialize_fmm_data(
-    _test_space->get_tree( ), _space_source_tree, _spatial_nearfield_limit );
+    _test_space->get_tree( ), _space_source_tree );
 
   global_matrix.initialize_spatial_m2m_coeffs( );
 

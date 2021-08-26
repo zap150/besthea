@@ -230,15 +230,10 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * @param[in] spacetime_target_tree  The distributed spacetime tree used as
    * target tree.
    * @param[in] space_source_tree The space cluster tree used as source tree.
-   * @param[in] spatial_nearfield_limit Parameter to determine the spatial
-   * neighborhood of a given spatial cluster. Used to determine
-   * @ref _nearfield_list_vector and @ref _interaction_list_vector.
-   *
    */
   void initialize_fmm_data(
     mesh::distributed_spacetime_cluster_tree * spacetime_target_tree,
-    mesh::volume_space_cluster_tree * space_source_tree,
-    const slou spatial_nearfield_limit );
+    mesh::volume_space_cluster_tree * space_source_tree );
 
   /**
    * Sets the heat conductivity parameter.
@@ -352,11 +347,8 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * Initializes the structures @ref _interaction_list_vector and
    * @ref _nearfield_list_vector which contain the respective lists for the FMM
    * operations.
-   * @param[in] spatial_nearfield_limit Parameter to determine the spatial
-   * neighborhood of a given spatial cluster.
    */
-  void initialize_nearfield_and_interaction_lists(
-    const slou spatial_nearfield_limit );
+  void initialize_nearfield_and_interaction_lists( );
 
   /**
    * Executes all nearfield operations assigned to the current MPI process.

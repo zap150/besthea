@@ -179,8 +179,6 @@ class besthea::bem::distributed_fast_spacetime_initial_be_assembler {
    * @param[in] comm  MPI communicator associated with the assembler.
    * @param[in] space_source_tree Space tree corresponding to the volume mesh,
    * see @ref _space_source_tree.
-   * @param[in] spatial_nearfield_limit Value to initialize
-   * @ref _spatial_nearfield_limit.
    * @param[in] order_regular_tri Triangle quadrature order for regular
    * quadrature.
    * @param[in] order_regular_tetra Tetrahedron quadrature order for regular
@@ -196,9 +194,9 @@ class besthea::bem::distributed_fast_spacetime_initial_be_assembler {
   distributed_fast_spacetime_initial_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
     MPI_Comm * comm, mesh::volume_space_cluster_tree & space_source_tree,
-    slou spatial_nearfield_limit, int order_regular_tri = 4,
-    int order_regular_tetra = 4, int order_regular_line = 4, int temp_order = 5,
-    int spat_order = 5, sc alpha = 1.0 );
+    int order_regular_tri = 4, int order_regular_tetra = 4,
+    int order_regular_line = 4, int temp_order = 5, int spat_order = 5,
+    sc alpha = 1.0 );
 
   distributed_fast_spacetime_initial_be_assembler(
     const distributed_fast_spacetime_initial_be_assembler & that )
@@ -330,20 +328,15 @@ class besthea::bem::distributed_fast_spacetime_initial_be_assembler {
   mesh::volume_space_cluster_tree *
     _space_source_tree;  //!< Space cluster tree corresponding to the volume
   //!< mesh associated with the trial fe space.
-  slou
-    _spatial_nearfield_limit;  //!< Parameter to determine the spatial
-                               //!< neighborhood of a given spatial cluster.
-                               //!< Used to determine nearfield and interaction
-                               //!< lists of initial pFMM matrices.
-  int _order_regular_tri;      //!< Triangle quadrature order for the regular
-                               //!< integrals. Polynomials on the triangle up to
-                               //!< this order are integrated exactly.
-  int _order_regular_tetra;    //!< Tetrahedron quadrature order for the regular
-                               //!< integrals. Polynomials on the tetrahedron up
-                               //!< to this order are integrated exactly.
-  int _order_regular_line;     //!< Line quadrature order for the regular
-                               //!< integrals. Polynomials on a 1D line up to
-                               //!< this order are integrated exactly.
+  int _order_regular_tri;    //!< Triangle quadrature order for the regular
+                             //!< integrals. Polynomials on the triangle up to
+                             //!< this order are integrated exactly.
+  int _order_regular_tetra;  //!< Tetrahedron quadrature order for the regular
+                             //!< integrals. Polynomials on the tetrahedron up
+                             //!< to this order are integrated exactly.
+  int _order_regular_line;   //!< Line quadrature order for the regular
+                             //!< integrals. Polynomials on a 1D line up to
+                             //!< this order are integrated exactly.
   int _temp_order;  //!< Degree of Lagrange interpolation polynomials in time
                     //!< for pFMM.
   int _spat_order;  //!< Largest degree of Chebyshev polynomials for expansion
