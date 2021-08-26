@@ -434,6 +434,16 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
   }
 
   /**
+   * Returns the spatial diameter of a space-time element with given index.
+   * @param[in] i_st_elem Index of the space-time element.
+   */
+  sc get_spatial_diameter( lo i_st_elem ) const {
+    lo space_elem_idx, time_elem_idx;
+    map_index( i_st_elem, space_elem_idx, time_elem_idx );
+    return _space_mesh->get_diameter( space_elem_idx );
+  }
+
+  /**
    * Returns the centroid of a spacetime element in the current mesh.
    * @param[in] i_elem  Index of the spacetime element.
    * @param[out] centroid  The centroid (the first tree components are spatial,
