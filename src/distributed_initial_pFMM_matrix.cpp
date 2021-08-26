@@ -71,7 +71,9 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
-  target_space, source_space >::initialize_nearfield_and_interaction_lists( ) {
+  target_space,
+  source_space >::initialize_nearfield_and_interaction_lists( const slou
+    spatial_nearfield_limit ) {
   // Initialize first the nearfield lists vector: determine all nearfields of
   // space-time leaf clusters associated with temporal clusters in the list
   // _time_clusters_for_nf.
@@ -89,9 +91,8 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
       std::vector< volume_space_cluster * > neighbors;
       lo spat_level, dummy;
       spacetime_leaf->get_n_divs( spat_level, dummy );
-      _space_source_tree->find_neighbors( spat_level, spatial_grid_coords,
-        _distributed_spacetime_target_tree->get_spatial_nearfield_limit( ),
-        neighbors );
+      _space_source_tree->find_neighbors(
+        spat_level, spatial_grid_coords, spatial_nearfield_limit, neighbors );
       if ( neighbors.size( ) > 0 ) {
         neighbors.shrink_to_fit( );
         _nearfield_list_vector.push_back( { spacetime_leaf, neighbors } );
@@ -113,9 +114,8 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
       std::vector< volume_space_cluster * > neighbors;
       lo spat_level, dummy;
       st_cluster->get_n_divs( spat_level, dummy );
-      _space_source_tree->find_neighbors( spat_level, spatial_grid_coords,
-        _distributed_spacetime_target_tree->get_spatial_nearfield_limit( ),
-        neighbors );
+      _space_source_tree->find_neighbors(
+        spat_level, spatial_grid_coords, spatial_nearfield_limit, neighbors );
       std::vector< volume_space_cluster * > clusters_requiring_nearfield_ops;
       // If neighboring volume cluster at lower levels exist, they are
       // positioned at the end of the vector neighbors. For such clusters
@@ -202,7 +202,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
                                                                sources,
   mesh::volume_space_cluster * current_cluster ) const {
   if ( current_cluster->get_n_children( ) > 0 ) {
-    std::vector< volume_space_cluster * > * children
+    const std::vector< volume_space_cluster * > * children
       = current_cluster->get_children( );
     for ( auto child : *children ) {
       compute_moments_upward_path( sources, child );
@@ -234,7 +234,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   char downpard_path_status
     = current_cluster->get_status_in_initial_op_downward_path( );
   if ( downpard_path_status == 1 ) {
-    mesh::scheduling_time_cluster * current_parent
+    const mesh::scheduling_time_cluster * current_parent
       = current_cluster->get_parent( );
     if ( current_parent != nullptr
       && ( current_parent->get_status_in_initial_op_downward_path( ) == 1 ) ) {
@@ -266,7 +266,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space,
   source_space >::apply_grouped_m2m_operation( mesh::volume_space_cluster *
     parent_cluster ) const {
-  std::vector< mesh::volume_space_cluster * > * children
+  const std::vector< mesh::volume_space_cluster * > * children
     = parent_cluster->get_children( );
   // declare auxiliary vectors lambda_1/2 to store intermediate results in m2m
   // operations
@@ -1350,7 +1350,8 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space, source_space >::
   initialize_fmm_data(
     mesh::distributed_spacetime_cluster_tree * spacetime_target_tree,
-    mesh::volume_space_cluster_tree * space_source_tree ) {
+    mesh::volume_space_cluster_tree * space_source_tree,
+    const slou spatial_nearfield_limit ) {
   _distributed_spacetime_target_tree = spacetime_target_tree;
   _space_source_tree = space_source_tree;
 
@@ -1373,7 +1374,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
        ->get_root( ) );
   // determine the related nearfield and interaction lists of space-time
   // clusters
-  initialize_nearfield_and_interaction_lists( );
+  initialize_nearfield_and_interaction_lists( spatial_nearfield_limit );
 
   resize_nearfield_matrix_container( );
 
@@ -1643,6 +1644,235 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   apply_all_nearfield_operations( x, y_pFMM );
 
   y.add( y_pFMM, alpha );
+}
+
+template< class kernel_type, class target_space, class source_space >
+sc besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
+  target_space, source_space >::compute_nearfield_ratio( ) const {
+  lou n_nearfield_entries = 0;
+  for ( auto nearfield_pair : _nearfield_list_vector ) {
+    general_spacetime_cluster * st_target = nearfield_pair.first;
+    lo n_target_dofs = st_target->get_n_dofs< target_space >( );
+    for ( auto src_cluster : nearfield_pair.second ) {
+      n_nearfield_entries
+        += n_target_dofs * src_cluster->get_n_dofs< source_space >( );
+    }
+  }
+  lou n_global_target_dofs = _distributed_spacetime_target_tree->get_mesh( )
+                               .get_n_dofs< target_space >( );
+  lou n_global_source_dofs
+    = _space_source_tree->get_mesh( ).get_n_dofs< source_space >( );
+  return n_nearfield_entries
+    / ( (sc) n_global_target_dofs * n_global_source_dofs );
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
+  target_space,
+  source_space >::count_fmm_operations_levelwise( std::vector< lou > &
+                                                    n_s2m_operations,
+  std::vector< lou > & n_m2m_operations, std::vector< lou > & n_m2l_operations,
+  std::vector< lou > & n_l2l_operations,
+  std::vector< lou > & n_l2t_operations ) const {
+  lo n_source_levels = _space_source_tree->get_max_n_levels( );
+  lo n_target_levels = _distributed_spacetime_target_tree->get_n_levels( );
+  // initialize all lists of operation counters appropriately
+  n_s2m_operations.resize( n_source_levels );
+  n_m2m_operations.resize( n_source_levels );
+  for ( lo i = 0; i < n_source_levels; ++i ) {
+    n_s2m_operations[ i ] = 0;
+    n_m2m_operations[ i ] = 0;
+  }
+  n_m2l_operations.resize( n_target_levels );
+  n_l2l_operations.resize( n_target_levels );
+  n_l2t_operations.resize( n_target_levels );
+  for ( lo i = 0; i < n_target_levels; ++i ) {
+    n_m2l_operations[ i ] = 0;
+    n_l2l_operations[ i ] = 0;
+    n_l2t_operations[ i ] = 0;
+  }
+
+  // count the number of s2m operations
+  const std::vector< mesh::volume_space_cluster * > & leaves_source_tree
+    = _space_source_tree->get_leaves( );
+  for ( mesh::volume_space_cluster * leaf : leaves_source_tree ) {
+    n_s2m_operations[ leaf->get_level( ) ] += 1;
+  }
+
+  // count the number of m2m operations
+  count_m2m_operations_recursively(
+    *_space_source_tree->get_root( ), n_m2m_operations );
+
+  // count the number of m2l operations.
+  for ( auto m2l_pair : _interaction_list_vector ) {
+    lo current_level = m2l_pair.first->get_level( );
+    n_m2l_operations[ current_level ] += m2l_pair.second.size( );
+  }
+
+  // count the number of l2l and l2t operations
+  mesh::scheduling_time_cluster * root_distribution_tree
+    = _distributed_spacetime_target_tree->get_distribution_tree( )->get_root( );
+  count_l2l_and_l2t_operations_recursively(
+    *root_distribution_tree, n_l2l_operations, n_l2t_operations );
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
+  target_space, source_space >::
+  count_m2m_operations_recursively(
+    const mesh::volume_space_cluster & current_cluster,
+    std::vector< lou > & n_m2m_operations ) const {
+  if ( current_cluster.get_parent( ) != nullptr ) {
+    n_m2m_operations[ current_cluster.get_level( ) ] += 1;
+  }
+  if ( current_cluster.get_n_children( ) > 0 ) {
+    for ( auto child : *current_cluster.get_children( ) ) {
+      count_m2m_operations_recursively( *child, n_m2m_operations );
+    }
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
+  target_space, source_space >::
+  count_l2l_and_l2t_operations_recursively(
+    const mesh::scheduling_time_cluster & current_cluster,
+    std::vector< lou > & n_l2l_operations,
+    std::vector< lou > & n_l2t_operations ) const {
+  char downpard_path_status
+    = current_cluster.get_status_in_initial_op_downward_path( );
+  lo current_level = current_cluster.get_level( );
+  lo n_associated_clusters
+    = current_cluster.get_associated_spacetime_clusters( )->size( );
+  lo n_associated_leaves = current_cluster.get_n_associated_leaves( );
+  if ( downpard_path_status == 1 ) {
+    const mesh::scheduling_time_cluster * current_parent
+      = current_cluster.get_parent( );
+    if ( current_parent != nullptr
+      && ( current_parent->get_status_in_initial_op_downward_path( ) == 1 ) ) {
+      n_l2l_operations[ current_level ] += n_associated_clusters;
+    }
+    n_l2t_operations[ current_level ] += n_associated_leaves;
+  }
+  if ( downpard_path_status > 0 && current_cluster.get_n_children( ) > 0 ) {
+    for ( auto child : *current_cluster.get_children( ) ) {
+      count_l2l_and_l2t_operations_recursively(
+        *child, n_l2l_operations, n_l2t_operations );
+    }
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
+  target_space, source_space >::print_information( const int root_process )
+  const {
+  // print rough nearfield percentage
+  // compute the nearfield ratio on each process.
+  sc local_nearfield_ratio = compute_nearfield_ratio( );
+  sc global_nearfield_ratio( 0 );
+  // gather the nearfield ratios at the root process
+  int n_processes;
+  MPI_Comm_size( *_comm, &n_processes );
+  sc * all_local_nearfield_ratios = nullptr;
+  if ( _my_rank == root_process ) {
+    all_local_nearfield_ratios = new sc[ n_processes ];
+  }
+
+  MPI_Gather( &local_nearfield_ratio, 1, get_scalar_type< sc >::MPI_SC( ),
+    all_local_nearfield_ratios, 1, get_scalar_type< sc >::MPI_SC( ),
+    root_process, *_comm );
+  if ( _my_rank == root_process ) {
+    for ( lo i = 0; i < n_processes; ++i ) {
+      global_nearfield_ratio += all_local_nearfield_ratios[ i ];
+    }
+    std::cout << "nearfield ratio = " << global_nearfield_ratio << std::endl;
+  }
+  // count the fmm operations levelwise
+  std::vector< lou > n_s2m_operations, n_m2m_operations, n_m2l_operations,
+    n_l2l_operations, n_l2t_operations;
+  count_fmm_operations_levelwise( n_s2m_operations, n_m2m_operations,
+    n_m2l_operations, n_l2l_operations, n_l2t_operations );
+  // collect the numbers of m2l, l2l and l2t operations at the root
+  // process via reduce operations
+  lo n_target_levels = _distributed_spacetime_target_tree->get_n_levels( );
+  lo n_source_levels = _space_source_tree->get_max_n_levels( );
+  if ( _my_rank == root_process ) {
+    MPI_Reduce( MPI_IN_PLACE, n_m2l_operations.data( ), n_target_levels,
+      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+    MPI_Reduce( MPI_IN_PLACE, n_l2l_operations.data( ), n_target_levels,
+      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+    MPI_Reduce( MPI_IN_PLACE, n_l2t_operations.data( ), n_target_levels,
+      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+  } else {
+    MPI_Reduce( n_m2l_operations.data( ), nullptr, n_target_levels,
+      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+    MPI_Reduce( n_l2l_operations.data( ), nullptr, n_target_levels,
+      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+    MPI_Reduce( n_l2t_operations.data( ), nullptr, n_target_levels,
+      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+  }
+  if ( _my_rank == root_process ) {
+    lo start_space_refinement
+      = _distributed_spacetime_target_tree->get_start_space_refinement( );
+    std::cout << "number of s2m operations: " << std::endl;
+    for ( lo i = 0; i < n_source_levels; ++i ) {
+      std::cout << "level " << i << ": " << n_s2m_operations[ i ] << std::endl;
+    }
+    std::cout << "number of m2m operations: " << std::endl;
+    for ( lo i = 0; i < n_source_levels; ++i ) {
+      std::cout << "level " << i << ": " << n_m2m_operations[ i ] << std::endl;
+    }
+    std::cout << "number of m2l operations: " << std::endl;
+    for ( lo i = 0; i < n_target_levels; ++i ) {
+      std::cout << "level " << i << ": " << n_m2l_operations[ i ] << std::endl;
+    }
+    std::cout << "number of l2l operations: " << std::endl;
+    for ( lo i = 0; i < n_target_levels; ++i ) {
+      std::cout << "level " << i << ": " << n_l2l_operations[ i ];
+      if ( i >= start_space_refinement
+        && ( ( i - start_space_refinement ) ) % 2 == 0 ) {
+        std::cout << " spacetime l2l" << std::endl;
+      } else {
+        std::cout << " temporal l2l" << std::endl;
+      }
+    }
+    std::cout << "number of l2t operations: " << std::endl;
+    for ( lo i = 0; i < n_target_levels; ++i ) {
+      std::cout << "level " << i << ": " << n_l2t_operations[ i ] << std::endl;
+    }
+
+    std::cout << "rough memory estimates per process (nearfield only): "
+              << std::endl;
+
+    lo n_target_dofs = _distributed_spacetime_target_tree->get_mesh( )
+                         .get_n_dofs< target_space >( );
+    lo n_source_dofs
+      = _space_source_tree->get_mesh( ).get_n_dofs< source_space >( );
+    sc total_storage_nearfield = 0.0;
+    // sc total_storage_contributions = 0.0;
+    for ( int i = 0; i < n_processes; ++i ) {
+      sc local_storage_nearfield
+        = n_target_dofs * n_source_dofs * all_local_nearfield_ratios[ i ];
+      local_storage_nearfield *= 8. / 1024. / 1024. / 1024.;
+      // get memory for double entries in GiB.
+      total_storage_nearfield += local_storage_nearfield;
+      // total_storage_contributions += local_storage_contributions;
+      std::cout << "process " << i
+                << ": nearfield_matrices: " << local_storage_nearfield << " GiB"
+                << std::endl;
+    }
+    std::cout << "total storage: nearfield matrices: "
+              << total_storage_nearfield << " GiB" << std::endl;
+    std::cout << "storage per allocated vector (source): "
+              << n_source_dofs * 8. / 1024. / 1024. / 1024. << " GiB."
+              << std::endl;
+    std::cout << "storage per allocated vector (target): "
+              << n_target_dofs * 8. / 1024. / 1024. / 1024. << " GiB."
+              << std::endl;
+    delete[] all_local_nearfield_ratios;
+    std::cout << "#############################################################"
+              << "###########################" << std::endl;
+  }
 }
 
 template class besthea::linear_algebra::distributed_initial_pFMM_matrix<

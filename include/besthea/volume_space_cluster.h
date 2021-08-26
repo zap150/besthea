@@ -137,14 +137,14 @@ class besthea::mesh::volume_space_cluster {
   /**
    * Returns the list of children
    */
-  std::vector< volume_space_cluster * > * get_children( ) {
+  const std::vector< volume_space_cluster * > * get_children( ) const {
     return _children;
   }
 
   /**
    * Returns the number of children.
    */
-  lo get_n_children( ) {
+  lo get_n_children( ) const {
     if ( _children != nullptr ) {
       return _children->size( );
     } else {
@@ -490,10 +490,10 @@ class besthea::mesh::volume_space_cluster {
               << _box_coordinate[ 1 ] << ", " << _box_coordinate[ 2 ] << ", "
               << _box_coordinate[ 3 ];
     std::cout << ", octant " << _octant;
-    std::cout << ", nodes:";
-    for ( auto node_idx : _local_2_global_nodes ) {
-      std::cout << " " << node_idx;
-    }
+    // std::cout << ", nodes:";
+    // for ( auto node_idx : _local_2_global_nodes ) {
+    //   std::cout << " " << node_idx;
+    // }
     std::cout << std::endl;
   }
 

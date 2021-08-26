@@ -2937,18 +2937,12 @@ void besthea::mesh::distributed_spacetime_cluster_tree::print_information(
     for ( lou box_dim = 0; box_dim < 3; ++box_dim ) {
       box_size[ box_dim ] /= initial_scaling_factor;
     }
+    std::vector< sc > spatial_paddings_per_spatial_level
+      = get_spatial_paddings_per_spatial_level( );
     for ( lo i = 0; i < _global_n_space_levels; ++i ) {
-      // find a spacetime level where the spatial components of boxes are on
-      // the current spatial level
-      lo spacetime_level;
-      if ( i == 0 ) {
-        spacetime_level = 0;
-      } else {
-        spacetime_level = _start_space_refinement + 2 * ( i - 1 );
-      }
       std::cout << "spatial level " << i << ": ( " << box_size[ 0 ] << ", "
                 << box_size[ 1 ] << ", " << box_size[ 2 ]
-                << "), padding = " << _spatial_paddings[ spacetime_level ]
+                << "), padding = " << spatial_paddings_per_spatial_level[ i ]
                 << std::endl;
       for ( lou box_dim = 0; box_dim < 3; ++box_dim ) {
         box_size[ box_dim ] /= 2.0;

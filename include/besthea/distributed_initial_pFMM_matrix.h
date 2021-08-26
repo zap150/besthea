@@ -230,10 +230,15 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * @param[in] spacetime_target_tree  The distributed spacetime tree used as
    * target tree.
    * @param[in] space_source_tree The space cluster tree used as source tree.
+   * @param[in] spatial_nearfield_limit Parameter to determine the spatial
+   * neighborhood of a given spatial cluster. Used to determine
+   * @ref _nearfield_list_vector and @ref _interaction_list_vector.
+   *
    */
   void initialize_fmm_data(
     mesh::distributed_spacetime_cluster_tree * spacetime_target_tree,
-    mesh::volume_space_cluster_tree * space_source_tree );
+    mesh::volume_space_cluster_tree * space_source_tree,
+    const slou spatial_nearfield_limit );
 
   /**
    * Sets the heat conductivity parameter.
@@ -325,6 +330,12 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    */
   void compute_chebyshev( );
 
+  /**
+   * Prints information about the operations which have to be applied.
+   * @param[in] root_process  Process responsible for printing the information.
+   */
+  void print_information( const int root_process ) const;
+
  private:
   /**
    * Determines all time clusters in the scheduling tree associated with
@@ -341,8 +352,11 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * Initializes the structures @ref _interaction_list_vector and
    * @ref _nearfield_list_vector which contain the respective lists for the FMM
    * operations.
+   * @param[in] spatial_nearfield_limit Parameter to determine the spatial
+   * neighborhood of a given spatial cluster.
    */
-  void initialize_nearfield_and_interaction_lists( );
+  void initialize_nearfield_and_interaction_lists(
+    const slou spatial_nearfield_limit );
 
   /**
    * Executes all nearfield operations assigned to the current MPI process.
@@ -697,6 +711,53 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    */
   void cluster_to_polynomials( quadrature_wrapper & my_quadrature, sc x_start,
     sc x_end, sc y_start, sc y_end, sc z_start, sc z_end ) const;
+
+  /**
+   * Returns the ratio of entries of the nearfield blocks of the initial pFMM
+   * matrix handled by the current MPI process and entries of the global,
+   * non-approximated matrix.
+   * @warning If executed in parallel, the results should be added up to get
+   * a meaningful result (due to the comparison with the global number of
+   * entries).
+   */
+  sc compute_nearfield_ratio( ) const;
+
+  /**
+   * Counts the number of all FMM operations levelwise
+   * @note m2m and l2l operations are counted for the levels of the children
+   */
+  void count_fmm_operations_levelwise( std::vector< lou > & n_s2m_operations,
+    std::vector< lou > & n_m2m_operations,
+    std::vector< lou > & n_m2l_operations,
+    std::vector< lou > & n_l2l_operations,
+    std::vector< lou > & n_l2t_operations ) const;
+
+  /**
+   * Counts the number of m2m operations for all levels in the source volume
+   * space tree. The routine is based on a recursive tree traversal.
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   * @param[in,out] n_m2m_operations  Vector in which the levelwise numbers of
+   * m2m operations are stored.
+   */
+  void count_m2m_operations_recursively(
+    const mesh::volume_space_cluster & current_cluster,
+    std::vector< lou > & n_m2m_operations ) const;
+
+  /**
+   * Counts the number of l2l and l2t operations for all levels in the target
+   * distributed space-time cluster tree. The routine is based on a recursive
+   * traversal of the associated scheduling time cluster tree.
+   * @param[in] current_cluster Current scheduling time cluster in the tree
+   * traversal.
+   * @param[in,out] n_l2l_operations  Vector in which the levelwise numbers of
+   * l2l operations are stored.
+   * @param[in,out] n_l2t_operations  Vector in which the levelwise numbers of
+   * l2t operations are stored.
+   */
+  void count_l2l_and_l2t_operations_recursively(
+    const mesh::scheduling_time_cluster & current_cluster,
+    std::vector< lou > & n_l2l_operations,
+    std::vector< lou > & n_l2t_operations ) const;
 
   const MPI_Comm *
     _comm;       //!< MPI communicator associated with the pFMM matrix.

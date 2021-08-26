@@ -47,9 +47,9 @@ besthea::mesh::volume_space_cluster_tree::volume_space_cluster_tree(
     _real_n_levels( 0 ),
     _n_min_elems( n_min_elems ),
     _n_max_elems_leaf( 0 ),
-    _non_empty_nodes_per_level( _max_n_levels ),
+    _non_empty_clusters_per_level( _max_n_levels ),
     _paddings( _max_n_levels, 0.0 ),
-    _n_nonempty_nodes( 0 ) {
+    _n_nonempty_clusters( 0 ) {
   sc xmin, xmax, ymin, ymax, zmin, zmax;
   compute_cubic_bounding_box( xmin, xmax, ymin, ymax, zmin, zmax );
   _bounding_box_size.resize( 3 );
@@ -77,8 +77,8 @@ besthea::mesh::volume_space_cluster_tree::volume_space_cluster_tree(
     _root->add_element( i );
   }
 
-  _non_empty_nodes_per_level[ 0 ].push_back( _root );
-  ++_n_nonempty_nodes;
+  _non_empty_clusters_per_level[ 0 ].push_back( _root );
+  ++_n_nonempty_clusters;
   this->build_tree( *_root );
   this->compute_padding( *_root );
   _paddings.shrink_to_fit( );
@@ -202,12 +202,12 @@ void besthea::mesh::volume_space_cluster_tree::build_tree(
             coord_z };
       clusters[ i ] = new volume_space_cluster( new_center, new_half_size,
         oct_sizes[ i ], &root, root.get_level( ) + 1, i, coordinates, _mesh );
-      _non_empty_nodes_per_level[ root.get_level( ) + 1 ].push_back(
+      _non_empty_clusters_per_level[ root.get_level( ) + 1 ].push_back(
         clusters[ i ] );
       _coord_2_cluster.insert(
         std::pair< std::vector< slou >, volume_space_cluster * >(
           coordinates, clusters[ i ] ) );
-      ++_n_nonempty_nodes;
+      ++_n_nonempty_clusters;
     } else {
       clusters[ i ] = nullptr;
     }
@@ -288,7 +288,7 @@ void besthea::mesh::volume_space_cluster_tree::compute_cubic_bounding_box(
 
 sc besthea::mesh::volume_space_cluster_tree::compute_padding(
   volume_space_cluster & root ) {
-  std::vector< volume_space_cluster * > * children = root.get_children( );
+  const std::vector< volume_space_cluster * > * children = root.get_children( );
   sc padding = -1.0;
   sc tmp_padding;
 
@@ -320,7 +320,7 @@ void besthea::mesh::volume_space_cluster_tree::find_neighbors( const lo level,
   // determine the search bounds first
   slou max_coordinate = (slou) ( 1 << level );
   slou i_x_low = (slou) ( (lo) target_grid_coordinates[ 0 ] - limit > 0
-      ? target_grid_coordinates[ 1 ] - limit
+      ? target_grid_coordinates[ 0 ] - limit
       : 0 );
   slou i_x_up
     = (slou) ( target_grid_coordinates[ 0 ] + limit + 1 < max_coordinate
@@ -404,11 +404,11 @@ bool besthea::mesh::volume_space_cluster_tree::print_tree(
     return false;
   }
 
-  lo n_nodes = 0;
+  lo n_clusters = 0;
   if ( level == -1 ) {
-    n_nodes = _n_nonempty_nodes;
+    n_clusters = _n_nonempty_clusters;
   } else {
-    n_nodes = _non_empty_nodes_per_level[ level ].size( );
+    n_clusters = _non_empty_clusters_per_level[ level ].size( );
   }
 
   std::cout << "Printing '" << file.str( ) << "' ... ";
@@ -419,8 +419,8 @@ bool besthea::mesh::volume_space_cluster_tree::print_tree(
            << std::endl;
   file_vtu << "  <UnstructuredGrid>" << std::endl;
 
-  file_vtu << "    <Piece NumberOfPoints=\"" << n_nodes << "\" NumberOfCells=\""
-           << 0 << "\">" << std::endl;
+  file_vtu << "    <Piece NumberOfPoints=\"" << n_clusters
+           << "\" NumberOfCells=\"" << 0 << "\">" << std::endl;
 
   file_vtu << "      <Points>" << std::endl;
   file_vtu << "        <DataArray type=\"Float32\" Name=\"points\""
@@ -429,10 +429,11 @@ bool besthea::mesh::volume_space_cluster_tree::print_tree(
 
   vector_type center( 3 );
 
-  for ( auto it = _non_empty_nodes_per_level.begin( );
-        it != _non_empty_nodes_per_level.end( ); ++it ) {
+  for ( auto it = _non_empty_clusters_per_level.begin( );
+        it != _non_empty_clusters_per_level.end( ); ++it ) {
     if ( level != -1
-      && std::distance( _non_empty_nodes_per_level.begin( ), it ) != level ) {
+      && std::distance( _non_empty_clusters_per_level.begin( ), it )
+        != level ) {
       continue;
     }
     for ( auto itt = ( *it ).begin( ); itt != ( *it ).end( ); ++itt ) {
@@ -474,10 +475,11 @@ bool besthea::mesh::volume_space_cluster_tree::print_tree(
   vector_type half_size( 3 );
   sc x_half_size, y_half_size, z_half_size;
 
-  for ( auto it = _non_empty_nodes_per_level.begin( );
-        it != _non_empty_nodes_per_level.end( ); ++it ) {
+  for ( auto it = _non_empty_clusters_per_level.begin( );
+        it != _non_empty_clusters_per_level.end( ); ++it ) {
     if ( level != -1
-      && std::distance( _non_empty_nodes_per_level.begin( ), it ) != level ) {
+      && std::distance( _non_empty_clusters_per_level.begin( ), it )
+        != level ) {
       continue;
     }
     for ( auto itt = ( *it ).begin( ); itt != ( *it ).end( ); ++itt ) {
@@ -489,11 +491,11 @@ bool besthea::mesh::volume_space_cluster_tree::print_tree(
 
       if ( include_padding ) {
         x_half_size += _paddings[ std::distance(
-          _non_empty_nodes_per_level.begin( ), it ) ];
+          _non_empty_clusters_per_level.begin( ), it ) ];
         y_half_size += _paddings[ std::distance(
-          _non_empty_nodes_per_level.begin( ), it ) ];
+          _non_empty_clusters_per_level.begin( ), it ) ];
         z_half_size += _paddings[ std::distance(
-          _non_empty_nodes_per_level.begin( ), it ) ];
+          _non_empty_clusters_per_level.begin( ), it ) ];
       }
 
       file_vtu << "          " << static_cast< float >( 2.0 * x_half_size )

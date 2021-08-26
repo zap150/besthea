@@ -263,6 +263,13 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
+   * Returns a pointer to the parent.
+   */
+  const scheduling_time_cluster * get_parent( ) const {
+    return _parent;
+  }
+
+  /**
    * Returns the configuration of the cluster with respect to its parent, i.e.
    * the value of @ref _left_right
    */
@@ -1036,7 +1043,7 @@ class besthea::mesh::scheduling_time_cluster {
    * Returns position in @ref
    * besthea::linear_algebra::distributed_pFMM_matrix::_m_list
    */
-  lo get_pos_in_m_list( ) {
+  lo get_pos_in_m_list( ) const {
     return _pos_in_m_list;
   }
 
@@ -1053,7 +1060,7 @@ class besthea::mesh::scheduling_time_cluster {
    * Returns position in @ref
    * besthea::linear_algebra::distributed_pFMM_matrix::_l_list
    */
-  lo get_pos_in_l_list( ) {
+  lo get_pos_in_l_list( ) const {
     return _pos_in_l_list;
   }
 
@@ -1070,7 +1077,7 @@ class besthea::mesh::scheduling_time_cluster {
    * Returns position in @ref
    * besthea::linear_algebra::distributed_pFMM_matrix::_m2l_list
    */
-  lo get_pos_in_m2l_list( ) {
+  lo get_pos_in_m2l_list( ) const {
     return _pos_in_m2l_list;
   }
 

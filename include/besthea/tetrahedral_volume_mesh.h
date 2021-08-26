@@ -51,6 +51,15 @@ namespace besthea {
   }
 }
 
+namespace besthea {
+  namespace bem {
+    template< class basis_type >
+    class fe_space;
+
+    class basis_tetra_p1;
+  }
+}
+
 /**
  *  Class representing a tetrahedral mesh of a 3D volume
  */
@@ -358,6 +367,15 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
     return _surface_orientation;
   }
 
+  /**
+   * Returns the global number of dofs in the mesh, depending on the considered
+   * discrete space.
+   * @tparam space_type  @ref besthea::bem::fe_space representing p1 (or other)
+   * basis functions. It determines the DOFs.
+   */
+  template< class space_type >
+  lo get_n_dofs( ) const;
+
  protected:
   /**
    * Precomputes exterior normals and areas of elements.
@@ -442,5 +460,11 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
   std::vector< lo > _faces;             //!< indices into #_nodes
   std::vector< lo > _element_to_faces;  //!< indices into #_faces
 };
+
+template<>
+inline lo besthea::mesh::tetrahedral_volume_mesh::get_n_dofs<
+  besthea::bem::fe_space< besthea::bem::basis_tetra_p1 > >( ) const {
+  return _n_nodes;
+}
 
 #endif /* INCLUDE_BESTHEA_TETRAHEDRAL_VOLUME_MESH_H_ */

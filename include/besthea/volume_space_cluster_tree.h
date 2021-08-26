@@ -144,6 +144,13 @@ class besthea::mesh::volume_space_cluster_tree {
   }
 
   /**
+   * Returns the associated distributed spacetime tensor mesh.
+   */
+  const tetrahedral_volume_mesh & get_mesh( ) const {
+    return _mesh;
+  }
+
+  /**
    * Returns @ref _root.
    */
   volume_space_cluster * get_root( ) {
@@ -281,7 +288,8 @@ class besthea::mesh::volume_space_cluster_tree {
   void print_internal( volume_space_cluster * root ) {
     if ( root != nullptr ) {
       root->print( );
-      std::vector< volume_space_cluster * > * children = root->get_children( );
+      const std::vector< volume_space_cluster * > * children
+        = root->get_children( );
       if ( children != nullptr )
         for ( auto it = children->begin( ); it != children->end( ); ++it ) {
           for ( lo i = 0; i < ( *it )->get_level( ); ++i ) std::cout << " ";
@@ -300,10 +308,10 @@ class besthea::mesh::volume_space_cluster_tree {
   lo _n_max_elems_leaf;  //!< maximal number of elements in a leaf cluster after
                          //!< construction.
   std::vector< std::vector< volume_space_cluster * > >
-    _non_empty_nodes_per_level;  //!< vectors of nonempty tree
-                                 //!< nodes in each level
-  std::vector< sc > _paddings;   //!< vector of paddings on each level
-  lo _n_nonempty_nodes;          //!< number of nonempty clusters in the tree
+    _non_empty_clusters_per_level;  //!< vectors of nonempty tree
+                                    //!< clusters in each level
+  std::vector< sc > _paddings;      //!< vector of paddings on each level
+  lo _n_nonempty_clusters;          //!< number of nonempty clusters in the tree
   std::vector< std::vector< lo > >
     _idx_2_coord;  //!< auxiliary mapping from octant indexing to coordinates
   std::map< std::vector< slou >, volume_space_cluster * >
