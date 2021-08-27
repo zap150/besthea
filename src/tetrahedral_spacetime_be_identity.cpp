@@ -149,6 +149,11 @@ template class besthea::bem::tetrahedral_spacetime_be_identity<
     besthea::bem::spacetime_basis_tetra_p0 > >;
 template class besthea::bem::tetrahedral_spacetime_be_identity<
   besthea::bem::tetrahedral_spacetime_be_space<
+    besthea::bem::spacetime_basis_tetra_p0 >,
+  besthea::bem::tetrahedral_spacetime_be_space<
+    besthea::bem::spacetime_basis_tetra_p1 > >;
+template class besthea::bem::tetrahedral_spacetime_be_identity<
+  besthea::bem::tetrahedral_spacetime_be_space<
     besthea::bem::spacetime_basis_tetra_p1 >,
   besthea::bem::tetrahedral_spacetime_be_space<
     besthea::bem::spacetime_basis_tetra_p1 > >;

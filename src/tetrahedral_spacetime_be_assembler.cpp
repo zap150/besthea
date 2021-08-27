@@ -50,7 +50,11 @@ besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type, test_space_type,
     _singular_refinements( singular_refinements ),
     _order_regular( order_regular ),
     _order_singular( order_singular ) {
-  _admissibles.resize( singular_refinements );
+  if ( order_singular > 0 ) {
+    _admissibles.resize( singular_refinements );
+  } else {
+    std::cout << "Assuming regular kernel" << std::endl;
+  }
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -131,11 +135,13 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
         trial_area = trial_mesh->area( i_trial );
 
         // test causality
+        /*
         int ti = 3;
         if ( std::max( { x1[ ti ], x2[ ti ], x3[ ti ], x4[ ti ] } )
           <= std::min( { y1[ ti ], y2[ ti ], y3[ ti ], y4[ ti ] } ) ) {
-          // continue;
+          continue;
         }
+        */
 
         get_type( i_test, i_trial, n_shared_vertices, perm_test, perm_trial );
         invert_permutation( perm_test, iperm_test );
@@ -204,8 +210,10 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
   quadrature_wrapper & my_quadrature ) const {
   // maximum size
   auto size = ref_quadrature._w[ 0 ].size( );
-  for ( int i_shared = 1; i_shared <= 4; ++i_shared ) {
-    size = std::max( size, ref_quadrature._w[ i_shared ].size( ) );
+  if ( _order_singular > 0 ) {
+    for ( int i_shared = 1; i_shared <= 4; ++i_shared ) {
+      size = std::max( size, ref_quadrature._w[ i_shared ].size( ) );
+    }
   }
   // std::cout << size << std::endl;
   my_quadrature._x1.resize( size );
@@ -261,17 +269,22 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
     }
   }
 
-  init_quadrature_shared_4( ref_quadrature );
-  init_quadrature_shared_3( ref_quadrature );
-  init_quadrature_shared_2( ref_quadrature );
-  init_quadrature_shared_1( ref_quadrature );
+  if ( _order_singular > 0 ) {
+    init_quadrature_shared_4( ref_quadrature );
+    init_quadrature_shared_3( ref_quadrature );
+    init_quadrature_shared_2( ref_quadrature );
+    init_quadrature_shared_1( ref_quadrature );
 
-  std::cout << "Quadrature over tensor product of tetrahedra:" << std::endl;
-  std::cout << "  disjoint:  " << ref_quadrature._w[ 0 ].size( ) << std::endl;
-  std::cout << "  vertex:    " << ref_quadrature._w[ 1 ].size( ) << std::endl;
-  std::cout << "  edge:      " << ref_quadrature._w[ 2 ].size( ) << std::endl;
-  std::cout << "  face:      " << ref_quadrature._w[ 3 ].size( ) << std::endl;
-  std::cout << "  identical: " << ref_quadrature._w[ 4 ].size( ) << std::endl;
+    std::cout << "Quadrature over tensor product of tetrahedra:" << std::endl;
+    std::cout << "  disjoint:  " << ref_quadrature._w[ 0 ].size( ) << std::endl;
+    std::cout << "  vertex:    " << ref_quadrature._w[ 1 ].size( ) << std::endl;
+    std::cout << "  edge:      " << ref_quadrature._w[ 2 ].size( ) << std::endl;
+    std::cout << "  face:      " << ref_quadrature._w[ 3 ].size( ) << std::endl;
+    std::cout << "  identical: " << ref_quadrature._w[ 4 ].size( ) << std::endl;
+  } else {
+    std::cout << "Quadrature over tensor product of tetrahedra:" << std::endl;
+    std::cout << "  regular:  " << ref_quadrature._w[ 0 ].size( ) << std::endl;
+  }
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
@@ -623,6 +636,10 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
   }
   n_shared_vertices = 0;
 
+  if ( _order_singular <= 0 ) {
+    return;
+  }
+
   if ( i_test == i_trial ) {
     n_shared_vertices = 4;
     return;
@@ -729,6 +746,12 @@ template class besthea::bem::tetrahedral_spacetime_be_assembler<
     besthea::bem::spacetime_basis_tetra_p0 >,
   besthea::bem::tetrahedral_spacetime_be_space<
     besthea::bem::spacetime_basis_tetra_p0 > >;
+template class besthea::bem::tetrahedral_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_kernel_normal_derivative,
+  besthea::bem::tetrahedral_spacetime_be_space<
+    besthea::bem::spacetime_basis_tetra_p0 >,
+  besthea::bem::tetrahedral_spacetime_be_space<
+    besthea::bem::spacetime_basis_tetra_p1 > >;
 template class besthea::bem::tetrahedral_spacetime_be_assembler<
   besthea::bem::spacetime_heat_kernel_normal_derivative,
   besthea::bem::tetrahedral_spacetime_be_space<
