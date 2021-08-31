@@ -189,6 +189,8 @@ class besthea::bem::distributed_fast_spacetime_initial_be_assembler {
    *                       for pFMM matrix.
    * @param[in] spat_order Largest degree of Chebyshev polynomials for expansion
    *                       in pFMM matrix.
+   * @param[in] n_recursions_singular_integrals Maximal number of recursive
+   * refinements for the computation of singular matrix entries.
    * @param[in] alpha Heat conductivity parameter.
    */
   distributed_fast_spacetime_initial_be_assembler( kernel_type & kernel,
@@ -196,7 +198,7 @@ class besthea::bem::distributed_fast_spacetime_initial_be_assembler {
     MPI_Comm * comm, mesh::volume_space_cluster_tree & space_source_tree,
     int order_regular_tri = 4, int order_regular_tetra = 4,
     int order_regular_line = 4, int temp_order = 5, int spat_order = 5,
-    sc alpha = 1.0 );
+    lo n_recursions_singular_integrals = 2, sc alpha = 1.0 );
 
   distributed_fast_spacetime_initial_be_assembler(
     const distributed_fast_spacetime_initial_be_assembler & that )
@@ -247,13 +249,125 @@ class besthea::bem::distributed_fast_spacetime_initial_be_assembler {
     full_matrix_type & nearfield_matrix ) const;
 
   /**
-   * Initializes quadrature structures for evaluation of nearfield integrals of
-   * pFMM matrix.
+   * Evaluates the definite integral of the heat kernel over a regular time
+   * interval for given quadrature points.
+   *
+   * @param[in,out] my_quadrature Container storing the quadrature points and
+   * the resulting kernel values.
+   * @param[in] t0  Starting time of the considered time interval.
+   * @param[in] t1  Ending time of the considered time interval.
+   * @param[in] nx_data Normal vector on the surface triangle. Not used.
+   */
+  void evaluate_kernel_regular_interval( quadrature_wrapper & my_quadrature,
+    const sc t0, const sc t1, const sc * nx_data ) const;
+
+  /**
+   * Evaluates the definite integral of the heat kernel over a time interval
+   * starting at 0 for given quadrature points.
+   *
+   * @param[in,out] my_quadrature Container storing the quadrature points and
+   * the resulting kernel values.
+   * @param[in] t1  Ending time of the considered time interval.
+   * @param[in] nx_data Normal vector on the surface triangle. Not used.
+   */
+  void evaluate_kernel_first_interval(
+    quadrature_wrapper & my_quadrature, const sc t1, const sc * nx_data ) const;
+
+  /**
+   * Computes local nearfield matrix entries for all dofs in a given pair of
+   * triangle and tetrahedron. (keyword local stiffness matrix)
+   *
+   * Regular case: The triangle and tetrahedron should be separated in space, or
+   * the time interval should start at a time t0 reasonably greater than 0.
+   *
+   * @param[in,out] local_entries The results are written to this vector.
+   * @param[in] my_quadrature Wrapper holding quadrature data.
+   * @param[in] is_first_time_step  Indicates if the time interval starts at 0.
+   * @param[in] t0  Starting time of the considered time interval.
+   * @param[in] t1  Ending time of the considered time interval.
+   * @param[in] test_index  Global spatial index of the test element (triange).
+   * Not used.
+   * @param[in] trial_index Index of the trial element (tetrahedron). Not used.
+   * @param[in] test_area Area of the test element (triangle).
+   * @param[in] trial_volume  Volume of the trial element (tetrahedron).
+   * @param[in] nx_data Normal vector on the surface triangle. Not used.
+   */
+  void compute_local_matrix_entries_regular_case( vector_type & local_entries,
+    quadrature_wrapper & my_quadrature, const bool is_first_timestep,
+    const sc t0, const sc t1, const lo test_index, const lo trial_index,
+    const sc test_area, const sc trial_volume, const sc * nx_data ) const;
+
+  /**
+   * Computes local nearfield matrix entries for all dofs in a given pair of
+   * triangle and tetrahedron. (keyword local stiffness matrix)
+   *
+   * Singular case: The considered time interval starts at 0, and the triangle
+   * and tetrahedron are not reasonably separated in space (e.g. they share a
+   * vertex, edge, ...). \n
+   * The integral is approximated by refining the tetrahedron and triangle
+   * recursively until a resulting pair is either separated or the recursion
+   * depth is reached. \n
+   * The routine calls itself recursively.
+   *
+   * @param[in,out] local_entries The results are written to this vector.
+   * @param[in] recursion_depth Determines the maximal number of refinements
+   * for the recursive computation of the integral.
+   * @param[in] my_quadrature Wrapper holding quadrature data.
+   * @param[in] x1  Node 1 of the triangle.
+   * @param[in] x2  Node 2 of the triangle.
+   * @param[in] x3  Node 3 of the triangle.
+   * @param[in] y1  Node 1 of the tetrahedron.
+   * @param[in] y2  Node 2 of the tetrahedron.
+   * @param[in] y3  Node 3 of the tetrahedron.
+   * @param[in] y4  Node 4 of the tetrahedron.
+   * @param[in] t1  Ending time of the considered time interval.
+   * @param[in] test_index  Global spatial index of the test element (triange).
+   * Not used.
+   * @param[in] trial_index Index of the trial element (tetrahedron). Not used.
+   * @param[in] test_area Area of the test element (triangle).
+   * @param[in] trial_volume  Volume of the trial element (tetrahedron).
+   * @param[in] nx_data Normal vector on the surface triangle. Not used.
+   */
+  void compute_local_matrix_entries_singular_case_recursively(
+    vector_type & local_entries, const lo recursion_depth,
+    quadrature_wrapper & my_quadrature,
+    const linear_algebra::coordinates< 3 > & x1,
+    const linear_algebra::coordinates< 3 > & x2,
+    const linear_algebra::coordinates< 3 > & x3,
+    const linear_algebra::coordinates< 3 > & y1,
+    const linear_algebra::coordinates< 3 > & y2,
+    const linear_algebra::coordinates< 3 > & y3,
+    const linear_algebra::coordinates< 3 > & y4, const sc t1,
+    const lo test_index, const lo trial_index, const sc test_area,
+    const sc trial_volume, const sc * nx_data ) const;
+
+  /**
+   * Auxiliary function to update the local nearfield matrix corresponding to a
+   * given triangle and tetrahedron (parents) by using the local nearfield
+   * matrices of a pair of their children.
+   *
+   * Used in the routine
+   * @ref compute_local_matrix_entries_singular_case_recursively.
+   * @param[in,out] parent_local_entries  Vector of the local nearfield matrix
+   * of the given parents, which is updated.
+   * @param[in] child_pair_local_entries  Vector of the local nearfield matrix
+   * of the given children.
+   * @param[in] tri_child_idx Index of the child of the triangle (range 0-3).
+   * @param[in] tet_child_idx Index of the child of the tetrahedron (range 0-4).
+   */
+  void process_childrens_local_matrix_entries(
+    vector_type & parent_local_entries,
+    const vector_type & child_pair_local_entries, const lo tri_child_idx,
+    const lo tet_child_idx ) const;
+
+  /**
+   * Initializes quadrature structures for evaluation of nearfield integrals
+   * of pFMM matrix.
    *
    * The quadrature points on the test and trial reference triangle and the
    * quadrature weights for each spatial configuration (disjoint triangles,
-   * shared vertex, shared edge, identical triangles) are initialized. The other
-   * structures used for nearfield quadrature are resized appropriately.
+   * shared vertex, shared edge, identical triangles) are initialized. The
+   * other structures used for nearfield quadrature are resized appropriately.
    * @param[in,out] my_quadrature Wrapper holding quadrature data.
    */
   void init_quadrature( quadrature_wrapper & my_quadrature ) const;
@@ -319,6 +433,33 @@ class besthea::bem::distributed_fast_spacetime_initial_be_assembler {
    */
   void initialize_moment_and_local_contributions( ) const;
 
+  /**
+   * Checks if a triangle and a tetrahedron are sufficiently separated to apply
+   * a standard quadrature scheme for the computation of the nearfield entries
+   * of the initial operator.
+   *
+   * The routine computes the centers of the triangle and tetrahedron, the
+   * distance of these centers and the radii of the triangle and tetrahedron
+   * (largest distance between the center and a vertex). If the distance is
+   * greater than the sum of the radii, the triangle and tetrahedron are
+   * considered to be separated, otherwise not.
+   * @param[in] x1  Node 1 of the triangle.
+   * @param[in] x2  Node 2 of the triangle.
+   * @param[in] x3  Node 3 of the triangle.
+   * @param[in] y1  Node 1 of the tetrahedron.
+   * @param[in] y2  Node 2 of the tetrahedron.
+   * @param[in] y3  Node 3 of the tetrahedron.
+   * @param[in] y4  Node 4 of the tetrahedron.
+   */
+  bool triangle_and_tetrahedron_are_separated(
+    const linear_algebra::coordinates< 3 > & x1,
+    const linear_algebra::coordinates< 3 > & x2,
+    const linear_algebra::coordinates< 3 > & x3,
+    const linear_algebra::coordinates< 3 > & y1,
+    const linear_algebra::coordinates< 3 > & y2,
+    const linear_algebra::coordinates< 3 > & y3,
+    const linear_algebra::coordinates< 3 > & y4 ) const;
+
   kernel_type * _kernel;  //!< Kernel used for the evaluation of the temporal
                           //!< antiderivatives.
   test_space_type * _test_space;  //!< Boundary element test space. Has to be a
@@ -337,6 +478,9 @@ class besthea::bem::distributed_fast_spacetime_initial_be_assembler {
   int _order_regular_line;   //!< Line quadrature order for the regular
                              //!< integrals. Polynomials on a 1D line up to
                              //!< this order are integrated exactly.
+  lo _n_recursions_singular_integrals;  //!< Maximal number of recursive
+                                        //!< refinements for the computation of
+                                        //!< singular matrix entries.
   int _temp_order;  //!< Degree of Lagrange interpolation polynomials in time
                     //!< for pFMM.
   int _spat_order;  //!< Largest degree of Chebyshev polynomials for expansion
@@ -350,8 +494,8 @@ class besthea::bem::distributed_fast_spacetime_initial_be_assembler {
           //!< (regularized quadrature). Realizes a fast modulo 3
           //!< operation.
   static constexpr std::array< int, 4 > n_simplices{ 1, 2, 5,
-    6 };  //!< Number of simplices which have to be considered for quadrature of
-          //!< integrals with singular kernels, sorted by configuration
+    6 };  //!< Number of simplices which have to be considered for quadrature
+          //!< of integrals with singular kernels, sorted by configuration
           //!< (disjoint, shared vertex, shared edge, identical).
   int _my_rank;  //!< MPI rank of the executing process.
   const MPI_Comm *

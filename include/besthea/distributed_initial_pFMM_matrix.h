@@ -208,7 +208,7 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * @warning Transposition is not supported.
    */
   void apply( const vector_type & x, distributed_block_vector & y,
-    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
+    [[maybe_unused]] bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
 
   /**
    * Sets the MPI communicator associated with the distributed pFMM matrix and
