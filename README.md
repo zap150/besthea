@@ -53,9 +53,9 @@ or CMake variables
 cmake -DCMAKE_C_COMPILER=icc -DCMAKE_CXX_COMPILER=icpc ..
 ```
 
-The project includes example executables testing the library. These can be enabled by setting
+The project includes example executables testing the library. These can be disabled by setting
 ```
-cmake -DBUILD_EXAMPLES=ON ..
+cmake -DBUILD_EXAMPLES=OFF ..
 ```
 
 AppleClang does not come with a native support of OpenMP. This can be installed e.g. via MacPorts. As of now, an include hint for `omp.h` is necessary, e.g.
@@ -75,7 +75,7 @@ cmake -DDATA_WIDTH=4 ..
 
 **Usage**
 
-The `install` target installs executable examples to `build/bin` together with example mesh files. After `cd ./bin`, one can run an example
+The `install` target installs the static library to `${CMAKE_INSTALL_PREFIX}/lib/besthea`, include files to `${CMAKE_INSTALL_PREFIX}/include/besthea`, and executable examples to `${CMAKE_INSTALL_PREFIX}/bin/besthea` together with example mesh files. One can run an example
 ```
 ./uniform_tensor_neumann --mesh cube_192.txt --grid grid_cube_xy.txt
 ```

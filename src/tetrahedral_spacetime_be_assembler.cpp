@@ -124,6 +124,8 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
     lo * iperm_test_data = iperm_test.data( );
     lo * iperm_trial_data = iperm_trial.data( );
 
+    // std::vector< bool > hb( 5, false );
+
 #pragma omp for schedule( dynamic )
     for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
       test_mesh->get_nodes( i_test, x1, x2, x3, x4 );
@@ -153,7 +155,24 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
         tetrahedra_to_geometry( x1, x2, x3, x4, y1, y2, y3, y4,
           n_shared_vertices, perm_test, perm_trial, ref_quadrature,
           my_quadrature );
-        // n_shared_vertices = 0;
+
+        /*
+        if ( !hb[ n_shared_vertices ] ) {
+          std::vector< lo > hist;
+          histogram( x1, x2, x3, x4, y1, y2, y3, y4, my_quadrature,
+            ref_quadrature._w[ n_shared_vertices ].size( ), 64, hist );
+          std::cout << "shared: " << n_shared_vertices << std::endl;
+          for ( std::size_t i = 0; i < hist.size( ); ++i ) {
+            std::cout << hist[ i ] << " ";
+          }
+          std::cout << std::endl;
+          hb[ n_shared_vertices ] = true;
+          if ( hb[ 0 ] && hb[ 1 ] && hb[ 2 ] && hb[ 3 ] && hb[ 4 ] ) {
+            exit( 0 );
+          }
+        }
+        */
+
         x1_ref = ref_quadrature._x1_ref[ n_shared_vertices ].data( );
         x2_ref = ref_quadrature._x2_ref[ n_shared_vertices ].data( );
         x3_ref = ref_quadrature._x3_ref[ n_shared_vertices ].data( );
@@ -724,6 +743,52 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
     besthea::linear_algebra::indices< 4 > & out ) const {
   for ( int i = 0; i < 4; ++i ) {
     out[ in[ i ] ] = i;
+  }
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
+  test_space_type,
+  trial_space_type >::histogram( const linear_algebra::coordinates< 4 > & x1,
+  const linear_algebra::coordinates< 4 > & x2,
+  const linear_algebra::coordinates< 4 > & x3,
+  const linear_algebra::coordinates< 4 > & x4,
+  const linear_algebra::coordinates< 4 > & y1,
+  const linear_algebra::coordinates< 4 > & y2,
+  const linear_algebra::coordinates< 4 > & y3,
+  const linear_algebra::coordinates< 4 > & y4, const quadrature_wrapper & quad,
+  lo size, int n_bins, std::vector< lo > & hist ) const {
+  hist.clear( );
+  hist.resize( n_bins, 0 );
+
+  sc max = 0.0;
+  std::array< linear_algebra::coordinates< 4 >, 4 > xx{ x1, x2, x3, x4 };
+  std::array< linear_algebra::coordinates< 4 >, 4 > yy{ y1, y2, y3, y4 };
+  for ( int i = 0; i < 4; ++i ) {
+    for ( int j = 0; j < 4; ++j ) {
+      const auto & x = xx[ i ];
+      const auto & y = yy[ j ];
+      sc dist = ( x[ 0 ] - y[ 0 ] ) * ( x[ 0 ] - y[ 0 ] )
+        + ( x[ 1 ] - y[ 1 ] ) * ( x[ 1 ] - y[ 1 ] )
+        + ( x[ 2 ] - y[ 2 ] ) * ( x[ 2 ] - y[ 2 ] )
+        + ( x[ 3 ] - y[ 3 ] ) * ( x[ 3 ] - y[ 3 ] );
+      if ( dist > max ) {
+        max = dist;
+      }
+    }
+  }
+  max = std::sqrt( max );
+  sc bin_size = max / n_bins;
+
+  for ( lo i = 0; i < size; ++i ) {
+    sc dist
+      = ( quad._x1[ i ] - quad._y1[ i ] ) * ( quad._x1[ i ] - quad._y1[ i ] )
+      + ( quad._x2[ i ] - quad._y2[ i ] ) * ( quad._x2[ i ] - quad._y2[ i ] )
+      + ( quad._x3[ i ] - quad._y3[ i ] ) * ( quad._x3[ i ] - quad._y3[ i ] )
+      + ( quad._t[ i ] - quad._tau[ i ] ) * ( quad._t[ i ] - quad._tau[ i ] );
+    dist = std::sqrt( dist );
+    lo bin = std::max( std::min( int( dist / bin_size ), n_bins ), 0 );
+    ++hist[ bin ];
   }
 }
 

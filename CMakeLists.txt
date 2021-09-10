@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 project(besthea)
 
+include(GNUInstallDirs)
+
 include(cmake/macros.cmake)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake/Modules)
 
@@ -201,11 +203,13 @@ target_compile_definitions(besthea PUBLIC
   MKL_INT=long
   DATA_WIDTH=${DATA_WIDTH})
 
-#install (TARGETS besthea ARCHIVE DESTINATION "${CMAKE_BINARY_DIR}/lib")
-#install(FILES ${besthea_INCLUDES}
-#  DESTINATION "${CMAKE_BINARY_DIR}/include/besthea")
+install(TARGETS ${PROJECT_NAME}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}
+  )
+install(FILES ${besthea_INCLUDES}
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 
-option(BUILD_EXAMPLES "Build examples using the library" OFF)
+option(BUILD_EXAMPLES "Build examples using the library" ON)
 
 if(BUILD_EXAMPLES)
   add_subdirectory(examples)
