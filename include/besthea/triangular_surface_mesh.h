@@ -332,7 +332,7 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
   }
 
   /**
-   * Returns the centroid of the mesh.
+   * Returns the centroid of an element.
    * @param[in] i_elem element index.
    * @param[out] centroid Allocated array containing the element centroid on
    * return.
@@ -344,6 +344,21 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
     centroid[ 0 ] = ( x1[ 0 ] + x2[ 0 ] + x3[ 0 ] ) / 3.0;
     centroid[ 1 ] = ( x1[ 1 ] + x2[ 1 ] + x3[ 1 ] ) / 3.0;
     centroid[ 2 ] = ( x1[ 2 ] + x2[ 2 ] + x3[ 2 ] ) / 3.0;
+  }
+
+  /**
+   * Returns the diameter of a given element.
+   * @param[in] i_elem Index of the element.
+   */
+  sc get_diameter( const lo i_elem ) const {
+    return _diameters[ i_elem ];
+  }
+
+  /**
+   * Returns the value of @ref _max_diameter.
+   */
+  sc get_max_diameter( ) const {
+    return _max_diameter;
   }
 
   /**
@@ -377,9 +392,9 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
 
  protected:
   /**
-   * Precomputes exterior normals and areas of elements.
+   * Precomputes exterior normals, diameters and areas of elements.
    */
-  void init_normals_and_areas( );
+  void init_normals_diameters_and_areas( );
 
   /**
    * Initializes edges.
@@ -435,9 +450,11 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
   lo _n_elements;               //!< number of elements
   std::vector< lo > _elements;  //!< indices into #_nodes
   std::pair< std::vector< lo >, std::vector< lo > >
-    _orientation;              //!< orientation of n := (x2-x1)x(x3-x1) and -n
-  std::vector< sc > _areas;    //!< element areas
-  std::vector< sc > _normals;  //!< exterior normal vectors
+    _orientation;                //!< orientation of n := (x2-x1)x(x3-x1) and -n
+  std::vector< sc > _areas;      //!< element areas
+  std::vector< sc > _normals;    //!< exterior normal vectors
+  std::vector< sc > _diameters;  //!< element diameters
+  sc _max_diameter;  //!< maximal diamter of all the triangles in the mesh
 
   lo _n_edges;                          //!< number of edges
   std::vector< lo > _edges;             //!< indices into #_nodes
