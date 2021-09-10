@@ -57,10 +57,10 @@ void besthea::bem::uniform_spacetime_initial_evaluator< kernel_type,
   space_type >::evaluate( const std::vector< sc > & x,
   const vector_type & density, block_vector_type & result ) const {
   auto & basis = _space->get_basis( );
-  auto mesh = _space->get_mesh( );
+  const auto & vol_mesh = _space->get_mesh( );
 
   lo n_points = x.size( ) / 3;
-  lo n_elements = mesh->get_n_elements( );
+  lo n_elements = vol_mesh.get_n_elements( );
   lo loc_dim = basis.dimension_local( );
 
   result.resize( _n_timesteps );
@@ -153,8 +153,8 @@ void besthea::bem::uniform_spacetime_initial_evaluator< kernel_type,
         t = ( i_t + 0.5 ) * _timestep;
 
         for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
-          mesh->get_nodes( i_elem, y1, y2, y3, y4 );
-          area = mesh->area( i_elem );
+          vol_mesh.get_nodes( i_elem, y1, y2, y3, y4 );
+          area = vol_mesh.area( i_elem );
           basis.local_to_global( i_elem, l2g );
           tetrahedron_to_geometry( y1, y2, y3, y4, my_quadrature );
 

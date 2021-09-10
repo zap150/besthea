@@ -35,19 +35,16 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDE_BESTHEA_DISTRIBUTED_SPACETIME_CLUSTER_TREE_H_
 #define INCLUDE_BESTHEA_DISTRIBUTED_SPACETIME_CLUSTER_TREE_H_
 
-#include "besthea/block_vector.h"
 #include "besthea/full_matrix.h"
 #include "besthea/general_spacetime_cluster.h"
 #include "besthea/scheduling_time_cluster.h"
-#include "besthea/space_cluster_tree.h"
-#include "besthea/spacetime_cluster.h"
-#include "besthea/time_cluster_tree.h"
 #include "besthea/timer.h"
 #include "besthea/vector.h"
 
 #include <map>
 #include <mpi.h>
 #include <omp.h>
+#include <unordered_map>
 #include <vector>
 
 namespace besthea {
@@ -70,14 +67,18 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @param[in] n_min_elems Minimum number of spacetime elements in cluster.
    * @param[in] st_coeff Coefficient to determine the coupling of the spatial
    * and temporal levels.
+   * @param[in] alpha Heat capacity constant. It influences the shape of the
+   * space-time clusters.
    * @param[in] spatial_nearfield_limit Number of clusters in the vicinity of a
    * given clusters to be considered as nearfield
    * @param[in] comm MPI communicator associated with the tree.
+   * @param[in,out] status  Indicates if the tree construction was successfull
+   *                        (status 0) or not (status 1)
    */
   distributed_spacetime_cluster_tree(
     distributed_spacetime_tensor_mesh & spacetime_mesh, lo max_levels,
-    lo n_min_elems, sc st_coeff, slou spatial_nearfield_limit,
-    MPI_Comm * comm );
+    lo n_min_elems, sc st_coeff, sc alpha, slou spatial_nearfield_limit,
+    MPI_Comm * comm, lo & status );
 
   /**
    * Destructor.
@@ -153,6 +154,13 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   }
 
   /**
+   * Returns the associated MPI communicator.
+   */
+  const MPI_Comm * get_MPI_comm( ) const {
+    return _comm;
+  }
+
+  /**
    * Prints levels of the tree.
    */
   void print( ) {
@@ -178,10 +186,12 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * Builts the spacetime cluster tree in a communicative way in the upper part
    * (where clusters can contain elements located in meshes of two or more
    * processes) and in a non-communicative way in the lower part.
-   * @param[in] pseudo_root Cluster at level -1 which acts as pseudo-root for
-   *                        the distributed space-time cluster tree.
+   * @param[in] status  Indicates if the tree has been built correctly
+   *                    (status 0). Status 1 means that for some cluster the
+   *                    number of assigned elements did not match with the
+   *                    predetermined value.
    */
-  void build_tree( general_spacetime_cluster * pseudo_root );
+  void build_tree( lo & status );
 
   /**
    * Expands the distribution tree included in @p _spacetime_mesh by adding
@@ -192,7 +202,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    *       is executed by @ref expand_tree_structure_recursively.
    * @note The nearfields, interaction lists and send lists of the distribution
    *       tree are cleared using the routine
-   *       @ref tree_structure::clear_cluster_lists and filled anew.
+   *       @ref tree_structure::clear_nearfield_send_and_interaction_lists and
+   *       filled anew.
    * @note After execution the distribution tree is possibly not locally
    *       essential anymore. Call the routine
    *       @ref tree_structure::reduce_2_essential on the distribution tree to
@@ -273,6 +284,10 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
 
   /**
    * Computes the bounding box of the underlying mesh.
+   *
+   * First the minimal axis parallel rectangular box in which the mesh is
+   * contained is computed. This box is extended to a cube, by expanding
+   * the shorter sides of the box by increasing the upper bound.
    * @param[in,out] xmin Minimum x coordinate of element's centroids.
    * @param[in,out] xmax Maximum x coordinate of element's centroids.
    * @param[in,out] ymin Minimum y coordinate of element's centroids.
@@ -287,7 +302,6 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * Collectively computes number of elements in subdivisioning (given by
    * numbers of space divisioning and vector of time clusters) of the bounding
    * box.
-   * @param[in] root Root of the tree.
    * @param[in] n_space_div Number of the spatial octasections.
    * @param[in] level_time The level in time determining the subdivision. On
    *                       each new level the clusters are split into halves
@@ -296,15 +310,20 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    *                                    the temporal domain is subdivided (
    *                                    the clusters do not have to span the
    *                                    complete time interval).
+   * @param[in] fine_box_bounds Auxiliary structure which contains the bounds of
+   *                            the spatial boxes at the finest required spatial
+   *                            level for all three spatial dimensions. It is
+   *                            used to determine the bounds of the boxes for
+   *                            each subdivision consistently.
    * @param[inout] elems_in_clusters Vector consisting of numbers of elements in
    * individual subclusters of the bounding box (ordered as pos_t *
    n_space_clusters * n_space_clusters * n_space_clusters
       + pos_x * n_space_clusters * n_space_clusters + pos_y * n_space_clusters
       + pos_z).
    */
-  void get_n_elements_in_subdivisioning( general_spacetime_cluster & root,
-    lo n_space_div, lo level_time,
+  void get_n_elements_in_subdivisioning( lo n_space_div, lo level_time,
     const std::vector< scheduling_time_cluster * > & time_clusters_on_level,
+    const std::vector< std::vector< sc > > & fine_box_bounds,
     std::vector< lo > & elems_in_clusters );
 
   /**
@@ -394,8 +413,17 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   /**
    * Adds elements to the cluster.
    * @param[in] cluster Cluster to be filled with elements.
+   * @param[in] fine_box_bounds Auxiliary structure which contains the bounds of
+   *                            the spatial boxes at the finest required spatial
+   *                            level for all three spatial dimensions. It is
+   *                            used to determine the bounds of the cluster for
+   *                            which elements are filled in consistently.
+   * @param[out]  status  Indicates if the cluster has been filled correctly
+   *                      (status 0). If not the exact amount of elements as
+   *                      expected is assigned to the cluster, status is 1.
    */
-  void fill_elements( general_spacetime_cluster & cluster );
+  void fill_elements( general_spacetime_cluster & cluster,
+    const std::vector< std::vector< sc > > & fine_box_bounds, lo & status );
 
   // void fill_elements2( std::vector< general_spacetime_cluster * > & leaves,
   //  spacetime_tensor_mesh const * current_mesh );

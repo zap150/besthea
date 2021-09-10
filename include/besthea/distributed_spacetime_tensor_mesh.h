@@ -54,6 +54,21 @@ namespace besthea {
   }
 }
 
+namespace besthea {
+  namespace bem {
+    template< class basis_type >
+    class distributed_fast_spacetime_be_space;
+    class basis_tri_p0;
+    class basis_tri_p1;
+  }
+}
+
+namespace besthea {
+  namespace linear_algebra {
+    class distributed_block_vector;
+  }
+}
+
 /**
  * Class serving as a container holding spacetime tensor product meshes
  * distributed among MPI processes.
@@ -261,6 +276,74 @@ class besthea::mesh::distributed_spacetime_tensor_mesh
    */
   std::vector< lo > get_my_timesteps( ) const;
 
+  /**
+   * Returns the global number of dofs in the mesh, depending on the considered
+   * discrete space.
+   * @tparam space_type  @ref besthea::bem::distributed_fast_spacetime_be_space
+   *                     representing either p0 or p1 basis functions. It
+   *                     determines the DOFs.
+   */
+  template< class space_type >
+  lo get_n_dofs( ) const;
+
+  /**
+   * Prints the EnSight Gold case file.
+   * @param[in] directory Directory to which the case file is saved.
+   * @param[in] node_labels Labels for nodal data.
+   * @param[in] element_labels Labels for elemental data.
+   * @param[in] selected_timesteps Contains the global indices of the timesteps
+   *                               for which data is printed. In case no vector
+   *                               is provided all timesteps are printed.
+   * @param[in] root_process  MPI rank of the process that takes care of
+   *                          printing (default = 0).
+   */
+  bool print_ensight_case( const std::string & directory,
+    const std::vector< std::string > * node_labels = nullptr,
+    const std::vector< std::string > * element_labels = nullptr,
+    const std::vector< lo > * selected_timesteps = nullptr,
+    const int root_process = 0 ) const;
+
+  /**
+   * Prints the EnSight Gold geometry file.
+   * @param[in] directory Directory to which the geometry file is saved.
+   * @param[in] root_process  MPI rank of the process that takes care of
+   *                          printing (default = 0).
+   */
+  bool print_ensight_geometry(
+    const std::string & directory, const int root_process = 0 ) const {
+    bool return_value;
+    if ( _my_rank == 0 ) {
+      return_value = _space_mesh->print_ensight_geometry( directory );
+    }
+    MPI_Bcast( &return_value, 1, MPI_CXX_BOOL, 0, *_comm );
+    return return_value;
+  }
+
+  /**
+   * Prints the EnSight Variable files for given element and node data for some
+   * selected timesteps.
+   * @param[in] directory Directory that datafiles are printed to.
+   * @param[in] node_labels Labels for nodal data.
+   * @param[in] node_data Scalar nodal data.
+   * @param[in] element_labels Labels for elemental data.
+   * @param[in] element_data Scalar elemental data.
+   * @param[in] selected_timesteps Contains the global indices of the timesteps
+   *                               for which data is printed. In case no vector
+   *                               is provided all timesteps are printed.
+   * @param[in] root_process  MPI rank of the process that takes care of
+   *                          printing (default = 0).
+   */
+  bool print_ensight_datafiles( const std::string & directory,
+    const std::vector< std::string > * node_labels = nullptr,
+    const std::vector< linear_algebra::distributed_block_vector * > * node_data
+    = nullptr,
+    const std::vector< std::string > * element_labels = nullptr,
+    const std::vector< linear_algebra::distributed_block_vector * > *
+      element_data
+    = nullptr,
+    const std::vector< lo > * selected_timesteps = nullptr,
+    const int root_process = 0 ) const;
+
  protected:
   /**
    * Loads submeshes assigned to the current rank and merges them into one mesh.
@@ -323,5 +406,26 @@ class besthea::mesh::distributed_spacetime_tensor_mesh
                            //!< mesh
   int _my_rank;            //!< MPI rank of the current process
 };
+
+/** specialization of
+ * @ref besthea::mesh::distributed_spacetime_tensor_mesh::get_n_dofs for p0
+ * basis functions */
+template<>
+inline lo besthea::mesh::distributed_spacetime_tensor_mesh::get_n_dofs<
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 > >( ) const {
+  return _n_global_elements;
+}
+
+/** specialization of
+ * @ref besthea::mesh::distributed_spacetime_tensor_mesh::get_n_dofs for p1
+ * basis functions
+ */
+template<>
+inline lo besthea::mesh::distributed_spacetime_tensor_mesh::get_n_dofs<
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p1 > >( ) const {
+  return _n_global_time_elements * _space_mesh->get_n_nodes( );
+}
 
 #endif /* INCLUDE_BESTHEA_DISTRIBUTED_SPACETIME_TENSOR_MESH_H_ */

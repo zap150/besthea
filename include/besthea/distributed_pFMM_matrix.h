@@ -39,7 +39,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
 #include "besthea/block_linear_operator.h"
-#include "besthea/block_vector.h"
 #include "besthea/chebyshev_evaluator.h"
 #include "besthea/distributed_block_vector.h"
 #include "besthea/distributed_fast_spacetime_be_space.h"
@@ -47,7 +46,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/full_matrix.h"
 #include "besthea/general_spacetime_cluster.h"
 #include "besthea/lagrange_interpolant.h"
-#include "besthea/local_vector_routines.h"
 #include "besthea/settings.h"
 #include "besthea/spacetime_heat_adl_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
@@ -208,22 +206,11 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * block matrix!).
    * @param[in] alpha
    * @param[in] beta
+   * @note This routine is just a dummy here. Please use the corresponding
+   * version with distributed block vectors.
    */
   virtual void apply( const block_vector & x, block_vector & y,
     bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
-
-  /*!
-   * @brief y = beta * y + alpha * (this)^trans * x using block vectors for
-   * single, double and adjoint double layer operators.
-   * @param[in] x
-   * @param[in,out] y
-   * @param[in] trans Flag for transpose of individual blocks (not the whole
-   * block matrix!).
-   * @param[in] alpha
-   * @param[in] beta
-   */
-  void apply_sl_dl( const block_vector & x, block_vector & y, bool trans,
-    sc alpha, sc beta ) const;
 
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x using block vectors.
@@ -393,31 +380,15 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   void compute_chebyshev( );
 
   /**
-   * Pseudo-parallel FGMRES based on the implementation in MKL.
-   * @param[in] rhs Right-hand side vector (cannot be const due to MKL).
-   * @param[out] solution Solution vector.
-   * @param[in,out] relative_residual_error Stopping criterion measuring
-   * decrease of |Ax-b|/|b|, actual value on exit.
-   * @param[in,out] n_iterations Maximal number of iterations, actual value on
-   * exit.
-   * @param[in] n_iterations_until_restart Maximal number of iterations before
-   * restart.
-   * @param[in] trans Use transpose of this.
-   * @param[in] root_id Id of the process which executes the sequential steps
-   *                    of the FGMRES implementation in MKL.
-   * @todo implement a true parallel version.
-   */
-  bool mkl_fgmres_solve_parallel( const block_vector & rhs,
-    block_vector & solution, sc & relative_residual_error, lo & n_iterations,
-    lo n_iterations_until_restart = 0, bool trans = false,
-    int root_id = 0 ) const;
-
-  /**
    * Prints information about the underlying distributed spacetime cluster tree
    * and the operations which have to be applied.
    * @param[in] root_process  Process responsible for printing the information.
+   * @param[in] print_tree_information  If true, information is printed for the
+   *                                    distributed spacetime cluster tree
+   *                                    corresponding to the matrix.
    */
-  void print_information( const int root_process );
+  void print_information(
+    const int root_process, const bool print_tree_information = false );
 
   /*!
    * Setter for verbosity during matrix-vector multiplication
@@ -436,64 +407,18 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     _measure_tasks = measure_tasks;
   }
 
+  /*!
+   * Auxiliary method that sorts clusters within the _n_list to improve shared
+   * memory scalability during matrix vector multiplication.
+   */
+  void sort_clusters_in_nearfield( );
+
  private:
   /**
    * Calls all S2M operations associated with a given scheduling time cluster.
    * @param[in] sources Global sources containing the once used for the S2M
    *                    operation.
-   * @param[in] time_cluster  Considered scheduling time cluster.
-   * @param[in] verbose If true, the required time is written to file.
-   * @param[in] verbose_file  If @p verbose is true, this is used as output
-   *                          file.
-   */
-  void call_s2m_operations( const block_vector & sources,
-    mesh::scheduling_time_cluster * time_cluster, bool verbose,
-    const std::string & verbose_file ) const;
-
-  /**
-   * Applies the appropriate S2M operation for the given source cluster and
-   * sources depending on the boundary integral operator.
-   * @param[in] source_vector Global sources containing the once used for the
-   *                          S2M operation.
-   * @param[in] source_cluster  Considered spacetime cluster.
-   */
-  void apply_s2m_operation( const block_vector & source_vector,
-    mesh::general_spacetime_cluster * source_cluster ) const;
-
-  /**
-   * Applies the S2M operation for the given source cluster and sources for
-   * p0 basis functions (for single layer and adjoint double layer operators)
-   * @param[in] source_vector Global sources containing the once used for the
-   *                          S2M operation.
-   * @param[in] source_cluster  Considered spacetime cluster.
-   * @todo Use buffers instead of reallocating sources and aux buffer in every
-   * function call?
-   * @todo Store the quadratures of Chebyshev polynomials in space and Lagrange
-   * polynomials in time again?
-   */
-  void apply_s2m_operation_p0( const block_vector & source_vector,
-    mesh::general_spacetime_cluster * source_cluster ) const;
-
-  /**
-   * Applies the S2M operation for the given source cluster and sources for
-   * p1 basis functions and normal derivatives of spatial polynomials (for
-   * double layer operator and hypersingular operator)
-   * @param[in] source_vector Global sources containing the once used for the
-   *                          S2M operation.
-   * @param[in] source_cluster  Considered spacetime cluster.
-   * @todo Use buffers instead of reallocating sources and aux buffer in every
-   * function call?
-   * @todo Store the quadratures of Chebyshev polynomials in space and Lagrange
-   * polynomials in time again?
-   */
-  void apply_s2m_operations_p1_normal_drv( const block_vector & source_vector,
-    mesh::general_spacetime_cluster * source_cluster ) const;
-
-  /**
-   * Calls all S2M operations associated with a given scheduling time cluster.
-   * @param[in] sources Global sources containing the once used for the S2M
-   *                    operation.
-   * @param[in] time_cluster  Considered scheduling time cluster.
+   * @param[in] t_cluster  Considered scheduling time cluster.
    * @param[in] verbose If true, the required time is written to file.
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
@@ -503,7 +428,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   template< slou run_count >
   void call_s2m_operations( const distributed_block_vector & sources,
-    mesh::scheduling_time_cluster * time_cluster, bool verbose,
+    mesh::scheduling_time_cluster * t_cluster, bool verbose,
     const std::string & verbose_file ) const;
 
   /**
@@ -574,8 +499,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] source_vector Global sources containing the once used for the
    *                          S2M operation.
    * @param[in] source_cluster  Considered spacetime cluster.
-   * @tparam dim  Used to select the component of the normal derivatives of the
-   *              Chebyshev polynomials (0,1 or 2).
+   * @param[in] dimension Used to select the component of the normal derivatives
+   *                      of the Chebyshev polynomials (0,1 or 2).
    * @todo Use buffers instead of reallocating sources and aux buffer in every
    * function call?
    */
@@ -586,12 +511,12 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   /**
    * Calls all M2M operations associated with a given scheduling time cluster.
-   * @param[in] time_cluster  Considered scheduling time cluster.
+   * @param[in] t_cluster  Considered scheduling time cluster.
    * @param[in] verbose If true, the required time is written to file.
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
    */
-  void call_m2m_operations( mesh::scheduling_time_cluster * time_cluster,
+  void call_m2m_operations( mesh::scheduling_time_cluster * t_cluster,
     bool verbose, const std::string & verbose_file ) const;
 
   /**
@@ -657,12 +582,12 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   /**
    * Calls all L2L operations associated with a given scheduling time cluster.
-   * @param[in] time_cluster  Considered scheduling time cluster.
+   * @param[in] t_cluster  Considered scheduling time cluster.
    * @param[in] verbose If true, the required time is written to file.
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
    */
-  void call_l2l_operations( mesh::scheduling_time_cluster * time_cluster,
+  void call_l2l_operations( mesh::scheduling_time_cluster * t_cluster,
     bool verbose, const std::string & verbose_file ) const;
 
   /**
@@ -710,19 +635,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   /**
    * Calls all L2T operations associated with a given scheduling time cluster.
-   * @param[in] time_cluster  Considered scheduling time cluster.
-   * @param[in,out] output_vector Block vector to which the results are added.
-   * @param[in] verbose If true, the required time is written to file.
-   * @param[in] verbose_file  If @p verbose is true, this is used as output
-   *                          file.
-   */
-  void call_l2t_operations( mesh::scheduling_time_cluster * time_cluster,
-    block_vector & output_vector, bool verbose,
-    const std::string & verbose_file ) const;
-
-  /**
-   * Calls all L2T operations associated with a given scheduling time cluster.
-   * @param[in] time_cluster  Considered scheduling time cluster.
+   * @param[in] t_cluster  Considered scheduling time cluster.
    * @param[in,out] output_vector Block vector to which the results are added.
    * @param[in] verbose If true, the required time is written to file.
    * @param[in] verbose_file  If @p verbose is true, this is used as output
@@ -732,56 +645,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                    run in case of the hypersingular operator.
    */
   template< slou run_count >
-  void call_l2t_operations( mesh::scheduling_time_cluster * time_cluster,
+  void call_l2t_operations( mesh::scheduling_time_cluster * t_cluster,
     distributed_block_vector & output_vector, bool verbose,
     const std::string & verbose_file ) const;
-
-  /**
-   * Applies the appropriate L2T operation for the given target cluster
-   * depending on the boundary integral operator and writes the result to the
-   * appropriate part of the output vector.
-   * @param[in] cluster  Considered spacetime cluster.
-   * @param[in,out] output_vector Global result vector to which the result of
-   *                              the operation is added.
-   * @todo Use buffers instead of reallocating targets and aux buffer in every
-   * function call?
-   * @todo Store the quadratures of Chebyshev polynomials in space and Lagrange
-   * polynomials in time again?
-   */
-  void apply_l2t_operation( const mesh::general_spacetime_cluster * cluster,
-    block_vector & output_vector ) const;
-
-  /**
-   * Applies the L2T operation for the given target cluster for p0 basis
-   * functions and writes the result to the appropriate part of the output
-   * vector.
-   * @param[in] cluster  Considered spacetime cluster.
-   * @param[in,out] output_vector Global result vector to which the result of
-   *                              the operation is added.
-   * @todo Use buffers instead of reallocating targets and aux buffer in every
-   * function call?
-   * @todo Store the quadratures of Chebyshev polynomials in space and Lagrange
-   * polynomials in time again?
-   */
-  void apply_l2t_operation_p0( const mesh::general_spacetime_cluster * cluster,
-    block_vector & output_vector ) const;
-
-  /**
-   * Applies the L2T operation for the given target cluster for p1 basis
-   * functions and normal derivatives of spatial polynomials (for adjoint double
-   * layer operator and hypersingular operator) functions and writes the result
-   * to the appropriate part of the output vector.
-   * @param[in] cluster  Considered spacetime cluster.
-   * @param[in,out] output_vector Global result vector to which the result of
-   *                              the operation is added.
-   * @todo Use buffers instead of reallocating targets and aux buffer in every
-   * function call?
-   * @todo Store the quadratures of Chebyshev polynomials in space and Lagrange
-   * polynomials in time again?
-   */
-  void apply_l2t_operation_p1_normal_drv(
-    const mesh::general_spacetime_cluster * cluster,
-    block_vector & output_vector ) const;
 
   /**
    * Applies the appropriate L2T operation for the given target cluster
@@ -852,40 +718,22 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     distributed_block_vector & output_vector ) const;
 
   /**
-   * Applies the L2T operation the given target cluster for p1 basis functions
-   * and a selected component of the normal derivative of the Chebyshev
-   * polynomials, which are used for the expansion (for hypersingular operator),
-   * and writes the result to the appropriate part of the output vector.
+   * Applies the L2T operation for the given target cluster for p1 basis
+   * functions and a selected component of the normal derivative of the
+   * Chebyshev polynomials, which are used for the expansion (for hypersingular
+   * operator), and writes the result to the appropriate part of the output
+   * vector.
    * @param[in] cluster Considered spacetime cluster.
+   * @param[in] dimension Used to select the component of the normal derivatives
+   *                      of the Chebyshev polynomials (0,1 or 2).
    * @param[in,out] output_vector Global result vector to which the result of
    *                              the operation is added.
-   * @tparam dim  Used to select the component of the normal derivatives of the
-   *              Chebyshev polynomials (0,1 or 2).
    * @todo Use buffers instead of reallocating targets and aux buffer in every
    * function call?
    */
   void apply_l2t_operation_p1_normal_hs(
     const mesh::general_spacetime_cluster * cluster, const slou dimension,
     distributed_block_vector & output_vector ) const;
-
-  /**
-   * Executes all nearfield operations associated with a given scheduling time
-   * cluster.
-   * @param[in] cluster Time cluster whose associated nearfield operations
-   *                    are executed.
-   * @param[in] sources Global sources containing the once used for the
-   *                    nearfield operation.
-   * @param[in] trans If true, the transposed nearfield matrices are applied
-   *                  otherwise the standard nearfield matrices.
-   * @param[in,out] output_vector Vector to which the results are added.
-   * @param[in] verbose If true, the required time is written to file.
-   * @param[in] verbose_file  If @p verbose is true, this is used as output
-   *                          file.
-   */
-  void apply_nearfield_operations(
-    const mesh::scheduling_time_cluster * cluster, const block_vector & sources,
-    bool trans, block_vector & output_vector, bool verbose,
-    const std::string & verbose_file ) const;
 
   /**
    * Executes all nearfield operations associated with a given scheduling time
@@ -1076,12 +924,12 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * a spacetime cluster.
    * @param[in] source_cluster  Cluster for whose spatial component the
    *                            quadratures are computed.
+   * @param[in] dim Used to select the component of the normal derivatives of
+   *                the Chebyshev polynomials (0,1 or 2).
    * @param[out] T_normal_along_dim Full matrix where the quadratures are
    *                                stored. The nodes of the cluster vary along
    *                                the rows, the order of the polynomial along
    *                                the columns of the matrix.
-   * @tparam dim  Used to select the component of the normal derivatives of the
-   *              Chebyshev polynomials (0,1 or 2).
    */
   void compute_chebyshev_times_normal_quadrature_p1_along_dimension(
     const mesh::general_spacetime_cluster * source_cluster, const slou dim,
@@ -1105,9 +953,10 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * functions for the temporal part of a spacetime cluster
    * @param[in] source_cluster  Cluster for whose temporal component the
    *                            quadratures are computed.
-   * @param[out] L  Full matrix where the quadratures are stored. The temporal
-   *                elements of the cluster vary along the columns, the order
-   *                of the polynomial along the rows of the matrix.
+   * @param[out] L_drv  Full matrix where the quadratures are stored. The
+   *                    temporal elements of the cluster vary along the columns,
+   *                    the order of the polynomial along the rows of the
+   *                    matrix.
    */
   void compute_lagrange_drv_quadrature(
     const mesh::general_spacetime_cluster * source_cluster,
@@ -1237,19 +1086,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   /**
    * Task in the M-list
    * @param[in] x Input vector
-   * @param[in] time_cluster  Considered scheduling time cluster.
-   * @param[in] verbose If true, the required time is written to file.
-   * @param[in] verbose_file  If @p verbose is true, this is used as output
-   *                          file.
-   */
-  void m_list_task( const block_vector & x,
-    mesh::scheduling_time_cluster * time_cluster, bool verbose,
-    const std::string & verbose_file ) const;
-
-  /**
-   * Task in the M-list
-   * @param[in] x Input vector
-   * @param[in] time_cluster  Considered scheduling time cluster.
+   * @param[in] t_cluster  Considered scheduling time cluster.
    * @param[in] verbose If true, the required time is written to file.
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
@@ -1259,25 +1096,13 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   template< slou run_count >
   void m_list_task( const distributed_block_vector & x,
-    mesh::scheduling_time_cluster * time_cluster, bool verbose,
+    mesh::scheduling_time_cluster * t_cluster, bool verbose,
     const std::string & verbose_file ) const;
 
   /**
    * Task in the L-list
    * @param[in] y_pFMM Output vector
-   * @param[in] time_cluster  Considered scheduling time cluster.
-   * @param[in] verbose If true, the required time is written to file.
-   * @param[in] verbose_file  If @p verbose is true, this is used as output
-   *                          file.
-   */
-  void l_list_task( block_vector & y_pFMM,
-    mesh::scheduling_time_cluster * time_cluster, bool verbose,
-    const std::string & verbose_file ) const;
-
-  /**
-   * Task in the L-list
-   * @param[in] y_pFMM Output vector
-   * @param[in] time_cluster  Considered scheduling time cluster.
+   * @param[in] t_cluster  Considered scheduling time cluster.
    * @param[in] verbose If true, the required time is written to file.
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
@@ -1287,25 +1112,13 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   template< slou run_count >
   void l_list_task( distributed_block_vector & y_pFMM,
-    mesh::scheduling_time_cluster * time_cluster, bool verbose,
+    mesh::scheduling_time_cluster * t_cluster, bool verbose,
     const std::string & verbose_file ) const;
 
   /**
    * Task in the M2L-list
    * @param[in] y_pFMM Output vector
-   * @param[in] time_cluster  Considered scheduling time cluster.
-   * @param[in] verbose If true, the required time is written to file.
-   * @param[in] verbose_file  If @p verbose is true, this is used as output
-   *                          file.
-   */
-  void m2l_list_task( block_vector & y_pFMM,
-    mesh::scheduling_time_cluster * time_cluster, bool verbose,
-    const std::string & verbose_file ) const;
-
-  /**
-   * Task in the M2L-list
-   * @param[in] y_pFMM Output vector
-   * @param[in] time_cluster  Considered scheduling time cluster.
+   * @param[in] t_cluster  Considered scheduling time cluster.
    * @param[in] verbose If true, the required time is written to file.
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
@@ -1315,7 +1128,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   template< slou run_count >
   void m2l_list_task( distributed_block_vector & y_pFMM,
-    mesh::scheduling_time_cluster * time_cluster, bool verbose,
+    mesh::scheduling_time_cluster * t_cluster, bool verbose,
     const std::string & verbose_file ) const;
 
   /**
@@ -1491,13 +1304,29 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     _n_subtask_times;  //!< Same as @ref _m_subtask_times for n-list
                        //!< subtasks.
 
-  mutable std::vector< std::vector< time_type::rep > > _mpi_send_m2l;
-  mutable std::vector< std::vector< time_type::rep > > _mpi_send_m_parent;
-  mutable std::vector< std::vector< time_type::rep > > _mpi_send_l_children;
+  mutable std::vector< std::vector< time_type::rep > >
+    _mpi_send_m2l;  //!< Contains a vector for each thread. The entries in these
+                    //!< vectors are the times when the sending of a group of
+                    //!< moments to another process for m2l-list operations has
+                    //!< started.
+  mutable std::vector< std::vector< time_type::rep > >
+    _mpi_send_m_parent;  //!< Same as @ref _mpi_send_m2l for sending moments
+                         //!< for m-list operations.
+  mutable std::vector< std::vector< time_type::rep > >
+    _mpi_send_l_children;  //!< Same as @ref _mpi_send_m2l for sending local
+                           //!< contributions for l-list operations.
 
-  mutable std::vector< std::vector< time_type::rep > > _mpi_recv_m2l;
-  mutable std::vector< std::vector< time_type::rep > > _mpi_recv_m_parent;
-  mutable std::vector< std::vector< time_type::rep > > _mpi_recv_l_children;
+  mutable std::vector< std::vector< time_type::rep > >
+    _mpi_recv_m2l;  //!< Contains a vector for each thread. The entries in these
+                    //!< vectors are the times when the thread has detected the
+                    //!< reception of a group of moments needed for m2l-list
+                    //!< operations.
+  mutable std::vector< std::vector< time_type::rep > >
+    _mpi_recv_m_parent;  //!< Same as @ref _mpi_recv_m2l for receiving moments
+                         //!< needed for m-list operations.
+  mutable std::vector< std::vector< time_type::rep > >
+    _mpi_recv_l_children;  //!< Same as @ref _mpi_recv_m2l for receiving local
+                           //!< contributions needed for l-list operations.
 
   /*!
    * Saves task duration measurement per thread in files (1 per MPI rank).

@@ -88,7 +88,9 @@ class besthea::bem::fe_space {
   /**
    * Constructor
    */
-  fe_space( mesh_type & mesh );
+  fe_space( const mesh_type & mesh );
+
+  fe_space( const mesh_type && ) = delete;
 
   /**
    * Destructor.
@@ -110,16 +112,9 @@ class besthea::bem::fe_space {
   }
 
   /**
-   * Returns pointer to the mesh.
+   * Returns reference of the mesh.
    */
-  mesh_type * get_mesh( ) {
-    return _mesh;
-  }
-
-  /**
-   * Returns pointer to the mesh.
-   */
-  const mesh_type * get_mesh( ) const {
+  const mesh_type & get_mesh( ) const {
     return _mesh;
   }
 
@@ -186,8 +181,8 @@ class besthea::bem::fe_space {
     const linear_algebra::coordinates< 3 > & x4,
     quadrature_wrapper & my_quadrature ) const;
 
-  basis_type _basis;  //!< basis function
-  mesh_type * _mesh;  //!< tetrahedral mesh
+  basis_type _basis;        //!< basis function
+  const mesh_type & _mesh;  //!< tetrahedral mesh
 };
 
 #endif /* INCLUDE_BESTHEA_FE_SPACE_H_ */

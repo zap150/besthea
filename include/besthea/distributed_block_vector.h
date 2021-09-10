@@ -56,7 +56,6 @@ namespace besthea {
 
 namespace besthea {
   namespace mesh {
-    class spacetime_cluster;
     class general_spacetime_cluster;
   }
 }
@@ -64,7 +63,7 @@ namespace besthea {
 namespace besthea {
   namespace bem {
     template< class basis_type >
-    class fast_spacetime_be_space;
+    class distributed_fast_spacetime_be_space;
   }
 }
 
@@ -421,28 +420,9 @@ class besthea::linear_algebra::distributed_block_vector {
    * in a spacetime cluster.
    * @param[in] cluster  Cluster determining the local dofs.
    * @param[in,out] local_vector Local part of block vector.
-   * @tparam space_type  @ref besthea::bem::fast_spacetime_be_space representing
-   *                     either p0 or p1 basis functions. It determines the
-   *                     DOFs.
-   * @warning The local vector must have the correct size.
-   * @note The local vector is not a block vector anymore, but a contiguous
-   *       vector.
-   * @warning The executing process has to own the blocks corresponding to the
-   * dofs in the spacetime cluster, otherwise the local vector is not filled
-   * correctly.
-   */
-  template< class space_type >
-  void get_local_part( besthea::mesh::spacetime_cluster * cluster,
-    besthea::linear_algebra::vector & local_vector ) const;
-
-  /*!
-   * Gets the local part of a distributed block vector corresponding to the dofs
-   * in a spacetime cluster.
-   * @param[in] cluster  Cluster determining the local dofs.
-   * @param[in,out] local_vector Local part of block vector.
-   * @tparam space_type  @ref besthea::bem::fast_spacetime_be_space representing
-   *                     either p0 or p1 basis functions. It determines the
-   *                     DOFs.
+   * @tparam space_type  @ref besthea::bem::distributed_fast_spacetime_be_space
+   *                     representing either p0 or p1 basis functions. It
+   *                     determines the DOFs.
    * @warning The local vector must have the correct size.
    * @note The local vector is not a block vector anymore, but a contiguous
    *       vector.
@@ -459,9 +439,9 @@ class besthea::linear_algebra::distributed_block_vector {
    * in a spacetime cluster and stores it in full matrix format.
    * @param[in] cluster  Cluster determining the local dofs.
    * @param[in,out] local_part  Local part of block vector.
-   * @tparam space_type @ref besthea::bem::fast_spacetime_be_space representing
-   *                     either p0 or p1 basis functions. It determines the
-   *                     DOFs.
+   * @tparam space_type @ref besthea::bem::distributed_fast_spacetime_be_space
+   *                    representing either p0 or p1 basis functions. It
+   *                    determines the DOFs.
    * @note Rows of the output matrix correspond to time, columns to space.
    */
   template< class space_type >
@@ -474,28 +454,9 @@ class besthea::linear_algebra::distributed_block_vector {
    * @param[in] cluster  Cluster determining the positions in the distributed
    *                     blockvector to which the local vector is added.
    * @param[in] local_vector Local part of block vector to be added.
-   * @tparam space_type  @ref besthea::bem::fast_spacetime_be_space representing
-   *                     either p0 or p1 basis functions. It determines the
-   *                     DOFs.
-   * @note The entries in the local vector are ordered according to the ordering
-   *       of the time elements and spatial dofs in the spacetime cluster (time
-   *       step after time step).
-   * @warning The executing process has to own the blocks corresponding to the
-   * dofs in the spacetime cluster, otherwise nothing is added.
-   */
-  template< class space_type >
-  void add_local_part( besthea::mesh::spacetime_cluster * cluster,
-    const besthea::linear_algebra::vector & local_vector );
-
-  /*!
-   * Adds a local vector to the appropriate positions of a distributed block
-   * vector. The positions are determined by the dofs in a spacetime cluster.
-   * @param[in] cluster  Cluster determining the positions in the distributed
-   *                     blockvector to which the local vector is added.
-   * @param[in] local_vector Local part of block vector to be added.
-   * @tparam space_type  @ref besthea::bem::fast_spacetime_be_space representing
-   *                     either p0 or p1 basis functions. It determines the
-   *                     DOFs.
+   * @tparam space_type  @ref besthea::bem::distributed_fast_spacetime_be_space
+   *                     representing either p0 or p1 basis functions. It
+   *                     determines the DOFs.
    * @note The entries in the local vector are ordered according to the ordering
    *       of the time elements and spatial dofs in the spacetime cluster (time
    *       step after time step).
@@ -515,9 +476,9 @@ class besthea::linear_algebra::distributed_block_vector {
    * @param[in] local_part  Local part of block vector to be added. It is stored
                             in matrix format, where rows correspond to time and
                             columns to space.
-   * @tparam space_type  @ref besthea::bem::fast_spacetime_be_space representing
-   *                     either p0 or p1 basis functions. It determines the
-   *                     DOFs.
+   * @tparam space_type  @ref besthea::bem::distributed_fast_spacetime_be_space
+   *                     representing either p0 or p1 basis functions. It
+   *                     determines the DOFs.
    */
   template< class space_type >
   void add_local_part( const besthea::mesh::general_spacetime_cluster * cluster,
@@ -555,6 +516,22 @@ class besthea::linear_algebra::distributed_block_vector {
    */
   bool am_i_primary_owner( lo block_idx ) const {
     return ( get_primary_owner( block_idx ) == _rank );
+  }
+
+  /*!
+   * Returns the rank of the primary owner of a block. The primary owner is the
+   * one with the lowest rank.
+   * @param[in] block_idx Block index.
+   * @returns The rank of the primary owner of the block.
+   */
+  int get_primary_owner( lo block_idx ) const {
+    if ( _owners[ block_idx ].size( ) == 1 ) {
+      return _owners[ block_idx ][ 0 ];
+    } else {
+      return _owners[ block_idx ][ 0 ] < _owners[ block_idx ][ 1 ]
+        ? _owners[ block_idx ][ 0 ]
+        : _owners[ block_idx ][ 1 ];
+    }
   }
 
   /*!
@@ -597,22 +574,6 @@ class besthea::linear_algebra::distributed_block_vector {
    * @note Each process updates its copy of @p _owners.
    */
   void communicate_owners( std::vector< lo > & my_blocks );
-
-  /*!
-   * Returns the rank of the primary owner of a block. The primary owner is the
-   * one with the lowest rank.
-   * @param[in] block_idx Block index.
-   * @returns The rank of the primary owner of the block.
-   */
-  int get_primary_owner( lo block_idx ) const {
-    if ( _owners[ block_idx ].size( ) == 1 ) {
-      return _owners[ block_idx ][ 0 ];
-    } else {
-      return _owners[ block_idx ][ 0 ] < _owners[ block_idx ][ 1 ]
-        ? _owners[ block_idx ][ 0 ]
-        : _owners[ block_idx ][ 1 ];
-    }
-  }
 
   lo _n_blocks;                      //!< number of blocks.
   lo _size;                          //!< size of each block.

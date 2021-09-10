@@ -46,7 +46,8 @@ namespace besthea {
   }
 }
 
-// forward declaration of fast_spacetime_be_space and basis functions
+// forward declaration of distributed_fast_spacetime_be_space and basis
+// functions
 namespace besthea {
   namespace bem {
     template< class basis_type >
@@ -148,8 +149,8 @@ class besthea::mesh::general_spacetime_cluster {
   /**
    * Returns the distributed spacetime mesh associated with the cluster.
    */
-  const distributed_spacetime_tensor_mesh * get_mesh( ) const {
-    return &_mesh;
+  const distributed_spacetime_tensor_mesh & get_mesh( ) const {
+    return _mesh;
   }
 
   /**
@@ -975,7 +976,8 @@ class besthea::mesh::general_spacetime_cluster {
                              //!< scheduling_time_cluster
 };
 
-/** specialization for p0 basis functions */
+/** specialization of @ref besthea::mesh::general_spacetime_cluster::get_n_dofs
+ * for p0 basis functions */
 template<>
 inline lo besthea::mesh::general_spacetime_cluster::get_n_dofs< besthea::bem::
     distributed_fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >( )
@@ -983,7 +985,8 @@ inline lo besthea::mesh::general_spacetime_cluster::get_n_dofs< besthea::bem::
   return _n_elements;
 }
 
-/** specialization for p1 basis functions
+/** specialization of @ref besthea::mesh::general_spacetime_cluster::get_n_dofs
+ * for p1 basis functions
  */
 template<>
 inline lo besthea::mesh::general_spacetime_cluster::get_n_dofs< besthea::bem::
@@ -992,7 +995,9 @@ inline lo besthea::mesh::general_spacetime_cluster::get_n_dofs< besthea::bem::
   return _n_time_elements * _n_space_nodes;
 }
 
-/** specialization for p0 basis functions */
+/** specialization of
+ * @ref besthea::mesh::general_spacetime_cluster::get_n_space_dofs for p0 basis
+ * functions */
 template<>
 inline lo besthea::mesh::general_spacetime_cluster::get_n_space_dofs< besthea::
     bem::distributed_fast_spacetime_be_space< besthea::bem::basis_tri_p0 > >( )
@@ -1000,7 +1005,9 @@ inline lo besthea::mesh::general_spacetime_cluster::get_n_space_dofs< besthea::
   return _n_space_elements;
 }
 
-/** specialization for p1 basis functions */
+/** specialization of
+ * @ref besthea::mesh::general_spacetime_cluster::get_n_space_dofs for p1 basis
+ * functions */
 template<>
 inline lo besthea::mesh::general_spacetime_cluster::get_n_space_dofs< besthea::
     bem::distributed_fast_spacetime_be_space< besthea::bem::basis_tri_p1 > >( )
@@ -1008,7 +1015,9 @@ inline lo besthea::mesh::general_spacetime_cluster::get_n_space_dofs< besthea::
   return _n_space_nodes;
 }
 
-/** specialization for p0 basis functions */
+/** specialization of
+ * @ref besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs
+ * for p0 basis functions */
 template<>
 inline void
 besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs<
@@ -1019,7 +1028,9 @@ besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs<
   indices[ 0 ] = i_loc_elem;
 }
 
-/** specialization for p1 basis functions */
+/** specialization of
+ * @ref besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs
+ * for p1 basis functions */
 template<>
 inline void
 besthea::mesh::general_spacetime_cluster::local_elem_to_local_space_dofs<

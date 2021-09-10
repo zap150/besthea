@@ -30,7 +30,7 @@ git submodule update --init --recursive
 
 **Dependencies**
 
-Except for the Boost, Eigen, and Lyra submodules, BESTHEA requires the installation of MPI and Intel MKL. To configure the project make sure that the `MKLROOT` and `LIBRARY_PATH` by calling the scripts `mklvars.sh` and `compilervars.sh` provided by the MKL installation.
+Beside the Boost, Eigen, and Lyra submodules, BESTHEA requires the installation of MPI and Intel MKL. To configure the project make sure that the `MKLROOT` and `LIBRARY_PATH` variables are set by calling the scripts `mklvars.sh` and `compilervars.sh` provided by the MKL installation (in the case of Intel OneAPI, use the script `setvars.sh`). 
 
 OpenMP is a dependency usually accompanying a compiler. For a note on AppleClang see the next section.
 
@@ -67,7 +67,7 @@ The BESTHEA library uses OpenMP SIMD. To fully leverage its potential we recomme
 ```
 CXXFLAGS="-xcore-avx512 -qopt-zmm-usage=high" cmake ..
 ```
-Vectorisation with GNU and OpenMP does not work optimally from our experience, however, one can try to use `CXXFLAGS="-march=skylake-avx512"`, `CXXFLAGS="-mavx512*"`, and similar.
+Vectorisation with GNU or Clang does not work optimally from our experience, however, one can try to use `CXXFLAGS="-march=skylake-avx512"`, `CXXFLAGS="-mavx512*"`, and similar.
 To specify the vector length processed in OpenMS SIMD loops, i.e. the `simdlen` clause, we provide the variable `DATA_WIDTH` implicitly set to 8. This can be modified by e.g.
 ```
 cmake -DDATA_WIDTH=4 ..
@@ -84,6 +84,16 @@ or
 ./uniform_tensor_neumann --help
 ```
 to see all command line options.
+
+## Related publications and experiment reproducibility
+
+Please cite this research as:
+
+* Jan Zapletal, Raphael Watschinger, Günther Of, Michal Merta, *Semi-analytic integration for a parallel space-time boundary element method modeling the heat equation*, 2021, [arXiv:2102.09811](https://arxiv.org/abs/2102.09811).
+
+* Raphael Watschinger, Michal Merta, Günther Of, Jan Zapletal, *A parallel fast multipole method for a space-time boundary element method for the heat equation*, 2021, [arXiv:2106.15911](https://arxiv.org/abs/2106.15911).\
+See this [guide](./examples/distributed_tensor_dirichlet/experiments_parallel_fmm.md) to **reproduce** experiments from the paper.
+
 
 ## Contact
 
