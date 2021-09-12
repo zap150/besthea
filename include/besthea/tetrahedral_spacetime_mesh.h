@@ -68,7 +68,9 @@ class besthea::mesh::tetrahedral_spacetime_mesh : public besthea::mesh::mesh {
 
   /**
    * Constructing mesh from provided data.
-   * @param[in] stmesh Path to the file.
+   * @param[in] nodes Coordinates of the nodes forming the mesh.
+   * @param[in] elements  Indices of the nodes of all elements in the mesh.
+   * @param[in] normals Spatial normal vectors of all elements in the mesh.
    */
   tetrahedral_spacetime_mesh( const std::vector< sc > & nodes,
     const std::vector< lo > & elements, const std::vector< sc > & normals );
@@ -89,7 +91,7 @@ class besthea::mesh::tetrahedral_spacetime_mesh : public besthea::mesh::mesh {
    */
   void print_info( ) const;
 
-  /**
+  /*
    * Loads mesh from a file.
    * @param[in] file File name.
    */
@@ -99,6 +101,7 @@ class besthea::mesh::tetrahedral_spacetime_mesh : public besthea::mesh::mesh {
 
   /**
    * Returns area (volume) of a single element
+   * @param[in] i_elem  Index of the element.
    */
   sc area( lo i_elem ) const {
     return _areas[ i_elem ];

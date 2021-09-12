@@ -59,12 +59,27 @@ namespace besthea {
 template< class kernel_type, class test_space_type, class trial_space_type >
 class besthea::bem::tetrahedral_spacetime_be_assembler {
  private:
+  /**
+   * Structure representing a tetrahedron
+   *
+   * Used to construct quadrature nodes for singular integrals, where pairs of
+   * tetrahedra are refined recursively.
+   */
   struct element {
-    std::array< besthea::linear_algebra::coordinates< 3 >, 4 > _nodes;
-    static constexpr double _eps = 1e-8;
+    std::array< besthea::linear_algebra::coordinates< 3 >, 4 >
+      _nodes;  //!< Array of 4D nodes of the element.
+    static constexpr double _eps
+      = 1e-8;  //!< Precision used to determine whether two scalars coincide.
 
     element( ) : _nodes( ){ };
 
+    /**
+     * Constructor
+     * @param[in] x1  Coordinates of the first node .
+     * @param[in] x2  Coordinates of the second node.
+     * @param[in] x3  Coordinates of the third node.
+     * @param[in] x4  Coordinates of the fourth node.
+     */
     element( const besthea::linear_algebra::coordinates< 3 > & x1,
       const besthea::linear_algebra::coordinates< 3 > & x2,
       const besthea::linear_algebra::coordinates< 3 > & x3,
@@ -72,6 +87,14 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
       : _nodes{ x1, x2, x3, x4 } {
     }
 
+    /**
+     * Determines whether the current element and a second one are admissible.
+     *
+     * Elements are said to be admissible, if they do not share a vertex.
+     * @return  Number of shared vertices.
+     * @warning The routine only checks whether there are shared vertices. The
+     * two elements might still be overlapping in general.
+     */
     int admissible( const element & that ) {
       int n_nodes = 0;
       for ( int i = 0; i < 4; ++i ) {
@@ -90,6 +113,10 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
       return n_nodes;
     }
 
+    /**
+     * Uniformly refines an element into 8 tetrahedra.
+     * @return Array containing all 8 children.
+     */
     std::array< element, 8 > refine( ) {
       // new nodes created in the center of edges of the current tetrahedron
       besthea::linear_algebra::coordinates< 3 > x1 = _nodes[ 0 ];
@@ -127,6 +154,9 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
       return { el1, el2, el3, el4, el5, el6, el7, el8 };
     }
 
+    /**
+     * Returns the centroid of an element.
+     */
     besthea::linear_algebra::coordinates< 3 > centroid( ) {
       besthea::linear_algebra::coordinates< 3 > x1 = _nodes[ 0 ];
       besthea::linear_algebra::coordinates< 3 > x2 = _nodes[ 1 ];
@@ -140,6 +170,9 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
       return c;
     }
 
+    /**
+     * Returns the radius of an element.
+     */
     sc radius( ) {
       besthea::linear_algebra::coordinates< 3 > c = centroid( );
       besthea::linear_algebra::coordinates< 3 > diff;
@@ -155,6 +188,9 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
       return max_d;
     }
 
+    /**
+     * Returns the area of an element.
+     */
     sc area( ) {
       linear_algebra::coordinates< 3 > x21;
       linear_algebra::coordinates< 3 > x31;
@@ -184,10 +220,11 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
       return ( std::abs( dot ) / 6.0 );
     }
 
-    using pair = std::pair< element, element >;
+    using pair = std::pair< element, element >;  //!< Pair of elements.
   };
 
-  typedef std::tuple< element, element, int > element_pair;
+  typedef std::tuple< element, element, int >
+    element_pair;  //!< Auxiliary structure of pairs of elements.
 
   /**
    * Quadrature nodes in the reference element.
@@ -280,10 +317,10 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
    * @param[in] trial_space Trial boundary element space.
    * @param[in] order_regular Tetrahedra quadrature order for regular
    * quadrature.
-   * @param[in] order_singular Tetrahedra quadrature order for singular 
+   * @param[in] order_singular Tetrahedra quadrature order for singular
    * quadrature.
-   * @param[in] singular_refinements Bound for the number of recursive 
-   * refinements of pairs of tetrahedra used for the approximation of 
+   * @param[in] singular_refinements Bound for the number of recursive
+   * refinements of pairs of tetrahedra used for the approximation of
    * singular integrals.
    */
   tetrahedral_spacetime_be_assembler( kernel_type & kernel,
@@ -324,6 +361,7 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
    * @param[in] y2 Coordinates of the second node of the trial element.
    * @param[in] y3 Coordinates of the third node of the trial element.
    * @param[in] y4 Coordinates of the fourth node of the trial element.
+   * @param[in] quad Wrapper holding quadrature data.
    * @param[in] size Number of quadrature points.
    * @param[in] n_bins Number of bins.
    * @param[out] hist Histogram of distances.
@@ -372,7 +410,7 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
     quadrature_wrapper_ref & ref_quadrature ) const;
 
   /**
-   * Initializes quadrature structures for an integration domain consisting 
+   * Initializes quadrature structures for an integration domain consisting
    * of two tetrahedra sharing an edge.
    * @param[out] ref_quadrature Wrapper holding quadrature data on reference
    * elements.
@@ -394,9 +432,11 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
    * non-disjoint elements.
    * @param[in] el Tuple consisting of pair of subelements and refinement
    * level.
+   * @param[in,out] ready_elems Pairs of refined elements which are admissible
+   * are added to this list.
    */
   void refine_reference_recursively(
-    element_pair el, std::list< element_pair > & _ready_elems ) const;
+    element_pair el, std::list< element_pair > & ready_elems ) const;
 
   /**
    * Determines the configuration of two tetrahedral elements.
@@ -486,10 +526,10 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
   int _order_regular;  //!< Tetrahedron quadrature order for the regular
                        //!< integrals.
 
-  int _order_singular;  //! Quadrature order for the singular elements treated
-                        //! by subdivision.
+  int _order_singular;  //!< Quadrature order for the singular elements treated
+                        //!< by subdivision.
 
-  mutable std::vector< lo > _admissibles;  // just for debugging
+  mutable std::vector< lo > _admissibles;  //!< just for debugging
 };
 
 #endif /* INCLUDE_BESTHEA_TETRAHEDRAL_SPACETIME_BE_ASSEMBLER_H_ */

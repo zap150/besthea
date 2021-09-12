@@ -73,7 +73,8 @@ class besthea::bem::distributed_spacetime_be_identity
 
   /**
    * Collects the sizes of the timesteps of the local temporal mesh associated
-   * with the test (and trial) space and stores them in @ref _timesteps.
+   * with the test (and trial) space and stores them in
+   * @ref spacetime_be_identity::_timesteps.
    */
   void assemble_timesteps( ) override;
 
