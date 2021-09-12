@@ -280,6 +280,11 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
    * @param[in] trial_space Trial boundary element space.
    * @param[in] order_regular Tetrahedra quadrature order for regular
    * quadrature.
+   * @param[in] order_singular Tetrahedra quadrature order for singular 
+   * quadrature.
+   * @param[in] singular_refinements Bound for the number of recursive 
+   * refinements of pairs of tetrahedra used for the approximation of 
+   * singular integrals.
    */
   tetrahedral_spacetime_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
@@ -306,12 +311,6 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
    * @param[in] ref_quadrature Quadrature data on reference element.
    * @param[out] my_quadrature Wrapper holding quadrature data.
    */
-
-  /**
-   * Inverts permutation.
-   * @param[in] ref_quadrature Quadrature data on reference element.
-   * @param[out] my_quadrature Wrapper holding quadrature data.
-   */
   void init_quadrature( const quadrature_wrapper_ref & ref_quadrature,
     quadrature_wrapper & my_quadrature ) const;
 
@@ -324,7 +323,6 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
    * @param[in] y1 Coordinates of the first node of the trial element.
    * @param[in] y2 Coordinates of the second node of the trial element.
    * @param[in] y3 Coordinates of the third node of the trial element.
-   * @param[in] y4 Coordinates of the fourth node of the trial element.
    * @param[in] y4 Coordinates of the fourth node of the trial element.
    * @param[in] size Number of quadrature points.
    * @param[in] n_bins Number of bins.
@@ -356,7 +354,8 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
   void init_quadrature_ref( quadrature_wrapper_ref & ref_quadrature ) const;
 
   /**
-   * Initializes quadrature structures.
+   * Initializes quadrature structures for an integration domain consisting
+   * of two identical tetrahedra.
    * @param[out] ref_quadrature Wrapper holding quadrature data on reference
    * elements.
    */
@@ -364,7 +363,8 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
     quadrature_wrapper_ref & ref_quadrature ) const;
 
   /**
-   * Initializes quadrature structures.
+   * Initializes quadrature structures for an integration domain consisting
+   * of two tetrahedra sharing a face.
    * @param[out] ref_quadrature Wrapper holding quadrature data on reference
    * elements.
    */
@@ -372,7 +372,8 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
     quadrature_wrapper_ref & ref_quadrature ) const;
 
   /**
-   * Initializes quadrature structures.
+   * Initializes quadrature structures for an integration domain consisting 
+   * of two tetrahedra sharing an edge.
    * @param[out] ref_quadrature Wrapper holding quadrature data on reference
    * elements.
    */
@@ -380,7 +381,8 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
     quadrature_wrapper_ref & ref_quadrature ) const;
 
   /**
-   * Initializes quadrature structures.
+   * Initializes quadrature structures for an integration domain consisting
+   * of two tetrahedra sharing a node.
    * @param[out] ref_quadrature Wrapper holding quadrature data on reference
    * elements.
    */
@@ -442,7 +444,9 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
    * Calculates quadrature points in the reference tetrahedron based on its
    * recursive refinement.
    *
-   * @param ref_quadrature Structure holding the quadrature nodes.
+   * @param[in,out] ref_quadrature Structure holding the quadrature nodes.
+   * @param[in] n_shared_vertices Indicates the configuration of the two
+   * tetrahedra for which quadrature points are created.
    */
   void create_quadrature_points(
     quadrature_wrapper_ref & ref_quadrature, int n_shared_vertices ) const;
