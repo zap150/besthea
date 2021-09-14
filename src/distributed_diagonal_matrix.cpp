@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2020, VSB - Technical University of Ostrava and Graz University of
+Copyright (c) 2021, VSB - Technical University of Ostrava and Graz University of
 Technology
 All rights reserved.
 
@@ -12,8 +12,8 @@ are permitted provided that the following conditions are met:
   other materials provided with the distribution.
 * Neither the names of VSB - Technical University of  Ostrava and Graz
   University of Technology nor the names of its contributors may be used to
-  endorse or promote products derived from this software without specific prior
-  written permission.
+  endorse or promote scaled_products derived from this software without specific
+prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -28,30 +28,35 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file linear_algebra.h
- * @brief
- */
-
-#ifndef INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_
-#define INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_
-
-#include "besthea/block_lower_triangular_toeplitz_matrix.h"
-#include "besthea/block_mkl_cg_inverse.h"
-#include "besthea/block_mkl_fgmres_inverse.h"
-#include "besthea/block_row_matrix.h"
-#include "besthea/block_vector.h"
-#include "besthea/compound_block_linear_operator.h"
-#include "besthea/compound_linear_operator.h"
-#include "besthea/coordinates.h"
-#include "besthea/distributed_block_vector.h"
 #include "besthea/distributed_diagonal_matrix.h"
-#include "besthea/distributed_initial_pFMM_matrix.h"
-#include "besthea/distributed_pFMM_matrix.h"
-#include "besthea/full_matrix.h"
-#include "besthea/indices.h"
-#include "besthea/mkl_cg_inverse.h"
-#include "besthea/mkl_fgmres_inverse.h"
-#include "besthea/sparse_matrix.h"
-#include "besthea/vector.h"
 
-#endif /* INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_ */
+#include "besthea/distributed_block_vector.h"
+
+void besthea::linear_algebra::distributed_diagonal_matrix::apply(
+  const block_vector & /*x*/, block_vector & /*y*/, bool /*trans*/,
+  sc /*alpha*/, sc /*beta*/ ) const {
+  // generic method not implemented
+  std::cout << "apply: NOT IMPLEMENTED for standard block vectors. Please use "
+               "distributed block vectors!"
+            << std::endl;
+}
+
+void besthea::linear_algebra::distributed_diagonal_matrix::apply(
+  const distributed_block_vector & x, distributed_block_vector & y,
+  bool /*trans*/, sc alpha, sc beta ) const {
+  lo n_blocks = _diagonal.get_n_blocks( );
+  std::vector< lo > my_blocks = _diagonal.get_my_blocks( );
+  lo block_size = _diagonal.get_size_of_block( );
+  distributed_block_vector scaled_product(
+    my_blocks, n_blocks, block_size, false, _diagonal.get_comm( ) );
+  for ( lou i = 0; i < my_blocks.size( ); ++i ) {
+    for ( lo j = 0; j < block_size; ++j ) {
+      scaled_product.set( my_blocks[ i ], j,
+        alpha * _diagonal.get( my_blocks[ i ], j )
+          * x.get( my_blocks[ i ], j ) );
+    }
+  }
+  y.scale( beta );
+  y.add( scaled_product );
+  y.synchronize_shared_parts( );
+}

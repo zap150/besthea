@@ -413,6 +413,15 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   void sort_clusters_in_nearfield( );
 
+  /**
+   * Extracts the diagonal from the pFMM matrix, inverts each entry, and writes
+   * the result to an output vector.
+   * @param[out] inverse_diagonal Result vector. It is resized appropriately
+   * during the function call.
+   */
+  void get_inverse_diagonal(
+    distributed_block_vector & inverse_diagonal ) const;
+
  private:
   /**
    * Calls all S2M operations associated with a given scheduling time cluster.

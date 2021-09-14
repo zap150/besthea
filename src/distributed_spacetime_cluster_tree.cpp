@@ -537,7 +537,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree_new(
   }
   if ( _my_rank == 0 && status == -1 ) {
     std::cout
-      << "Note: Some scarsely populated space-time clusters were refined in "
+      << "Note: Some scarcely populated space-time clusters were refined in "
          "the construction of the upper part of the space-time cluster tree."
       << std::endl;
   }
@@ -1402,70 +1402,70 @@ void besthea::mesh::distributed_spacetime_cluster_tree::create_spacetime_roots(
   std::vector< lo > & elems_in_clusters,
   std::vector< std::pair< general_spacetime_cluster *,
     scheduling_time_cluster * > > & spacetime_root_pairs ) {
-  if ( _root->get_n_elements( ) >= _n_min_elems ) {
-    scheduling_time_cluster * time_root = get_distribution_tree( )->get_root( );
-    // compute number of space and time clusters at the level of children
-    lo n_space_clusters = 1 << _initial_space_refinement;
+  // The cluster at level -1 is refined even if it contains less than
+  // _n_min_elems elements. This is done to avoid generating leaves which
+  // cannot be handled well directly in the parallelization routine.
+  scheduling_time_cluster * time_root = get_distribution_tree( )->get_root( );
+  // compute number of space and time clusters at the level of children
+  lo n_space_clusters = 1 << _initial_space_refinement;
 
-    // reserve a fair amount of entries
-    spacetime_root_pairs.reserve(
-      n_space_clusters * n_space_clusters * n_space_clusters );
+  // reserve a fair amount of entries
+  spacetime_root_pairs.reserve(
+    n_space_clusters * n_space_clusters * n_space_clusters );
 
-    lo owner = time_root->get_process_id( );
-    lo global_time_index = 0;
+  lo owner = time_root->get_process_id( );
+  lo global_time_index = 0;
 
-    sc time_center, time_half_size;
-    vector_type spat_center( 3 );
-    vector_type spat_half_size( 3 );
-    _root->get_center( spat_center, time_center );
-    _root->get_half_size( spat_half_size, time_half_size );
-    // compute the new spatial half size, spatial step size to get from one
-    // cluster center to the other and the center of the bottom front left
-    // spatial cluster, which is formed during the refinement.
-    vector_type new_spat_half_size = { spat_half_size[ 0 ] / n_space_clusters,
-      spat_half_size[ 1 ] / n_space_clusters,
-      spat_half_size[ 2 ] / n_space_clusters };
-    vector_type spat_step_size = { 2 * spat_half_size[ 0 ] / n_space_clusters,
-      2 * spat_half_size[ 1 ] / n_space_clusters,
-      2 * spat_half_size[ 2 ] / n_space_clusters };
-    vector_type spat_center_corner
-      = { spat_center[ 0 ] - spat_half_size[ 0 ] + new_spat_half_size[ 0 ],
-          spat_center[ 1 ] - spat_half_size[ 1 ] + new_spat_half_size[ 1 ],
-          spat_center[ 2 ] - spat_half_size[ 2 ] + new_spat_half_size[ 2 ] };
-    vector_type new_spat_center( 3 );
-    for ( slou i_x = 0; i_x < n_space_clusters; ++i_x ) {
-      new_spat_center[ 0 ]
-        = spat_center_corner[ 0 ] + i_x * spat_step_size[ 0 ];
-      for ( slou i_y = 0; i_y < n_space_clusters; ++i_y ) {
-        new_spat_center[ 1 ]
-          = spat_center_corner[ 1 ] + i_y * spat_step_size[ 1 ];
-        for ( slou i_z = 0; i_z < n_space_clusters; ++i_z ) {
-          new_spat_center[ 2 ]
-            = spat_center_corner[ 2 ] + i_z * spat_step_size[ 2 ];
-          // construct coordinates of cluster (level and temporal coordinate
-          // 0)
-          std::vector< slou > coordinates = { 0, i_x, i_y, i_z, 0 };
-          lou pos = i_x * n_space_clusters * n_space_clusters
-            + i_y * n_space_clusters + i_z;
+  sc time_center, time_half_size;
+  vector_type spat_center( 3 );
+  vector_type spat_half_size( 3 );
+  _root->get_center( spat_center, time_center );
+  _root->get_half_size( spat_half_size, time_half_size );
+  // compute the new spatial half size, spatial step size to get from one
+  // cluster center to the other and the center of the bottom front left
+  // spatial cluster, which is formed during the refinement.
+  vector_type new_spat_half_size = { spat_half_size[ 0 ] / n_space_clusters,
+    spat_half_size[ 1 ] / n_space_clusters,
+    spat_half_size[ 2 ] / n_space_clusters };
+  vector_type spat_step_size = { 2 * spat_half_size[ 0 ] / n_space_clusters,
+    2 * spat_half_size[ 1 ] / n_space_clusters,
+    2 * spat_half_size[ 2 ] / n_space_clusters };
+  vector_type spat_center_corner
+    = { spat_center[ 0 ] - spat_half_size[ 0 ] + new_spat_half_size[ 0 ],
+        spat_center[ 1 ] - spat_half_size[ 1 ] + new_spat_half_size[ 1 ],
+        spat_center[ 2 ] - spat_half_size[ 2 ] + new_spat_half_size[ 2 ] };
+  vector_type new_spat_center( 3 );
+  for ( slou i_x = 0; i_x < n_space_clusters; ++i_x ) {
+    new_spat_center[ 0 ] = spat_center_corner[ 0 ] + i_x * spat_step_size[ 0 ];
+    for ( slou i_y = 0; i_y < n_space_clusters; ++i_y ) {
+      new_spat_center[ 1 ]
+        = spat_center_corner[ 1 ] + i_y * spat_step_size[ 1 ];
+      for ( slou i_z = 0; i_z < n_space_clusters; ++i_z ) {
+        new_spat_center[ 2 ]
+          = spat_center_corner[ 2 ] + i_z * spat_step_size[ 2 ];
+        // construct coordinates of cluster (level and temporal coordinate
+        // 0)
+        std::vector< slou > coordinates = { 0, i_x, i_y, i_z, 0 };
+        lou pos = i_x * n_space_clusters * n_space_clusters
+          + i_y * n_space_clusters + i_z;
 
-          if ( elems_in_clusters[ pos ] > 0 ) {
-            // construct spacetime root cluster if its not empty. octant and
-            // left_right are meaningless, and set to 0.
-            general_spacetime_cluster * new_child
-              = new general_spacetime_cluster( new_spat_center, time_center,
-                new_spat_half_size, time_half_size, elems_in_clusters[ pos ],
-                _root, 0, 0, coordinates, 0, global_time_index,
-                _initial_space_refinement, 0, _spacetime_mesh, owner, false );
-            // add the spacetime root as child to the "pseudo"root at level -1
-            _root->add_child( new_child );
-            spacetime_root_pairs.push_back( { new_child, time_root } );
-          }
+        if ( elems_in_clusters[ pos ] > 0 ) {
+          // construct spacetime root cluster if its not empty. octant and
+          // left_right are meaningless, and set to 0.
+          general_spacetime_cluster * new_child
+            = new general_spacetime_cluster( new_spat_center, time_center,
+              new_spat_half_size, time_half_size, elems_in_clusters[ pos ],
+              _root, 0, 0, coordinates, 0, global_time_index,
+              _initial_space_refinement, 0, _spacetime_mesh, owner, false );
+          // add the spacetime root as child to the "pseudo"root at level -1
+          _root->add_child( new_child );
+          spacetime_root_pairs.push_back( { new_child, time_root } );
         }
       }
     }
-    // shrink the spacetime root pairs to the appropriate size
-    spacetime_root_pairs.shrink_to_fit( );
   }
+  // shrink the spacetime root pairs to the appropriate size
+  spacetime_root_pairs.shrink_to_fit( );
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::

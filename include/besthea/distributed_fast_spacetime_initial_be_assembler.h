@@ -282,7 +282,7 @@ class besthea::bem::distributed_fast_spacetime_initial_be_assembler {
    *
    * @param[in,out] local_entries The results are written to this vector.
    * @param[in] my_quadrature Wrapper holding quadrature data.
-   * @param[in] is_first_time_step  Indicates if the time interval starts at 0.
+   * @param[in] is_first_timestep  Indicates if the time interval starts at 0.
    * @param[in] t0  Starting time of the considered time interval.
    * @param[in] t1  Ending time of the considered time interval.
    * @param[in] test_index  Global spatial index of the test element (triange).

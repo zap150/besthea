@@ -36,6 +36,7 @@ set(besthea_INCLUDES
   include/besthea/compound_linear_operator.h
   include/besthea/coordinates.h
   include/besthea/distributed_block_vector.h
+  include/besthea/distributed_diagonal_matrix.h
   include/besthea/distributed_fast_spacetime_be_assembler.h
   include/besthea/distributed_fast_spacetime_initial_be_assembler.h
   include/besthea/distributed_fast_spacetime_be_space.h
@@ -119,6 +120,7 @@ set(besthea_SOURCES
   src/compound_linear_operator.cpp
   src/coordinates.cpp
   src/distributed_block_vector.cpp
+  src/distributed_diagonal_matrix.cpp
   src/distributed_fast_spacetime_be_assembler.cpp
   src/distributed_fast_spacetime_initial_be_assembler.cpp
   src/distributed_fast_spacetime_be_space.cpp

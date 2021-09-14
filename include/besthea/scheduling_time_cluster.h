@@ -975,7 +975,7 @@ class besthea::mesh::scheduling_time_cluster {
   /**
    * Prints info of the object.
    */
-  void print( lo executing_process_id = -1 ) {
+  void print( lo executing_process_id = -1 ) const {
     std::cout << "level: " << _level << ", center: " << _center
               << ", half size: " << _half_size
               << ", global_index: " << _global_index

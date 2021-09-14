@@ -207,7 +207,7 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * @param[in] beta
    * @warning Transposition is not supported.
    */
-  void apply( const vector_type & x, distributed_block_vector & y,
+  void apply( const vector & x, distributed_block_vector & y,
     [[maybe_unused]] bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
 
   /**

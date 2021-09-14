@@ -983,11 +983,12 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
   sc hs;
   distributed_block_vector_type r( rhs );
   std::vector< distributed_block_vector_type > V(
-    max_it );  // orthogonalized search directions
-  distributed_block_vector_type vs( rhs.get_n_blocks( ),
+    max_it + 1 );  // orthogonalized search directions
+  std::vector< lo > my_blocks = rhs.get_my_blocks( );
+  distributed_block_vector_type vs( my_blocks, rhs.get_n_blocks( ),
     rhs.get_size_of_block( ),
     true );  // new search direction
-  distributed_block_vector_type vs_prec( rhs.get_n_blocks( ),
+  distributed_block_vector_type vs_prec( my_blocks, rhs.get_n_blocks( ),
     rhs.get_size_of_block( ),
     true );  // auxiliary result of preconditioning
   std::vector< std::vector< sc > > H(
@@ -996,7 +997,7 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
   std::vector< sc > c( max_it + 1 );      // coeffs of Givens rotation
   std::vector< sc > s( max_it + 1 );      // coeffs of Givens rotation
   sc norm_vs;                             // h_k+1,k
-  distributed_block_vector_type u_tilde( solution.get_n_blocks( ),
+  distributed_block_vector_type u_tilde( my_blocks, solution.get_n_blocks( ),
     solution.get_size_of_block( ), true );  // solution=prec*u_tilde
   sc gmres_eps = 1e-20;
 
@@ -1097,7 +1098,6 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
   distributed_block_vector_type & solution, sc & relative_residual_error,
   lo & n_iterations, bool trans ) const {
   // initialize data
-
   lo max_it = n_iterations;
   n_iterations = 0;
   sc hs;

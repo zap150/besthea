@@ -86,16 +86,29 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
         = spacetime_leaf->get_box_coordinate( );
       std::vector< slou > spatial_grid_coords
         = { cluster_coords[ 1 ], cluster_coords[ 2 ], cluster_coords[ 3 ] };
-      std::vector< volume_space_cluster * > neighbors;
+      std::vector< mesh::volume_space_cluster * > neighbors;
       lo spat_level, dummy;
       spacetime_leaf->get_n_divs( spat_level, dummy );
       slou spatial_nearfield_limit
         = _distributed_spacetime_target_tree->get_spatial_nearfield_limit( );
       _space_source_tree->find_neighbors(
         spat_level, spatial_grid_coords, spatial_nearfield_limit, neighbors );
-      if ( neighbors.size( ) > 0 ) {
-        neighbors.shrink_to_fit( );
-        _nearfield_list_vector.push_back( { spacetime_leaf, neighbors } );
+      // check if the determined nearfield clusters are leaves. If they are not,
+      // add their leaf descendants to the nearfield list of the current target
+      // cluster
+      std::vector< mesh::volume_space_cluster * > neighboring_leaves;
+      for ( auto neighbor : neighbors ) {
+        if ( neighbor->get_n_children( ) > 0 ) {
+          _space_source_tree->collect_leaf_descendants(
+            *neighbor, neighboring_leaves );
+        } else {
+          neighboring_leaves.push_back( neighbor );
+        }
+      }
+      if ( neighboring_leaves.size( ) > 0 ) {
+        neighboring_leaves.shrink_to_fit( );
+        _nearfield_list_vector.push_back(
+          { spacetime_leaf, neighboring_leaves } );
       }
     }
   }
@@ -1618,8 +1631,9 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
-  target_space, source_space >::apply( const vector_type & x,
-  distributed_block_vector & y, bool trans, sc alpha, sc beta ) const {
+  target_space, source_space >::apply( const vector & x,
+  distributed_block_vector & y, [[maybe_unused]] bool trans, sc alpha,
+  sc beta ) const {
   // first scaling
   y.scale( beta );
 
@@ -1743,10 +1757,10 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   char downpard_path_status
     = current_cluster.get_status_in_initial_op_downward_path( );
   lo current_level = current_cluster.get_level( );
-  lo n_associated_clusters
-    = current_cluster.get_associated_spacetime_clusters( )->size( );
-  lo n_associated_leaves = current_cluster.get_n_associated_leaves( );
   if ( downpard_path_status == 1 ) {
+    lo n_associated_clusters
+      = current_cluster.get_associated_spacetime_clusters( )->size( );
+    lo n_associated_leaves = current_cluster.get_n_associated_leaves( );
     const mesh::scheduling_time_cluster * current_parent
       = current_cluster.get_parent( );
     if ( current_parent != nullptr
@@ -1786,6 +1800,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
     for ( lo i = 0; i < n_processes; ++i ) {
       global_nearfield_ratio += all_local_nearfield_ratios[ i ];
     }
+    std::cout << std::endl;
     std::cout << "nearfield ratio = " << global_nearfield_ratio << std::endl;
   }
   // count the fmm operations levelwise
@@ -1873,6 +1888,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
     delete[] all_local_nearfield_ratios;
     std::cout << "#############################################################"
               << "###########################" << std::endl;
+    std::cout << std::endl;
   }
 }
 

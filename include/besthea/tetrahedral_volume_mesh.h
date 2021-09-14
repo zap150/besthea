@@ -461,10 +461,12 @@ class besthea::mesh::tetrahedral_volume_mesh : public besthea::mesh::mesh {
   std::vector< lo > _element_to_faces;  //!< indices into #_faces
 };
 
+/** \cond doxygen should skip the following functions */
 template<>
 inline lo besthea::mesh::tetrahedral_volume_mesh::get_n_dofs<
   besthea::bem::fe_space< besthea::bem::basis_tetra_p1 > >( ) const {
   return _n_nodes;
 }
+/** \endcond (end doxygen skip this)*/
 
 #endif /* INCLUDE_BESTHEA_TETRAHEDRAL_VOLUME_MESH_H_ */

@@ -156,7 +156,7 @@ void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
   //       return ( total_sizes[ a ] > total_sizes[ b ] );
   //     } );
 
-  // #pragma omp parallel for schedule( dynamic, 1 )
+#pragma omp parallel for schedule( dynamic, 1 )
   for ( lo leaf_index = nearfield_list_vector.size( ) - 1; leaf_index > -1;
         --leaf_index ) {
     mesh::general_spacetime_cluster * current_cluster

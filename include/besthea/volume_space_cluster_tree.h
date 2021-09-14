@@ -210,6 +210,18 @@ class besthea::mesh::volume_space_cluster_tree {
     volume_space_cluster & current_cluster ) const;
 
   /**
+   * Collects all clusters without descendants starting from an initial root
+   * cluster and stores them in a provided vector. The routine is based on a
+   * recursive tree traversal.
+   * @param[in] root At first function call: Cluster whose leaf descendants
+   * should be determined. Later on it represents the current cluster in the
+   * tree traversal.
+   * @param[in,out] leaves  Vector to which the determined leaves are added.
+   */
+  void collect_leaf_descendants( volume_space_cluster & root,
+    std::vector< volume_space_cluster * > & leaves ) const;
+
+  /**
    * Prints the tree levelwise together with some additional information.
    */
   void print( ) {
@@ -257,13 +269,6 @@ class besthea::mesh::volume_space_cluster_tree {
    * @param[in] root Node to stem from.
    */
   sc compute_padding( volume_space_cluster & root );
-
-  /**
-   * Collects all clusters without descendants and stores them in the internal
-   * vector @ref _leaves.
-   * @param[in] root Root cluster of the tree.
-   */
-  void collect_leaves( volume_space_cluster & root );
 
   /**
    * Initializes @ref _levelwise_cluster_grids.

@@ -270,8 +270,6 @@ class besthea::linear_algebra::block_linear_operator {
    * @param[in] trans Indicates if the block linear operator is transposed or
    * not.
    * @todo Discuss new output for @p relative_residual_error.
-   * @todo Discuss: What is relative error in case that solution is not 0 at
-   * function call? Should we fill solution with 0 in the routine?
    */
   bool gmres_solve( const block_vector_type & rhs, block_vector_type & solution,
     sc & relative_residual_error, lo & n_iterations,
@@ -288,8 +286,6 @@ class besthea::linear_algebra::block_linear_operator {
    * @param[in] trans Indicates if the block linear operator is transposed or
    * not.
    * @todo Discuss new output for @p relative_residual_error
-   * @todo Discuss: What is relative error in case that solution is not 0 at
-   * function call? Should we fill solution with 0 in the routine?
    */
   bool gmres_solve( const block_vector_type & rhs, block_vector_type & solution,
     sc & relative_residual_error, lo & n_iterations, bool trans = false ) const;
@@ -309,8 +305,6 @@ class besthea::linear_algebra::block_linear_operator {
    * @todo Currently all ranks execute the GMRES algorithm, but computations
    * like matrix-vector products and scalar products are parallelized.
    * @todo Discuss new output for @p relative_residual_error
-   * @todo Discuss: What is relative error in case that solution is not 0 at
-   * function call? Should we fill solution with 0 in the routine?
    */
   bool gmres_solve( const distributed_block_vector_type & rhs,
     distributed_block_vector_type & solution, sc & relative_residual_error,
@@ -332,8 +326,6 @@ class besthea::linear_algebra::block_linear_operator {
    * computations like matrix-vector products and scalar products are
    * parallelized.
    * @todo Discuss new output for @p relative_residual_error
-   * @todo Discuss: What is relative error in case that solution is not 0 at
-   * function call? Should we fill solution with 0 in the routine?
    */
   bool gmres_solve( const distributed_block_vector_type & rhs,
     distributed_block_vector_type & solution, sc & relative_residual_error,

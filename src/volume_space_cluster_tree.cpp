@@ -107,7 +107,7 @@ besthea::mesh::volume_space_cluster_tree::volume_space_cluster_tree(
   }
 
   // collect all clusters without descendants
-  collect_leaves( *_root );
+  collect_leaf_descendants( *_root, _leaves );
 
   initialize_levelwise_cluster_grids( );
 }
@@ -517,14 +517,15 @@ bool besthea::mesh::volume_space_cluster_tree::print_tree(
   return true;
 }
 
-void besthea::mesh::volume_space_cluster_tree::collect_leaves(
-  volume_space_cluster & root ) {
+void besthea::mesh::volume_space_cluster_tree::collect_leaf_descendants(
+  volume_space_cluster & root,
+  std::vector< volume_space_cluster * > & leaves ) const {
   if ( root.get_n_children( ) == 0 ) {
-    _leaves.push_back( &root );
+    leaves.push_back( &root );
   } else {
     for ( auto it = root.get_children( )->begin( );
           it != root.get_children( )->end( ); ++it ) {
-      collect_leaves( **it );
+      collect_leaf_descendants( **it, leaves );
     }
   }
 }

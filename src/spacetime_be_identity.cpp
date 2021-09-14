@@ -76,13 +76,17 @@ void besthea::bem::spacetime_be_identity< test_space_type,
 
 template< class test_space_type, class trial_space_type >
 void besthea::bem::spacetime_be_identity< test_space_type,
-  trial_space_type >::assemble( matrix_type & global_matrix ) const {
+  trial_space_type >::assemble( matrix_type & global_matrix, bool weighted,
+  sc temp_interval_length ) const {
   std::vector< los > ii;
   std::vector< los > jj;
   std::vector< sc > vv;
 
-  assemble_triplets( ii, jj, vv );
-
+  if ( weighted ) {
+    assemble_weighted_triplets( ii, jj, vv, temp_interval_length );
+  } else {
+    assemble_triplets( ii, jj, vv );
+  }
   lo n_rows = _test_space->get_basis( ).dimension_global( );
   lo n_columns = _trial_space->get_basis( ).dimension_global( );
   global_matrix.set_from_triplets( n_rows, n_columns, ii, jj, vv );
@@ -137,6 +141,66 @@ void besthea::bem::spacetime_be_identity< test_space_type,
         ii.push_back( test_l2g[ i_loc_test ] );
         jj.push_back( trial_l2g[ i_loc_trial ] );
         vv.push_back( value * area );
+      }
+    }
+  }
+}
+
+template< class test_space_type, class trial_space_type >
+void besthea::bem::spacetime_be_identity< test_space_type,
+  trial_space_type >::assemble_weighted_triplets( std::vector< los > & ii,
+  std::vector< los > & jj, std::vector< sc > & vv,
+  sc temp_interval_length ) const {
+  auto & test_basis = _test_space->get_basis( );
+  auto & trial_basis = _trial_space->get_basis( );
+  const auto spatial_mesh
+    = _test_space->get_mesh( ).get_spatial_surface_mesh( );
+
+  lo n_loc_rows = test_basis.dimension_local( );
+  lo n_loc_columns = trial_basis.dimension_local( );
+
+  lo n_elements = spatial_mesh->get_n_elements( );
+  std::vector< lo > test_l2g( n_loc_rows );
+  std::vector< lo > trial_l2g( n_loc_columns );
+  ii.reserve( n_elements * n_loc_rows * n_loc_columns );
+  jj.reserve( n_elements * n_loc_rows * n_loc_columns );
+  vv.reserve( n_elements * n_loc_rows * n_loc_columns );
+
+  const std::vector< sc, besthea::allocator_type< sc > > & x1_ref
+    = quadrature::triangle_x1( _order_regular );
+  const std::vector< sc, besthea::allocator_type< sc > > & x2_ref
+    = quadrature::triangle_x2( _order_regular );
+  const std::vector< sc, besthea::allocator_type< sc > > & w
+    = quadrature::triangle_w( _order_regular );
+  lo size = w.size( );
+
+  sc value, test, trial, area;
+  sc h_t_weight = std::pow( temp_interval_length, 0.25 );
+  linear_algebra::coordinates< 3 > n;
+  for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
+    spatial_mesh->get_normal( i_elem, n );
+    area = spatial_mesh->area( i_elem );
+    // compute the spatial weight h_x^{1/2} with h_x ~ spatial_area^{1/2}
+    sc h_x_weight = std::pow( area, 0.25 );
+    sc combined_weight = h_x_weight + h_t_weight;
+    combined_weight *= combined_weight;
+
+    test_basis.local_to_global( i_elem, test_l2g );
+    trial_basis.local_to_global( i_elem, trial_l2g );
+    for ( lo i_loc_test = 0; i_loc_test < n_loc_rows; ++i_loc_test ) {
+      for ( lo i_loc_trial = 0; i_loc_trial < n_loc_columns; ++i_loc_trial ) {
+        value = 0.0;
+        for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
+          test = test_basis.evaluate(
+            i_elem, i_loc_test, x1_ref[ i_quad ], x2_ref[ i_quad ], n.data( ) );
+          trial = trial_basis.evaluate( i_elem, i_loc_trial, x1_ref[ i_quad ],
+            x2_ref[ i_quad ], n.data( ) );
+
+          value += w[ i_quad ] * test * trial;
+        }
+        ii.push_back( test_l2g[ i_loc_test ] );
+        jj.push_back( trial_l2g[ i_loc_trial ] );
+        vv.push_back( value * area * temp_interval_length * combined_weight );
       }
     }
   }

@@ -355,6 +355,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       global_nearfield_ratio_adaptive_part
         += all_local_nearfield_ratios_adaptive_part[ i ];
     }
+    std::cout << std::endl;
     std::cout << "nearfield ratio (including zeros) = "
               << global_nearfield_ratio << std::endl;
     std::cout << "nearfield ratio (counting non-zero entries only) = "
@@ -494,8 +495,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     std::cout << "storage per allocated vector (target): "
               << n_target_dofs * 8. / 1024. / 1024. / 1024. << " GiB."
               << std::endl;
+    std::cout << std::endl;
     delete[] all_local_nearfield_ratios;
     delete[] all_local_nonzero_nearfield_ratios;
+    delete[] all_local_nearfield_ratios_adaptive_part;
     delete[] all_n_moments;
     delete[] all_n_moments_receive;
     delete[] all_n_local_contributions;
@@ -4146,6 +4149,86 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     return ( sizes[ lhs ] > sizes[ rhs ] );
   } );
 }
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::get_inverse_diagonal( distributed_block_vector &
+  /* inverse_diagonal */ ) const {
+  std::cout << "ERROR: get_diagonal not implemented for general pFMM matrices"
+            << std::endl;
+}
+
+/** \cond doxygen should skip the following functions */
+template<>
+void besthea::linear_algebra::distributed_pFMM_matrix<
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 > >::
+  get_inverse_diagonal( distributed_block_vector & inverse_diagonal ) const {
+  const mesh::distributed_spacetime_tensor_mesh & distributed_mesh
+    = _distributed_spacetime_tree->get_mesh( );
+  const mesh::spacetime_tensor_mesh * local_mesh
+    = distributed_mesh.get_local_mesh( );
+  lo local_start_idx = distributed_mesh.get_local_start_idx( );
+  // resize the distributed vector inverse_diagonal appropriately
+  std::vector< lo > local_blocks = distributed_mesh.get_my_timesteps( );
+  inverse_diagonal.resize(
+    local_blocks, distributed_mesh.get_n_temporal_elements( ) );
+  inverse_diagonal.resize_blocks(
+    local_mesh->get_n_spatial_elements( ), false );
+  for ( auto nearfield_matrix_list_pair : _clusterwise_nearfield_matrices ) {
+    mesh::general_spacetime_cluster * leaf_cluster
+      = nearfield_matrix_list_pair.first;
+    std::vector< mesh::general_spacetime_cluster * > * nearfield_list
+      = leaf_cluster->get_nearfield_list( );
+    auto nf_list_it = nearfield_list->begin( );
+    // find the position of the leaf cluster in its own nearfield list
+    lo position = 0;
+    while (
+      nf_list_it != nearfield_list->end( ) && *nf_list_it != leaf_cluster ) {
+      ++nf_list_it;
+      ++position;
+    }
+    full_matrix * current_nf_matrix
+      = nearfield_matrix_list_pair.second[ position ];
+
+    std::vector< lo > all_elements_in_leaf_cluster
+      = leaf_cluster->get_all_elements( );
+
+    lo n_time_elements = leaf_cluster->get_n_time_elements( );
+    lo n_space_elements = leaf_cluster->get_n_space_elements( );
+    const std::vector< lo > & spacetime_elements
+      = leaf_cluster->get_all_elements( );
+    for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
+      // use that the spacetime elements are sorted in time, i.e. a consecutive
+      // group of n_space_elements elements has the same temporal component, to
+      // determine the local time index only once
+      lo local_time_index
+        = local_mesh->get_time_element( distributed_mesh.global_2_local(
+          local_start_idx, spacetime_elements[ i_time * n_space_elements ] ) );
+      lo global_time_index = distributed_mesh.local_2_global_time(
+        local_start_idx, local_time_index );
+      for ( lo i_space = 0; i_space < n_space_elements; ++i_space ) {
+        lo current_spacetime_element_index
+          = i_time * n_space_elements + i_space;
+        // for the spatial mesh no transformation from local 2 global is
+        // necessary since there is just one global space mesh at the moment.
+        lo global_space_index = local_mesh->get_space_element(
+          distributed_mesh.global_2_local( local_start_idx,
+            spacetime_elements[ current_spacetime_element_index ] ) );
+        // get the diagonal entries of the current nearfield matrix
+        inverse_diagonal.set( global_time_index, global_space_index,
+          1.0
+            / current_nf_matrix->get( current_spacetime_element_index,
+              current_spacetime_element_index ) );
+      }
+    }
+  }
+  inverse_diagonal.synchronize_shared_parts( );
+}
+/** \endcond (end doxygen skip this)*/
 
 template class besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,
