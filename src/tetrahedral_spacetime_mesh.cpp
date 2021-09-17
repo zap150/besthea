@@ -35,14 +35,83 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <iomanip>
 #include <sstream>
 
-besthea::mesh::tetrahedral_spacetime_mesh::tetrahedral_spacetime_mesh( )
-  : _n_nodes( 0 ), _n_elements( 0 ), _n_edges( 0 ), _n_faces( 0 ) {
+besthea::mesh::tetrahedral_spacetime_mesh::tetrahedral_spacetime_mesh(
+  const besthea::mesh::spacetime_tensor_mesh & stmesh )
+  : _n_nodes( stmesh.get_n_nodes( ) ),
+    _n_elements( 3 * stmesh.get_n_elements( ) ) {
+  stmesh.get_nodes( _nodes );
+  _elements.reserve( _n_elements );
+  _normals.reserve( 3 * _n_elements );
+
+  // based on http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.35.4908
+
+  int map[ 6 ][ 6 ]
+    = { { 0, 1, 2, 3, 4, 5 }, { 1, 2, 0, 4, 5, 3 }, { 2, 0, 1, 5, 3, 4 },
+        { 3, 5, 4, 0, 2, 1 }, { 4, 3, 5, 1, 0, 2 }, { 5, 4, 3, 2, 1, 0 } };
+
+  besthea::linear_algebra::indices< 6 > e;
+  besthea::linear_algebra::coordinates< 3 > n;
+  for ( lo i = 0; i < stmesh.get_n_elements( ); ++i ) {
+    stmesh.get_element( i, e );
+    // FIXME: this should work with i directly
+    stmesh.get_spatial_normal( i % stmesh.get_n_spatial_elements( ), n );
+
+    int * cmap = map[ std::min_element( e.begin( ), e.end( ) ) - e.begin( ) ];
+
+    if ( std::min( e[ cmap[ 1 ] ], e[ cmap[ 5 ] ] )
+      < std::min( e[ cmap[ 2 ] ], e[ cmap[ 4 ] ] ) ) {
+      // first
+      _elements.push_back( e[ cmap[ 0 ] ] );
+      _elements.push_back( e[ cmap[ 1 ] ] );
+      _elements.push_back( e[ cmap[ 2 ] ] );
+      _elements.push_back( e[ cmap[ 5 ] ] );
+      // second
+      _elements.push_back( e[ cmap[ 0 ] ] );
+      _elements.push_back( e[ cmap[ 1 ] ] );
+      _elements.push_back( e[ cmap[ 5 ] ] );
+      _elements.push_back( e[ cmap[ 4 ] ] );
+    } else {
+      // first
+      _elements.push_back( e[ cmap[ 0 ] ] );
+      _elements.push_back( e[ cmap[ 1 ] ] );
+      _elements.push_back( e[ cmap[ 2 ] ] );
+      _elements.push_back( e[ cmap[ 4 ] ] );
+      // second
+      _elements.push_back( e[ cmap[ 0 ] ] );
+      _elements.push_back( e[ cmap[ 4 ] ] );
+      _elements.push_back( e[ cmap[ 2 ] ] );
+      _elements.push_back( e[ cmap[ 5 ] ] );
+    }
+    // third
+    _elements.push_back( e[ cmap[ 0 ] ] );
+    _elements.push_back( e[ cmap[ 4 ] ] );
+    _elements.push_back( e[ cmap[ 5 ] ] );
+    _elements.push_back( e[ cmap[ 3 ] ] );
+
+    // copy spatial normals
+    for ( int j = 0; j < 3; ++j ) {
+      _normals.push_back( n[ 0 ] );
+      _normals.push_back( n[ 1 ] );
+      _normals.push_back( n[ 2 ] );
+    }
+  }
+
+  init_areas( );
+  init_edges( );
+  init_node_to_elements( );
 }
 
 besthea::mesh::tetrahedral_spacetime_mesh::tetrahedral_spacetime_mesh(
-  const std::string & file )
-  : _n_nodes( 0 ), _n_elements( 0 ) {
-  load( file );
+  const std::vector< sc > & nodes, const std::vector< lo > & elements,
+  const std::vector< sc > & normals )
+  : _n_nodes( nodes.size( ) / 4 ),
+    _nodes( nodes ),
+    _n_elements( elements.size( ) / 4 ),
+    _elements( elements ),
+    _normals( normals ) {
+  init_areas( );
+  init_edges( );
+  init_node_to_elements( );
 }
 
 besthea::mesh::tetrahedral_spacetime_mesh::~tetrahedral_spacetime_mesh( ) {
@@ -53,7 +122,7 @@ void besthea::mesh::tetrahedral_spacetime_mesh::print_info( ) const {
   std::cout << "  elements: " << _n_elements << ", nodes: " << _n_nodes
             << ", edges: " << _n_edges << std::endl;
 }
-
+/*
 bool besthea::mesh::tetrahedral_spacetime_mesh::load(
   const std::string & file ) {
   std::ifstream filestream( file.c_str( ) );
@@ -99,10 +168,11 @@ bool besthea::mesh::tetrahedral_spacetime_mesh::load(
 
   init_areas( );
   init_edges( );
+  init_node_to_elements( );
 
   return true;
 }
-
+*/
 void besthea::mesh::tetrahedral_spacetime_mesh::scale_in_space( sc factor ) {
   linear_algebra::coordinates< 3 > centroid;
   get_spatial_centroid( centroid );
@@ -138,6 +208,7 @@ void besthea::mesh::tetrahedral_spacetime_mesh::refine( int level ) {
 
   lo new_n_nodes, new_n_elements;
   linear_algebra::coordinates< 4 > x1, x2;
+  linear_algebra::coordinates< 3 > n;
   linear_algebra::indices< 2 > edge;
   linear_algebra::indices< 4 > element;
   linear_algebra::indices< 6 > edges;
@@ -151,6 +222,8 @@ void besthea::mesh::tetrahedral_spacetime_mesh::refine( int level ) {
     new_nodes.resize( 4 * new_n_nodes );
     std::vector< lo > new_elements;
     new_elements.resize( 6 * new_n_elements );
+    std::vector< sc > new_normals;
+    new_normals.resize( 3 * new_n_elements );
 
     std::vector< lo > new_orientation_first;
     std::vector< lo > new_orientation_second;
@@ -170,12 +243,13 @@ void besthea::mesh::tetrahedral_spacetime_mesh::refine( int level ) {
     }
 
     // loop through old elements to define new elements as in Bey, J. Computing
-    //   (1995) 55: 355. https://doi.org/10.1007/BF02238487 node1
-#pragma omp parallel for private( element, edges, node1, node2, node3, node4, \
-  node12, node13, node14, node23, node24, node34 )
+    //   (1995) 55: 355. https://doi.org/10.1007/BF02238487
+#pragma omp parallel for private( element, edges, n, node1, node2, node3, \
+  node4, node12, node13, node14, node23, node24, node34 )
     for ( lo i = 0; i < _n_elements; ++i ) {
       get_element( i, element );
       get_edges( i, edges );
+      get_spatial_normal( i, n );
 
       node1 = element[ 0 ];
       node2 = element[ 1 ];
@@ -228,6 +302,13 @@ void besthea::mesh::tetrahedral_spacetime_mesh::refine( int level ) {
       new_elements[ 32 * i + 29 ] = node23;
       new_elements[ 32 * i + 30 ] = node24;
       new_elements[ 32 * i + 31 ] = node34;
+
+      // copy spatial normals
+      for ( int j = 0; j < 8; ++j ) {
+        new_normals[ 24 * i + 3 * j ] = n[ 0 ];
+        new_normals[ 24 * i + 3 * j + 1 ] = n[ 1 ];
+        new_normals[ 24 * i + 3 * j + 2 ] = n[ 2 ];
+      }
     }
 
     // update the mesh
@@ -235,11 +316,13 @@ void besthea::mesh::tetrahedral_spacetime_mesh::refine( int level ) {
     _n_elements = new_n_elements;
     _nodes.swap( new_nodes );
     _elements.swap( new_elements );
+    _normals.swap( new_normals );
 
     init_edges( );
   }
 
   init_areas( );
+  init_node_to_elements( );
 }
 
 void besthea::mesh::tetrahedral_spacetime_mesh::init_areas( ) {
@@ -261,7 +344,7 @@ void besthea::mesh::tetrahedral_spacetime_mesh::init_areas( ) {
       - _nodes[ 4 * _elements[ 4 * i_elem ] + 3 ];
 
     x31[ 0 ] = _nodes[ 4 * _elements[ 4 * i_elem + 2 ] ]
-      - _nodes[ 3 * _elements[ 4 * i_elem ] ];
+      - _nodes[ 4 * _elements[ 4 * i_elem ] ];
     x31[ 1 ] = _nodes[ 4 * _elements[ 4 * i_elem + 2 ] + 1 ]
       - _nodes[ 4 * _elements[ 4 * i_elem ] + 1 ];
     x31[ 2 ] = _nodes[ 4 * _elements[ 4 * i_elem + 2 ] + 2 ]
@@ -276,7 +359,7 @@ void besthea::mesh::tetrahedral_spacetime_mesh::init_areas( ) {
     x41[ 2 ] = _nodes[ 4 * _elements[ 4 * i_elem + 3 ] + 2 ]
       - _nodes[ 4 * _elements[ 4 * i_elem ] + 2 ];
     x41[ 3 ] = _nodes[ 4 * _elements[ 4 * i_elem + 3 ] + 3 ]
-      - _nodes[ 4 * _elements[ 4 * i_elem ] + 2 ];
+      - _nodes[ 4 * _elements[ 4 * i_elem ] + 3 ];
 
     // volume of the 3d parallelogram in 4d
     dot11 = x21[ 0 ] * x21[ 0 ] + x21[ 1 ] * x21[ 1 ] + x21[ 2 ] * x21[ 2 ]
@@ -406,6 +489,20 @@ void besthea::mesh::tetrahedral_spacetime_mesh::init_edges( ) {
   }
 }
 
+void besthea::mesh::tetrahedral_spacetime_mesh::init_node_to_elements( ) {
+  _node_to_elements.clear( );
+  _node_to_elements.resize( _n_nodes );
+
+  linear_algebra::indices< 4 > element;
+  for ( lo i_elem = 0; i_elem < _n_elements; ++i_elem ) {
+    get_element( i_elem, element );
+    _node_to_elements[ element[ 0 ] ].push_back( i_elem );
+    _node_to_elements[ element[ 1 ] ].push_back( i_elem );
+    _node_to_elements[ element[ 2 ] ].push_back( i_elem );
+    _node_to_elements[ element[ 3 ] ].push_back( i_elem );
+  }
+}
+/*
 void besthea::mesh::tetrahedral_spacetime_mesh::init_faces( ) {
   // allocate aux. variables
   linear_algebra::indices< 6 > element_edges;
@@ -513,3 +610,4 @@ void besthea::mesh::tetrahedral_spacetime_mesh::init_faces( ) {
   //    std::cout << std::endl;
   //  }
 }
+*/

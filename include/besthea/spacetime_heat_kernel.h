@@ -72,15 +72,23 @@ class besthea::bem::spacetime_heat_kernel
    * @param[in] xy1 First coordinate of `x - y`.
    * @param[in] xy2 Second coordinate of `x - y`.
    * @param[in] xy3 Third coordinate of `x - y`.
-   * @param[in] t `t`.
+   * @param[in] nx Normal in the `x` variable.
+   * @param[in] ny Normal in the `y` variable.
+   * @param[in] ttau `t-tau`.
    */
-#pragma omp declare simd uniform( this, t ) simdlen( DATA_WIDTH )
-  sc do_evaluate( sc xy1, sc xy2, sc xy3, sc t ) const {
-    sc norm2 = xy1 * xy1 + xy2 * xy2 + xy3 * xy3;
+#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( DATA_WIDTH )
+  sc do_evaluate( sc xy1, sc xy2, sc xy3, [[maybe_unused]] const sc * nx,
+    [[maybe_unused]] const sc * ny, sc ttau ) const {
+    sc value = 0.0;
 
-    sc value = _one
-      / ( _eight * _pi_sqrt_pi * _alpha_sqrt_alpha * t * std::sqrt( t ) )
-      * std::exp( -norm2 / ( _four * _alpha * t ) );
+    if ( ttau > _eps ) {
+      sc norm2 = xy1 * xy1 + xy2 * xy2 + xy3 * xy3;
+
+      value = _one
+        / ( _eight * _pi_sqrt_pi * _alpha_sqrt_alpha * ttau
+          * std::sqrt( ttau ) )
+        * std::exp( -norm2 / ( _four * _alpha * ttau ) );
+    }
 
     return value;
   }
@@ -91,10 +99,9 @@ class besthea::bem::spacetime_heat_kernel
   sc _alpha_sqrt_alpha;  //!< Auxiliary variable
 
   const sc _pi_sqrt_pi{ M_PI * std::sqrt( M_PI ) };  //!< Auxiliary variable
-  const sc _zero{ 0.0 };                             //!< Auxiliary variable
-  const sc _one{ 1.0 };                              //!< Auxiliary variable
-  const sc _four{ 4.0 };                             //!< Auxiliary variable
-  const sc _eight{ 8.0 };                            //!< Auxiliary variable
+  static constexpr sc _one{ 1.0 };                   //!< Auxiliary variable
+  static constexpr sc _four{ 4.0 };                  //!< Auxiliary variable
+  static constexpr sc _eight{ 8.0 };                 //!< Auxiliary variable
 };
 
 #endif /* INCLUDE_BESTHEA_SPACETIME_HEAT_KERNEL_H_ */

@@ -4359,7 +4359,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
     // sort within nearfield cluster
     std::vector< lo > permutation_index( total_sizes.size( ), 0 );
-    for ( lo i = 0; i != permutation_index.size( ); i++ ) {
+    for ( lo i = 0; i != lo( permutation_index.size( ) ); i++ ) {
       permutation_index[ i ] = i;
     }
     sort( permutation_index.begin( ), permutation_index.end( ),

@@ -181,6 +181,9 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
     return _space_mesh->get_n_edges( );
   }
 
+  // FIXME: IMHO, i_element and i_node should be indices of
+  // spacetime_tensor_mesh and not the underlying spatial mesh
+
   /**
    * Returns node indices of a spatial element.
    * @param[in] i_element Index of the spatial element.
@@ -406,6 +409,32 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
         nodes.back( )[ 1 ] = x[ 1 ];
         nodes.back( )[ 2 ] = x[ 2 ];
         nodes.back( )[ 3 ] = t[ 0 ];
+      }
+    }
+  }
+
+  /**
+   * Returns coordinates of all nodes of the mesh.
+   * @param[out] nodes Vector of sc. If the size is not
+   * corresponding to the number of nodes per element, it will be resized.
+   */
+  void get_nodes( std::vector< sc > & nodes ) const {
+    lo n_spatial_nodes = _space_mesh->get_n_nodes( );
+    lo n_temporal_nodes = _time_mesh->get_n_nodes( );
+    lo n_nodes = n_spatial_nodes * n_temporal_nodes;
+
+    nodes.reserve( 4 * n_nodes );
+
+    linear_algebra::coordinates< 3 > x;
+    linear_algebra::coordinates< 1 > t;
+    for ( lo i_t = 0; i_t < n_temporal_nodes; ++i_t ) {
+      for ( lo i_x = 0; i_x < n_spatial_nodes; ++i_x ) {
+        _space_mesh->get_node( i_x, x );
+        _time_mesh->get_node( i_t, t );
+        nodes.push_back( x[ 0 ] );
+        nodes.push_back( x[ 1 ] );
+        nodes.push_back( x[ 2 ] );
+        nodes.push_back( t[ 0 ] );
       }
     }
   }
