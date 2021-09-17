@@ -288,27 +288,6 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
       _kernel_values;  //!< Buffer for storing kernel values.
   };
 
-  /*
-    template< typename element_type, int n_children >
-    struct tree {
-      element_type * _root;
-      std::array< element_type *, n_children > _children;
-
-      tree( const element_type * root ) : _root( root ) {
-        std::fill( _children.begin( ), _children.end( ), nullptr );
-      }
-
-      ~tree( ) {
-        for ( int i = 0; i < n_children; ++i ) {
-          delete _children[ i ];
-        }
-        delete _root;
-      }
-    };
-
-    using element_tree = tree< element, 8 >;
-    using element_pair_tree = tree< typename element::pair, 64 >;
-  */
  public:
   /**
    * Constructor.
@@ -350,32 +329,6 @@ class besthea::bem::tetrahedral_spacetime_be_assembler {
    */
   void init_quadrature( const quadrature_wrapper_ref & ref_quadrature,
     quadrature_wrapper & my_quadrature ) const;
-
-  /**
-   * Histogram of quadrature points distance
-   * @param[in] x1 Coordinates of the first node of the test element.
-   * @param[in] x2 Coordinates of the second node of the test element.
-   * @param[in] x3 Coordinates of the third node of the test element.
-   * @param[in] x4 Coordinates of the fourth node of the test element.
-   * @param[in] y1 Coordinates of the first node of the trial element.
-   * @param[in] y2 Coordinates of the second node of the trial element.
-   * @param[in] y3 Coordinates of the third node of the trial element.
-   * @param[in] y4 Coordinates of the fourth node of the trial element.
-   * @param[in] quad Wrapper holding quadrature data.
-   * @param[in] size Number of quadrature points.
-   * @param[in] n_bins Number of bins.
-   * @param[out] hist Histogram of distances.
-   */
-  void histogram( const linear_algebra::coordinates< 4 > & x1,
-    const linear_algebra::coordinates< 4 > & x2,
-    const linear_algebra::coordinates< 4 > & x3,
-    const linear_algebra::coordinates< 4 > & x4,
-    const linear_algebra::coordinates< 4 > & y1,
-    const linear_algebra::coordinates< 4 > & y2,
-    const linear_algebra::coordinates< 4 > & y3,
-    const linear_algebra::coordinates< 4 > & y4,
-    const quadrature_wrapper & quad, lo size, int n_bins,
-    std::vector< lo > & hist ) const;
 
   /**
    * Inverts permutation.
