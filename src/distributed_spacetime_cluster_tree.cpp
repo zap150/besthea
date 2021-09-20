@@ -549,7 +549,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree_new(
     collect_real_leaves( *spacetime_root, *temporal_root, leaves );
   }
 
-  fill_elements_new( leaves, n_levels_dist_tree_global - 1, space_levels,
+  fill_elements_new( leaves, n_levels_dist_tree_global, space_levels,
     boxes_of_local_elements, status );
 
   if ( status <= 0 ) {
@@ -973,9 +973,10 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     std::vector< sc > & spatial_step_sizes, std::vector< sc > & space_bounds_x,
     std::vector< sc > & space_bounds_y, std::vector< sc > & space_bounds_z ) {
   ////// first, take care of the temporal data
-  lo dist_tree_depth = n_global_levels_dist_tree - 1;
+  lo global_max_level_dist_tree = n_global_levels_dist_tree - 1;
 
-  lo time_cluster_index_conversion_factor = ( 1 << dist_tree_depth ) - 1;
+  lo time_cluster_index_conversion_factor
+    = ( 1 << global_max_level_dist_tree ) - 1;
   // by subtracting this index from a global index of a cluster at level
   // dist_tree_depth one obtains a local index between 0 and 2^dist_tree_depth-1
 
@@ -984,8 +985,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   // if the first cluster is not a leaf at level dist_tree_depth, its index is
   // exchanged by the index its leftmost descendant at level dist_tree_depth
   // would have
-  if ( cluster_level < dist_tree_depth ) {
-    for ( lo j = 0; j < ( dist_tree_depth - cluster_level ); ++j ) {
+  if ( cluster_level < global_max_level_dist_tree ) {
+    for ( lo j = 0; j < ( global_max_level_dist_tree - cluster_level ); ++j ) {
       leaves_start_index = leaves_start_index * 2 + 1;
     }
   }
@@ -997,8 +998,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   // if the last cluster is not a leaf at level dist_tree_depth, its index is
   // exchanged by the index its rightmost descendant at level dist_tree_depth
   // would have
-  if ( cluster_level < dist_tree_depth ) {
-    for ( lo j = 0; j < ( dist_tree_depth - cluster_level ); ++j ) {
+  if ( cluster_level < global_max_level_dist_tree ) {
+    for ( lo j = 0; j < ( global_max_level_dist_tree - cluster_level ); ++j ) {
       leaves_end_index = leaves_end_index * 2 + 2;
     }
   }
@@ -1026,10 +1027,11 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
         leaf != temporal_leaf_clusters.end( ); ++leaf ) {
     cluster_level = ( *leaf )->get_level( );
     lo cluster_index = ( *leaf )->get_global_index( );
-    if ( cluster_level < dist_tree_depth ) {
+    if ( cluster_level < global_max_level_dist_tree ) {
       // substitute the cluster index by the index of its leftmost descendant at
-      // level dist_tree_depth
-      for ( lo j = 0; j < ( dist_tree_depth - cluster_level ); ++j ) {
+      // level global_max_level_dist_tree
+      for ( lo j = 0; j < ( global_max_level_dist_tree - cluster_level );
+            ++j ) {
         cluster_index = 2 * cluster_index + 1;
       }
     }
@@ -1280,7 +1282,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
 
 void besthea::mesh::distributed_spacetime_cluster_tree::
   assign_nearfield_elements_to_boxes( const lo n_space_clusters_per_dim,
-    const lo global_dist_tree_depth,
+    const lo n_global_levels_dist_tree,
     std::vector< lo > & boxes_of_nearfield_elements ) {
   // get the leaves in the distribution tree which are handled by other
   // processes, but whose mesh is available (nearfield clusters)
@@ -1300,7 +1302,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   std::vector< sc > starts_time_clusters, endings_time_clusters,
     spatial_step_sizes, space_bounds_x, space_bounds_y, space_bounds_z;
   prepare_data_for_element_counting( nearfield_leaves,
-    global_dist_tree_depth + 1, n_space_clusters_per_dim, leaves_start_index,
+    n_global_levels_dist_tree, n_space_clusters_per_dim, leaves_start_index,
     starts_time_clusters, endings_time_clusters, spatial_step_sizes,
     space_bounds_x, space_bounds_y, space_bounds_z );
 
@@ -1379,11 +1381,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
         // corresponding box later)
         lo global_pos = ( pos_t + leaves_start_index ) * t_stride
           + pos_x * x_stride + pos_y * y_stride + pos_z;
-        if ( _my_rank == 1 && i == 0 ) {
-          std::cout << i << ": box coordinate: [ "
-                    << ( pos_t + leaves_start_index ) << ", " << pos_x << ", "
-                    << pos_y << ", " << pos_z << "]" << std::endl;
-        }
         boxes_of_nearfield_elements[ i ] = global_pos;
       }
     }
@@ -1873,11 +1870,12 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements(
 
 void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements_new(
   const std::vector< general_spacetime_cluster * > & leaves,
-  const lo global_dist_tree_depth, const std::vector< lo > & space_levels,
+  const lo n_global_levels_dist_tree, const std::vector< lo > & space_levels,
   const std::vector< lo > & boxes_of_local_elements, lo & status ) {
   // compute the number of spatial boxes per dimension at level dist_tree_depth
   // and the strides to compute global indices of boxes
-  lo n_space_clusters_per_dim = 1 << space_levels[ global_dist_tree_depth ];
+  lo global_max_level_dist_tree = n_global_levels_dist_tree - 1;
+  lo n_space_clusters_per_dim = 1 << space_levels[ global_max_level_dist_tree ];
   lo y_stride = n_space_clusters_per_dim;
   lo x_stride = n_space_clusters_per_dim * n_space_clusters_per_dim;
   lo t_stride = x_stride * n_space_clusters_per_dim;
@@ -1897,7 +1895,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements_new(
       leaf->set_elements_are_local( true );
     }
     // continue with construction of assignment map
-    if ( box_coordinates[ 0 ] == global_dist_tree_depth ) {
+    if ( box_coordinates[ 0 ] == global_max_level_dist_tree ) {
       // compute the index and update the map
       lo box_index = box_coordinates[ 4 ] * t_stride
         + box_coordinates[ 1 ] * x_stride + box_coordinates[ 2 ] * y_stride
@@ -1906,8 +1904,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements_new(
     } else {
       // compute indices of all potential children and add an entry to the map
       // for each one
-      lo level_diff = global_dist_tree_depth - box_coordinates[ 0 ];
-      lo space_level_diff = space_levels[ global_dist_tree_depth ]
+      lo level_diff = global_max_level_dist_tree - box_coordinates[ 0 ];
+      lo space_level_diff = space_levels[ global_max_level_dist_tree ]
         - space_levels[ box_coordinates[ 0 ] ];
       lo n_time_descendants = 1 << level_diff;
       lo time_multiplicator = n_time_descendants;
@@ -1946,7 +1944,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements_new(
   if ( _spacetime_mesh.get_nearfield_mesh( ) != nullptr ) {
     std::vector< lo > boxes_of_nearfield_elements;
     assign_nearfield_elements_to_boxes( n_space_clusters_per_dim,
-      global_dist_tree_depth, boxes_of_nearfield_elements );
+      n_global_levels_dist_tree, boxes_of_nearfield_elements );
     start_index = _spacetime_mesh.get_nearfield_start_idx( );
     for ( lou i = 0; i < boxes_of_nearfield_elements.size( ); ++i ) {
       index_to_cluster.at( boxes_of_nearfield_elements[ i ] )

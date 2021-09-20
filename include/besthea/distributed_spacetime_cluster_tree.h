@@ -436,15 +436,15 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * Assigns the elements contained in the nearfield mesh of
    * @ref _spacetime_mesh to the appropriate clusters in the tree.
    * @param[in] n_space_clusters_per_dim Number of space clusters along each
-   *                                      spatial dimension in the fine
-   *                                      subdivisioning from *
-   *                                  @ref get_n_elements_in_fine_subdivisioning
+   * spatial dimension in the fine subdivisioning from
+   * @ref get_n_elements_in_fine_subdivisioning.
+   * @param[in] n_global_levels_dist_tree Number of levels in the global
+   * distribution tree.
    * @param[in] boxes_of_nearfield_elements For each element in the nearfield
-   *                                        mesh this vector contains the index
-   *                                        of the cluster in which it lies.
+   * mesh this vector contains the index of the cluster in which it lies.
    */
   void assign_nearfield_elements_to_boxes( const lo n_space_clusters_per_dim,
-    const lo global_dist_tree_depth,
+    const lo n_global_levels_dist_tree,
     std::vector< lo > & boxes_of_nearfield_elements );
 
   /**
@@ -580,19 +580,20 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * Assigns elements to the leaf clusters in the upper part of the tree in the
    * first part of the tree assembly.
    * @param[in] leaves  Vector containing all the space-time leaf clusters in
-   *                    the upper part of the tree.
-   * @param[in] global_dist_tree_depth  Depth of the global distribution tree.
+   * the upper part of the tree.
+   * @param[in] n_global_levels_dist_tree Number of levels in the global
+   * distribution tree.
    * @param[in] space_levels  For each space-time level this vector contains the
-   *                          associated space level.
+   * associated space level.
    * @param[in] boxes_of_local_elements For each element in the nearfield mesh
-   *                                    this vector contains the index of the
-   *                                    cluster in which the element is located.
+   * this vector contains the index of the cluster in which the element is
+   * located.
    * @param[in,out] status If a leaf at levels <= 1 is found the status is set
-   *                       to 3, otherwise it is not changed.
+   * to 3, otherwise it is not changed.
    */
   void fill_elements_new(
     const std::vector< general_spacetime_cluster * > & leaves,
-    const lo global_dist_tree_depth, const std::vector< lo > & space_levels,
+    const lo n_global_levels_dist_tree, const std::vector< lo > & space_levels,
     const std::vector< lo > & boxes_of_local_elements, lo & status );
 
   // void fill_elements2( std::vector< general_spacetime_cluster * > & leaves,
