@@ -620,6 +620,42 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     general_spacetime_cluster & root, const bool split_space );
 
   /**
+   * Refines a given general space-time parent cluster with respect to space
+   * and time.
+   *
+   * The elements contained in the parent cluster are assigned to the resulting
+   * clusters according to the position of their centers. The refinement in
+   * time is uniform at first, but the temporal cluster bounds are adapted such
+   * that the temporal components of the assigned space-time elements are fully
+   * contained in the resulting clusters. The refinement in space is also
+   * uniform, and not modified, i.e. it is not ensured that the spatial parts
+   * of space-time elements are fully contained in the clusters. \n
+   * The resulting clusters are added to the parent cluster's list of children.
+   * @param[in] parent_cluster  Cluster which is refined.
+   * @note It is not checked, whether the refinement is appropriate, e.g. if
+   * the number of elements contained in the cluster or their sizes allow for a
+   * refinement.
+   */
+  void refine_cluster_in_space_and_time(
+    general_spacetime_cluster & parent_cluster );
+
+  /**
+   * Refines a given general space-time parent cluster with respect to time.
+   *
+   * The elements contained in the parent cluster are assigned to the resulting
+   * clusters according to the position of their centers. The refinement in
+   * time is uniform at first, but the temporal cluster bounds are adapted such
+   * that the temporal components of the assigned space-time elements are fully
+   * contained in the resulting clusters. \n
+   * The resulting clusters are added to the parent cluster's list of children.
+   * @param[in] parent_cluster  Cluster which is refined.
+   * @note It is not checked, whether the refinement is appropriate, e.g. if
+   * the number of elements contained in the cluster or their sizes allow for a
+   * refinement.
+   */
+  void refine_cluster_in_time( general_spacetime_cluster & parent_cluster );
+
+  /**
    * Finds the associated spacetime clusters for each scheduling time cluster in
    * the distribution tree.
    * @note The routine

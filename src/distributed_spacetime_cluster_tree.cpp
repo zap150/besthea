@@ -2150,37 +2150,12 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
     return;
   }
 
-  const spacetime_tensor_mesh * current_mesh;
-  lo start_idx;
-  bool elements_are_local = root.get_elements_are_local( );
-  if ( root.get_process_id( ) == _my_rank ) {
-    current_mesh = _spacetime_mesh.get_local_mesh( );
-    start_idx = _spacetime_mesh.get_local_start_idx( );
-    elements_are_local = true;
+  // call the appropriate routine to refine root
+  if ( split_space ) {
+    refine_cluster_in_space_and_time( root );
   } else {
-    current_mesh = _spacetime_mesh.get_nearfield_mesh( );
-    start_idx = _spacetime_mesh.get_nearfield_start_idx( );
+    refine_cluster_in_time( root );
   }
-
-  const std::vector< slou > parent_coord = root.get_box_coordinate( );
-
-  vector_type space_center( 3 );
-
-  sc time_center;
-  root.get_center( space_center, time_center );
-
-  lo n_space_div, n_time_div;
-  root.get_n_divs( n_space_div, n_time_div );
-
-  linear_algebra::coordinates< 4 > el_centroid;
-  lo elem_idx = 0;
-  lo oct_sizes[ 16 ];
-  for ( lo i = 0; i < 16; ++i ) {
-    oct_sizes[ i ] = 0;
-  }
-
-  vector_type new_space_center( 3 );
-  vector_type new_space_half_size( 3 );
 
   // decide whether to split space when refining the descendant
   bool split_space_descendant = false;
@@ -2190,378 +2165,463 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_subtree(
     split_space_descendant = true;
   }
 
-  slou coord_x, coord_y, coord_z, coord_t = 0;
+  for ( auto child_cluster : *root.get_children( ) ) {
+    build_subtree( *child_cluster, split_space_descendant );
+  }
+}
+
+void besthea::mesh::distributed_spacetime_cluster_tree::
+  refine_cluster_in_space_and_time(
+    general_spacetime_cluster & parent_cluster ) {
+  // get the appropriate mesh (nearfield or local, depending on parent_cluster)
+  const spacetime_tensor_mesh * current_mesh;
+  lo start_idx;
+  bool elements_are_local = parent_cluster.get_elements_are_local( );
+  if ( elements_are_local ) {
+    current_mesh = _spacetime_mesh.get_local_mesh( );
+    start_idx = _spacetime_mesh.get_local_start_idx( );
+  } else {
+    current_mesh = _spacetime_mesh.get_nearfield_mesh( );
+    start_idx = _spacetime_mesh.get_nearfield_start_idx( );
+  }
+
+  // preparatory steps
+  const std::vector< slou > parent_coord = parent_cluster.get_box_coordinate( );
+  vector_type space_center( 3 );
+  sc time_center;
+  parent_cluster.get_center( space_center, time_center );
+  lo oct_sizes[ 16 ];
+  for ( lo i = 0; i < 16; ++i ) {
+    oct_sizes[ i ] = 0;
+  }
+  vector_type new_space_center( 3 );
+  vector_type new_space_half_size( 3 );
   sc temporal_splitting_point = -std::numeric_limits< sc >::infinity( );
   bool set_temporal_splitting_point = false;
-  lo first_time_element = current_mesh->get_time_element(
-    _spacetime_mesh.global_2_local( start_idx, root.get_element( 0 ) ) );
-  lo last_time_element
+  lo first_time_element
     = current_mesh->get_time_element( _spacetime_mesh.global_2_local(
-      start_idx, root.get_element( root.get_n_elements( ) - 1 ) ) );
+      start_idx, parent_cluster.get_element( 0 ) ) );
+  lo last_time_element
+    = current_mesh->get_time_element( _spacetime_mesh.global_2_local( start_idx,
+      parent_cluster.get_element( parent_cluster.get_n_elements( ) - 1 ) ) );
   lo n_time_elements_left = 0;
   lo n_time_elements_right = 0;
+  std::vector< lo > clusters_of_elements( parent_cluster.get_n_elements( ) );
+  linear_algebra::coordinates< 4 > el_centroid;
+  std::vector< general_spacetime_cluster * > clusters( 16, nullptr );
+  std::vector< sc > max_space_diameters( 16, 0.0 );
 
-  std::vector< lo > clusters_of_elements( root.get_n_elements( ) );
-  if ( split_space ) {
-    std::vector< general_spacetime_cluster * > clusters( 16, nullptr );
-    std::vector< sc > max_space_diameters( 16, 0.0 );
-    for ( lo i = 0; i < root.get_n_elements( ); ++i ) {
-      elem_idx
-        = _spacetime_mesh.global_2_local( start_idx, root.get_element( i ) );
-      current_mesh->get_centroid( elem_idx, el_centroid );
-      sc elem_diameter = current_mesh->get_spatial_diameter( elem_idx );
+  // go through all elements of the parent cluster and assign them to the
+  // appropriate child clusters.
+  for ( lo i = 0; i < parent_cluster.get_n_elements( ); ++i ) {
+    lo elem_idx = _spacetime_mesh.global_2_local(
+      start_idx, parent_cluster.get_element( i ) );
+    current_mesh->get_centroid( elem_idx, el_centroid );
+    sc elem_diameter = current_mesh->get_spatial_diameter( elem_idx );
 
-      if ( el_centroid[ 0 ] >= space_center( 0 )
-        && el_centroid[ 1 ] >= space_center( 1 )
-        && el_centroid[ 2 ] >= space_center( 2 )
-        && el_centroid[ 3 ] < time_center ) {
-        ++oct_sizes[ 0 ];
-        clusters_of_elements[ i ] = 0;
-        if ( elem_diameter > max_space_diameters[ 0 ] ) {
-          max_space_diameters[ 0 ] = elem_diameter;
-        }
-      } else if ( el_centroid[ 0 ] < space_center( 0 )
-        && el_centroid[ 1 ] >= space_center( 1 )
-        && el_centroid[ 2 ] >= space_center( 2 )
-        && el_centroid[ 3 ] < time_center ) {
-        ++oct_sizes[ 1 ];
-        clusters_of_elements[ i ] = 1;
-        if ( elem_diameter > max_space_diameters[ 1 ] ) {
-          max_space_diameters[ 1 ] = elem_diameter;
-        }
-      } else if ( el_centroid[ 0 ] < space_center( 0 )
-        && el_centroid[ 1 ] < space_center( 1 )
-        && el_centroid[ 2 ] >= space_center( 2 )
-        && el_centroid[ 3 ] < time_center ) {
-        ++oct_sizes[ 2 ];
-        clusters_of_elements[ i ] = 2;
-        if ( elem_diameter > max_space_diameters[ 2 ] ) {
-          max_space_diameters[ 2 ] = elem_diameter;
-        }
-      } else if ( el_centroid[ 0 ] >= space_center( 0 )
-        && el_centroid[ 1 ] < space_center( 1 )
-        && el_centroid[ 2 ] >= space_center( 2 )
-        && el_centroid[ 3 ] < time_center ) {
-        ++oct_sizes[ 3 ];
-        clusters_of_elements[ i ] = 3;
-        if ( elem_diameter > max_space_diameters[ 3 ] ) {
-          max_space_diameters[ 3 ] = elem_diameter;
-        }
-      } else if ( el_centroid[ 0 ] >= space_center( 0 )
-        && el_centroid[ 1 ] >= space_center( 1 )
-        && el_centroid[ 2 ] < space_center( 2 )
-        && el_centroid[ 3 ] < time_center ) {
-        ++oct_sizes[ 4 ];
-        clusters_of_elements[ i ] = 4;
-        if ( elem_diameter > max_space_diameters[ 4 ] ) {
-          max_space_diameters[ 4 ] = elem_diameter;
-        }
-      } else if ( el_centroid[ 0 ] < space_center( 0 )
-        && el_centroid[ 1 ] >= space_center( 1 )
-        && el_centroid[ 2 ] < space_center( 2 )
-        && el_centroid[ 3 ] < time_center ) {
-        ++oct_sizes[ 5 ];
-        clusters_of_elements[ i ] = 5;
-        if ( elem_diameter > max_space_diameters[ 5 ] ) {
-          max_space_diameters[ 5 ] = elem_diameter;
-        }
-      } else if ( el_centroid[ 0 ] < space_center( 0 )
-        && el_centroid[ 1 ] < space_center( 1 )
-        && el_centroid[ 2 ] < space_center( 2 )
-        && el_centroid[ 3 ] < time_center ) {
-        ++oct_sizes[ 6 ];
-        clusters_of_elements[ i ] = 6;
-        if ( elem_diameter > max_space_diameters[ 6 ] ) {
-          max_space_diameters[ 6 ] = elem_diameter;
-        }
-      } else if ( el_centroid[ 0 ] >= space_center( 0 )
-        && el_centroid[ 1 ] < space_center( 1 )
-        && el_centroid[ 2 ] < space_center( 2 )
-        && el_centroid[ 3 ] < time_center ) {
-        ++oct_sizes[ 7 ];
-        clusters_of_elements[ i ] = 7;
-        if ( elem_diameter > max_space_diameters[ 7 ] ) {
-          max_space_diameters[ 7 ] = elem_diameter;
-        }
-      } else if ( el_centroid[ 0 ] >= space_center( 0 )
-        && el_centroid[ 1 ] >= space_center( 1 )
-        && el_centroid[ 2 ] >= space_center( 2 )
-        && el_centroid[ 3 ] >= time_center ) {
-        ++oct_sizes[ 8 ];
-        clusters_of_elements[ i ] = 8;
-        if ( elem_diameter > max_space_diameters[ 8 ] ) {
-          max_space_diameters[ 8 ] = elem_diameter;
-        }
-      } else if ( el_centroid[ 0 ] < space_center( 0 )
-        && el_centroid[ 1 ] >= space_center( 1 )
-        && el_centroid[ 2 ] >= space_center( 2 )
-        && el_centroid[ 3 ] >= time_center ) {
-        ++oct_sizes[ 9 ];
-        clusters_of_elements[ i ] = 9;
-        if ( elem_diameter > max_space_diameters[ 9 ] ) {
-          max_space_diameters[ 9 ] = elem_diameter;
-        }
-      } else if ( el_centroid[ 0 ] < space_center( 0 )
-        && el_centroid[ 1 ] < space_center( 1 )
-        && el_centroid[ 2 ] >= space_center( 2 )
-        && el_centroid[ 3 ] >= time_center ) {
-        ++oct_sizes[ 10 ];
-        clusters_of_elements[ i ] = 10;
-        if ( elem_diameter > max_space_diameters[ 10 ] ) {
-          max_space_diameters[ 10 ] = elem_diameter;
-        }
-      } else if ( el_centroid[ 0 ] >= space_center( 0 )
-        && el_centroid[ 1 ] < space_center( 1 )
-        && el_centroid[ 2 ] >= space_center( 2 )
-        && el_centroid[ 3 ] >= time_center ) {
-        ++oct_sizes[ 11 ];
-        clusters_of_elements[ i ] = 11;
-        if ( elem_diameter > max_space_diameters[ 11 ] ) {
-          max_space_diameters[ 11 ] = elem_diameter;
-        }
-      } else if ( el_centroid[ 0 ] >= space_center( 0 )
-        && el_centroid[ 1 ] >= space_center( 1 )
-        && el_centroid[ 2 ] < space_center( 2 )
-        && el_centroid[ 3 ] >= time_center ) {
-        ++oct_sizes[ 12 ];
-        clusters_of_elements[ i ] = 12;
-        if ( elem_diameter > max_space_diameters[ 12 ] ) {
-          max_space_diameters[ 12 ] = elem_diameter;
-        }
-      } else if ( el_centroid[ 0 ] < space_center( 0 )
-        && el_centroid[ 1 ] >= space_center( 1 )
-        && el_centroid[ 2 ] < space_center( 2 )
-        && el_centroid[ 3 ] >= time_center ) {
-        ++oct_sizes[ 13 ];
-        clusters_of_elements[ i ] = 13;
-        if ( elem_diameter > max_space_diameters[ 13 ] ) {
-          max_space_diameters[ 13 ] = elem_diameter;
-        }
-      } else if ( el_centroid[ 0 ] < space_center( 0 )
-        && el_centroid[ 1 ] < space_center( 1 )
-        && el_centroid[ 2 ] < space_center( 2 )
-        && el_centroid[ 3 ] >= time_center ) {
-        ++oct_sizes[ 14 ];
-        clusters_of_elements[ i ] = 14;
-        if ( elem_diameter > max_space_diameters[ 14 ] ) {
-          max_space_diameters[ 14 ] = elem_diameter;
-        }
-      } else if ( el_centroid[ 0 ] >= space_center( 0 )
-        && el_centroid[ 1 ] < space_center( 1 )
-        && el_centroid[ 2 ] < space_center( 2 )
-        && el_centroid[ 3 ] >= time_center ) {
-        ++oct_sizes[ 15 ];
-        clusters_of_elements[ i ] = 15;
-        if ( elem_diameter > max_space_diameters[ 15 ] ) {
-          max_space_diameters[ 15 ] = elem_diameter;
-        }
+    if ( el_centroid[ 0 ] >= space_center( 0 )
+      && el_centroid[ 1 ] >= space_center( 1 )
+      && el_centroid[ 2 ] >= space_center( 2 )
+      && el_centroid[ 3 ] < time_center ) {
+      ++oct_sizes[ 0 ];
+      clusters_of_elements[ i ] = 0;
+      if ( elem_diameter > max_space_diameters[ 0 ] ) {
+        max_space_diameters[ 0 ] = elem_diameter;
       }
-      // check if the temporal splitting point has been set or has to be set
-      // NOTE: this check is only reasonable for pure spacetime tensor meshes
-      // (the intersection of the temporal intervals of two elements is either
-      // empty, a point, or the whole time interval)
-      if ( !set_temporal_splitting_point ) {
-        sc temp_node_1, temp_node_2;
-        lo current_time_element = current_mesh->get_time_element( elem_idx );
-        current_mesh->get_temporal_nodes(
-          current_time_element, &temp_node_1, &temp_node_2 );
-        if ( ( el_centroid[ 3 ] < time_center )
-          && ( temp_node_2 >= time_center ) ) {
-          // the element is assigned to the left half, but its right bound
-          // is greater or equal than the center of the cluster.
-          set_temporal_splitting_point = true;
-          temporal_splitting_point = temp_node_2;
-          // set the number of time elements in the left and right clusters
-          n_time_elements_left = current_time_element - first_time_element + 1;
-          n_time_elements_right = last_time_element - current_time_element;
-        } else if ( el_centroid[ 3 ] >= time_center
-          && ( temp_node_1 <= time_center ) ) {
-          // the element is assigned to the right half, but its left bound
-          // is less or equal than the center of the cluster.
-          set_temporal_splitting_point = true;
-          temporal_splitting_point = temp_node_1;
-          // set the number of time elements in the left and right clusters
-          n_time_elements_left = current_time_element - first_time_element;
-          n_time_elements_right = last_time_element - current_time_element + 1;
-        }
+    } else if ( el_centroid[ 0 ] < space_center( 0 )
+      && el_centroid[ 1 ] >= space_center( 1 )
+      && el_centroid[ 2 ] >= space_center( 2 )
+      && el_centroid[ 3 ] < time_center ) {
+      ++oct_sizes[ 1 ];
+      clusters_of_elements[ i ] = 1;
+      if ( elem_diameter > max_space_diameters[ 1 ] ) {
+        max_space_diameters[ 1 ] = elem_diameter;
+      }
+    } else if ( el_centroid[ 0 ] < space_center( 0 )
+      && el_centroid[ 1 ] < space_center( 1 )
+      && el_centroid[ 2 ] >= space_center( 2 )
+      && el_centroid[ 3 ] < time_center ) {
+      ++oct_sizes[ 2 ];
+      clusters_of_elements[ i ] = 2;
+      if ( elem_diameter > max_space_diameters[ 2 ] ) {
+        max_space_diameters[ 2 ] = elem_diameter;
+      }
+    } else if ( el_centroid[ 0 ] >= space_center( 0 )
+      && el_centroid[ 1 ] < space_center( 1 )
+      && el_centroid[ 2 ] >= space_center( 2 )
+      && el_centroid[ 3 ] < time_center ) {
+      ++oct_sizes[ 3 ];
+      clusters_of_elements[ i ] = 3;
+      if ( elem_diameter > max_space_diameters[ 3 ] ) {
+        max_space_diameters[ 3 ] = elem_diameter;
+      }
+    } else if ( el_centroid[ 0 ] >= space_center( 0 )
+      && el_centroid[ 1 ] >= space_center( 1 )
+      && el_centroid[ 2 ] < space_center( 2 )
+      && el_centroid[ 3 ] < time_center ) {
+      ++oct_sizes[ 4 ];
+      clusters_of_elements[ i ] = 4;
+      if ( elem_diameter > max_space_diameters[ 4 ] ) {
+        max_space_diameters[ 4 ] = elem_diameter;
+      }
+    } else if ( el_centroid[ 0 ] < space_center( 0 )
+      && el_centroid[ 1 ] >= space_center( 1 )
+      && el_centroid[ 2 ] < space_center( 2 )
+      && el_centroid[ 3 ] < time_center ) {
+      ++oct_sizes[ 5 ];
+      clusters_of_elements[ i ] = 5;
+      if ( elem_diameter > max_space_diameters[ 5 ] ) {
+        max_space_diameters[ 5 ] = elem_diameter;
+      }
+    } else if ( el_centroid[ 0 ] < space_center( 0 )
+      && el_centroid[ 1 ] < space_center( 1 )
+      && el_centroid[ 2 ] < space_center( 2 )
+      && el_centroid[ 3 ] < time_center ) {
+      ++oct_sizes[ 6 ];
+      clusters_of_elements[ i ] = 6;
+      if ( elem_diameter > max_space_diameters[ 6 ] ) {
+        max_space_diameters[ 6 ] = elem_diameter;
+      }
+    } else if ( el_centroid[ 0 ] >= space_center( 0 )
+      && el_centroid[ 1 ] < space_center( 1 )
+      && el_centroid[ 2 ] < space_center( 2 )
+      && el_centroid[ 3 ] < time_center ) {
+      ++oct_sizes[ 7 ];
+      clusters_of_elements[ i ] = 7;
+      if ( elem_diameter > max_space_diameters[ 7 ] ) {
+        max_space_diameters[ 7 ] = elem_diameter;
+      }
+    } else if ( el_centroid[ 0 ] >= space_center( 0 )
+      && el_centroid[ 1 ] >= space_center( 1 )
+      && el_centroid[ 2 ] >= space_center( 2 )
+      && el_centroid[ 3 ] >= time_center ) {
+      ++oct_sizes[ 8 ];
+      clusters_of_elements[ i ] = 8;
+      if ( elem_diameter > max_space_diameters[ 8 ] ) {
+        max_space_diameters[ 8 ] = elem_diameter;
+      }
+    } else if ( el_centroid[ 0 ] < space_center( 0 )
+      && el_centroid[ 1 ] >= space_center( 1 )
+      && el_centroid[ 2 ] >= space_center( 2 )
+      && el_centroid[ 3 ] >= time_center ) {
+      ++oct_sizes[ 9 ];
+      clusters_of_elements[ i ] = 9;
+      if ( elem_diameter > max_space_diameters[ 9 ] ) {
+        max_space_diameters[ 9 ] = elem_diameter;
+      }
+    } else if ( el_centroid[ 0 ] < space_center( 0 )
+      && el_centroid[ 1 ] < space_center( 1 )
+      && el_centroid[ 2 ] >= space_center( 2 )
+      && el_centroid[ 3 ] >= time_center ) {
+      ++oct_sizes[ 10 ];
+      clusters_of_elements[ i ] = 10;
+      if ( elem_diameter > max_space_diameters[ 10 ] ) {
+        max_space_diameters[ 10 ] = elem_diameter;
+      }
+    } else if ( el_centroid[ 0 ] >= space_center( 0 )
+      && el_centroid[ 1 ] < space_center( 1 )
+      && el_centroid[ 2 ] >= space_center( 2 )
+      && el_centroid[ 3 ] >= time_center ) {
+      ++oct_sizes[ 11 ];
+      clusters_of_elements[ i ] = 11;
+      if ( elem_diameter > max_space_diameters[ 11 ] ) {
+        max_space_diameters[ 11 ] = elem_diameter;
+      }
+    } else if ( el_centroid[ 0 ] >= space_center( 0 )
+      && el_centroid[ 1 ] >= space_center( 1 )
+      && el_centroid[ 2 ] < space_center( 2 )
+      && el_centroid[ 3 ] >= time_center ) {
+      ++oct_sizes[ 12 ];
+      clusters_of_elements[ i ] = 12;
+      if ( elem_diameter > max_space_diameters[ 12 ] ) {
+        max_space_diameters[ 12 ] = elem_diameter;
+      }
+    } else if ( el_centroid[ 0 ] < space_center( 0 )
+      && el_centroid[ 1 ] >= space_center( 1 )
+      && el_centroid[ 2 ] < space_center( 2 )
+      && el_centroid[ 3 ] >= time_center ) {
+      ++oct_sizes[ 13 ];
+      clusters_of_elements[ i ] = 13;
+      if ( elem_diameter > max_space_diameters[ 13 ] ) {
+        max_space_diameters[ 13 ] = elem_diameter;
+      }
+    } else if ( el_centroid[ 0 ] < space_center( 0 )
+      && el_centroid[ 1 ] < space_center( 1 )
+      && el_centroid[ 2 ] < space_center( 2 )
+      && el_centroid[ 3 ] >= time_center ) {
+      ++oct_sizes[ 14 ];
+      clusters_of_elements[ i ] = 14;
+      if ( elem_diameter > max_space_diameters[ 14 ] ) {
+        max_space_diameters[ 14 ] = elem_diameter;
+      }
+    } else if ( el_centroid[ 0 ] >= space_center( 0 )
+      && el_centroid[ 1 ] < space_center( 1 )
+      && el_centroid[ 2 ] < space_center( 2 )
+      && el_centroid[ 3 ] >= time_center ) {
+      ++oct_sizes[ 15 ];
+      clusters_of_elements[ i ] = 15;
+      if ( elem_diameter > max_space_diameters[ 15 ] ) {
+        max_space_diameters[ 15 ] = elem_diameter;
       }
     }
-    lo n_clusters = 0;
-
-    sc time_half_size_right
-      = ( time_center + time_half_size - temporal_splitting_point ) * 0.5;
-    sc time_center_right = temporal_splitting_point + time_half_size_right;
-    sc time_half_size_left
-      = ( temporal_splitting_point - ( time_center - time_half_size ) ) * 0.5;
-    sc time_center_left = temporal_splitting_point - time_half_size_left;
-
-    for ( short i = 0; i < 8; ++i ) {
-      root.compute_spatial_suboctant(
-        i, new_space_center, new_space_half_size );
-
-      coord_x = 2 * root.get_box_coordinate( )[ 1 ] + _idx_2_coord[ i ][ 0 ];
-      coord_y = 2 * root.get_box_coordinate( )[ 2 ] + _idx_2_coord[ i ][ 1 ];
-      coord_z = 2 * root.get_box_coordinate( )[ 3 ] + _idx_2_coord[ i ][ 2 ];
-
-      // std::cout << oct_sizes[ i ] << " " << oct_sizes[ i + 8 ] <<
-      // std::endl;
-      if ( oct_sizes[ i ] > 0 ) {
-        ++n_clusters;
-        coord_t = (slou) ( 2 * parent_coord[ 4 ] );
-        std::vector< slou > coordinates
-          = { static_cast< slou >( root.get_level( ) + 1 ), coord_x, coord_y,
-              coord_z, coord_t };
-        clusters[ i ] = new general_spacetime_cluster( new_space_center,
-          time_center_left, new_space_half_size, time_half_size_left,
-          oct_sizes[ i ], &root, root.get_level( ) + 1, i, coordinates, 0,
-          2 * root.get_global_time_index( ) + 1, n_space_div + 1,
-          n_time_div + 1, _spacetime_mesh, root.get_process_id( ), true );
-        clusters[ i ]->set_n_time_elements( n_time_elements_left );
-        clusters[ i ]->set_elements_are_local( elements_are_local );
-        clusters[ i ]->set_max_element_space_diameter(
-          max_space_diameters[ i ] );
+    // check if the temporal splitting point has been set or has to be set
+    // NOTE: this check is only reasonable for pure spacetime tensor meshes
+    // (the intersection of the temporal intervals of two elements is either
+    // empty, a point, or the whole time interval)
+    if ( !set_temporal_splitting_point ) {
+      sc temp_node_1, temp_node_2;
+      lo current_time_element = current_mesh->get_time_element( elem_idx );
+      current_mesh->get_temporal_nodes(
+        current_time_element, &temp_node_1, &temp_node_2 );
+      if ( ( el_centroid[ 3 ] < time_center )
+        && ( temp_node_2 >= time_center ) ) {
+        // the element is assigned to the left half, but its right bound
+        // is greater or equal than the center of the cluster.
+        set_temporal_splitting_point = true;
+        temporal_splitting_point = temp_node_2;
+        // set the number of time elements in the left and right clusters
+        n_time_elements_left = current_time_element - first_time_element + 1;
+        n_time_elements_right = last_time_element - current_time_element;
+      } else if ( el_centroid[ 3 ] >= time_center
+        && ( temp_node_1 <= time_center ) ) {
+        // the element is assigned to the right half, but its left bound
+        // is less or equal than the center of the cluster.
+        set_temporal_splitting_point = true;
+        temporal_splitting_point = temp_node_1;
+        // set the number of time elements in the left and right clusters
+        n_time_elements_left = current_time_element - first_time_element;
+        n_time_elements_right = last_time_element - current_time_element + 1;
       }
-      if ( oct_sizes[ i + 8 ] > 0 ) {
-        ++n_clusters;
-        coord_t = (slou) ( 2 * parent_coord[ 4 ] + 1 );
-        std::vector< slou > coordinates
-          = { static_cast< slou >( root.get_level( ) + 1 ), coord_x, coord_y,
-              coord_z, coord_t };
-        clusters[ i + 8 ] = new general_spacetime_cluster( new_space_center,
-          time_center_right, new_space_half_size, time_half_size_right,
-          oct_sizes[ i + 8 ], &root, root.get_level( ) + 1, i, coordinates, 1,
-          2 * root.get_global_time_index( ) + 2, n_space_div + 1,
-          n_time_div + 1, _spacetime_mesh, root.get_process_id( ), true );
-        clusters[ i + 8 ]->set_n_time_elements( n_time_elements_right );
-        clusters[ i + 8 ]->set_elements_are_local( elements_are_local );
-        clusters[ i + 8 ]->set_max_element_space_diameter(
-          max_space_diameters[ i + 8 ] );
-      }
-    }
-
-    // finally, assign elements to clusters
-    for ( lo i = 0; i < root.get_n_elements( ); ++i ) {
-      clusters[ clusters_of_elements[ i ] ]->add_element(
-        root.get_element( i ) );
-    }
-
-    root.set_n_children( n_clusters );
-
-    for ( lo i = 0; i < 16; ++i ) {
-      if ( clusters[ i ] != nullptr ) {
-        root.add_child( clusters[ i ] );
-        build_subtree( *clusters[ i ], split_space_descendant );
-      }
-    }
-  } else {
-    std::vector< general_spacetime_cluster * > clusters( 2, nullptr );
-    std::vector< lo > clusters_of_elements( root.get_n_elements( ) );
-    for ( lo i = 0; i < root.get_n_elements( ); ++i ) {
-      // get elem idx in local mesh indexing
-      elem_idx
-        = _spacetime_mesh.global_2_local( start_idx, root.get_element( i ) );
-      current_mesh->get_centroid( elem_idx, el_centroid );
-      if ( el_centroid[ 3 ] >= time_center ) {
-        oct_sizes[ 1 ] += 1;
-        clusters_of_elements[ i ] = 1;
-      } else {
-        oct_sizes[ 0 ] += 1;
-        clusters_of_elements[ i ] = 0;
-      }
-      // set the temporal splitting point as in the previous case
-      if ( !set_temporal_splitting_point ) {
-        sc temp_node_1, temp_node_2;
-        lo current_time_element = current_mesh->get_time_element( elem_idx );
-        current_mesh->get_temporal_nodes(
-          current_time_element, &temp_node_1, &temp_node_2 );
-        if ( ( el_centroid[ 3 ] < time_center )
-          && ( temp_node_2 >= time_center ) ) {
-          set_temporal_splitting_point = true;
-          temporal_splitting_point = temp_node_2;
-          n_time_elements_left = current_time_element - first_time_element + 1;
-          n_time_elements_right = last_time_element - current_time_element;
-        } else if ( el_centroid[ 3 ] >= time_center
-          && ( temp_node_1 <= time_center ) ) {
-          set_temporal_splitting_point = true;
-          temporal_splitting_point = temp_node_1;
-          n_time_elements_left = current_time_element - first_time_element;
-          n_time_elements_right = last_time_element - current_time_element + 1;
-        }
-      }
-    }
-
-    lo n_clusters = 0;
-    coord_x = parent_coord[ 1 ];
-    coord_y = parent_coord[ 2 ];
-    coord_z = parent_coord[ 3 ];
-    coord_t = (slou) ( 2 * parent_coord[ 4 ] );
-    std::vector< slou > coordinates
-      = { static_cast< slou >( root.get_level( ) + 1 ), coord_x, coord_y,
-          coord_z, coord_t };
-
-    sc time_half_size_right
-      = ( time_center + time_half_size - temporal_splitting_point ) * 0.5;
-    sc time_center_right = temporal_splitting_point + time_half_size_right;
-    sc time_half_size_left
-      = ( temporal_splitting_point - ( time_center - time_half_size ) ) * 0.5;
-    sc time_center_left = temporal_splitting_point - time_half_size_left;
-    general_spacetime_cluster * left_child = nullptr;
-    general_spacetime_cluster * right_child = nullptr;
-
-    // left temporal cluster
-    if ( oct_sizes[ 0 ] > 0 ) {
-      n_clusters++;
-      left_child = new general_spacetime_cluster( space_center,
-        time_center_left, space_half_size, time_half_size_left, oct_sizes[ 0 ],
-        &root, root.get_level( ) + 1, root.get_spatial_octant( ), coordinates,
-        0, 2 * root.get_global_time_index( ) + 1, n_space_div, n_time_div + 1,
-        _spacetime_mesh, root.get_process_id( ), true );
-      left_child->set_n_time_elements( n_time_elements_left );
-      left_child->set_elements_are_local( elements_are_local );
-      // the spatial part stays the same (in particular the maximal diameter of
-      // all elements)
-      left_child->set_max_element_space_diameter(
-        root.get_max_element_space_diameter( ) );
-    }
-
-    // right temporal cluster
-    coord_t = (slou) ( 2 * parent_coord[ 4 ] + 1 );
-    coordinates[ 4 ] = coord_t;
-    if ( oct_sizes[ 1 ] > 0 ) {
-      n_clusters++;
-      right_child
-        = new general_spacetime_cluster( space_center, time_center_right,
-          space_half_size, time_half_size_right, oct_sizes[ 1 ], &root,
-          root.get_level( ) + 1, root.get_spatial_octant( ), coordinates, 1,
-          2 * root.get_global_time_index( ) + 2, n_space_div, n_time_div + 1,
-          _spacetime_mesh, root.get_process_id( ), true );
-      right_child->set_n_time_elements( n_time_elements_right );
-      right_child->set_elements_are_local( elements_are_local );
-      // the spatial part stays the same (in particular the maximal diameter of
-      // all elements)
-      right_child->set_max_element_space_diameter(
-        root.get_max_element_space_diameter( ) );
-    }
-
-    // assign elements to clusters
-    clusters[ 0 ] = left_child;
-    clusters[ 1 ] = right_child;
-    for ( lo i = 0; i < root.get_n_elements( ); ++i ) {
-      clusters[ clusters_of_elements[ i ] ]->add_element(
-        root.get_element( i ) );
-    }
-    root.set_n_children( n_clusters );
-
-    if ( left_child != nullptr ) {
-      root.add_child( left_child );
-      build_subtree( *left_child, split_space_descendant );
-    }
-    if ( right_child != nullptr ) {
-      root.add_child( right_child );
-      build_subtree( *right_child, split_space_descendant );
     }
   }
-  root.shrink_children( );
+
+  // preparatory steps for the construction of the child clusters
+  lo n_space_div, n_time_div;
+  parent_cluster.get_n_divs( n_space_div, n_time_div );
+  sc time_half_size;
+  vector_type space_half_size( 3 );
+  parent_cluster.get_half_size( space_half_size, time_half_size );
+
+  sc time_half_size_right
+    = ( time_center + time_half_size - temporal_splitting_point ) * 0.5;
+  sc time_center_right = temporal_splitting_point + time_half_size_right;
+  sc time_half_size_left
+    = ( temporal_splitting_point - ( time_center - time_half_size ) ) * 0.5;
+  sc time_center_left = temporal_splitting_point - time_half_size_left;
+
+  slou coord_x, coord_y, coord_z, coord_t = 0;
+  lo n_clusters = 0;
+
+  // create all child clusters, which are non-empty
+  for ( short i = 0; i < 8; ++i ) {
+    parent_cluster.compute_spatial_suboctant(
+      i, new_space_center, new_space_half_size );
+    coord_x
+      = 2 * parent_cluster.get_box_coordinate( )[ 1 ] + _idx_2_coord[ i ][ 0 ];
+    coord_y
+      = 2 * parent_cluster.get_box_coordinate( )[ 2 ] + _idx_2_coord[ i ][ 1 ];
+    coord_z
+      = 2 * parent_cluster.get_box_coordinate( )[ 3 ] + _idx_2_coord[ i ][ 2 ];
+
+    if ( oct_sizes[ i ] > 0 ) {
+      ++n_clusters;
+      coord_t = (slou) ( 2 * parent_coord[ 4 ] );
+      std::vector< slou > coordinates
+        = { static_cast< slou >( parent_cluster.get_level( ) + 1 ), coord_x,
+            coord_y, coord_z, coord_t };
+      clusters[ i ] = new general_spacetime_cluster( new_space_center,
+        time_center_left, new_space_half_size, time_half_size_left,
+        oct_sizes[ i ], &parent_cluster, parent_cluster.get_level( ) + 1, i,
+        coordinates, 0, 2 * parent_cluster.get_global_time_index( ) + 1,
+        n_space_div + 1, n_time_div + 1, _spacetime_mesh,
+        parent_cluster.get_process_id( ), true );
+      clusters[ i ]->set_n_time_elements( n_time_elements_left );
+      clusters[ i ]->set_elements_are_local( elements_are_local );
+      clusters[ i ]->set_max_element_space_diameter( max_space_diameters[ i ] );
+    }
+    if ( oct_sizes[ i + 8 ] > 0 ) {
+      ++n_clusters;
+      coord_t = (slou) ( 2 * parent_coord[ 4 ] + 1 );
+      std::vector< slou > coordinates
+        = { static_cast< slou >( parent_cluster.get_level( ) + 1 ), coord_x,
+            coord_y, coord_z, coord_t };
+      clusters[ i + 8 ] = new general_spacetime_cluster( new_space_center,
+        time_center_right, new_space_half_size, time_half_size_right,
+        oct_sizes[ i + 8 ], &parent_cluster, parent_cluster.get_level( ) + 1, i,
+        coordinates, 1, 2 * parent_cluster.get_global_time_index( ) + 2,
+        n_space_div + 1, n_time_div + 1, _spacetime_mesh,
+        parent_cluster.get_process_id( ), true );
+      clusters[ i + 8 ]->set_n_time_elements( n_time_elements_right );
+      clusters[ i + 8 ]->set_elements_are_local( elements_are_local );
+      clusters[ i + 8 ]->set_max_element_space_diameter(
+        max_space_diameters[ i + 8 ] );
+    }
+  }
+
+  // finally, assign elements to child clusters and assign the children to the
+  // parent
+  for ( lo i = 0; i < parent_cluster.get_n_elements( ); ++i ) {
+    clusters[ clusters_of_elements[ i ] ]->add_element(
+      parent_cluster.get_element( i ) );
+  }
+  parent_cluster.set_n_children( n_clusters );
+  for ( lo i = 0; i < 16; ++i ) {
+    if ( clusters[ i ] != nullptr ) {
+      parent_cluster.add_child( clusters[ i ] );
+    }
+  }
+  parent_cluster.shrink_children( );
+}
+
+void besthea::mesh::distributed_spacetime_cluster_tree::refine_cluster_in_time(
+  general_spacetime_cluster & parent_cluster ) {
+  // get the appropriate mesh (nearfield or local, depending on parent_cluster)
+  const spacetime_tensor_mesh * current_mesh;
+  lo start_idx;
+  bool elements_are_local = parent_cluster.get_elements_are_local( );
+  if ( elements_are_local ) {
+    current_mesh = _spacetime_mesh.get_local_mesh( );
+    start_idx = _spacetime_mesh.get_local_start_idx( );
+  } else {
+    current_mesh = _spacetime_mesh.get_nearfield_mesh( );
+    start_idx = _spacetime_mesh.get_nearfield_start_idx( );
+  }
+  // preparatory steps
+  const std::vector< slou > parent_coord = parent_cluster.get_box_coordinate( );
+  vector_type space_center( 3 );
+  vector_type space_half_size( 3 );
+  sc time_center, time_half_size;
+  parent_cluster.get_center( space_center, time_center );
+  parent_cluster.get_half_size( space_half_size, time_half_size );
+  std::vector< general_spacetime_cluster * > clusters( 2, nullptr );
+  lo child_sizes[ 2 ];
+  for ( lo i = 0; i < 2; ++i ) {
+    child_sizes[ i ] = 0;
+  }
+  sc temporal_splitting_point = -std::numeric_limits< sc >::infinity( );
+  bool set_temporal_splitting_point = false;
+  lo first_time_element
+    = current_mesh->get_time_element( _spacetime_mesh.global_2_local(
+      start_idx, parent_cluster.get_element( 0 ) ) );
+  lo last_time_element
+    = current_mesh->get_time_element( _spacetime_mesh.global_2_local( start_idx,
+      parent_cluster.get_element( parent_cluster.get_n_elements( ) - 1 ) ) );
+  lo n_time_elements_left = 0;
+  lo n_time_elements_right = 0;
+  linear_algebra::coordinates< 4 > el_centroid;
+  std::vector< lo > clusters_of_elements( parent_cluster.get_n_elements( ) );
+
+  // go through all elements of the parent cluster and assign them to the
+  // appropriate child clusters.
+  for ( lo i = 0; i < parent_cluster.get_n_elements( ); ++i ) {
+    // get elem idx in local mesh indexing
+    lo elem_idx = _spacetime_mesh.global_2_local(
+      start_idx, parent_cluster.get_element( i ) );
+    current_mesh->get_centroid( elem_idx, el_centroid );
+    if ( el_centroid[ 3 ] >= time_center ) {
+      child_sizes[ 1 ] += 1;
+      clusters_of_elements[ i ] = 1;
+    } else {
+      child_sizes[ 0 ] += 1;
+      clusters_of_elements[ i ] = 0;
+    }
+    // set the temporal splitting point of the child clusters.
+    if ( !set_temporal_splitting_point ) {
+      sc temp_node_1, temp_node_2;
+      lo current_time_element = current_mesh->get_time_element( elem_idx );
+      current_mesh->get_temporal_nodes(
+        current_time_element, &temp_node_1, &temp_node_2 );
+      if ( ( el_centroid[ 3 ] < time_center )
+        && ( temp_node_2 >= time_center ) ) {
+        set_temporal_splitting_point = true;
+        temporal_splitting_point = temp_node_2;
+        n_time_elements_left = current_time_element - first_time_element + 1;
+        n_time_elements_right = last_time_element - current_time_element;
+      } else if ( el_centroid[ 3 ] >= time_center
+        && ( temp_node_1 <= time_center ) ) {
+        set_temporal_splitting_point = true;
+        temporal_splitting_point = temp_node_1;
+        n_time_elements_left = current_time_element - first_time_element;
+        n_time_elements_right = last_time_element - current_time_element + 1;
+      }
+    }
+  }
+
+  // preparatory steps for the construction of the child clusters
+  // get number of spatial and temporal refinements of parent cluster (to set
+  // these values for its children)
+  lo n_space_div, n_time_div;
+  parent_cluster.get_n_divs( n_space_div, n_time_div );
+  // compute the temporal centers and half sizes of the children.
+  sc time_half_size_right
+    = ( time_center + time_half_size - temporal_splitting_point ) * 0.5;
+  sc time_center_right = temporal_splitting_point + time_half_size_right;
+  sc time_half_size_left
+    = ( temporal_splitting_point - ( time_center - time_half_size ) ) * 0.5;
+  sc time_center_left = temporal_splitting_point - time_half_size_left;
+  slou coord_x = parent_coord[ 1 ];
+  slou coord_y = parent_coord[ 2 ];
+  slou coord_z = parent_coord[ 3 ];
+  slou coord_t = (slou) ( 2 * parent_coord[ 4 ] );
+  std::vector< slou > coordinates
+    = { static_cast< slou >( parent_cluster.get_level( ) + 1 ), coord_x,
+        coord_y, coord_z, coord_t };
+  lo n_clusters = 0;
+  general_spacetime_cluster * left_child = nullptr;
+  general_spacetime_cluster * right_child = nullptr;
+
+  // create the left temporal child cluster, if it is not empty
+  if ( child_sizes[ 0 ] > 0 ) {
+    n_clusters++;
+    left_child = new general_spacetime_cluster( space_center, time_center_left,
+      space_half_size, time_half_size_left, child_sizes[ 0 ], &parent_cluster,
+      parent_cluster.get_level( ) + 1, parent_cluster.get_spatial_octant( ),
+      coordinates, 0, 2 * parent_cluster.get_global_time_index( ) + 1,
+      n_space_div, n_time_div + 1, _spacetime_mesh,
+      parent_cluster.get_process_id( ), true );
+    left_child->set_n_time_elements( n_time_elements_left );
+    left_child->set_elements_are_local( elements_are_local );
+    // the spatial part stays the same (in particular the maximal diameter of
+    // all elements)
+    left_child->set_max_element_space_diameter(
+      parent_cluster.get_max_element_space_diameter( ) );
+  }
+
+  // create the right temporal child cluster, if it is not empty.
+  coord_t = (slou) ( 2 * parent_coord[ 4 ] + 1 );
+  coordinates[ 4 ] = coord_t;
+  if ( child_sizes[ 1 ] > 0 ) {
+    n_clusters++;
+    right_child = new general_spacetime_cluster( space_center,
+      time_center_right, space_half_size, time_half_size_right,
+      child_sizes[ 1 ], &parent_cluster, parent_cluster.get_level( ) + 1,
+      parent_cluster.get_spatial_octant( ), coordinates, 1,
+      2 * parent_cluster.get_global_time_index( ) + 2, n_space_div,
+      n_time_div + 1, _spacetime_mesh, parent_cluster.get_process_id( ), true );
+    right_child->set_n_time_elements( n_time_elements_right );
+    right_child->set_elements_are_local( elements_are_local );
+    // the spatial part stays the same (in particular the maximal diameter of
+    // all elements)
+    right_child->set_max_element_space_diameter(
+      parent_cluster.get_max_element_space_diameter( ) );
+  }
+
+  // finally, assign elements to clusters, and add the non-empty children to the
+  // respective list of the parent.
+  clusters[ 0 ] = left_child;
+  clusters[ 1 ] = right_child;
+  for ( lo i = 0; i < parent_cluster.get_n_elements( ); ++i ) {
+    clusters[ clusters_of_elements[ i ] ]->add_element(
+      parent_cluster.get_element( i ) );
+  }
+  parent_cluster.set_n_children( n_clusters );
+  if ( left_child != nullptr ) {
+    parent_cluster.add_child( left_child );
+  }
+  if ( right_child != nullptr ) {
+    parent_cluster.add_child( right_child );
+  }
+  parent_cluster.shrink_children( );
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::
