@@ -443,7 +443,8 @@ sc besthea::bem::distributed_fast_spacetime_be_space< basis_type >::
         local_mesh->get_spatial_normal( i_elem, n );
         sc spatial_area = local_mesh->spatial_area( i_elem );
         sc area_xt = spatial_area * ( t_end - t_start );
-        // compute the spatial weight h_x^{1/2} with h_x ~ spatial_area^{1/2}
+        // compute the spatial weight h_x^{1/2} with h_x ~
+        // spatial_area ^ { 1 / 2 }
         sc h_x_weight = std::pow( spatial_area, 0.25 );
         sc combined_weight = h_t_weight + h_x_weight;
         combined_weight *= combined_weight;
