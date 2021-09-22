@@ -656,6 +656,25 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   void refine_cluster_in_time( general_spacetime_cluster & parent_cluster );
 
   /**
+   * Refines a given general space-time parent cluster with respect to space.
+   *
+   * The elements contained in the parent cluster are assigned to the resulting
+   * clusters according to the position of their centers. The refinement in
+   * space is uniform. Note that it is not ensured that the spatial parts of
+   * space-time elements are fully contained in the resulting child clusters. \n
+   * The resulting clusters are added to the parent cluster's list of children.
+   * @param[in] parent_cluster  Cluster which is refined.
+   * @note It is not checked, whether the refinement is appropriate, e.g. if
+   * the number of elements contained in the cluster or their sizes allow for a
+   * refinement.
+   * @note This routine is not used in the original construction of space-time
+   * clusters.
+   * @warning The space-time level of the constructed clusters does not
+   * correspond anymore to their temporal level.
+   */
+  void refine_cluster_in_space( general_spacetime_cluster & parent_cluster );
+
+  /**
    * Finds the associated spacetime clusters for each scheduling time cluster in
    * the distribution tree.
    * @note The routine

@@ -2624,6 +2624,166 @@ void besthea::mesh::distributed_spacetime_cluster_tree::refine_cluster_in_time(
   parent_cluster.shrink_children( );
 }
 
+void besthea::mesh::distributed_spacetime_cluster_tree::refine_cluster_in_space(
+  general_spacetime_cluster & parent_cluster ) {
+  // get the appropriate mesh (nearfield or local, depending on parent_cluster)
+  const spacetime_tensor_mesh * current_mesh;
+  lo start_idx;
+  bool elements_are_local = parent_cluster.get_elements_are_local( );
+  if ( elements_are_local ) {
+    current_mesh = _spacetime_mesh.get_local_mesh( );
+    start_idx = _spacetime_mesh.get_local_start_idx( );
+  } else {
+    current_mesh = _spacetime_mesh.get_nearfield_mesh( );
+    start_idx = _spacetime_mesh.get_nearfield_start_idx( );
+  }
+
+  // preparatory steps
+  const std::vector< slou > parent_coord = parent_cluster.get_box_coordinate( );
+  vector_type space_center( 3 );
+  sc time_center;
+  parent_cluster.get_center( space_center, time_center );
+  lo oct_sizes[ 8 ];
+  for ( lo i = 0; i < 8; ++i ) {
+    oct_sizes[ i ] = 0;
+  }
+  std::vector< lo > clusters_of_elements( parent_cluster.get_n_elements( ) );
+  linear_algebra::coordinates< 4 > el_centroid;
+  std::vector< general_spacetime_cluster * > clusters( 8, nullptr );
+  std::vector< sc > max_space_diameters( 8, 0.0 );
+
+  // go through all elements of the parent cluster and assign them to the
+  // appropriate child clusters.
+  for ( lo i = 0; i < parent_cluster.get_n_elements( ); ++i ) {
+    lo elem_idx = _spacetime_mesh.global_2_local(
+      start_idx, parent_cluster.get_element( i ) );
+    current_mesh->get_centroid( elem_idx, el_centroid );
+    sc elem_diameter = current_mesh->get_spatial_diameter( elem_idx );
+
+    if ( el_centroid[ 0 ] >= space_center( 0 )
+      && el_centroid[ 1 ] >= space_center( 1 )
+      && el_centroid[ 2 ] >= space_center( 2 ) ) {
+      ++oct_sizes[ 0 ];
+      clusters_of_elements[ i ] = 0;
+      if ( elem_diameter > max_space_diameters[ 0 ] ) {
+        max_space_diameters[ 0 ] = elem_diameter;
+      }
+    } else if ( el_centroid[ 0 ] < space_center( 0 )
+      && el_centroid[ 1 ] >= space_center( 1 )
+      && el_centroid[ 2 ] >= space_center( 2 ) ) {
+      ++oct_sizes[ 1 ];
+      clusters_of_elements[ i ] = 1;
+      if ( elem_diameter > max_space_diameters[ 1 ] ) {
+        max_space_diameters[ 1 ] = elem_diameter;
+      }
+    } else if ( el_centroid[ 0 ] < space_center( 0 )
+      && el_centroid[ 1 ] < space_center( 1 )
+      && el_centroid[ 2 ] >= space_center( 2 ) ) {
+      ++oct_sizes[ 2 ];
+      clusters_of_elements[ i ] = 2;
+      if ( elem_diameter > max_space_diameters[ 2 ] ) {
+        max_space_diameters[ 2 ] = elem_diameter;
+      }
+    } else if ( el_centroid[ 0 ] >= space_center( 0 )
+      && el_centroid[ 1 ] < space_center( 1 )
+      && el_centroid[ 2 ] >= space_center( 2 ) ) {
+      ++oct_sizes[ 3 ];
+      clusters_of_elements[ i ] = 3;
+      if ( elem_diameter > max_space_diameters[ 3 ] ) {
+        max_space_diameters[ 3 ] = elem_diameter;
+      }
+    } else if ( el_centroid[ 0 ] >= space_center( 0 )
+      && el_centroid[ 1 ] >= space_center( 1 )
+      && el_centroid[ 2 ] < space_center( 2 ) ) {
+      ++oct_sizes[ 4 ];
+      clusters_of_elements[ i ] = 4;
+      if ( elem_diameter > max_space_diameters[ 4 ] ) {
+        max_space_diameters[ 4 ] = elem_diameter;
+      }
+    } else if ( el_centroid[ 0 ] < space_center( 0 )
+      && el_centroid[ 1 ] >= space_center( 1 )
+      && el_centroid[ 2 ] < space_center( 2 ) ) {
+      ++oct_sizes[ 5 ];
+      clusters_of_elements[ i ] = 5;
+      if ( elem_diameter > max_space_diameters[ 5 ] ) {
+        max_space_diameters[ 5 ] = elem_diameter;
+      }
+    } else if ( el_centroid[ 0 ] < space_center( 0 )
+      && el_centroid[ 1 ] < space_center( 1 )
+      && el_centroid[ 2 ] < space_center( 2 ) ) {
+      ++oct_sizes[ 6 ];
+      clusters_of_elements[ i ] = 6;
+      if ( elem_diameter > max_space_diameters[ 6 ] ) {
+        max_space_diameters[ 6 ] = elem_diameter;
+      }
+    } else if ( el_centroid[ 0 ] >= space_center( 0 )
+      && el_centroid[ 1 ] < space_center( 1 )
+      && el_centroid[ 2 ] < space_center( 2 ) ) {
+      ++oct_sizes[ 7 ];
+      clusters_of_elements[ i ] = 7;
+      if ( elem_diameter > max_space_diameters[ 7 ] ) {
+        max_space_diameters[ 7 ] = elem_diameter;
+      }
+    }
+  }
+
+  // preparatory steps for the construction of the child clusters
+  lo n_space_div, n_time_div;
+  parent_cluster.get_n_divs( n_space_div, n_time_div );
+  sc time_half_size;
+  vector_type space_half_size( 3 );
+  parent_cluster.get_half_size( space_half_size, time_half_size );
+
+  vector_type new_space_center( 3 );
+  vector_type new_space_half_size( 3 );
+  slou coord_x, coord_y, coord_z;
+  slou coord_t = parent_coord[ 4 ];
+  lo n_clusters = 0;
+
+  // create all child clusters, which are non-empty
+  for ( short i = 0; i < 8; ++i ) {
+    parent_cluster.compute_spatial_suboctant(
+      i, new_space_center, new_space_half_size );
+    coord_x
+      = 2 * parent_cluster.get_box_coordinate( )[ 1 ] + _idx_2_coord[ i ][ 0 ];
+    coord_y
+      = 2 * parent_cluster.get_box_coordinate( )[ 2 ] + _idx_2_coord[ i ][ 1 ];
+    coord_z
+      = 2 * parent_cluster.get_box_coordinate( )[ 3 ] + _idx_2_coord[ i ][ 2 ];
+
+    if ( oct_sizes[ i ] > 0 ) {
+      ++n_clusters;
+      std::vector< slou > coordinates
+        = { static_cast< slou >( parent_cluster.get_level( ) + 1 ), coord_x,
+            coord_y, coord_z, coord_t };
+      clusters[ i ] = new general_spacetime_cluster( new_space_center,
+        time_center, new_space_half_size, time_half_size, oct_sizes[ i ],
+        &parent_cluster, parent_cluster.get_level( ) + 1, i, coordinates,
+        parent_cluster.get_temporal_configuration( ),
+        parent_cluster.get_global_time_index( ), n_space_div + 1, n_time_div,
+        _spacetime_mesh, parent_cluster.get_process_id( ), true );
+      clusters[ i ]->set_n_time_elements(
+        parent_cluster.get_n_time_elements( ) );
+      clusters[ i ]->set_elements_are_local( elements_are_local );
+      clusters[ i ]->set_max_element_space_diameter( max_space_diameters[ i ] );
+    }
+  }
+
+  // finally, assign elements to child clusters and assign the children to the
+  // parent
+  for ( lo i = 0; i < parent_cluster.get_n_elements( ); ++i ) {
+    clusters[ clusters_of_elements[ i ] ]->add_element(
+      parent_cluster.get_element( i ) );
+  }
+  parent_cluster.set_n_children( n_clusters );
+  for ( lo i = 0; i < 8; ++i ) {
+    if ( clusters[ i ] != nullptr ) {
+      parent_cluster.add_child( clusters[ i ] );
+    }
+  }
+  parent_cluster.shrink_children( );
+}
+
 void besthea::mesh::distributed_spacetime_cluster_tree::
   associate_scheduling_clusters_and_space_time_clusters( ) {
   // Traverse the two trees to determine all associated clusters. It is not
