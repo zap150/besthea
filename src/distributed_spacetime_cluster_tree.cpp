@@ -2958,15 +2958,34 @@ void besthea::mesh::distributed_spacetime_cluster_tree::print_information(
     }
   }
   // determine levelwise number of leaves:
-  std::vector< lou > n_leaves_levelwise( _n_levels, 0 );
+  std::vector< lo > n_leaves_levelwise( _n_levels, 0 );
   std::vector< sc > n_time_elems_levelwise( _n_levels, 0.0 );
   std::vector< sc > n_space_elems_levelwise( _n_levels, 0.0 );
+  std::vector< lo > max_n_space_elems_levelwise( _n_levels, 0.0 );
+  std::vector< lo > min_n_space_elems_levelwise(
+    _n_levels, _spacetime_mesh.get_n_elements( ) );
+  std::vector< lo > max_n_time_elems_levelwise( _n_levels, 0.0 );
+  std::vector< lo > min_n_time_elems_levelwise(
+    _n_levels, _spacetime_mesh.get_n_elements( ) );
   for ( auto leaf : _local_leaves ) {
-    n_leaves_levelwise[ leaf->get_level( ) ] += 1;
-    n_time_elems_levelwise[ leaf->get_level( ) ]
-      += leaf->get_n_time_elements( );
-    n_space_elems_levelwise[ leaf->get_level( ) ]
-      += leaf->get_n_space_elements( );
+    lo curr_n_time_elems = leaf->get_n_time_elements( );
+    lo curr_n_space_elems = leaf->get_n_space_elements( );
+    lo curr_level = leaf->get_level( );
+    n_leaves_levelwise[ curr_level ] += 1;
+    n_time_elems_levelwise[ curr_level ] += curr_n_time_elems;
+    n_space_elems_levelwise[ curr_level ] += curr_n_space_elems;
+    if ( curr_n_time_elems > max_n_time_elems_levelwise[ curr_level ] ) {
+      max_n_time_elems_levelwise[ curr_level ] = curr_n_time_elems;
+    }
+    if ( curr_n_time_elems < min_n_time_elems_levelwise[ curr_level ] ) {
+      min_n_time_elems_levelwise[ curr_level ] = curr_n_time_elems;
+    }
+    if ( curr_n_space_elems > max_n_space_elems_levelwise[ curr_level ] ) {
+      max_n_space_elems_levelwise[ curr_level ] = curr_n_space_elems;
+    }
+    if ( curr_n_space_elems < min_n_space_elems_levelwise[ curr_level ] ) {
+      min_n_space_elems_levelwise[ curr_level ] = curr_n_space_elems;
+    }
   }
   if ( _my_rank == root_process ) {
     MPI_Reduce( MPI_IN_PLACE, n_leaves_levelwise.data( ), _n_levels,
@@ -2975,6 +2994,14 @@ void besthea::mesh::distributed_spacetime_cluster_tree::print_information(
       get_scalar_type< sc >::MPI_SC( ), MPI_SUM, root_process, *_comm );
     MPI_Reduce( MPI_IN_PLACE, n_space_elems_levelwise.data( ), _n_levels,
       get_scalar_type< sc >::MPI_SC( ), MPI_SUM, root_process, *_comm );
+    MPI_Reduce( MPI_IN_PLACE, min_n_time_elems_levelwise.data( ), _n_levels,
+      get_index_type< lo >::MPI_LO( ), MPI_MIN, root_process, *_comm );
+    MPI_Reduce( MPI_IN_PLACE, max_n_time_elems_levelwise.data( ), _n_levels,
+      get_index_type< lo >::MPI_LO( ), MPI_MAX, root_process, *_comm );
+    MPI_Reduce( MPI_IN_PLACE, min_n_space_elems_levelwise.data( ), _n_levels,
+      get_index_type< lo >::MPI_LO( ), MPI_MIN, root_process, *_comm );
+    MPI_Reduce( MPI_IN_PLACE, max_n_time_elems_levelwise.data( ), _n_levels,
+      get_index_type< lo >::MPI_LO( ), MPI_MAX, root_process, *_comm );
   } else {
     MPI_Reduce( n_leaves_levelwise.data( ), nullptr, _n_levels,
       get_index_type< lo >::MPI_LO( ), MPI_SUM, root_process, *_comm );
@@ -2982,8 +3009,23 @@ void besthea::mesh::distributed_spacetime_cluster_tree::print_information(
       get_scalar_type< sc >::MPI_SC( ), MPI_SUM, root_process, *_comm );
     MPI_Reduce( n_space_elems_levelwise.data( ), nullptr, _n_levels,
       get_scalar_type< sc >::MPI_SC( ), MPI_SUM, root_process, *_comm );
+    MPI_Reduce( min_n_time_elems_levelwise.data( ), nullptr, _n_levels,
+      get_index_type< lo >::MPI_LO( ), MPI_MIN, root_process, *_comm );
+    MPI_Reduce( max_n_time_elems_levelwise.data( ), nullptr, _n_levels,
+      get_index_type< lo >::MPI_LO( ), MPI_MAX, root_process, *_comm );
+    MPI_Reduce( min_n_space_elems_levelwise.data( ), nullptr, _n_levels,
+      get_index_type< lo >::MPI_LO( ), MPI_MIN, root_process, *_comm );
+    MPI_Reduce( max_n_time_elems_levelwise.data( ), nullptr, _n_levels,
+      get_index_type< lo >::MPI_LO( ), MPI_MAX, root_process, *_comm );
   }
   if ( _my_rank == root_process ) {
+    // correct the minimal entries for levels without leaf clusters
+    for ( lo i = 0; i < _n_levels; ++i ) {
+      if ( n_leaves_levelwise[ i ] == 0 ) {
+        min_n_time_elems_levelwise[ i ] = 0;
+        min_n_space_elems_levelwise[ i ] = 0;
+      }
+    }
     std::cout << "#############################################################"
               << "###########################" << std::endl;
     lou n_global_leaves = 0;
@@ -3000,7 +3042,11 @@ void besthea::mesh::distributed_spacetime_cluster_tree::print_information(
         n_time_elems_levelwise[ i ] /= n_leaves_levelwise[ i ];
         n_space_elems_levelwise[ i ] /= n_leaves_levelwise[ i ];
         std::cout << ", mean_n_elems_time: " << n_time_elems_levelwise[ i ]
-                  << ", mean_n_elems_space: " << n_space_elems_levelwise[ i ];
+                  << " (min = " << min_n_time_elems_levelwise[ i ]
+                  << ", max = " << max_n_time_elems_levelwise[ i ] << ")"
+                  << ", mean_n_elems_space: " << n_space_elems_levelwise[ i ]
+                  << " (min = " << min_n_space_elems_levelwise[ i ]
+                  << ", max = " << max_n_space_elems_levelwise[ i ] << ")";
       }
       std::cout << std::endl;
     }

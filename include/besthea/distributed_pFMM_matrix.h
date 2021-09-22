@@ -1063,35 +1063,32 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     sc x_end, sc y_start, sc y_end, sc z_start, sc z_end ) const;
 
   /**
-   * Returns the ratio of entries of the nearfield blocks of the pFMM matrix
-   * handled by this process and entries of the global, non-approximated matrix.
-   * @note Zeros in nearfield blocks and the full matrix are counted.
-   * @warning If executed in parallel, the results should be added up to get
-   * a meaningful result (due to the comparison with the global number of
-   * entries).
+   * In this routine each process counts the number of entries in its nearfield
+   * matrices levelwise. The level of the target cluster determines where the
+   * entries are added up to.
+   *
+   * @param[out] levelwise_nearfield_entries  Contains the numbers of counted
+   * nearfield matrix entries for all levels in the cluster tree.
+   * @note No communication among processes occurs in this routine. Each process
+   * returns an individual vector.
    */
-  sc compute_nearfield_ratio( ) const;
+  void compute_nearfield_entries_levelwise(
+    std::vector< lo > & levelwise_nearfield_entries ) const;
 
   /**
-   * Returns the ratio of entries of the nearfield blocks of the pFMM matrix
-   * handled by this process, which could be substituted by adaptive FMM
-   * operations, and entries of the global, non-approximated matrix.
-   * @note Zeros in nearfield blocks and the full matrix are counted.
-   * @warning If executed in parallel, the results should be added up to get
-   * a meaningful result (due to the comparison with the global number of
-   * entries).
+   * In this routine each process counts the number of entries in its nearfield
+   * matrices levelwise for all those nearfield matrices which correspond to
+   * clusters that are separated in time. The level of the target cluster
+   * determines where the entries are added up to.
+   *
+   * @param[out] levelwise_time_separated_nearfield_entries  Contains the
+   * numbers of counted nearfield matrix entries for time separated clusters for
+   * all levels in the cluster tree.
+   * @note No communication among processes occurs in this routine. Each process
+   * returns an individual vector.
    */
-  sc compute_nearfield_ratio_adaptivity_part( ) const;
-
-  /**
-   * Returns the ratio of non-zero entries of the nearfield blocks of the
-   * pFMM matrix handled by this process and non-zero entries of the global,
-   * non-approximated matrix.
-   * @warning If executed in parallel, the results should be added up to get
-   * a meaningful result (due to the comparison with the global number of
-   * entries).
-   */
-  sc compute_nonzero_nearfield_ratio( ) const;
+  void compute_time_separated_nearfield_entries_levelwise(
+    std::vector< lo > & levelwise_time_separated_nearfield_entries ) const;
 
   /**
    * Counts the number of all FMM operations levelwise

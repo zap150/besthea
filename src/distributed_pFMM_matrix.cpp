@@ -319,50 +319,32 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   if ( print_tree_information ) {
     _distributed_spacetime_tree->print_information( root_process );
   }
-  // print rough nearfield percentage
-  // compute the nearfield ratios (two versions) on each process.
-  sc local_nearfield_ratio = compute_nearfield_ratio( );
-  sc local_nonzero_nearfield_ratio = compute_nonzero_nearfield_ratio( );
-  sc local_nearfield_ratio_adaptive_part
-    = compute_nearfield_ratio_adaptivity_part( );
-  sc global_nearfield_ratio( 0 ), global_nonzero_nearfield_ratio( 0 ),
-    global_nearfield_ratio_adaptive_part( 0 );
-  // gather the nearfield ratios at the root process
+
+  // compute the number of nearfield entries on each process (and separately
+  // those corresponding to time-separated clusters)
+  std::vector< lo > local_levelwise_nearfield_entries;
+  std::vector< lo > local_levelwise_time_separated_nearfield_entries;
+  compute_nearfield_entries_levelwise( local_levelwise_nearfield_entries );
+  compute_time_separated_nearfield_entries_levelwise(
+    local_levelwise_time_separated_nearfield_entries );
+
+  lo n_global_tree_levels = _distributed_spacetime_tree->get_n_levels( );
+  // gather the number of nearfield entries at the root process
   int n_processes;
   MPI_Comm_size( *_comm, &n_processes );
-  sc * all_local_nonzero_nearfield_ratios = nullptr;
-  sc * all_local_nearfield_ratios = nullptr;
-  sc * all_local_nearfield_ratios_adaptive_part = nullptr;
+  lo * all_local_entries = nullptr;
+  lo * all_local_separated_entries = nullptr;
   if ( _my_rank == root_process ) {
-    all_local_nonzero_nearfield_ratios = new sc[ n_processes ];
-    all_local_nearfield_ratios = new sc[ n_processes ];
-    all_local_nearfield_ratios_adaptive_part = new sc[ n_processes ];
+    all_local_entries = new lo[ n_processes * n_global_tree_levels ];
+    all_local_separated_entries = new lo[ n_processes * n_global_tree_levels ];
   }
-
-  MPI_Gather( &local_nearfield_ratio, 1, get_scalar_type< sc >::MPI_SC( ),
-    all_local_nearfield_ratios, 1, get_scalar_type< sc >::MPI_SC( ),
-    root_process, *_comm );
-  MPI_Gather( &local_nonzero_nearfield_ratio, 1,
-    get_scalar_type< sc >::MPI_SC( ), all_local_nonzero_nearfield_ratios, 1,
-    get_scalar_type< sc >::MPI_SC( ), root_process, *_comm );
-  MPI_Gather( &local_nearfield_ratio_adaptive_part, 1,
-    get_scalar_type< sc >::MPI_SC( ), all_local_nearfield_ratios_adaptive_part,
-    1, get_scalar_type< sc >::MPI_SC( ), root_process, *_comm );
-  if ( _my_rank == root_process ) {
-    for ( lo i = 0; i < n_processes; ++i ) {
-      global_nearfield_ratio += all_local_nearfield_ratios[ i ];
-      global_nonzero_nearfield_ratio += all_local_nonzero_nearfield_ratios[ i ];
-      global_nearfield_ratio_adaptive_part
-        += all_local_nearfield_ratios_adaptive_part[ i ];
-    }
-    std::cout << std::endl;
-    std::cout << "nearfield ratio (including zeros) = "
-              << global_nearfield_ratio << std::endl;
-    std::cout << "nearfield ratio (counting non-zero entries only) = "
-              << global_nonzero_nearfield_ratio << std::endl;
-    std::cout << "nearfield ratio for adaptive part = "
-              << global_nearfield_ratio_adaptive_part << std::endl;
-  }
+  MPI_Gather( local_levelwise_nearfield_entries.data( ), n_global_tree_levels,
+    get_index_type< lo >::MPI_LO( ), all_local_entries, n_global_tree_levels,
+    get_index_type< lo >::MPI_LO( ), root_process, *_comm );
+  MPI_Gather( local_levelwise_time_separated_nearfield_entries.data( ),
+    n_global_tree_levels, get_index_type< lo >::MPI_LO( ),
+    all_local_separated_entries, n_global_tree_levels,
+    get_index_type< lo >::MPI_LO( ), root_process, *_comm );
   // count the fmm operations levelwise
   std::vector< lou > n_s2m_operations, n_m2m_operations, n_m2l_operations,
     n_l2l_operations, n_l2t_operations;
@@ -370,28 +352,27 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     n_m2l_operations, n_l2l_operations, n_l2t_operations );
   // collect the numbers of operations at the root process via reduce
   // operations
-  lo n_max_levels = _distributed_spacetime_tree->get_n_levels( );
   if ( _my_rank == root_process ) {
-    MPI_Reduce( MPI_IN_PLACE, n_s2m_operations.data( ), n_max_levels,
+    MPI_Reduce( MPI_IN_PLACE, n_s2m_operations.data( ), n_global_tree_levels,
       get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
-    MPI_Reduce( MPI_IN_PLACE, n_m2m_operations.data( ), n_max_levels,
+    MPI_Reduce( MPI_IN_PLACE, n_m2m_operations.data( ), n_global_tree_levels,
       get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
-    MPI_Reduce( MPI_IN_PLACE, n_m2l_operations.data( ), n_max_levels,
+    MPI_Reduce( MPI_IN_PLACE, n_m2l_operations.data( ), n_global_tree_levels,
       get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
-    MPI_Reduce( MPI_IN_PLACE, n_l2l_operations.data( ), n_max_levels,
+    MPI_Reduce( MPI_IN_PLACE, n_l2l_operations.data( ), n_global_tree_levels,
       get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
-    MPI_Reduce( MPI_IN_PLACE, n_l2t_operations.data( ), n_max_levels,
+    MPI_Reduce( MPI_IN_PLACE, n_l2t_operations.data( ), n_global_tree_levels,
       get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
   } else {
-    MPI_Reduce( n_s2m_operations.data( ), nullptr, n_max_levels,
+    MPI_Reduce( n_s2m_operations.data( ), nullptr, n_global_tree_levels,
       get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
-    MPI_Reduce( n_m2m_operations.data( ), nullptr, n_max_levels,
+    MPI_Reduce( n_m2m_operations.data( ), nullptr, n_global_tree_levels,
       get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
-    MPI_Reduce( n_m2l_operations.data( ), nullptr, n_max_levels,
+    MPI_Reduce( n_m2l_operations.data( ), nullptr, n_global_tree_levels,
       get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
-    MPI_Reduce( n_l2l_operations.data( ), nullptr, n_max_levels,
+    MPI_Reduce( n_l2l_operations.data( ), nullptr, n_global_tree_levels,
       get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
-    MPI_Reduce( n_l2t_operations.data( ), nullptr, n_max_levels,
+    MPI_Reduce( n_l2t_operations.data( ), nullptr, n_global_tree_levels,
       get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
   }
   // count the number of allocated moments (own and received) and
@@ -418,15 +399,17 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   MPI_Gather( &local_n_local_contributions, 1, get_index_type< lo >::MPI_LO( ),
     all_n_local_contributions, 1, get_index_type< lo >::MPI_LO( ), root_process,
     *_comm );
+  // postprocessing and printing on the root process
   if ( _my_rank == root_process ) {
+    std::cout << "Farfield part:" << std::endl;
     lo start_space_refinement
       = _distributed_spacetime_tree->get_start_space_refinement( );
     std::cout << "number of s2m operations: " << std::endl;
-    for ( lo i = 2; i < n_max_levels; ++i ) {
+    for ( lo i = 2; i < n_global_tree_levels; ++i ) {
       std::cout << "level " << i << ": " << n_s2m_operations[ i ] << std::endl;
     }
     std::cout << "number of m2m operations: " << std::endl;
-    for ( lo i = 2; i < n_max_levels; ++i ) {
+    for ( lo i = 2; i < n_global_tree_levels; ++i ) {
       std::cout << "level " << i << ": " << n_m2m_operations[ i ];
       if ( i >= start_space_refinement
         && ( ( i - start_space_refinement ) ) % 2 == 0 ) {
@@ -436,11 +419,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       }
     }
     std::cout << "number of m2l operations: " << std::endl;
-    for ( lo i = 2; i < n_max_levels; ++i ) {
+    for ( lo i = 2; i < n_global_tree_levels; ++i ) {
       std::cout << "level " << i << ": " << n_m2l_operations[ i ] << std::endl;
     }
     std::cout << "number of l2l operations: " << std::endl;
-    for ( lo i = 2; i < n_max_levels; ++i ) {
+    for ( lo i = 2; i < n_global_tree_levels; ++i ) {
       std::cout << "level " << i << ": " << n_l2l_operations[ i ];
       if ( i >= start_space_refinement
         && ( ( i - start_space_refinement ) ) % 2 == 0 ) {
@@ -450,45 +433,104 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       }
     }
     std::cout << "number of l2t operations: " << std::endl;
-    for ( lo i = 2; i < n_max_levels; ++i ) {
+    for ( lo i = 2; i < n_global_tree_levels; ++i ) {
       std::cout << "level " << i << ": " << n_l2t_operations[ i ] << std::endl;
     }
-    std::cout << "#############################################################"
-              << "###########################" << std::endl;
-    std::cout << "rough memory estimates per process: " << std::endl;
+    std::cout << "########################" << std::endl;
+    std::cout << "rough memory estimates: " << std::endl;
+    std::cout << "########################" << std::endl;
     lo n_target_dofs
       = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< target_space >( );
     lo n_source_dofs
       = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< source_space >( );
-    sc total_storage_nearfield = 0.0;
+    // print first the estimates for the farfield part
+    std::cout << "Required storage for moments and local contributions"
+              << std::endl;
     sc total_storage_contributions = 0.0;
-    sc total_storage_adaptive_part = 0.0;
     for ( int i = 0; i < n_processes; ++i ) {
-      sc local_storage_nearfield
-        = n_target_dofs * n_source_dofs * all_local_nearfield_ratios[ i ];
-      local_storage_nearfield
-        *= 8. / 1024. / 1024. / 1024.;  // get memory for double entries in GiB.
-      total_storage_adaptive_part += n_target_dofs * n_source_dofs
-        * all_local_nearfield_ratios_adaptive_part[ i ] * 8. / 1024. / 1024.
-        / 1024.;
       sc local_storage_contributions
         = ( all_n_moments[ i ] + all_n_moments_receive[ i ]
             + all_n_local_contributions[ i ] )
         * 8. * _contribution_size / 1024. / 1024. / 1024.;
-      total_storage_nearfield += local_storage_nearfield;
+
       total_storage_contributions += local_storage_contributions;
       std::cout << "process " << i
-                << ": nearfield_matrices: " << local_storage_nearfield
-                << " GiB, moment and local contributions: "
+                << ": storage for moment and local contributions: "
                 << local_storage_contributions << " GiB." << std::endl;
     }
-    std::cout << "total storage: nearfield matrices: "
-              << total_storage_nearfield
-              << " GiB, moment and local contributions: "
+    std::cout << "total storage for moments and local contributions: "
               << total_storage_contributions << " GiB." << std::endl;
-    std::cout
-      << "total storage corresponding to nearfield matrices in adaptive part: "
-      << total_storage_adaptive_part << " GiB" << std::endl;
+    // next, estimate the storage for the nearfield part
+    std::vector< sc > global_levelwise_nearfield_storage(
+      n_global_tree_levels, 0.0 );
+    std::vector< sc > global_levelwise_time_separated_nearfield_storage(
+      n_global_tree_levels, 0.0 );
+    std::vector< sc > nearfield_storage_on_processes( n_processes, 0.0 );
+    std::vector< sc > time_separated_nearfield_storage_on_processes(
+      n_processes, 0.0 );
+    // add up the nearfield entries processwise or levelwise for the respective
+    // counters (and all of them for a total count)
+    lo total_nearfield_entries = 0;
+    lo total_nearfield_entries_time_separated_part = 0;
+    for ( lo i = 0; i < n_processes; ++i ) {
+      for ( lo j = 0; j < n_global_tree_levels; ++j ) {
+        global_levelwise_nearfield_storage[ j ]
+          += all_local_entries[ n_global_tree_levels * i + j ];
+        global_levelwise_time_separated_nearfield_storage[ j ]
+          += all_local_separated_entries[ n_global_tree_levels * i + j ];
+        nearfield_storage_on_processes[ i ]
+          += all_local_entries[ n_global_tree_levels * i + j ];
+        time_separated_nearfield_storage_on_processes[ i ]
+          += all_local_separated_entries[ n_global_tree_levels * i + j ];
+        total_nearfield_entries
+          += all_local_entries[ n_global_tree_levels * i + j ];
+        total_nearfield_entries_time_separated_part
+          += all_local_separated_entries[ n_global_tree_levels * i + j ];
+      }
+    }
+    // compute required memory for storing nearfield entries in GiB levelwise,
+    // processwise and total
+    for ( lo i = 0; i < n_processes; ++i ) {
+      nearfield_storage_on_processes[ i ] *= 8. / 1024. / 1024. / 1024.;
+      time_separated_nearfield_storage_on_processes[ i ]
+        *= 8. / 1024. / 1024. / 1024.;
+    }
+    for ( lo i = 0; i < n_global_tree_levels; ++i ) {
+      global_levelwise_nearfield_storage[ i ] *= 8. / 1024. / 1024. / 1024.;
+      global_levelwise_time_separated_nearfield_storage[ i ]
+        *= 8. / 1024. / 1024. / 1024.;
+    }
+    sc total_storage_nearfield
+      = total_nearfield_entries * 8. / 1024. / 1024. / 1024.;
+    sc total_storage_time_separated_part
+      = total_nearfield_entries_time_separated_part * 8. / 1024. / 1024.
+      / 1024.;
+
+    std::cout << "Required storage for nearfield matrices per process: "
+              << std::endl;
+    for ( lo i = 0; i < n_processes; ++i ) {
+      std::cout << "process " << i << ": nearfield_matrices: "
+                << nearfield_storage_on_processes[ i ] << " GiB, of which "
+                << time_separated_nearfield_storage_on_processes[ i ]
+                << " GiB are 'time separated'" << std::endl;
+    }
+    std::cout << "Required storage (global) per level:" << std::endl;
+    for ( lo i = 0; i < n_global_tree_levels; ++i ) {
+      std::cout << "level " << i << ": nearfield matrices: "
+                << global_levelwise_nearfield_storage[ i ] << " GiB, of which "
+                << global_levelwise_time_separated_nearfield_storage[ i ]
+                << " GiB are 'time separated'" << std::endl;
+    }
+    std::cout << "Total nearfield storage: " << total_storage_nearfield
+              << " GiB, of which " << total_storage_time_separated_part
+              << " GiB are 'time separated'" << std::endl;
+    std::cout << "Nearfield ratio: "
+              << (sc) total_nearfield_entries
+        / ( n_target_dofs * n_source_dofs )
+              << ", for time separated part: "
+              << (sc) total_nearfield_entries_time_separated_part
+        / ( n_target_dofs * n_source_dofs )
+              << std::endl;
     std::cout << "storage per allocated vector (source): "
               << n_source_dofs * 8. / 1024. / 1024. / 1024. << " GiB."
               << std::endl;
@@ -496,9 +538,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               << n_target_dofs * 8. / 1024. / 1024. / 1024. << " GiB."
               << std::endl;
     std::cout << std::endl;
-    delete[] all_local_nearfield_ratios;
-    delete[] all_local_nonzero_nearfield_ratios;
-    delete[] all_local_nearfield_ratios_adaptive_part;
+    delete[] all_local_entries;
+    delete[] all_local_separated_entries;
     delete[] all_n_moments;
     delete[] all_n_moments_receive;
     delete[] all_n_local_contributions;
@@ -2232,104 +2273,17 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 }
 
 template< class kernel_type, class target_space, class source_space >
-sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
-  source_space >::compute_nonzero_nearfield_ratio( ) const {
-  lou n_nearfield_entries = 0;
-
-  // get the local and nearfield mesh (needed to determine correct
-  // number of non-zero nearfield matrix entries)
-  const mesh::spacetime_tensor_mesh * nearfield_mesh;
-  const mesh::spacetime_tensor_mesh * local_mesh;
-  local_mesh = _distributed_spacetime_tree->get_mesh( ).get_local_mesh( );
-  nearfield_mesh
-    = _distributed_spacetime_tree->get_mesh( ).get_nearfield_mesh( );
-  const mesh::spacetime_tensor_mesh * tar_mesh;
-  const mesh::spacetime_tensor_mesh * src_mesh;
-
-  for ( auto it : _n_list ) {
-    const std::vector< general_spacetime_cluster * > * st_targets
-      = it->get_associated_spacetime_clusters( );
-    if ( it->get_process_id( ) == _my_rank ) {
-      tar_mesh = local_mesh;
-    } else {
-      tar_mesh = nearfield_mesh;
-    }
-    lou n_associated_leaves = it->get_n_associated_leaves( );
-    for ( lou i = 0; i < n_associated_leaves; ++i ) {
-      // consider all associated st target clusters
-      general_spacetime_cluster * st_target = ( *st_targets )[ i ];
-      lo n_tar_space_dofs = st_target->get_n_space_dofs< target_space >( );
-      lo n_tar_elements_time = st_target->get_n_time_elements( );
-      lo n_tar_elements = st_target->get_n_elements( );
-      std::vector< general_spacetime_cluster * > * st_nearfield_list
-        = st_target->get_nearfield_list( );
-      for ( lou src_index = 0; src_index < st_nearfield_list->size( );
-            ++src_index ) {
-        // consider all spacetime clusters in the nearfield of the
-        // current target cluster
-        general_spacetime_cluster * st_source
-          = ( *st_nearfield_list )[ src_index ];
-        if ( st_source->get_elements_are_local( ) ) {
-          src_mesh = local_mesh;
-        } else {
-          src_mesh = nearfield_mesh;
-        }
-        lo n_src_space_dofs = st_source->get_n_space_dofs< source_space >( );
-        lo n_src_elements_time = st_source->get_n_time_elements( );
-        lo n_src_elements = st_source->get_n_elements( );
-        // depending on the configuration in time update the number of
-        // nearfield entries appropriately.
-        if ( st_source->get_level( ) >= st_target->get_level( ) ) {
-          if ( std::abs(
-                 st_target->get_time_center( ) - st_source->get_time_center( ) )
-            < st_target->get_time_half_size( ) ) {
-            // source cluster's temporal component is contained in
-            // target cluster's
-            lo src_max_time_idx = src_mesh->get_time_element(
-              st_source->get_element( n_src_elements - 1 ) );
-            lo tar_max_time_idx = tar_mesh->get_time_element(
-              st_target->get_element( n_tar_elements - 1 ) );
-            n_nearfield_entries += n_src_space_dofs * n_tar_space_dofs
-              * ( ( n_src_elements_time * ( n_src_elements_time + 1 ) ) / 2
-                + n_src_elements_time
-                  * ( tar_max_time_idx - src_max_time_idx ) );
-          }
-        } else if ( std::abs( st_source->get_time_center( )
-                      - st_target->get_time_center( ) )
-          < st_source->get_time_half_size( ) ) {
-          // target cluster's temporal component is contained in source
-          // cluster's
-          lo src_min_time_idx
-            = src_mesh->get_time_element( st_source->get_element( 0 ) );
-          lo tar_min_time_idx
-            = tar_mesh->get_time_element( st_target->get_element( 0 ) );
-          n_nearfield_entries += n_src_space_dofs * n_tar_space_dofs
-            * ( ( n_tar_elements_time * ( n_tar_elements_time + 1 ) ) / 2
-              + n_tar_elements_time * ( tar_min_time_idx - src_min_time_idx ) );
-        } else {
-          n_nearfield_entries += n_src_space_dofs * n_tar_space_dofs
-            * n_src_elements_time * n_tar_elements_time;
-        }
-      }
-    }
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space,
+  source_space >::compute_nearfield_entries_levelwise( std::vector< lo > &
+    levelwise_nearfield_entries ) const {
+  levelwise_nearfield_entries.resize(
+    _distributed_spacetime_tree->get_n_levels( ) );
+  for ( lo i = 0; i < _distributed_spacetime_tree->get_n_levels( ); ++i ) {
+    levelwise_nearfield_entries[ i ] = 0;
   }
-  lou n_global_time_elements
-    = _distributed_spacetime_tree->get_mesh( ).get_n_temporal_elements( );
-  lou n_global_src_space_dofs
-    = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< source_space >( );
-  lou n_global_tar_space_dofs
-    = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< target_space >( );
-  return n_nearfield_entries
-    / ( (sc) ( ( n_global_tar_space_dofs * n_global_src_space_dofs
-                 * ( n_global_time_elements + 1 ) )
-      / ( 2 * n_global_time_elements ) ) );
-}
-
-template< class kernel_type, class target_space, class source_space >
-sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
-  source_space >::compute_nearfield_ratio( ) const {
-  lou n_nearfield_entries = 0;
   for ( auto it : _n_list ) {
+    lo current_level = it->get_level( );
     const std::vector< general_spacetime_cluster * > * st_targets
       = it->get_associated_spacetime_clusters( );
     lou n_associated_leaves = it->get_n_associated_leaves( );
@@ -2342,24 +2296,25 @@ sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
             ++src_index ) {
         general_spacetime_cluster * st_source
           = ( *st_nearfield_list )[ src_index ];
-        n_nearfield_entries
+        levelwise_nearfield_entries[ current_level ]
           += n_target_dofs * st_source->get_n_dofs< source_space >( );
       }
     }
   }
-  lou n_global_target_dofs
-    = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< target_space >( );
-  lou n_global_source_dofs
-    = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< source_space >( );
-  return n_nearfield_entries
-    / ( (sc) n_global_target_dofs * n_global_source_dofs );
 }
 
 template< class kernel_type, class target_space, class source_space >
-sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
-  source_space >::compute_nearfield_ratio_adaptivity_part( ) const {
-  lou n_nearfield_entries = 0;
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::
+  compute_time_separated_nearfield_entries_levelwise(
+    std::vector< lo > & levelwise_time_separated_nearfield_entries ) const {
+  levelwise_time_separated_nearfield_entries.resize(
+    _distributed_spacetime_tree->get_n_levels( ) );
+  for ( lo i = 0; i < _distributed_spacetime_tree->get_n_levels( ); ++i ) {
+    levelwise_time_separated_nearfield_entries[ i ] = 0;
+  }
   for ( auto it : _n_list ) {
+    lo current_level = it->get_level( );
     const std::vector< general_spacetime_cluster * > * st_targets
       = it->get_associated_spacetime_clusters( );
     lou n_associated_leaves = it->get_n_associated_leaves( );
@@ -2383,18 +2338,12 @@ sc besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
         if ( ( tar_time_center - tar_time_half_size
                - 1e-8 * tar_time_half_size )
           > src_time_center + src_time_half_size ) {
-          n_nearfield_entries
+          levelwise_time_separated_nearfield_entries[ current_level ]
             += n_target_dofs * st_source->get_n_dofs< source_space >( );
         }
       }
     }
   }
-  lou n_global_target_dofs
-    = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< target_space >( );
-  lou n_global_source_dofs
-    = _distributed_spacetime_tree->get_mesh( ).get_n_dofs< source_space >( );
-  return n_nearfield_entries
-    / ( (sc) n_global_target_dofs * n_global_source_dofs );
 }
 
 template< class kernel_type, class target_space, class source_space >

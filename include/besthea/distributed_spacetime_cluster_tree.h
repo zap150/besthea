@@ -130,7 +130,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   std::vector< sc > get_spatial_paddings_per_spatial_level( ) const;
 
   /**
-   * Returns the effective number of levels in the cluster tree.
+   * Returns the effective number of levels in the global cluster tree.
    */
   lo get_n_levels( ) const {
     return _n_levels;
