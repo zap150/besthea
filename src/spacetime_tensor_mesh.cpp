@@ -43,8 +43,8 @@ besthea::mesh::spacetime_tensor_mesh::~spacetime_tensor_mesh( ) {
 
 void besthea::mesh::spacetime_tensor_mesh::print_info( ) const {
   std::cout << "besthea::mesh::spacetime_tensor_mesh" << std::endl;
-  std::cout << "  elements: " << get_n_elements( ) << std::endl;
-  std::cout << "  nodes: " << get_n_nodes( ) << std::endl;
+  std::cout << "  elements: " << get_n_elements( )
+            << ", nodes: " << get_n_nodes( ) << std::endl;
 }
 
 void besthea::mesh::spacetime_tensor_mesh::refine(
