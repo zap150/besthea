@@ -53,8 +53,8 @@ besthea::mesh::tetrahedral_spacetime_mesh::tetrahedral_spacetime_mesh(
   besthea::linear_algebra::coordinates< 3 > n;
   for ( lo i = 0; i < stmesh.get_n_elements( ); ++i ) {
     stmesh.get_element( i, e );
-    // FIXME: this should work with i directly
-    stmesh.get_spatial_normal( i % stmesh.get_n_spatial_elements( ), n );
+    stmesh.get_spatial_normal_using_spatial_element_index(
+      stmesh.get_space_element_index( i ), n );
 
     int * cmap = map[ std::min_element( e.begin( ), e.end( ) ) - e.begin( ) ];
 

@@ -47,12 +47,15 @@ void besthea::mesh::general_spacetime_cluster::
     // use that the spacetime elements are sorted in time, i.e. a consecutive
     // group of n_space_elements elements has the same temporal component,
     // to get the spatial indices of elements in the source cluster
-    lo global_space_index = local_mesh->get_space_element( _elements[ i_el ] );
-    local_mesh->get_spatial_normal( global_space_index, normal );
-    local_mesh->get_spatial_element( global_space_index, space_element );
-    local_mesh->get_spatial_node( space_element[ 0 ], x0 );
-    local_mesh->get_spatial_node( space_element[ 1 ], x1 );
-    local_mesh->get_spatial_node( space_element[ 2 ], x2 );
+    lo global_space_index
+      = local_mesh->get_space_element_index( _elements[ i_el ] );
+    local_mesh->get_spatial_normal_using_spatial_element_index(
+      global_space_index, normal );
+    local_mesh->get_spatial_element_using_spatial_index(
+      global_space_index, space_element );
+    local_mesh->get_spatial_node_using_spatial_index( space_element[ 0 ], x0 );
+    local_mesh->get_spatial_node_using_spatial_index( space_element[ 1 ], x1 );
+    local_mesh->get_spatial_node_using_spatial_index( space_element[ 2 ], x2 );
     // same computation as in evaluate curl in basis_tri_p1; difference:
     // only the required component is computed (dim 0)
     // ######################################
@@ -65,7 +68,8 @@ void besthea::mesh::general_spacetime_cluster::
     sc a23 = x2[ 2 ] - x0[ 2 ];
     // determinant to invert the matrix is the triple product. in particular it
     // is 2 * area of the triangle
-    sc det = 2 * local_mesh->spatial_area( global_space_index );
+    sc det = 2
+      * local_mesh->get_spatial_area_using_spatial_index( global_space_index );
     // compute only the entries of R^{-\trans} * [1;0;0] and
     // R^{-\trans} * [0;1;0] which are required
     sc g22 = ( -normal[ 2 ] * a21 + normal[ 0 ] * a23 ) / det;
@@ -101,12 +105,15 @@ void besthea::mesh::general_spacetime_cluster::
     // use that the spacetime elements are sorted in time, i.e. a consecutive
     // group of n_space_elements elements has the same temporal component,
     // to get the spatial indices of elements in the source cluster
-    lo global_space_index = local_mesh->get_space_element( _elements[ i_el ] );
-    local_mesh->get_spatial_normal( global_space_index, normal );
-    local_mesh->get_spatial_element( global_space_index, space_element );
-    local_mesh->get_spatial_node( space_element[ 0 ], x0 );
-    local_mesh->get_spatial_node( space_element[ 1 ], x1 );
-    local_mesh->get_spatial_node( space_element[ 2 ], x2 );
+    lo global_space_index
+      = local_mesh->get_space_element_index( _elements[ i_el ] );
+    local_mesh->get_spatial_normal_using_spatial_element_index(
+      global_space_index, normal );
+    local_mesh->get_spatial_element_using_spatial_index(
+      global_space_index, space_element );
+    local_mesh->get_spatial_node_using_spatial_index( space_element[ 0 ], x0 );
+    local_mesh->get_spatial_node_using_spatial_index( space_element[ 1 ], x1 );
+    local_mesh->get_spatial_node_using_spatial_index( space_element[ 2 ], x2 );
     // same computation as in evaluate curl in basis_tri_p1; difference:
     // only the required component is computed (dim 1)
     // ######################################
@@ -119,7 +126,8 @@ void besthea::mesh::general_spacetime_cluster::
     sc a23 = x2[ 2 ] - x0[ 2 ];
     // determinant to invert the matrix is the triple product. in particular it
     // is 2 * area of the triangle
-    sc det = 2 * local_mesh->spatial_area( global_space_index );
+    sc det = 2
+      * local_mesh->get_spatial_area_using_spatial_index( global_space_index );
     // compute only the entries of R^{-\trans} * [1;0;0] and
     // R^{-\trans} * [0;1;0] which are required
     sc g21 = ( normal[ 2 ] * a22 - normal[ 1 ] * a23 ) / det;
@@ -155,12 +163,15 @@ void besthea::mesh::general_spacetime_cluster::
     // use that the spacetime elements are sorted in time, i.e. a consecutive
     // group of n_space_elements elements has the same temporal component,
     // to get the spatial indices of elements in the source cluster
-    lo global_space_index = local_mesh->get_space_element( _elements[ i_el ] );
-    local_mesh->get_spatial_normal( global_space_index, normal );
-    local_mesh->get_spatial_element( global_space_index, space_element );
-    local_mesh->get_spatial_node( space_element[ 0 ], x0 );
-    local_mesh->get_spatial_node( space_element[ 1 ], x1 );
-    local_mesh->get_spatial_node( space_element[ 2 ], x2 );
+    lo global_space_index
+      = local_mesh->get_space_element_index( _elements[ i_el ] );
+    local_mesh->get_spatial_normal_using_spatial_element_index(
+      global_space_index, normal );
+    local_mesh->get_spatial_element_using_spatial_index(
+      global_space_index, space_element );
+    local_mesh->get_spatial_node_using_spatial_index( space_element[ 0 ], x0 );
+    local_mesh->get_spatial_node_using_spatial_index( space_element[ 1 ], x1 );
+    local_mesh->get_spatial_node_using_spatial_index( space_element[ 2 ], x2 );
     // same computation as in evaluate curl in basis_tri_p1; difference:
     // only the required component is computed (dim 2)
     // ######################################
@@ -173,7 +184,8 @@ void besthea::mesh::general_spacetime_cluster::
     sc a23 = x2[ 2 ] - x0[ 2 ];
     // determinant to invert the matrix is the triple product. in particular it
     // is 2 * area of the triangle
-    sc det = 2 * local_mesh->spatial_area( global_space_index );
+    sc det = 2
+      * local_mesh->get_spatial_area_using_spatial_index( global_space_index );
     // compute only the entries of R^{-\trans} * [1;0;0] and
     // R^{-\trans} * [0;1;0] which are required
     sc g21 = ( normal[ 2 ] * a22 - normal[ 1 ] * a23 ) / det;

@@ -155,12 +155,13 @@ void besthea::bem::distributed_fast_spacetime_be_space<
     local_mesh->get_temporal_nodes( d, &t_start, &t_end );
     this->line_to_time( t_start, t_end, my_quadrature );
     for ( lo i_elem = 0; i_elem < n_space_elements; ++i_elem ) {
-      local_mesh->get_spatial_nodes( i_elem, x1, x2, x3 );
+      local_mesh->get_spatial_nodes_using_spatial_element_index(
+        i_elem, x1, x2, x3 );
       this->triangle_to_geometry( x1, x2, x3, my_quadrature );
       this->_basis.local_to_global( i_elem, l2g );
-      local_mesh->get_spatial_normal( i_elem, n );
+      local_mesh->get_spatial_normal_using_spatial_element_index( i_elem, n );
       // not necessary to multiply by timestep, M does not include this either
-      area_x = local_mesh->spatial_area( i_elem );
+      area_x = local_mesh->get_spatial_area_using_spatial_index( i_elem );
 
       for ( lo i_t = 0; i_t < size_t; ++i_t ) {
         for ( lo i_x = 0; i_x < size_x; ++i_x ) {
@@ -242,12 +243,13 @@ void besthea::bem::distributed_fast_spacetime_be_space< basis_type >::
 
     sc h_t_weight = std::pow( temp_length, 0.25 );
     for ( lo i_elem = 0; i_elem < n_space_elements; ++i_elem ) {
-      local_mesh->get_spatial_nodes( i_elem, x1, x2, x3 );
+      local_mesh->get_spatial_nodes_using_spatial_element_index(
+        i_elem, x1, x2, x3 );
       this->triangle_to_geometry( x1, x2, x3, my_quadrature );
       this->_basis.local_to_global( i_elem, l2g );
-      local_mesh->get_spatial_normal( i_elem, n );
+      local_mesh->get_spatial_normal_using_spatial_element_index( i_elem, n );
 
-      area_x = local_mesh->spatial_area( i_elem );
+      area_x = local_mesh->get_spatial_area_using_spatial_index( i_elem );
       sc area_xt = area_x * temp_length;
       sc h_x_weight = std::pow( area_x, 0.25 );
       sc combined_weight = h_t_weight + h_x_weight;
@@ -336,11 +338,13 @@ sc besthea::bem::distributed_fast_spacetime_be_space<
 
 #pragma omp for
       for ( lo i_elem = 0; i_elem < n_space_elements; ++i_elem ) {
-        local_mesh->get_spatial_nodes( i_elem, x1, x2, x3 );
+        local_mesh->get_spatial_nodes_using_spatial_element_index(
+          i_elem, x1, x2, x3 );
         this->triangle_to_geometry( x1, x2, x3, space_quadrature );
         this->_basis.local_to_global( i_elem, l2g );
-        local_mesh->get_spatial_normal( i_elem, n );
-        sc area_xt = local_mesh->spatial_area( i_elem ) * ( t_end - t_start );
+        local_mesh->get_spatial_normal_using_spatial_element_index( i_elem, n );
+        sc area_xt = local_mesh->get_spatial_area_using_spatial_index( i_elem )
+          * ( t_end - t_start );
         for ( lo i_x = 0; i_x < size_x; ++i_x ) {
           sc local_value = 0.0;
           for ( lo i_loc = 0; i_loc < local_dim; ++i_loc ) {
@@ -437,11 +441,13 @@ sc besthea::bem::distributed_fast_spacetime_be_space< basis_type >::
 
 #pragma omp for
       for ( lo i_elem = 0; i_elem < n_space_elements; ++i_elem ) {
-        local_mesh->get_spatial_nodes( i_elem, x1, x2, x3 );
+        local_mesh->get_spatial_nodes_using_spatial_element_index(
+          i_elem, x1, x2, x3 );
         this->triangle_to_geometry( x1, x2, x3, space_quadrature );
         this->_basis.local_to_global( i_elem, l2g );
-        local_mesh->get_spatial_normal( i_elem, n );
-        sc spatial_area = local_mesh->spatial_area( i_elem );
+        local_mesh->get_spatial_normal_using_spatial_element_index( i_elem, n );
+        sc spatial_area
+          = local_mesh->get_spatial_area_using_spatial_index( i_elem );
         sc area_xt = spatial_area * ( t_end - t_start );
         // compute the spatial weight h_x^{1/2} with h_x ~
         // spatial_area ^ { 1 / 2 }
@@ -514,11 +520,12 @@ sc besthea::bem::distributed_fast_spacetime_be_space< basis_type >::
   //   approximation_data = approximation.get_block( d + local_start_idx ).data(
   //   ); sc h_t_weight = std::pow( ( t_end - t_start ), 0.25 ); for ( lo i_elem
   //   = 0; i_elem < n_space_elements; ++i_elem ) {
-  //     local_mesh->get_spatial_nodes( i_elem, x1, x2, x3 );
-  //     this->triangle_to_geometry( x1, x2, x3, my_quadrature );
+  //     local_mesh->get_spatial_nodes_using_spatial_element_index( i_elem, x1,
+  //     x2, x3 ); this->triangle_to_geometry( x1, x2, x3, my_quadrature );
   //     this->_basis.local_to_global( i_elem, l2g );
-  //     local_mesh->get_spatial_normal( i_elem, n );
-  //     sc spatial_area = local_mesh->spatial_area( i_elem );
+  //     local_mesh->get_spatial_normal_using_spatial_element_index( i_elem, n
+  //     ); sc spatial_area =
+  //     local_mesh->get_spatial_area_using_spatial_index( i_elem );
   //     area_xt = spatial_area * ( t_end - t_start );
   //     // compute the spatial weight h_x^{1/2} with h_x ~ spatial_area^{1/2}
   //     sc h_x_weight = std::pow( spatial_area, 0.25 );

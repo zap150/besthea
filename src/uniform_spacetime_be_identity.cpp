@@ -114,8 +114,8 @@ void besthea::bem::uniform_spacetime_be_identity< test_space_type,
   sc value, test, trial, area;
   linear_algebra::coordinates< 3 > n;
   for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
-    st_mesh.get_spatial_normal( i_elem, n );
-    area = st_mesh.spatial_area( i_elem );
+    st_mesh.get_spatial_normal_using_spatial_element_index( i_elem, n );
+    area = st_mesh.get_spatial_area_using_spatial_index( i_elem );
 
     test_basis.local_to_global( i_elem, test_l2g );
     trial_basis.local_to_global( i_elem, trial_l2g );
