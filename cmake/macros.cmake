@@ -7,6 +7,15 @@ macro(check_insource)
 endmacro()
 
 macro(setup_compiler)
+
+  # can't use add_compile_options, because cmake uses them for all langueges
+  # and nvcc does not understand these intel-specific options
+  #
+  # using MY_ADDITIONAL_CXX_FLAGS helper variable to make passing 
+  # the same options to CXX compiler and CUDA host compiler simpler
+
+  set(MY_ADDITIONAL_CXX_FLAGS "")
+
   if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
     message(STATUS "Using GNU ${CMAKE_CXX_COMPILER_VERSION} toolchain")
 
@@ -15,16 +24,12 @@ macro(setup_compiler)
         " compiled only with g++ 8.3.0 or higher")
     endif()
 
-    # can't use add_compile_options, because cmake uses them for all langueges
-    # nvcc does not understand these options
-    string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -pedantic-errors")
-    # TODO when cuda host compiler will be properly set to the same as CXX compiler
-    # string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -Wall")
-    # string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -Wextra")
-    # string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -pedantic-errors")
+    string(APPEND MY_ADDITIONAL_CXX_FLAGS " -Wall -Wextra")
+    # can't pass this to the cuda host compiler via -Xcompiler because of errors
+    string(APPEND CMAKE_CXX_FLAGS " -pedantic-errors")
 
     # GNU cannot vectorise complicated loops
-    #add_compile_options(-fopt-info-omp-vec-optimized-missed)
+    #string(APPEND MY_ADDITIONAL_CXX_FLAGS " -fopt-info-omp-vec-optimized-missed")
 
   elseif (CMAKE_CXX_COMPILER_ID MATCHES AppleClang)
     message(STATUS "Using AppleClang ${CMAKE_CXX_COMPILER_VERSION} toolchain")
@@ -34,9 +39,9 @@ macro(setup_compiler)
         " compiled only with AppleClang 12 or higher")
     endif()
 
-    add_compile_options(-Wall -Wextra -pedantic-errors)
+    string(APPEND MY_ADDITIONAL_CXX_FLAGS " -Wall -Wextra -pedantic-errors")
     # Clang cannot vectorise complicated loops
-    add_compile_options(-Wno-pass-failed)
+    string(APPEND MY_ADDITIONAL_CXX_FLAGS " -Wno-pass-failed")
 
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang
     AND NOT CMAKE_CXX_COMPILER_ID MATCHES AppleClang)
@@ -47,14 +52,14 @@ macro(setup_compiler)
         " compiled only with clang++ 7 or higher")
     endif()
 
-    add_compile_options(-Wall -Wextra -pedantic-errors)
+    string(APPEND MY_ADDITIONAL_CXX_FLAGS " -Wall -Wextra -pedantic-errors")
     # Clang cannot vectorise complicated loops
-    add_compile_options(-Wno-pass-failed)
-    #add_compile_options(
-    #  -Rpass="vect" -Rpass-missed="vect" -Rpass-analysis="vect")
+    string(APPEND MY_ADDITIONAL_CXX_FLAGS " -Wno-pass-failed")
+    #string(APPEND MY_ADDITIONAL_CXX_FLAGS
+    #  " -Rpass=\"vect\" -Rpass-missed=\"vect\" -Rpass-analysis=\"vect\"")
     if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 11)
       # TODO: get rid of this warning (don't understand it)
-      add_compile_options(-Wno-dtor-name)
+      string(APPEND MY_ADDITIONAL_CXX_FLAGS " -Wno-dtor-name")
     endif()
 
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
@@ -65,35 +70,30 @@ macro(setup_compiler)
         " compiled only with icpc 19.0.1 or higher")
     endif()
 
-    # can't use add_compile_options, because cmake uses them for all langueges
-    # and nvcc does not understand these intel-specific options
-    string(APPEND CMAKE_CXX_FLAGS " -w3")
-    #string(APPEND CMAKE_CXX_FLAGS " -qopt-report=5 -qopt-report-phase=vec")
+    string(APPEND MY_ADDITIONAL_CXX_FLAGS " -w3")
+    #string(APPEND MY_ADDITIONAL_CXX_FLAGS " -qopt-report=5 -qopt-report-phase=vec")
     # zero used for undefined preprocessing identifier
-    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 193")
+    string(APPEND MY_ADDITIONAL_CXX_FLAGS " -diag-disable 193")
     # attribute appears more than once
-    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 2620")
+    string(APPEND MY_ADDITIONAL_CXX_FLAGS " -diag-disable 2620")
     # parameter was never referenced
-    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 869")
+    string(APPEND MY_ADDITIONAL_CXX_FLAGS " -diag-disable 869")
     # declaration hides variable
-    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 1599")
+    string(APPEND MY_ADDITIONAL_CXX_FLAGS " -diag-disable 1599")
     # value copied to temporary, reference to temporary used
-    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 383")
+    string(APPEND MY_ADDITIONAL_CXX_FLAGS " -diag-disable 383")
     # inlining inhibited by limit max-total-size
-    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 11074")
+    string(APPEND MY_ADDITIONAL_CXX_FLAGS " -diag-disable 11074")
     # to get full report use -qopt-report=4 -qopt-report-phase ipo
-    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 11076")
+    string(APPEND MY_ADDITIONAL_CXX_FLAGS " -diag-disable 11076")
     # specified as both a system and non-system include directory
-    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 2547")
+    string(APPEND MY_ADDITIONAL_CXX_FLAGS " -diag-disable 2547")
     # unrecognised GCC pragma
-    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 2282")
+    string(APPEND MY_ADDITIONAL_CXX_FLAGS " -diag-disable 2282")
     # floating-point equality and inequality comparisons
-    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 1572")
+    string(APPEND MY_ADDITIONAL_CXX_FLAGS " -diag-disable 1572")
     # external function definition with no prior declaration
-    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 1418")
-
-    # TODO when cuda host compiler will be properly set to the same as CXX compiler
-    #   add the necessery options to nvcc via -Xcompiler
+    string(APPEND MY_ADDITIONAL_CXX_FLAGS " -diag-disable 1418")
 
   else()
     message(FATAL_ERROR "Unknown C++ compiler: ${CMAKE_CXX_COMPILER_ID}")
@@ -105,6 +105,11 @@ macro(setup_compiler)
   if (NOT CMAKE_BUILD_TYPE)
     #set(CMAKE_BUILD_TYPE RelWithDebInfo)
     set(CMAKE_BUILD_TYPE Release)
+  endif()
+
+  string(APPEND CMAKE_CXX_FLAGS ${MY_ADDITIONAL_CXX_FLAGS})
+  if(USE_CUDA)
+    string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler \"" ${MY_ADDITIONAL_CXX_FLAGS} "\"")
   endif()
 endmacro()
 
@@ -138,19 +143,19 @@ endmacro()
 
 macro(enable_OpenMP)
   if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
-    string(APPEND CMAKE_CXX_FLAGS " -fopenmp")
+    set(MY_OMP_FLAG "-fopenmp")
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
-    string(APPEND CMAKE_CXX_FLAGS " -qopenmp")
+    set(MY_OMP_FLAG "-qopenmp")
   elseif (CMAKE_CXX_COMPILER_ID MATCHES AppleClang)
-    string(APPEND CMAKE_CXX_FLAGS " -Xclang -fopenmp")
+    set(MY_OMP_FLAG "-Xclang -fopenmp")
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang AND NOT CMAKE_CXX_COMPILER_ID MATCHES AppleClang)
-    string(APPEND CMAKE_CXX_FLAGS " -fopenmp")
+    set(MY_OMP_FLAG "-fopenmp")
   endif()
+    
+  string(APPEND CMAKE_CXX_FLAGS " " ${MY_OMP_FLAG})
 
   if(USE_CUDA)
-    # now cuda host compiler is g++, so -fopenmp is enough
-    # in the future, when other cuda host compilers are supported, similar else-ifs will need to be there as above
-    string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -fopenmp")
+    string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler \"" ${MY_OMP_FLAG} "\"")
   endif()
 endmacro()
 
@@ -181,10 +186,7 @@ macro(enable_Lyra)
 endmacro()
 
 macro(setup_CUDA)
-  # intel host compiler in combination with eigen 3.3.90 causes problems
-  # specifically https://gitlab.com/libeigen/eigen/-/issues/2180
-  # therefore we stick with the default host compiler, which is on linux g++
-  # and do not change anything. after intel is working, this should be reworked
+  set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
 
   enable_language(CUDA)
 
@@ -200,9 +202,6 @@ macro(setup_CUDA)
     set(CMAKE_CUDA_STANDARD 17)
     set(CMAKE_CUDA_STANDARD_REQUIRED True)
   endif()
-
-  string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -Wall")
-  string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -Wextra")
 
   if(${CMAKE_VERSION} VERSION_LESS "3.18.0")
     string(APPEND CMAKE_CUDA_FLAGS " -arch=compute_60")

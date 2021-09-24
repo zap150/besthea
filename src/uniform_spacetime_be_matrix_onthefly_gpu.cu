@@ -138,15 +138,15 @@ besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   <kernel_type, test_space_type, trial_space_type>::
   uniform_spacetime_be_matrix_onthefly_gpu( kernel_type & kernel,
   test_space_type & test_space, trial_space_type & trial_space,
-  const besthea::mesh::uniform_spacetime_tensor_mesh_gpu & gpu_mesh,
-  int order_singular, int order_regular, int gpu_kernel_version,
+  const besthea::mesh::uniform_spacetime_tensor_mesh_gpu & gpu_mesh_,
+  int order_singular, int order_regular, int gpu_kernel_version_,
   bool loadbalancing_use_cpu_ )
   : uniform_spacetime_be_matrix_onthefly_cpu
       <kernel_type, test_space_type, trial_space_type>(
         kernel, test_space, trial_space, order_singular, order_regular ),
-    gpu_mesh(&gpu_mesh),
-    n_gpus(gpu_mesh.get_n_gpus()),
-    gpu_kernel_version(gpu_kernel_version),
+    gpu_mesh(&gpu_mesh_),
+    n_gpus(gpu_mesh_.get_n_gpus()),
+    gpu_kernel_version(gpu_kernel_version_),
     load_distr(nullptr),
     loadbalancing_use_cpu(loadbalancing_use_cpu_) {
 
