@@ -234,8 +234,8 @@ class besthea::mesh::time_cluster_tree {
   time_cluster * _root;         //!< root cluster of the tree
   const temporal_mesh & _mesh;  //!< underlying mesh
   lo _levels;                   //!< number of levels in the tree
-  lo _real_max_levels;  //!< auxiliary value to determine number of real tree
-                        //!< levels (depending on _n_min_elems)
+  lo _real_n_levels;  //!< auxiliary value to determine number of real tree
+                      //!< levels (depending on _n_min_elems)
   lo _n_min_elems;  //!< minimum number of elements so that cluster can be split
                     //!< in halves
                     //!< @todo: can we rename this? the name is somehow

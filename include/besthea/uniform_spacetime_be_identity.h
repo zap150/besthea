@@ -79,6 +79,8 @@ class besthea::bem::uniform_spacetime_be_identity
 
   /**
    * Assembles the identity matrix.
+   * @param[in,out] global_matrix The resulting the matrix is stored in this
+   * variable.
    */
   void assemble( matrix_type & global_matrix ) const;
 

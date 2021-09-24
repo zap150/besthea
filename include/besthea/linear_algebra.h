@@ -44,6 +44,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/compound_linear_operator.h"
 #include "besthea/coordinates.h"
 #include "besthea/distributed_block_vector.h"
+#include "besthea/distributed_diagonal_matrix.h"
+#include "besthea/distributed_initial_pFMM_matrix.h"
 #include "besthea/distributed_pFMM_matrix.h"
 #include "besthea/full_matrix.h"
 #include "besthea/indices.h"

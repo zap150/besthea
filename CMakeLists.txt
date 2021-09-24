@@ -38,14 +38,18 @@ set(besthea_INCLUDES
   include/besthea/compound_linear_operator.h
   include/besthea/coordinates.h
   include/besthea/distributed_block_vector.h
+  include/besthea/distributed_diagonal_matrix.h
   include/besthea/distributed_fast_spacetime_be_assembler.h
+  include/besthea/distributed_fast_spacetime_initial_be_assembler.h
   include/besthea/distributed_fast_spacetime_be_space.h
+  include/besthea/distributed_initial_pFMM_matrix.h
   include/besthea/distributed_pFMM_matrix.h
   include/besthea/distributed_spacetime_be_identity.h
   include/besthea/distributed_spacetime_cluster_tree.h
   include/besthea/distributed_spacetime_tensor_mesh.h
   include/besthea/fe_identity.h
   include/besthea/fe_space.h
+  include/besthea/fmm_routines.h
   include/besthea/full_matrix.h
   include/besthea/general_spacetime_cluster.h
   include/besthea/indices.h
@@ -63,6 +67,8 @@ set(besthea_INCLUDES
   include/besthea/quadrature.h
   include/besthea/scheduling_time_cluster.h
   include/besthea/settings.h
+  include/besthea/volume_space_cluster.h
+  include/besthea/volume_space_cluster_tree.h
   include/besthea/spacetime_be_identity.h
   include/besthea/spacetime_be_space.h
   include/besthea/spacetime_heat_adl_kernel_antiderivative.h
@@ -125,14 +131,18 @@ set(besthea_SOURCES
   src/compound_linear_operator.cpp
   src/coordinates.cpp
   src/distributed_block_vector.cpp
+  src/distributed_diagonal_matrix.cpp
   src/distributed_fast_spacetime_be_assembler.cpp
+  src/distributed_fast_spacetime_initial_be_assembler.cpp
   src/distributed_fast_spacetime_be_space.cpp
+  src/distributed_initial_pFMM_matrix.cpp
   src/distributed_pFMM_matrix.cpp
   src/distributed_spacetime_be_identity.cpp
   src/distributed_spacetime_cluster_tree.cpp
   src/distributed_spacetime_tensor_mesh.cpp
   src/fe_identity.cpp
   src/fe_space.cpp
+  src/fmm_routines.cpp
   src/full_matrix.cpp
   src/general_spacetime_cluster.cpp
   src/indices.cpp
@@ -141,6 +151,7 @@ set(besthea_SOURCES
   src/mkl_cg_inverse.cpp
   src/mkl_fgmres_inverse.cpp
   src/quadrature.cpp
+  src/volume_space_cluster_tree.cpp
   src/spacetime_be_identity.cpp
   src/spacetime_be_space.cpp
   src/spacetime_mesh_generator.cpp

@@ -77,9 +77,19 @@ class besthea::bem::spacetime_be_identity
   void assemble( );
 
   /**
-   * Assembles the identity matrix (without the timestep premultiply).
+   * Assembles the identity matrix (without the timestep premultiply in case
+   * that weighted == false) for a given inner product (either standard L2, or
+   * weighted L2 with elementwise weights weights(h_x^{1/2} + h_t^{1/4})).
+   * @param[in,out] global_matrix The resulting matrix is stored in this
+   * variable.
+   * @param[in] weighted  Switch between weighted (true) and standard (false) L2
+   * inner products to compute the identity matrix.
+   * @param[in] temp_interval_length  Length of the interval for which the
+   * identity matrix is assembled. This is only used in case of weighted L2
+   * inner products.
    */
-  void assemble( matrix_type & global_matrix ) const;
+  void assemble( matrix_type & global_matrix, bool weighted = false,
+    sc temp_interval_length = 0.0 ) const;
 
   /**
    * Prints info on the object.
@@ -125,6 +135,19 @@ class besthea::bem::spacetime_be_identity
    */
   void assemble_triplets( std::vector< los > & ii, std::vector< los > & jj,
     std::vector< sc > & vv ) const;
+
+  /**
+   * Assembles the triplets for the sparse identity matrix based on a weighted
+   * L2 inner product with elementwise weights(h_x^{1/2} + h_t^{1/4}).
+   * @param[in] ii Row indices.
+   * @param[in] jj Column indices.
+   * @param[in] vv Values.
+   * @param[in] temp_interval_length  Length of the temporal interval for which
+   * the identity matrix is assembled.
+   */
+  void assemble_weighted_triplets( std::vector< los > & ii,
+    std::vector< los > & jj, std::vector< sc > & vv,
+    sc temp_interval_length ) const;
 
   /**
    * Collects the sizes of the timesteps of the temporal mesh associated with

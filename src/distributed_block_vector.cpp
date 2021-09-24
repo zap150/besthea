@@ -419,7 +419,7 @@ void besthea::linear_algebra::distributed_block_vector::get_local_part<
     lo global_time_index = distributed_mesh.local_2_global_time(
       mesh_start_idx, local_time_index );
     for ( lo i_space = 0; i_space < n_space_elements; ++i_space ) {
-      lo global_space_index = cluster_mesh->get_space_element(
+      lo global_space_index = cluster_mesh->get_space_element_index(
         distributed_mesh.global_2_local( mesh_start_idx,
           spacetime_elements[ i_time * n_space_elements + i_space ] ) );
       // for the spatial mesh no transformation from local 2 global is
@@ -503,7 +503,7 @@ void besthea::linear_algebra::distributed_block_vector::add_local_part<
     lo global_time_index = distributed_mesh.local_2_global_time(
       local_start_idx, local_time_index );
     for ( lo i_space = 0; i_space < n_space_elements; ++i_space ) {
-      lo global_space_index = local_mesh->get_space_element(
+      lo global_space_index = local_mesh->get_space_element_index(
         distributed_mesh.global_2_local( local_start_idx,
           spacetime_elements[ i_time * n_space_elements + i_space ] ) );
       // for the spatial mesh no transformation from local 2 global is
@@ -596,7 +596,7 @@ void besthea::linear_algebra::distributed_block_vector::get_local_part<
     // use again that spacetime elements are sorted in time and their tensor
     // product structure to get the global space indices
     lo global_space_index
-      = cluster_mesh->get_space_element( distributed_mesh.global_2_local(
+      = cluster_mesh->get_space_element_index( distributed_mesh.global_2_local(
         mesh_start_idx, spacetime_elements[ i_space ] ) );
     for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
       local_part.set( i_time, i_space,
@@ -700,7 +700,7 @@ void besthea::linear_algebra::distributed_block_vector::add_local_part<
     // use again that spacetime elements are sorted in time and their tensor
     // product structure to get the global space indices
     lo global_space_index
-      = cluster_mesh->get_space_element( distributed_mesh.global_2_local(
+      = cluster_mesh->get_space_element_index( distributed_mesh.global_2_local(
         mesh_start_idx, spacetime_elements[ i_space ] ) );
     for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
       add_atomic( global_time_indices[ i_time ], global_space_index,

@@ -124,6 +124,8 @@ class besthea::bem::quadrature {
         return triangle_x1_4;
       case 5:
         return triangle_x1_5;
+      case 10:
+        return triangle_x1_10;
       default:
         std::cout << "Order " << order
                   << " not available, returning lowest order rule."
@@ -148,6 +150,8 @@ class besthea::bem::quadrature {
         return triangle_x2_4;
       case 5:
         return triangle_x2_5;
+      case 10:
+        return triangle_x2_10;
       default:
         std::cout << "Order " << order
                   << " not available, returning lowest order rule."
@@ -172,6 +176,8 @@ class besthea::bem::quadrature {
         return triangle_w_4;
       case 5:
         return triangle_w_5;
+      case 10:
+        return triangle_w_10;
       default:
         std::cout << "Order " << order
                   << " not available, returning lowest order rule."
@@ -198,6 +204,14 @@ class besthea::bem::quadrature {
         return tetrahedron_x1_5;
       case 6:
         return tetrahedron_x1_6;
+      case 7:
+        return tetrahedron_x1_7;
+      case 8:
+        return tetrahedron_x1_8;
+      case 9:
+        return tetrahedron_x1_9;
+      case 10:
+        return tetrahedron_x1_10;
       default:
         std::cout << "Order " << order
                   << " not available, returning lowest order rule."
@@ -224,6 +238,14 @@ class besthea::bem::quadrature {
         return tetrahedron_x2_5;
       case 6:
         return tetrahedron_x2_6;
+      case 7:
+        return tetrahedron_x2_7;
+      case 8:
+        return tetrahedron_x2_8;
+      case 9:
+        return tetrahedron_x2_9;
+      case 10:
+        return tetrahedron_x2_10;
       default:
         std::cout << "Order " << order
                   << " not available, returning lowest order rule."
@@ -250,6 +272,14 @@ class besthea::bem::quadrature {
         return tetrahedron_x3_5;
       case 6:
         return tetrahedron_x3_6;
+      case 7:
+        return tetrahedron_x3_7;
+      case 8:
+        return tetrahedron_x3_8;
+      case 9:
+        return tetrahedron_x3_9;
+      case 10:
+        return tetrahedron_x3_10;
       default:
         std::cout << "Order " << order
                   << " not available, returning lowest order rule."
@@ -276,6 +306,14 @@ class besthea::bem::quadrature {
         return tetrahedron_w_5;
       case 6:
         return tetrahedron_w_6;
+      case 7:
+        return tetrahedron_w_7;
+      case 8:
+        return tetrahedron_w_8;
+      case 9:
+        return tetrahedron_w_9;
+      case 10:
+        return tetrahedron_w_10;
       default:
         std::cout << "Order " << order
                   << " not available, returning lowest order rule."
@@ -355,6 +393,18 @@ class besthea::bem::quadrature {
     triangle_w_5;  //!< Quadrature weights in
                    //!< (0,1)x(0,1-x1), order 5
 
+  // The following quadrature formulas are found in
+  // https://doi.org/10.1016/S0898-1221(03)90004-6
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    triangle_x1_10;  //!< First coordinates of quadrature nodes in
+                     //!< (0,1)x(0,1-x1), order 10
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    triangle_x2_10;  //!< Second coordinates of quadrature nodes in
+                     //!< (0,1)x(0,1-x1), order 10
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    triangle_w_10;  //!< Quadrature weights in
+                    //!< (0,1)x(0,1-x1), order 10
+
   static const std::vector< sc, besthea::allocator_type< sc > >
     tetrahedron_x1_1;  //!< First coordinates of quadrature nodes in
                        //!< conv((0,0,0),(1,0,0),(0,1,0),(0,0,1)), order 1
@@ -419,6 +469,58 @@ class besthea::bem::quadrature {
   static const std::vector< sc, besthea::allocator_type< sc > >
     tetrahedron_w_6;  //!< Quadrature weights in
                       //!< conv((0,0,0),(1,0,0),(0,1,0),(0,0,1)), order 6
+
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    tetrahedron_x1_7;  //!< First coordinates of quadrature nodes in
+                       //!< conv((0,0,0),(1,0,0),(0,1,0),(0,0,1)), order 7
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    tetrahedron_x2_7;  //!< Second coordinates of quadrature nodes in
+                       //!< conv((0,0,0),(1,0,0),(0,1,0),(0,0,1)), order 7
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    tetrahedron_x3_7;  //!< Third coordinates of quadrature nodes in
+                       //!< conv((0,0,0),(1,0,0),(0,1,0),(0,0,1)), order 7
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    tetrahedron_w_7;  //!< Quadrature weights in
+                      //!< conv((0,0,0),(1,0,0),(0,1,0),(0,0,1)), order 7
+
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    tetrahedron_x1_8;  //!< First coordinates of quadrature nodes in
+                       //!< conv((0,0,0),(1,0,0),(0,1,0),(0,0,1)), order 8
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    tetrahedron_x2_8;  //!< Second coordinates of quadrature nodes in
+                       //!< conv((0,0,0),(1,0,0),(0,1,0),(0,0,1)), order 8
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    tetrahedron_x3_8;  //!< Third coordinates of quadrature nodes in
+                       //!< conv((0,0,0),(1,0,0),(0,1,0),(0,0,1)), order 8
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    tetrahedron_w_8;  //!< Quadrature weights in
+                      //!< conv((0,0,0),(1,0,0),(0,1,0),(0,0,1)), order 8
+
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    tetrahedron_x1_9;  //!< First coordinates of quadrature nodes in
+                       //!< conv((0,0,0),(1,0,0),(0,1,0),(0,0,1)), order 9
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    tetrahedron_x2_9;  //!< Second coordinates of quadrature nodes in
+                       //!< conv((0,0,0),(1,0,0),(0,1,0),(0,0,1)), order 9
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    tetrahedron_x3_9;  //!< Third coordinates of quadrature nodes in
+                       //!< conv((0,0,0),(1,0,0),(0,1,0),(0,0,1)), order 9
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    tetrahedron_w_9;  //!< Quadrature weights in
+                      //!< conv((0,0,0),(1,0,0),(0,1,0),(0,0,1)), order 9
+
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    tetrahedron_x1_10;  //!< First coordinates of quadrature nodes in
+                        //!< conv((0,0,0),(1,0,0),(0,1,0),(0,0,1)), order 10
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    tetrahedron_x2_10;  //!< Second coordinates of quadrature nodes in
+                        //!< conv((0,0,0),(1,0,0),(0,1,0),(0,0,1)), order 10
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    tetrahedron_x3_10;  //!< Third coordinates of quadrature nodes in
+                        //!< conv((0,0,0),(1,0,0),(0,1,0),(0,0,1)), order 10
+  static const std::vector< sc, besthea::allocator_type< sc > >
+    tetrahedron_w_10;  //!< Quadrature weights in
+                       //!< conv((0,0,0),(1,0,0),(0,1,0),(0,0,1)), order 10
 };
 
 #endif /* INCLUDE_BESTHEA_QUADRATURE_H_ */

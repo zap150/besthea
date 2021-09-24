@@ -47,6 +47,12 @@ namespace besthea {
   }
 }
 
+namespace besthea {
+  namespace mesh {
+    class volume_space_cluster;
+  }
+}
+
 // TODO: float version of cblas routines!
 
 /**
@@ -248,6 +254,19 @@ class besthea::linear_algebra::vector {
     _size = that._size;
     _data = that._data;
   }
+
+  /*!
+   * Gets the local part of a vector corresponding to the dofs in a volume space
+   * cluster.
+   * @param[in] cluster  Cluster determining the local dofs.
+   * @param[in,out] local_vector Local part of the vector.
+   * @tparam space_type @ref besthea::bem::fe_space representing basis
+   * functions. It determines the DOFs.
+   * @warning The local vector must have the correct size.
+   */
+  template< class space_type >
+  void get_local_part( const besthea::mesh::volume_space_cluster * cluster,
+    besthea::linear_algebra::vector & local_vector ) const;
 
  protected:
   lo _size;                                                //!< vector size

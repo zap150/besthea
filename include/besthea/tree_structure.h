@@ -166,6 +166,20 @@ class besthea::mesh::tree_structure {
   void reduce_2_essential( );
 
   /**
+   * Determines the value of
+   * @ref scheduling_time_cluster::_status_initial_op_downward_path for all
+   * scheduling time clusters in the subtree of current_cluster by a recursive
+   * tree traversal.
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   * @note This routine has to be called after the complete construction of a
+   * distributed space-time cluster tree associated with the tree structure for
+   * which it is called. In particular, the assignment of space-time clusters to
+   * scheduling time clusters has to be completed.
+   */
+  char determine_downward_path_initial_op_status_recursively(
+    scheduling_time_cluster & current_cluster );
+
+  /**
    * Traverses the tree recursively and adds all relevant clusters assigned to
    * the process @p _my_process_id to the 4 lists for scheduling operations in
    * the FMM.
@@ -218,6 +232,17 @@ class besthea::mesh::tree_structure {
    * @param[in] root  Current cluster in the tree traversal.
    */
   void clear_local_contributions( scheduling_time_cluster & root );
+
+  /**
+   * Traverses the tree structure recursively and allocates and initializes the
+   * local contributions for all clusters which are active in the downward path
+   * of an initial pFMM operator.
+   * @param[in] root  Current cluster in the tree traversal.
+   * @param[in] contribution_size Size of the contribution of a single spacetime
+   * cluster.
+   */
+  void initialize_local_contributions_initial_op(
+    scheduling_time_cluster & root, lou contribution_size );
 
   /**
    * Returns the structure of the tree represented as a vector of chars.

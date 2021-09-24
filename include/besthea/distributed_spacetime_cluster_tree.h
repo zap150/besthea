@@ -124,18 +124,31 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   }
 
   /**
+   * Computes and returns the spatial padding for each spatial level from
+   * @ref _spatial_paddings
+   */
+  std::vector< sc > get_spatial_paddings_per_spatial_level( ) const;
+
+  /**
    * Returns the effective number of levels in the cluster tree.
    */
-  lo get_max_levels( ) const {
-    return _max_levels;
+  lo get_n_levels( ) const {
+    return _n_levels;
   }
 
   /**
    * Returns the bound for the maximal number of refinements in space of the
    * clusters in the local part of the distributed tree.
    */
-  lo get_local_max_space_level( ) const {
-    return _local_max_space_level;
+  lo get_local_n_space_levels( ) const {
+    return _local_n_space_levels;
+  }
+
+  /**
+   * Returns @ref _global_n_space_levels.
+   */
+  lo get_global_n_space_levels( ) const {
+    return _global_n_space_levels;
   }
 
   /**
@@ -154,6 +167,13 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   }
 
   /**
+   * Returns the value of @ref _spatial_nearfield_limit.
+   */
+  lo get_spatial_nearfield_limit( ) const {
+    return _spatial_nearfield_limit;
+  }
+
+  /**
    * Returns the associated MPI communicator.
    */
   const MPI_Comm * get_MPI_comm( ) const {
@@ -165,7 +185,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    */
   void print( ) {
     // print general tree information
-    std::cout << "number of levels of spacetime tree " << _real_max_levels
+    std::cout << "number of levels of spacetime tree " << _real_n_levels
               << std::endl;
     std::cout << "spatial padding: " << std::endl;
     for ( lou i = 0; i < _spatial_paddings.size( ); ++i ) {
@@ -188,6 +208,17 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * structure in time.
    */
   void print_spatial_grids( const lo root_proc_id ) const;
+
+  /**
+   * Collects the leaves of the cluster tree which are owned by the current MPI
+   * process, i.e. local. The routine is based on a tree traversal. It can also
+   * be used to find local leaves of a subtree.
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   * @param[in,out] leaf_vector Vector to which the detected local leaves are
+   * added.
+   */
+  void collect_local_leaves( general_spacetime_cluster & current_cluster,
+    std::vector< general_spacetime_cluster * > & leaf_vector ) const;
 
  private:
   /**
@@ -305,7 +336,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * Computes a cubic bounding box of the underlying mesh.
    *
    * First the minimal axis parallel rectangular box in which the mesh is
-   * contained is computed. This box is extended to a cube, by expanding
+   * contained is computed. This box is extended to a cube by expanding
    * the shorter sides of the box by increasing the upper bound.
    * @param[in,out] xmin Minimum x coordinate of element's centroids.
    * @param[in,out] xmax Maximum x coordinate of element's centroids.
@@ -350,21 +381,22 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * space-time bounding box corresponding to the leaves in the distribution
    * tree.
    * @param[in] n_space_div Number of spatial refinements used for the
-   *                        subdivisioning.
+   * subdivisioning.
+   * @param[in] n_global_levels_dist_tree Number of levels in the global
+   * distribution tree.
    * @param[out] elems_in_clusters  Vector containing the number of elements in
    * the individual subclusters of the subdivisioning (ordered as
    * pos_t * n_space_clusters * n_space_clusters * n_space_clusters
    * + pos_x * n_space_clusters * n_space_clusters + pos_y * n_space_clusters
    * + pos_z).
    * @param[out] boxes_of_local_elements For each element in the local mesh this
-   *                                     vector contains the index of the
-   *                                     cluster in which it lies.
+   * vector contains the index of the cluster in which it lies.
    * @note If the distribution tree contains early leaf clusters they are
-   *       refined artificially for the counting process. Thus, the clusters in
-   *       the subdivisioning correspond to a regular refinement.
+   * refined artificially for the counting process. Thus, the clusters in the
+   * subdivisioning correspond to a regular refinement.
    */
-  void get_n_elements_in_fine_subdivisioning( lo n_space_div,
-    std::vector< lo > & elems_in_clusters,
+  void get_n_elements_in_fine_subdivisioning( const lo n_space_div,
+    const lo n_global_levels_dist_tree, std::vector< lo > & elems_in_clusters,
     std::vector< lo > & boxes_of_local_elements );
 
   /**
@@ -372,33 +404,30 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * assigning elements to) clusters in some subdivisioning of the space-time
    * bounding box.
    * @param[in] temporal_leaf_clusters  Temporal leaf clusters corresponding to
-   *                                    the mesh of the elements elements
-   *                                    (nearfield mesh or local mesh)
+   * the mesh of the elements elements (nearfield mesh or local mesh)
    * @param[in] n_space_clusters_per_dim  Number of space clusters along each
-   *                                      spatial dimension in the
-   *                                      subdivisioning.
+   * spatial dimension in the subdivisioning.
+   * @param[in] n_global_levels_dist_tree Number of levels in the global
+   * distribution tree.
    * @param[out] leaves_start_index Temporal index of the first cluster in
-   *                                @p temporal_leaf_clusters. If this is an
-   *                                early cluster, the temporal index of its
-   *                                leftmost (artificially refined) successor is
-   *                                returned.
+   * @p temporal_leaf_clusters. If this is an early cluster, the temporal index
+   * of its leftmost (artificially refined) successor is returned.
    * @param[out] starts_time_intervals  Start time of the provided time
-   *                                    clusters.
+   * clusters.
    * @param[out] endings_time_intervals End time of the provided time clusters.
    * @param[out] spatial_step_sizes Spatial step sizes for each spatial
-                                    dimension.
+   * dimension.
    * @param[out] space_bounds_x Bounds of the spatial clusters of the
-   *                            subdivisioning along x axis.
+   * subdivisioning along x axis.
    * @param[out] space_bounds_y Bounds of the spatial clusters of the
-   *                            subdivisioning along y axis.
+   * subdivisioning along y axis.
    * @param[out] space_bounds_z Bounds of the spatial clusters of the
-   *                            subdivisioning along z axis.
-
+   * subdivisioning along z axis.
    */
   void prepare_data_for_element_counting(
     const std::vector< scheduling_time_cluster * > & temporal_leaf_clusters,
-    const lo n_space_clusters_per_dim, lo & leaves_start_index,
-    std::vector< sc > & starts_time_intervals,
+    const lo n_global_levels_dist_tree, const lo n_space_clusters_per_dim,
+    lo & leaves_start_index, std::vector< sc > & starts_time_intervals,
     std::vector< sc > & endings_time_intervals,
     std::vector< sc > & spatial_step_sizes, std::vector< sc > & space_bounds_x,
     std::vector< sc > & space_bounds_y, std::vector< sc > & space_bounds_z );
@@ -407,14 +436,15 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * Assigns the elements contained in the nearfield mesh of
    * @ref _spacetime_mesh to the appropriate clusters in the tree.
    * @param[in] n_space_clusters_per_dim Number of space clusters along each
-   *                                      spatial dimension in the fine
-   *                                      subdivisioning from *
-   *                                  @ref get_n_elements_in_fine_subdivisioning
+   * spatial dimension in the fine subdivisioning from
+   * @ref get_n_elements_in_fine_subdivisioning.
+   * @param[in] n_global_levels_dist_tree Number of levels in the global
+   * distribution tree.
    * @param[in] boxes_of_nearfield_elements For each element in the nearfield
-   *                                        mesh this vector contains the index
-   *                                        of the cluster in which it lies.
+   * mesh this vector contains the index of the cluster in which it lies.
    */
   void assign_nearfield_elements_to_boxes( const lo n_space_clusters_per_dim,
+    const lo n_global_levels_dist_tree,
     std::vector< lo > & boxes_of_nearfield_elements );
 
   /**
@@ -503,13 +533,6 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     lo & status );
 
   /**
-   * Collects the leaves of the cluster tree which are owned by the current MPI
-   * process, i.e. local. The routine is based on a tree traversal.
-   * @param[in] root Current cluster in the tree traversal.
-   */
-  void collect_local_leaves( general_spacetime_cluster & root );
-
-  /**
    * Collects the leaves of the cluster tree which correspond to elements in the
    * nearfield mesh of the current process. The routine is based on a tree
    * traversal.
@@ -557,19 +580,20 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * Assigns elements to the leaf clusters in the upper part of the tree in the
    * first part of the tree assembly.
    * @param[in] leaves  Vector containing all the space-time leaf clusters in
-   *                    the upper part of the tree.
-   * @param[in] global_dist_tree_depth  Depth of the global distribution tree.
+   * the upper part of the tree.
+   * @param[in] n_global_levels_dist_tree Number of levels in the global
+   * distribution tree.
    * @param[in] space_levels  For each space-time level this vector contains the
-   *                          associated space level.
+   * associated space level.
    * @param[in] boxes_of_local_elements For each element in the nearfield mesh
-   *                                    this vector contains the index of the
-   *                                    cluster in which the element is located.
+   * this vector contains the index of the cluster in which the element is
+   * located.
    * @param[in,out] status If a leaf at levels <= 1 is found the status is set
-   *                       to 3, otherwise it is not changed.
+   * to 3, otherwise it is not changed.
    */
   void fill_elements_new(
     const std::vector< general_spacetime_cluster * > & leaves,
-    const lo global_dist_tree_depth, const std::vector< lo > & space_levels,
+    const lo n_global_levels_dist_tree, const std::vector< lo > & space_levels,
     const std::vector< lo > & boxes_of_local_elements, lo & status );
 
   // void fill_elements2( std::vector< general_spacetime_cluster * > & leaves,
@@ -588,8 +612,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    *                        constructing the children of root.
    * @todo check correctness of determination of temporal cluster data when
    * more general meshes are used.
-   * @note The member variables @p _real_max_levels and
-   * @p _local_max_space_level are updated in this routine.
+   * @note The member variables @p _real_n_levels and
+   * @p _local_n_space_levels are updated in this routine.
    *
    */
   void build_subtree(
@@ -769,9 +793,9 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
       }
   }
 
-  lo _max_levels;       //!< number of levels in the tree
-  lo _real_max_levels;  //!< auxiliary value to determine number of real tree
-                        //!< levels (depending on _n_min_elems)
+  lo _n_levels;       //!< number of levels in the tree
+  lo _real_n_levels;  //!< auxiliary value to determine number of real tree
+                      //!< levels (depending on _n_min_elems)
   distributed_spacetime_tensor_mesh &
     _spacetime_mesh;                  //!< underlying distributed spacetime mesh
                                       //!< @todo discuss: why reference and not
@@ -792,9 +816,10 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
                                  //!< level the spatial refinement starts
                                  //!< (relevant if
                                  //!< _initial_space_refinement == 0)
-  lo _local_max_space_level;     //!< bound for the maximal number of spatial
-                                 //!< refinements in the local part of the
-                                 //!< distributed tree.
+  lo _local_n_space_levels;      //!< Number of spatial levels in the local
+                                 //!< space-time tree owned by the current rank
+  lo _global_n_space_levels;     //!< Number of spatial levels in the global
+                                 //!< space-time tree
 
   // sc _s_t_coeff;  //!< coefficient to determine the coupling of the spatial
   //!< and temporal levels

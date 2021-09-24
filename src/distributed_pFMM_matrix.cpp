@@ -30,6 +30,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/distributed_pFMM_matrix.h"
 
+#include "besthea/fmm_routines.h"
 #include "besthea/quadrature.h"
 #include "besthea/timer.h"
 
@@ -235,245 +236,22 @@ besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::compute_spatial_m2m_coeffs( ) {
-  lo max_space_level
-    = _distributed_spacetime_tree->get_local_max_space_level( );
-  // Declare the structures containing coefficients of appropriate size.
-  // NOTE: The M2M coefficients are computed for all levels except the last
-  // one,
-  //       even in case they are not needed for the first few levels.
-  _m2m_coeffs_s_dim_0_left.resize( max_space_level );
-  _m2m_coeffs_s_dim_0_right.resize( max_space_level );
-  _m2m_coeffs_s_dim_1_left.resize( max_space_level );
-  _m2m_coeffs_s_dim_1_right.resize( max_space_level );
-  _m2m_coeffs_s_dim_2_left.resize( max_space_level );
-  _m2m_coeffs_s_dim_2_right.resize( max_space_level );
-
-  // Allocate storage for the required m2m coefficients. We do not need m2m
-  // matrices for all spatial levels, but only for those corresponding to
-  // space-time levels >= 2. This is considered in the following.
-  lo initial_space_refinement
-    = _distributed_spacetime_tree->get_initial_space_refinement( );
-  lo start_space_refinement
-    = _distributed_spacetime_tree->get_start_space_refinement( );
-  lo first_parent_m2m_level_space = initial_space_refinement;
-  if ( start_space_refinement <= 2 ) {
-    first_parent_m2m_level_space += 1;
-  }
-
-  for ( lo i = first_parent_m2m_level_space; i < max_space_level; ++i ) {
-    _m2m_coeffs_s_dim_0_left[ i ].resize(
-      ( _spat_order + 1 ) * ( _spat_order + 1 ) );
-    _m2m_coeffs_s_dim_0_right[ i ].resize(
-      ( _spat_order + 1 ) * ( _spat_order + 1 ) );
-    _m2m_coeffs_s_dim_1_left[ i ].resize(
-      ( _spat_order + 1 ) * ( _spat_order + 1 ) );
-    _m2m_coeffs_s_dim_1_right[ i ].resize(
-      ( _spat_order + 1 ) * ( _spat_order + 1 ) );
-    _m2m_coeffs_s_dim_2_left[ i ].resize(
-      ( _spat_order + 1 ) * ( _spat_order + 1 ) );
-    _m2m_coeffs_s_dim_2_right[ i ].resize(
-      ( _spat_order + 1 ) * ( _spat_order + 1 ) );
-  }
-
-  std::vector< sc > paddings_refinementwise( max_space_level + 1, 0.0 );
-  const std::vector< sc > & paddings_levelwise
-    = _distributed_spacetime_tree->get_spatial_paddings( );
-  // paddings_levelwise contains the padding levelwise with respect to the
-  // clusters levels. we need the padding with respect to the number of
-  // refinements in space.
-  if ( initial_space_refinement > 0 ) {
-    // padding is only computed starting from the spatial refinement level
-    // initial_space_refinement. set it to this value for all lower levels
-    for ( lo i = 0; i <= initial_space_refinement; ++i ) {
-      paddings_refinementwise[ i ] = paddings_levelwise[ 0 ];
-    }
-    // get the correct padding from paddings_levelwise (spatial refinement
-    // every second step)
-    lo current_idx = start_space_refinement;
-    for ( lo i = initial_space_refinement + 1; i <= max_space_level; ++i ) {
-      // note: by construction current_idx should never be out of bound for
-      // paddings_levelwise
-      paddings_refinementwise[ i ] = paddings_levelwise.at( current_idx );
-      current_idx += 2;
-    }
-  } else {
-    paddings_refinementwise[ 0 ] = paddings_levelwise[ 0 ];
-    // the level of the first spatial refinement is known
-    lo current_idx = start_space_refinement;
-    for ( lo i = 1; i <= max_space_level; ++i ) {
-      paddings_refinementwise[ i ] = paddings_levelwise.at( current_idx );
-      current_idx += 2;
-    }
-  }
-
-  // declare half box side lengths of parent and child cluster + initialize
-  vector_type h_par_no_pad( 3, false ), h_child_no_pad( 3, false );
+  target_space, source_space >::initialize_spatial_m2m_coeffs( ) {
+  lo n_space_levels = _distributed_spacetime_tree->get_local_n_space_levels( );
+  vector_type root_half_size( 3, false );
   sc dummy_val;
   _distributed_spacetime_tree->get_root( )->get_half_size(
-    h_par_no_pad, dummy_val );
+    root_half_size, dummy_val );
 
-  vector_type nodes( _spat_order + 1, false );
-  for ( lo i = 0; i <= _spat_order; ++i )
-    nodes[ i ] = cos( ( M_PI * ( 2 * i + 1 ) ) / ( 2 * ( _spat_order + 1 ) ) );
-  // evaluate Chebyshev polynomials at the nodes (needed for coefficients)
-  vector_type all_values_cheb_std_intrvl(
-    ( _spat_order + 1 ) * ( _spat_order + 1 ), false );
-  _chebyshev.evaluate( nodes, all_values_cheb_std_intrvl );
-  // vector to store values of Chebyshev polynomials for transformed intervals
-  vector_type all_values_cheb_trf_intrvl(
-    ( _spat_order + 1 ) * ( _spat_order + 1 ), false );
-  // initialize vectors to store transformed nodes
-  vector_type nodes_l_child_dim_0( _spat_order + 1, false );
-  vector_type nodes_r_child_dim_0( _spat_order + 1, false );
-  vector_type nodes_l_child_dim_1( _spat_order + 1, false );
-  vector_type nodes_r_child_dim_1( _spat_order + 1, false );
-  vector_type nodes_l_child_dim_2( _spat_order + 1, false );
-  vector_type nodes_r_child_dim_2( _spat_order + 1, false );
-
-  // compute the spatial half sizes of the first parent box, for which m2m
-  // coefficients are computed
-  h_par_no_pad[ 0 ] /= (sc) ( 1 << first_parent_m2m_level_space );
-  h_par_no_pad[ 1 ] /= (sc) ( 1 << first_parent_m2m_level_space );
-  h_par_no_pad[ 2 ] /= (sc) ( 1 << first_parent_m2m_level_space );
-
-  for ( lo curr_level = first_parent_m2m_level_space;
-        curr_level < max_space_level; ++curr_level ) {
-    h_child_no_pad[ 0 ] = h_par_no_pad[ 0 ] / 2.0;
-    h_child_no_pad[ 1 ] = h_par_no_pad[ 1 ] / 2.0;
-    h_child_no_pad[ 2 ] = h_par_no_pad[ 2 ] / 2.0;
-    sc padding_par = paddings_refinementwise[ curr_level ];
-    sc padding_child = paddings_refinementwise[ curr_level + 1 ];
-    // transform the nodes from [-1, 1] to the child interval and then back to
-    // [-1, 1] with the transformation of the parent interval:
-    for ( lo j = 0; j <= _spat_order; ++j ) {
-      nodes_l_child_dim_0[ j ] = 1.0 / ( h_par_no_pad[ 0 ] + padding_par )
-        * ( -h_child_no_pad[ 0 ]
-          + ( h_child_no_pad[ 0 ] + padding_child ) * nodes[ j ] );
-      nodes_r_child_dim_0[ j ] = 1.0 / ( h_par_no_pad[ 0 ] + padding_par )
-        * ( h_child_no_pad[ 0 ]
-          + ( h_child_no_pad[ 0 ] + padding_child ) * nodes[ j ] );
-      nodes_l_child_dim_1[ j ] = 1.0 / ( h_par_no_pad[ 1 ] + padding_par )
-        * ( -h_child_no_pad[ 1 ]
-          + ( h_child_no_pad[ 1 ] + padding_child ) * nodes[ j ] );
-      nodes_r_child_dim_1[ j ] = 1.0 / ( h_par_no_pad[ 1 ] + padding_par )
-        * ( h_child_no_pad[ 1 ]
-          + ( h_child_no_pad[ 1 ] + padding_child ) * nodes[ j ] );
-      nodes_l_child_dim_2[ j ] = 1.0 / ( h_par_no_pad[ 2 ] + padding_par )
-        * ( -h_child_no_pad[ 2 ]
-          + ( h_child_no_pad[ 2 ] + padding_child ) * nodes[ j ] );
-      nodes_r_child_dim_2[ j ] = 1.0 / ( h_par_no_pad[ 2 ] + padding_par )
-        * ( h_child_no_pad[ 2 ]
-          + ( h_child_no_pad[ 2 ] + padding_child ) * nodes[ j ] );
-    }
-    // compute m2m coefficients at current level along all dimensions
-    // for i1 > i0 the coefficients are known to be zero
-    _chebyshev.evaluate( nodes_l_child_dim_0, all_values_cheb_trf_intrvl );
-    for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
-      for ( lo i1 = 0; i1 <= i0; ++i1 ) {
-        sc coeff = 0;
-        for ( lo n = 0; n <= _spat_order; ++n ) {
-          coeff += all_values_cheb_std_intrvl[ i1 * ( _spat_order + 1 ) + n ]
-            * all_values_cheb_trf_intrvl[ i0 * ( _spat_order + 1 ) + n ];
-        }
-        coeff *= 2.0 / ( _spat_order + 1.0 );
-        if ( i1 == 0 ) {
-          coeff /= 2.0;
-        }
-        _m2m_coeffs_s_dim_0_left[ curr_level ][ ( _spat_order + 1 ) * i0 + i1 ]
-          = coeff;
-      }
-    }
-
-    _chebyshev.evaluate( nodes_r_child_dim_0, all_values_cheb_trf_intrvl );
-    for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
-      for ( lo i1 = 0; i1 <= i0; ++i1 ) {
-        sc coeff = 0;
-        for ( lo n = 0; n <= _spat_order; ++n ) {
-          coeff += all_values_cheb_std_intrvl[ i1 * ( _spat_order + 1 ) + n ]
-            * all_values_cheb_trf_intrvl[ i0 * ( _spat_order + 1 ) + n ];
-        }
-        coeff *= 2.0 / ( _spat_order + 1 );
-        if ( i1 == 0 ) {
-          coeff /= 2.0;
-        }
-        _m2m_coeffs_s_dim_0_right[ curr_level ][ ( _spat_order + 1 ) * i0 + i1 ]
-          = coeff;
-      }
-    }
-
-    _chebyshev.evaluate( nodes_l_child_dim_1, all_values_cheb_trf_intrvl );
-    for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
-      for ( lo i1 = 0; i1 <= i0; ++i1 ) {
-        sc coeff = 0;
-        for ( lo n = 0; n <= _spat_order; ++n ) {
-          coeff += all_values_cheb_std_intrvl[ i1 * ( _spat_order + 1 ) + n ]
-            * all_values_cheb_trf_intrvl[ i0 * ( _spat_order + 1 ) + n ];
-        }
-        coeff *= 2.0 / ( _spat_order + 1 );
-        if ( i1 == 0 ) {
-          coeff /= 2.0;
-        }
-        _m2m_coeffs_s_dim_1_left[ curr_level ][ ( _spat_order + 1 ) * i0 + i1 ]
-          = coeff;
-      }
-    }
-
-    _chebyshev.evaluate( nodes_r_child_dim_1, all_values_cheb_trf_intrvl );
-    for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
-      for ( lo i1 = 0; i1 <= i0; ++i1 ) {
-        sc coeff = 0;
-        for ( lo n = 0; n <= _spat_order; ++n ) {
-          coeff += all_values_cheb_std_intrvl[ i1 * ( _spat_order + 1 ) + n ]
-            * all_values_cheb_trf_intrvl[ i0 * ( _spat_order + 1 ) + n ];
-        }
-        coeff *= 2.0 / ( _spat_order + 1 );
-        if ( i1 == 0 ) {
-          coeff /= 2.0;
-        }
-        _m2m_coeffs_s_dim_1_right[ curr_level ][ ( _spat_order + 1 ) * i0 + i1 ]
-          = coeff;
-      }
-    }
-
-    _chebyshev.evaluate( nodes_l_child_dim_2, all_values_cheb_trf_intrvl );
-    for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
-      for ( lo i1 = 0; i1 <= i0; ++i1 ) {
-        sc coeff = 0;
-        for ( lo n = 0; n <= _spat_order; ++n ) {
-          coeff += all_values_cheb_std_intrvl[ i1 * ( _spat_order + 1 ) + n ]
-            * all_values_cheb_trf_intrvl[ i0 * ( _spat_order + 1 ) + n ];
-        }
-        coeff *= 2.0 / ( _spat_order + 1 );
-        if ( i1 == 0 ) {
-          coeff /= 2.0;
-        }
-        _m2m_coeffs_s_dim_2_left[ curr_level ][ ( _spat_order + 1 ) * i0 + i1 ]
-          = coeff;
-      }
-    }
-
-    _chebyshev.evaluate( nodes_r_child_dim_2, all_values_cheb_trf_intrvl );
-    for ( lo i0 = 0; i0 <= _spat_order; ++i0 ) {
-      for ( lo i1 = 0; i1 <= i0; ++i1 ) {
-        sc coeff = 0;
-        for ( lo n = 0; n <= _spat_order; ++n ) {
-          coeff += all_values_cheb_std_intrvl[ i1 * ( _spat_order + 1 ) + n ]
-            * all_values_cheb_trf_intrvl[ i0 * ( _spat_order + 1 ) + n ];
-        }
-        coeff *= 2.0 / ( _spat_order + 1 );
-        if ( i1 == 0 ) {
-          coeff /= 2.0;
-        }
-        _m2m_coeffs_s_dim_2_right[ curr_level ][ ( _spat_order + 1 ) * i0 + i1 ]
-          = coeff;
-      }
-    }
-    // update for next iteration
-    h_par_no_pad[ 0 ] = h_child_no_pad[ 0 ];
-    h_par_no_pad[ 1 ] = h_child_no_pad[ 1 ];
-    h_par_no_pad[ 2 ] = h_child_no_pad[ 2 ];
-  }
+  compute_spatial_m2m_coeffs( n_space_levels, _spat_order, root_half_size[ 0 ],
+    _distributed_spacetime_tree->get_spatial_paddings_per_spatial_level( ),
+    _m2m_coeffs_s_dim_0_left, _m2m_coeffs_s_dim_0_right );
+  // @todo Due to the cubic bounding boxes the m2m coefficients are the same
+  // for all dimensions. Get rid of redundant vectors
+  _m2m_coeffs_s_dim_1_left = _m2m_coeffs_s_dim_0_left;
+  _m2m_coeffs_s_dim_1_right = _m2m_coeffs_s_dim_0_right;
+  _m2m_coeffs_s_dim_2_left = _m2m_coeffs_s_dim_0_left;
+  _m2m_coeffs_s_dim_2_right = _m2m_coeffs_s_dim_0_right;
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -577,6 +355,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       global_nearfield_ratio_adaptive_part
         += all_local_nearfield_ratios_adaptive_part[ i ];
     }
+    std::cout << std::endl;
     std::cout << "nearfield ratio (including zeros) = "
               << global_nearfield_ratio << std::endl;
     std::cout << "nearfield ratio (counting non-zero entries only) = "
@@ -591,7 +370,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     n_m2l_operations, n_l2l_operations, n_l2t_operations );
   // collect the numbers of operations at the root process via reduce
   // operations
-  lo n_max_levels = _distributed_spacetime_tree->get_max_levels( );
+  lo n_max_levels = _distributed_spacetime_tree->get_n_levels( );
   if ( _my_rank == root_process ) {
     MPI_Reduce( MPI_IN_PLACE, n_s2m_operations.data( ), n_max_levels,
       get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
@@ -716,8 +495,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     std::cout << "storage per allocated vector (target): "
               << n_target_dofs * 8. / 1024. / 1024. / 1024. << " GiB."
               << std::endl;
+    std::cout << std::endl;
     delete[] all_local_nearfield_ratios;
     delete[] all_local_nonzero_nearfield_ratios;
+    delete[] all_local_nearfield_ratios_adaptive_part;
     delete[] all_n_moments;
     delete[] all_n_moments_receive;
     delete[] all_n_local_contributions;
@@ -961,8 +742,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
   }
 
-  // compute intermediate result lambda_1 ignoring zero entries for the sake
-  // of better readability
+  // compute intermediate result lambda_1 not exploiting zero entries for the
+  // sake of better readability
   for ( lo beta1 = 0; beta1 <= _spat_order; ++beta1 ) {
     for ( lo beta2 = 0; beta2 <= _spat_order - beta1; ++beta2 ) {
       for ( lo alpha0 = 0; alpha0 <= _spat_order - beta1 - beta2; ++alpha0 ) {
@@ -1223,9 +1004,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::call_l2l_operations( scheduling_time_cluster *
                                                        t_cluster,
   bool verbose, const std::string & verbose_file ) const {
-  scheduling_time_cluster * parent_cluster = t_cluster->get_parent( );
-  // m2m operations are only executed if the parent is active in the upward
-  // path
   if ( verbose ) {
 #pragma omp critical( verbose )
     {
@@ -1237,6 +1015,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       }
     }
   }
+  scheduling_time_cluster * parent_cluster = t_cluster->get_parent( );
   slou configuration = t_cluster->get_configuration( );
   std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
     = parent_cluster->get_associated_spacetime_clusters( );
@@ -1292,7 +1071,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // transform the nodes from [-1, 1] to the child interval and then back to
   // [-1, 1] with the transformation of the parent interval:
   for ( lo j = 0; j <= _temp_order; ++j ) {
-    nodes_child[ j ] = ( child_time_center + (child_time_half_size) *nodes[ j ]
+    nodes_child[ j ] = ( child_time_center + child_time_half_size * nodes[ j ]
                          - parent_time_center )
       / parent_time_half_size;
   }
@@ -1840,10 +1619,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     // the first n_space_elems spacetime elements.
     lo local_elem_idx = distributed_mesh.global_2_local(
       local_start_idx, source_cluster->get_element( i ) );
-    lo local_elem_idx_space = local_mesh->get_space_element( local_elem_idx );
+    lo local_elem_idx_space
+      = local_mesh->get_space_element_index( local_elem_idx );
 
-    local_mesh->get_spatial_nodes( local_elem_idx_space, y1, y2, y3 );
-    sc elem_area = local_mesh->spatial_area( local_elem_idx_space );
+    local_mesh->get_spatial_nodes_using_spatial_element_index(
+      local_elem_idx_space, y1, y2, y3 );
+    sc elem_area = local_mesh->get_spatial_area_using_spatial_index(
+      local_elem_idx_space );
 
     triangle_to_geometry( y1, y2, y3, my_quadrature );
 
@@ -1882,6 +1664,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   lo n_space_elems = source_cluster->get_n_space_elements( );
   lo n_space_nodes = source_cluster->get_n_space_nodes( );
   T_drv.resize( n_space_nodes, _spat_contribution_size );
+  T_drv.fill( 0.0 );
   // get some info on the current cluster
   vector_type cluster_center_space( 3 );
   vector_type cluster_half_space( 3 );
@@ -1930,10 +1713,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   for ( lo i = 0; i < n_space_elems; ++i ) {
     lo local_elem_idx = distributed_mesh.global_2_local(
       local_start_idx, source_cluster->get_element( i ) );
-    lo local_elem_idx_space = local_mesh->get_space_element( local_elem_idx );
-    local_mesh->get_spatial_normal( local_elem_idx_space, normal );
-    local_mesh->get_spatial_nodes( local_elem_idx_space, y1, y2, y3 );
-    sc elem_area = local_mesh->spatial_area( local_elem_idx_space );
+    lo local_elem_idx_space
+      = local_mesh->get_space_element_index( local_elem_idx );
+    local_mesh->get_spatial_normal_using_spatial_element_index(
+      local_elem_idx_space, normal );
+    local_mesh->get_spatial_nodes_using_spatial_element_index(
+      local_elem_idx_space, y1, y2, y3 );
+    sc elem_area = local_mesh->get_spatial_area_using_spatial_index(
+      local_elem_idx_space );
 
     triangle_to_geometry( y1, y2, y3, my_quadrature );
 
@@ -2050,10 +1837,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   for ( lo i = 0; i < n_space_elems; ++i ) {
     lo local_elem_idx = distributed_mesh.global_2_local(
       local_start_idx, source_cluster->get_element( i ) );
-    lo local_elem_idx_space = local_mesh->get_space_element( local_elem_idx );
-    local_mesh->get_spatial_normal( local_elem_idx_space, normal );
-    local_mesh->get_spatial_nodes( local_elem_idx_space, y1, y2, y3 );
-    sc elem_area = local_mesh->spatial_area( local_elem_idx_space );
+    lo local_elem_idx_space
+      = local_mesh->get_space_element_index( local_elem_idx );
+    local_mesh->get_spatial_normal_using_spatial_element_index(
+      local_elem_idx_space, normal );
+    local_mesh->get_spatial_nodes_using_spatial_element_index(
+      local_elem_idx_space, y1, y2, y3 );
+    sc elem_area = local_mesh->get_spatial_area_using_spatial_index(
+      local_elem_idx_space );
 
     triangle_to_geometry( y1, y2, y3, my_quadrature );
 
@@ -2118,6 +1909,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   const std::vector< lo > & elems_2_local_nodes
     = source_cluster->get_elems_2_local_nodes( );
   T_curl_along_dim.resize( n_space_nodes, _spat_contribution_size );
+  T_curl_along_dim.fill( 0.0 );
   // compute T_curl_along_dim from T and surface_curls
   for ( lo i_beta = 0; i_beta < _spat_contribution_size; ++i_beta ) {
     for ( lo i_space_el = 0; i_space_el < n_space_elements; ++i_space_el ) {
@@ -2269,7 +2061,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                                                            src_time_nodes,
   const vector_type & tar_time_nodes, const sc half_size, const sc center_diff,
   vector_type & buffer_for_gaussians, vector_type & coupling_coeffs ) const {
-  coupling_coeffs.fill( 0.0 );
   // evaluate the gaussian kernel for the numerical integration
   sc h_alpha = half_size * half_size / ( 4.0 * _alpha );
   sc scaled_center_diff = center_diff / half_size;
@@ -2289,7 +2080,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         buffer_for_gaussians_data[ index_gaussian + i ] = std::exp( -h_delta_ab
           * ( scaled_center_diff + cheb_nodes_sum_coll_data[ i ] )
           * ( scaled_center_diff + cheb_nodes_sum_coll_data[ i ] ) );
-        //++index_gaussian;
       }
       index_gaussian += i;
     }
@@ -2317,14 +2107,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               * curr_ptr[ start_idx + idx ];
           }
           index_gaussian += idx;
-          coupling_coeffs[ index_integral ] += val;
+          coupling_coeffs[ index_integral ] = val;
 
           sc mul_factor_ab = mul_factor
             / std::sqrt( 4.0 * M_PI * _alpha
               * ( tar_time_nodes[ a ] - src_time_nodes[ b ] ) );
-          // gamma = 2 for all alpha and beta ( wrong, correction in
-          //                    case of
-          // alpha == 0 or beta == 0 )
+          // In the multiplicative factor a factor of 2 (gamma) is used for all
+          // alpha and beta. For alpha == 0 or beta == 0 a correction is
+          // required)
           // an attempt to compute this in a separate loop with precomputed
           // mul_factor_ab was slower
           if ( alpha == 0 ) {
@@ -2340,22 +2130,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       }
     }
   }
-
-  // TODO: activate (and check!) this to avoid if clauses in the above loop
-  //   for ( lo k = 0; k <= _spat_order; ++ k ) {
-  //     lou index_temp = 0;
-  //     for ( lo a = 0; a <= _temp_order; ++ a ) {
-  //       for ( lo b = 0; b <= _temp_order; ++ b ) {
-  //         //corrections for alpha = 0
-  //         coupling_coeffs[ ( _temp_order + 1 ) * ( _temp_order + 1 ) * k
-  //                           + index_temp ] *= 0.5;
-  //         //corrections for beta = 0
-  //         coupling_coeffs[ ( _temp_order + 1 ) * ( _temp_order + 1 ) *
-  //                           ( _spat_order + 1 ) * k + index_temp ] *= 0.5;
-  //         ++ index_temp;
-  //       }
-  //     }
-  //   }
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -2642,7 +2416,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   std::vector< lou > & n_m2m_operations, std::vector< lou > & n_m2l_operations,
   std::vector< lou > & n_l2l_operations,
   std::vector< lou > & n_l2t_operations ) const {
-  lo n_max_levels = _distributed_spacetime_tree->get_max_levels( );
+  lo n_max_levels = _distributed_spacetime_tree->get_n_levels( );
   // count the number of s2m operations
   n_s2m_operations.resize( n_max_levels );
   for ( lo i = 0; i < n_max_levels; ++i ) {
@@ -2817,8 +2591,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   // allocate a global result vector to store the result of the pFMM procedure.
   std::vector< lo > my_blocks = y.get_my_blocks( );
-  distributed_block_vector y_pFMM( my_blocks, y.get_n_blocks( ),
-    y.get_size_of_block( ), true, MPI_COMM_WORLD );
+  distributed_block_vector y_pFMM(
+    my_blocks, y.get_n_blocks( ), y.get_size_of_block( ), true, y.get_comm( ) );
 
   // apply pFMM procedure
   apply_pFMM_procedure< 0 >( x, y_pFMM, trans );
@@ -4386,6 +4160,86 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     return ( sizes[ lhs ] > sizes[ rhs ] );
   } );
 }
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::get_inverse_diagonal( distributed_block_vector &
+  /* inverse_diagonal */ ) const {
+  std::cout << "ERROR: get_diagonal not implemented for general pFMM matrices"
+            << std::endl;
+}
+
+/** \cond doxygen should skip the following functions */
+template<>
+void besthea::linear_algebra::distributed_pFMM_matrix<
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 > >::
+  get_inverse_diagonal( distributed_block_vector & inverse_diagonal ) const {
+  const mesh::distributed_spacetime_tensor_mesh & distributed_mesh
+    = _distributed_spacetime_tree->get_mesh( );
+  const mesh::spacetime_tensor_mesh * local_mesh
+    = distributed_mesh.get_local_mesh( );
+  lo local_start_idx = distributed_mesh.get_local_start_idx( );
+  // resize the distributed vector inverse_diagonal appropriately
+  std::vector< lo > local_blocks = distributed_mesh.get_my_timesteps( );
+  inverse_diagonal.resize(
+    local_blocks, distributed_mesh.get_n_temporal_elements( ) );
+  inverse_diagonal.resize_blocks(
+    local_mesh->get_n_spatial_elements( ), false );
+  for ( auto nearfield_matrix_list_pair : _clusterwise_nearfield_matrices ) {
+    mesh::general_spacetime_cluster * leaf_cluster
+      = nearfield_matrix_list_pair.first;
+    std::vector< mesh::general_spacetime_cluster * > * nearfield_list
+      = leaf_cluster->get_nearfield_list( );
+    auto nf_list_it = nearfield_list->begin( );
+    // find the position of the leaf cluster in its own nearfield list
+    lo position = 0;
+    while (
+      nf_list_it != nearfield_list->end( ) && *nf_list_it != leaf_cluster ) {
+      ++nf_list_it;
+      ++position;
+    }
+    full_matrix * current_nf_matrix
+      = nearfield_matrix_list_pair.second[ position ];
+
+    std::vector< lo > all_elements_in_leaf_cluster
+      = leaf_cluster->get_all_elements( );
+
+    lo n_time_elements = leaf_cluster->get_n_time_elements( );
+    lo n_space_elements = leaf_cluster->get_n_space_elements( );
+    const std::vector< lo > & spacetime_elements
+      = leaf_cluster->get_all_elements( );
+    for ( lo i_time = 0; i_time < n_time_elements; ++i_time ) {
+      // use that the spacetime elements are sorted in time, i.e. a consecutive
+      // group of n_space_elements elements has the same temporal component, to
+      // determine the local time index only once
+      lo local_time_index
+        = local_mesh->get_time_element( distributed_mesh.global_2_local(
+          local_start_idx, spacetime_elements[ i_time * n_space_elements ] ) );
+      lo global_time_index = distributed_mesh.local_2_global_time(
+        local_start_idx, local_time_index );
+      for ( lo i_space = 0; i_space < n_space_elements; ++i_space ) {
+        lo current_spacetime_element_index
+          = i_time * n_space_elements + i_space;
+        // for the spatial mesh no transformation from local 2 global is
+        // necessary since there is just one global space mesh at the moment.
+        lo global_space_index = local_mesh->get_space_element_index(
+          distributed_mesh.global_2_local( local_start_idx,
+            spacetime_elements[ current_spacetime_element_index ] ) );
+        // get the diagonal entries of the current nearfield matrix
+        inverse_diagonal.set( global_time_index, global_space_index,
+          1.0
+            / current_nf_matrix->get( current_spacetime_element_index,
+              current_spacetime_element_index ) );
+      }
+    }
+  }
+  inverse_diagonal.synchronize_shared_parts( );
+}
+/** \endcond (end doxygen skip this)*/
 
 template class besthea::linear_algebra::distributed_pFMM_matrix<
   besthea::bem::spacetime_heat_sl_kernel_antiderivative,

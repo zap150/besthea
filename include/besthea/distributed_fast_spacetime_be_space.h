@@ -144,7 +144,6 @@ class besthea::bem::distributed_fast_spacetime_be_space
    * assemble the right-hand side.
    * @param[in] order_rhs_temporal Temporal line quadrature order to assemble
    * the right-hand side.
-   * @todo adapt this
    */
   virtual void L2_projection(
     sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
@@ -152,14 +151,30 @@ class besthea::bem::distributed_fast_spacetime_be_space
     int order_rhs_spatial = 5, int order_rhs_temporal = 4 ) const override;
 
   /**
-   * Returns the L2 relative error |f-approximation|/|f|.
-   * @param[in] f Function in infinite dimensional space.
-   * @param[in] approximation Function in finite dimensional space.
+   * Projects a function to the boundary elements space, using a weighted L2
+   * scalar product, which uses the elementwise weight (h_x^{1/2} + h_t^{1/4}).
+   * @param[in] f Function to be projected.
+   * @param[out] projection Projection vector.
+   * @param[in] order_matrix Spatial quadrature order to assemble the mass
+   * matrix.
    * @param[in] order_rhs_spatial Spatial triangular quadrature order to
    * assemble the right-hand side.
    * @param[in] order_rhs_temporal Temporal line quadrature order to assemble
    * the right-hand side.
-   * @todo adapt this
+   */
+  void weighted_L2_projection(
+    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
+    linear_algebra::distributed_block_vector & projection, int order_matrix = 2,
+    int order_rhs_spatial = 5, int order_rhs_temporal = 4 ) const;
+
+  /**
+   * Returns the L2 relative error |f-approximation|/|f|.
+   * @param[in] f Function in infinite dimensional space.
+   * @param[in] approximation Approximation in finite dimensional space.
+   * @param[in] order_rhs_spatial Spatial triangular quadrature order to
+   * assemble the right-hand side.
+   * @param[in] order_rhs_temporal Temporal line quadrature order to assemble
+   * the right-hand side.
    */
   virtual sc L2_relative_error(
     sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
@@ -167,6 +182,21 @@ class besthea::bem::distributed_fast_spacetime_be_space
     int order_rhs_spatial = 5, int order_rhs_temporal = 4 ) const override;
 
   /**
+   * Returns the absolute error |f-approximation| in a weighted L2 norm, where
+   * the elementwise weight (h_x^{1/2} + h_t^{1/4}) is used.
+   * @param[in] f Function in infinite dimensional space.
+   * @param[in] approximation Approximation in finite dimensional space.
+   * @param[in] order_rhs_spatial Spatial triangular quadrature order to
+   * assemble the right-hand side.
+   * @param[in] order_rhs_temporal Temporal line quadrature order to assemble
+   * the right-hand side.
+   */
+  sc weighted_L2_absolute_error(
+    sc ( *f )( sc, sc, sc, const linear_algebra::coordinates< 3 > &, sc ),
+    const linear_algebra::distributed_block_vector & approximation,
+    int order_rhs_spatial = 5, int order_rhs_temporal = 4 ) const;
+
+  /*
    * Projects a function to the boundary element space. ONLY USE SPECIALIZED
    * FUNCTIONS!
    * @param[in] f Function to be projected.

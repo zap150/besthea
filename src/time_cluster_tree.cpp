@@ -38,7 +38,7 @@ besthea::mesh::time_cluster_tree::time_cluster_tree(
   const temporal_mesh & mesh, lo levels, lo n_min_elems )
   : _mesh( mesh ),
     _levels( levels ),
-    _real_max_levels( 0 ),
+    _real_n_levels( 0 ),
     _n_min_elems( n_min_elems ),
     _n_max_elems_leaf( 0 ),
     _paddings( _levels, -1.0 ) {
@@ -54,7 +54,7 @@ besthea::mesh::time_cluster_tree::time_cluster_tree(
 
   this->build_tree( *_root, 1 );
   this->compute_padding( *_root );
-  _levels = std::min( _levels, _real_max_levels );
+  _levels = std::min( _levels, _real_n_levels );
 
   _paddings.resize( _levels );
   _paddings.shrink_to_fit( );
@@ -424,8 +424,8 @@ void besthea::mesh::time_cluster_tree::build_tree(
     if ( root.get_n_elements( ) > _n_max_elems_leaf ) {
       _n_max_elems_leaf = root.get_n_elements( );
     }
-    if ( level > _real_max_levels ) {
-      _real_max_levels = level;
+    if ( level > _real_n_levels ) {
+      _real_n_levels = level;
     }
     return;
   }

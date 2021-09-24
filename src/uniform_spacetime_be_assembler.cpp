@@ -121,9 +121,10 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
 
 #pragma omp for schedule( dynamic )
       for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
-        test_mesh.get_spatial_nodes( i_test, x1, x2, x3 );
-        test_mesh.get_spatial_normal( i_test, nx );
-        test_area = test_mesh.spatial_area( i_test );
+        test_mesh.get_spatial_nodes_using_spatial_element_index(
+          i_test, x1, x2, x3 );
+        test_mesh.get_spatial_normal_using_spatial_element_index( i_test, nx );
+        test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
         for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
           if ( delta == 0 ) {
             get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
@@ -132,9 +133,12 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
             rot_test = 0;
             rot_trial = 0;
           }
-          trial_mesh.get_spatial_nodes( i_trial, y1, y2, y3 );
-          trial_mesh.get_spatial_normal( i_trial, ny );
-          trial_area = trial_mesh.spatial_area( i_trial );
+          trial_mesh.get_spatial_nodes_using_spatial_element_index(
+            i_trial, y1, y2, y3 );
+          trial_mesh.get_spatial_normal_using_spatial_element_index(
+            i_trial, ny );
+          trial_area
+            = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
           test_basis.local_to_global(
             i_test, n_shared_vertices, rot_test, false, test_l2g );
@@ -328,8 +332,9 @@ void besthea::bem::uniform_spacetime_be_assembler<
 
 #pragma omp for schedule( dynamic )
       for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
-        test_mesh.get_spatial_nodes( i_test, x1, x2, x3 );
-        test_area = test_mesh.spatial_area( i_test );
+        test_mesh.get_spatial_nodes_using_spatial_element_index(
+          i_test, x1, x2, x3 );
+        test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
         for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
           if ( delta == 0 ) {
             get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
@@ -338,8 +343,10 @@ void besthea::bem::uniform_spacetime_be_assembler<
             rot_test = 0;
             rot_trial = 0;
           }
-          trial_mesh.get_spatial_nodes( i_trial, y1, y2, y3 );
-          trial_area = trial_mesh.spatial_area( i_trial );
+          trial_mesh.get_spatial_nodes_using_spatial_element_index(
+            i_trial, y1, y2, y3 );
+          trial_area
+            = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
           triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices,
             rot_test, rot_trial, my_quadrature );
@@ -491,8 +498,9 @@ void besthea::bem::uniform_spacetime_be_assembler<
 
 #pragma omp for schedule( dynamic )
       for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
-        test_mesh.get_spatial_nodes( i_test, x1, x2, x3 );
-        test_area = test_mesh.spatial_area( i_test );
+        test_mesh.get_spatial_nodes_using_spatial_element_index(
+          i_test, x1, x2, x3 );
+        test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
         for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
           if ( delta == 0 ) {
             get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
@@ -501,9 +509,12 @@ void besthea::bem::uniform_spacetime_be_assembler<
             rot_test = 0;
             rot_trial = 0;
           }
-          trial_mesh.get_spatial_nodes( i_trial, y1, y2, y3 );
-          trial_mesh.get_spatial_normal( i_trial, ny );
-          trial_area = trial_mesh.spatial_area( i_trial );
+          trial_mesh.get_spatial_nodes_using_spatial_element_index(
+            i_trial, y1, y2, y3 );
+          trial_mesh.get_spatial_normal_using_spatial_element_index(
+            i_trial, ny );
+          trial_area
+            = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
           trial_basis.local_to_global(
             i_trial, n_shared_vertices, rot_trial, true, trial_l2g );
@@ -704,9 +715,10 @@ void besthea::bem::uniform_spacetime_be_assembler<
 
 #pragma omp for schedule( dynamic )
       for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
-        test_mesh.get_spatial_nodes( i_test, x1, x2, x3 );
-        test_mesh.get_spatial_normal( i_test, nx );
-        test_area = test_mesh.spatial_area( i_test );
+        test_mesh.get_spatial_nodes_using_spatial_element_index(
+          i_test, x1, x2, x3 );
+        test_mesh.get_spatial_normal_using_spatial_element_index( i_test, nx );
+        test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
         for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
           if ( delta == 0 ) {
             get_type( i_test, i_trial, n_shared_vertices, rot_test, rot_trial );
@@ -716,9 +728,12 @@ void besthea::bem::uniform_spacetime_be_assembler<
             rot_trial = 0;
           }
 
-          trial_mesh.get_spatial_nodes( i_trial, y1, y2, y3 );
-          trial_mesh.get_spatial_normal( i_trial, ny );
-          areas = test_area * trial_mesh.spatial_area( i_trial );
+          trial_mesh.get_spatial_nodes_using_spatial_element_index(
+            i_trial, y1, y2, y3 );
+          trial_mesh.get_spatial_normal_using_spatial_element_index(
+            i_trial, ny );
+          areas = test_area
+            * trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
           test_basis.local_to_global(
             i_test, n_shared_vertices, rot_test, false, test_l2g );
@@ -1313,8 +1328,10 @@ void besthea::bem::uniform_spacetime_be_assembler< kernel_type, test_space_type,
   linear_algebra::indices< 3 > test_elem;
   linear_algebra::indices< 3 > trial_elem;
 
-  ( _test_space->get_mesh( ) ).get_spatial_element( i_test, test_elem );
-  ( _trial_space->get_mesh( ) ).get_spatial_element( i_trial, trial_elem );
+  ( _test_space->get_mesh( ) )
+    .get_spatial_element_using_spatial_index( i_test, test_elem );
+  ( _trial_space->get_mesh( ) )
+    .get_spatial_element_using_spatial_index( i_trial, trial_elem );
 
   // check for shared edge
   for ( int i_rot_test = 0; i_rot_test < 3; ++i_rot_test ) {

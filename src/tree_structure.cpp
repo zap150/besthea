@@ -140,6 +140,39 @@ void besthea::mesh::tree_structure::reduce_2_essential( ) {
   collect_leaves( *_root );
 }
 
+char besthea::mesh::tree_structure::
+  determine_downward_path_initial_op_status_recursively(
+    scheduling_time_cluster & current_cluster ) {
+  char return_value = 0;
+  if ( current_cluster.get_n_children( ) > 0 ) {
+    std::vector< scheduling_time_cluster * > * children
+      = current_cluster.get_children( );
+    for ( auto child_it = children->begin( ); child_it != children->end( );
+          ++child_it ) {
+      char child_return_value
+        = determine_downward_path_initial_op_status_recursively( **child_it );
+      if ( child_return_value > return_value ) {
+        return_value = child_return_value;
+      }
+    }
+  } else {
+    if ( current_cluster.get_process_id( ) == _my_process_id
+      && current_cluster.get_n_associated_leaves( ) > 0 ) {
+      return_value = 1;
+      // Check if the cluster's left end point is the starting point of the time
+      // interval (i.e. the cluster is the leftmost cluster on its level). If
+      // this is the case return_value is changed to 2
+      lo level = current_cluster.get_level( );
+      lo global_index = current_cluster.get_global_index( );
+      if ( ( global_index == ( 1 << level ) - 1 ) ) {
+        return_value = 2;
+      }
+    }
+  }
+  current_cluster.set_status_initial_op_downward_path( return_value );
+  return return_value;
+}
+
 void besthea::mesh::tree_structure::initialize_moment_contributions(
   scheduling_time_cluster & root, lou contribution_size ) {
   if ( root.is_active_in_upward_path( ) ) {
@@ -180,6 +213,18 @@ void besthea::mesh::tree_structure::clear_local_contributions(
   if ( root.get_n_children( ) > 0 ) {
     for ( auto child : *root.get_children( ) ) {
       clear_local_contributions( *child );
+    }
+  }
+}
+
+void besthea::mesh::tree_structure::initialize_local_contributions_initial_op(
+  scheduling_time_cluster & root, lou contribution_size ) {
+  if ( root.get_status_in_initial_op_downward_path( ) == 1 ) {
+    root.allocate_associated_local_contributions( contribution_size );
+  }
+  if ( root.get_n_children( ) > 0 ) {
+    for ( auto child : *root.get_children( ) ) {
+      initialize_local_contributions_initial_op( *child, contribution_size );
     }
   }
 }
@@ -511,9 +556,10 @@ void besthea::mesh::tree_structure::determine_clusters_to_refine(
     }
   } else {
     if ( root->get_process_id( ) == _my_process_id ) {
-      // mark root and all leaf clusters in its nearfield as clusters which have
-      // to be refined. note: by construction all clusters in the nearfield are
-      // leaves, and root itself is contained in its own nearfield.
+      // mark root and all leaf clusters in its nearfield as clusters which
+      // have to be refined. note: by construction all clusters in the
+      // nearfield are leaves, and root itself is contained in its own
+      // nearfield.
       std::vector< scheduling_time_cluster * > * nearfield
         = root->get_nearfield_list( );
       for ( auto it = nearfield->begin( ); it != nearfield->end( ); ++it ) {
@@ -526,7 +572,8 @@ void besthea::mesh::tree_structure::determine_clusters_to_refine(
       // descendants are local, mark root as cluster which has to be refined.
       std::vector< scheduling_time_cluster * > nearfield;
       // determine the nearfield on the level of root (or lower levels) by
-      // considering the children of the clusters in the nearfield of its parent
+      // considering the children of the clusters in the nearfield of its
+      // parent
       std::vector< scheduling_time_cluster * > * parent_nearfield
         = root->get_parent( )->get_nearfield_list( );
       for ( auto it_nf_par = parent_nearfield->begin( );
@@ -600,8 +647,8 @@ void besthea::mesh::tree_structure::determine_cluster_communication_lists(
   if ( root->is_global_leaf( ) ) {
     if ( root->get_process_id( ) == _my_process_id ) {
       // go through the nearfield of the cluster. If it contains a non-local
-      // cluster add root together with the process id of the non-local cluster
-      // to the subtree send list.
+      // cluster add root together with the process id of the non-local
+      // cluster to the subtree send list.
       for ( auto it_nf : *( root->get_nearfield_list( ) ) ) {
         lo nf_process_id = it_nf->get_process_id( );
         if ( nf_process_id != _my_process_id ) {
@@ -609,10 +656,10 @@ void besthea::mesh::tree_structure::determine_cluster_communication_lists(
         }
       }
       // go through the send list of the cluster. If it contains a non-local
-      // cluster add root together with the process id of the non-local cluster
-      // to the leaf info send list
-      // NOTE: if root is falsely added (because its mesh is available for the
-      // receiving process, it is removed from the list below)
+      // cluster add root together with the process id of the non-local
+      // cluster to the leaf info send list NOTE: if root is falsely added
+      // (because its mesh is available for the receiving process, it is
+      // removed from the list below)
       if ( root->get_send_list( ) != nullptr ) {
         for ( auto it_sl : *( root->get_send_list( ) ) ) {
           lo sl_process_id = it_sl->get_process_id( );
@@ -623,9 +670,9 @@ void besthea::mesh::tree_structure::determine_cluster_communication_lists(
       }
     } else {
       lo root_process_id = root->get_process_id( );
-      // if root's mesh is not available, check whether there is a local cluster
-      // in its send list. if yes, add root with its owning process to the
-      // leaf info receive list
+      // if root's mesh is not available, check whether there is a local
+      // cluster in its send list. if yes, add root with its owning process to
+      // the leaf info receive list
       if ( !root->mesh_is_available( ) && root->get_send_list( ) != nullptr ) {
         for ( auto it_sl : *( root->get_send_list( ) ) ) {
           lo sl_process_id = it_sl->get_process_id( );
@@ -649,8 +696,8 @@ void besthea::mesh::tree_structure::determine_cluster_communication_lists(
               subtree_receive_list.insert( { root_process_id, root } );
               added_cluster = true;
             }
-            // If the nearfield contains a cluster from the leaf info send list
-            // remove this cluster from the list.
+            // If the nearfield contains a cluster from the leaf info send
+            // list remove this cluster from the list.
             leaf_info_send_list.erase( { root_process_id, *it_nf } );
           }
           ++it_nf;
@@ -727,10 +774,10 @@ void besthea::mesh::tree_structure::prepare_essential_reduction(
         max_child_status = child_status;
       }
     }
-    // Change the status of the current cluster if at least one of its children
-    // is essential. If a child is local, then the parent is needed in both
-    // locally essential trees (time and space-time). Otherwise the essential
-    // status is inherited from the children.
+    // Change the status of the current cluster if at least one of its
+    // children is essential. If a child is local, then the parent is needed
+    // in both locally essential trees (time and space-time). Otherwise the
+    // essential status is inherited from the children.
     if ( max_child_status > 0
       && root.get_essential_status( ) < max_child_status ) {
       char new_status = ( max_child_status == 3 ) ? (char) 2 : max_child_status;
@@ -847,8 +894,8 @@ void besthea::mesh::tree_structure::determine_essential_clusters(
         }
       }
     }
-    // if root is a leaf set status of all clusters in the nearfield from 0 to 2
-    // (nearfield clusters are essential in time and space-time tree)
+    // if root is a leaf set status of all clusters in the nearfield from 0 to
+    // 2 (nearfield clusters are essential in time and space-time tree)
     if ( root.get_n_children( ) == 0 ) {
       const std::vector< scheduling_time_cluster * > * nearfield
         = root.get_nearfield_list( );
@@ -874,8 +921,9 @@ void besthea::mesh::tree_structure::determine_essential_clusters(
     // @todo: Check later, whether this has to be changed! According to the
     // current assignment of processes to clusters all descendants of the
     // neighbors of root would be assigned to the same process as the neighbor
-    // itself. If this changes, one has to traverse the nearfield starting from
-    // the neighboring clusters to see whether it contains a local cluster.
+    // itself. If this changes, one has to traverse the nearfield starting
+    // from the neighboring clusters to see whether it contains a local
+    // cluster.
     if ( ( root.get_n_children( ) == 0 ) && ( root_status == 0 ) ) {
       const std::vector< scheduling_time_cluster * > * nearfield
         = root.get_nearfield_list( );
@@ -1000,8 +1048,8 @@ bool besthea::mesh::tree_structure::compare_clusters_top_down_right_2_left(
 
 void besthea::mesh::tree_structure::remove_clusters_with_no_association(
   scheduling_time_cluster & current_cluster ) {
-  // each scheduling cluster with essential status > 1 should be associated with
-  // a group of space-time clusters. Otherwise we can delete it.
+  // each scheduling cluster with essential status > 1 should be associated
+  // with a group of space-time clusters. Otherwise we can delete it.
   if ( current_cluster.get_n_children( ) > 0 ) {
     std::vector< scheduling_time_cluster * > * children
       = current_cluster.get_children( );
