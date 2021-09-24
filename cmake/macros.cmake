@@ -67,6 +67,8 @@ macro(setup_compiler)
     string(APPEND CMAKE_CXX_FLAGS " -w3")
     #add_compile_options(-w3)
     #add_compile_options(-qopt-report=5 -qopt-report-phase=vec)
+    # zero used for undefined preprocessing identifier
+    add_compile_options("SHELL:-diag-disable 193")
     # attribute appears more than once
     string(APPEND CMAKE_CXX_FLAGS " -diag-disable 2620")
     # parameter was never referenced
@@ -96,7 +98,8 @@ macro(setup_compiler)
   set(CMAKE_CXX_STANDARD_REQUIRED True)
 
   if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE RelWithDebInfo)
+    #set(CMAKE_BUILD_TYPE RelWithDebInfo)
+    set(CMAKE_BUILD_TYPE Release)
   endif()
 endmacro()
 

@@ -86,15 +86,16 @@ class besthea::bem::spacetime_heat_kernel_antiderivative
   sc _sqrt_alpha;  //!< Auxiliary variable
   sc _alpha2;      //!< Auxiliary variable
 
-  const sc _pi{ M_PI };                    //!< Auxiliary variable
+  static constexpr sc _pi{ M_PI };  //!< Auxiliary variable
+  // sqrt is not constexpr
   const sc _sqrt_pi{ std::sqrt( M_PI ) };  //!< Auxiliary variable
-  const sc _zero{ 0.0 };                   //!< Auxiliary variable
-  const sc _one{ 1.0 };                    //!< Auxiliary variable
-  const sc _two{ 2.0 };                    //!< Auxiliary variable
-  const sc _four{ 4.0 };                   //!< Auxiliary variable
-  const sc _eight{ 8.0 };                  //!< Auxiliary variable
+  static constexpr sc _zero{ 0.0 };        //!< Auxiliary variable
+  static constexpr sc _one{ 1.0 };         //!< Auxiliary variable
+  static constexpr sc _two{ 2.0 };         //!< Auxiliary variable
+  static constexpr sc _four{ 4.0 };        //!< Auxiliary variable
+  static constexpr sc _eight{ 8.0 };       //!< Auxiliary variable
 
-  const sc _eps{ 1e-12 };  //!< Auxiliary variable
+  static constexpr sc _eps{ 1e-12 };  //!< Auxiliary variable
 };
 
 #endif /* INCLUDE_BESTHEA_SPACETIME_HEAT_KERNEL_ANTIDERIVATIVE_H_ */

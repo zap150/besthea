@@ -166,7 +166,7 @@ void besthea::bem::uniform_spacetime_initial_evaluator< kernel_type,
               kernel_data[ i_point ]
                 = _kernel->evaluate( x1[ i_point ] - y1_mapped[ i_quad ],
                     x2[ i_point ] - y2_mapped[ i_quad ],
-                    x3[ i_point ] - y3_mapped[ i_quad ], t )
+                    x3[ i_point ] - y3_mapped[ i_quad ], nullptr, nullptr, t )
                 * wy[ i_quad ];
             }  // i_point
 

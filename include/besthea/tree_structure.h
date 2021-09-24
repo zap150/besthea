@@ -131,7 +131,7 @@ class besthea::mesh::tree_structure {
   /**
    * Returns clusters without descendants.
    */
-  std::vector< scheduling_time_cluster * > & get_leaves( ) {
+  const std::vector< scheduling_time_cluster * > & get_leaves( ) const {
     return _leaves;
   }
 
