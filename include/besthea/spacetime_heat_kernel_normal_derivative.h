@@ -28,52 +28,43 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file spacetime_kernel.h
+/** @file spacetime_heat_kernel_normal_derivative.h
  * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_SPACETIME_KERNEL_H_
-#define INCLUDE_BESTHEA_SPACETIME_KERNEL_H_
+#ifndef INCLUDE_BESTHEA_SPACETIME_HEAT_KERNEL_NORMAL_DERIVATIVE_H_
+#define INCLUDE_BESTHEA_SPACETIME_HEAT_KERNEL_NORMAL_DERIVATIVE_H_
 
 #include "besthea/settings.h"
+#include "besthea/spacetime_kernel.h"
+
+#include <vector>
 
 namespace besthea {
   namespace bem {
-    template< class derived_type >
-    class spacetime_kernel;
+    class spacetime_heat_kernel_normal_derivative;
   }
 }
 
 /**
- *  Class representing a spacetime kernel.
+ *  Class representing a spacetime heat kernel.
  */
-template< class derived_type >
-class besthea::bem::spacetime_kernel {
+class besthea::bem::spacetime_heat_kernel_normal_derivative
+  : public besthea::bem::spacetime_kernel<
+      besthea::bem::spacetime_heat_kernel_normal_derivative > {
  public:
   /**
    * Constructor.
+   * @param[in] alpha Heat conductivity.
    */
-  spacetime_kernel( ) {
+  spacetime_heat_kernel_normal_derivative( sc alpha )
+    : _alpha( alpha ), _alpha_sqrt_alpha( alpha * std::sqrt( alpha ) ) {
   }
 
   /**
    * Destructor.
    */
-  virtual ~spacetime_kernel( ) {
-  }
-
-  /**
-   * Returns this cast to the descendant's type.
-   */
-  derived_type * derived( ) {
-    return static_cast< derived_type * >( this );
-  }
-
-  /**
-   * Returns this cast to the descendant's type.
-   */
-  const derived_type * derived( ) const {
-    return static_cast< const derived_type * >( this );
+  virtual ~spacetime_heat_kernel_normal_derivative( ) {
   }
 
   /**
@@ -86,13 +77,31 @@ class besthea::bem::spacetime_kernel {
    * @param[in] ttau `t-tau`.
    */
 #pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( DATA_WIDTH )
-  sc evaluate(
-    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, sc ttau ) const {
-    return derived( )->do_evaluate( xy1, xy2, xy3, nx, ny, ttau );
+  sc do_evaluate( sc xy1, sc xy2, sc xy3, [[maybe_unused]] const sc * nx,
+    const sc * ny, sc ttau ) const {
+    sc value = 0.0;
+
+    if ( ttau > _eps ) {
+      sc norm2 = xy1 * xy1 + xy2 * xy2 + xy3 * xy3;
+      sc dot = xy1 * ny[ 0 ] + xy2 * ny[ 1 ] + xy3 * ny[ 2 ];
+
+      value = dot
+        / ( _sixteen * _pi_sqrt_pi * _alpha_sqrt_alpha * ttau * ttau
+          * std::sqrt( ttau ) )
+        * std::exp( -norm2 / ( _four * _alpha * ttau ) );
+    }
+
+    return value;
   }
 
  protected:
-  static constexpr sc _eps{ 1e-12 };  //!< Auxiliary variable
+  sc _alpha;  //!< Heat conductivity.
+
+  sc _alpha_sqrt_alpha;  //!< Auxiliary variable
+
+  const sc _pi_sqrt_pi{ M_PI * std::sqrt( M_PI ) };  //!< Auxiliary variable
+  static constexpr sc _four{ 4.0 };                  //!< Auxiliary variable
+  static constexpr sc _sixteen{ 16.0 };              //!< Auxiliary variable
 };
 
-#endif /* INCLUDE_BESTHEA_SPACETIME_KERNEL_H_ */
+#endif /* INCLUDE_BESTHEA_SPACETIME_HEAT_KERNEL_NORMAL_DERIVATIVE_H_ */

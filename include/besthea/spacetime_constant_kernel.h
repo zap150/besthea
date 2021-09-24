@@ -28,52 +28,42 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file spacetime_kernel.h
+/** @file spacetime_constant_kernel.h
  * @brief
  */
 
-#ifndef INCLUDE_BESTHEA_SPACETIME_KERNEL_H_
-#define INCLUDE_BESTHEA_SPACETIME_KERNEL_H_
+#ifndef INCLUDE_BESTHEA_SPACETIME_CONSTANT_KERNEL_H_
+#define INCLUDE_BESTHEA_SPACETIME_CONSTANT_KERNEL_H_
 
 #include "besthea/settings.h"
+#include "besthea/spacetime_kernel.h"
+
+#include <vector>
 
 namespace besthea {
   namespace bem {
-    template< class derived_type >
-    class spacetime_kernel;
+    class spacetime_constant_kernel;
   }
 }
 
 /**
- *  Class representing a spacetime kernel.
+ *  Class representing a spacetime heat kernel.
  */
-template< class derived_type >
-class besthea::bem::spacetime_kernel {
+class besthea::bem::spacetime_constant_kernel
+  : public besthea::bem::spacetime_kernel<
+      besthea::bem::spacetime_constant_kernel > {
  public:
   /**
    * Constructor.
+   * @param[in] alpha Heat conductivity.
    */
-  spacetime_kernel( ) {
+  spacetime_constant_kernel( sc alpha ) : _alpha( alpha ) {
   }
 
   /**
    * Destructor.
    */
-  virtual ~spacetime_kernel( ) {
-  }
-
-  /**
-   * Returns this cast to the descendant's type.
-   */
-  derived_type * derived( ) {
-    return static_cast< derived_type * >( this );
-  }
-
-  /**
-   * Returns this cast to the descendant's type.
-   */
-  const derived_type * derived( ) const {
-    return static_cast< const derived_type * >( this );
+  virtual ~spacetime_constant_kernel( ) {
   }
 
   /**
@@ -86,13 +76,16 @@ class besthea::bem::spacetime_kernel {
    * @param[in] ttau `t-tau`.
    */
 #pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( DATA_WIDTH )
-  sc evaluate(
-    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, sc ttau ) const {
-    return derived( )->do_evaluate( xy1, xy2, xy3, nx, ny, ttau );
+  sc do_evaluate( [[maybe_unused]] sc xy1, [[maybe_unused]] sc xy2,
+    [[maybe_unused]] sc xy3, [[maybe_unused]] const sc * nx,
+    [[maybe_unused]] const sc * ny, [[maybe_unused]] sc ttau ) const {
+    // return _alpha;
+
+    return _alpha;
   }
 
  protected:
-  static constexpr sc _eps{ 1e-12 };  //!< Auxiliary variable
+  sc _alpha;  //!< Constant kernel.
 };
 
-#endif /* INCLUDE_BESTHEA_SPACETIME_KERNEL_H_ */
+#endif /* INCLUDE_BESTHEA_SPACETIME_CONSTANT_KERNEL_H_ */

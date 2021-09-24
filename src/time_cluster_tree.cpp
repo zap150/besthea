@@ -152,7 +152,8 @@ std::vector< lo > besthea::mesh::time_cluster_tree::compute_process_assignments(
     return std::vector< lo >( 1, -1 );
   } else if ( thresh_level > trunc_level ) {
     std::cout << "Error: The number of processes is higher than the number of "
-              << "clusters at the level of the earliest leaf!" << std::endl;
+              << "clusters at the level of the earliest leaf (" << trunc_level
+              << ")!" << std::endl;
     status = 2;
     return std::vector< lo >( 1, -1 );
   } else {

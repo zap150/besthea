@@ -192,7 +192,7 @@ void besthea::mesh::general_spacetime_cluster::
   }
 }
 
-/** \cond makes doxygen skip the following block*/
+/** \cond doxygen should skip the following functions */
 /** template specialization for dimension 0 */
 template void besthea::mesh::general_spacetime_cluster::
   compute_surface_curls_p1_along_dim< 0 >( std::vector< sc > & ) const;

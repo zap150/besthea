@@ -15,10 +15,13 @@ macro(setup_compiler)
         " compiled only with g++ 8.3.0 or higher")
     endif()
 
-    # cant use add_compile_options, because cmake adds the options
-    # to the cuda compiler as well, which does not understand them
+    # can't use add_compile_options, because cmake uses them for all langueges
+    # nvcc does not understand these options
     string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -pedantic-errors")
-    # add_compile_options(-Wall -Wextra -pedantic-errors)
+    # TODO when cuda host compiler will be properly set to the same as CXX compiler
+    # string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -Wall")
+    # string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -Wextra")
+    # string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -pedantic-errors")
 
     # GNU cannot vectorise complicated loops
     #add_compile_options(-fopt-info-omp-vec-optimized-missed)
@@ -62,11 +65,12 @@ macro(setup_compiler)
         " compiled only with icpc 19.0.1 or higher")
     endif()
 
-    # cant use add_compile_options, because cmake adds the options
-    # to the cuda compiler as well, which does not understand them
+    # can't use add_compile_options, because cmake uses them for all langueges
+    # and nvcc does not understand these intel-specific options
     string(APPEND CMAKE_CXX_FLAGS " -w3")
-    #add_compile_options(-w3)
-    #add_compile_options(-qopt-report=5 -qopt-report-phase=vec)
+    #string(APPEND CMAKE_CXX_FLAGS " -qopt-report=5 -qopt-report-phase=vec")
+    # zero used for undefined preprocessing identifier
+    string(APPEND CMAKE_CXX_FLAGS " -diag-disable 193")
     # attribute appears more than once
     string(APPEND CMAKE_CXX_FLAGS " -diag-disable 2620")
     # parameter was never referenced
@@ -88,6 +92,9 @@ macro(setup_compiler)
     # external function definition with no prior declaration
     string(APPEND CMAKE_CXX_FLAGS " -diag-disable 1418")
 
+    # TODO when cuda host compiler will be properly set to the same as CXX compiler
+    #   add the necessery options to nvcc via -Xcompiler
+
   else()
     message(FATAL_ERROR "Unknown C++ compiler: ${CMAKE_CXX_COMPILER_ID}")
   endif()
@@ -96,7 +103,8 @@ macro(setup_compiler)
   set(CMAKE_CXX_STANDARD_REQUIRED True)
 
   if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE RelWithDebInfo)
+    #set(CMAKE_BUILD_TYPE RelWithDebInfo)
+    set(CMAKE_BUILD_TYPE Release)
   endif()
 endmacro()
 

@@ -32,8 +32,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
-#include "besthea/block_vector.h"
-#include "besthea/distributed_block_vector.h"
 #include "besthea/distributed_fast_spacetime_be_space.h"
 
 template< class test_space_type, class trial_space_type >

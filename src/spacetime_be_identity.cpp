@@ -155,7 +155,7 @@ void besthea::bem::spacetime_be_identity< test_space_type,
   }
 }
 
-/** \cond makes doxygen skip the following functions */
+/*! \cond doxygen should skip the following functions */
 template<>
 void besthea::bem::spacetime_be_identity<
   besthea::bem::distributed_fast_spacetime_be_space<
