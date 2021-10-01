@@ -7,7 +7,6 @@ macro(check_insource)
 endmacro()
 
 macro(setup_compiler)
-
   # can't use add_compile_options, because cmake uses them for all langueges
   # and nvcc does not understand these intel-specific options
   #
@@ -25,7 +24,8 @@ macro(setup_compiler)
     endif()
 
     string(APPEND MY_ADDITIONAL_CXX_FLAGS " -Wall -Wextra")
-    # can't pass this to the cuda host compiler via -Xcompiler because of errors
+    # can't pass this also to the cuda host compiler via -Xcompiler
+    # because of unsolvable errors
     string(APPEND CMAKE_CXX_FLAGS " -pedantic-errors")
 
     # GNU cannot vectorise complicated loops
@@ -61,6 +61,8 @@ macro(setup_compiler)
       # TODO: get rid of this warning (don't understand it)
       string(APPEND MY_ADDITIONAL_CXX_FLAGS " -Wno-dtor-name")
     endif()
+
+    string(APPEND CMAKE_CUDA_FLAGS " -Wno-overlength-strings")
 
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
     message(STATUS "Using Intel ${CMAKE_CXX_COMPILER_VERSION} toolchain")
@@ -147,8 +149,10 @@ macro(enable_OpenMP)
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
     set(MY_OMP_FLAG "-qopenmp")
   elseif (CMAKE_CXX_COMPILER_ID MATCHES AppleClang)
+    #set(MY_OMP_FLAG "-I/opt/local/include/libomp -Xclang -fopenmp")
     set(MY_OMP_FLAG "-Xclang -fopenmp")
-  elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang AND NOT CMAKE_CXX_COMPILER_ID MATCHES AppleClang)
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang
+      AND NOT CMAKE_CXX_COMPILER_ID MATCHES AppleClang)
     set(MY_OMP_FLAG "-fopenmp")
   endif()
     
