@@ -56,6 +56,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // NOTE: this is only relevant in case of non-distributed pFMM
 #define NEARFIELD_CLUSTERWISE  //!< Pragma to control nearfield computation
 
+#ifndef BESTHEA_SIMD_WIDTH
+#define BESTHEA_SIMD_WIDTH 8
+#endif
+
 namespace besthea {
   using scalar = double;  //!< Floating point type.
   // using index = std::size_t; //!< Indexing type.

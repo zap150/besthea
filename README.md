@@ -68,9 +68,9 @@ The BESTHEA library uses OpenMP SIMD. To fully leverage its potential we recomme
 CXXFLAGS="-xcore-avx512 -qopt-zmm-usage=high" cmake ..
 ```
 Vectorisation with GNU or Clang does not work optimally from our experience, however, one can try to use `CXXFLAGS="-march=skylake-avx512"`, `CXXFLAGS="-mavx512*"`, and similar.
-To specify the vector length processed in OpenMS SIMD loops, i.e. the `simdlen` clause, we provide the variable `DATA_WIDTH` implicitly set to 8. This can be modified by e.g.
+To specify the vector length processed in OpenMP SIMD loops, i.e. the `simdlen` clause, we provide the variable `BESTHEA_SIMD_WIDTH` implicitly set to 8. This can be modified by e.g.
 ```
-cmake -DDATA_WIDTH=4 ..
+cmake -DBESTHEA_SIMD_WIDTH=4 ..
 ```
 
 **Usage**

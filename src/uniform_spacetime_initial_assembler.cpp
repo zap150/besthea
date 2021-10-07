@@ -132,7 +132,7 @@ void besthea::bem::uniform_spacetime_initial_assembler< kernel_type,
           if ( i_t == 0 ) {
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
                           y2_mapped, y3_mapped, kernel_data, w        \
-                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
             for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
               kernel_data[ i_quad ]
                 = _kernel->anti_t_limit(
@@ -144,7 +144,7 @@ void besthea::bem::uniform_spacetime_initial_assembler< kernel_type,
           } else {
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
                           y2_mapped, y3_mapped, kernel_data, w        \
-                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
             for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
               kernel_data[ i_quad ]
                 = _kernel->anti_t_regular(
@@ -161,7 +161,7 @@ void besthea::bem::uniform_spacetime_initial_assembler< kernel_type,
               value = 0.0;
 #pragma omp simd \
     	aligned( x1_ref, x2_ref, y1_ref, y2_ref, y3_ref, kernel_data : DATA_ALIGN ) \
-    	private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
+    	private( test, trial ) reduction( + : value ) simdlen( BESTHEA_SIMD_WIDTH )
               for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
                 test = test_basis.evaluate( i_test, i_loc_test,
                   x1_ref[ i_quad ], x2_ref[ i_quad ], nx_data );
@@ -270,7 +270,7 @@ void besthea::bem::uniform_spacetime_initial_assembler< kernel_type,
 
 #pragma omp simd aligned(                                 \
   y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, y3_ref \
-  : DATA_ALIGN ) simdlen( DATA_WIDTH )
+  : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     y1_mapped[ i ] = y1[ 0 ] + ( y2[ 0 ] - y1[ 0 ] ) * y1_ref[ i ]
       + ( y3[ 0 ] - y1[ 0 ] ) * y2_ref[ i ]
@@ -284,7 +284,7 @@ void besthea::bem::uniform_spacetime_initial_assembler< kernel_type,
   }
 
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, x1_ref, x2_ref \
-                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     x1_mapped[ i ] = x1[ 0 ] + ( x2[ 0 ] - x1[ 0 ] ) * x1_ref[ i ]
       + ( x3[ 0 ] - x1[ 0 ] ) * x2_ref[ i ];

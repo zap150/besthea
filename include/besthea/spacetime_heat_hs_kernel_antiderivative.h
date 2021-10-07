@@ -79,7 +79,7 @@ class besthea::bem::spacetime_heat_hs_kernel_antiderivative
    * @param[in] ny Normal in the `y` variable.
    * @param[in] ttau `t-tau`.
    */
-#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( BESTHEA_SIMD_WIDTH )
   sc do_anti_tau_anti_t( [[maybe_unused]] sc xy1, [[maybe_unused]] sc xy2,
     [[maybe_unused]] sc xy3, [[maybe_unused]] const sc * nx,
     [[maybe_unused]] const sc * ny, [[maybe_unused]] sc ttau ) const {
@@ -95,7 +95,7 @@ class besthea::bem::spacetime_heat_hs_kernel_antiderivative
    * @param[in] ny Normal in the `y` variable.
    * @param[in] ttau `t-tau`.
    */
-#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( BESTHEA_SIMD_WIDTH )
   sc do_anti_tau_anti_t_regular_in_time( [[maybe_unused]] sc xy1,
     [[maybe_unused]] sc xy2, [[maybe_unused]] sc xy3,
     [[maybe_unused]] const sc * nx, [[maybe_unused]] const sc * ny,
@@ -112,7 +112,7 @@ class besthea::bem::spacetime_heat_hs_kernel_antiderivative
    * @param[in] ny Normal in the `y` variable.
    * @param[in] ttau `t-tau`.
    */
-#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( BESTHEA_SIMD_WIDTH )
   sc do_anti_tau_anti_t_regular_in_time_regular_in_space(
     [[maybe_unused]] sc xy1, [[maybe_unused]] sc xy2, [[maybe_unused]] sc xy3,
     [[maybe_unused]] const sc * nx, [[maybe_unused]] const sc * ny,
@@ -128,7 +128,7 @@ class besthea::bem::spacetime_heat_hs_kernel_antiderivative
    * @param[in] nx Normal in the `x` variable.
    * @param[in] ny Normal in the `y` variable.
    */
-#pragma omp declare simd uniform( this, nx, ny ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, nx, ny ) simdlen( BESTHEA_SIMD_WIDTH )
   sc do_anti_tau_anti_t_limit_in_time_regular_in_space( [[maybe_unused]] sc xy1,
     [[maybe_unused]] sc xy2, [[maybe_unused]] sc xy3,
     [[maybe_unused]] const sc * nx, [[maybe_unused]] const sc * ny ) const {
@@ -145,7 +145,7 @@ class besthea::bem::spacetime_heat_hs_kernel_antiderivative
    * @param[in] ny Normal in the `y` variable.
    * @param[in] ttau `t-tau`.
    */
-#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( BESTHEA_SIMD_WIDTH )
   sc do_anti_tau_regular( [[maybe_unused]] sc xy1, [[maybe_unused]] sc xy2,
     [[maybe_unused]] sc xy3, [[maybe_unused]] const sc * nx,
     [[maybe_unused]] const sc * ny, [[maybe_unused]] sc ttau ) const {
@@ -162,7 +162,7 @@ class besthea::bem::spacetime_heat_hs_kernel_antiderivative
    * @param[in] t0 Start of interval.
    * @param[in] t1 End of interval.
    */
-#pragma omp declare simd uniform( this, nx, ny, t0, t1 ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, nx, ny, t0, t1 ) simdlen( BESTHEA_SIMD_WIDTH )
   sc do_definite_integral_over_same_interval( [[maybe_unused]] sc xy1,
     [[maybe_unused]] sc xy2, [[maybe_unused]] sc xy3,
     [[maybe_unused]] const sc * nx, [[maybe_unused]] const sc * ny,
@@ -183,7 +183,7 @@ class besthea::bem::spacetime_heat_hs_kernel_antiderivative
    * @param[in] tau1 End of interval in `tau`.
    */
 #pragma omp declare simd uniform( this, nx, ny, t0, t1, tau0, tau1 ) \
-  simdlen( DATA_WIDTH )
+  simdlen( BESTHEA_SIMD_WIDTH )
   sc do_definite_integral_over_different_intervals( [[maybe_unused]] sc xy1,
     [[maybe_unused]] sc xy2, [[maybe_unused]] sc xy3,
     [[maybe_unused]] const sc * nx, [[maybe_unused]] const sc * ny,
@@ -200,7 +200,7 @@ class besthea::bem::spacetime_heat_hs_kernel_antiderivative
  * @param[in] nx Normal in the `x` variable.
  * @param[in] ny Normal in the `y` variable.
  */
-#pragma omp declare simd uniform( this, nx, ny ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, nx, ny ) simdlen( BESTHEA_SIMD_WIDTH )
   sc do_anti_tau_limit( sc xy1, sc xy2, sc xy3, [[maybe_unused]] const sc * nx,
     [[maybe_unused]] const sc * ny ) const {
     sc norm = std::sqrt( xy1 * xy1 + xy2 * xy2 + xy3 * xy3 );
@@ -222,7 +222,7 @@ class besthea::bem::spacetime_heat_hs_kernel_antiderivative
    * @param[out] value1 Return value for anti_tau_anti_t part.
    * @param[out] value2 Return value for anti_t part.
    */
-#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( BESTHEA_SIMD_WIDTH )
   void anti_tau_anti_t_and_anti_t( sc xy1, sc xy2, sc xy3, const sc * nx,
     const sc * ny, sc ttau, sc * value1, sc * value2 ) const {
     sc dot = nx[ 0 ] * ny[ 0 ] + nx[ 1 ] * ny[ 1 ] + nx[ 2 ] * ny[ 2 ];
@@ -268,7 +268,7 @@ class besthea::bem::spacetime_heat_hs_kernel_antiderivative
    * @param[out] value1 Return value for anti_tau_anti_t part.
    * @param[out] value2 Return value for anti_t part.
    */
-#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( BESTHEA_SIMD_WIDTH )
   void anti_tau_anti_t_and_anti_t_regular_in_time( sc xy1, sc xy2, sc xy3,
     const sc * nx, const sc * ny, sc ttau, sc * value1, sc * value2 ) const {
     sc dot = nx[ 0 ] * ny[ 0 ] + nx[ 1 ] * ny[ 1 ] + nx[ 2 ] * ny[ 2 ];
@@ -307,7 +307,7 @@ class besthea::bem::spacetime_heat_hs_kernel_antiderivative
    * @param[out] value1 Return value for anti_tau_anti_t part.
    * @param[out] value2 Return value for anti_t part.
    */
-#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( BESTHEA_SIMD_WIDTH )
   void anti_tau_anti_t_and_anti_t_regular_in_time_regular_in_space( sc xy1,
     sc xy2, sc xy3, const sc * nx, const sc * ny, sc ttau, sc * value1,
     sc * value2 ) const {
@@ -339,7 +339,7 @@ class besthea::bem::spacetime_heat_hs_kernel_antiderivative
    * @param[out] value1 Return value for anti_tau_anti_t part.
    * @param[out] value2 Return value for anti_t part.
    */
-#pragma omp declare simd uniform( this, nx, ny ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, nx, ny ) simdlen( BESTHEA_SIMD_WIDTH )
   void anti_tau_anti_t_and_anti_t_limit_in_time_regular_in_space( sc xy1,
     sc xy2, sc xy3, const sc * nx, const sc * ny, sc * value1,
     sc * value2 ) const {
@@ -366,7 +366,7 @@ class besthea::bem::spacetime_heat_hs_kernel_antiderivative
    * @param[out] value1 Return value for anti_tau_anti_t part.
    * @param[out] value2 Return value for anti_t part.
    */
-#pragma omp declare simd uniform( this, nx, ny, t0, t1 ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, nx, ny, t0, t1 ) simdlen( BESTHEA_SIMD_WIDTH )
   void definite_integral_over_same_interval( sc xy1, sc xy2, sc xy3,
     const sc * nx, const sc * ny, sc t0, sc t1, sc * value1,
     sc * value2 ) const {
@@ -398,7 +398,7 @@ class besthea::bem::spacetime_heat_hs_kernel_antiderivative
    * @param[out] value2 Return value for anti_t part.
    */
 #pragma omp declare simd uniform( this, nx, ny, t0, t1, tau0, tau1 ) \
-  simdlen( DATA_WIDTH )
+  simdlen( BESTHEA_SIMD_WIDTH )
   void definite_integral_over_different_intervals( sc xy1, sc xy2, sc xy3,
     const sc * nx, const sc * ny, sc t0, sc t1, sc tau0, sc tau1, sc * value1,
     sc * value2 ) const {

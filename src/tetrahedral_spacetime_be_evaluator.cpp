@@ -108,7 +108,7 @@ void besthea::bem::
 
 #pragma omp simd aligned(                                                \
   y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, y3_ref, tau_mapped, w \
-  : DATA_ALIGN ) reduction(+ : res) simdlen( DATA_WIDTH )
+  : DATA_ALIGN ) reduction(+ : res) simdlen( BESTHEA_SIMD_WIDTH )
         for ( lo i_quad = 0; i_quad < size_quad; ++i_quad ) {
           sc kernel = _kernel->evaluate( x1 - y1_mapped[ i_quad ],
             x2 - y2_mapped[ i_quad ], x3 - y3_mapped[ i_quad ], nullptr,
@@ -166,7 +166,7 @@ void besthea::bem::tetrahedral_spacetime_be_evaluator< kernel_type,
 
 #pragma omp simd aligned(                                      \
   y1_mapped, y2_mapped, y3_mapped, tau, y1_ref, y2_ref, y3_ref \
-  : DATA_ALIGN ) simdlen( DATA_WIDTH )
+  : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     y1_mapped[ i ] = x1[ 0 ] + ( x2[ 0 ] - x1[ 0 ] ) * y1_ref[ i ]
       + ( x3[ 0 ] - x1[ 0 ] ) * y2_ref[ i ]

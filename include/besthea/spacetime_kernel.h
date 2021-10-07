@@ -85,7 +85,7 @@ class besthea::bem::spacetime_kernel {
    * @param[in] ny Normal in the `y` variable.
    * @param[in] ttau `t-tau`.
    */
-#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( BESTHEA_SIMD_WIDTH )
   sc evaluate(
     sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, sc ttau ) const {
     return derived( )->do_evaluate( xy1, xy2, xy3, nx, ny, ttau );

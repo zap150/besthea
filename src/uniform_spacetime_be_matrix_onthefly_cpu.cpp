@@ -151,7 +151,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, \
                           y1_mapped, y2_mapped, y3_mapped, \
                           w : DATA_ALIGN ) \
-            reduction( + : value ) simdlen( DATA_WIDTH )
+            reduction( + : value ) simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
     value += _kernel->anti_tau_anti_t_regular_in_time_regular_in_space(
       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -201,7 +201,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, \
                           y1_mapped, y2_mapped, y3_mapped, \
                           w : DATA_ALIGN ) \
-            reduction( + : value ) simdlen( DATA_WIDTH )
+            reduction( + : value ) simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
     value += _kernel->anti_tau_anti_t_regular_in_time(
       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -248,7 +248,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, \
                           y1_mapped, y2_mapped, y3_mapped, \
                           w : DATA_ALIGN ) \
-            reduction( + : value ) simdlen( DATA_WIDTH )
+            reduction( + : value ) simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
     value += _kernel->anti_tau_anti_t_limit_in_time_regular_in_space(
       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -296,7 +296,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, \
                           y1_mapped, y2_mapped, y3_mapped, \
                           w : DATA_ALIGN ) \
-            reduction( + : value ) simdlen( DATA_WIDTH )
+            reduction( + : value ) simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
     value += _kernel->anti_tau_limit(
       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -367,7 +367,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
                           w : DATA_ALIGN ) \
             private( kernel ) \
             reduction( + : value1, value2, value3 ) \
-            simdlen( DATA_WIDTH )
+            simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
     kernel = _kernel->anti_tau_anti_t_regular_in_time_regular_in_space(
       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -431,7 +431,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
                           w : DATA_ALIGN ) \
             private( kernel ) \
             reduction( + : value1, value2, value3 ) \
-            simdlen( DATA_WIDTH )
+            simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
     kernel = _kernel->anti_tau_anti_t_regular_in_time(
       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -492,7 +492,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
                           w : DATA_ALIGN ) \
             private( kernel ) \
             reduction( + : value1, value2, value3 ) \
-            simdlen( DATA_WIDTH )
+            simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
     kernel = _kernel->anti_tau_anti_t_limit_in_time_regular_in_space(
       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -554,7 +554,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
                           w : DATA_ALIGN ) \
             private( kernel ) \
             reduction( + : value1, value2, value3 ) \
-            simdlen( DATA_WIDTH )
+            simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
     kernel = _kernel->anti_tau_limit(
       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -630,7 +630,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
                           w : DATA_ALIGN ) \
             private( kernel ) \
             reduction( + : value1, value2, value3 ) \
-            simdlen( DATA_WIDTH )
+            simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
     kernel = _kernel->anti_tau_anti_t_regular_in_time_regular_in_space(
       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -694,7 +694,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
                           w : DATA_ALIGN ) \
             private( kernel ) \
             reduction( + : value1, value2, value3 ) \
-            simdlen( DATA_WIDTH )
+            simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
     kernel = _kernel->anti_tau_anti_t_regular_in_time(
       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -755,7 +755,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
                           w : DATA_ALIGN ) \
             private( kernel ) \
             reduction( + : value1, value2, value3 ) \
-            simdlen( DATA_WIDTH )
+            simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
     kernel = _kernel->anti_tau_anti_t_limit_in_time_regular_in_space(
       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -817,7 +817,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
                           w : DATA_ALIGN ) \
             private( kernel ) \
             reduction( + : value1, value2, value3 ) \
-            simdlen( DATA_WIDTH )
+            simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
     kernel = _kernel->anti_tau_limit(
       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -919,7 +919,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
         reduction( + : value11, value12, value13 ) \
         reduction( + : value21, value22, value23 ) \
         reduction( + : value31, value32, value33 ) \
-        simdlen( DATA_WIDTH )
+        simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
     _kernel->anti_tau_anti_t_and_anti_t_regular_in_time_regular_in_space(
         x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -1027,7 +1027,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
         reduction( + : value11, value12, value13 ) \
         reduction( + : value21, value22, value23 ) \
         reduction( + : value31, value32, value33 ) \
-        simdlen( DATA_WIDTH )
+        simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
     _kernel->anti_tau_anti_t_and_anti_t_regular_in_time(
       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -1132,7 +1132,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
         reduction( + : value11, value12, value13 ) \
         reduction( + : value21, value22, value23 ) \
         reduction( + : value31, value32, value33 ) \
-        simdlen( DATA_WIDTH )
+        simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
     _kernel->anti_tau_anti_t_and_anti_t_limit_in_time_regular_in_space(
       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -1228,7 +1228,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 #pragma omp simd \
         aligned( x1_mapped, x2_mapped, x3_mapped : DATA_ALIGN ) \
         aligned( y1_mapped, y2_mapped, y3_mapped, w : DATA_ALIGN ) \
-        reduction( + : value11 ) simdlen( DATA_WIDTH )
+        reduction( + : value11 ) simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
     value += _kernel->anti_tau_limit(
       x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -2587,7 +2587,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped        \
                           : DATA_ALIGN ) aligned( x1_ref, x2_ref \
                                                   : DATA_ALIGN ) \
-  simdlen( DATA_WIDTH )
+  simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     x1_mapped[ i ] = x1rot[ 0 ] + ( x2rot[ 0 ] - x1rot[ 0 ] ) * x1_ref[ i ]
       + ( x3rot[ 0 ] - x1rot[ 0 ] ) * x2_ref[ i ];
@@ -2661,7 +2661,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
 #pragma omp simd aligned( y1_mapped, y2_mapped, y3_mapped        \
                           : DATA_ALIGN ) aligned( y1_ref, y2_ref \
                                                   : DATA_ALIGN ) \
-    simdlen( DATA_WIDTH )
+    simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     y1_mapped[ i ] = y1rot[ 0 ] + ( y2rot[ 0 ] - y1rot[ 0 ] ) * y1_ref[ i ]
       + ( y3rot[ 0 ] - y1rot[ 0 ] ) * y2_ref[ i ];

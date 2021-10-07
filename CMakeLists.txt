@@ -195,11 +195,11 @@ if(USE_CUDA)
   )
 endif()
 
-if (NOT DEFINED DATA_WIDTH)
-set(DATA_WIDTH 8)
+if (NOT DEFINED BESTHEA_SIMD_WIDTH)
+  set(BESTHEA_SIMD_WIDTH 8)
 endif()
 
-message(STATUS "Setting DATA_WIDTH to ${DATA_WIDTH}")
+message(STATUS "Setting BESTHEA_SIMD_WIDTH to ${BESTHEA_SIMD_WIDTH}")
 
 set(besthea_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
 add_library(besthea STATIC ${besthea_SOURCES})
@@ -218,7 +218,7 @@ target_link_libraries(besthea PUBLIC
   ${CUDA_LIBRARIES})
 target_compile_definitions(besthea PUBLIC
   MKL_INT=long
-  DATA_WIDTH=${DATA_WIDTH})
+  BESTHEA_SIMD_WIDTH=${BESTHEA_SIMD_WIDTH})
 
 if(USE_CUDA)
   target_include_directories(besthea SYSTEM PUBLIC

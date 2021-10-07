@@ -75,7 +75,7 @@ class besthea::bem::spacetime_constant_kernel
    * @param[in] ny Normal in the `y` variable.
    * @param[in] ttau `t-tau`.
    */
-#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( BESTHEA_SIMD_WIDTH )
   sc do_evaluate( [[maybe_unused]] sc xy1, [[maybe_unused]] sc xy2,
     [[maybe_unused]] sc xy3, [[maybe_unused]] const sc * nx,
     [[maybe_unused]] const sc * ny, [[maybe_unused]] sc ttau ) const {

@@ -111,7 +111,7 @@ class besthea::bem::basis_tri_p1
    * the choice of the element, and in particular not on the outward normal
    * vector.
    */
-#pragma omp declare simd uniform( this, i_elem, i_fun, n ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, i_elem, i_fun, n ) simdlen( BESTHEA_SIMD_WIDTH )
   sc do_evaluate( [[maybe_unused]] lo i_elem, lo i_fun, sc x1_ref, sc x2_ref,
     [[maybe_unused]] const sc * n ) const {
     sc value = 0.0;
@@ -147,7 +147,7 @@ class besthea::bem::basis_tri_p1
    * either.
    */
 #pragma omp declare simd uniform( this, i_elem, i_fun, n, n_shared_vertices, \
-  rotation, swap ) simdlen( DATA_WIDTH )
+  rotation, swap ) simdlen( BESTHEA_SIMD_WIDTH )
   sc do_evaluate( [[maybe_unused]] lo i_elem, lo i_fun, sc x1_ref, sc x2_ref,
     [[maybe_unused]] const sc * n, [[maybe_unused]] int n_shared_vertices,
     [[maybe_unused]] int rotation, [[maybe_unused]] bool swap ) const {
