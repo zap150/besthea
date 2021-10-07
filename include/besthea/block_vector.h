@@ -160,7 +160,7 @@ class besthea::linear_algebra::block_vector {
    * @param[in] other The original block vector with target dimensions.
    * @param[in] zero Initialize to 0 if true.
    */
-  void resize_match( const block_vector & original, bool zero = true ) {
+  void resize_to_match( const block_vector & original, bool zero = true ) {
     resize(original.get_n_blocks());
     resize_blocks(original.get_size_of_block(), zero);
   }
@@ -170,7 +170,7 @@ class besthea::linear_algebra::block_vector {
    * @param[in] other The original block vector with permuted target dimensions.
    * @param[in] zero Initialize to 0 if true.
    */
-  void resize_match_perm( const block_vector & original, bool zero = true ) {
+  void resize_to_match_permute( const block_vector & original, bool zero = true ) {
     resize(original.get_size_of_block());
     resize_blocks(original.get_n_blocks(), zero);
   }

@@ -300,6 +300,27 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
   }
 
   /**
+   * Returns vector containing areas of elements
+   */
+  const std::vector< sc > & get_areas() const {
+    return _areas;
+  }
+
+  /**
+   * Returns vector containing mapping from elements to its nodes
+   */
+  const std::vector< lo > & get_elements() const {
+    return _elements;
+  }
+
+  /**
+   * Returns vector containing exterior normal vectors of all elements
+   */
+  const std::vector< sc > & get_normals() const {
+    return _normals;
+  }
+
+  /**
    * Sets coordinates of a node.
    * @param[in] i_node Index of the node.
    * @param[in] node Node coordinates.
@@ -389,34 +410,6 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
    */
   void compute_bounding_box(
     sc & xmin, sc & xmax, sc & ymin, sc & ymax, sc & zmin, sc & zmax ) const;
-
-  /**
-   * Returns vector containing areas of elements
-   */
-  const std::vector< sc > & get_all_areas() const {
-    return _areas;
-  }
-
-  /**
-   * Returns vector containing node coordinates
-   */
-  const std::vector< sc > & get_all_nodes() const {
-    return _nodes;
-  }
-
-  /**
-   * Returns vector containing mapping from elements to its nodes
-   */
-  const std::vector< lo > & get_all_elements() const {
-    return _elements;
-  }
-
-  /**
-   * Returns vector containing exterior normal vectors of all elements
-   */
-  const std::vector< sc > & get_all_normals() const {
-    return _normals;
-  }
 
  protected:
   /**

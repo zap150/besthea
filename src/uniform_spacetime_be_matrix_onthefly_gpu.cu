@@ -2454,7 +2454,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
 
   timers.cpu_scalein.start();
   x_perm.copy_permute(x);
-  y_perm.resize_match_perm(y, true);
+  y_perm.resize_to_match_permute(y, true);
   y.scale(beta);
   timers.cpu_scalein.stop();
 

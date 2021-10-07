@@ -1744,7 +1744,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
     y_perm_thread_privates.resize(omp_get_num_threads());
 
     block_vector_type &y_perm_private = y_perm_thread_privates[omp_get_thread_num()];
-    y_perm_private.resize_match(y_perm, true);
+    y_perm_private.resize_to_match(y_perm, true);
 
     quadrature_nodes quadr_nodes_tst(quadr_reference._sizes[0]);
     quadrature_nodes quadr_nodes_trl(quadr_reference._sizes[0]);
@@ -1834,7 +1834,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
     y_perm_thread_privates.resize(omp_get_num_threads());
 
     block_vector_type &y_perm_private = y_perm_thread_privates[omp_get_thread_num()];
-    y_perm_private.resize_match(y_perm, true);
+    y_perm_private.resize_to_match(y_perm, true);
 
     quadrature_nodes quadr_nodes_tst(quadr_reference._sizes[0]);
     quadrature_nodes quadr_nodes_trl(quadr_reference._sizes[0]);
@@ -1922,7 +1922,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
     y_perm_thread_privates.resize(omp_get_num_threads());
 
     block_vector_type &y_perm_private = y_perm_thread_privates[omp_get_thread_num()];
-    y_perm_private.resize_match(y_perm, true);
+    y_perm_private.resize_to_match(y_perm, true);
 
     quadrature_nodes quadr_nodes_tst(quadr_reference._max_size);
     quadrature_nodes quadr_nodes_trl(quadr_reference._max_size);
@@ -2031,7 +2031,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
     y_perm_thread_privates.resize(omp_get_num_threads());
 
     block_vector_type &y_perm_private = y_perm_thread_privates[omp_get_thread_num()];
-    y_perm_private.resize_match(y_perm, true);
+    y_perm_private.resize_to_match(y_perm, true);
 
     quadrature_nodes quadr_nodes_tst(quadr_reference._sizes[0]);
     quadrature_nodes quadr_nodes_trl(quadr_reference._sizes[0]);
@@ -2129,7 +2129,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
     y_perm_thread_privates.resize(omp_get_num_threads());
 
     block_vector_type &y_perm_private = y_perm_thread_privates[omp_get_thread_num()];
-    y_perm_private.resize_match(y_perm, true);
+    y_perm_private.resize_to_match(y_perm, true);
 
     quadrature_nodes quadr_nodes_tst(quadr_reference._sizes[0]);
     quadrature_nodes quadr_nodes_trl(quadr_reference._sizes[0]);
@@ -2225,7 +2225,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
     y_perm_thread_privates.resize(omp_get_num_threads());
 
     block_vector_type &y_perm_private = y_perm_thread_privates[omp_get_thread_num()];
-    y_perm_private.resize_match(y_perm, true);
+    y_perm_private.resize_to_match(y_perm, true);
 
     quadrature_nodes quadr_nodes_tst(quadr_reference._max_size);
     quadrature_nodes quadr_nodes_trl(quadr_reference._max_size);
@@ -2368,7 +2368,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   x_perm.copy_permute(x, alpha);
 
   if(beta == 0.0) {
-    y_perm.resize_match_perm(y, true);
+    y_perm.resize_to_match_permute(y, true);
   } else if(beta == 1.0) {
     y_perm.copy_permute(y);
   } else {
