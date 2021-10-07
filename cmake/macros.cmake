@@ -184,4 +184,10 @@ macro(setup_CUDA)
 
   cmake_policy(SET CMP0104 NEW)
   set(CMAKE_CUDA_ARCHITECTURES 60-virtual)
+
+  # older nvcc does not support -forward-unknown-to-host-compiler at all
+  if(CMAKE_CUDA_COMPILER_VERSION VERSION_LESS 10.2.89)
+    message(FATAL_ERROR "CUDA compiler is too old, besthea can be"
+      " compiled only with nvcc 10.2.89 or higher")
+  endif()
 endmacro()
