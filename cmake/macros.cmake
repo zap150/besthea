@@ -178,16 +178,10 @@ macro(setup_CUDA)
 
   enable_language(CUDA)
 
-  if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.12.0")
-    cmake_policy(SET CMP0074 NEW)
-  endif()
+  cmake_policy(SET CMP0074 NEW)
 
   find_package(CUDA REQUIRED)
 
-  if(${CMAKE_VERSION} VERSION_LESS "3.18.0")
-    string(APPEND CMAKE_CUDA_FLAGS " -arch=compute_60")
-  else()
-    cmake_policy(SET CMP0104 NEW)
-    set(CMAKE_CUDA_ARCHITECTURES 60-virtual)
-  endif()
+  cmake_policy(SET CMP0104 NEW)
+  set(CMAKE_CUDA_ARCHITECTURES 60-virtual)
 endmacro()
