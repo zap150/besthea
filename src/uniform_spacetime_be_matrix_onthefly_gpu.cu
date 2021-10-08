@@ -257,7 +257,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
       break;
   }
   this->load_distr =
-    new besthea::bem::onthefly::helpers::apply_load_distribution(
+    new besthea::bem::onthefly::gpu_apply_load_distribution(
       n_gpus, gpu_mesh->get_metadata().n_elems, gpu_chunk_size, loadbalancing_use_cpu);
 
 

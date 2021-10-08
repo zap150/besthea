@@ -35,6 +35,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_MATRIX_ONTHEFLY_GPU_H_
 #define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_MATRIX_ONTHEFLY_GPU_H_
 
+#include "besthea/gpu_apply_load_distribution.h"
 #include "besthea/gpu_onthefly_helpers.h"
 #include "besthea/uniform_spacetime_be_matrix_onthefly_cpu.h"
 #include "besthea/uniform_spacetime_tensor_mesh_gpu.h"
@@ -174,7 +175,7 @@ class besthea::bem::onthefly::
 
   besthea::bem::onthefly::helpers::gpu_apply_vectors_data
     vectors_data;  //!< GPU-resident vectors
-  besthea::bem::onthefly::helpers::apply_load_distribution *
+  besthea::bem::onthefly::gpu_apply_load_distribution *
     load_distr;  //!< Object handling CPU-GPU load distribution
   bool loadbalancing_use_cpu; //!< Indicates wheather to use CPU for fully regular component
 };

@@ -68,8 +68,7 @@ namespace besthea::bem::onthefly::helpers {
 #ifdef __NVCC__
   __host__ __device__
 #endif
-    constexpr int
-    qo2qs( int quadr_order ) {
+    constexpr int qo2qs( int quadr_order ) {
     switch ( quadr_order ) {
       case 5:
         return 49;
@@ -148,51 +147,6 @@ struct besthea::bem::onthefly::helpers::gpu_apply_vectors_data {
     lo y_block_count, lo y_size_of_block );
   void free( );
   void print_times( ) const;
-};
-
-/*!
- *  Class taking care of CPU-GPU load distribution
- */
-class besthea::bem::onthefly::helpers::apply_load_distribution {
- private:
-  lo cpu_n_tst_elems;
-  double cpu_n_tst_elems_target;
-  std::vector< lo > gpu_i_tst_begins;
-  lo n_elems;
-  lo gpu_chunk_size;
-  int n_gpus;
-  bool use_cpu;
-
- public:
-  apply_load_distribution( int n_gpus_, lo n_elems_, lo gpu_chunk_size_, bool use_cpu_ );
-  void update_gpu_begins( );
-  void adapt( double cpu_time_const, double cpu_time_scaling,
-    double gpu_time_const, double gpu_time_scaling, double inertia = 0.0 );
-  lo get_cpu_begin( ) const {
-    return n_elems - cpu_n_tst_elems;
-  }
-  lo get_cpu_end( ) const {
-    return n_elems;
-  }
-  lo get_cpu_count( ) const {
-    return cpu_n_tst_elems;
-  }
-  lo get_gpu_begin( int gpu_idx ) const {
-    return gpu_i_tst_begins[ gpu_idx ];
-  }
-  lo get_gpu_end( int gpu_idx ) const {
-    return gpu_i_tst_begins[ gpu_idx + 1 ];
-  }
-  lo get_gpu_count( int gpu_idx ) const {
-    return get_gpu_end( gpu_idx ) - get_gpu_begin( gpu_idx );
-  }
-  lo get_gpu_count_total( ) const {
-    return n_elems - cpu_n_tst_elems;
-  }
-  void print( );
-
- private:
-  lo adjust_cpu_count( double suggested ) const;
 };
 
 /*!

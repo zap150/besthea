@@ -119,6 +119,7 @@ set(besthea_INCLUDES
 if(BESTHEA_USE_CUDA)
   set(besthea_INCLUDES
     ${besthea_INCLUDES}
+    include/besthea/gpu_apply_load_distribution.h
     include/besthea/gpu_onthefly_helpers.h
     include/besthea/time_measurer_cuda.h
     include/besthea/uniform_spacetime_be_matrix_onthefly_gpu.h
@@ -189,6 +190,7 @@ set(besthea_SOURCES
 if(BESTHEA_USE_CUDA)
   set(besthea_SOURCES
     ${besthea_SOURCES}
+    src/gpu_apply_load_distribution.cpp
     src/gpu_onthefly_helpers.cpp
     src/uniform_spacetime_be_matrix_onthefly_gpu.cu
     src/uniform_spacetime_tensor_mesh_gpu.cpp
