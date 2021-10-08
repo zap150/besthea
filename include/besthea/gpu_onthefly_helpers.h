@@ -130,23 +130,4 @@ struct besthea::bem::onthefly::helpers::heat_kernel_parameters {
   }
 };
 
-/*!
- *  Struct containing CPU and GPU resident vectors data.
- */
-struct besthea::bem::onthefly::helpers::gpu_apply_vectors_data {
-  sc * h_x;                                // raw data on host
-  std::vector< sc * > h_y;                 // raw data on host
-  std::vector< sc * > d_x, d_y;            // raw data on device
-  std::vector< size_t > pitch_x, pitch_y;  // pitch in bytes
-  std::vector< lo > ld_x, ld_y;            // leading dimension in elements
-
-  gpu_apply_vectors_data( );
-  gpu_apply_vectors_data( const gpu_apply_vectors_data & that ) = delete;
-  ~gpu_apply_vectors_data( );
-  void allocate( int n_gpus, lo x_block_count, lo x_size_of_block,
-    lo y_block_count, lo y_size_of_block );
-  void free( );
-  void print_times( ) const;
-};
-
 #endif /* INCLUDE_BESTHEA_GPU_ONTHEFLY_HELPERS_H_ */

@@ -37,6 +37,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/gpu_apply_load_distribution.h"
 #include "besthea/gpu_apply_timer_collection.h"
+#include "besthea/gpu_apply_vectors_data.h"
 #include "besthea/gpu_onthefly_helpers.h"
 #include "besthea/uniform_spacetime_be_matrix_onthefly_cpu.h"
 #include "besthea/uniform_spacetime_tensor_mesh_gpu.h"
@@ -174,7 +175,7 @@ class besthea::bem::onthefly::
   int n_gpus;              //!< Number of GPUs to use
   int gpu_kernel_version;  //!< Version of GPU multiplication algorithm
 
-  besthea::bem::onthefly::helpers::gpu_apply_vectors_data
+  besthea::bem::onthefly::gpu_apply_vectors_data
     vectors_data;  //!< GPU-resident vectors
   besthea::bem::onthefly::gpu_apply_load_distribution *
     load_distr;  //!< Object handling CPU-GPU load distribution
