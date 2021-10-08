@@ -2443,7 +2443,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
     throw std::runtime_error("BESTHEA Exception: incompatible matrix and vector dimensions");
   }
   
-  ns_gpu_helpers::timer_collection timers(n_gpus);
+  gpu_apply_timer_collection timers(n_gpus);
 
   timers.combined.start();
 
@@ -2552,7 +2552,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   <kernel_type, test_space_type, trial_space_type>::
   apply_gpu_treg_sreg_begin( const block_vector_type & x,
     const block_vector_type & y, sc alpha,
-    ns_gpu_helpers::timer_collection & timers ) const {
+    gpu_apply_timer_collection & timers ) const {
   // this function does not really care if x or y are permuted or not
 
   x.copy_to_raw(vectors_data.h_x);

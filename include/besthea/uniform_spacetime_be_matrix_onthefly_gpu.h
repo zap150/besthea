@@ -36,6 +36,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_MATRIX_ONTHEFLY_GPU_H_
 
 #include "besthea/gpu_apply_load_distribution.h"
+#include "besthea/gpu_apply_timer_collection.h"
 #include "besthea/gpu_onthefly_helpers.h"
 #include "besthea/uniform_spacetime_be_matrix_onthefly_cpu.h"
 #include "besthea/uniform_spacetime_tensor_mesh_gpu.h"
@@ -158,7 +159,7 @@ class besthea::bem::onthefly::
    */
   void apply_gpu_treg_sreg_begin( const block_vector_type & x,
     const block_vector_type & y, sc alpha,
-    besthea::bem::onthefly::helpers::timer_collection & timers )
+    besthea::bem::onthefly::gpu_apply_timer_collection & timers )
     const;
 
   /*!

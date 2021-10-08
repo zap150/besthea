@@ -149,30 +149,4 @@ struct besthea::bem::onthefly::helpers::gpu_apply_vectors_data {
   void print_times( ) const;
 };
 
-/*!
- *  Struct containing several timers used in GPU onthefly matrix apply.
- */
-struct besthea::bem::onthefly::helpers::timer_collection {
-  std::vector< besthea::tools::time_measurer_cuda > gpu_all;
-  std::vector< besthea::tools::time_measurer_cuda > gpu_copyin;
-  std::vector< besthea::tools::time_measurer_cuda > gpu_compute;
-  std::vector< besthea::tools::time_measurer_cuda > gpu_copyout;
-  besthea::tools::time_measurer cpu_scalein;
-  besthea::tools::time_measurer cpu_treg_sreg;
-  besthea::tools::time_measurer cpu_treg_ssng;
-  besthea::tools::time_measurer cpu_tsng;
-  besthea::tools::time_measurer cpu_all;
-  besthea::tools::time_measurer combined;
-
-  timer_collection( int n_gpus );
-  void print_all( );
-  void print_timers(
-    std::vector< besthea::tools::time_measurer_cuda > & timers );
-  double get_cpu_time_const( );
-  double get_cpu_time_scaling( );
-  double get_gpu_time_const( );
-  double get_gpu_time_scaling( );
-  double get_gpu_time_all( );
-};
-
 #endif /* INCLUDE_BESTHEA_GPU_ONTHEFLY_HELPERS_H_ */
