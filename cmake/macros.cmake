@@ -30,6 +30,7 @@ macro(setup_compiler)
     add_compile_options(-Wall -Wextra -pedantic-errors)
     # Clang cannot vectorise complicated loops
     add_compile_options(-Wno-pass-failed)
+    add_compile_options(-Wno-dtor-name)
 
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang
     AND NOT CMAKE_CXX_COMPILER_ID MATCHES AppleClang)
@@ -133,7 +134,7 @@ macro(enable_OpenMP)
   if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
     add_compile_options(-fopenmp)
   elseif (CMAKE_CXX_COMPILER_ID MATCHES AppleClang)
-    #add_compile_options(-I/opt/local/include/libomp -Xclang -fopenmp)
+    # add_compile_options(-I/opt/local/include/libomp -Xclang -fopenmp)
     add_compile_options(-Xclang -fopenmp)
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang
     AND NOT CMAKE_CXX_COMPILER_ID MATCHES AppleClang)

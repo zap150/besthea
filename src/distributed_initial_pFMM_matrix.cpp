@@ -1677,7 +1677,7 @@ sc besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
     lo n_target_dofs = st_target->get_n_dofs< target_space >( );
     for ( auto src_cluster : nearfield_pair.second ) {
       n_nearfield_entries
-        += n_target_dofs * src_cluster->get_n_dofs< source_space >( );
+        += n_target_dofs * src_cluster->template get_n_dofs< source_space >( );
     }
   }
   lou n_global_target_dofs = _distributed_spacetime_target_tree->get_mesh( )
