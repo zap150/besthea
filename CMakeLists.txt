@@ -8,7 +8,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake/Modules)
 
 check_insource()
 setup_compiler()
-if(USE_CUDA)
+if(BESTHEA_USE_CUDA)
   setup_CUDA()
 endif()
 
@@ -116,7 +116,7 @@ set(besthea_INCLUDES
   include/besthea/tetrahedral_spacetime_be_evaluator.h
 )
 
-if(USE_CUDA)
+if(BESTHEA_USE_CUDA)
   set(besthea_INCLUDES
     ${besthea_INCLUDES}
     include/besthea/gpu_onthefly_helpers.h
@@ -186,7 +186,7 @@ set(besthea_SOURCES
   src/tetrahedral_spacetime_be_evaluator.cpp
 )
 
-if(USE_CUDA)
+if(BESTHEA_USE_CUDA)
   set(besthea_SOURCES
     ${besthea_SOURCES}
     src/gpu_onthefly_helpers.cpp
@@ -220,7 +220,7 @@ target_compile_definitions(besthea PUBLIC
   MKL_INT=long
   BESTHEA_SIMD_WIDTH=${BESTHEA_SIMD_WIDTH})
 
-if(USE_CUDA)
+if(BESTHEA_USE_CUDA)
   target_include_directories(besthea SYSTEM PUBLIC
     ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
   target_link_libraries(besthea PUBLIC
