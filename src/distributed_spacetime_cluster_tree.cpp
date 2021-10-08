@@ -1882,9 +1882,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::fill_elements_new(
   // first we have to assign to each id the corresponding non empty box (or
   // boxes, in case that leaf is an early leaf)
   std::unordered_map< lo, general_spacetime_cluster * > index_to_cluster;
-  lo sum = 0;
+
   for ( auto leaf : leaves ) {
-    sum += leaf->get_n_elements( );
     const std::vector< slou > box_coordinates = leaf->get_box_coordinate( );
     // while going through the leaves we also check for exceptional cases,
     // reserve space for the elements and set the "elements_are_local" status of

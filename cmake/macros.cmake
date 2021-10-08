@@ -46,11 +46,13 @@ macro(setup_compiler)
     #add_compile_options(
     #  -Rpass="vect" -Rpass-missed="vect" -Rpass-analysis="vect")
     if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 11)
-      # TODO: get rid of this warning (don't understand it)
+      # https://stackoverflow.com/questions/68751682/is-a-class-templates-name
+      # -in-scope-for-a-qualified-out-of-line-destructors-def
       add_compile_options(-Wno-dtor-name)
     endif()
 
-  elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel
+    AND NOT CMAKE_CXX_COMPILER_ID MATCHES IntelLLVM)
     message(STATUS "Using Intel ${CMAKE_CXX_COMPILER_VERSION} toolchain")
 
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.0.1)
@@ -59,7 +61,9 @@ macro(setup_compiler)
     endif()
 
     add_compile_options(-w3)
+
     #add_compile_options(-qopt-report=5 -qopt-report-phase=vec)
+
     # zero used for undefined preprocessing identifier
     add_compile_options("SHELL:-diag-disable 193")
     # attribute appears more than once
@@ -76,6 +80,13 @@ macro(setup_compiler)
     add_compile_options("SHELL:-diag-disable 11076")
     # specified as both a system and non-system include directory
     add_compile_options("SHELL:-diag-disable 2547")
+
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES IntelLLVM)
+    message(STATUS "Using IntelLLVM ${CMAKE_CXX_COMPILER_VERSION} toolchain")
+
+    add_compile_options(-Wall -Wextra -pedantic-errors)
+
+    add_compile_options(-Wno-dtor-name)
 
   else()
     message(FATAL_ERROR "Unknown C++ compiler: ${CMAKE_CXX_COMPILER_ID}")
@@ -127,8 +138,11 @@ macro(enable_OpenMP)
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang
     AND NOT CMAKE_CXX_COMPILER_ID MATCHES AppleClang)
     add_compile_options(-fopenmp)
-  elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel
+    AND NOT CMAKE_CXX_COMPILER_ID MATCHES IntelLLVM)
     add_compile_options(-qopenmp)
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES  IntelLLVM)
+    add_compile_options(-fiopenmp)
   endif()
 endmacro()
 

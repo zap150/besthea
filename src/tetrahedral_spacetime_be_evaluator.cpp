@@ -80,6 +80,8 @@ void besthea::bem::
     sc * y3_mapped = my_quadrature._y3.data( );
     sc * tau_mapped = my_quadrature._tau.data( );
     sc * w = my_quadrature._wy.data( );
+    sc * ny_data = ny.data( );
+    const sc * density_data = density.data( );
 
 #pragma omp for schedule( dynamic, 8 )
     for ( lo i_point = 0; i_point < n_points; ++i_point ) {
@@ -112,7 +114,7 @@ void besthea::bem::
         for ( lo i_quad = 0; i_quad < size_quad; ++i_quad ) {
           sc kernel = _kernel->evaluate( x1 - y1_mapped[ i_quad ],
             x2 - y2_mapped[ i_quad ], x3 - y3_mapped[ i_quad ], nullptr,
-            ny.data( ), t - tau_mapped[ i_quad ] );
+            ny_data, t - tau_mapped[ i_quad ] );
 
           for ( lo i_loc = 0; i_loc < loc_dim; ++i_loc ) {
             sc basis_value = basis.evaluate( i_elem, i_loc, y1_ref[ i_quad ],
@@ -120,7 +122,7 @@ void besthea::bem::
               * w[ i_quad ] * area * kernel;
 
             // adding value
-            res += density.get( l2g[ i_loc ] ) * basis_value;
+            res += density_data[ l2g[ i_loc ] ] * basis_value;
           }  // i_loc
         }    // i_quad
         // save result

@@ -99,6 +99,7 @@ class besthea::bem::spacetime_basis_tetra_p0
    * @param[in] x3_ref Third coordinate of reference quadrature point.
    */
 #pragma omp declare simd uniform( this, i_elem, i_fun ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, i_elem ) simdlen( DATA_WIDTH )
   sc do_evaluate( [[maybe_unused]] lo i_elem, [[maybe_unused]] lo i_fun,
     [[maybe_unused]] sc x1_ref, [[maybe_unused]] sc x2_ref,
     [[maybe_unused]] sc x3_ref ) const {
@@ -118,6 +119,7 @@ class besthea::bem::spacetime_basis_tetra_p0
    */
 #pragma omp declare simd uniform( this, i_elem, i_fun, perm ) \
   simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, i_elem, perm ) simdlen( DATA_WIDTH )
   sc do_evaluate( [[maybe_unused]] lo i_elem, [[maybe_unused]] lo i_fun,
     [[maybe_unused]] sc x1_ref, [[maybe_unused]] sc x2_ref,
     [[maybe_unused]] sc x3_ref, [[maybe_unused]] lo * perm ) const {

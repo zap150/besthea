@@ -182,7 +182,7 @@ set(besthea_SOURCES
 
 
 if (NOT DEFINED DATA_WIDTH)
-set(DATA_WIDTH 8)
+  set(DATA_WIDTH 8)
 endif()
 
 message(STATUS "Setting DATA_WIDTH to ${DATA_WIDTH}")
