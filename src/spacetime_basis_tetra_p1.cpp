@@ -28,71 +28,30 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file spacetime_kernel.h
- * @brief
- */
+#include "besthea/spacetime_basis_tetra_p1.h"
 
-#ifndef INCLUDE_BESTHEA_SPACETIME_KERNEL_H_
-#define INCLUDE_BESTHEA_SPACETIME_KERNEL_H_
-
-#include "besthea/settings.h"
-
-namespace besthea {
-  namespace bem {
-    template< class derived_type >
-    class spacetime_kernel;
-  }
+besthea::bem::spacetime_basis_tetra_p1::spacetime_basis_tetra_p1(
+  const mesh_type & mesh ) {
+  _mesh = &mesh;
 }
 
-/**
- *  Class representing a spacetime kernel.
- */
-template< class derived_type >
-class besthea::bem::spacetime_kernel {
- public:
-  /**
-   * Constructor.
-   */
-  spacetime_kernel( ) {
-  }
+besthea::bem::spacetime_basis_tetra_p1::~spacetime_basis_tetra_p1( ) {
+}
 
-  /**
-   * Destructor.
-   */
-  virtual ~spacetime_kernel( ) {
-  }
+lo besthea::bem::spacetime_basis_tetra_p1::dimension_local( ) const {
+  return 4;
+}
 
-  /**
-   * Returns this cast to the descendant's type.
-   */
-  derived_type * derived( ) {
-    return static_cast< derived_type * >( this );
-  }
+lo besthea::bem::spacetime_basis_tetra_p1::dimension_global( ) const {
+  return _mesh->get_n_nodes( );
+}
 
-  /**
-   * Returns this cast to the descendant's type.
-   */
-  const derived_type * derived( ) const {
-    return static_cast< const derived_type * >( this );
-  }
-
-  /**
-   * Evaluates the kernel.
-   * @param[in] xy1 First coordinate of `x - y`.
-   * @param[in] xy2 Second coordinate of `x - y`.
-   * @param[in] xy3 Third coordinate of `x - y`.
-   * @param[in] nx Normal in the `x` variable.
-   * @param[in] ny Normal in the `y` variable.
-   * @param[in] ttau `t-tau`.
-   */
-#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( DATA_WIDTH )
-  sc evaluate(
-    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, sc ttau ) const {
-    return derived( )->do_evaluate( xy1, xy2, xy3, nx, ny, ttau );
-  }
-
- protected:
-  static constexpr sc _eps{ 1e-12 };  //!< Auxiliary variable
-};
-
-#endif /* INCLUDE_BESTHEA_SPACETIME_KERNEL_H_ */
+void besthea::bem::spacetime_basis_tetra_p1::do_local_to_global(
+  lo i_elem, std::vector< lo > & indices ) const {
+  linear_algebra::indices< 4 > element;
+  _mesh->get_element( i_elem, element );
+  indices[ 0 ] = element[ 0 ];
+  indices[ 1 ] = element[ 1 ];
+  indices[ 2 ] = element[ 2 ];
+  indices[ 3 ] = element[ 3 ];
+}

@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 project(besthea)
 
+include(GNUInstallDirs)
+
 include(cmake/macros.cmake)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake/Modules)
 
@@ -76,6 +78,7 @@ set(besthea_INCLUDES
   include/besthea/spacetime_heat_initial_m0_kernel_antiderivative.h
   include/besthea/spacetime_heat_initial_m1_kernel_antiderivative.h
   include/besthea/spacetime_heat_kernel.h
+  include/besthea/spacetime_heat_kernel_normal_derivative.h
   include/besthea/spacetime_heat_kernel_antiderivative.h
   include/besthea/spacetime_heat_sl_kernel_antiderivative.h
   include/besthea/spacetime_initial_kernel_antiderivative.h
@@ -104,6 +107,14 @@ set(besthea_INCLUDES
   include/besthea/uniform_spacetime_tensor_mesh.h
   include/besthea/vector.h
   include/besthea/volume_basis_function.h
+  include/besthea/spacetime_basis_function.h
+  include/besthea/spacetime_basis_tetra_p0.h
+  include/besthea/spacetime_basis_tetra_p1.h
+  include/besthea/tetrahedral_spacetime_be_space.h
+  include/besthea/tetrahedral_spacetime_be_identity.h
+  include/besthea/tetrahedral_spacetime_be_assembler.h
+  include/besthea/spacetime_constant_kernel.h
+  include/besthea/tetrahedral_spacetime_be_evaluator.h
 )
 
 set(besthea_SOURCES
@@ -161,11 +172,17 @@ set(besthea_SOURCES
   src/uniform_spacetime_initial_evaluator.cpp
   src/uniform_spacetime_tensor_mesh.cpp
   src/vector.cpp
+  src/spacetime_basis_tetra_p0.cpp
+  src/spacetime_basis_tetra_p1.cpp
+  src/tetrahedral_spacetime_be_space.cpp
+  src/tetrahedral_spacetime_be_identity.cpp
+  src/tetrahedral_spacetime_be_assembler.cpp
+  src/tetrahedral_spacetime_be_evaluator.cpp
 )
 
 
 if (NOT DEFINED DATA_WIDTH)
-set(DATA_WIDTH 8)
+  set(DATA_WIDTH 8)
 endif()
 
 message(STATUS "Setting DATA_WIDTH to ${DATA_WIDTH}")
@@ -187,9 +204,11 @@ target_compile_definitions(besthea PUBLIC
   MKL_INT=long
   DATA_WIDTH=${DATA_WIDTH})
 
-#install (TARGETS besthea ARCHIVE DESTINATION "${CMAKE_BINARY_DIR}/lib")
-#install(FILES ${besthea_INCLUDES}
-#  DESTINATION "${CMAKE_BINARY_DIR}/include/besthea")
+install(TARGETS ${PROJECT_NAME}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}
+  )
+install(FILES ${besthea_INCLUDES}
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 
 option(BUILD_EXAMPLES "Build examples using the library" ON)
 

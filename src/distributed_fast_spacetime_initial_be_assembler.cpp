@@ -243,10 +243,14 @@ void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
       // the spacetime element consists and get some data.
       test_elem_time = test_mesh->get_time_element( test_elem_spacetime );
       test_mesh->get_temporal_nodes( test_elem_time, &t0, &t1 );
-      gl_test_elem_space = test_mesh->get_space_element( test_elem_spacetime );
-      test_mesh->get_spatial_nodes( gl_test_elem_space, x1, x2, x3 );
-      test_mesh->get_spatial_normal( gl_test_elem_space, nx );
-      test_area = test_mesh->spatial_area( gl_test_elem_space );
+      gl_test_elem_space
+        = test_mesh->get_space_element_index( test_elem_spacetime );
+      test_mesh->get_spatial_nodes_using_spatial_element_index(
+        gl_test_elem_space, x1, x2, x3 );
+      test_mesh->get_spatial_normal_using_spatial_element_index(
+        gl_test_elem_space, nx );
+      test_area
+        = test_mesh->get_spatial_area_using_spatial_index( gl_test_elem_space );
 
       bool is_first_time_step
         = ( test_mesh_start_idx == 0 && test_elem_time == 0 );

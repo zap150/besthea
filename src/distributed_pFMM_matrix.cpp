@@ -1660,10 +1660,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     // the first n_space_elems spacetime elements.
     lo local_elem_idx = distributed_mesh.global_2_local(
       local_start_idx, source_cluster->get_element( i ) );
-    lo local_elem_idx_space = local_mesh->get_space_element( local_elem_idx );
+    lo local_elem_idx_space
+      = local_mesh->get_space_element_index( local_elem_idx );
 
-    local_mesh->get_spatial_nodes( local_elem_idx_space, y1, y2, y3 );
-    sc elem_area = local_mesh->spatial_area( local_elem_idx_space );
+    local_mesh->get_spatial_nodes_using_spatial_element_index(
+      local_elem_idx_space, y1, y2, y3 );
+    sc elem_area = local_mesh->get_spatial_area_using_spatial_index(
+      local_elem_idx_space );
 
     triangle_to_geometry( y1, y2, y3, my_quadrature );
 
@@ -1751,10 +1754,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   for ( lo i = 0; i < n_space_elems; ++i ) {
     lo local_elem_idx = distributed_mesh.global_2_local(
       local_start_idx, source_cluster->get_element( i ) );
-    lo local_elem_idx_space = local_mesh->get_space_element( local_elem_idx );
-    local_mesh->get_spatial_normal( local_elem_idx_space, normal );
-    local_mesh->get_spatial_nodes( local_elem_idx_space, y1, y2, y3 );
-    sc elem_area = local_mesh->spatial_area( local_elem_idx_space );
+    lo local_elem_idx_space
+      = local_mesh->get_space_element_index( local_elem_idx );
+    local_mesh->get_spatial_normal_using_spatial_element_index(
+      local_elem_idx_space, normal );
+    local_mesh->get_spatial_nodes_using_spatial_element_index(
+      local_elem_idx_space, y1, y2, y3 );
+    sc elem_area = local_mesh->get_spatial_area_using_spatial_index(
+      local_elem_idx_space );
 
     triangle_to_geometry( y1, y2, y3, my_quadrature );
 
@@ -1871,10 +1878,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   for ( lo i = 0; i < n_space_elems; ++i ) {
     lo local_elem_idx = distributed_mesh.global_2_local(
       local_start_idx, source_cluster->get_element( i ) );
-    lo local_elem_idx_space = local_mesh->get_space_element( local_elem_idx );
-    local_mesh->get_spatial_normal( local_elem_idx_space, normal );
-    local_mesh->get_spatial_nodes( local_elem_idx_space, y1, y2, y3 );
-    sc elem_area = local_mesh->spatial_area( local_elem_idx_space );
+    lo local_elem_idx_space
+      = local_mesh->get_space_element_index( local_elem_idx );
+    local_mesh->get_spatial_normal_using_spatial_element_index(
+      local_elem_idx_space, normal );
+    local_mesh->get_spatial_nodes_using_spatial_element_index(
+      local_elem_idx_space, y1, y2, y3 );
+    sc elem_area = local_mesh->get_spatial_area_using_spatial_index(
+      local_elem_idx_space );
 
     triangle_to_geometry( y1, y2, y3, my_quadrature );
 
@@ -4071,7 +4082,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
     // sort within nearfield cluster
     std::vector< lo > permutation_index( total_sizes.size( ), 0 );
-    for ( lou i = 0; i != permutation_index.size( ); i++ ) {
+    for ( lo i = 0; i != lo( permutation_index.size( ) ); i++ ) {
       permutation_index[ i ] = i;
     }
     sort( permutation_index.begin( ), permutation_index.end( ),
@@ -4164,7 +4175,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
           = i_time * n_space_elements + i_space;
         // for the spatial mesh no transformation from local 2 global is
         // necessary since there is just one global space mesh at the moment.
-        lo global_space_index = local_mesh->get_space_element(
+        lo global_space_index = local_mesh->get_space_element_index(
           distributed_mesh.global_2_local( local_start_idx,
             spacetime_elements[ current_spacetime_element_index ] ) );
         // get the diagonal entries of the current nearfield matrix

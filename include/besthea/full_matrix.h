@@ -123,6 +123,14 @@ class besthea::linear_algebra::full_matrix
   void random_fill_diag( sc lower, sc upper );
 
   /*!
+   * @brief Removes data from the matrix.
+   */
+  void clear( ) {
+    _data.clear( );
+    _data.shrink_to_fit( );
+  }
+
+  /*!
    * @brief Returns the (i,j)-th element of the matrix.
    * @param[in] i Row index.
    * @param[in] j Column index.
@@ -259,12 +267,16 @@ class besthea::linear_algebra::full_matrix
    * Resizes the matrix.
    * @param[in] n_rows Number of rows.
    * @param[in] n_columns Number of columns.
+   * @param[in] zero Initialize to 0 if true.
    */
-  void resize( lo n_rows, lo n_columns ) {
+  void resize( lo n_rows, lo n_columns, bool zero = true ) {
     _data.resize( n_rows * n_columns );
     _data.shrink_to_fit( );
     _n_rows = n_rows;
     _n_columns = n_columns;
+    if ( zero ) {
+      fill( sc( 0.0 ) );
+    }
   }
 
  protected:

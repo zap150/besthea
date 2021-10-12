@@ -116,7 +116,8 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
     lo space_elem_idx;
     lo time_elem_idx;
     map_index( i_element, space_elem_idx, time_elem_idx );
-    return spatial_area( space_elem_idx ) * temporal_length( time_elem_idx );
+    return get_spatial_area_using_spatial_index( space_elem_idx )
+      * temporal_length( time_elem_idx );
   }
 
   /**
@@ -181,66 +182,81 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
     return _space_mesh->get_n_edges( );
   }
 
+  // FIXME: IMHO, i_element and i_node should be indices of
+  // spacetime_tensor_mesh and not the underlying spatial mesh
+
   /**
-   * Returns node indices of a spatial element.
-   * @param[in] i_element Index of the spatial element.
-   * @param[out] element Spatial element indices.
+   * Returns the node indices of a spatial element.
+   * @param[in] i_space_element Index of the spatial element.
+   * @param[out] space_element Indices of the 3 nodes of the spatial element.
+   * @note The spatial element index is needed, do not use indices of space-time
+   * elements.
    */
-  void get_spatial_element(
-    lo i_element, linear_algebra::indices< 3 > & element ) const {
-    _space_mesh->get_element( i_element, element );
+  void get_spatial_element_using_spatial_index(
+    lo i_space_element, linear_algebra::indices< 3 > & space_element ) const {
+    _space_mesh->get_element( i_space_element, space_element );
   }
 
   /**
-   * Returns coordinates of a spatial node.
-   * @param[in] i_node Index of the spatial node.
+   * Returns the coordinates of a spatial node.
+   * @param[in] i_space_node Index of the spatial node.
    * @param[out] node Spatial node coordinates.
+   * @note The spatial node index is needed, do not use indices of space-time
+   * nodes.
    */
-  void get_spatial_node(
-    lo i_node, linear_algebra::coordinates< 3 > & node ) const {
-    _space_mesh->get_node( i_node, node );
+  void get_spatial_node_using_spatial_index(
+    lo i_space_node, linear_algebra::coordinates< 3 > & node ) const {
+    _space_mesh->get_node( i_space_node, node );
   }
 
   /**
-   * Returns coordinates of all nodes of a spatial element.
-   * @param[in] i_element Index of the element.
+   * Returns the coordinates of all nodes of a spatial element.
+   * @param[in] i_space_element Index of the spatial element.
    * @param[out] node1 Coordinates of the first node.
    * @param[out] node2 Coordinates of the second node.
    * @param[out] node3 Coordinates of the third node.
+   * @note The spatial element index is needed, do not use indices of space-time
+   * elements.
    */
-  void get_spatial_nodes( lo i_element,
+  void get_spatial_nodes_using_spatial_element_index( lo i_space_element,
     linear_algebra::coordinates< 3 > & node1,
     linear_algebra::coordinates< 3 > & node2,
     linear_algebra::coordinates< 3 > & node3 ) const {
-    _space_mesh->get_nodes( i_element, node1, node2, node3 );
+    _space_mesh->get_nodes( i_space_element, node1, node2, node3 );
   }
 
   /**
-   * Returns element normal vector.
-   * @param[in] i_element Index of the element.
-   * @param[out] n Normal indices.
+   * Returns the normal vector of a spacial element.
+   * @param[in] i_space_element Index of the spatial element.
+   * @param[out] n Coordinates of the normal vector.
+   * @note The spatial element index is needed, do not use indices of space-time
+   * elements.
    */
-  void get_spatial_normal(
-    lo i_element, linear_algebra::coordinates< 3 > & n ) const {
-    _space_mesh->get_normal( i_element, n );
+  void get_spatial_normal_using_spatial_element_index(
+    lo i_space_element, linear_algebra::coordinates< 3 > & n ) const {
+    _space_mesh->get_normal( i_space_element, n );
   }
 
   /**
-   * Returns nodal normal vector.
-   * @param[in] i_node Index of the node.
-   * @param[out] n Normal indices.
+   * Returns the nodal normal vector of a given spatial node.
+   * @param[in] i_node Index of the spatial node.
+   * @param[out] n Coordinates of the normal vector.
+   * @note The spatial node index is needed, do not use indices of space-time
+   * nodes.
    */
-  void get_spatial_nodal_normal(
-    lo i_node, linear_algebra::coordinates< 3 > & n ) const {
-    _space_mesh->get_nodal_normal( i_node, n );
+  void get_spatial_nodal_normal_using_spatial_node_index(
+    lo i_space_node, linear_algebra::coordinates< 3 > & n ) const {
+    _space_mesh->get_nodal_normal( i_space_node, n );
   }
 
   /**
-   * Returns area of a single spatial element.
-   * @param[in] i_elem Index of the element.
+   * Returns the area of a single spatial element.
+   * @param[in] i_space_elem Index of the spatial element.
+   * @note The spatial element index is needed, do not use indices of space-time
+   * elements.
    */
-  sc spatial_area( lo i_elem ) const {
-    return _space_mesh->area( i_elem );
+  sc get_spatial_area_using_spatial_index( lo i_space_elem ) const {
+    return _space_mesh->area( i_space_elem );
   }
 
   /**
@@ -406,6 +422,32 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
         nodes.back( )[ 1 ] = x[ 1 ];
         nodes.back( )[ 2 ] = x[ 2 ];
         nodes.back( )[ 3 ] = t[ 0 ];
+      }
+    }
+  }
+
+  /**
+   * Returns coordinates of all nodes of the mesh.
+   * @param[out] nodes Vector of sc. If the size is not
+   * corresponding to the number of nodes per element, it will be resized.
+   */
+  void get_nodes( std::vector< sc > & nodes ) const {
+    lo n_spatial_nodes = _space_mesh->get_n_nodes( );
+    lo n_temporal_nodes = _time_mesh->get_n_nodes( );
+    lo n_nodes = n_spatial_nodes * n_temporal_nodes;
+
+    nodes.reserve( 4 * n_nodes );
+
+    linear_algebra::coordinates< 3 > x;
+    linear_algebra::coordinates< 1 > t;
+    for ( lo i_t = 0; i_t < n_temporal_nodes; ++i_t ) {
+      for ( lo i_x = 0; i_x < n_spatial_nodes; ++i_x ) {
+        _space_mesh->get_node( i_x, x );
+        _time_mesh->get_node( i_t, t );
+        nodes.push_back( x[ 0 ] );
+        nodes.push_back( x[ 1 ] );
+        nodes.push_back( x[ 2 ] );
+        nodes.push_back( t[ 0 ] );
       }
     }
   }
@@ -587,9 +629,8 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
    * Returns the index of the space element corresponding to the given
    * spacetime element
    * @param[in] i_element Index of the spacetime element.
-   * @todo rename: hard to distinguish get_spatial_element and get_space_element
    */
-  lo get_space_element( lo i_element ) const {
+  lo get_space_element_index( lo i_element ) const {
     return i_element % get_n_spatial_elements( );
   }
 

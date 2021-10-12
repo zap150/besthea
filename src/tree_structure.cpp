@@ -164,7 +164,7 @@ char besthea::mesh::tree_structure::
       // this is the case return_value is changed to 2
       lo level = current_cluster.get_level( );
       lo global_index = current_cluster.get_global_index( );
-      if ( ( global_index == ( 1 << level ) - 1 ) ) {
+      if ( global_index == ( 1 << level ) - 1 ) {
         return_value = 2;
       }
     }

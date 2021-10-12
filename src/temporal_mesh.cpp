@@ -81,8 +81,8 @@ besthea::mesh::temporal_mesh::~temporal_mesh( ) {
 
 void besthea::mesh::temporal_mesh::print_info( ) const {
   std::cout << "besthea::mesh::temporal_mesh" << std::endl;
-  std::cout << " elements: " << _n_timesteps << ", nodes: " << _n_temporal_nodes
-            << std::endl;
+  std::cout << "  elements: " << _n_timesteps
+            << ", nodes: " << _n_temporal_nodes << std::endl;
 }
 
 besthea::mesh::temporal_mesh::temporal_mesh( const std::string & file ) {
