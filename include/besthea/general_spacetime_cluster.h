@@ -119,6 +119,8 @@ class besthea::mesh::general_spacetime_cluster {
       _n_time_div( n_time_div ),
       _nearfield_list( nullptr ),
       _interaction_list( nullptr ),
+      _m2t_list( nullptr ),
+      _s2l_list( nullptr ),
       _moment( nullptr ),
       _local_contribution( nullptr ) {
     if ( reserve_elements ) {
@@ -144,6 +146,10 @@ class besthea::mesh::general_spacetime_cluster {
       delete _nearfield_list;
     if ( _interaction_list != nullptr )
       delete _interaction_list;
+    if ( _m2t_list != nullptr )
+      delete _m2t_list;
+    if ( _s2l_list != nullptr )
+      delete _s2l_list;
   }
 
   /**
@@ -296,6 +302,28 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
+   * Adds cluster to the s2l list.
+   * @param[in] cluster Cluster to be added.
+   */
+  void add_to_s2l_list( general_spacetime_cluster * cluster ) {
+    if ( _s2l_list == nullptr ) {
+      _s2l_list = new std::vector< general_spacetime_cluster * >( );
+    }
+    _s2l_list->push_back( cluster );
+  }
+
+  /**
+   * Adds cluster to the m2t list.
+   * @param[in] cluster Cluster to be added.
+   */
+  void add_to_m2t_list( general_spacetime_cluster * cluster ) {
+    if ( _m2t_list == nullptr ) {
+      _m2t_list = new std::vector< general_spacetime_cluster * >( );
+    }
+    _m2t_list->push_back( cluster );
+  }
+
+  /**
    * Returns cluster's interaction list.
    */
   std::vector< general_spacetime_cluster * > * get_interaction_list( ) {
@@ -310,6 +338,20 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
+   * Returns cluster's s2l list
+   */
+  std::vector< general_spacetime_cluster * > * get_s2l_list( ) {
+    return _s2l_list;
+  }
+
+  /**
+   * Returns cluster's m2t list
+   */
+  std::vector< general_spacetime_cluster * > * get_m2t_list( ) {
+    return _m2t_list;
+  }
+
+  /**
    * Determines temporal admissibility for a given general_spacetime_cluster
    * based on the "neighborhood criterion" (as in Messner's work).
    * @param[in] src_cluster Source cluster whose admissibility is checked.
@@ -318,6 +360,8 @@ class besthea::mesh::general_spacetime_cluster {
    * @note The current criterion guarantees that the distance in time of two
    * admissible clusters is greater than the minimum of the temporal half sizes
    * of the two clusters.
+   * @note The current criterion is also suitable to check for admissibility in
+   * adaptive situations (single sided expansions)
    */
   bool determine_temporal_admissibility(
     general_spacetime_cluster * src_cluster ) const {
@@ -896,8 +940,9 @@ class besthea::mesh::general_spacetime_cluster {
               << _box_coordinate[ 3 ] << ", " << _box_coordinate[ 4 ] << ")";
     std::cout << ", space_center: (" << _space_center[ 0 ] << ", "
               << _space_center[ 1 ] << ", " << _space_center[ 2 ] << ")";
-    std::cout << ", octant " << _octant;
+    std::cout << ", octant: " << _octant;
     std::cout << ", global_leaf_status: " << _global_leaf_status;
+    std::cout << ", process id: " << _process_id;
     // std::cout << ", elements: ";
     // for ( lou i = 0; i < _elements.size( ); ++i ) {
     //   std::cout << _elements[ i ] << " ";
@@ -920,6 +965,32 @@ class besthea::mesh::general_spacetime_cluster {
     //             << ff_box_coordinate[ 4 ] << "), ";
     //   }
     // }
+    // if ( _m2t_list != nullptr ) {
+    //   std::cout << ", m2t list: ";
+    //   for ( auto m2t_cluster : *_m2t_list ) {
+    //     std::vector< slou > m2t_box_coordinate
+    //       = m2t_cluster->get_box_coordinate( );
+    //     std::cout << "(" << m2t_box_coordinate[ 0 ] << ", "
+    //               << m2t_box_coordinate[ 1 ] << ", " << m2t_box_coordinate[ 2
+    //               ]
+    //               << ", " << m2t_box_coordinate[ 3 ] << ", "
+    //               << m2t_box_coordinate[ 4 ] << "), ";
+    //   }
+    // }
+
+    // if ( _s2l_list != nullptr ) {
+    //   std::cout << ", s2l list: ";
+    //   for ( auto s2l_cluster : *_s2l_list ) {
+    //     std::vector< slou > s2l_box_coordinate
+    //       = s2l_cluster->get_box_coordinate( );
+    //     std::cout << "(" << s2l_box_coordinate[ 0 ] << ", "
+    //               << s2l_box_coordinate[ 1 ] << ", " << s2l_box_coordinate[ 2
+    //               ]
+    //               << ", " << s2l_box_coordinate[ 3 ] << ", "
+    //               << s2l_box_coordinate[ 4 ] << "), ";
+    //   }
+    // }
+
     std::cout << std::endl;
     // if ( _children == nullptr ) {
     //   std::cout << "elements are: " << std::endl;
@@ -986,6 +1057,12 @@ class besthea::mesh::general_spacetime_cluster {
     _nearfield_list;  //!< nearfield list of the cluster
   std::vector< general_spacetime_cluster * > *
     _interaction_list;  //!< interaction list of the cluster
+  std::vector< general_spacetime_cluster * > *
+    _m2t_list;  //!< list of source clusters for which m2t operations have to be
+                //!< executed.
+  std::vector< general_spacetime_cluster * > *
+    _s2l_list;  //!< list of source clusters for which s2l operations have to be
+                //!< executed.
   sc * _moment;  //!< pointer to the moment of the cluster, which is stored in
                  //!< the associated scheduling_time_cluster
   sc * _local_contribution;  //!< pointer to the local contribution of the

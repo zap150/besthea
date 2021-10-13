@@ -31,6 +31,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/tree_structure.h"
 
 #include <algorithm>
+#include <unordered_set>
 
 besthea::mesh::tree_structure::tree_structure( const std::string & filename,
   const sc start_time, const sc end_time, const lo process_id )
@@ -227,6 +228,16 @@ void besthea::mesh::tree_structure::initialize_local_contributions_initial_op(
       initialize_local_contributions_initial_op( *child, contribution_size );
     }
   }
+}
+
+void besthea::mesh::tree_structure::set_m2t_and_s2l_lists( ) {
+  // first construct an auxiliary map from global indices to cluster pointers
+  std::unordered_map< lo, scheduling_time_cluster * >
+    global_indices_to_clusters;
+  initialize_map_global_index_to_cluster( *_root, global_indices_to_clusters );
+  // determine m2t and s2l lists for all clusters in the tree recursively by
+  // using the proper routine.
+  set_m2t_and_s2l_lists_recursively( *_root, global_indices_to_clusters );
 }
 
 void besthea::mesh::tree_structure::init_fmm_lists(
@@ -531,6 +542,86 @@ void besthea::mesh::tree_structure::add_leaves_to_nearfield_list(
       = current_cluster.get_children( );
     for ( auto it = children->begin( ); it != children->end( ); ++it ) {
       add_leaves_to_nearfield_list( **it, target_cluster );
+    }
+  }
+}
+
+void besthea::mesh::tree_structure::initialize_map_global_index_to_cluster(
+  scheduling_time_cluster & current_cluster,
+  std::unordered_map< lo, scheduling_time_cluster * > &
+    global_index_to_cluster ) const {
+  lo current_global_index = current_cluster.get_global_index( );
+  global_index_to_cluster.insert( { current_global_index, &current_cluster } );
+  if ( current_cluster.get_n_children( ) > 0 ) {
+    for ( auto child : *current_cluster.get_children( ) ) {
+      initialize_map_global_index_to_cluster( *child, global_index_to_cluster );
+    }
+  }
+}
+
+void besthea::mesh::tree_structure::set_m2t_and_s2l_lists_recursively(
+  scheduling_time_cluster & current_cluster,
+  const std::unordered_map< lo, scheduling_time_cluster * > &
+    global_index_to_cluster ) {
+  // m2t and s2l lists are only set for local clusters
+  if ( current_cluster.get_process_id( ) == _my_process_id ) {
+    const std::vector< general_spacetime_cluster * > *
+      associated_spacetime_clusters
+      = current_cluster.get_associated_spacetime_clusters( );
+    if ( associated_spacetime_clusters != nullptr ) {
+      std::unordered_set< lo > m2t_list_indices;
+      std::unordered_set< lo > s2l_list_indices;
+      // for all associated space-time clusters check if they have a non-empty
+      // m2t- or s2l-list; if yes, update the time clusters list accordingly.
+      for ( auto st_cluster : *associated_spacetime_clusters ) {
+        // consider the m2t list first
+        std::vector< general_spacetime_cluster * > * current_m2t_list
+          = st_cluster->get_m2t_list( );
+        if ( current_m2t_list != nullptr ) {
+          for ( auto m2t_source_cluster : *current_m2t_list ) {
+            m2t_list_indices.insert(
+              m2t_source_cluster->get_global_time_index( ) );
+          }
+        }
+        // now consider the s2l list
+        std::vector< general_spacetime_cluster * > * current_s2l_list
+          = st_cluster->get_s2l_list( );
+        if ( current_s2l_list != nullptr ) {
+          for ( auto s2l_source_cluster : *current_s2l_list ) {
+            s2l_list_indices.insert(
+              s2l_source_cluster->get_global_time_index( ) );
+          }
+        }
+      }
+      // use the sets of m2t and s2l cluster indices and the  map from global
+      // indices to temporal clusters to fill the m2t and s2l list of the
+      // current time cluster.
+      if ( !m2t_list_indices.empty( ) ) {
+        for ( auto m2t_source_cluster_index : m2t_list_indices ) {
+          if ( _my_process_id == 1 ) {
+            std::cout << "target index is: "
+                      << current_cluster.get_global_index( );
+            std::cout << ", source index is: " << m2t_source_cluster_index;
+          }
+          current_cluster.add_to_m2t_list(
+            global_index_to_cluster.at( m2t_source_cluster_index ) );
+          if ( _my_process_id == 1 ) {
+            std::cout << ", access successfull" << std::endl;
+          }
+        }
+      }
+      if ( !s2l_list_indices.empty( ) ) {
+        for ( auto s2l_source_cluster_index : s2l_list_indices ) {
+          current_cluster.add_to_s2l_list(
+            global_index_to_cluster.at( s2l_source_cluster_index ) );
+        }
+      }
+    }
+  }
+  // call the routine recursively for all children.
+  if ( current_cluster.get_n_children( ) > 0 ) {
+    for ( auto child : *current_cluster.get_children( ) ) {
+      set_m2t_and_s2l_lists_recursively( *child, global_index_to_cluster );
     }
   }
 }

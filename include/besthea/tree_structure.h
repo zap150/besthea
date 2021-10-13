@@ -180,6 +180,14 @@ class besthea::mesh::tree_structure {
     scheduling_time_cluster & current_cluster );
 
   /**
+   * Initializes the m2t and s2l lists of all local scheduling time clusters,
+   * whose associated space-time clusters have non-empty m2t or s2l lists.
+   * @note This routine is basically just a wrapper for
+   * @ref set_m2t_and_s2l_lists_recursively
+   */
+  void set_m2t_and_s2l_lists( );
+
+  /**
    * Traverses the tree recursively and adds all relevant clusters assigned to
    * the process @p _my_process_id to the 4 lists for scheduling operations in
    * the FMM.
@@ -410,6 +418,36 @@ class besthea::mesh::tree_structure {
    */
   void add_leaves_to_nearfield_list( scheduling_time_cluster & current_cluster,
     scheduling_time_cluster & target_cluster );
+
+  /**
+   * Initializes the m2t and s2l lists of all local scheduling time clusters,
+   * whose associated space-time clusters have non-empty m2t or s2l lists, by
+   * a recursive tree traversal.
+   * @param[in] current_cluster Current cluster in the tree traversal. Its m2t
+   * and s2l list are initialized if necessary.
+   * @param[in] global_index_to_cluster Auxiliary structure to access scheduling
+   * time clusters by knowing only their global index in the tree structure.
+   * @note The unordered map @p global_index_to_cluster can be constructed using
+   * @ref initialize_map_global_index_to_cluster.
+   */
+  void set_m2t_and_s2l_lists_recursively(
+    scheduling_time_cluster & current_cluster,
+    const std::unordered_map< lo, scheduling_time_cluster * > &
+      global_index_to_cluster );
+
+  /**
+   * Auxiliary routine that constructs a mapping from global indices to time
+   * clusters in the tree structure.
+   *
+   * The routine is based on a recursive tree traversal.
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   * @param[in,out] global_index_to_cluster Map which is constructed by the
+   * routine.
+   */
+  void initialize_map_global_index_to_cluster(
+    scheduling_time_cluster & current_cluster,
+    std::unordered_map< lo, scheduling_time_cluster * > &
+      global_index_to_cluster ) const;
 
   /**
    * Determines all clusters which should be refined during an expansion of the

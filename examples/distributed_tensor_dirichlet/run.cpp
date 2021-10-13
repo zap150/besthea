@@ -349,7 +349,7 @@ int main( int argc, char * argv[] ) {
     lo n_max_levels_spacetime_tree = 20;
     distributed_spacetime_cluster_tree distributed_st_tree( distributed_mesh,
       n_max_levels_spacetime_tree, c.n_min_elems_refine, c.st_coupling_coeff,
-      cauchy_data::_alpha, c.trunc_space, &comm, status );
+      cauchy_data::_alpha, c.trunc_space, false, &comm, status );
 
     if ( status > 0 ) {
       if ( my_rank == 0 ) {

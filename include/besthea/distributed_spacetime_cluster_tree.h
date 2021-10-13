@@ -71,6 +71,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * space-time clusters.
    * @param[in] spatial_nearfield_limit Number of clusters in the vicinity of a
    * given clusters to be considered as nearfield
+   * @param[in] enable_m2t_and_s2l If true, structures for the realization of
+   * m2t and s2l operations are initialized.
    * @param[in] comm MPI communicator associated with the tree.
    * @param[in,out] status  Indicates if the tree construction was successfull
    *                        (status 0) or not (status 1)
@@ -78,7 +80,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   distributed_spacetime_cluster_tree(
     distributed_spacetime_tensor_mesh & spacetime_mesh, lo max_levels,
     lo n_min_elems, sc st_coeff, sc alpha, slou spatial_nearfield_limit,
-    MPI_Comm * comm, lo & status );
+    bool enable_single_sided_expansions, MPI_Comm * comm, lo & status );
 
   /**
    * Destructor.
@@ -544,9 +546,10 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     std::vector< general_spacetime_cluster * > & non_local_leaves ) const;
 
   /**
-   * Collects space-time leaf clusters in the local part of the distributed tree
-   * which are leaves in the global tree (i.e. real leaves). The leaves include
-   * non-local leaves, which are in the nearfield of local leaf clusters.
+   * Collects space-time leaf clusters in the locally essential part of the
+   * distributed tree which are leaves in the global tree (i.e. real leaves).
+   * The leaves include non-local leaves, which are in the nearfield of local
+   * leaf clusters.
    *
    * The routine is based on a traversal of the local part of the spacetime
    * cluster tree and the temporal tree structure.
@@ -720,9 +723,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     std::vector< general_spacetime_cluster * > & non_leaf_buffer );
 
   /**
-   * Computes and sets the nearfield list and interaction list for every
-   * cluster in the distributed spacetime cluster tree by recursively traversing
-   * the tree.
+   * Initializes the nearfield list and interaction list for every cluster in
+   * the distributed spacetime cluster tree by recursively traversing the tree.
    * @param[in] root  Current cluster in the tree traversal.
    * @warning The construction is based only on the local part of the cluster
    * tree. Only for local clusters the nearfield and interaction lists are the
@@ -740,6 +742,32 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    */
   void add_leaves_to_nearfield_list(
     general_spacetime_cluster & current_cluster,
+    general_spacetime_cluster & target_cluster );
+
+  /**
+   * Initializes the nearfield list and interaction list for every cluster in
+   * the distributed spacetime cluster tree by recursively traversing the tree.
+   * In addition, it initializes the m2t and s2l of appropriate clusters.
+   * @param[in] root  Current cluster in the tree traversal.
+   * @warning The construction is based only on the local part of the cluster
+   * tree. Only for local clusters the nearfield and interaction lists are the
+   * same as in the global tree.
+   */
+  void fill_nearfield_interaction_m2t_and_s2l_lists(
+    general_spacetime_cluster & current_cluster );
+
+  /**
+   * Used for the construction of nearfields and m2t lists of early leaf
+   * clusters by @ref fill_nearfield_interaction_m2t_and_s2l_lists. It
+   * recursively traverses the tree starting from the initial cluster
+   * @p current_source, and updates the nearfield and m2t list of
+   * @p target_cluster appropriately.
+   * @param[in] current_source  Current source cluster in the tree traversal.
+   * @param[in] target_cluster  Cluster whose nearfield and m2t lists are
+   * updated.
+   */
+  void determine_operation_lists_in_subtree(
+    general_spacetime_cluster & current_source,
     general_spacetime_cluster & target_cluster );
 
   /**
@@ -887,6 +915,11 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
                                   //!< access)
   slou _spatial_nearfield_limit;  //!< number of the clusters in the vicinity to
                                   //!< be considered as nearfield
+  // bool _enable_m2t_and_s2l;       //!< If this is true, s2l- and m2t-lists
+  //                                 //!< of appropriate clusters in the tree
+  //                                 //!< are initiliazed in addition to the
+  //                                 //!< nearfield and interaction lists.
+
   const std::vector< std::vector< lo > > _idx_2_coord = { { 1, 1, 1 },
     { 0, 1, 1 }, { 0, 0, 1 }, { 1, 0, 1 }, { 1, 1, 0 }, { 0, 1, 0 },
     { 0, 0, 0 },

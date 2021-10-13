@@ -182,9 +182,6 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
     return _space_mesh->get_n_edges( );
   }
 
-  // FIXME: IMHO, i_element and i_node should be indices of
-  // spacetime_tensor_mesh and not the underlying spatial mesh
-
   /**
    * Returns the node indices of a spatial element.
    * @param[in] i_space_element Index of the spatial element.

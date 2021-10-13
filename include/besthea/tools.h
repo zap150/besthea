@@ -35,7 +35,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDE_BESTHEA_TOOLS_H_
 #define INCLUDE_BESTHEA_TOOLS_H_
 
+#include "besthea/io_routines.h"
 #include "besthea/timer.h"
-#include "io_routines.h"
 
 #endif /* INCLUDE_BESTHEA_TOOLS_H_ */

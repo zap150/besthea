@@ -90,6 +90,8 @@ class besthea::mesh::scheduling_time_cluster {
       _mesh_available( false ),
       _nearfield_list( nullptr ),
       _interaction_list( nullptr ),
+      _m2t_list( nullptr ),
+      _s2l_list( nullptr ),
       _send_list( nullptr ),
       _essential_status( -1 ),
       _active_upward_path( false ),
@@ -130,6 +132,10 @@ class besthea::mesh::scheduling_time_cluster {
       delete _nearfield_list;
     if ( _interaction_list != nullptr )
       delete _interaction_list;
+    if ( _m2t_list != nullptr )
+      delete _m2t_list;
+    if ( _s2l_list != nullptr )
+      delete _s2l_list;
     if ( _send_list != nullptr )
       delete _send_list;
     if ( _associated_spacetime_clusters != nullptr )
@@ -385,7 +391,7 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Adds a cluster to @p _nearfield_list.
+   * Adds a cluster to @ref _nearfield_list.
    * @param[in] src_cluster Pointer to a nearfield cluster.
    * @note If @p _nearfield_list is not allocated this is done here.
    */
@@ -426,7 +432,7 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Adds a cluster to @p _interaction_list.
+   * Adds a cluster to @ref _interaction_list.
    * @param[in] src_cluster Pointer to a farfield cluster.
    * @note If @p _interaction_list is not allocated this is done here.
    */
@@ -435,6 +441,60 @@ class besthea::mesh::scheduling_time_cluster {
       _interaction_list = new std::vector< scheduling_time_cluster * >( );
     }
     _interaction_list->push_back( src_cluster );
+  }
+
+  /**
+   * Adds a cluster to @ref _m2t_list.
+   * @param[in] src_cluster Pointer to a source cluster for which m2t operations
+   * have to be exectued.
+   * @note If @p _m2t_list is not allocated this is done here.
+   */
+  void add_to_m2t_list( scheduling_time_cluster * src_cluster ) {
+    if ( _m2t_list == nullptr ) {
+      _m2t_list = new std::vector< scheduling_time_cluster * >( );
+    }
+    _m2t_list->push_back( src_cluster );
+  }
+
+  /**
+   * Returns a pointer to the m2t list.
+   */
+  std::vector< scheduling_time_cluster * > * get_m2t_list( ) {
+    return _m2t_list;
+  }
+
+  /**
+   * Returns a pointer to the const m2t list.
+   */
+  const std::vector< scheduling_time_cluster * > * get_m2t_list( ) const {
+    return _m2t_list;
+  }
+
+  /**
+   * Adds a cluster to @ref _s2l_list.
+   * @param[in] src_cluster Pointer to a source cluster for which s2l operations
+   * have to be exectued.
+   * @note If @p _s2l_list is not allocated this is done here.
+   */
+  void add_to_s2l_list( scheduling_time_cluster * src_cluster ) {
+    if ( _s2l_list == nullptr ) {
+      _s2l_list = new std::vector< scheduling_time_cluster * >( );
+    }
+    _s2l_list->push_back( src_cluster );
+  }
+
+  /**
+   * Returns a pointer to the s2l list.
+   */
+  std::vector< scheduling_time_cluster * > * get_s2l_list( ) {
+    return _s2l_list;
+  }
+
+  /**
+   * Returns a pointer to the const s2l list.
+   */
+  const std::vector< scheduling_time_cluster * > * get_s2l_list( ) const {
+    return _s2l_list;
   }
 
   /**
@@ -983,6 +1043,20 @@ class besthea::mesh::scheduling_time_cluster {
     if ( _global_leaf_status ) {
       std::cout << ", is global leaf";
     }
+    if ( _m2t_list != nullptr ) {
+      std::cout << ", m2t list: ";
+      for ( lou i = 0; i < _m2t_list->size( ); ++i ) {
+        std::cout << "(" << ( *_m2t_list )[ i ]->get_level( ) << ", "
+                  << ( *_m2t_list )[ i ]->get_global_index( ) << "), ";
+      }
+    }
+    if ( _s2l_list != nullptr ) {
+      std::cout << ", s2l list: ";
+      for ( lou i = 0; i < _s2l_list->size( ); ++i ) {
+        std::cout << "(" << ( *_s2l_list )[ i ]->get_level( ) << ", "
+                  << ( *_s2l_list )[ i ]->get_global_index( ) << "), ";
+      }
+    }
     // if ( _nearfield_list != nullptr ) {
     //   std::cout << ", nearfield: ";
     //   for ( lou i = 0; i < _nearfield_list->size( ); ++i ) {
@@ -1110,6 +1184,12 @@ class besthea::mesh::scheduling_time_cluster {
     _nearfield_list;  //!< Nearfield of the cluster.
   std::vector< scheduling_time_cluster * > *
     _interaction_list;  //!< Interaction list of the cluster.
+  std::vector< scheduling_time_cluster * > *
+    _m2t_list;  //!< List of source clusters for which m2t operations have to be
+                //!< executed.
+  std::vector< scheduling_time_cluster * > *
+    _s2l_list;  //!< List of source clusters for which s2l operations have to be
+                //!< executed.
   std::vector< scheduling_time_cluster * > *
     _send_list;  //!< Contains all clusters in whose interaction list the
                  //!< cluster is contained.
