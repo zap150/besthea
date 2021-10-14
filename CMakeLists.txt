@@ -221,7 +221,7 @@ target_compile_definitions(besthea PUBLIC
   MKL_INT=long
   BESTHEA_SIMD_WIDTH=${BESTHEA_SIMD_WIDTH})
   
-if(BESTHEA_USE_CUDA)
+if(BESTHEA_IS_USING_CUDA)
   set(besthea_cuda_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
   add_library(besthea_cuda STATIC ${besthea_cuda_SOURCES})
   target_include_directories(besthea_cuda PUBLIC ${besthea_INCLUDE_DIRS})
@@ -247,7 +247,7 @@ endif()
 install(TARGETS ${PROJECT_NAME}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}
   )  
-if(BESTHEA_USE_CUDA)
+if(BESTHEA_IS_USING_CUDA)
   install(TARGETS besthea_cuda
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}
     )
