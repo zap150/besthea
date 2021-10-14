@@ -8,9 +8,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake/Modules)
 
 check_insource()
 setup_compiler()
-if(BESTHEA_USE_CUDA)
-  setup_CUDA()
-endif()
+setup_CUDA()
 
 enable_filesystem()
 enable_MKL()

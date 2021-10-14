@@ -174,20 +174,37 @@ macro(enable_Lyra)
 endmacro()
 
 macro(setup_CUDA)
-  set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
+  string(TOUPPER "${USE_CUDA}" USE_CUDA )
 
-  enable_language(CUDA)
+  if("${USE_CUDA}" STREQUAL "REQUIRE")
+    find_package(CUDA REQUIRED)
+  elseif(NOT "${USE_CUDA}" STREQUAL "FORBID")
+    find_package(CUDA QUIET)
+  endif()
 
-  cmake_policy(SET CMP0074 NEW)
+  if(CUDA_FOUND)
+    set(BESTHEA_USE_CUDA ON)
 
-  find_package(CUDA REQUIRED)
-
-  cmake_policy(SET CMP0104 NEW)
-  set(CMAKE_CUDA_ARCHITECTURES 60-virtual)
-
-  # older nvcc does not support -forward-unknown-to-host-compiler at all
-  if(CMAKE_CUDA_COMPILER_VERSION VERSION_LESS 10.2.89)
-    message(FATAL_ERROR "CUDA compiler is too old, besthea can be"
-      " compiled only with nvcc 10.2.89 or higher")
+    set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
+  
+    enable_language(CUDA)
+  
+    cmake_policy(SET CMP0074 NEW)
+  
+    cmake_policy(SET CMP0104 NEW)
+    set(CMAKE_CUDA_ARCHITECTURES 60-virtual)
+  
+    # older nvcc does not support -forward-unknown-to-host-compiler at all
+    if(CMAKE_CUDA_COMPILER_VERSION VERSION_LESS 10.2.89)
+      if("${USE_CUDA}" STREQUAL "REQUIRE")
+        message(FATAL_ERROR "CUDA compiler is too old, besthea can be"
+          " compiled only with nvcc 10.2.89 or higher")
+      else()
+        message(WARNING "CUDA compiler is too old, besthea can be"
+          " compiled only with nvcc 10.2.89 or higher. CUDA will not be used")
+      endif()
+    endif()
+  else()
+    set(BESTHEA_USE_CUDA OFF)
   endif()
 endmacro()
