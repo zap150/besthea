@@ -32,6 +32,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <exception>
 #include <cuda_runtime.h>
+#include "besthea/gpu_onthefly_helpers.h"
 
 
 
@@ -42,9 +43,11 @@ besthea::mesh::uniform_spacetime_tensor_mesh_gpu::
     const besthea::mesh::uniform_spacetime_tensor_mesh & orig_mesh) {
 
   n_gpus = 0;
-  cudaGetDeviceCount(&n_gpus);
+  cudaError_t errDc = cudaGetDeviceCount(&n_gpus);
+  if(errDc != cudaErrorNoDevice)
+    CUDA_CHECK(errDc);
   
-  if(n_gpus == 0 || cudaGetLastError() == cudaErrorNoDevice) {
+  if(n_gpus == 0 || errDc == cudaErrorNoDevice) {
     if(besthea::settings::output_verbosity.warnings >= 1) {
       std::cerr << "BESTHEA Warning: Constructing GPU mesh, "
         "but no cuda-capable GPUs were detected.\n";
@@ -60,31 +63,20 @@ besthea::mesh::uniform_spacetime_tensor_mesh_gpu::
   per_gpu_data.resize(n_gpus);
   for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
 
-    cudaSetDevice(gpu_idx);
+    CUDA_CHECK(cudaSetDevice(gpu_idx));
 
     mesh_raw_data &curr_gpu_data = per_gpu_data[gpu_idx];
 
-    cudaMalloc(&curr_gpu_data.d_element_areas,       metadata.n_elems * sizeof(*curr_gpu_data.d_element_areas));
-    cudaMalloc(&curr_gpu_data.d_node_coords,     3 * metadata.n_nodes * sizeof(*curr_gpu_data.d_node_coords));
-    cudaMalloc(&curr_gpu_data.d_element_nodes,   3 * metadata.n_elems * sizeof(*curr_gpu_data.d_element_nodes));
-    cudaMalloc(&curr_gpu_data.d_element_normals, 3 * metadata.n_elems * sizeof(*curr_gpu_data.d_element_normals));
+    CUDA_CHECK(cudaMalloc(&curr_gpu_data.d_element_areas,       metadata.n_elems * sizeof(*curr_gpu_data.d_element_areas)));
+    CUDA_CHECK(cudaMalloc(&curr_gpu_data.d_node_coords,     3 * metadata.n_nodes * sizeof(*curr_gpu_data.d_node_coords)));
+    CUDA_CHECK(cudaMalloc(&curr_gpu_data.d_element_nodes,   3 * metadata.n_elems * sizeof(*curr_gpu_data.d_element_nodes)));
+    CUDA_CHECK(cudaMalloc(&curr_gpu_data.d_element_normals, 3 * metadata.n_elems * sizeof(*curr_gpu_data.d_element_normals)));
 
-    cudaMemcpy(curr_gpu_data.d_element_areas,   orig_mesh.get_spatial_surface_mesh()->get_areas().data(),        metadata.n_elems * sizeof(*curr_gpu_data.d_element_areas),   cudaMemcpyHostToDevice);
-    cudaMemcpy(curr_gpu_data.d_node_coords,     orig_mesh.get_spatial_surface_mesh()->get_nodes().data(),    3 * metadata.n_nodes * sizeof(*curr_gpu_data.d_node_coords),     cudaMemcpyHostToDevice);
-    cudaMemcpy(curr_gpu_data.d_element_nodes,   orig_mesh.get_spatial_surface_mesh()->get_elements().data(), 3 * metadata.n_elems * sizeof(*curr_gpu_data.d_element_nodes),   cudaMemcpyHostToDevice);
-    cudaMemcpy(curr_gpu_data.d_element_normals, orig_mesh.get_spatial_surface_mesh()->get_normals().data(),  3 * metadata.n_elems * sizeof(*curr_gpu_data.d_element_normals), cudaMemcpyHostToDevice);
+    CUDA_CHECK(cudaMemcpy(curr_gpu_data.d_element_areas,   orig_mesh.get_spatial_surface_mesh()->get_areas().data(),        metadata.n_elems * sizeof(*curr_gpu_data.d_element_areas),   cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(curr_gpu_data.d_node_coords,     orig_mesh.get_spatial_surface_mesh()->get_nodes().data(),    3 * metadata.n_nodes * sizeof(*curr_gpu_data.d_node_coords),     cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(curr_gpu_data.d_element_nodes,   orig_mesh.get_spatial_surface_mesh()->get_elements().data(), 3 * metadata.n_elems * sizeof(*curr_gpu_data.d_element_nodes),   cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(curr_gpu_data.d_element_normals, orig_mesh.get_spatial_surface_mesh()->get_normals().data(),  3 * metadata.n_elems * sizeof(*curr_gpu_data.d_element_normals), cudaMemcpyHostToDevice));
   }
-
-  if(n_gpus > 0) {
-    cudaError_t err = cudaGetLastError();
-    if(err != cudaSuccess) {
-      std::cerr << "BESTHEA Error: gpu mesh init, detected cuda error "
-        << err << ": " << cudaGetErrorString(err) << ".\n";
-      free();
-      throw std::runtime_error("BESTHEA Exception: cuda error");
-    }
-  }
-
 }
 
 
@@ -101,26 +93,16 @@ void besthea::mesh::uniform_spacetime_tensor_mesh_gpu::free() {
 
   for(unsigned int gpu_idx = 0; gpu_idx < per_gpu_data.size(); gpu_idx++) {
 
-    cudaSetDevice(gpu_idx);
+    CUDA_CHECK(cudaSetDevice(gpu_idx));
 
     mesh_raw_data &curr_gpu_data = per_gpu_data[gpu_idx];
 
-    cudaFree(curr_gpu_data.d_element_areas);
-    cudaFree(curr_gpu_data.d_node_coords);
-    cudaFree(curr_gpu_data.d_element_nodes);
-    cudaFree(curr_gpu_data.d_element_normals);
+    CUDA_CHECK(cudaFree(curr_gpu_data.d_element_areas));
+    CUDA_CHECK(cudaFree(curr_gpu_data.d_node_coords));
+    CUDA_CHECK(cudaFree(curr_gpu_data.d_element_nodes));
+    CUDA_CHECK(cudaFree(curr_gpu_data.d_element_normals));
   }
   per_gpu_data.clear();
-
-  if(n_gpus > 0) {
-    cudaError_t err = cudaGetLastError();
-    if(err != cudaSuccess) {
-      std::cerr << "BESTHEA Error: gpu mesh free, detected cuda error "
-        << err << ": " << cudaGetErrorString(err) << ".\n";
-      throw std::runtime_error("BESTHEA Exception: cuda error");
-    }
-  }
-
 }
 
 

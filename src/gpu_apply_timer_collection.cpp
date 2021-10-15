@@ -41,7 +41,7 @@ besthea::bem::onthefly::gpu_apply_timer_collection::
   gpu_copyout.resize(n_gpus);
 
   for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
-    cudaSetDevice(gpu_idx);
+    CUDA_CHECK(cudaSetDevice(gpu_idx));
     gpu_all[gpu_idx].init(gpu_idx, 0);
     gpu_copyin[gpu_idx].init(gpu_idx, 0);
     gpu_compute[gpu_idx].init(gpu_idx, 0);

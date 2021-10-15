@@ -36,9 +36,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define INCLUDE_BESTHEA_GPU_ONTHEFLY_HELPERS_H_
 
 #include "besthea/settings.h"
-#include "besthea/time_measurer.h"
-#include "besthea/time_measurer_cuda.h"
-#include "besthea/uniform_spacetime_tensor_mesh.h"
 
 #include <cmath>
 #include <cuda_runtime.h>
@@ -129,5 +126,13 @@ struct besthea::bem::onthefly::helpers::heat_kernel_parameters {
     sqrt_pi = std::sqrt( M_PI );
   }
 };
+
+#define CUDA_CHECK(err) if(err!=cudaSuccess) {                                 \
+  std::cerr << "CUDA error " << err << " '" << cudaGetErrorString(err) <<"':\n"\
+    << "  in file '" << __FILE__ << "'\n"                                      \
+    << "  in function '" << __func__ << "'\n"                                  \
+    << "  on line " << __LINE__ << "'\n";                                      \
+  throw std::runtime_error("BESTHEA Exception: cuda error");                   \
+}
 
 #endif /* INCLUDE_BESTHEA_GPU_ONTHEFLY_HELPERS_H_ */

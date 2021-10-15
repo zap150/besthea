@@ -37,7 +37,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <iostream>
 #include <cuda_runtime.h>
-#include <besthea/settings.h>
+#include "besthea/settings.h"
+#include "besthea/gpu_onthefly_helpers.h"
 
 
 
@@ -63,7 +64,7 @@ public:
     this->was_inited = false;
 
     int curr_gpu_idx;
-    cudaGetDevice(&curr_gpu_idx);
+    CUDA_CHECK(cudaGetDevice(&curr_gpu_idx));
     this->init(curr_gpu_idx, 0);
   }
 
@@ -96,7 +97,7 @@ public:
     }
 
     int curr_gpu_idx;
-    cudaGetDevice(&curr_gpu_idx);
+    CUDA_CHECK(cudaGetDevice(&curr_gpu_idx));
     if(curr_gpu_idx != gpu_idx_) {
       if(besthea::settings::output_verbosity.warnings >= 1) {
         std::cerr << "BESTHEA Warning: time measurer cuda, current device is " << curr_gpu_idx << " but " << gpu_idx_ << " was provided\n";
@@ -107,9 +108,9 @@ public:
 
     this->gpu_idx = gpu_idx_;
     this->stream = stream_;
-    cudaSetDevice(gpu_idx);
-    cudaEventCreate(&start_event);
-    cudaEventCreate(&stop_event);
+    CUDA_CHECK(cudaSetDevice(gpu_idx));
+    CUDA_CHECK(cudaEventCreate(&start_event));
+    CUDA_CHECK(cudaEventCreate(&stop_event));
     reset();
     
     this->was_inited = true;
@@ -119,8 +120,8 @@ public:
    * Destroys the cuda events.
    */
   void destroy() {
-    cudaEventDestroy(start_event);
-    cudaEventDestroy(stop_event);
+    CUDA_CHECK(cudaEventDestroy(start_event));
+    CUDA_CHECK(cudaEventDestroy(stop_event));
   }
 
   /*!
@@ -128,14 +129,14 @@ public:
    */
   void start_submit() {
     int curr_gpu_idx;
-    cudaGetDevice(&curr_gpu_idx);
+    CUDA_CHECK(cudaGetDevice(&curr_gpu_idx));
     if(curr_gpu_idx != gpu_idx) {
       if(besthea::settings::output_verbosity.warnings >= 1) {
         std::cerr << "BESTHEA Warning: time measurer cuda, was initialized with gpu_idx=" << gpu_idx << " but current is gpu_idx=" << curr_gpu_idx << "\n";
       }
     }
 
-    cudaEventRecord(start_event, stream);
+    CUDA_CHECK(cudaEventRecord(start_event, stream));
   }
 
   /*!
@@ -143,14 +144,14 @@ public:
    */
   void stop_submit() {
     int curr_gpu_idx;
-    cudaGetDevice(&curr_gpu_idx);
+    CUDA_CHECK(cudaGetDevice(&curr_gpu_idx));
     if(curr_gpu_idx != gpu_idx) {
       if(besthea::settings::output_verbosity.warnings >= 1) {
         std::cerr << "BESTHEA Warning: time measurer cuda, was initialized with gpu_idx=" << gpu_idx << " but current is gpu_idx=" << curr_gpu_idx << "\n";
       }
     }
 
-    cudaEventRecord(stop_event, stream);
+    CUDA_CHECK(cudaEventRecord(stop_event, stream));
     this->was_time_collected = false;
   }
 
@@ -181,15 +182,15 @@ private:
    */
   void collect_time() {
     int orig_gpu_idx;
-    cudaGetDevice(&orig_gpu_idx);
-    cudaSetDevice(gpu_idx);
+    CUDA_CHECK(cudaGetDevice(&orig_gpu_idx));
+    CUDA_CHECK(cudaSetDevice(gpu_idx));
 
     float dur;
-    cudaEventSynchronize(stop_event);
-    cudaEventElapsedTime(&dur, start_event, stop_event);
+    CUDA_CHECK(cudaEventSynchronize(stop_event));
+    CUDA_CHECK(cudaEventElapsedTime(&dur, start_event, stop_event));
     this->elapsed_time += dur / 1000.0;
     
-    cudaSetDevice(orig_gpu_idx);
+    CUDA_CHECK(cudaSetDevice(orig_gpu_idx));
   }
 
 private:
