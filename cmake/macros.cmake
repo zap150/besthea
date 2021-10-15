@@ -85,9 +85,9 @@ macro(setup_compiler)
   elseif (CMAKE_CXX_COMPILER_ID MATCHES IntelLLVM)
     message(STATUS "Using IntelLLVM ${CMAKE_CXX_COMPILER_VERSION} toolchain")
 
-    if(${CMAKE_VERSION} VERSION_LESS "3.20.6")
+    if(${CMAKE_VERSION} VERSION_LESS "3.20.2")
       message(FATAL_ERROR
-        "CMake >= 3.20.6 required to compile with the Intel LLVM compiler")
+        "CMake >= 3.20.2 required to compile with the Intel LLVM compiler")
     endif()
 
     add_compile_options(-Wall -Wextra -pedantic-errors)
