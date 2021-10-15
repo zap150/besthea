@@ -42,10 +42,10 @@ besthea::bem::onthefly::gpu_apply_timer_collection::
 
   for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
     CUDA_CHECK(cudaSetDevice(gpu_idx));
-    gpu_all[gpu_idx].init(gpu_idx, 0);
-    gpu_copyin[gpu_idx].init(gpu_idx, 0);
-    gpu_compute[gpu_idx].init(gpu_idx, 0);
-    gpu_copyout[gpu_idx].init(gpu_idx, 0);
+    gpu_all[gpu_idx].init(0);
+    gpu_copyin[gpu_idx].init(0);
+    gpu_compute[gpu_idx].init(0);
+    gpu_copyout[gpu_idx].init(0);
   }
 }
 

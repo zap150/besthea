@@ -63,20 +63,17 @@ public:
   time_measurer_cuda() {
     this->was_inited = false;
 
-    int curr_gpu_idx;
-    CUDA_CHECK(cudaGetDevice(&curr_gpu_idx));
-    this->init(curr_gpu_idx, 0);
+    this->init(0);
   }
 
   /*!
    * Constructor.
-   * @param[in] gpu_idx_ Index of the watched cuda device.
    * @param[in] stream_ Cuda stream to place the events in.
    */
-  time_measurer_cuda(int gpu_idx_, cudaStream_t stream_) {
+  time_measurer_cuda(cudaStream_t stream_) {
     this->was_inited = false;
 
-    this->init(gpu_idx_, stream_);
+    this->init(stream_);
   }
 
   /*!
@@ -88,27 +85,14 @@ public:
   
   /*!
    * Initialization method.
-   * @param[in] gpu_idx_ Index of the used cuda device.
    * @param[in] stream_ Cuda stream to place the events in.
    */
-  void init(int gpu_idx_, cudaStream_t stream_) {
+  void init(cudaStream_t stream_) {
     if(this->was_inited) {
       destroy();
     }
 
-    int curr_gpu_idx;
-    CUDA_CHECK(cudaGetDevice(&curr_gpu_idx));
-    if(curr_gpu_idx != gpu_idx_) {
-      if(besthea::settings::output_verbosity.warnings >= 1) {
-        std::cerr << "BESTHEA Warning: time measurer cuda, current device is " << curr_gpu_idx << " but " << gpu_idx_ << " was provided\n";
-      }
-      this->gpu_idx = -1;
-      return;
-    }
-
-    this->gpu_idx = gpu_idx_;
     this->stream = stream_;
-    CUDA_CHECK(cudaSetDevice(gpu_idx));
     CUDA_CHECK(cudaEventCreate(&start_event));
     CUDA_CHECK(cudaEventCreate(&stop_event));
     reset();
@@ -128,14 +112,6 @@ public:
    * Submits a cuda event marking the start of the measured timespan.
    */
   void start_submit() {
-    int curr_gpu_idx;
-    CUDA_CHECK(cudaGetDevice(&curr_gpu_idx));
-    if(curr_gpu_idx != gpu_idx) {
-      if(besthea::settings::output_verbosity.warnings >= 1) {
-        std::cerr << "BESTHEA Warning: time measurer cuda, was initialized with gpu_idx=" << gpu_idx << " but current is gpu_idx=" << curr_gpu_idx << "\n";
-      }
-    }
-
     CUDA_CHECK(cudaEventRecord(start_event, stream));
   }
 
@@ -143,14 +119,6 @@ public:
    * Submits a cuda event marking the end of the measured timespan.
    */
   void stop_submit() {
-    int curr_gpu_idx;
-    CUDA_CHECK(cudaGetDevice(&curr_gpu_idx));
-    if(curr_gpu_idx != gpu_idx) {
-      if(besthea::settings::output_verbosity.warnings >= 1) {
-        std::cerr << "BESTHEA Warning: time measurer cuda, was initialized with gpu_idx=" << gpu_idx << " but current is gpu_idx=" << curr_gpu_idx << "\n";
-      }
-    }
-
     CUDA_CHECK(cudaEventRecord(stop_event, stream));
     this->was_time_collected = false;
   }
@@ -181,21 +149,14 @@ private:
    * Synchronizes with end event and computes elapsed time.
    */
   void collect_time() {
-    int orig_gpu_idx;
-    CUDA_CHECK(cudaGetDevice(&orig_gpu_idx));
-    CUDA_CHECK(cudaSetDevice(gpu_idx));
-
     float dur;
     CUDA_CHECK(cudaEventSynchronize(stop_event));
     CUDA_CHECK(cudaEventElapsedTime(&dur, start_event, stop_event));
     this->elapsed_time += dur / 1000.0;
-    
-    CUDA_CHECK(cudaSetDevice(orig_gpu_idx));
   }
 
 private:
 
-  int gpu_idx; //!< Index of the used GPU
   cudaStream_t stream; //!< Used cuda stream
 	cudaEvent_t start_event; //!< Event marking the start of measured period
 	cudaEvent_t stop_event; //!< Event marking the end of the measured period
