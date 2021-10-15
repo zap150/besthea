@@ -154,9 +154,10 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type,
         ttau = ( delta + 0.5 ) * timestep;
 
         for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
-          st_mesh.get_spatial_nodes( i_elem, y1, y2, y3 );
-          st_mesh.get_spatial_normal( i_elem, ny );
-          area = st_mesh.spatial_area( i_elem );
+          st_mesh.get_spatial_nodes_using_spatial_element_index(
+            i_elem, y1, y2, y3 );
+          st_mesh.get_spatial_normal_using_spatial_element_index( i_elem, ny );
+          area = st_mesh.get_spatial_area_using_spatial_index( i_elem );
           basis.local_to_global( i_elem, l2g );
           triangle_to_geometry( y1, y2, y3, my_quadrature );
 
@@ -303,9 +304,10 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type, space_type >::
         sc ttau = delta * timestep + diff;
 
         for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
-          st_mesh.get_spatial_nodes( i_elem, y1, y2, y3 );
-          st_mesh.get_spatial_normal( i_elem, ny );
-          sc area = st_mesh.spatial_area( i_elem );
+          st_mesh.get_spatial_nodes_using_spatial_element_index(
+            i_elem, y1, y2, y3 );
+          st_mesh.get_spatial_normal_using_spatial_element_index( i_elem, ny );
+          sc area = st_mesh.get_spatial_area_using_spatial_index( i_elem );
           basis.local_to_global( i_elem, l2g );
           triangle_to_geometry( y1, y2, y3, my_quadrature );
 
@@ -347,9 +349,10 @@ void besthea::bem::uniform_spacetime_be_evaluator< kernel_type, space_type >::
       // adding last part
       if ( diff > 0.0 ) {
         for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
-          st_mesh.get_spatial_nodes( i_elem, y1, y2, y3 );
-          st_mesh.get_spatial_normal( i_elem, ny );
-          sc area = st_mesh.spatial_area( i_elem );
+          st_mesh.get_spatial_nodes_using_spatial_element_index(
+            i_elem, y1, y2, y3 );
+          st_mesh.get_spatial_normal_using_spatial_element_index( i_elem, ny );
+          sc area = st_mesh.get_spatial_area_using_spatial_index( i_elem );
           basis.local_to_global( i_elem, l2g );
           triangle_to_geometry( y1, y2, y3, my_quadrature );
 

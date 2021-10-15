@@ -94,6 +94,7 @@ class besthea::mesh::scheduling_time_cluster {
       _essential_status( -1 ),
       _active_upward_path( false ),
       _active_downward_path( false ),
+      _status_initial_op_downward_path( 0 ),
       _upward_path_counter( -1 ),
       _m2l_counter( 0 ),
       _downward_path_status( 0 ),
@@ -262,8 +263,15 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
+   * Returns a pointer to the parent.
+   */
+  const scheduling_time_cluster * get_parent( ) const {
+    return _parent;
+  }
+
+  /**
    * Returns the configuration of the cluster with respect to its parent, i.e.
-   * the value of _left_right
+   * the value of @ref _left_right
    */
   short get_configuration( ) const {
     return _left_right;
@@ -564,6 +572,21 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
+   * Sets @ref _status_initial_op_downward_path.
+   * \param[in] new_status  Value to set.
+   */
+  void set_status_initial_op_downward_path( const char new_status ) {
+    _status_initial_op_downward_path = new_status;
+  }
+
+  /**
+   * Returns the value of @ref _status_initial_op_downward_path
+   */
+  char get_status_in_initial_op_downward_path( ) const {
+    return _status_initial_op_downward_path;
+  }
+
+  /**
    * Sets the upward path counter to the given value.
    * @param[in] upward_path_counter Value to set.
    */
@@ -861,17 +884,6 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Determines whether the current cluster is the left child of its parent.
-   * @note If the current cluster is the root of the tree \p false is returned.
-   */
-  bool is_left_child( ) const {
-    if ( _parent == nullptr )
-      return false;
-    else
-      return ( this == _parent->_children->front( ) );
-  }
-
-  /**
    * Allocates an array containing all the moments of the associated
    * spacetime clusters. In addition, for each associated spacetime cluster it
    * sets the pointer to the appropriate moment.
@@ -963,7 +975,7 @@ class besthea::mesh::scheduling_time_cluster {
   /**
    * Prints info of the object.
    */
-  void print( lo executing_process_id = -1 ) {
+  void print( lo executing_process_id = -1 ) const {
     std::cout << "level: " << _level << ", center: " << _center
               << ", half size: " << _half_size
               << ", global_index: " << _global_index
@@ -1031,7 +1043,7 @@ class besthea::mesh::scheduling_time_cluster {
    * Returns position in @ref
    * besthea::linear_algebra::distributed_pFMM_matrix::_m_list
    */
-  lo get_pos_in_m_list( ) {
+  lo get_pos_in_m_list( ) const {
     return _pos_in_m_list;
   }
 
@@ -1048,7 +1060,7 @@ class besthea::mesh::scheduling_time_cluster {
    * Returns position in @ref
    * besthea::linear_algebra::distributed_pFMM_matrix::_l_list
    */
-  lo get_pos_in_l_list( ) {
+  lo get_pos_in_l_list( ) const {
     return _pos_in_l_list;
   }
 
@@ -1065,7 +1077,7 @@ class besthea::mesh::scheduling_time_cluster {
    * Returns position in @ref
    * besthea::linear_algebra::distributed_pFMM_matrix::_m2l_list
    */
-  lo get_pos_in_m2l_list( ) {
+  lo get_pos_in_m2l_list( ) const {
     return _pos_in_m2l_list;
   }
 
@@ -1074,7 +1086,7 @@ class besthea::mesh::scheduling_time_cluster {
   sc _half_size;                      //!< Half size of the cluster.
   scheduling_time_cluster * _parent;  //!< Parent of the cluster.
   short _left_right;  //!< Indicates if the child is the left (0), or right (1)
-                      //!< child of its parent.
+                      //!< child of its parent (-1 for root).
   std::vector< scheduling_time_cluster * > *
     _children;       //!< Children of the cluster.
   lo _level;         //!< Level within the cluster tree.
@@ -1115,6 +1127,13 @@ class besthea::mesh::scheduling_time_cluster {
                                //!< upward path of the FMM.
   bool _active_downward_path;  //!< Indicates if the cluster is active in the
                                //!< downward path of the FMM.
+  char
+    _status_initial_op_downward_path;  //!< Indicates if the cluster is active
+                                       //!< in the downward path of the FMM for
+                                       //!< initial potential operators. This is
+                                       //!< the case if its subtree contains
+                                       //!< clusters associated with local
+                                       //!< space-time leaf clusters.
   lo _upward_path_counter;  //!< Used to keep track of the dependencies in the
                             //!< upward path. If it is 0, the dependencies are
                             //!< fulfilled.

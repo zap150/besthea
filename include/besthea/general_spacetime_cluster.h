@@ -652,7 +652,7 @@ class besthea::mesh::general_spacetime_cluster {
    * @param[out] n_space_div Number of spatial subdivisioning.
    * @param[out] n_time_div  Number of temporal subdivisioning.
    */
-  void get_n_divs( lo & n_space_div, lo & n_time_div ) {
+  void get_n_divs( lo & n_space_div, lo & n_time_div ) const {
     n_space_div = _n_space_div;
     n_time_div = _n_time_div;
   }

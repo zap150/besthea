@@ -100,6 +100,38 @@ class besthea::bem::spacetime_initial_kernel_antiderivative {
   sc anti_t_regular( sc xy1, sc xy2, sc xy3, const sc * n, sc t ) const {
     return derived( )->do_anti_t_regular( xy1, xy2, xy3, n, t );
   }
+
+  /**
+   * Evaluates the definite integral over the first time interval.
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] n Normal.
+   * @param[in] t End of first time interval.
+   */
+#pragma omp declare simd uniform( this, n, t ) simdlen( BESTHEA_SIMD_WIDTH )
+  sc definite_integral_over_first_interval(
+    sc xy1, sc xy2, sc xy3, const sc * n, sc t ) const {
+    return derived( )->do_definite_integral_over_first_interval(
+      xy1, xy2, xy3, n, t );
+  }
+
+  /**
+   * Evaluates the definite integral over a regular time interval (not the
+   * first).
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] n Normal.
+   * @param[in] t0 Start of the time interval.
+   * @param[in] t1 End of the time interval.
+   */
+#pragma omp declare simd uniform( this, n, t0, t1 ) simdlen( BESTHEA_SIMD_WIDTH )
+  sc definite_integral_over_regular_interval(
+    sc xy1, sc xy2, sc xy3, const sc * n, sc t0, sc t1 ) const {
+    return derived( )->do_definite_integral_over_regular_interval(
+      xy1, xy2, xy3, n, t0, t1 );
+  }
 };
 
 #endif /* INCLUDE_BESTHEA_SPACETIME_INITIAL_KERNEL_ANTIDERIVATIVE_H_ */

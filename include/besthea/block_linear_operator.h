@@ -68,8 +68,8 @@ class besthea::linear_algebra::block_linear_operator {
    * @param[in] dim_domain Dimension of domain per block.
    * @param[in] dim_range Dimension of range per block.
    * @remark Example: In case of block matrices, \p block_dim is the number of
-   * blocks in each row and column, \p dim_domain the number of rows per block
-   * and \p dim_range the number of columns per block.
+   * blocks in each row and column, \p dim_domain the number of columns per
+   * block and \p dim_range the number of rows per block.
    */
   block_linear_operator( lo block_dim, lo dim_domain, lo dim_range )
     : _block_dim( block_dim ),
@@ -270,8 +270,6 @@ class besthea::linear_algebra::block_linear_operator {
    * @param[in] trans Indicates if the block linear operator is transposed or
    * not.
    * @todo Discuss new output for @p relative_residual_error.
-   * @todo Discuss: What is relative error in case that solution is not 0 at
-   * function call? Should we fill solution with 0 in the routine?
    */
   bool gmres_solve( const block_vector_type & rhs, block_vector_type & solution,
     sc & relative_residual_error, lo & n_iterations,
@@ -288,8 +286,6 @@ class besthea::linear_algebra::block_linear_operator {
    * @param[in] trans Indicates if the block linear operator is transposed or
    * not.
    * @todo Discuss new output for @p relative_residual_error
-   * @todo Discuss: What is relative error in case that solution is not 0 at
-   * function call? Should we fill solution with 0 in the routine?
    */
   bool gmres_solve( const block_vector_type & rhs, block_vector_type & solution,
     sc & relative_residual_error, lo & n_iterations, bool trans = false ) const;
@@ -309,8 +305,6 @@ class besthea::linear_algebra::block_linear_operator {
    * @todo Currently all ranks execute the GMRES algorithm, but computations
    * like matrix-vector products and scalar products are parallelized.
    * @todo Discuss new output for @p relative_residual_error
-   * @todo Discuss: What is relative error in case that solution is not 0 at
-   * function call? Should we fill solution with 0 in the routine?
    */
   bool gmres_solve( const distributed_block_vector_type & rhs,
     distributed_block_vector_type & solution, sc & relative_residual_error,
@@ -332,8 +326,6 @@ class besthea::linear_algebra::block_linear_operator {
    * computations like matrix-vector products and scalar products are
    * parallelized.
    * @todo Discuss new output for @p relative_residual_error
-   * @todo Discuss: What is relative error in case that solution is not 0 at
-   * function call? Should we fill solution with 0 in the routine?
    */
   bool gmres_solve( const distributed_block_vector_type & rhs,
     distributed_block_vector_type & solution, sc & relative_residual_error,
@@ -386,8 +378,8 @@ class besthea::linear_algebra::block_linear_operator {
 
  protected:
   lo _block_dim;   //!< Number of blocks in a row (column).
-  lo _dim_domain;  //!< domain dimension (number of rows in a block)
-  lo _dim_range;   //!< range dimension (number of columns in a block)
+  lo _dim_domain;  //!< domain dimension (number of columns in a block)
+  lo _dim_range;   //!< range dimension (number of rows in a block)
 };
 
 #endif /* INCLUDE_BESTHEA_BLOCK_LINEAR_OPERATOR_H_ */

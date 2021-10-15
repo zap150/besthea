@@ -116,9 +116,10 @@ void besthea::bem::uniform_spacetime_initial_assembler< kernel_type,
 
 #pragma omp for schedule( dynamic )
       for ( lo i_test = 0; i_test < n_test_elements; ++i_test ) {
-        test_mesh.get_spatial_nodes( i_test, x1, x2, x3 );
-        test_mesh.get_spatial_normal( i_test, nx );
-        test_area = test_mesh.spatial_area( i_test );
+        test_mesh.get_spatial_nodes_using_spatial_element_index(
+          i_test, x1, x2, x3 );
+        test_mesh.get_spatial_normal_using_spatial_element_index( i_test, nx );
+        test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
         for ( lo i_trial = 0; i_trial < n_trial_elements; ++i_trial ) {
           trial_mesh.get_nodes( i_trial, y1, y2, y3, y4 );
           trial_area = trial_mesh.area( i_trial );

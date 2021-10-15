@@ -84,7 +84,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   bool info_mode ) const {
   global_matrix.set_MPI_communicator( _comm );
   global_matrix.set_trees( _test_space->get_tree( ) );
-  global_matrix.set_order( _spat_order, _temp_order, _order_regular );
+  global_matrix.set_orders( _spat_order, _temp_order, _order_regular );
   global_matrix.set_alpha( _alpha );
   global_matrix.set_m2l_integration_order( _m2l_integration_order );
 
@@ -95,10 +95,10 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   auto & trial_basis = _trial_space->get_basis( );
   lo n_rows = test_basis.dimension_global( );
   lo n_columns = trial_basis.dimension_global( );
-  global_matrix.resize( n_timesteps, n_rows, n_columns );
+  global_matrix.resize( n_timesteps, n_columns, n_rows );
   // ###########################################################################
 
-  global_matrix.compute_spatial_m2m_coeffs( );
+  global_matrix.initialize_spatial_m2m_coeffs( );
 
   initialize_moment_and_local_contributions( );
 
@@ -309,10 +309,13 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
         test_elem_time = test_mesh->get_time_element( test_element_spacetime );
         test_mesh->get_temporal_nodes( test_elem_time, &t0, &t1 );
         gl_test_elem_space
-          = test_mesh->get_space_element( test_element_spacetime );
-        test_mesh->get_spatial_nodes( gl_test_elem_space, x1, x2, x3 );
-        test_mesh->get_spatial_normal( gl_test_elem_space, nx );
-        test_area = test_mesh->spatial_area( gl_test_elem_space );
+          = test_mesh->get_space_element_index( test_element_spacetime );
+        test_mesh->get_spatial_nodes_using_spatial_element_index(
+          gl_test_elem_space, x1, x2, x3 );
+        test_mesh->get_spatial_normal_using_spatial_element_index(
+          gl_test_elem_space, nx );
+        test_area = test_mesh->get_spatial_area_using_spatial_index(
+          gl_test_elem_space );
         for ( lo i_trial_space = 0; i_trial_space < n_trial_space_elem;
               ++i_trial_space ) {
           // get the appropriate indices of the spacetime trial element, its
@@ -324,7 +327,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
             = trial_mesh->get_time_element( trial_element_spacetime );
           trial_mesh->get_temporal_nodes( trial_elem_time, &tau0, &tau1 );
           gl_trial_elem_space
-            = trial_mesh->get_space_element( trial_element_spacetime );
+            = trial_mesh->get_space_element_index( trial_element_spacetime );
           // determine the configuration in time and space.
           gl_trial_elem_time = trial_mesh_start_idx + trial_elem_time;
           gl_test_elem_time = test_mesh_start_idx + test_elem_time;
@@ -339,9 +342,12 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
             rot_test = 0;
             rot_trial = 0;
           }
-          trial_mesh->get_spatial_nodes( gl_trial_elem_space, y1, y2, y3 );
-          trial_mesh->get_spatial_normal( gl_trial_elem_space, ny );
-          trial_area = trial_mesh->spatial_area( gl_trial_elem_space );
+          trial_mesh->get_spatial_nodes_using_spatial_element_index(
+            gl_trial_elem_space, y1, y2, y3 );
+          trial_mesh->get_spatial_normal_using_spatial_element_index(
+            gl_trial_elem_space, ny );
+          trial_area = trial_mesh->get_spatial_area_using_spatial_index(
+            gl_trial_elem_space );
 
           target_cluster->local_elem_to_local_space_dofs< test_space_type >(
             i_test_space, n_shared_vertices, rot_test, false, test_loc_access );
@@ -571,10 +577,13 @@ void besthea::bem::distributed_fast_spacetime_be_assembler<
         test_elem_time = test_mesh->get_time_element( test_element_spacetime );
         test_mesh->get_temporal_nodes( test_elem_time, &t0, &t1 );
         gl_test_elem_space
-          = test_mesh->get_space_element( test_element_spacetime );
-        test_mesh->get_spatial_nodes( gl_test_elem_space, x1, x2, x3 );
-        test_mesh->get_spatial_normal( gl_test_elem_space, nx );
-        test_area = test_mesh->spatial_area( gl_test_elem_space );
+          = test_mesh->get_space_element_index( test_element_spacetime );
+        test_mesh->get_spatial_nodes_using_spatial_element_index(
+          gl_test_elem_space, x1, x2, x3 );
+        test_mesh->get_spatial_normal_using_spatial_element_index(
+          gl_test_elem_space, nx );
+        test_area = test_mesh->get_spatial_area_using_spatial_index(
+          gl_test_elem_space );
         for ( lo i_trial_space = 0; i_trial_space < n_trial_space_elem;
               ++i_trial_space ) {
           // get the appropriate indices of the spacetime trial element, its
@@ -586,7 +595,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler<
             = trial_mesh->get_time_element( trial_element_spacetime );
           trial_mesh->get_temporal_nodes( trial_elem_time, &tau0, &tau1 );
           gl_trial_elem_space
-            = trial_mesh->get_space_element( trial_element_spacetime );
+            = trial_mesh->get_space_element_index( trial_element_spacetime );
           // determine the configuration in time and space.
           gl_trial_elem_time = trial_mesh_start_idx + trial_elem_time;
           gl_test_elem_time = test_mesh_start_idx + test_elem_time;
@@ -601,9 +610,13 @@ void besthea::bem::distributed_fast_spacetime_be_assembler<
             rot_test = 0;
             rot_trial = 0;
           }
-          trial_mesh->get_spatial_nodes( gl_trial_elem_space, y1, y2, y3 );
-          trial_mesh->get_spatial_normal( gl_trial_elem_space, ny );
-          areas = test_area * trial_mesh->spatial_area( gl_trial_elem_space );
+          trial_mesh->get_spatial_nodes_using_spatial_element_index(
+            gl_trial_elem_space, y1, y2, y3 );
+          trial_mesh->get_spatial_normal_using_spatial_element_index(
+            gl_trial_elem_space, ny );
+          areas = test_area
+            * trial_mesh->get_spatial_area_using_spatial_index(
+              gl_trial_elem_space );
 
           target_cluster->local_elem_to_local_space_dofs<
             besthea::bem::distributed_fast_spacetime_be_space<
@@ -803,10 +816,12 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 
   // assuming that the spatial meshes of the nearfield mesh and the local
   // mesh coincide, we can simply consider the local meshes.
-  _test_space->get_mesh( ).get_local_mesh( )->get_spatial_element(
-    i_test_space, test_elem );
-  _trial_space->get_mesh( ).get_local_mesh( )->get_spatial_element(
-    i_trial_space, trial_elem );
+  _test_space->get_mesh( )
+    .get_local_mesh( )
+    ->get_spatial_element_using_spatial_index( i_test_space, test_elem );
+  _trial_space->get_mesh( )
+    .get_local_mesh( )
+    ->get_spatial_element_using_spatial_index( i_trial_space, trial_elem );
 
   // check for shared edge
   for ( int i_rot_test = 0; i_rot_test < 3; ++i_rot_test ) {

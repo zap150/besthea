@@ -96,11 +96,14 @@ void besthea::bem::uniform_spacetime_be_space< basis_type >::L2_projection(
     _spacetime_mesh.get_temporal_nodes( d, &t_start, &t_end );
     this->line_to_time( t_start, t_end, my_quadrature );
     for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
-      _spacetime_mesh.get_spatial_nodes( i_elem, x1, x2, x3 );
+      _spacetime_mesh.get_spatial_nodes_using_spatial_element_index(
+        i_elem, x1, x2, x3 );
       this->triangle_to_geometry( x1, x2, x3, my_quadrature );
       this->_basis.local_to_global( i_elem, l2g );
-      _spacetime_mesh.get_spatial_normal( i_elem, n );
-      area_xt = _spacetime_mesh.spatial_area( i_elem ) * timestep;
+      _spacetime_mesh.get_spatial_normal_using_spatial_element_index(
+        i_elem, n );
+      area_xt = _spacetime_mesh.get_spatial_area_using_spatial_index( i_elem )
+        * timestep;
 
       for ( lo i_t = 0; i_t < size_wt; ++i_t ) {
         for ( lo i_x = 0; i_x < size_x; ++i_x ) {
@@ -163,11 +166,14 @@ sc besthea::bem::uniform_spacetime_be_space< basis_type >::L2_relative_error(
     this->line_to_time( t_start, t_end, my_quadrature );
     approximation_data = approximation.get_block( d ).data( );
     for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
-      _spacetime_mesh.get_spatial_nodes( i_elem, x1, x2, x3 );
+      _spacetime_mesh.get_spatial_nodes_using_spatial_element_index(
+        i_elem, x1, x2, x3 );
       this->triangle_to_geometry( x1, x2, x3, my_quadrature );
       this->_basis.local_to_global( i_elem, l2g );
-      _spacetime_mesh.get_spatial_normal( i_elem, n );
-      area_xt = _spacetime_mesh.spatial_area( i_elem ) * timestep;
+      _spacetime_mesh.get_spatial_normal_using_spatial_element_index(
+        i_elem, n );
+      area_xt = _spacetime_mesh.get_spatial_area_using_spatial_index( i_elem )
+        * timestep;
       for ( lo i_x = 0; i_x < size_x; ++i_x ) {
         local_value = 0.0;
         for ( lo i_loc = 0; i_loc < local_dim; ++i_loc ) {
@@ -209,7 +215,7 @@ void besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >::
 
   for ( lo i_elem = 0; i_elem < n_elements; ++i_elem ) {
     _spacetime_mesh.get_spatial_centroid( i_elem, centroid );
-    _spacetime_mesh.get_spatial_normal( i_elem, n );
+    _spacetime_mesh.get_spatial_normal_using_spatial_element_index( i_elem, n );
     for ( lo d = 0; d < n_timesteps; ++d ) {
       interpolation.set( d, i_elem,
         f( centroid[ 0 ], centroid[ 1 ], centroid[ 2 ], n,
@@ -236,8 +242,9 @@ void besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >::
   linear_algebra::coordinates< 3 > x, n;
 
   for ( lo i_node = 0; i_node < n_nodes; ++i_node ) {
-    _spacetime_mesh.get_spatial_node( i_node, x );
-    _spacetime_mesh.get_spatial_nodal_normal( i_node, n );
+    _spacetime_mesh.get_spatial_node_using_spatial_index( i_node, x );
+    _spacetime_mesh.get_spatial_nodal_normal_using_spatial_node_index(
+      i_node, n );
     for ( lo d = 0; d < n_timesteps; ++d ) {
       interpolation.set( d, i_node,
         f( x[ 0 ], x[ 1 ], x[ 2 ], n,

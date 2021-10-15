@@ -135,8 +135,8 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
-  sc test_area = test_mesh.spatial_area( i_test );
-  sc trial_area = trial_mesh.spatial_area( i_trial );
+  sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
+  sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
   const sc * x1_mapped = quadr_nodes_tst._xs.data( );
   const sc * x2_mapped = quadr_nodes_tst._ys.data( );
@@ -185,8 +185,8 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
-  sc test_area = test_mesh.spatial_area( i_test );
-  sc trial_area = trial_mesh.spatial_area( i_trial );
+  sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
+  sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
   const sc * x1_mapped = quadr_nodes_tst._xs.data( );
   const sc * x2_mapped = quadr_nodes_tst._ys.data( );
@@ -232,8 +232,8 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   const besthea::mesh::uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
   const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
   
-  sc test_area = test_mesh.spatial_area( i_test );
-  sc trial_area = trial_mesh.spatial_area( i_trial );
+  sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
+  sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
   const sc * x1_mapped = quadr_nodes_tst._xs.data( );
   const sc * x2_mapped = quadr_nodes_tst._ys.data( );
@@ -280,8 +280,8 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
   
   sc timestep = test_mesh.get_timestep( );
-  sc test_area = test_mesh.spatial_area( i_test );
-  sc trial_area = trial_mesh.spatial_area( i_trial );
+  sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
+  sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
   const sc * x1_mapped = quadr_nodes_tst._xs.data( );
   const sc * x2_mapped = quadr_nodes_tst._ys.data( );
@@ -342,11 +342,11 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
-  sc test_area = test_mesh.spatial_area( i_test );
-  sc trial_area = trial_mesh.spatial_area( i_trial );
+  sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
+  sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
   linear_algebra::coordinates< 3 > ny;
-  trial_mesh.get_spatial_normal( i_trial, ny );
+  trial_mesh.get_spatial_normal_using_spatial_element_index( i_trial, ny );
   sc * ny_data = ny.data( );
 
   const sc * x1_mapped = quadr_nodes_tst._xs.data( );
@@ -406,11 +406,11 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
-  sc test_area = test_mesh.spatial_area( i_test );
-  sc trial_area = trial_mesh.spatial_area( i_trial );
+  sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
+  sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
   linear_algebra::coordinates< 3 > ny;
-  trial_mesh.get_spatial_normal( i_trial, ny );
+  trial_mesh.get_spatial_normal_using_spatial_element_index( i_trial, ny );
   sc * ny_data = ny.data( );
 
   const sc * x1_mapped = quadr_nodes_tst._xs.data( );
@@ -467,11 +467,11 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   const besthea::mesh::uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
   const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
   
-  sc test_area = test_mesh.spatial_area( i_test );
-  sc trial_area = trial_mesh.spatial_area( i_trial );
+  sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
+  sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
   linear_algebra::coordinates< 3 > ny;
-  trial_mesh.get_spatial_normal( i_trial, ny );
+  trial_mesh.get_spatial_normal_using_spatial_element_index( i_trial, ny );
   sc * ny_data = ny.data( );
 
   const sc * x1_mapped = quadr_nodes_tst._xs.data( );
@@ -529,11 +529,11 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
   
   sc timestep = test_mesh.get_timestep( );
-  sc test_area = test_mesh.spatial_area( i_test );
-  sc trial_area = trial_mesh.spatial_area( i_trial );
+  sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
+  sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
   linear_algebra::coordinates< 3 > ny;
-  trial_mesh.get_spatial_normal( i_trial, ny );
+  trial_mesh.get_spatial_normal_using_spatial_element_index( i_trial, ny );
   sc * ny_data = ny.data( );
 
   const sc * x1_mapped = quadr_nodes_tst._xs.data( );
@@ -605,11 +605,11 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
-  sc test_area = test_mesh.spatial_area( i_test );
-  sc trial_area = trial_mesh.spatial_area( i_trial );
+  sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
+  sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
   linear_algebra::coordinates< 3 > nx;
-  test_mesh.get_spatial_normal( i_test, nx );
+  test_mesh.get_spatial_normal_using_spatial_element_index( i_test, nx );
   sc * nx_data = nx.data( );
 
   const sc * x1_mapped = quadr_nodes_tst._xs.data( );
@@ -669,11 +669,11 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
-  sc test_area = test_mesh.spatial_area( i_test );
-  sc trial_area = trial_mesh.spatial_area( i_trial );
+  sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
+  sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
   linear_algebra::coordinates< 3 > nx;
-  test_mesh.get_spatial_normal( i_test, nx );
+  test_mesh.get_spatial_normal_using_spatial_element_index( i_test, nx );
   sc * nx_data = nx.data( );
 
   const sc * x1_mapped = quadr_nodes_tst._xs.data( );
@@ -730,11 +730,11 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   const besthea::mesh::uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
   const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
   
-  sc test_area = test_mesh.spatial_area( i_test );
-  sc trial_area = trial_mesh.spatial_area( i_trial );
+  sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
+  sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
   linear_algebra::coordinates< 3 > nx;
-  test_mesh.get_spatial_normal( i_test, nx );
+  test_mesh.get_spatial_normal_using_spatial_element_index( i_test, nx );
   sc * nx_data = nx.data( );
 
   const sc * x1_mapped = quadr_nodes_tst._xs.data( );
@@ -792,11 +792,11 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
   
   sc timestep = test_mesh.get_timestep( );
-  sc test_area = test_mesh.spatial_area( i_test );
-  sc trial_area = trial_mesh.spatial_area( i_trial );
+  sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
+  sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
   linear_algebra::coordinates< 3 > nx;
-  test_mesh.get_spatial_normal( i_test, nx );
+  test_mesh.get_spatial_normal_using_spatial_element_index( i_test, nx );
   sc * nx_data = nx.data( );
 
   const sc * x1_mapped = quadr_nodes_tst._xs.data( );
@@ -868,12 +868,12 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
-  sc test_area = test_mesh.spatial_area( i_test );
-  sc trial_area = trial_mesh.spatial_area( i_trial );
+  sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
+  sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
   linear_algebra::coordinates< 3 > nx, ny;
-  test_mesh.get_spatial_normal( i_test, nx );
-  trial_mesh.get_spatial_normal( i_trial, ny );
+  test_mesh.get_spatial_normal_using_spatial_element_index( i_test, nx );
+  trial_mesh.get_spatial_normal_using_spatial_element_index( i_trial, ny );
   sc * nx_data = nx.data( );
   sc * ny_data = ny.data( );
 
@@ -976,12 +976,12 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
-  sc test_area = test_mesh.spatial_area( i_test );
-  sc trial_area = trial_mesh.spatial_area( i_trial );
+  sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
+  sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
   linear_algebra::coordinates< 3 > nx, ny;
-  test_mesh.get_spatial_normal( i_test, nx );
-  trial_mesh.get_spatial_normal( i_trial, ny );
+  test_mesh.get_spatial_normal_using_spatial_element_index( i_test, nx );
+  trial_mesh.get_spatial_normal_using_spatial_element_index( i_trial, ny );
   sc * nx_data = nx.data( );
   sc * ny_data = ny.data( );
 
@@ -1081,12 +1081,12 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   const besthea::mesh::uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
   const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
 
-  sc test_area = test_mesh.spatial_area( i_test );
-  sc trial_area = trial_mesh.spatial_area( i_trial );
+  sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
+  sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
   linear_algebra::coordinates< 3 > nx, ny;
-  test_mesh.get_spatial_normal( i_test, nx );
-  trial_mesh.get_spatial_normal( i_trial, ny );
+  test_mesh.get_spatial_normal_using_spatial_element_index( i_test, nx );
+  trial_mesh.get_spatial_normal_using_spatial_element_index( i_trial, ny );
   sc * nx_data = nx.data( );
   sc * ny_data = ny.data( );
 
@@ -1187,12 +1187,12 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
 
   sc timestep = test_mesh.get_timestep( );
-  sc test_area = test_mesh.spatial_area( i_test );
-  sc trial_area = trial_mesh.spatial_area( i_trial );
+  sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
+  sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
   linear_algebra::coordinates< 3 > nx, ny;
-  test_mesh.get_spatial_normal( i_test, nx );
-  trial_mesh.get_spatial_normal( i_trial, ny );
+  test_mesh.get_spatial_normal_using_spatial_element_index( i_test, nx );
+  trial_mesh.get_spatial_normal_using_spatial_element_index( i_trial, ny );
   sc * ny_data = ny.data( );
 
   const sc * x1_mapped = quadr_nodes_tst._xs.data( );
@@ -2551,7 +2551,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
     quadrature_nodes & quadr_nodes_tst ) const {
       
   linear_algebra::coordinates< 3 > x1, x2, x3;
-  _test_space->get_mesh().get_spatial_nodes( i_tst, x1, x2, x3 );
+  _test_space->get_mesh().get_spatial_nodes_using_spatial_element_index( i_tst, x1, x2, x3 );
 
   const sc * x1rot = nullptr;
   const sc * x2rot = nullptr;
@@ -2608,7 +2608,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
     quadrature_nodes & quadr_nodes_trl ) const {
       
   linear_algebra::coordinates< 3 > y1, y2, y3;
-  _trial_space->get_mesh().get_spatial_nodes( i_trl, y1, y2, y3 );
+  _trial_space->get_mesh().get_spatial_nodes_using_spatial_element_index( i_trl, y1, y2, y3 );
 
   const sc * y1rot = nullptr;
   const sc * y2rot = nullptr;
@@ -2691,8 +2691,8 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   linear_algebra::indices< 3 > test_elem;
   linear_algebra::indices< 3 > trial_elem;
 
-  _test_space->get_mesh( ).get_spatial_element( i_test, test_elem );
-  _trial_space->get_mesh( ).get_spatial_element( i_trial, trial_elem );
+  _test_space->get_mesh( ).get_spatial_element_using_spatial_index( i_test, test_elem );
+  _trial_space->get_mesh( ).get_spatial_element_using_spatial_index( i_trial, trial_elem );
 
   // check for shared edge
   for ( int i_rot_test = 0; i_rot_test < 3; ++i_rot_test ) {

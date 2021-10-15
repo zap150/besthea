@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2020, VSB - Technical University of Ostrava and Graz University of
+Copyright (c) 2021, VSB - Technical University of Ostrava and Graz University of
 Technology
 All rights reserved.
 
@@ -12,8 +12,8 @@ are permitted provided that the following conditions are met:
   other materials provided with the distribution.
 * Neither the names of VSB - Technical University of  Ostrava and Graz
   University of Technology nor the names of its contributors may be used to
-  endorse or promote products derived from this software without specific prior
-  written permission.
+  endorse or promote scaled_products derived from this software without specific
+prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -28,34 +28,35 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file mesh_structures.h
- * @brief
- */
+#include "besthea/distributed_diagonal_matrix.h"
 
-#ifndef INCLUDE_BESTHEA_MESH_STRUCTURES_H_
-#define INCLUDE_BESTHEA_MESH_STRUCTURES_H_
+#include "besthea/distributed_block_vector.h"
 
-#include "besthea/distributed_spacetime_cluster_tree.h"
-#include "besthea/distributed_spacetime_tensor_mesh.h"
-#include "besthea/general_spacetime_cluster.h"
-#include "besthea/mesh.h"
-#include "besthea/scheduling_time_cluster.h"
-#include "besthea/spacetime_mesh_generator.h"
-#include "besthea/spacetime_slice.h"
-#include "besthea/spacetime_tensor_mesh.h"
-#include "besthea/temporal_mesh.h"
-#include "besthea/tetrahedral_spacetime_mesh.h"
-#include "besthea/tetrahedral_volume_mesh.h"
-#include "besthea/time_cluster.h"
-#include "besthea/time_cluster_tree.h"
-#include "besthea/tree_structure.h"
-#include "besthea/triangular_surface_mesh.h"
-#include "besthea/uniform_spacetime_tensor_mesh.h"
-#include "besthea/volume_space_cluster.h"
-#include "besthea/volume_space_cluster_tree.h"
+void besthea::linear_algebra::distributed_diagonal_matrix::apply(
+  const block_vector & /*x*/, block_vector & /*y*/, bool /*trans*/,
+  sc /*alpha*/, sc /*beta*/ ) const {
+  // generic method not implemented
+  std::cout << "apply: NOT IMPLEMENTED for standard block vectors. Please use "
+               "distributed block vectors!"
+            << std::endl;
+}
 
-#ifdef BESTHEA_USE_CUDA
-#include "besthea/uniform_spacetime_tensor_mesh_gpu.h"
-#endif
-
-#endif /* INCLUDE_BESTHEA_MESH_STRUCTURES_H_ */
+void besthea::linear_algebra::distributed_diagonal_matrix::apply(
+  const distributed_block_vector & x, distributed_block_vector & y,
+  bool /*trans*/, sc alpha, sc beta ) const {
+  lo n_blocks = _diagonal.get_n_blocks( );
+  std::vector< lo > my_blocks = _diagonal.get_my_blocks( );
+  lo block_size = _diagonal.get_size_of_block( );
+  distributed_block_vector scaled_product(
+    my_blocks, n_blocks, block_size, false, _diagonal.get_comm( ) );
+  for ( lou i = 0; i < my_blocks.size( ); ++i ) {
+    for ( lo j = 0; j < block_size; ++j ) {
+      scaled_product.set( my_blocks[ i ], j,
+        alpha * _diagonal.get( my_blocks[ i ], j )
+          * x.get( my_blocks[ i ], j ) );
+    }
+  }
+  y.scale( beta );
+  y.add( scaled_product );
+  y.synchronize_shared_parts( );
+}
