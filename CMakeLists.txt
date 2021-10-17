@@ -94,7 +94,6 @@ set(besthea_INCLUDES
   include/besthea/tetrahedral_volume_mesh.h
   include/besthea/time_cluster.h
   include/besthea/time_cluster_tree.h
-  include/besthea/time_measurer.h
   include/besthea/timer.h
   include/besthea/tools.h
   include/besthea/tree_structure.h
@@ -127,7 +126,7 @@ set(besthea_cuda_INCLUDES
   include/besthea/gpu_apply_timer_collection.h
   include/besthea/gpu_apply_vectors_data.h
   include/besthea/gpu_onthefly_helpers.h
-  include/besthea/time_measurer_cuda.h
+  include/besthea/timer_cuda.h
   include/besthea/uniform_spacetime_be_matrix_onthefly_gpu.h
   include/besthea/uniform_spacetime_tensor_mesh_gpu.h
 )

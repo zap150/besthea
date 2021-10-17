@@ -35,8 +35,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDE_BESTHEA_GPU_APPLY_TIMER_COLLECTION_H_
 #define INCLUDE_BESTHEA_GPU_APPLY_TIMER_COLLECTION_H_
 
-#include "besthea/time_measurer.h"
-#include "besthea/time_measurer_cuda.h"
+#include "besthea/timer.h"
+#include "besthea/timer_cuda.h"
 
 #include <vector>
 
@@ -64,7 +64,7 @@ struct besthea::bem::onthefly::gpu_apply_timer_collection {
    * Prints the provided timing information for all GPUs
    */
   void print_timers(
-    std::vector< besthea::tools::time_measurer_cuda > & timers );
+    std::vector< besthea::tools::timer_cuda > & timers );
 
   /*!
    * Returns the execution time of the constant part on the CPU
@@ -93,16 +93,16 @@ struct besthea::bem::onthefly::gpu_apply_timer_collection {
    */
   double get_gpu_time_all( );
 
-  std::vector< besthea::tools::time_measurer_cuda > gpu_all;
-  std::vector< besthea::tools::time_measurer_cuda > gpu_copyin;
-  std::vector< besthea::tools::time_measurer_cuda > gpu_compute;
-  std::vector< besthea::tools::time_measurer_cuda > gpu_copyout;
-  besthea::tools::time_measurer cpu_scalein;
-  besthea::tools::time_measurer cpu_treg_sreg;
-  besthea::tools::time_measurer cpu_treg_ssng;
-  besthea::tools::time_measurer cpu_tsng;
-  besthea::tools::time_measurer cpu_all;
-  besthea::tools::time_measurer combined;
+  std::vector< besthea::tools::timer_cuda > gpu_all;
+  std::vector< besthea::tools::timer_cuda > gpu_copyin;
+  std::vector< besthea::tools::timer_cuda > gpu_compute;
+  std::vector< besthea::tools::timer_cuda > gpu_copyout;
+  besthea::tools::timer cpu_scalein;
+  besthea::tools::timer cpu_treg_sreg;
+  besthea::tools::timer cpu_treg_ssng;
+  besthea::tools::timer cpu_tsng;
+  besthea::tools::timer cpu_all;
+  besthea::tools::timer combined;
 };
 
 #endif /* INCLUDE_BESTHEA_GPU_APPLY_TIMER_COLLECTION_H_ */

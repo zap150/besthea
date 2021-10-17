@@ -2621,7 +2621,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
       timers.print_all();
     }
     std::cout << "BESTHEA Info: apply elapsed time = "
-      << timers.combined.get_time() << " seconds\n";
+      << timers.combined.get_elapsed_time_in_seconds() << " seconds\n";
   }
 
 

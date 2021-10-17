@@ -37,7 +37,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_hs_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_sl_kernel_antiderivative.h"
-#include "besthea/time_measurer.h"
+#include "besthea/timer.h"
 #include "besthea/uniform_spacetime_be_space.h"
 
 #include <exception>
@@ -2415,7 +2415,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
       "incompatible matrix and vector dimensions");
   }
 
-  besthea::tools::time_measurer tm_combined, tm_perm, tm_apply;
+  besthea::tools::timer tm_combined, tm_perm, tm_apply;
   tm_combined.start();
   
   // permuting the vector x should improve data locality
@@ -2440,7 +2440,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   tm_apply.stop();
 
 
-  tm_perm.start();
+  tm_perm.start(true);
   y.copy_permute(y_perm);
   tm_perm.stop();
   
@@ -2449,12 +2449,12 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   if(besthea::settings::output_verbosity.timers >= 1) {
     if(besthea::settings::output_verbosity.timers >= 2) {
       std::cout << "BESTHEA Info: apply, vector permutation elapsed time = "
-        << tm_perm.get_time() << " seconds\n";
+        << tm_perm.get_elapsed_time_in_seconds() << " seconds\n";
       std::cout << "BESTHEA Info: apply, apply itself elapsed time = "
-        << tm_apply.get_time() << " seconds\n";
+        << tm_apply.get_elapsed_time_in_seconds() << " seconds\n";
     }
     std::cout << "BESTHEA Info: apply elapsed time = "
-      << tm_combined.get_time() << " seconds\n";
+      << tm_combined.get_elapsed_time_in_seconds() << " seconds\n";
   }
 
 }
@@ -2467,7 +2467,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   apply_cpu( const block_vector_type & x_perm, block_vector_type & y_perm,
     sc alpha, sc beta ) const {
 
-  besthea::tools::time_measurer tm_scale, tm_treg_sreg, tm_treg_ssng, tm_tsng;
+  besthea::tools::timer tm_scale, tm_treg_sreg, tm_treg_ssng, tm_tsng;
 
   tm_scale.start();
   if(beta == 0.0) {
@@ -2491,13 +2491,13 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
 
   if(besthea::settings::output_verbosity.timers >= 2) {
     std::cout << "BESTHEA Info: apply, scalein elapsed time = "
-      << tm_scale.get_time() << " seconds\n";
+      << tm_scale.get_elapsed_time_in_seconds() << " seconds\n";
     std::cout << "BESTHEA Info: apply, fully-regular elapsed time = "
-      << tm_treg_sreg.get_time() << " seconds\n";
+      << tm_treg_sreg.get_elapsed_time_in_seconds() << " seconds\n";
     std::cout << "BESTHEA Info: apply, time-regular-space-singular elapsed time"
-      << " = " << tm_treg_ssng.get_time() << " seconds\n";
+      << " = " << tm_treg_ssng.get_elapsed_time_in_seconds() << " seconds\n";
     std::cout << "BESTHEA Info: apply, time-singular elapsed time = "
-      << tm_tsng.get_time() << " seconds\n";
+      << tm_tsng.get_elapsed_time_in_seconds() << " seconds\n";
   }
 
 }
