@@ -193,30 +193,27 @@ macro(enable_Lyra)
   set(Lyra_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/Lyra/include)
 endmacro()
 
-macro(setup_CUDA)  
-  string(TOUPPER "${BESTHEA_USE_CUDA}" BESTHEA_USE_CUDA )
-  if("${BESTHEA_USE_CUDA}" STREQUAL "REQUIRE"
-      OR "${BESTHEA_USE_CUDA}" STREQUAL "REQUIRED")
-    set(BESTHEA_USE_CUDA "REQUIRE")
-  elseif("${BESTHEA_USE_CUDA}" STREQUAL "FORBID")
-    set(BESTHEA_USE_CUDA "FORBID")
-  elseif("${BESTHEA_USE_CUDA}" STREQUAL ""
-      OR "${BESTHEA_USE_CUDA}" STREQUAL "AUTO")
-    set(BESTHEA_USE_CUDA "AUTO")
-  else()
+macro(setup_CUDA)
+  string(TOUPPER "${BESTHEA_CUDA}" BESTHEA_CUDA )
+
+  if(NOT (
+    "${BESTHEA_CUDA}" STREQUAL "ENABLE" OR
+    "${BESTHEA_CUDA}" STREQUAL "AUTO" OR
+    "${BESTHEA_CUDA}" STREQUAL "DISABLE")
+    )
     message(WARNING "Invalid value of variable"
-    " BESTHEA_USE_CUDA=\"${BESTHEA_USE_CUDA}\". Using auto-detection.")
-    set(BESTHEA_USE_CUDA "AUTO")
+    " BESTHEA_CUDA=\"${BESTHEA_CUDA}\". Using auto-detection.")
+    set(BESTHEA_CUDA "AUTO")
   endif()
   
-  set(BESTHEA_IS_USING_CUDA OFF)
+  set(BESTHEA_USE_CUDA OFF)
 
   if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.18)
     cmake_policy(SET CMP0074 NEW)
 
-    if("${BESTHEA_USE_CUDA}" STREQUAL "REQUIRE")
+    if("${BESTHEA_CUDA}" STREQUAL "ENABLE")
       find_package(CUDA REQUIRED)
-    elseif("${BESTHEA_USE_CUDA}" STREQUAL "AUTO")
+    elseif("${BESTHEA_CUDA}" STREQUAL "AUTO")
       find_package(CUDA QUIET)
     endif()
 
@@ -226,9 +223,9 @@ macro(setup_CUDA)
 
       # older nvcc does not support -forward-unknown-to-host-compiler at all
       if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 10.2.89)
-        set(BESTHEA_IS_USING_CUDA ON)
+        set(BESTHEA_USE_CUDA ON)
       else()
-        if("${BESTHEA_USE_CUDA}" STREQUAL "REQUIRE")
+        if("${BESTHEA_CUDA}" STREQUAL "ENABLE")
           message(FATAL_ERROR "CUDA compiler is too old, besthea_cuda can be"
             " compiled only with nvcc 10.2.89 or higher")
         else()
@@ -241,7 +238,7 @@ macro(setup_CUDA)
       set(CMAKE_CUDA_ARCHITECTURES 60-virtual)
     endif()
   else()
-    if("${BESTHEA_USE_CUDA}" STREQUAL "REQUIRE")
+    if("${BESTHEA_CUDA}" STREQUAL "ENABLE")
       message(FATAL_ERROR "CMake >= 3.18 required to support besthea_cuda")
     endif()
   endif()

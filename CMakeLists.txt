@@ -6,6 +6,12 @@ include(GNUInstallDirs)
 include(cmake/macros.cmake)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake/Modules)
 
+# like option but works for more than two values
+set(BESTHEA_CUDA_OPTION_DESCRIPTION "Also build besthea_cuda to enable "
+  "GPU-accelerated functionality of besthea using CUDA")
+set(BESTHEA_CUDA "AUTO" CACHE STRING "${BESTHEA_CUDA_OPTION_DESCRIPTION}")
+set_property(CACHE BESTHEA_CUDA PROPERTY STRINGS "AUTO" "ENABLE" "DISABLE")
+
 check_insource()
 setup_compiler()
 setup_CUDA()
@@ -199,7 +205,6 @@ set(besthea_SOURCES
 )
 
 set(besthea_cuda_SOURCES
-  ${besthea_SOURCES}
   src/gpu_apply_load_distribution.cpp
   src/gpu_apply_timer_collection.cpp
   src/gpu_apply_vectors_data.cpp
@@ -231,10 +236,12 @@ target_compile_definitions(besthea PUBLIC
   MKL_INT=long
   BESTHEA_SIMD_WIDTH=${BESTHEA_SIMD_WIDTH})
   
-if(BESTHEA_IS_USING_CUDA)
+if(BESTHEA_USE_CUDA)
   set(besthea_cuda_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
   add_library(besthea_cuda STATIC ${besthea_cuda_SOURCES})
-  target_include_directories(besthea_cuda PUBLIC ${besthea_INCLUDE_DIRS})
+  target_include_directories(besthea_cuda PUBLIC
+    ${besthea_cuda_INCLUDE_DIRS}
+    ${besthea_INCLUDE_DIRS})
   target_include_directories(besthea_cuda SYSTEM PUBLIC
     ${Boost_INCLUDE_DIRS}
     ${Eigen_INCLUDE_DIRS}
@@ -246,7 +253,8 @@ if(BESTHEA_IS_USING_CUDA)
     ${STDFS_LIBRARIES}
     ${MKL_LIBRARIES}
     ${MPI_CXX_LIBRARIES}
-    ${CUDA_LIBRARIES})
+    ${CUDA_LIBRARIES}
+    besthea)
   target_compile_definitions(besthea_cuda PUBLIC
     MKL_INT=long
     BESTHEA_SIMD_WIDTH=${BESTHEA_SIMD_WIDTH}
@@ -257,7 +265,7 @@ endif()
 install(TARGETS ${PROJECT_NAME}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}
   )  
-if(BESTHEA_IS_USING_CUDA)
+if(BESTHEA_USE_CUDA)
   install(TARGETS besthea_cuda
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}
     )
