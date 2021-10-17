@@ -125,7 +125,9 @@ class besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   virtual void apply( [[maybe_unused]] const distributed_block_vector_type & x,
     [[maybe_unused]] distributed_block_vector_type & y,
     [[maybe_unused]] bool trans = false, [[maybe_unused]] sc alpha = 1.0,
-    [[maybe_unused]] sc beta = 0.0 ) const override{ };
+    [[maybe_unused]] sc beta = 0.0 ) const override {
+    throw std::runtime_error( "Not implemented" );
+  }
 
   /*!
    * Returns the used version of the GPU algorithm
