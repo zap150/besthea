@@ -37,11 +37,20 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_hs_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_sl_kernel_antiderivative.h"
-#include "besthea/uniform_spacetime_be_space.h"
 #include "besthea/time_measurer.h"
+#include "besthea/uniform_spacetime_be_space.h"
 
-#include <iostream>
 #include <exception>
+#include <iostream>
+
+using namespace besthea::mesh;
+using namespace besthea::bem;
+
+// clang-format off
+// I tried to keep the max-80-column formatting as I could, but sometimes it is
+//   just much better to violate this rule. Also the formatter collapses
+//   multiple empty lines into one, which reduces clarity and readibility
+//   of the code. Therefore I decided to turn off formatting for this file.
 
 
 
@@ -121,17 +130,18 @@ besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  get_local_contributions_treg_sreg(sc * values_out, lo delta, lo i_test, lo i_trial,
+  spacetime_heat_sl_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p0 >,
+  uniform_spacetime_be_space< basis_tri_p0 > >::
+  get_local_contributions_treg_sreg(sc * values_out,
+    lo delta, lo i_test, lo i_trial,
     const quadrature_nodes & quadr_nodes_tst,
     const quadrature_nodes & quadr_nodes_trl) const {
 
   // assuming delta > 0 && i_test != i_trial
 
-  const besthea::mesh::uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
-  const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
   
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
@@ -171,17 +181,18 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  get_local_contributions_treg_ssng(sc * values_out, lo delta, lo i_test, lo i_trial,
+  spacetime_heat_sl_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p0 >,
+  uniform_spacetime_be_space< basis_tri_p0 > >::
+  get_local_contributions_treg_ssng(sc * values_out,
+    lo delta, lo i_test, lo i_trial,
     const quadrature_nodes & quadr_nodes_tst,
     const quadrature_nodes & quadr_nodes_trl) const {
   
   // assuming delta > 0 && i_test == i_trial
 
-  const besthea::mesh::uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
-  const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
   
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
@@ -221,16 +232,17 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  get_local_contributions_tsng_2(sc * values_out, lo i_test, lo i_trial,
+  spacetime_heat_sl_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p0 >,
+  uniform_spacetime_be_space< basis_tri_p0 > >::
+  get_local_contributions_tsng_2(sc * values_out,
+    lo i_test, lo i_trial,
     int n_shared_vertices, [[maybe_unused]] int rot_test,
     [[maybe_unused]] int rot_trial, const quadrature_nodes & quadr_nodes_tst,
     const quadrature_nodes & quadr_nodes_trl) const {
 
-  const besthea::mesh::uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
-  const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
   
   sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
   sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
@@ -268,16 +280,17 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  get_local_contributions_tsng_1(sc * values_out, lo i_test, lo i_trial,
+  spacetime_heat_sl_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p0 >,
+  uniform_spacetime_be_space< basis_tri_p0 > >::
+  get_local_contributions_tsng_1(sc * values_out,
+    lo i_test, lo i_trial,
     int n_shared_vertices, [[maybe_unused]] int rot_test,
     [[maybe_unused]] int rot_trial, const quadrature_nodes & quadr_nodes_tst,
     const quadrature_nodes & quadr_nodes_trl) const {
   
-  const besthea::mesh::uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
-  const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
   
   sc timestep = test_mesh.get_timestep( );
   sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
@@ -328,17 +341,18 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
-  get_local_contributions_treg_sreg(sc * values_out, lo delta, lo i_test, lo i_trial,
+  spacetime_heat_dl_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p0 >,
+  uniform_spacetime_be_space< basis_tri_p1 > >::
+  get_local_contributions_treg_sreg(sc * values_out,
+    lo delta, lo i_test, lo i_trial,
     const quadrature_nodes & quadr_nodes_tst,
     const quadrature_nodes & quadr_nodes_trl) const {
 
   // assuming delta > 0 && i_test != i_trial
 
-  const besthea::mesh::uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
-  const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
   
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
@@ -392,17 +406,18 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
-  get_local_contributions_treg_ssng(sc * values_out, lo delta, lo i_test, lo i_trial,
+  spacetime_heat_dl_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p0 >,
+  uniform_spacetime_be_space< basis_tri_p1 > >::
+  get_local_contributions_treg_ssng(sc * values_out,
+    lo delta, lo i_test, lo i_trial,
     const quadrature_nodes & quadr_nodes_tst,
     const quadrature_nodes & quadr_nodes_trl) const {
 
   // assuming delta > 0 && i_test == i_trial
 
-  const besthea::mesh::uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
-  const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
   
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
@@ -456,16 +471,17 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
-  get_local_contributions_tsng_2(sc * values_out, lo i_test, lo i_trial,
+  spacetime_heat_dl_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p0 >,
+  uniform_spacetime_be_space< basis_tri_p1 > >::
+  get_local_contributions_tsng_2(sc * values_out,
+    lo i_test, lo i_trial,
     int n_shared_vertices, [[maybe_unused]] int rot_test,
     [[maybe_unused]] int rot_trial, const quadrature_nodes & quadr_nodes_tst,
     const quadrature_nodes & quadr_nodes_trl) const {
 
-  const besthea::mesh::uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
-  const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
   
   sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
   sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
@@ -517,16 +533,17 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
-  get_local_contributions_tsng_1(sc * values_out, lo i_test, lo i_trial,
+  spacetime_heat_dl_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p0 >,
+  uniform_spacetime_be_space< basis_tri_p1 > >::
+  get_local_contributions_tsng_1(sc * values_out,
+    lo i_test, lo i_trial,
     int n_shared_vertices, [[maybe_unused]] int rot_test,
     [[maybe_unused]] int rot_trial, const quadrature_nodes & quadr_nodes_tst,
     const quadrature_nodes & quadr_nodes_trl) const {
 
-  const besthea::mesh::uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
-  const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
   
   sc timestep = test_mesh.get_timestep( );
   sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
@@ -591,17 +608,18 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_adl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  get_local_contributions_treg_sreg(sc * values_out, lo delta, lo i_test, lo i_trial,
+  spacetime_heat_adl_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p1 >,
+  uniform_spacetime_be_space< basis_tri_p0 > >::
+  get_local_contributions_treg_sreg(sc * values_out,
+    lo delta, lo i_test, lo i_trial,
     const quadrature_nodes & quadr_nodes_tst,
     const quadrature_nodes & quadr_nodes_trl) const {
 
   // assuming delta > 0 && i_test != i_trial
 
-  const besthea::mesh::uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
-  const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
   
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
@@ -655,17 +673,18 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_adl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  get_local_contributions_treg_ssng(sc * values_out, lo delta, lo i_test, lo i_trial,
+  spacetime_heat_adl_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p1 >,
+  uniform_spacetime_be_space< basis_tri_p0 > >::
+  get_local_contributions_treg_ssng(sc * values_out,
+    lo delta, lo i_test, lo i_trial,
     const quadrature_nodes & quadr_nodes_tst,
     const quadrature_nodes & quadr_nodes_trl) const {
 
   // assuming delta > 0 && i_test == i_trial
 
-  const besthea::mesh::uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
-  const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
   
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
@@ -719,16 +738,17 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_adl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  get_local_contributions_tsng_2(sc * values_out, lo i_test, lo i_trial,
+  spacetime_heat_adl_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p1 >,
+  uniform_spacetime_be_space< basis_tri_p0 > >::
+  get_local_contributions_tsng_2(sc * values_out,
+    lo i_test, lo i_trial,
     int n_shared_vertices, [[maybe_unused]] int rot_test,
     [[maybe_unused]] int rot_trial, const quadrature_nodes & quadr_nodes_tst,
     const quadrature_nodes & quadr_nodes_trl) const {
 
-  const besthea::mesh::uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
-  const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
   
   sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
   sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
@@ -780,16 +800,17 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_adl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
-  get_local_contributions_tsng_1(sc * values_out, lo i_test, lo i_trial,
+  spacetime_heat_adl_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p1 >,
+  uniform_spacetime_be_space< basis_tri_p0 > >::
+  get_local_contributions_tsng_1(sc * values_out,
+    lo i_test, lo i_trial,
     int n_shared_vertices, [[maybe_unused]] int rot_test,
     [[maybe_unused]] int rot_trial, const quadrature_nodes & quadr_nodes_tst,
     const quadrature_nodes & quadr_nodes_trl) const {
 
-  const besthea::mesh::uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
-  const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
   
   sc timestep = test_mesh.get_timestep( );
   sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
@@ -852,19 +873,20 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
-  get_local_contributions_treg_sreg(sc * values_out, lo delta, lo i_test, lo i_trial,
+  spacetime_heat_hs_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p1 >,
+  uniform_spacetime_be_space< basis_tri_p1 > >::
+  get_local_contributions_treg_sreg(sc * values_out,
+    lo delta, lo i_test, lo i_trial,
     const quadrature_nodes & quadr_nodes_tst,
     const quadrature_nodes & quadr_nodes_trl) const {
 
   // assuming delta > 0 && i_test != i_trial
 
-  besthea::bem::basis_tri_p1 & test_basis = _test_space->get_basis( );
-  besthea::bem::basis_tri_p1 & trial_basis = _trial_space->get_basis( );
-  const besthea::mesh::uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
-  const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
+  basis_tri_p1 & test_basis = _test_space->get_basis( );
+  basis_tri_p1 & trial_basis = _trial_space->get_basis( );
+  const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
 
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
@@ -899,7 +921,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
     for ( lo i_loc_trial = 0; i_loc_trial < 3; ++i_loc_trial ) {
       trial_curl_offset = 3 * i_loc_trial;
       curl_dot[ i_loc_trial * 3 + i_loc_test ]
-        = test_curls[ test_curl_offset     ] * trial_curls[ trial_curl_offset ]
+        = test_curls[ test_curl_offset     ] * trial_curls[ trial_curl_offset     ]
         + test_curls[ test_curl_offset + 1 ] * trial_curls[ trial_curl_offset + 1 ]
         + test_curls[ test_curl_offset + 2 ] * trial_curls[ trial_curl_offset + 2 ];
     }
@@ -960,19 +982,20 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
-  get_local_contributions_treg_ssng(sc * values_out, lo delta, lo i_test, lo i_trial,
+  spacetime_heat_hs_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p1 >,
+  uniform_spacetime_be_space< basis_tri_p1 > >::
+  get_local_contributions_treg_ssng(sc * values_out,
+    lo delta, lo i_test, lo i_trial,
     const quadrature_nodes & quadr_nodes_tst,
     const quadrature_nodes & quadr_nodes_trl) const {
 
   // assuming delta > 0 && i_test == i_trial
 
-  besthea::bem::basis_tri_p1 & test_basis = _test_space->get_basis( );
-  besthea::bem::basis_tri_p1 & trial_basis = _trial_space->get_basis( );
-  const besthea::mesh::uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
-  const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
+  basis_tri_p1 & test_basis = _test_space->get_basis( );
+  basis_tri_p1 & trial_basis = _trial_space->get_basis( );
+  const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
 
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
@@ -1068,18 +1091,19 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
-  get_local_contributions_tsng_2(sc * values_out, lo i_test, lo i_trial,
+  spacetime_heat_hs_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p1 >,
+  uniform_spacetime_be_space< basis_tri_p1 > >::
+  get_local_contributions_tsng_2(sc * values_out,
+    lo i_test, lo i_trial,
     int n_shared_vertices, int rot_test, int rot_trial,
     const quadrature_nodes & quadr_nodes_tst,
     const quadrature_nodes & quadr_nodes_trl) const {
 
-  besthea::bem::basis_tri_p1 & test_basis = _test_space->get_basis( );
-  besthea::bem::basis_tri_p1 & trial_basis = _trial_space->get_basis( );
-  const besthea::mesh::uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
-  const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
+  basis_tri_p1 & test_basis = _test_space->get_basis( );
+  basis_tri_p1 & trial_basis = _trial_space->get_basis( );
+  const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
 
   sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
   sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
@@ -1105,14 +1129,16 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   sc test_curls[ 9 ], trial_curls[ 9 ];
   sc curl_dot[ 9 ];
   lo test_curl_offset, trial_curl_offset;
-  test_basis.evaluate_curl( i_test, nx, n_shared_vertices, rot_test, false, test_curls );
-  trial_basis.evaluate_curl( i_trial, ny, n_shared_vertices, rot_trial, true, trial_curls );
+  test_basis.evaluate_curl( i_test, nx, n_shared_vertices, rot_test,
+    false, test_curls );
+  trial_basis.evaluate_curl( i_trial, ny, n_shared_vertices, rot_trial,
+    true, trial_curls );
   for ( lo i_loc_test = 0; i_loc_test < 3; ++i_loc_test ) {
     test_curl_offset = 3 * i_loc_test;
     for ( lo i_loc_trial = 0; i_loc_trial < 3; ++i_loc_trial ) {
       trial_curl_offset = 3 * i_loc_trial;
       curl_dot[ i_loc_trial * 3 + i_loc_test ]
-        = test_curls[ test_curl_offset     ] * trial_curls[ trial_curl_offset ]
+        = test_curls[ test_curl_offset     ] * trial_curls[ trial_curl_offset     ]
         + test_curls[ test_curl_offset + 1 ] * trial_curls[ trial_curl_offset + 1 ]
         + test_curls[ test_curl_offset + 2 ] * trial_curls[ trial_curl_offset + 2 ];
     }
@@ -1173,18 +1199,19 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
-  get_local_contributions_tsng_1(sc * values_out, lo i_test, lo i_trial,
+  spacetime_heat_hs_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p1 >,
+  uniform_spacetime_be_space< basis_tri_p1 > >::
+  get_local_contributions_tsng_1(sc * values_out,
+    lo i_test, lo i_trial,
     int n_shared_vertices, int rot_test, int rot_trial,
     const quadrature_nodes & quadr_nodes_tst,
     const quadrature_nodes & quadr_nodes_trl) const {
 
-  besthea::bem::basis_tri_p1 & test_basis = _test_space->get_basis( );
-  besthea::bem::basis_tri_p1 & trial_basis = _trial_space->get_basis( );
-  const besthea::mesh::uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
-  const besthea::mesh::uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
+  basis_tri_p1 & test_basis = _test_space->get_basis( );
+  basis_tri_p1 & trial_basis = _trial_space->get_basis( );
+  const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
+  const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
 
   sc timestep = test_mesh.get_timestep( );
   sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
@@ -1206,14 +1233,16 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
   sc test_curls[ 9 ], trial_curls[ 9 ];
   sc curl_dot[ 9 ];
   lo test_curl_offset, trial_curl_offset;
-  test_basis.evaluate_curl( i_test, nx, n_shared_vertices, rot_test, false, test_curls );
-  trial_basis.evaluate_curl( i_trial, ny, n_shared_vertices, rot_trial, true, trial_curls );
+  test_basis.evaluate_curl( i_test, nx, n_shared_vertices, rot_test,
+    false, test_curls );
+  trial_basis.evaluate_curl( i_trial, ny, n_shared_vertices, rot_trial,
+    true, trial_curls );
   for ( lo i_loc_test = 0; i_loc_test < 3; ++i_loc_test ) {
     test_curl_offset = 3 * i_loc_test;
     for ( lo i_loc_trial = 0; i_loc_trial < 3; ++i_loc_trial ) {
       trial_curl_offset = 3 * i_loc_trial;
       curl_dot[ i_loc_trial * 3 + i_loc_test ]
-        = test_curls[ test_curl_offset     ] * trial_curls[ trial_curl_offset ]
+        = test_curls[ test_curl_offset     ] * trial_curls[ trial_curl_offset     ]
         + test_curls[ test_curl_offset + 1 ] * trial_curls[ trial_curl_offset + 1 ]
         + test_curls[ test_curl_offset + 2 ] * trial_curls[ trial_curl_offset + 2 ];
     }
@@ -1296,9 +1325,9 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
+  spacetime_heat_sl_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p0 >,
+  uniform_spacetime_be_space< basis_tri_p0 > >::
   apply_cpu_treg_sreg( const block_vector_type & x_perm,
     block_vector_type & y_perm, sc alpha,
     lo tst_elem_start, lo tst_elem_end ) const {
@@ -1358,9 +1387,9 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
+  spacetime_heat_sl_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p0 >,
+  uniform_spacetime_be_space< basis_tri_p0 > >::
   apply_cpu_treg_ssng( const block_vector_type & x_perm,
     block_vector_type & y_perm, sc alpha) const {
 
@@ -1417,9 +1446,9 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
+  spacetime_heat_sl_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p0 >,
+  uniform_spacetime_be_space< basis_tri_p0 > >::
   apply_cpu_tsng( const block_vector_type & x_perm,
     block_vector_type & y_perm, sc alpha ) const {
 
@@ -1440,16 +1469,20 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
     for (lo i_tst = 0; i_tst < rows_in_block; i_tst++) {
       for (lo i_trl = 0; i_trl < cols_in_block; i_trl++) {
         get_type(i_tst, i_trl, n_shared_vertices, rot_tst, rot_trl);
-        triangles_to_geometry_tst(i_tst, n_shared_vertices, rot_tst, quadr_nodes_tst);
-        triangles_to_geometry_trl(i_trl, n_shared_vertices, rot_trl, quadr_nodes_trl);
+        triangles_to_geometry_tst(i_tst, n_shared_vertices, rot_tst,
+          quadr_nodes_tst);
+        triangles_to_geometry_trl(i_trl, n_shared_vertices, rot_trl,
+          quadr_nodes_trl);
 
         const lo &row = i_tst;
         const lo &col = i_trl;
 
-        get_local_contributions_tsng_1(&val_prev, i_tst, i_trl, n_shared_vertices,
-          rot_tst, rot_trl, quadr_nodes_tst, quadr_nodes_trl);
-        get_local_contributions_tsng_2(&val_curr, i_tst, i_trl, n_shared_vertices,
-          rot_tst, rot_trl, quadr_nodes_tst, quadr_nodes_trl);
+        get_local_contributions_tsng_1(&val_prev, i_tst, i_trl,
+          n_shared_vertices, rot_tst, rot_trl,
+          quadr_nodes_tst, quadr_nodes_trl);
+        get_local_contributions_tsng_2(&val_curr, i_tst, i_trl,
+          n_shared_vertices, rot_tst, rot_trl,
+          quadr_nodes_tst, quadr_nodes_trl);
 
         sc matrix_val = val_prev + val_curr;
         lo max_block = blocks;
@@ -1491,14 +1524,14 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
+  spacetime_heat_dl_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p0 >,
+  uniform_spacetime_be_space< basis_tri_p1 > >::
   apply_cpu_treg_sreg(  const block_vector_type & x_perm,
     block_vector_type & y_perm, sc alpha,
     lo tst_elem_start, lo tst_elem_end ) const {
 
-  besthea::bem::basis_tri_p1 & trial_basis = _trial_space->get_basis( );
+  basis_tri_p1 & trial_basis = _trial_space->get_basis( );
 
   lo trl_spelems_count = _trial_space->get_mesh().get_n_spatial_elements();
   lo n_blocks = _block_dim;
@@ -1532,7 +1565,8 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
           for (lo delta = 0; delta < n_blocks; delta++) {
             vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
             vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-            get_local_contributions_treg_sreg(vals_next, delta+1, i_tst, i_trl, quadr_nodes_tst, quadr_nodes_trl);
+            get_local_contributions_treg_sreg(vals_next, delta+1, i_tst, i_trl,
+              quadr_nodes_tst, quadr_nodes_trl);
 
             matrix_vals[0] = -vals_prev[0] + 2*vals_curr[0] - vals_next[0];
             matrix_vals[1] = -vals_prev[1] + 2*vals_curr[1] - vals_next[1];
@@ -1564,13 +1598,13 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
+  spacetime_heat_dl_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p0 >,
+  uniform_spacetime_be_space< basis_tri_p1 > >::
   apply_cpu_treg_ssng( const block_vector_type & x_perm,
     block_vector_type & y_perm, sc alpha) const {
 
-  besthea::bem::basis_tri_p1 & trial_basis = _trial_space->get_basis( );
+  basis_tri_p1 & trial_basis = _trial_space->get_basis( );
 
   lo tst_spelems_count = _test_space->get_mesh().get_n_spatial_elements();
   lo n_blocks = _block_dim;
@@ -1602,7 +1636,8 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
       for (lo delta = 0; delta < n_blocks; delta++) {
         vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
         vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-        get_local_contributions_treg_ssng(vals_next, delta+1, i_elem, i_elem, quadr_nodes_tst, quadr_nodes_trl);
+        get_local_contributions_treg_ssng(vals_next, delta+1, i_elem, i_elem,
+          quadr_nodes_tst, quadr_nodes_trl);
 
         matrix_vals[0] = -vals_prev[0] + 2*vals_curr[0] - vals_next[0];
         matrix_vals[1] = -vals_prev[1] + 2*vals_curr[1] - vals_next[1];
@@ -1632,13 +1667,13 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
+  spacetime_heat_dl_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p0 >,
+  uniform_spacetime_be_space< basis_tri_p1 > >::
   apply_cpu_tsng( const block_vector_type & x_perm,
     block_vector_type & y_perm, sc alpha ) const {
 
-  besthea::bem::basis_tri_p1 & trial_basis = _trial_space->get_basis( );
+  basis_tri_p1 & trial_basis = _trial_space->get_basis( );
 
   lo tst_spelems_count = _test_space->get_mesh().get_n_spatial_elements();
   lo trl_spelems_count = _trial_space->get_mesh().get_n_spatial_elements();
@@ -1661,16 +1696,21 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
     for (lo i_tst = 0; i_tst < tst_spelems_count; i_tst++) {
       for (lo i_trl = 0; i_trl < trl_spelems_count; i_trl++) {
         get_type( i_tst, i_trl, n_shared_vertices, rot_tst, rot_trl );
-        triangles_to_geometry_tst(i_tst, n_shared_vertices, rot_tst, quadr_nodes_tst);
-        triangles_to_geometry_trl(i_trl, n_shared_vertices, rot_trl, quadr_nodes_trl);
+        triangles_to_geometry_tst(i_tst, n_shared_vertices, rot_tst,
+          quadr_nodes_tst);
+        triangles_to_geometry_trl(i_trl, n_shared_vertices, rot_trl,
+          quadr_nodes_trl);
 
         const lo &row = i_tst;
-        trial_basis.local_to_global(i_trl, n_shared_vertices, rot_trl, true, cols_0 );
+        trial_basis.local_to_global(i_trl, n_shared_vertices, rot_trl,
+          true, cols_0 );
 
-        get_local_contributions_tsng_1(vals_prev, i_tst, i_trl, n_shared_vertices,
-          rot_tst, rot_trl, quadr_nodes_tst, quadr_nodes_trl);
-        get_local_contributions_tsng_2(vals_curr, i_tst, i_trl, n_shared_vertices,
-          rot_tst, rot_trl, quadr_nodes_tst, quadr_nodes_trl);
+        get_local_contributions_tsng_1(vals_prev, i_tst, i_trl,
+          n_shared_vertices, rot_tst, rot_trl,
+          quadr_nodes_tst, quadr_nodes_trl);
+        get_local_contributions_tsng_2(vals_curr, i_tst, i_trl,
+          n_shared_vertices, rot_tst, rot_trl,
+          quadr_nodes_tst, quadr_nodes_trl);
 
         matrix_vals[0] = vals_prev[0] + vals_curr[0];
         matrix_vals[1] = vals_prev[1] + vals_curr[1];
@@ -1724,14 +1764,14 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_adl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
+  spacetime_heat_adl_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p1 >,
+  uniform_spacetime_be_space< basis_tri_p0 > >::
   apply_cpu_treg_sreg(  const block_vector_type & x_perm,
     block_vector_type & y_perm, sc alpha,
     lo tst_elem_start, lo tst_elem_end ) const {
 
-  besthea::bem::basis_tri_p1 & test_basis = _test_space->get_basis( );
+  basis_tri_p1 & test_basis = _test_space->get_basis( );
 
   lo trl_spelems_count = _trial_space->get_mesh().get_n_spatial_elements();
   lo n_blocks = _block_dim;
@@ -1743,7 +1783,8 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 #pragma omp single
     y_perm_thread_privates.resize(omp_get_num_threads());
 
-    block_vector_type &y_perm_private = y_perm_thread_privates[omp_get_thread_num()];
+    block_vector_type &y_perm_private
+      = y_perm_thread_privates[omp_get_thread_num()];
     y_perm_private.resize_to_match(y_perm, true);
 
     quadrature_nodes quadr_nodes_tst(quadr_reference._sizes[0]);
@@ -1815,13 +1856,13 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_adl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
+  spacetime_heat_adl_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p1 >,
+  uniform_spacetime_be_space< basis_tri_p0 > >::
   apply_cpu_treg_ssng( const block_vector_type & x_perm,
     block_vector_type & y_perm, sc alpha) const {
 
-  besthea::bem::basis_tri_p1 & test_basis = _test_space->get_basis( );
+  basis_tri_p1 & test_basis = _test_space->get_basis( );
 
   lo tst_spelems_count = _test_space->get_mesh().get_n_spatial_elements();
   lo n_blocks = _block_dim;
@@ -1833,7 +1874,8 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 #pragma omp single
     y_perm_thread_privates.resize(omp_get_num_threads());
 
-    block_vector_type &y_perm_private = y_perm_thread_privates[omp_get_thread_num()];
+    block_vector_type &y_perm_private
+      = y_perm_thread_privates[omp_get_thread_num()];
     y_perm_private.resize_to_match(y_perm, true);
 
     quadrature_nodes quadr_nodes_tst(quadr_reference._sizes[0]);
@@ -1902,13 +1944,13 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_adl_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >::
+  spacetime_heat_adl_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p1 >,
+  uniform_spacetime_be_space< basis_tri_p0 > >::
   apply_cpu_tsng( const block_vector_type & x_perm,
     block_vector_type & y_perm, sc alpha ) const {
 
-  besthea::bem::basis_tri_p1 & test_basis = _test_space->get_basis( );
+  basis_tri_p1 & test_basis = _test_space->get_basis( );
 
   lo tst_spelems_count = _test_space->get_mesh().get_n_spatial_elements();
   lo trl_spelems_count = _trial_space->get_mesh().get_n_spatial_elements();
@@ -1921,7 +1963,8 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 #pragma omp single
     y_perm_thread_privates.resize(omp_get_num_threads());
 
-    block_vector_type &y_perm_private = y_perm_thread_privates[omp_get_thread_num()];
+    block_vector_type &y_perm_private
+      = y_perm_thread_privates[omp_get_thread_num()];
     y_perm_private.resize_to_match(y_perm, true);
 
     quadrature_nodes quadr_nodes_tst(quadr_reference._max_size);
@@ -1939,16 +1982,21 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
     for (lo i_tst = 0; i_tst < tst_spelems_count; i_tst++) {
       for (lo i_trl = 0; i_trl < trl_spelems_count; i_trl++) {
         get_type( i_tst, i_trl, n_shared_vertices, rot_tst, rot_trl );
-        triangles_to_geometry_tst(i_tst, n_shared_vertices, rot_tst, quadr_nodes_tst);
-        triangles_to_geometry_trl(i_trl, n_shared_vertices, rot_trl, quadr_nodes_trl);
+        triangles_to_geometry_tst(i_tst, n_shared_vertices, rot_tst,
+          quadr_nodes_tst);
+        triangles_to_geometry_trl(i_trl, n_shared_vertices, rot_trl,
+          quadr_nodes_trl);
 
-        test_basis.local_to_global(i_tst, n_shared_vertices, rot_tst, false, rows_0 );
+        test_basis.local_to_global(i_tst, n_shared_vertices, rot_tst,
+          false, rows_0 );
         col_0 = i_trl;
 
-        get_local_contributions_tsng_1(vals_prev, i_tst, i_trl, n_shared_vertices,
-          rot_tst, rot_trl, quadr_nodes_tst, quadr_nodes_trl);
-        get_local_contributions_tsng_2(vals_curr, i_tst, i_trl, n_shared_vertices,
-          rot_tst, rot_trl, quadr_nodes_tst, quadr_nodes_trl);
+        get_local_contributions_tsng_1(vals_prev, i_tst, i_trl,
+          n_shared_vertices, rot_tst, rot_trl,
+          quadr_nodes_tst, quadr_nodes_trl);
+        get_local_contributions_tsng_2(vals_curr, i_tst, i_trl,
+          n_shared_vertices, rot_tst, rot_trl,
+          quadr_nodes_tst, quadr_nodes_trl);
 
         matrix_vals[0] = vals_prev[0] + vals_curr[0];
         matrix_vals[1] = vals_prev[1] + vals_curr[1];
@@ -2010,15 +2058,15 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
+  spacetime_heat_hs_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p1 >,
+  uniform_spacetime_be_space< basis_tri_p1 > >::
   apply_cpu_treg_sreg(  const block_vector_type & x_perm,
     block_vector_type & y_perm, sc alpha,
     lo tst_elem_start, lo tst_elem_end ) const {
 
-  besthea::bem::basis_tri_p1 & test_basis = _test_space->get_basis( );
-  besthea::bem::basis_tri_p1 & trial_basis = _trial_space->get_basis( );
+  basis_tri_p1 & test_basis = _test_space->get_basis( );
+  basis_tri_p1 & trial_basis = _trial_space->get_basis( );
 
   lo trl_spelems_count = _trial_space->get_mesh().get_n_spatial_elements();
   lo n_blocks = _block_dim;
@@ -2030,7 +2078,8 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 #pragma omp single
     y_perm_thread_privates.resize(omp_get_num_threads());
 
-    block_vector_type &y_perm_private = y_perm_thread_privates[omp_get_thread_num()];
+    block_vector_type &y_perm_private
+      = y_perm_thread_privates[omp_get_thread_num()];
     y_perm_private.resize_to_match(y_perm, true);
 
     quadrature_nodes quadr_nodes_tst(quadr_reference._sizes[0]);
@@ -2109,14 +2158,14 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
+  spacetime_heat_hs_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p1 >,
+  uniform_spacetime_be_space< basis_tri_p1 > >::
   apply_cpu_treg_ssng( const block_vector_type & x_perm,
     block_vector_type & y_perm, sc alpha) const {
 
-  besthea::bem::basis_tri_p1 & test_basis = _test_space->get_basis( );
-  besthea::bem::basis_tri_p1 & trial_basis = _trial_space->get_basis( );
+  basis_tri_p1 & test_basis = _test_space->get_basis( );
+  basis_tri_p1 & trial_basis = _trial_space->get_basis( );
 
   lo tst_spelems_count = _test_space->get_mesh().get_n_spatial_elements();
   lo n_blocks = _block_dim;
@@ -2128,7 +2177,8 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 #pragma omp single
     y_perm_thread_privates.resize(omp_get_num_threads());
 
-    block_vector_type &y_perm_private = y_perm_thread_privates[omp_get_thread_num()];
+    block_vector_type &y_perm_private
+      = y_perm_thread_privates[omp_get_thread_num()];
     y_perm_private.resize_to_match(y_perm, true);
 
     quadrature_nodes quadr_nodes_tst(quadr_reference._sizes[0]);
@@ -2204,14 +2254,14 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
 template<>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
-  besthea::bem::spacetime_heat_hs_kernel_antiderivative,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-  besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >::
+  spacetime_heat_hs_kernel_antiderivative,
+  uniform_spacetime_be_space< basis_tri_p1 >,
+  uniform_spacetime_be_space< basis_tri_p1 > >::
   apply_cpu_tsng( const block_vector_type & x_perm,
     block_vector_type & y_perm, sc alpha ) const {
 
-  besthea::bem::basis_tri_p1 & test_basis = _test_space->get_basis( );
-  besthea::bem::basis_tri_p1 & trial_basis = _trial_space->get_basis( );
+  basis_tri_p1 & test_basis = _test_space->get_basis( );
+  basis_tri_p1 & trial_basis = _trial_space->get_basis( );
 
   lo tst_spelems_count = _test_space->get_mesh().get_n_spatial_elements();
   lo trl_spelems_count = _trial_space->get_mesh().get_n_spatial_elements();
@@ -2224,7 +2274,8 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 #pragma omp single
     y_perm_thread_privates.resize(omp_get_num_threads());
 
-    block_vector_type &y_perm_private = y_perm_thread_privates[omp_get_thread_num()];
+    block_vector_type &y_perm_private
+      = y_perm_thread_privates[omp_get_thread_num()];
     y_perm_private.resize_to_match(y_perm, true);
 
     quadrature_nodes quadr_nodes_tst(quadr_reference._max_size);
@@ -2244,16 +2295,22 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
     for (lo i_tst = 0; i_tst < tst_spelems_count; i_tst++) {
       for (lo i_trl = 0; i_trl < trl_spelems_count; i_trl++) {
         get_type( i_tst, i_trl, n_shared_vertices, rot_tst, rot_trl );
-        triangles_to_geometry_tst(i_tst, n_shared_vertices, rot_tst, quadr_nodes_tst);
-        triangles_to_geometry_trl(i_trl, n_shared_vertices, rot_trl, quadr_nodes_trl);
+        triangles_to_geometry_tst(i_tst, n_shared_vertices, rot_tst,
+          quadr_nodes_tst);
+        triangles_to_geometry_trl(i_trl, n_shared_vertices, rot_trl,
+          quadr_nodes_trl);
 
-        test_basis.local_to_global(i_tst, n_shared_vertices, rot_tst, false, rows_0 );
-        trial_basis.local_to_global(i_trl, n_shared_vertices, rot_trl, true, cols_0 );
+        test_basis.local_to_global(i_tst, n_shared_vertices, rot_tst,
+          false, rows_0 );
+        trial_basis.local_to_global(i_trl, n_shared_vertices, rot_trl,
+          true, cols_0 );
 
-        get_local_contributions_tsng_1(vals_prev, i_tst, i_trl, n_shared_vertices,
-          rot_tst, rot_trl, quadr_nodes_tst, quadr_nodes_trl);
-        get_local_contributions_tsng_2(vals_curr, i_tst, i_trl, n_shared_vertices,
-          rot_tst, rot_trl, quadr_nodes_tst, quadr_nodes_trl);
+        get_local_contributions_tsng_1(vals_prev, i_tst, i_trl,
+          n_shared_vertices, rot_tst, rot_trl,
+          quadr_nodes_tst, quadr_nodes_trl);
+        get_local_contributions_tsng_2(vals_curr, i_tst, i_trl,
+          n_shared_vertices, rot_tst, rot_trl,
+          quadr_nodes_tst, quadr_nodes_trl);
 
         for(lo j = 0; j < 9; j++) matrix_vals[j] = vals_prev[j] + vals_curr[j];
         max_block = n_blocks;
@@ -2343,7 +2400,8 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
       << ") does not match block matrix domain dimension ("
       << this->get_block_dim() << "*" << this->get_dim_domain()
       << ").\n";
-    throw std::runtime_error("BESTHEA Exception: incompatible matrix and vector dimensions");
+    throw std::runtime_error("BESTHEA Exception: "
+      "incompatible matrix and vector dimensions");
   }
 
   if(y.get_n_blocks() != this->get_block_dim() ||
@@ -2353,14 +2411,15 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
       << ") does not match block matrix range dimension ("
       << this->get_block_dim() << "*" << this->get_dim_range()
       << "). Apply will not be performed.\n";
-    throw std::runtime_error("BESTHEA Exception: incompatible matrix and vector dimensions");
+    throw std::runtime_error("BESTHEA Exception: "
+      "incompatible matrix and vector dimensions");
   }
 
   besthea::tools::time_measurer tm_combined, tm_perm, tm_apply;
   tm_combined.start();
   
   // permuting the vector x should improve data locality
-  // permuting the vector y should prevent false sharing and improve data locality
+  // permuting the vector y should prevent false sharing, improve data locality
   block_vector_type x_perm;
   block_vector_type y_perm;
 
@@ -2435,8 +2494,8 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
       << tm_scale.get_time() << " seconds\n";
     std::cout << "BESTHEA Info: apply, fully-regular elapsed time = "
       << tm_treg_sreg.get_time() << " seconds\n";
-    std::cout << "BESTHEA Info: apply, time-regular-space-singular elapsed time = "
-      << tm_treg_ssng.get_time() << " seconds\n";
+    std::cout << "BESTHEA Info: apply, time-regular-space-singular elapsed time"
+      << " = " << tm_treg_ssng.get_time() << " seconds\n";
     std::cout << "BESTHEA Info: apply, time-singular elapsed time = "
       << tm_tsng.get_time() << " seconds\n";
   }
@@ -2463,11 +2522,11 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   <kernel_type, test_space_type, trial_space_type>::init_quadrature( ) {
   // Use triangle rules for disjoint elements
   const std::vector< sc, besthea::allocator_type< sc > > & tri_x1
-    = besthea::bem::quadrature::triangle_x1( _order_regular );
+    = quadrature::triangle_x1( _order_regular );
   const std::vector< sc, besthea::allocator_type< sc > > & tri_x2
-    = besthea::bem::quadrature::triangle_x2( _order_regular );
+    = quadrature::triangle_x2( _order_regular );
   const std::vector< sc, besthea::allocator_type< sc > > & tri_w
-    = besthea::bem::quadrature::triangle_w( _order_regular );
+    = quadrature::triangle_w( _order_regular );
   lo tri_size = tri_w.size( );
   lo tri_size2 = tri_size * tri_size;
 
@@ -2495,9 +2554,9 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
 
   // Use tensor Gauss rules for singular configurations
   const std::vector< sc, besthea::allocator_type< sc > > & line_x
-    = besthea::bem::quadrature::line_x( _order_singular );
+    = quadrature::line_x( _order_singular );
   const std::vector< sc, besthea::allocator_type< sc > > & line_w
-    = besthea::bem::quadrature::line_w( _order_singular );
+    = quadrature::line_w( _order_singular );
   lo line_size = line_x.size( );
   lo line_size4 = line_size * line_size * line_size * line_size;
   sc jacobian = 0.0;
@@ -2526,9 +2585,9 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
                 quadr_reference._y1_ref[ n_shared_vertices ][ counter ],
                 quadr_reference._y2_ref[ n_shared_vertices ][ counter ],
                 jacobian );
-              quadr_reference._w[ n_shared_vertices ][ counter ] = 4.0 * jacobian
-                * line_w[ i_ksi ] * line_w[ i_eta1 ] * line_w[ i_eta2 ]
-                * line_w[ i_eta3 ];
+              quadr_reference._w[ n_shared_vertices ][ counter ]
+                = 4.0 * jacobian * line_w[ i_ksi ] * line_w[ i_eta1 ]
+                * line_w[ i_eta2 ] * line_w[ i_eta3 ];
               ++counter;
             }
           }
@@ -2551,7 +2610,8 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
     quadrature_nodes & quadr_nodes_tst ) const {
       
   linear_algebra::coordinates< 3 > x1, x2, x3;
-  _test_space->get_mesh().get_spatial_nodes_using_spatial_element_index( i_tst, x1, x2, x3 );
+  _test_space->get_mesh().get_spatial_nodes_using_spatial_element_index(
+    i_tst, x1, x2, x3 );
 
   const sc * x1rot = nullptr;
   const sc * x2rot = nullptr;
@@ -2608,7 +2668,8 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
     quadrature_nodes & quadr_nodes_trl ) const {
       
   linear_algebra::coordinates< 3 > y1, y2, y3;
-  _trial_space->get_mesh().get_spatial_nodes_using_spatial_element_index( i_trl, y1, y2, y3 );
+  _trial_space->get_mesh().get_spatial_nodes_using_spatial_element_index(
+    i_trl, y1, y2, y3 );
 
   const sc * y1rot = nullptr;
   const sc * y2rot = nullptr;
@@ -2691,8 +2752,10 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   linear_algebra::indices< 3 > test_elem;
   linear_algebra::indices< 3 > trial_elem;
 
-  _test_space->get_mesh( ).get_spatial_element_using_spatial_index( i_test, test_elem );
-  _trial_space->get_mesh( ).get_spatial_element_using_spatial_index( i_trial, trial_elem );
+  _test_space->get_mesh( ).get_spatial_element_using_spatial_index(
+    i_test, test_elem );
+  _trial_space->get_mesh( ).get_spatial_element_using_spatial_index(
+    i_trial, trial_elem );
 
   // check for shared edge
   for ( int i_rot_test = 0; i_rot_test < 3; ++i_rot_test ) {
@@ -2867,26 +2930,25 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
 template class
   besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
     besthea::bem::spacetime_heat_sl_kernel_antiderivative,
-    besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-    besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
+    besthea::bem::uniform_spacetime_be_space< basis_tri_p0 >,
+    besthea::bem::uniform_spacetime_be_space< basis_tri_p0 > >;
 
 template class
   besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
     besthea::bem::spacetime_heat_dl_kernel_antiderivative,
-    besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 >,
-    besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+    besthea::bem::uniform_spacetime_be_space< basis_tri_p0 >,
+    besthea::bem::uniform_spacetime_be_space< basis_tri_p1 > >;
 
 template class
   besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
     besthea::bem::spacetime_heat_adl_kernel_antiderivative,
-    besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-    besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > >;
+    besthea::bem::uniform_spacetime_be_space< basis_tri_p1 >,
+    besthea::bem::uniform_spacetime_be_space< basis_tri_p0 > >;
 
 template class
   besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
     besthea::bem::spacetime_heat_hs_kernel_antiderivative,
-    besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
-    besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
+    besthea::bem::uniform_spacetime_be_space< basis_tri_p1 >,
+    besthea::bem::uniform_spacetime_be_space< basis_tri_p1 > >;
 
-
-
+// clang-format on

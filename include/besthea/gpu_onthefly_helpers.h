@@ -65,7 +65,9 @@ namespace besthea::bem::onthefly::helpers {
 #ifdef __NVCC__
   __host__ __device__
 #endif
-    constexpr int qo2qs( int quadr_order ) {
+    constexpr int
+    qo2qs( int quadr_order ) {
+    // this needs to be changed too if quadrature rules are changed in future
     switch ( quadr_order ) {
       case 5:
         return 49;
@@ -127,12 +129,14 @@ struct besthea::bem::onthefly::helpers::heat_kernel_parameters {
   }
 };
 
-#define CUDA_CHECK(err) if(err!=cudaSuccess) {                                 \
-  std::cerr << "CUDA error " << err << " '" << cudaGetErrorString(err) <<"':\n"\
-    << "  in file '" << __FILE__ << "'\n"                                      \
-    << "  in function '" << __func__ << "'\n"                                  \
-    << "  on line " << __LINE__ << "'\n";                                      \
-  throw std::runtime_error("BESTHEA Exception: cuda error");                   \
-}
+#define CUDA_CHECK( err )                                                  \
+  if ( err != cudaSuccess ) {                                              \
+    std::cerr << "CUDA error " << err << " '" << cudaGetErrorString( err ) \
+              << "':\n"                                                    \
+              << "  in file '" << __FILE__ << "'\n"                        \
+              << "  in function '" << __func__ << "'\n"                    \
+              << "  on line " << __LINE__ << "'\n";                        \
+    throw std::runtime_error( "BESTHEA Exception: cuda error" );           \
+  }
 
 #endif /* INCLUDE_BESTHEA_GPU_ONTHEFLY_HELPERS_H_ */

@@ -38,7 +38,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/settings.h"
 
 namespace besthea::bem::onthefly {
-    class gpu_apply_load_distribution;
+  class gpu_apply_load_distribution;
 }
 
 /*!
@@ -54,8 +54,9 @@ class besthea::bem::onthefly::gpu_apply_load_distribution {
    * this number
    * @param[in] use_cpu_ Whether to assign work to CPU or use only GPU
    */
-  gpu_apply_load_distribution( int n_gpus_, lo n_elems_, lo gpu_chunk_size_, bool use_cpu_ );
-  
+  gpu_apply_load_distribution(
+    int n_gpus_, lo n_elems_, lo gpu_chunk_size_, bool use_cpu_ );
+
   /*!
    * Adapts the load distribution according to the provided timing results
    * @param[in] cpu_time_const Execution time of the constant part of CPU work
@@ -139,13 +140,15 @@ class besthea::bem::onthefly::gpu_apply_load_distribution {
   void update_gpu_begins( );
 
  private:
-  lo cpu_n_tst_elems; //!< Number of elements assigned to the CPU
-  double cpu_n_tst_elems_target; //!< The intended number of elements assigned to the CPU
-  std::vector< lo > gpu_i_tst_begins; //!< Indexes dividing the elements to ranges for the GPUs.
-  lo n_elems; //!< Total number of spatial elements
-  lo gpu_chunk_size; //!< Partition the work on GPU to multiples of this number
-  int n_gpus; //<! Number of GPUs
-  bool use_cpu; //<! Whether to assign work to CPU or use only GPU
+  lo cpu_n_tst_elems;             //!< Number of elements assigned to the CPU
+  double cpu_n_tst_elems_target;  //!< The intended number of elements assigned
+                                  //!< to the CPU
+  std::vector< lo > gpu_i_tst_begins;  //!< Indexes dividing the elements to
+                                       //!< ranges for the GPUs.
+  lo n_elems;                          //!< Total number of spatial elements
+  lo gpu_chunk_size;  //!< Partition the work on GPU to multiples of this number
+  int n_gpus;         //<! Number of GPUs
+  bool use_cpu;       //<! Whether to assign work to CPU or use only GPU
 };
 
 #endif /* INCLUDE_BESTHEA_GPU_APPLY_LOAD_DISTRIBUTION_H_ */

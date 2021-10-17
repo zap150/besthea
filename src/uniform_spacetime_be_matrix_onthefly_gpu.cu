@@ -32,35 +32,54 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
+#include "besthea/gpu_onthefly_helpers.h"
 #include "besthea/quadrature.h"
 #include "besthea/spacetime_heat_adl_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_hs_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_sl_kernel_antiderivative.h"
 #include "besthea/uniform_spacetime_be_space.h"
-#include "besthea/gpu_onthefly_helpers.h"
 
-#include <iostream>
 #include <array>
-#include <vector>
-#include <exception>
 #include <cuda_runtime.h>
+#include <exception>
+#include <iostream>
 #include <omp.h>
+#include <vector>
+
+using namespace besthea::mesh;
+using namespace besthea::bem;
+using namespace besthea::bem::onthefly;
+using namespace besthea::bem::onthefly::helpers;
+
+// clang-format off
+// I tried to keep the max-80-column formatting as I could, but sometimes it is
+//   just much better to violate this rule. Also the formatter collapses
+//   multiple empty lines into one, which reduces clarity and readibility
+//   of the code. Therefore I decided to turn off formatting for this file.
 
 
 
-namespace ns_gpu_helpers = besthea::bem::onthefly::helpers;
+__constant__ __device__ quadrature_reference_raw<5> c_quadr_reference_order5;
+__constant__ __device__ quadrature_reference_raw<4> c_quadr_reference_order4;
+__constant__ __device__ quadrature_reference_raw<2> c_quadr_reference_order2;
+__constant__ __device__ quadrature_reference_raw<1> c_quadr_reference_order1;
 
-__constant__ __device__ ns_gpu_helpers::quadrature_reference_raw<5> c_quadr_reference_order5;
-__constant__ __device__ ns_gpu_helpers::quadrature_reference_raw<4> c_quadr_reference_order4;
-__constant__ __device__ ns_gpu_helpers::quadrature_reference_raw<2> c_quadr_reference_order2;
-__constant__ __device__ ns_gpu_helpers::quadrature_reference_raw<1> c_quadr_reference_order1;
+template<int quadr_order> __host__ __device__
+const quadrature_reference_raw<quadr_order> & c_get_quadr_reference();
 
-template<int quadr_order> __host__ __device__ const ns_gpu_helpers::quadrature_reference_raw<quadr_order> & c_get_quadr_reference();
-template<> const ns_gpu_helpers::quadrature_reference_raw<5> & c_get_quadr_reference<5>() { return c_quadr_reference_order5; }
-template<> const ns_gpu_helpers::quadrature_reference_raw<4> & c_get_quadr_reference<4>() { return c_quadr_reference_order4; }
-template<> const ns_gpu_helpers::quadrature_reference_raw<2> & c_get_quadr_reference<2>() { return c_quadr_reference_order2; }
-template<> const ns_gpu_helpers::quadrature_reference_raw<1> & c_get_quadr_reference<1>() { return c_quadr_reference_order1; }
+template<> const quadrature_reference_raw<5> & c_get_quadr_reference<5>() {
+  return c_quadr_reference_order5;
+}
+template<> const quadrature_reference_raw<4> & c_get_quadr_reference<4>() {
+  return c_quadr_reference_order4;
+}
+template<> const quadrature_reference_raw<2> & c_get_quadr_reference<2>() {
+  return c_quadr_reference_order2;
+}
+template<> const quadrature_reference_raw<1> & c_get_quadr_reference<1>() {
+  return c_quadr_reference_order1;
+}
 
 constexpr dim3 tpb_V[5][6] = { // tpb_V[gpu_kernel_version][quadrature_order]
   {dim3(  0,  0),     dim3(  0,  0),     dim3(  0,  0),     dim3(  0,  0),     dim3(  0,  0),     dim3(  0,  0)},
@@ -92,30 +111,30 @@ constexpr dim3 tpb_D[5][6] = {
 };
 
 constexpr dim3 get_tpb(
-  [[maybe_unused]] const besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
-  [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
-  [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
+  [[maybe_unused]] const spacetime_heat_sl_kernel_antiderivative * _hka,
+  [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p0 > * _tst_space,
+  [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p0 > * _trl_space,
   int version, int quadrature_order) {
     return tpb_V[version][quadrature_order];
 }
 constexpr dim3 get_tpb(
-  [[maybe_unused]] const besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
-  [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
-  [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+  [[maybe_unused]] const spacetime_heat_dl_kernel_antiderivative * _hka,
+  [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p0 > * _tst_space,
+  [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p1 > * _trl_space,
   int version, int quadrature_order) {
     return tpb_K[version][quadrature_order];
 }
 constexpr dim3 get_tpb(
-  [[maybe_unused]] const besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
-  [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
-  [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
+  [[maybe_unused]] const spacetime_heat_adl_kernel_antiderivative * _hka,
+  [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p1 > * _tst_space,
+  [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p0 > * _trl_space,
   int version, int quadrature_order) {
     return tpb_Kt[version][quadrature_order];
 }
 constexpr dim3 get_tpb(
-  [[maybe_unused]] const besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
-  [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
-  [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+  [[maybe_unused]] const spacetime_heat_hs_kernel_antiderivative * _hka,
+  [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p1 > * _tst_space,
+  [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p1 > * _trl_space,
   int version, int quadrature_order) {
     return tpb_D[version][quadrature_order];
 }
@@ -139,7 +158,7 @@ besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   <kernel_type, test_space_type, trial_space_type>::
   uniform_spacetime_be_matrix_onthefly_gpu( kernel_type & kernel,
   test_space_type & test_space, trial_space_type & trial_space,
-  const besthea::mesh::uniform_spacetime_tensor_mesh_gpu & gpu_mesh_,
+  const uniform_spacetime_tensor_mesh_gpu & gpu_mesh_,
   int order_singular, int order_regular, int gpu_kernel_version_,
   bool loadbalancing_use_cpu_ )
   : uniform_spacetime_be_matrix_onthefly_cpu
@@ -164,9 +183,11 @@ besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   bool isCcOk = true;
   for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
     int ccVerMajor, ccVerMinor;
-    CUDA_CHECK(cudaDeviceGetAttribute(&ccVerMajor, cudaDevAttrComputeCapabilityMajor, gpu_idx));
+    CUDA_CHECK(cudaDeviceGetAttribute(&ccVerMajor,
+      cudaDevAttrComputeCapabilityMajor, gpu_idx));
     if(ccVerMajor < 6) {
-      CUDA_CHECK(cudaDeviceGetAttribute(&ccVerMinor, cudaDevAttrComputeCapabilityMinor, gpu_idx));
+      CUDA_CHECK(cudaDeviceGetAttribute(&ccVerMinor,
+        cudaDevAttrComputeCapabilityMinor, gpu_idx));
       std::cerr << "BESTHEA Error: gpu with index " << gpu_idx
         << " has insufficient compute capability ("
         << ccVerMajor << "." << ccVerMinor
@@ -175,7 +196,8 @@ besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
     }
   }
   if(!isCcOk) {
-    throw std::runtime_error("BESTHEA Exception: insufficient gpu compute capability");
+    throw std::runtime_error("BESTHEA Exception: "
+      "insufficient gpu compute capability");
   }
 
   if(gpu_kernel_version < 1 || gpu_kernel_version > 4) {
@@ -189,8 +211,7 @@ besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   if(n_gpus > 0) {
     init_gpu_data();
   }
-
-
+  
 }
 
 
@@ -217,20 +238,32 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   switch(gpu_kernel_version) {
     case 4:
       // x_perm, y
-      vectors_data.allocate(n_gpus, this->get_dim_domain(), this->get_block_dim(), this->get_block_dim(), this->get_dim_range());
+      vectors_data.allocate(n_gpus, 
+        this->get_dim_domain(), this->get_block_dim(),
+        this->get_block_dim(), this->get_dim_range()
+      );
       break;
     case 3:
       // x_perm, y
-      vectors_data.allocate(n_gpus, this->get_dim_domain(), this->get_block_dim(), this->get_block_dim(), this->get_dim_range());
+      vectors_data.allocate(n_gpus,
+        this->get_dim_domain(), this->get_block_dim(),
+        this->get_block_dim(), this->get_dim_range()
+      );
       break;
     case 2:
     default:
       // x_perm, y
-      vectors_data.allocate(n_gpus, this->get_dim_domain(), this->get_block_dim(), this->get_block_dim(), this->get_dim_range());
+      vectors_data.allocate(n_gpus,
+        this->get_dim_domain(), this->get_block_dim(),
+        this->get_block_dim(), this->get_dim_range()
+      );
       break;
     case 1:
       // x, y_perm
-      vectors_data.allocate(n_gpus, this->get_block_dim(), this->get_dim_domain(), this->get_dim_range(), this->get_block_dim());
+      vectors_data.allocate(n_gpus,
+        this->get_block_dim(), this->get_dim_domain(),
+        this->get_dim_range(), this->get_block_dim()
+      );
       break;
   }
 
@@ -252,36 +285,37 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
       gpu_chunk_size = get_tpb(this->_kernel, this->_test_space, this->_trial_space, 1, this->_order_regular).y;
       break;
   }
-  this->load_distr =
-    new besthea::bem::onthefly::gpu_apply_load_distribution(
-      n_gpus, gpu_mesh->get_metadata().n_elems, gpu_chunk_size, loadbalancing_use_cpu);
+  this->load_distr = new gpu_apply_load_distribution(
+    n_gpus, gpu_mesh->get_metadata().n_elems,
+    gpu_chunk_size, loadbalancing_use_cpu
+  );
 
 
 
   switch(this->_order_regular) {
     case 5:
-      if(!ns_gpu_helpers::is_gpu_quadr_order5_initialized) {
+      if(!is_gpu_quadr_order5_initialized) {
         init_gpu_quadrature_memory<5>();
-        ns_gpu_helpers::is_gpu_quadr_order5_initialized = true;
+        is_gpu_quadr_order5_initialized = true;
       }
       break;
     case 4:
-      if(!ns_gpu_helpers::is_gpu_quadr_order4_initialized) {
+      if(!is_gpu_quadr_order4_initialized) {
         init_gpu_quadrature_memory<4>();
-        ns_gpu_helpers::is_gpu_quadr_order4_initialized = true;
+        is_gpu_quadr_order4_initialized = true;
       }
       break;
     case 2:
-      if(!ns_gpu_helpers::is_gpu_quadr_order2_initialized) {
+      if(!is_gpu_quadr_order2_initialized) {
         init_gpu_quadrature_memory<2>();
-        ns_gpu_helpers::is_gpu_quadr_order2_initialized = true;
+        is_gpu_quadr_order2_initialized = true;
       }
       break;
     case 1:
     default:
-      if(!ns_gpu_helpers::is_gpu_quadr_order1_initialized) {
+      if(!is_gpu_quadr_order1_initialized) {
         init_gpu_quadrature_memory<1>();
-        ns_gpu_helpers::is_gpu_quadr_order1_initialized = true;
+        is_gpu_quadr_order1_initialized = true;
       }
       break;
   }
@@ -299,7 +333,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   <kernel_type, test_space_type, trial_space_type>::
   init_gpu_quadrature_memory() const {
 
-  ns_gpu_helpers::quadrature_reference_raw<quadr_order> quadr_ref_tmp;
+  quadrature_reference_raw<quadr_order> quadr_ref_tmp;
   std::copy(this->quadr_reference._x1_ref[0].begin(), this->quadr_reference._x1_ref[0].end(), quadr_ref_tmp._x1_ref);
   std::copy(this->quadr_reference._x2_ref[0].begin(), this->quadr_reference._x2_ref[0].end(), quadr_ref_tmp._x2_ref);
   std::copy(this->quadr_reference._y1_ref[0].begin(), this->quadr_reference._y1_ref[0].end(), quadr_ref_tmp._y1_ref);
@@ -330,7 +364,6 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   }
 
 }
-
 
 
 
@@ -491,8 +524,8 @@ __device__ void d_reduce_sum_2d_y_multiple(volatile sc * shmem_vals1,
 // 0 shared vertices, 0 rot_test, 0 rot_trial
 template<int quadr_order>
 __device__ void d_triangles_to_geometry_000_tst_shmem( lo i_tst,
-  const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data & mesh_data,
-  ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & shmem_quadr_nodes_tst ) {
+  const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data & mesh_data,
+  quadrature_nodes_raw<quadr_order> & shmem_quadr_nodes_tst ) {
   
   const lo * tst_elem_nodes = mesh_data.d_element_nodes + 3 * i_tst;
 
@@ -503,14 +536,17 @@ __device__ void d_triangles_to_geometry_000_tst_shmem( lo i_tst,
   const sc * x1_ref = c_get_quadr_reference<quadr_order>()._x1_ref;
   const sc * x2_ref = c_get_quadr_reference<quadr_order>()._x2_ref;
 
-  constexpr int quadr_size = ns_gpu_helpers::qo2qs(quadr_order);
+  constexpr int quadr_size = qo2qs(quadr_order);
   for ( lo i = threadIdx.x; i < quadr_size; i += blockDim.x ) {
-    shmem_quadr_nodes_tst.xs[ i ] = x1[ 0 ] + ( x2[ 0 ] - x1[ 0 ] ) * x1_ref[ i ]
-                                            + ( x3[ 0 ] - x1[ 0 ] ) * x2_ref[ i ];
-    shmem_quadr_nodes_tst.ys[ i ] = x1[ 1 ] + ( x2[ 1 ] - x1[ 1 ] ) * x1_ref[ i ]
-                                            + ( x3[ 1 ] - x1[ 1 ] ) * x2_ref[ i ];
-    shmem_quadr_nodes_tst.zs[ i ] = x1[ 2 ] + ( x2[ 2 ] - x1[ 2 ] ) * x1_ref[ i ]
-                                            + ( x3[ 2 ] - x1[ 2 ] ) * x2_ref[ i ];
+    shmem_quadr_nodes_tst.xs[ i ] = x1[ 0 ]
+      + ( x2[ 0 ] - x1[ 0 ] ) * x1_ref[ i ]
+      + ( x3[ 0 ] - x1[ 0 ] ) * x2_ref[ i ];
+    shmem_quadr_nodes_tst.ys[ i ] = x1[ 1 ]
+      + ( x2[ 1 ] - x1[ 1 ] ) * x1_ref[ i ]
+      + ( x3[ 1 ] - x1[ 1 ] ) * x2_ref[ i ];
+    shmem_quadr_nodes_tst.zs[ i ] = x1[ 2 ]
+      + ( x2[ 2 ] - x1[ 2 ] ) * x1_ref[ i ]
+      + ( x3[ 2 ] - x1[ 2 ] ) * x2_ref[ i ];
   }
 }
 
@@ -519,8 +555,8 @@ __device__ void d_triangles_to_geometry_000_tst_shmem( lo i_tst,
 // 0 shared vertices, 0 rot_test, 0 rot_trial
 template<int quadr_order>
 __device__ void d_triangles_to_geometry_000_tst( lo i_tst,
-  const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data & mesh_data,
-  ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & shmem_quadr_nodes_tst ) {
+  const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data & mesh_data,
+  quadrature_nodes_raw<quadr_order> & shmem_quadr_nodes_tst ) {
   
   const lo * tst_elem_nodes = mesh_data.d_element_nodes + 3 * i_tst;
 
@@ -531,14 +567,17 @@ __device__ void d_triangles_to_geometry_000_tst( lo i_tst,
   const sc * x1_ref = c_get_quadr_reference<quadr_order>()._x1_ref;
   const sc * x2_ref = c_get_quadr_reference<quadr_order>()._x2_ref;
 
-  constexpr int quadr_size = ns_gpu_helpers::qo2qs(quadr_order);
+  constexpr int quadr_size = qo2qs(quadr_order);
   for ( lo i = 0; i < quadr_size; ++i ) {
-    shmem_quadr_nodes_tst.xs[ i ] = x1[ 0 ] + ( x2[ 0 ] - x1[ 0 ] ) * x1_ref[ i ]
-                                            + ( x3[ 0 ] - x1[ 0 ] ) * x2_ref[ i ];
-    shmem_quadr_nodes_tst.ys[ i ] = x1[ 1 ] + ( x2[ 1 ] - x1[ 1 ] ) * x1_ref[ i ]
-                                            + ( x3[ 1 ] - x1[ 1 ] ) * x2_ref[ i ];
-    shmem_quadr_nodes_tst.zs[ i ] = x1[ 2 ] + ( x2[ 2 ] - x1[ 2 ] ) * x1_ref[ i ]
-                                            + ( x3[ 2 ] - x1[ 2 ] ) * x2_ref[ i ];
+    shmem_quadr_nodes_tst.xs[ i ] = x1[ 0 ]
+      + ( x2[ 0 ] - x1[ 0 ] ) * x1_ref[ i ]
+      + ( x3[ 0 ] - x1[ 0 ] ) * x2_ref[ i ];
+    shmem_quadr_nodes_tst.ys[ i ] = x1[ 1 ]
+      + ( x2[ 1 ] - x1[ 1 ] ) * x1_ref[ i ]
+      + ( x3[ 1 ] - x1[ 1 ] ) * x2_ref[ i ];
+    shmem_quadr_nodes_tst.zs[ i ] = x1[ 2 ]
+      + ( x2[ 2 ] - x1[ 2 ] ) * x1_ref[ i ]
+      + ( x3[ 2 ] - x1[ 2 ] ) * x2_ref[ i ];
   }
 }
 
@@ -547,8 +586,8 @@ __device__ void d_triangles_to_geometry_000_tst( lo i_tst,
 // 0 shared vertices, 0 rot_test, 0 rot_trial
 template<int quadr_order>
 __device__ void d_triangles_to_geometry_000_trl( lo i_trl,
-  const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data & mesh_data,
-  ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & quadr_nodes_trl ) {
+  const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data & mesh_data,
+  quadrature_nodes_raw<quadr_order> & quadr_nodes_trl ) {
 
   const lo * trl_elem_nodes = mesh_data.d_element_nodes + 3 * i_trl;
 
@@ -559,14 +598,17 @@ __device__ void d_triangles_to_geometry_000_trl( lo i_trl,
   const sc * y1_ref = c_get_quadr_reference<quadr_order>()._y1_ref;
   const sc * y2_ref = c_get_quadr_reference<quadr_order>()._y2_ref;
   
-  constexpr int quadr_size = ns_gpu_helpers::qo2qs(quadr_order);
+  constexpr int quadr_size = qo2qs(quadr_order);
   for ( lo i = 0; i < quadr_size; ++i ) {
-    quadr_nodes_trl.xs[ i ] = y1[ 0 ] + ( y2[ 0 ] - y1[ 0 ] ) * y1_ref[ i ]
-                                      + ( y3[ 0 ] - y1[ 0 ] ) * y2_ref[ i ];
-    quadr_nodes_trl.ys[ i ] = y1[ 1 ] + ( y2[ 1 ] - y1[ 1 ] ) * y1_ref[ i ]
-                                      + ( y3[ 1 ] - y1[ 1 ] ) * y2_ref[ i ];
-    quadr_nodes_trl.zs[ i ] = y1[ 2 ] + ( y2[ 2 ] - y1[ 2 ] ) * y1_ref[ i ]
-                                      + ( y3[ 2 ] - y1[ 2 ] ) * y2_ref[ i ];
+    quadr_nodes_trl.xs[ i ] = y1[ 0 ]
+      + ( y2[ 0 ] - y1[ 0 ] ) * y1_ref[ i ]
+      + ( y3[ 0 ] - y1[ 0 ] ) * y2_ref[ i ];
+    quadr_nodes_trl.ys[ i ] = y1[ 1 ]
+      + ( y2[ 1 ] - y1[ 1 ] ) * y1_ref[ i ]
+      + ( y3[ 1 ] - y1[ 1 ] ) * y2_ref[ i ];
+    quadr_nodes_trl.zs[ i ] = y1[ 2 ]
+      + ( y2[ 2 ] - y1[ 2 ] ) * y1_ref[ i ]
+      + ( y3[ 2 ] - y1[ 2 ] ) * y2_ref[ i ];
   }
 }
 
@@ -586,7 +628,7 @@ __device__ void d_triangles_to_geometry_000_trl( lo i_trl,
 
 __device__ sc d_sl_kernel_do_anti_tau_anti_t_regular_in_time_regular_in_space(
   sc xy1, sc xy2, sc xy3, sc ttau, sc ttau_sqrt,
-  const ns_gpu_helpers::heat_kernel_parameters & kp ) {
+  const heat_kernel_parameters & kp ) {
 
   constexpr sc _two = 2.0;
   constexpr sc _four = 4.0;
@@ -609,7 +651,7 @@ __device__ sc d_sl_kernel_do_anti_tau_anti_t_regular_in_time_regular_in_space(
 
 __device__ sc d_dl_kernel_do_anti_tau_anti_t_regular_in_time_regular_in_space(
   sc xy1, sc xy2, sc xy3, const sc * ny, sc ttau, sc ttau_sqrt,
-  const ns_gpu_helpers::heat_kernel_parameters & kp ) {
+  const heat_kernel_parameters & kp ) {
 
   constexpr sc _one = 1.0;
   constexpr sc _two = 2.0;
@@ -634,7 +676,7 @@ __device__ sc d_dl_kernel_do_anti_tau_anti_t_regular_in_time_regular_in_space(
 
 __device__ sc d_adl_kernel_do_anti_tau_anti_t_regular_in_time_regular_in_space(
   sc xy1, sc xy2, sc xy3, const sc * nx, sc ttau, sc ttau_sqrt,
-  const ns_gpu_helpers::heat_kernel_parameters & kp ) {
+  const heat_kernel_parameters & kp ) {
 
   constexpr sc _one = 1.0;
   constexpr sc _two = 2.0;
@@ -660,7 +702,7 @@ __device__ sc d_adl_kernel_do_anti_tau_anti_t_regular_in_time_regular_in_space(
 __device__ void d_hs_kernel_do_anti_tau_anti_t_and_anti_t_regular_in_time_regular_in_space(
   sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny,
   sc ttau, sc ttau_sqrt, sc * value1, sc * value2,
-  const ns_gpu_helpers::heat_kernel_parameters & kp) {
+  const heat_kernel_parameters & kp) {
 
   constexpr sc _two = 2.0;
   constexpr sc _four = 4.0;
@@ -673,7 +715,7 @@ __device__ void d_hs_kernel_do_anti_tau_anti_t_and_anti_t_regular_in_time_regula
   sc four_pi_alpha_norm = _four * kp.pi * kp.alpha * norm;
 
   //  ttau > 0, norm > 0
-  *value1 = ( ttau / four_pi_alpha_norm + norm / ( _eight * kp.pi * kp.alpha_2 ) )
+  *value1 = (ttau / four_pi_alpha_norm + norm / (_eight * kp.pi * kp.alpha_2))
       * erf_value
     + sqrt_d / ( _four * kp.pi * kp.alpha * kp.sqrt_pi * kp.sqrt_alpha )
       * exp( -( norm * norm ) / ( _four * ttau * kp.alpha ) );
@@ -693,7 +735,7 @@ __device__ void d_hs_kernel_do_anti_tau_anti_t_and_anti_t_regular_in_time_regula
 
 __device__ void d_basis_tri_p1_evaluate_curl_00(
   lo i_elem, const sc * n, bool swap, sc * curls,
-  const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data & mesh_data) {
+  const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data & mesh_data) {
 
   const lo * elem_nodes = mesh_data.d_element_nodes + 3 * i_elem;
   const sc * x1rot = mesh_data.d_node_coords + 3 * elem_nodes[0];
@@ -756,11 +798,11 @@ __device__ void d_basis_tri_p1_evaluate_curl_00(
 template<int quadr_order>
 __device__ void d_get_local_contributions_treg_sreg_sl_p0_p0(sc * values_out,
   lo delta, lo i_test, lo i_trial,
-  const ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & quadr_nodes_tst,
-  const ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & quadr_nodes_trl,
-  const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata & mesh_metadata,
-  const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data & mesh_data,
-  const ns_gpu_helpers::heat_kernel_parameters & kp) {
+  const quadrature_nodes_raw<quadr_order> & quadr_nodes_tst,
+  const quadrature_nodes_raw<quadr_order> & quadr_nodes_trl,
+  const uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata & mesh_metadata,
+  const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data & mesh_data,
+  const heat_kernel_parameters & kp) {
   
   sc timestep = mesh_metadata.timestep;
 
@@ -774,7 +816,7 @@ __device__ void d_get_local_contributions_treg_sreg_sl_p0_p0(sc * values_out,
 
 
   sc value = 0;
-  constexpr int quadr_size = ns_gpu_helpers::qo2qs(quadr_order);
+  constexpr int quadr_size = qo2qs(quadr_order);
   for ( lo i_quad = 0; i_quad < quadr_size; ++i_quad ) {
     value += d_sl_kernel_do_anti_tau_anti_t_regular_in_time_regular_in_space(
       quadr_nodes_tst.xs[ i_quad ] - quadr_nodes_trl.xs[ i_quad ],
@@ -806,11 +848,11 @@ __device__ void d_get_local_contributions_treg_sreg_sl_p0_p0(sc * values_out,
 template<int quadr_order>
 __device__ void d_get_local_contributions_treg_sreg_dl_p0_p1(sc * values_out,
   lo delta, lo i_test, lo i_trial,
-  const ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & quadr_nodes_tst,
-  const ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & quadr_nodes_trl,
-  const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata & mesh_metadata,
-  const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data & mesh_data,
-  const ns_gpu_helpers::heat_kernel_parameters & kp) {
+  const quadrature_nodes_raw<quadr_order> & quadr_nodes_tst,
+  const quadrature_nodes_raw<quadr_order> & quadr_nodes_trl,
+  const uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata & mesh_metadata,
+  const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data & mesh_data,
+  const heat_kernel_parameters & kp) {
     
   sc timestep = mesh_metadata.timestep;
 
@@ -832,7 +874,7 @@ __device__ void d_get_local_contributions_treg_sreg_dl_p0_p1(sc * values_out,
 
   value1 = value2 = value3 = 0.0;
 
-  constexpr int quadr_size = ns_gpu_helpers::qo2qs(quadr_order);
+  constexpr int quadr_size = qo2qs(quadr_order);
   for ( lo i_quad = 0; i_quad < quadr_size; ++i_quad ) {
     kernel = d_dl_kernel_do_anti_tau_anti_t_regular_in_time_regular_in_space(
       quadr_nodes_tst.xs[ i_quad ] - quadr_nodes_trl.xs[ i_quad ],
@@ -869,11 +911,11 @@ __device__ void d_get_local_contributions_treg_sreg_dl_p0_p1(sc * values_out,
 template<int quadr_order>
 __device__ void d_get_local_contributions_treg_sreg_adl_p1_p0(sc * values_out,
   lo delta, lo i_test, lo i_trial,
-  const ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & quadr_nodes_tst,
-  const ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & quadr_nodes_trl,
-  const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata & mesh_metadata,
-  const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data & mesh_data,
-  const ns_gpu_helpers::heat_kernel_parameters & kp) {
+  const quadrature_nodes_raw<quadr_order> & quadr_nodes_tst,
+  const quadrature_nodes_raw<quadr_order> & quadr_nodes_trl,
+  const uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata & mesh_metadata,
+  const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data & mesh_data,
+  const heat_kernel_parameters & kp) {
     
   sc timestep = mesh_metadata.timestep;
 
@@ -895,7 +937,7 @@ __device__ void d_get_local_contributions_treg_sreg_adl_p1_p0(sc * values_out,
 
   value1 = value2 = value3 = 0.0;
 
-  constexpr int quadr_size = ns_gpu_helpers::qo2qs(quadr_order);
+  constexpr int quadr_size = qo2qs(quadr_order);
   for ( lo i_quad = 0; i_quad < quadr_size; ++i_quad ) {
     kernel = d_adl_kernel_do_anti_tau_anti_t_regular_in_time_regular_in_space(
       quadr_nodes_tst.xs[ i_quad ] - quadr_nodes_trl.xs[ i_quad ],
@@ -932,11 +974,11 @@ __device__ void d_get_local_contributions_treg_sreg_adl_p1_p0(sc * values_out,
 template<int quadr_order>
 __device__ void d_get_local_contributions_treg_sreg_hs_p1_p1(sc * values_out,
   lo delta, lo i_test, lo i_trial,
-  const ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & quadr_nodes_tst,
-  const ns_gpu_helpers::quadrature_nodes_raw<quadr_order> & quadr_nodes_trl,
-  const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata & mesh_metadata,
-  const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data & mesh_data,
-  const ns_gpu_helpers::heat_kernel_parameters & kp) {
+  const quadrature_nodes_raw<quadr_order> & quadr_nodes_tst,
+  const quadrature_nodes_raw<quadr_order> & quadr_nodes_trl,
+  const uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata & mesh_metadata,
+  const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data & mesh_data,
+  const heat_kernel_parameters & kp) {
   
   sc timestep = mesh_metadata.timestep;
 
@@ -969,7 +1011,7 @@ __device__ void d_get_local_contributions_treg_sreg_hs_p1_p1(sc * values_out,
     for ( lo i_loc_trial = 0; i_loc_trial < 3; ++i_loc_trial ) {
       trial_curl_offset = 3 * i_loc_trial;
       curl_dot[ i_loc_trial * 3 + i_loc_test ]
-        = test_curls[ test_curl_offset     ] * trial_curls[ trial_curl_offset ]
+        = test_curls[ test_curl_offset     ] * trial_curls[ trial_curl_offset     ]
         + test_curls[ test_curl_offset + 1 ] * trial_curls[ trial_curl_offset + 1 ]
         + test_curls[ test_curl_offset + 2 ] * trial_curls[ trial_curl_offset + 2 ];
     }
@@ -980,7 +1022,7 @@ __device__ void d_get_local_contributions_treg_sreg_hs_p1_p1(sc * values_out,
   sc &value21 = values_out[3];   sc &value22 = values_out[4];   sc &value23 = values_out[5];
   sc &value31 = values_out[6];   sc &value32 = values_out[7];   sc &value33 = values_out[8];
 
-  constexpr int quadr_size = ns_gpu_helpers::qo2qs(quadr_order);
+  constexpr int quadr_size = qo2qs(quadr_order);
   for ( lo i_quad = 0; i_quad < quadr_size; ++i_quad ) {
     d_hs_kernel_do_anti_tau_anti_t_and_anti_t_regular_in_time_regular_in_space(
       quadr_nodes_tst.xs[ i_quad ] - quadr_nodes_trl.xs[ i_quad ],
@@ -1024,20 +1066,20 @@ __device__ void d_get_local_contributions_treg_sreg_hs_p1_p1(sc * values_out,
 
 template< int quadr_order >
 __global__ void g_apply_gpu_treg_sreg_ver1
-  ( [[maybe_unused]] const besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
+  ( [[maybe_unused]] const spacetime_heat_sl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p0 > * _tst_space,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p0 > * _trl_space,
     const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
-    const ns_gpu_helpers::heat_kernel_parameters kp) {
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
+    const heat_kernel_parameters kp) {
 
   // each block handles one test element
   // each thread handles one or more trial elements, and loops through all the blocks
 
   constexpr int tpbx = tpb_V[1][quadr_order].x;
 
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
   __shared__ volatile sc shmem_y_vals[tpbx];
 
   const lo &n_blocks = mesh_metadata.n_temporal_elements;
@@ -1054,7 +1096,7 @@ __global__ void g_apply_gpu_treg_sreg_ver1
   sc val_curr;
   sc val_next;
 
-  ns_gpu_helpers::quadrature_nodes_raw<quadr_order> quadr_nodes_trl;
+  quadrature_nodes_raw<quadr_order> quadr_nodes_trl;
 
   for (lo i_trl = threadIdx.x; i_trl < n_elems; i_trl += blockDim.x) {
     d_triangles_to_geometry_000_trl(i_trl, mesh_data, quadr_nodes_trl);
@@ -1068,8 +1110,9 @@ __global__ void g_apply_gpu_treg_sreg_ver1
     for (lo delta = 0; delta < n_blocks; delta++) {
       val_prev = val_curr;
       val_curr = val_next;
-      d_get_local_contributions_treg_sreg_sl_p0_p0(&val_next, delta+1, i_tst, i_trl,
-        shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
+      d_get_local_contributions_treg_sreg_sl_p0_p0(&val_next,
+        delta+1, i_tst, i_trl, shmem_quadr_nodes_tst, quadr_nodes_trl,
+        mesh_metadata, mesh_data, kp);
 
       matrix_val = ((i_tst == i_trl) ? (0) : (-val_prev + 2*val_curr - val_next));
 
@@ -1080,7 +1123,8 @@ __global__ void g_apply_gpu_treg_sreg_ver1
         shmem_y_vals[tid] = matrix_val * x[block_col * ld_x + col];
         __syncthreads();
         d_reduce_sum<tpbx>(shmem_y_vals);
-        if(tid == 0) y_perm[block_row + ld_y_perm * row] += alpha * shmem_y_vals[0];
+        if(tid == 0)
+          y_perm[block_row + ld_y_perm * row] += alpha * shmem_y_vals[0];
       }
     }
 
@@ -1095,20 +1139,20 @@ __global__ void g_apply_gpu_treg_sreg_ver1
 
 template< int quadr_order >
 __global__ void g_apply_gpu_treg_sreg_ver1
-  ( [[maybe_unused]] const besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+  ( [[maybe_unused]] const spacetime_heat_dl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p0 > * _tst_space,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p1 > * _trl_space,
     const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
-    const ns_gpu_helpers::heat_kernel_parameters kp) {
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
+    const heat_kernel_parameters kp) {
 
   // each block handles one test element
   // each thread handles one or more trial elements, and loops through all the blocks
 
   constexpr int tpbx = tpb_K[1][quadr_order].x;
 
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
   __shared__ sc shmem_y_vals[tpbx];
 
   const lo &n_blocks = mesh_metadata.n_temporal_elements;
@@ -1125,7 +1169,7 @@ __global__ void g_apply_gpu_treg_sreg_ver1
   sc vals_curr[3];
   sc vals_next[3];
 
-  ns_gpu_helpers::quadrature_nodes_raw<quadr_order> quadr_nodes_trl;
+  quadrature_nodes_raw<quadr_order> quadr_nodes_trl;
 
 
   for (lo i_trl = threadIdx.x; i_trl < n_elems; i_trl += blockDim.x) {
@@ -1140,8 +1184,9 @@ __global__ void g_apply_gpu_treg_sreg_ver1
     for (lo delta = 0; delta < n_blocks; delta++) {
       vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
       vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-      d_get_local_contributions_treg_sreg_dl_p0_p1(vals_next, delta+1, i_tst, i_trl,
-        shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
+      d_get_local_contributions_treg_sreg_dl_p0_p1(vals_next,
+        delta+1, i_tst, i_trl, shmem_quadr_nodes_tst, quadr_nodes_trl,
+        mesh_metadata, mesh_data, kp);
 
       matrix_vals[0] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
       matrix_vals[1] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
@@ -1156,7 +1201,8 @@ __global__ void g_apply_gpu_treg_sreg_ver1
         shmem_y_vals[tid] += matrix_vals[2] * x[block_col * ld_x + cols[2]];
         __syncthreads();
         d_reduce_sum<tpbx>(shmem_y_vals);
-        if(tid == 0) y_perm[block_row + ld_y_perm * row] += alpha * shmem_y_vals[0];
+        if(tid == 0)
+          y_perm[block_row + ld_y_perm * row] += alpha * shmem_y_vals[0];
       }
     }
 
@@ -1171,17 +1217,17 @@ __global__ void g_apply_gpu_treg_sreg_ver1
 
 template< int quadr_order >
 __global__ void g_apply_gpu_treg_sreg_ver1
-  ( [[maybe_unused]] const besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
+  ( [[maybe_unused]] const spacetime_heat_adl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p1 > * _tst_space,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p0 > * _trl_space,
     const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
-    const ns_gpu_helpers::heat_kernel_parameters kp) {
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
+    const heat_kernel_parameters kp) {
 
   constexpr int tpbx = tpb_Kt[1][quadr_order].x;
 
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
   __shared__ sc shmem_y_vals_data[3 * tpbx];
   sc * shmem_y_vals[3];
   shmem_y_vals[0] = shmem_y_vals_data + 0 * blockDim.x;
@@ -1204,7 +1250,7 @@ __global__ void g_apply_gpu_treg_sreg_ver1
   sc vals_curr[3];
   sc vals_next[3];
 
-  ns_gpu_helpers::quadrature_nodes_raw<quadr_order> quadr_nodes_trl;
+  quadrature_nodes_raw<quadr_order> quadr_nodes_trl;
 
 
   for (lo i_trl = threadIdx.x; i_trl < n_elems; i_trl += blockDim.x) {
@@ -1219,8 +1265,9 @@ __global__ void g_apply_gpu_treg_sreg_ver1
     for (lo delta = 0; delta < n_blocks; delta++) {
       vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
       vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-      d_get_local_contributions_treg_sreg_adl_p1_p0(vals_next, delta+1, i_tst, i_trl,
-        shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
+      d_get_local_contributions_treg_sreg_adl_p1_p0(vals_next,
+        delta+1, i_tst, i_trl, shmem_quadr_nodes_tst, quadr_nodes_trl,
+        mesh_metadata, mesh_data, kp);
 
       matrix_vals[0] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
       matrix_vals[1] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
@@ -1236,7 +1283,8 @@ __global__ void g_apply_gpu_treg_sreg_ver1
         shmem_y_vals[2][tid] = matrix_vals[2] * x_val;
         __syncthreads();
         d_reduce_sum_multiple<tpbx>(shmem_y_vals[0], shmem_y_vals[1], shmem_y_vals[2]);
-        if(tid < 3) atomicAdd(&y_perm[block_row + ld_y_perm * rows[tid]], alpha * shmem_y_vals[tid][0]);
+        if(tid < 3)
+          atomicAdd(&y_perm[block_row + ld_y_perm * rows[tid]], alpha * shmem_y_vals[tid][0]);
         
       }
     }
@@ -1254,17 +1302,17 @@ __global__ void g_apply_gpu_treg_sreg_ver1
 
 template< int quadr_order >
 __global__ void g_apply_gpu_treg_sreg_ver1
-  ( [[maybe_unused]] const besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+  ( [[maybe_unused]] const spacetime_heat_hs_kernel_antiderivative * _hka,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p1 > * _tst_space,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p1 > * _trl_space,
     const sc * x, lo ld_x, sc * y_perm, lo ld_y_perm, sc alpha, lo i_tst_begin,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
-    const ns_gpu_helpers::heat_kernel_parameters kp) {
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
+    const heat_kernel_parameters kp) {
 
   constexpr int tpbx = tpb_D[1][quadr_order].x;
 
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
   __shared__ sc shmem_y_vals_data[3 * tpbx];
   sc * shmem_y_vals[3];
   shmem_y_vals[0] = shmem_y_vals_data + 0 * blockDim.x;
@@ -1288,7 +1336,7 @@ __global__ void g_apply_gpu_treg_sreg_ver1
   sc vals_next[9];
   sc x_vals[3];
 
-  ns_gpu_helpers::quadrature_nodes_raw<quadr_order> quadr_nodes_trl;
+  quadrature_nodes_raw<quadr_order> quadr_nodes_trl;
 
 
   for (lo i_trl = threadIdx.x; i_trl < n_elems; i_trl += blockDim.x) {
@@ -1303,10 +1351,12 @@ __global__ void g_apply_gpu_treg_sreg_ver1
     for (lo delta = 0; delta < n_blocks; delta++) {
       for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
       for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
-      d_get_local_contributions_treg_sreg_hs_p1_p1(vals_next, delta+1, i_tst, i_trl,
-        shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
+      d_get_local_contributions_treg_sreg_hs_p1_p1(vals_next,
+        delta+1, i_tst, i_trl, shmem_quadr_nodes_tst, quadr_nodes_trl,
+        mesh_metadata, mesh_data, kp);
 
-      for(lo j = 0; j < 9; j++) matrix_vals[j] = ((i_tst == i_trl) ? (0) : (-vals_prev[j] + 2*vals_curr[j] - vals_next[j]));
+      for(lo j = 0; j < 9; j++)
+        matrix_vals[j] = ((i_tst == i_trl) ? (0) : (-vals_prev[j] + 2*vals_curr[j] - vals_next[j]));
 
       lo max_block = n_blocks - delta;
       for (lo block = 0; block < max_block; block++) {
@@ -1315,11 +1365,15 @@ __global__ void g_apply_gpu_treg_sreg_ver1
         x_vals[0] = x[block_col * ld_x + cols[0]];
         x_vals[1] = x[block_col * ld_x + cols[1]];
         x_vals[2] = x[block_col * ld_x + cols[2]];
-        for(lo r = 0; r < 3; r++) shmem_y_vals[r][tid] = 0;
-        for(lo r = 0; r < 3; r++) for(lo c = 0; c < 3; c++) shmem_y_vals[r][tid] += matrix_vals[3*r+c] * x_vals[c];
+        for(lo r = 0; r < 3; r++)
+          shmem_y_vals[r][tid] = 0;
+        for(lo r = 0; r < 3; r++)
+          for(lo c = 0; c < 3; c++)
+            shmem_y_vals[r][tid] += matrix_vals[3*r+c] * x_vals[c];
         __syncthreads();
         d_reduce_sum_multiple<tpbx>(shmem_y_vals[0], shmem_y_vals[1], shmem_y_vals[2]);
-        if(tid < 3) atomicAdd(&y_perm[block_row + ld_y_perm * rows[tid]], alpha * shmem_y_vals[tid][0]);
+        if(tid < 3)
+          atomicAdd(&y_perm[block_row + ld_y_perm * rows[tid]], alpha * shmem_y_vals[tid][0]);
         
       }
     }
@@ -1350,13 +1404,13 @@ __global__ void g_apply_gpu_treg_sreg_ver1
 
 template< int quadr_order >
 __global__ void g_apply_gpu_treg_sreg_ver2
-  ( [[maybe_unused]] const besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
+  ( [[maybe_unused]] const spacetime_heat_sl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p0 > * _tst_space,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p0 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
-    const ns_gpu_helpers::heat_kernel_parameters kp) {
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
+    const heat_kernel_parameters kp) {
 
   // each block handles one test element
   // each thread handles one or more trial elements,
@@ -1364,7 +1418,7 @@ __global__ void g_apply_gpu_treg_sreg_ver2
 
   constexpr int tpbx = tpb_V[2][quadr_order].x;
                       
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
   __shared__ sc shmem_matrix_vals[tpbx];
   
   const lo &n_blocks = mesh_metadata.n_temporal_elements;
@@ -1376,7 +1430,7 @@ __global__ void g_apply_gpu_treg_sreg_ver2
   d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_data, shmem_quadr_nodes_tst);
   __syncthreads();
 
-  ns_gpu_helpers::quadrature_nodes_raw<quadr_order> quadr_nodes_trl;
+  quadrature_nodes_raw<quadr_order> quadr_nodes_trl;
 
 
   sc val_prev;
@@ -1398,8 +1452,9 @@ __global__ void g_apply_gpu_treg_sreg_ver2
         lo &i_trl = i;
         val_prev = val_curr;
         val_curr = val_next;
-        d_get_local_contributions_treg_sreg_sl_p0_p0(&val_next, delta+1, i_tst, i_trl,
-          shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
+        d_get_local_contributions_treg_sreg_sl_p0_p0(&val_next,
+          delta+1, i_tst, i_trl, shmem_quadr_nodes_tst, quadr_nodes_trl,
+          mesh_metadata, mesh_data, kp);
         shmem_matrix_vals[tid] = ((i_tst == i_trl) ? (0) : (-val_prev + 2*val_curr - val_next));
         __syncthreads();
       }
@@ -1435,13 +1490,13 @@ __global__ void g_apply_gpu_treg_sreg_ver2
 
 template< int quadr_order >
 __global__ void g_apply_gpu_treg_sreg_ver2
-  ( [[maybe_unused]] const besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+  ( [[maybe_unused]] const spacetime_heat_dl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p0 > * _tst_space,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p1 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
-    const ns_gpu_helpers::heat_kernel_parameters kp) {
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
+    const heat_kernel_parameters kp) {
 
   // each block handles one test element
   // each thread handles one or more trial elements,
@@ -1449,7 +1504,7 @@ __global__ void g_apply_gpu_treg_sreg_ver2
 
   constexpr int tpbx = tpb_K[2][quadr_order].x;
 
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
   __shared__ sc shmem_matrix_vals_data[3 * tpbx];
   sc * shmem_matrix_vals[3];
   shmem_matrix_vals[0] = shmem_matrix_vals_data + 0 * blockDim.x;
@@ -1465,7 +1520,7 @@ __global__ void g_apply_gpu_treg_sreg_ver2
   d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_data, shmem_quadr_nodes_tst);
   __syncthreads();
 
-  ns_gpu_helpers::quadrature_nodes_raw<quadr_order> quadr_nodes_trl;
+  quadrature_nodes_raw<quadr_order> quadr_nodes_trl;
 
 
   sc vals_prev[3];
@@ -1487,8 +1542,9 @@ __global__ void g_apply_gpu_treg_sreg_ver2
         lo &i_trl = i;
         vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
         vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-        d_get_local_contributions_treg_sreg_dl_p0_p1(vals_next, delta+1, i_tst, i_trl,
-          shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
+        d_get_local_contributions_treg_sreg_dl_p0_p1(vals_next,
+          delta+1, i_tst, i_trl, shmem_quadr_nodes_tst, quadr_nodes_trl,
+          mesh_metadata, mesh_data, kp);
         shmem_matrix_vals[0][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
         shmem_matrix_vals[1][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
         shmem_matrix_vals[2][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[2] + 2*vals_curr[2] - vals_next[2]));
@@ -1526,20 +1582,21 @@ __global__ void g_apply_gpu_treg_sreg_ver2
 
 template< int quadr_order >
 __global__ void g_apply_gpu_treg_sreg_ver2
-  ( [[maybe_unused]] const besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
+  ( [[maybe_unused]] const spacetime_heat_adl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p1 > * _tst_space,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p0 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
-    const ns_gpu_helpers::heat_kernel_parameters kp) {
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
+    const heat_kernel_parameters kp) {
 
   // each block handles one test element
-  // each thread handles one or more trial elements, then is assigned to a block and loops through all the trial elements
+  // each thread handles one or more trial elements, then is assigned
+  //   to a block and loops through all the trial elements
 
   constexpr int tpbx = tpb_Kt[2][quadr_order].x;
 
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
   __shared__ sc shmem_matrix_vals_data[3 * tpbx];
   sc * shmem_matrix_vals[3];
   shmem_matrix_vals[0] = shmem_matrix_vals_data + 0 * blockDim.x;
@@ -1555,7 +1612,7 @@ __global__ void g_apply_gpu_treg_sreg_ver2
   d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_data, shmem_quadr_nodes_tst);
   __syncthreads();
 
-  ns_gpu_helpers::quadrature_nodes_raw<quadr_order> quadr_nodes_trl;
+  quadrature_nodes_raw<quadr_order> quadr_nodes_trl;
 
 
   sc vals_prev[3];
@@ -1577,8 +1634,9 @@ __global__ void g_apply_gpu_treg_sreg_ver2
         lo &i_trl = i;
         vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
         vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-        d_get_local_contributions_treg_sreg_adl_p1_p0(vals_next, delta+1, i_tst, i_trl,
-          shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
+        d_get_local_contributions_treg_sreg_adl_p1_p0(vals_next,
+          delta+1, i_tst, i_trl, shmem_quadr_nodes_tst, quadr_nodes_trl,
+          mesh_metadata, mesh_data, kp);
         shmem_matrix_vals[0][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
         shmem_matrix_vals[1][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
         shmem_matrix_vals[2][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[2] + 2*vals_curr[2] - vals_next[2]));
@@ -1618,23 +1676,25 @@ __global__ void g_apply_gpu_treg_sreg_ver2
 
 template< int quadr_order >
 __global__ void g_apply_gpu_treg_sreg_ver2
-  ( [[maybe_unused]] const besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+  ( [[maybe_unused]] const spacetime_heat_hs_kernel_antiderivative * _hka,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p1 > * _tst_space,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p1 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
-    const ns_gpu_helpers::heat_kernel_parameters kp) {
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
+    const heat_kernel_parameters kp) {
 
   // each block handles one test element
-  // each thread handles one or more trial elements, then is assigned to a block and loops through all the trial elements
+  // each thread handles one or more trial elements, then is assigned
+  //   to a block and loops through all the trial elements
 
   constexpr int tpbx = tpb_D[2][quadr_order].x;
 
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst;
   __shared__ sc shmem_matrix_vals_data[9 * tpbx];
   sc * shmem_matrix_vals[9];
-  for(lo j = 0; j < 9; j++) shmem_matrix_vals[j] = shmem_matrix_vals_data + j * blockDim.x;
+  for(lo j = 0; j < 9; j++)
+    shmem_matrix_vals[j] = shmem_matrix_vals_data + j * blockDim.x;
   
   const lo &n_blocks = mesh_metadata.n_temporal_elements;
   const lo &n_elems = mesh_metadata.n_elems;
@@ -1645,7 +1705,7 @@ __global__ void g_apply_gpu_treg_sreg_ver2
   d_triangles_to_geometry_000_tst_shmem(i_tst, mesh_data, shmem_quadr_nodes_tst);
   __syncthreads();
 
-  ns_gpu_helpers::quadrature_nodes_raw<quadr_order> quadr_nodes_trl;
+  quadrature_nodes_raw<quadr_order> quadr_nodes_trl;
 
 
   sc vals_prev[9];
@@ -1667,8 +1727,9 @@ __global__ void g_apply_gpu_treg_sreg_ver2
         lo &i_trl = i;
         for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
         for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
-        d_get_local_contributions_treg_sreg_hs_p1_p1(vals_next, delta+1, i_tst, i_trl,
-          shmem_quadr_nodes_tst, quadr_nodes_trl, mesh_metadata, mesh_data, kp);
+        d_get_local_contributions_treg_sreg_hs_p1_p1(vals_next,
+          delta+1, i_tst, i_trl, shmem_quadr_nodes_tst, quadr_nodes_trl,
+          mesh_metadata, mesh_data, kp);
         for(lo j = 0; j < 9; j++)
           shmem_matrix_vals[j][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[j] + 2*vals_curr[j] - vals_next[j]));
         __syncthreads();
@@ -1721,19 +1782,19 @@ __global__ void g_apply_gpu_treg_sreg_ver2
 
 template< int quadr_order >
 __global__ void g_apply_gpu_treg_sreg_ver3
-  ( [[maybe_unused]] const besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
+  ( [[maybe_unused]] const spacetime_heat_sl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p0 > * _tst_space,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p0 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
-    const ns_gpu_helpers::heat_kernel_parameters kp) {
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
+    const heat_kernel_parameters kp) {
 
   constexpr int tpbx = tpb_V[3][quadr_order].x;
   constexpr int tpby = tpb_V[3][quadr_order].y;
   
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
   __shared__ sc shmem_y_vals[tpbx * tpby];
 
   const int tid = threadIdx.y * blockDim.x + threadIdx.x;
@@ -1743,7 +1804,8 @@ __global__ void g_apply_gpu_treg_sreg_ver3
   
   shmem_y_vals[tid] = 0;
   if(tid < blockDim.x)
-    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_data, shmem_quadr_nodes_tst[tid]);
+    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid,
+      mesh_data, shmem_quadr_nodes_tst[tid]);
   __syncthreads();
 
   sc matrix_val;
@@ -1753,7 +1815,8 @@ __global__ void g_apply_gpu_treg_sreg_ver3
 
   for(lo i_trl = threadIdx.y; i_trl < n_elems; i_trl += blockDim.y) {
     if(tid < blockDim.y)
-      d_triangles_to_geometry_000_trl((i_trl / blockDim.y) * blockDim.y + tid, mesh_data, shmem_quadr_nodes_trl[tid]);
+      d_triangles_to_geometry_000_trl((i_trl / blockDim.y) * blockDim.y + tid,
+      mesh_data, shmem_quadr_nodes_trl[tid]);
     __syncthreads();
 
     const lo &row = i_tst;
@@ -1765,8 +1828,10 @@ __global__ void g_apply_gpu_treg_sreg_ver3
     for(lo delta = 0; delta < n_blocks; delta++) {
       val_prev = val_curr;
       val_curr = val_next;
-      d_get_local_contributions_treg_sreg_sl_p0_p0(&val_next, delta+1, i_tst, i_trl,
-        shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
+      d_get_local_contributions_treg_sreg_sl_p0_p0(&val_next,
+        delta+1, i_tst, i_trl,
+        shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y],
+        mesh_metadata, mesh_data, kp);
       matrix_val = ((i_tst == i_trl) ? (0) : (-val_prev + 2*val_curr - val_next));
       
       lo max_block = n_blocks - delta;
@@ -1776,7 +1841,8 @@ __global__ void g_apply_gpu_treg_sreg_ver3
         shmem_y_vals[tid] = matrix_val * x_perm[block_col + ld_x_perm * col];
         __syncthreads();
         d_reduce_sum_2d_y<tpbx,tpby>(shmem_y_vals);
-        if(tid < blockDim.x) y[block_row * ld_y + row] += alpha * shmem_y_vals[tid];
+        if(tid < blockDim.x)
+          y[block_row * ld_y + row] += alpha * shmem_y_vals[tid];
         __syncthreads();
       }
   
@@ -1793,19 +1859,19 @@ __global__ void g_apply_gpu_treg_sreg_ver3
 
 template< int quadr_order >
 __global__ void g_apply_gpu_treg_sreg_ver3
-  ( [[maybe_unused]] const besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+  ( [[maybe_unused]] const spacetime_heat_dl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p0 > * _tst_space,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p1 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
-    const ns_gpu_helpers::heat_kernel_parameters kp) {
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
+    const heat_kernel_parameters kp) {
 
   constexpr int tpbx = tpb_K[3][quadr_order].x;
   constexpr int tpby = tpb_K[3][quadr_order].y;
 
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
   __shared__ sc shmem_y_vals[tpbx * tpby];
 
   const int tid = threadIdx.y * blockDim.x + threadIdx.x;
@@ -1815,7 +1881,8 @@ __global__ void g_apply_gpu_treg_sreg_ver3
   
   shmem_y_vals[tid] = 0;
   if(tid < blockDim.x)
-    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_data, shmem_quadr_nodes_tst[tid]);
+    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid,
+      mesh_data, shmem_quadr_nodes_tst[tid]);
   __syncthreads();
 
   sc matrix_vals[3];
@@ -1825,7 +1892,8 @@ __global__ void g_apply_gpu_treg_sreg_ver3
 
   for(lo i_trl = threadIdx.y; i_trl < n_elems; i_trl += blockDim.y) {
     if(tid < blockDim.y)
-      d_triangles_to_geometry_000_trl((i_trl / blockDim.y) * blockDim.y + tid, mesh_data, shmem_quadr_nodes_trl[tid]);
+      d_triangles_to_geometry_000_trl((i_trl / blockDim.y) * blockDim.y + tid,
+      mesh_data, shmem_quadr_nodes_trl[tid]);
     __syncthreads();
 
     const lo &row = i_tst;
@@ -1837,8 +1905,10 @@ __global__ void g_apply_gpu_treg_sreg_ver3
     for(lo delta = 0; delta < n_blocks; delta++) {
       vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
       vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-      d_get_local_contributions_treg_sreg_dl_p0_p1(vals_next, delta+1, i_tst, i_trl,
-        shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
+      d_get_local_contributions_treg_sreg_dl_p0_p1(vals_next,
+        delta+1, i_tst, i_trl,
+        shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y],
+        mesh_metadata, mesh_data, kp);
       
       matrix_vals[0] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
       matrix_vals[1] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
@@ -1853,7 +1923,8 @@ __global__ void g_apply_gpu_treg_sreg_ver3
         shmem_y_vals[tid] += matrix_vals[2] * x_perm[block_col + ld_x_perm * cols[2]];
         __syncthreads();
         d_reduce_sum_2d_y<tpbx,tpby>(shmem_y_vals);
-        if(tid < blockDim.x) y[block_row * ld_y + row] += alpha * shmem_y_vals[tid];
+        if(tid < blockDim.x)
+          y[block_row * ld_y + row] += alpha * shmem_y_vals[tid];
         __syncthreads();
       }
   
@@ -1870,19 +1941,19 @@ __global__ void g_apply_gpu_treg_sreg_ver3
 
 template< int quadr_order >
 __global__ void g_apply_gpu_treg_sreg_ver3
-  ( [[maybe_unused]] const besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
+  ( [[maybe_unused]] const spacetime_heat_adl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p1 > * _tst_space,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p0 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
-    const ns_gpu_helpers::heat_kernel_parameters kp) {
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
+    const heat_kernel_parameters kp) {
 
   constexpr int tpbx = tpb_Kt[3][quadr_order].x;
   constexpr int tpby = tpb_Kt[3][quadr_order].y;
 
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
   __shared__ sc shmem_y_vals_data[3 * tpbx * tpby];
   sc * shmem_y_vals[3];
   shmem_y_vals[0] = shmem_y_vals_data + 0 * blockDim.x * blockDim.y;
@@ -1898,7 +1969,8 @@ __global__ void g_apply_gpu_treg_sreg_ver3
   shmem_y_vals[1][tid] = 0;
   shmem_y_vals[2][tid] = 0;
   if(tid < blockDim.x)
-    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_data, shmem_quadr_nodes_tst[tid]);
+    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid,
+      mesh_data, shmem_quadr_nodes_tst[tid]);
   __syncthreads();
 
   sc matrix_vals[3];
@@ -1908,7 +1980,8 @@ __global__ void g_apply_gpu_treg_sreg_ver3
 
   for(lo i_trl = threadIdx.y; i_trl < n_elems; i_trl += blockDim.y) {
     if(tid < blockDim.y)
-      d_triangles_to_geometry_000_trl((i_trl / blockDim.y) * blockDim.y + tid, mesh_data, shmem_quadr_nodes_trl[tid]);
+      d_triangles_to_geometry_000_trl((i_trl / blockDim.y) * blockDim.y + tid,
+        mesh_data, shmem_quadr_nodes_trl[tid]);
     __syncthreads();
 
     const lo * rows = mesh_data.d_element_nodes + 3 * i_tst;
@@ -1920,8 +1993,10 @@ __global__ void g_apply_gpu_treg_sreg_ver3
     for(lo delta = 0; delta < n_blocks; delta++) {
       vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
       vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-      d_get_local_contributions_treg_sreg_adl_p1_p0(vals_next, delta+1, i_tst, i_trl,
-        shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
+      d_get_local_contributions_treg_sreg_adl_p1_p0(vals_next,
+        delta+1, i_tst, i_trl,
+        shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y],
+        mesh_metadata, mesh_data, kp);
       
       matrix_vals[0] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
       matrix_vals[1] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
@@ -1937,7 +2012,8 @@ __global__ void g_apply_gpu_treg_sreg_ver3
         shmem_y_vals[2][tid] = matrix_vals[2] * x_val;
         __syncthreads();
         d_reduce_sum_2d_y_multiple<tpbx,tpby>(shmem_y_vals[0], shmem_y_vals[1], shmem_y_vals[2]);
-        if(threadIdx.y < 3) atomicAdd(&y[block_row * ld_y + rows[threadIdx.y]], alpha * shmem_y_vals[threadIdx.y][threadIdx.x]);
+        if(threadIdx.y < 3)
+          atomicAdd(&y[block_row * ld_y + rows[threadIdx.y]], alpha * shmem_y_vals[threadIdx.y][threadIdx.x]);
         __syncthreads(); // dont understand why this needs to be there, but it needs to
       }
     }
@@ -1955,19 +2031,19 @@ __global__ void g_apply_gpu_treg_sreg_ver3
 
 template< int quadr_order >
 __global__ void g_apply_gpu_treg_sreg_ver3
-  ( [[maybe_unused]] const besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+  ( [[maybe_unused]] const spacetime_heat_hs_kernel_antiderivative * _hka,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p1 > * _tst_space,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p1 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
-    const ns_gpu_helpers::heat_kernel_parameters kp) {
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
+    const heat_kernel_parameters kp) {
 
   constexpr int tpbx = tpb_D[3][quadr_order].x;
   constexpr int tpby = tpb_D[3][quadr_order].y;
 
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
   __shared__ sc shmem_y_vals_data[3 * tpbx * tpby];
   sc * shmem_y_vals[3];
   shmem_y_vals[0] = shmem_y_vals_data + 0 * blockDim.x * blockDim.y;
@@ -1983,7 +2059,8 @@ __global__ void g_apply_gpu_treg_sreg_ver3
   shmem_y_vals[1][tid] = 0;
   shmem_y_vals[2][tid] = 0;
   if(tid < blockDim.x)
-    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_data, shmem_quadr_nodes_tst[tid]);
+    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid,
+      mesh_data, shmem_quadr_nodes_tst[tid]);
   __syncthreads();
 
   sc matrix_vals[9];
@@ -1994,7 +2071,8 @@ __global__ void g_apply_gpu_treg_sreg_ver3
 
   for(lo i_trl = threadIdx.y; i_trl < n_elems; i_trl += blockDim.y) {
     if(tid < blockDim.y)
-      d_triangles_to_geometry_000_trl((i_trl / blockDim.y) * blockDim.y + tid, mesh_data, shmem_quadr_nodes_trl[tid]);
+      d_triangles_to_geometry_000_trl((i_trl / blockDim.y) * blockDim.y + tid,
+      mesh_data, shmem_quadr_nodes_trl[tid]);
     __syncthreads();
 
     const lo * rows = mesh_data.d_element_nodes + 3 * i_tst;
@@ -2006,8 +2084,10 @@ __global__ void g_apply_gpu_treg_sreg_ver3
     for(lo delta = 0; delta < n_blocks; delta++) {
       for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
       for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
-      d_get_local_contributions_treg_sreg_hs_p1_p1(vals_next, delta+1, i_tst, i_trl,
-        shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
+      d_get_local_contributions_treg_sreg_hs_p1_p1(vals_next,
+        delta+1, i_tst, i_trl,
+        shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y],
+        mesh_metadata, mesh_data, kp);
       
       for(lo j = 0; j < 9; j++) matrix_vals[j] = ((i_tst == i_trl) ? (0) : (-vals_prev[j] + 2*vals_curr[j] - vals_next[j]));
       
@@ -2018,11 +2098,15 @@ __global__ void g_apply_gpu_treg_sreg_ver3
         x_vals[0] = x_perm[block_col + ld_x_perm * cols[0]];
         x_vals[1] = x_perm[block_col + ld_x_perm * cols[1]];
         x_vals[2] = x_perm[block_col + ld_x_perm * cols[2]];
-        for(lo r = 0; r < 3; r++) shmem_y_vals[r][tid] = 0;
-        for(lo r = 0; r < 3; r++) for(lo c = 0; c < 3; c++) shmem_y_vals[r][tid] += matrix_vals[3*r+c] * x_vals[c];
+        for(lo r = 0; r < 3; r++)
+          shmem_y_vals[r][tid] = 0;
+        for(lo r = 0; r < 3; r++)
+          for(lo c = 0; c < 3; c++)
+            shmem_y_vals[r][tid] += matrix_vals[3*r+c] * x_vals[c];
         __syncthreads();
         d_reduce_sum_2d_y_multiple<tpbx,tpby>(shmem_y_vals[0], shmem_y_vals[1], shmem_y_vals[2]);
-        if(threadIdx.y < 3) atomicAdd(&y[block_row * ld_y + rows[threadIdx.y]], alpha * shmem_y_vals[threadIdx.y][threadIdx.x]);
+        if(threadIdx.y < 3)
+          atomicAdd(&y[block_row * ld_y + rows[threadIdx.y]], alpha * shmem_y_vals[threadIdx.y][threadIdx.x]);
         __syncthreads();
       }
     }
@@ -2052,19 +2136,19 @@ __global__ void g_apply_gpu_treg_sreg_ver3
 
 template< int quadr_order >
 __global__ void g_apply_gpu_treg_sreg_ver4
-  ( [[maybe_unused]] const besthea::bem::spacetime_heat_sl_kernel_antiderivative * _hka,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
+  ( [[maybe_unused]] const spacetime_heat_sl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p0 > * _tst_space,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p0 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
-    const ns_gpu_helpers::heat_kernel_parameters kp) {
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
+    const heat_kernel_parameters kp) {
 
   constexpr int tpbx = tpb_V[4][quadr_order].x;
   constexpr int tpby = tpb_V[4][quadr_order].y;
   
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
   __shared__ sc shmem_matrix_vals[tpbx * tpby];
 
   const int tid = threadIdx.y * blockDim.x + threadIdx.x;
@@ -2074,7 +2158,8 @@ __global__ void g_apply_gpu_treg_sreg_ver4
   const lo &row = i_tst;
   
   if(tid < blockDim.x)
-    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_data, shmem_quadr_nodes_tst[tid]);
+    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid,
+      mesh_data, shmem_quadr_nodes_tst[tid]);
   __syncthreads();
 
   sc val_prev;
@@ -2083,7 +2168,8 @@ __global__ void g_apply_gpu_treg_sreg_ver4
 
   for(lo i = threadIdx.y; i < n_elems; i += blockDim.y) {
     if(tid < blockDim.y)
-      d_triangles_to_geometry_000_trl((i / blockDim.y) * blockDim.y + tid, mesh_data, shmem_quadr_nodes_trl[tid]);
+      d_triangles_to_geometry_000_trl((i / blockDim.y) * blockDim.y + tid,
+      mesh_data, shmem_quadr_nodes_trl[tid]);
     __syncthreads();
 
     val_curr = 0;
@@ -2096,8 +2182,10 @@ __global__ void g_apply_gpu_treg_sreg_ver4
         lo &i_trl = i;
         val_prev = val_curr;
         val_curr = val_next;
-        d_get_local_contributions_treg_sreg_sl_p0_p0(&val_next, delta+1, i_tst, i_trl,
-          shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
+        d_get_local_contributions_treg_sreg_sl_p0_p0(&val_next,
+          delta+1, i_tst, i_trl,
+          shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y],
+          mesh_metadata, mesh_data, kp);
         shmem_matrix_vals[tid] = ((i_tst == i_trl) ? (0) : (-val_prev + 2*val_curr - val_next));
         __syncthreads();
       }
@@ -2130,19 +2218,19 @@ __global__ void g_apply_gpu_treg_sreg_ver4
 
 template< int quadr_order >
 __global__ void g_apply_gpu_treg_sreg_ver4
-  ( [[maybe_unused]] const besthea::bem::spacetime_heat_dl_kernel_antiderivative * _hka,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _tst_space,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+  ( [[maybe_unused]] const spacetime_heat_dl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p0 > * _tst_space,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p1 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
-    const ns_gpu_helpers::heat_kernel_parameters kp) {
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
+    const heat_kernel_parameters kp) {
 
   constexpr int tpbx = tpb_K[4][quadr_order].x;
   constexpr int tpby = tpb_K[4][quadr_order].y;
 
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
   __shared__ sc shmem_matrix_vals_data[3 * tpbx * tpby];
   sc * shmem_matrix_vals[3];
   shmem_matrix_vals[0] = shmem_matrix_vals_data + 0 * blockDim.x * blockDim.y;
@@ -2156,7 +2244,8 @@ __global__ void g_apply_gpu_treg_sreg_ver4
   const lo &row = i_tst;
   
   if(tid < blockDim.x)
-    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_data, shmem_quadr_nodes_tst[tid]);
+    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid,
+      mesh_data, shmem_quadr_nodes_tst[tid]);
   __syncthreads();
 
   sc vals_prev[3];
@@ -2165,7 +2254,8 @@ __global__ void g_apply_gpu_treg_sreg_ver4
 
   for(lo i = threadIdx.y; i < n_elems; i += blockDim.y) {
     if(tid < blockDim.y)
-      d_triangles_to_geometry_000_trl((i / blockDim.y) * blockDim.y + tid, mesh_data, shmem_quadr_nodes_trl[tid]);
+      d_triangles_to_geometry_000_trl((i / blockDim.y) * blockDim.y + tid,
+      mesh_data, shmem_quadr_nodes_trl[tid]);
     __syncthreads();
 
     vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
@@ -2178,8 +2268,10 @@ __global__ void g_apply_gpu_treg_sreg_ver4
         lo &i_trl = i;
         vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
         vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-        d_get_local_contributions_treg_sreg_dl_p0_p1(vals_next, delta+1, i_tst, i_trl,
-          shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
+        d_get_local_contributions_treg_sreg_dl_p0_p1(vals_next,
+          delta+1, i_tst, i_trl,
+          shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y],
+          mesh_metadata, mesh_data, kp);
         shmem_matrix_vals[0][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
         shmem_matrix_vals[1][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
         shmem_matrix_vals[2][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[2] + 2*vals_curr[2] - vals_next[2]));
@@ -2215,19 +2307,19 @@ __global__ void g_apply_gpu_treg_sreg_ver4
 
 template< int quadr_order >
 __global__ void g_apply_gpu_treg_sreg_ver4
-  ( [[maybe_unused]] const besthea::bem::spacetime_heat_adl_kernel_antiderivative * _hka,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p0 > * _trl_space,
+  ( [[maybe_unused]] const spacetime_heat_adl_kernel_antiderivative * _hka,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p1 > * _tst_space,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p0 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
-    const ns_gpu_helpers::heat_kernel_parameters kp) {
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
+    const heat_kernel_parameters kp) {
 
   constexpr int tpbx = tpb_Kt[4][quadr_order].x;
   constexpr int tpby = tpb_Kt[4][quadr_order].y;
 
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
   __shared__ sc shmem_matrix_vals_data[3 * tpbx * tpby];
   sc * shmem_matrix_vals[3];
   shmem_matrix_vals[0] = shmem_matrix_vals_data + 0 * blockDim.x * blockDim.y;
@@ -2241,7 +2333,8 @@ __global__ void g_apply_gpu_treg_sreg_ver4
   const lo * rows = mesh_data.d_element_nodes + 3 * i_tst;
   
   if(tid < blockDim.x)
-    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_data, shmem_quadr_nodes_tst[tid]);
+    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid,
+      mesh_data, shmem_quadr_nodes_tst[tid]);
   __syncthreads();
 
   sc vals_prev[3];
@@ -2250,7 +2343,8 @@ __global__ void g_apply_gpu_treg_sreg_ver4
 
   for(lo i = threadIdx.y; i < n_elems; i += blockDim.y) {
     if(tid < blockDim.y)
-      d_triangles_to_geometry_000_trl((i / blockDim.y) * blockDim.y + tid, mesh_data, shmem_quadr_nodes_trl[tid]);
+      d_triangles_to_geometry_000_trl((i / blockDim.y) * blockDim.y + tid,
+      mesh_data, shmem_quadr_nodes_trl[tid]);
     __syncthreads();
 
     vals_curr[0] = 0;   vals_curr[1] = 0;   vals_curr[2] = 0;
@@ -2263,8 +2357,10 @@ __global__ void g_apply_gpu_treg_sreg_ver4
         lo &i_trl = i;
         vals_prev[0] = vals_curr[0];   vals_prev[1] = vals_curr[1];   vals_prev[2] = vals_curr[2];
         vals_curr[0] = vals_next[0];   vals_curr[1] = vals_next[1];   vals_curr[2] = vals_next[2];
-        d_get_local_contributions_treg_sreg_adl_p1_p0(vals_next, delta+1, i_tst, i_trl,
-          shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
+        d_get_local_contributions_treg_sreg_adl_p1_p0(vals_next,
+          delta+1, i_tst, i_trl,
+          shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y],
+          mesh_metadata, mesh_data, kp);
         shmem_matrix_vals[0][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[0] + 2*vals_curr[0] - vals_next[0]));
         shmem_matrix_vals[1][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[1] + 2*vals_curr[1] - vals_next[1]));
         shmem_matrix_vals[2][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[2] + 2*vals_curr[2] - vals_next[2]));
@@ -2302,19 +2398,19 @@ __global__ void g_apply_gpu_treg_sreg_ver4
 
 template< int quadr_order >
 __global__ void g_apply_gpu_treg_sreg_ver4
-  ( [[maybe_unused]] const besthea::bem::spacetime_heat_hs_kernel_antiderivative * _hka,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _tst_space,
-    [[maybe_unused]] const besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > * _trl_space,
+  ( [[maybe_unused]] const spacetime_heat_hs_kernel_antiderivative * _hka,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p1 > * _tst_space,
+    [[maybe_unused]] const uniform_spacetime_be_space< basis_tri_p1 > * _trl_space,
     const sc * x_perm, lo ld_x_perm, sc * y, lo ld_y, sc alpha, lo i_tst_begin,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
-    const besthea::mesh::uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
-    const ns_gpu_helpers::heat_kernel_parameters kp) {
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_metadata mesh_metadata,
+    const uniform_spacetime_tensor_mesh_gpu::mesh_raw_data mesh_data,
+    const heat_kernel_parameters kp) {
 
   constexpr int tpbx = tpb_D[4][quadr_order].x;
   constexpr int tpby = tpb_D[4][quadr_order].y;
 
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
-  __shared__ ns_gpu_helpers::quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_tst[tpbx];
+  __shared__ quadrature_nodes_raw<quadr_order> shmem_quadr_nodes_trl[tpby];
   __shared__ sc shmem_matrix_vals_data[9 * tpbx * tpby];
   sc * shmem_matrix_vals[9];
   for(lo j = 0; j < 9; j++) shmem_matrix_vals[j] = shmem_matrix_vals_data + j * blockDim.x * blockDim.y;
@@ -2326,7 +2422,8 @@ __global__ void g_apply_gpu_treg_sreg_ver4
   const lo * rows = mesh_data.d_element_nodes + 3 * i_tst;
   
   if(tid < blockDim.x)
-    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid, mesh_data, shmem_quadr_nodes_tst[tid]);
+    d_triangles_to_geometry_000_tst(i_tst_begin + blockIdx.x * blockDim.x + tid,
+      mesh_data, shmem_quadr_nodes_tst[tid]);
   __syncthreads();
 
   sc vals_prev[9];
@@ -2335,7 +2432,8 @@ __global__ void g_apply_gpu_treg_sreg_ver4
 
   for(lo i = threadIdx.y; i < n_elems; i += blockDim.y) {
     if(tid < blockDim.y)
-      d_triangles_to_geometry_000_trl((i / blockDim.y) * blockDim.y + tid, mesh_data, shmem_quadr_nodes_trl[tid]);
+      d_triangles_to_geometry_000_trl((i / blockDim.y) * blockDim.y + tid,
+      mesh_data, shmem_quadr_nodes_trl[tid]);
     __syncthreads();
 
     for(lo j = 0; j < 9; j++) vals_curr[j] = 0;
@@ -2348,8 +2446,10 @@ __global__ void g_apply_gpu_treg_sreg_ver4
         lo &i_trl = i;
         for(lo j = 0; j < 9; j++) vals_prev[j] = vals_curr[j];
         for(lo j = 0; j < 9; j++) vals_curr[j] = vals_next[j];
-        d_get_local_contributions_treg_sreg_hs_p1_p1(vals_next, delta+1, i_tst, i_trl,
-          shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y], mesh_metadata, mesh_data, kp);
+        d_get_local_contributions_treg_sreg_hs_p1_p1(vals_next,
+          delta+1, i_tst, i_trl,
+          shmem_quadr_nodes_tst[threadIdx.x], shmem_quadr_nodes_trl[threadIdx.y],
+          mesh_metadata, mesh_data, kp);
         for(lo j = 0; j < 9; j++)
           shmem_matrix_vals[j][tid] = ((i_tst == i_trl) ? (0) : (-vals_prev[j] + 2*vals_curr[j] - vals_next[j]));
         __syncthreads();
@@ -2398,14 +2498,13 @@ __global__ void g_apply_gpu_treg_sreg_ver4
 
 
 
-
 template<class kernel_type, class test_space_type, class trial_space_type>
 void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   <kernel_type, test_space_type, trial_space_type>::
   apply( const block_vector_type & x, block_vector_type & y, bool trans, sc alpha, sc beta ) const {
 
   if(n_gpus == 0) {
-    besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
+    uniform_spacetime_be_matrix_onthefly_cpu
       <kernel_type, test_space_type, trial_space_type>::
       apply(x, y, trans, alpha, beta);
     return;
@@ -2426,7 +2525,8 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
       << ") does not match block matrix domain dimension ("
       << this->get_block_dim() << "*" << this->get_dim_domain()
       << ").\n";
-    throw std::runtime_error("BESTHEA Exception: incompatible matrix and vector dimensions");
+    throw std::runtime_error("BESTHEA Exception: "
+      "incompatible matrix and vector dimensions");
   }
 
   if(y.get_n_blocks() != this->get_block_dim() ||
@@ -2436,7 +2536,8 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
       << ") does not match block matrix range dimension ("
       << this->get_block_dim() << "*" << this->get_dim_range()
       << "). Apply will not be performed.\n";
-    throw std::runtime_error("BESTHEA Exception: incompatible matrix and vector dimensions");
+    throw std::runtime_error("BESTHEA Exception: "
+      "incompatible matrix and vector dimensions");
   }
   
   gpu_apply_timer_collection timers(n_gpus);
@@ -2479,7 +2580,8 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
   timers.cpu_all.start();
   if(load_distr->get_cpu_count() > 0) {
     timers.cpu_treg_sreg.start();
-    this->apply_cpu_treg_sreg(x_perm, y_perm, alpha, load_distr->get_cpu_begin(), load_distr->get_cpu_end());
+    this->apply_cpu_treg_sreg(x_perm, y_perm, alpha,
+      load_distr->get_cpu_begin(), load_distr->get_cpu_end());
     timers.cpu_treg_sreg.stop();
   }
   timers.cpu_treg_ssng.start();
@@ -2569,7 +2671,7 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
 
 
 
-  ns_gpu_helpers::heat_kernel_parameters kp(this->_kernel->get_alpha());
+  heat_kernel_parameters kp(this->_kernel->get_alpha());
 
   for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
     CUDA_CHECK(cudaSetDevice(gpu_idx));
@@ -2778,6 +2880,4 @@ template class
     besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 >,
     besthea::bem::uniform_spacetime_be_space< besthea::bem::basis_tri_p1 > >;
 
-
-
-
+// clang-format on

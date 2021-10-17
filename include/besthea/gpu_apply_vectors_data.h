@@ -38,7 +38,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/settings.h"
 
 namespace besthea::bem::onthefly {
-    class gpu_apply_vectors_data;
+  class gpu_apply_vectors_data;
 }
 
 /*!
@@ -54,7 +54,7 @@ struct besthea::bem::onthefly::gpu_apply_vectors_data {
    * Copy constructor - deleted
    */
   gpu_apply_vectors_data( const gpu_apply_vectors_data & that ) = delete;
-  
+
   /*!
    * Destructor
    */
@@ -70,12 +70,12 @@ struct besthea::bem::onthefly::gpu_apply_vectors_data {
    */
   void allocate( int n_gpus, lo x_block_count, lo x_size_of_block,
     lo y_block_count, lo y_size_of_block );
-    
+
   /*!
    * Frees the memory of the vectors
    */
   void free( );
-  
+
   sc * h_x;                                //<! raw data on host
   std::vector< sc * > h_y;                 //<! raw data on host
   std::vector< sc * > d_x, d_y;            //<! raw data on device

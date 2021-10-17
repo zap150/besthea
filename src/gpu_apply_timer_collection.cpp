@@ -30,105 +30,89 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/gpu_apply_timer_collection.h"
 
+besthea::bem::onthefly::gpu_apply_timer_collection::gpu_apply_timer_collection(
+  int n_gpus ) {
+  gpu_all.resize( n_gpus );
+  gpu_copyin.resize( n_gpus );
+  gpu_compute.resize( n_gpus );
+  gpu_copyout.resize( n_gpus );
 
-
-besthea::bem::onthefly::gpu_apply_timer_collection::
-  gpu_apply_timer_collection(int n_gpus) {
-
-  gpu_all.resize(n_gpus);
-  gpu_copyin.resize(n_gpus);
-  gpu_compute.resize(n_gpus);
-  gpu_copyout.resize(n_gpus);
-
-  for(int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++) {
-    CUDA_CHECK(cudaSetDevice(gpu_idx));
-    gpu_all[gpu_idx].init(0);
-    gpu_copyin[gpu_idx].init(0);
-    gpu_compute[gpu_idx].init(0);
-    gpu_copyout[gpu_idx].init(0);
+  for ( int gpu_idx = 0; gpu_idx < n_gpus; gpu_idx++ ) {
+    CUDA_CHECK( cudaSetDevice( gpu_idx ) );
+    gpu_all[ gpu_idx ].init( 0 );
+    gpu_copyin[ gpu_idx ].init( 0 );
+    gpu_compute[ gpu_idx ].init( 0 );
+    gpu_copyout[ gpu_idx ].init( 0 );
   }
 }
 
-
-
-void besthea::bem::onthefly::gpu_apply_timer_collection::print_all() {
-  printf("BESTHEA Info: time gpu_copyin:   ");
-  print_timers(gpu_copyin);
-  printf("BESTHEA Info: time gpu_compute:  ");
-  print_timers(gpu_compute);
-  printf("BESTHEA Info: time gpu_copyout:  ");
-  print_timers(gpu_copyout);
-  printf("BESTHEA Info: time gpu_all:      ");
-  print_timers(gpu_all);
-  printf("BESTHEA Info: time cpu_scalein:  %10.6f\n", cpu_scalein.get_time());
-  printf("BESTHEA Info: time cpu_regular:  %10.6f\n", cpu_treg_sreg.get_time());
-  printf("BESTHEA Info: time cpu_singular: %10.6f\n", cpu_treg_ssng.get_time());
-  printf("BESTHEA Info: time cpu_delta0:   %10.6f\n", cpu_tsng.get_time());
-  printf("BESTHEA Info: time cpu_all:      %10.6f\n", cpu_all.get_time());
-  printf("BESTHEA Info: time gpu_max:      %10.6f\n", get_gpu_time_all());
-  printf("BESTHEA Info: time combined:     %10.6f\n", combined.get_time());
+void besthea::bem::onthefly::gpu_apply_timer_collection::print_all( ) {
+  printf( "BESTHEA Info: time gpu_copyin:   " );
+  print_timers( gpu_copyin );
+  printf( "BESTHEA Info: time gpu_compute:  " );
+  print_timers( gpu_compute );
+  printf( "BESTHEA Info: time gpu_copyout:  " );
+  print_timers( gpu_copyout );
+  printf( "BESTHEA Info: time gpu_all:      " );
+  print_timers( gpu_all );
+  printf(
+    "BESTHEA Info: time cpu_scalein:  %10.6f\n", cpu_scalein.get_time( ) );
+  printf(
+    "BESTHEA Info: time cpu_regular:  %10.6f\n", cpu_treg_sreg.get_time( ) );
+  printf(
+    "BESTHEA Info: time cpu_singular: %10.6f\n", cpu_treg_ssng.get_time( ) );
+  printf( "BESTHEA Info: time cpu_delta0:   %10.6f\n", cpu_tsng.get_time( ) );
+  printf( "BESTHEA Info: time cpu_all:      %10.6f\n", cpu_all.get_time( ) );
+  printf( "BESTHEA Info: time gpu_max:      %10.6f\n", get_gpu_time_all( ) );
+  printf( "BESTHEA Info: time combined:     %10.6f\n", combined.get_time( ) );
 }
 
-
-
-void besthea::bem::onthefly::gpu_apply_timer_collection::
-  print_timers(std::vector<besthea::tools::time_measurer_cuda> & timers) {
-  for(unsigned int i = 0; i < timers.size(); i++) {
-    printf("%10.6f  ", timers[i].get_time());
+void besthea::bem::onthefly::gpu_apply_timer_collection::print_timers(
+  std::vector< besthea::tools::time_measurer_cuda > & timers ) {
+  for ( unsigned int i = 0; i < timers.size( ); i++ ) {
+    printf( "%10.6f  ", timers[ i ].get_time( ) );
   }
-  printf("\n");
+  printf( "\n" );
 }
 
-
-
-double besthea::bem::onthefly::gpu_apply_timer_collection::
-  get_cpu_time_const() {
-  return cpu_treg_ssng.get_time() + cpu_tsng.get_time();
+double
+besthea::bem::onthefly::gpu_apply_timer_collection::get_cpu_time_const( ) {
+  return cpu_treg_ssng.get_time( ) + cpu_tsng.get_time( );
 }
 
-
-
-double besthea::bem::onthefly::gpu_apply_timer_collection::
-  get_cpu_time_scaling() {
-  return cpu_treg_sreg.get_time();
+double
+besthea::bem::onthefly::gpu_apply_timer_collection::get_cpu_time_scaling( ) {
+  return cpu_treg_sreg.get_time( );
 }
 
-
-
-double besthea::bem::onthefly::gpu_apply_timer_collection::
-  get_gpu_time_const() {
-
+double
+besthea::bem::onthefly::gpu_apply_timer_collection::get_gpu_time_const( ) {
   double max_time_copyin = -1;
-  for(unsigned int i = 0; i < gpu_copyin.size(); i++) {
-    max_time_copyin = std::max(max_time_copyin, gpu_copyin[i].get_time());
+  for ( unsigned int i = 0; i < gpu_copyin.size( ); i++ ) {
+    max_time_copyin = std::max( max_time_copyin, gpu_copyin[ i ].get_time( ) );
   }
   double max_time_copyout = -1;
-  for(unsigned int i = 0; i < gpu_copyout.size(); i++) {
-    max_time_copyout = std::max(max_time_copyout, gpu_copyout[i].get_time());
+  for ( unsigned int i = 0; i < gpu_copyout.size( ); i++ ) {
+    max_time_copyout
+      = std::max( max_time_copyout, gpu_copyout[ i ].get_time( ) );
   }
   return max_time_copyin + max_time_copyout;
 }
 
-
-
-double besthea::bem::onthefly::gpu_apply_timer_collection::
-  get_gpu_time_scaling() {
-
+double
+besthea::bem::onthefly::gpu_apply_timer_collection::get_gpu_time_scaling( ) {
   double max_time_compute = -1;
-  for(unsigned int i = 0; i < gpu_compute.size(); i++) {
-    max_time_compute = std::max(max_time_compute, gpu_compute[i].get_time());
+  for ( unsigned int i = 0; i < gpu_compute.size( ); i++ ) {
+    max_time_compute
+      = std::max( max_time_compute, gpu_compute[ i ].get_time( ) );
   }
   return max_time_compute;
 }
 
-
-
-double besthea::bem::onthefly::gpu_apply_timer_collection::
-  get_gpu_time_all() {
-    
+double besthea::bem::onthefly::gpu_apply_timer_collection::get_gpu_time_all( ) {
   double max_time_gpu_all = -1;
-  for(unsigned int i = 0; i < gpu_all.size(); i++) {
-    max_time_gpu_all = std::max(max_time_gpu_all, gpu_all[i].get_time());
+  for ( unsigned int i = 0; i < gpu_all.size( ); i++ ) {
+    max_time_gpu_all = std::max( max_time_gpu_all, gpu_all[ i ].get_time( ) );
   }
   return max_time_gpu_all;
 }

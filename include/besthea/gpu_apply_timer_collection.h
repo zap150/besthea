@@ -35,12 +35,14 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDE_BESTHEA_GPU_APPLY_TIMER_COLLECTION_H_
 #define INCLUDE_BESTHEA_GPU_APPLY_TIMER_COLLECTION_H_
 
-#include <vector>
 #include "besthea/time_measurer.h"
 #include "besthea/time_measurer_cuda.h"
 
+#include <vector>
+
+
 namespace besthea::bem::onthefly {
-    class gpu_apply_timer_collection;
+  class gpu_apply_timer_collection;
 }
 
 /*!
@@ -57,23 +59,24 @@ struct besthea::bem::onthefly::gpu_apply_timer_collection {
    * Prints all the timing information
    */
   void print_all( );
-  
+
   /*!
    * Prints the provided timing information for all GPUs
    */
-  void print_timers(std::vector< besthea::tools::time_measurer_cuda > & timers);
-  
+  void print_timers(
+    std::vector< besthea::tools::time_measurer_cuda > & timers );
+
   /*!
    * Returns the execution time of the constant part on the CPU
    */
   double get_cpu_time_const( );
-  
+
   /*!
    * Returns the execution time of the part that scales with number of elements
    * on the CPU
    */
   double get_cpu_time_scaling( );
-  
+
   /*!
    * Returns the execution time of the constant part on the GPU
    */
@@ -84,12 +87,12 @@ struct besthea::bem::onthefly::gpu_apply_timer_collection {
    * on the GPU
    */
   double get_gpu_time_scaling( );
-  
+
   /*!
    * Returns the total execution time on the GPU
    */
   double get_gpu_time_all( );
-  
+
   std::vector< besthea::tools::time_measurer_cuda > gpu_all;
   std::vector< besthea::tools::time_measurer_cuda > gpu_copyin;
   std::vector< besthea::tools::time_measurer_cuda > gpu_compute;

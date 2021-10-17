@@ -28,8 +28,8 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file besthea.h
- * @brief Includes all header files of the besthea library.
+/** @file besthea_cuda.h
+ * @brief Includes all header files of the besthea_cuda library.
  * @note updated documentation
  */
 

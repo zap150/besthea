@@ -54,11 +54,9 @@ namespace besthea::bem::onthefly {
  *  during multiplication on the fly, on the GPU.
  */
 template< class kernel_type, class test_space_type, class trial_space_type >
-class besthea::bem::onthefly::
-  uniform_spacetime_be_matrix_onthefly_gpu
-  : public besthea::bem::onthefly::
-      uniform_spacetime_be_matrix_onthefly_cpu< kernel_type, test_space_type,
-        trial_space_type > {
+class besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_gpu
+  : public besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
+      kernel_type, test_space_type, trial_space_type > {
  public:
   using block_vector_type
     = besthea::linear_algebra::block_vector;            //!< Block vector type.
@@ -128,16 +126,20 @@ class besthea::bem::onthefly::
     [[maybe_unused]] distributed_block_vector_type & y,
     [[maybe_unused]] bool trans = false, [[maybe_unused]] sc alpha = 1.0,
     [[maybe_unused]] sc beta = 0.0 ) const override{ };
-  
+
   /*!
    * Returns the used version of the GPU algorithm
    */
-  int get_gpu_algorithm_version() const { return gpu_kernel_version; }
+  int get_gpu_algorithm_version( ) const {
+    return gpu_kernel_version;
+  }
 
   /*!
    * Returns whether CPU is used for fully regular component
    */
-  bool get_does_loadbalancing_use_cpu() const { return loadbalancing_use_cpu; }
+  bool get_does_loadbalancing_use_cpu( ) const {
+    return loadbalancing_use_cpu;
+  }
 
  private:
   /*!
@@ -160,8 +162,7 @@ class besthea::bem::onthefly::
    */
   void apply_gpu_treg_sreg_begin( const block_vector_type & x,
     const block_vector_type & y, sc alpha,
-    besthea::bem::onthefly::gpu_apply_timer_collection & timers )
-    const;
+    besthea::bem::onthefly::gpu_apply_timer_collection & timers ) const;
 
   /*!
    * Waits for all GPU tasks to finish and copies vector y back to CPU memory.
@@ -178,8 +179,9 @@ class besthea::bem::onthefly::
   besthea::bem::onthefly::gpu_apply_vectors_data
     vectors_data;  //!< GPU-resident vectors
   besthea::bem::onthefly::gpu_apply_load_distribution *
-    load_distr;  //!< Object handling CPU-GPU load distribution
-  bool loadbalancing_use_cpu; //!< Indicates wheather to use CPU for fully regular component
+    load_distr;                //!< Object handling CPU-GPU load distribution
+  bool loadbalancing_use_cpu;  //!< Indicates wheather to use CPU for fully
+                               //!< regular component
 };
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_MATRIX_ONTHEFLY_GPU_H_ */

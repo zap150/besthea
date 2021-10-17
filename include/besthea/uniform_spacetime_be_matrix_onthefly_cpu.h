@@ -39,13 +39,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <array>
 
-
 namespace besthea::bem::onthefly {
   template< class kernel_type, class test_space_type, class trial_space_type >
   class uniform_spacetime_be_matrix_onthefly_cpu;
 }
-
-
 
 /*!
  *  Class representing a boundary element matrix, whose elements are computed
@@ -53,9 +50,8 @@ namespace besthea::bem::onthefly {
  */
 template< class kernel_type, class test_space_type, class trial_space_type >
 class besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
-  : public besthea::linear_algebra::block_matrix
-{
-protected:
+  : public besthea::linear_algebra::block_matrix {
+ protected:
   /*!
    *  Stores quadrature nodes for reference element
    */
@@ -77,10 +73,9 @@ protected:
     std::array< std::vector< sc, besthea::allocator_type< sc > >, 4 >
       _w;  //!< Quadrature weights including transformation Jacobians
 
-    std::array< lo, 4>
-      _sizes; //!< Sizes
-    
-    lo _max_size; //!< Maximum size
+    std::array< lo, 4 > _sizes;  //!< Sizes
+
+    lo _max_size;  //!< Maximum size
   };
 
   /*!
@@ -94,19 +89,20 @@ protected:
     std::vector< sc, besthea::allocator_type< sc > >
       _zs;  //!< Third coordinates of quadrature nodes
 
-    quadrature_nodes(lo size) {
+    quadrature_nodes( lo size ) {
       _xs.resize( size );
       _ys.resize( size );
       _zs.resize( size );
     }
   };
 
-public:
+ public:
   using block_vector_type
     = besthea::linear_algebra::block_vector;            //!< Block vector type.
   using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
   using distributed_block_vector_type
-    = besthea::linear_algebra::distributed_block_vector;  //!< Block vector type.
+    = besthea::linear_algebra::distributed_block_vector;  //!< Block vector
+                                                          //!< type.
 
   /*!
    * Constructor.
@@ -123,7 +119,7 @@ public:
   uniform_spacetime_be_matrix_onthefly_cpu(
     const uniform_spacetime_be_matrix_onthefly_cpu & that )
     = delete;
-  
+
   /*!
    * Destructor.
    */
@@ -133,12 +129,11 @@ public:
    * Prints info on the object.
    */
   void print_info( ) const {
-    std::cout
-      << "besthea::onthefly::uniform_spacetime_be_matrix_onthefly_cpu"
-      << std::endl;
+    std::cout << "besthea::onthefly::uniform_spacetime_be_matrix_onthefly_cpu"
+              << std::endl;
     std::cout << "  number of blocks: " << _block_dim << std::endl;
-    std::cout << "  dimension of each block: " << _dim_domain
-              << " x " << _dim_range << std::endl;
+    std::cout << "  dimension of each block: " << _dim_domain << " x "
+              << _dim_range << std::endl;
   }
 
   /*!
@@ -151,7 +146,7 @@ public:
    * @param[in] beta
    */
   virtual void apply( const block_vector_type & x, block_vector_type & y,
-   bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
+    bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const override;
 
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x. Not implemented.
@@ -164,20 +159,23 @@ public:
   virtual void apply( [[maybe_unused]] const distributed_block_vector_type & x,
     [[maybe_unused]] distributed_block_vector_type & y,
     [[maybe_unused]] bool trans = false, [[maybe_unused]] sc alpha = 1.0,
-    [[maybe_unused]] sc beta = 0.0 ) const override {};
+    [[maybe_unused]] sc beta = 0.0 ) const override{ };
 
   /*!
    * Returns quadrature order used for the regular integrals
    */
-  int get_quadr_order_regular() const { return _order_regular; }
-  
+  int get_quadr_order_regular( ) const {
+    return _order_regular;
+  }
+
   /*!
    * Returns quadrature order used for the singular integrals
    */
-  int get_quadr_order_singular() const { return _order_singular; }
+  int get_quadr_order_singular( ) const {
+    return _order_singular;
+  }
 
-protected:
-
+ protected:
   /*!
    * @brief Performs the whole apply operation on-the-fly on the CPU
    * @param[in] x
@@ -198,19 +196,21 @@ protected:
    */
   void apply_cpu_treg_sreg( const block_vector_type & x_perm,
     block_vector_type & y_perm, sc alpha = 1.0 ) const;
-    
+
   /*!
-   * Performs the apply operation using only a section of the fully regular contributions.
+   * Performs the apply operation using only a section of the fully regular
+   * contributions.
    * @param[in] x
    * @param[in,out] y
    * @param[in] alpha
    * @param[in] beta
    * @param[in] tst_elem_start Index of the first test element to be included.
-   * @param[in] tst_elem_end Index of the one-after-last test element to be included.
+   * @param[in] tst_elem_end Index of the one-after-last test element to be
+   * included.
    */
   void apply_cpu_treg_sreg( const block_vector_type & x_perm,
-    block_vector_type & y_perm, sc alpha,
-    lo tst_elem_start, lo tst_elem_end ) const;
+    block_vector_type & y_perm, sc alpha, lo tst_elem_start,
+    lo tst_elem_end ) const;
 
   /*!
    * Performs the apply operation using only the time-regular
@@ -233,8 +233,6 @@ protected:
   void apply_cpu_tsng( const block_vector_type & x_perm,
     block_vector_type & y_perm, sc alpha = 1.0 ) const;
 
-
-
   /*!
    * Calculates the values of the fully regular local contributions.
    * @param[out] values_out Array of contribution values
@@ -244,13 +242,13 @@ protected:
    * @param[in] quadr_nodes_tst Quadrature nodes mapped to the test element
    * @param[in] quadr_nodes_trl Quadrature nodes mapped to the trial element
    */
-  void get_local_contributions_treg_sreg(sc * values_out,
-    lo delta, lo i_test, lo i_trial,
-    const quadrature_nodes & quadr_nodes_tst,
-    const quadrature_nodes & quadr_nodes_trl) const;
+  void get_local_contributions_treg_sreg( sc * values_out, lo delta, lo i_test,
+    lo i_trial, const quadrature_nodes & quadr_nodes_tst,
+    const quadrature_nodes & quadr_nodes_trl ) const;
 
   /*!
-   * Calculates the values of the time-regular space-singular local contributions.
+   * Calculates the values of the time-regular space-singular local
+   * contributions.
    * @param[out] values_out Array of contribution values
    * @param[in] delta Temporal element difference
    * @param[in] i_test Test element index
@@ -258,10 +256,9 @@ protected:
    * @param[in] quadr_nodes_tst Quadrature nodes mapped to the test element
    * @param[in] quadr_nodes_trl Quadrature nodes mapped to the trial element
    */
-  void get_local_contributions_treg_ssng( sc * values_out,
-    lo delta, lo i_test, lo i_trial,
-    const quadrature_nodes & quadr_nodes_tst,
-    const quadrature_nodes & quadr_nodes_trl) const;
+  void get_local_contributions_treg_ssng( sc * values_out, lo delta, lo i_test,
+    lo i_trial, const quadrature_nodes & quadr_nodes_tst,
+    const quadrature_nodes & quadr_nodes_trl ) const;
 
   /*!
    * Calculates the values of the second time-singular local contributions.
@@ -272,11 +269,10 @@ protected:
    * @param[in] quadr_nodes_tst Quadrature nodes mapped to the test element
    * @param[in] quadr_nodes_trl Quadrature nodes mapped to the trial element
    */
-  void get_local_contributions_tsng_2( sc * values_out,
-    lo i_test, lo i_trial,
+  void get_local_contributions_tsng_2( sc * values_out, lo i_test, lo i_trial,
     int n_shared_vertices, int rot_test, int rot_trial,
     const quadrature_nodes & quadr_nodes_tst,
-    const quadrature_nodes & quadr_nodes_trl) const;
+    const quadrature_nodes & quadr_nodes_trl ) const;
 
   /*!
    * Calculates the values of the first time-singular local contributions.
@@ -287,16 +283,15 @@ protected:
    * @param[in] quadr_nodes_tst Quadrature nodes mapped to the test element
    * @param[in] quadr_nodes_trl Quadrature nodes mapped to the trial element
    */
-  void get_local_contributions_tsng_1( sc * values_out,
-    lo i_test, lo i_trial,
+  void get_local_contributions_tsng_1( sc * values_out, lo i_test, lo i_trial,
     int n_shared_vertices, int rot_test, int rot_trial,
     const quadrature_nodes & quadr_nodes_tst,
-    const quadrature_nodes & quadr_nodes_trl) const;
+    const quadrature_nodes & quadr_nodes_trl ) const;
 
   /*!
    * Initializes the quadrature reference structure.
    */
-  void init_quadrature();
+  void init_quadrature( );
 
   /*!
    * Determines the configuration of two triangular elements.
@@ -319,8 +314,8 @@ protected:
    * @param[out] quadr_nodes_tst Structure to write mapped nodes to.
    */
   void triangles_to_geometry_tst( lo i_tst, int n_shared_vertices, int rot_test,
-    quadrature_nodes & quadr_nodes_tst) const ;
-    
+    quadrature_nodes & quadr_nodes_tst ) const;
+
   /*!
    * Maps the quadrature nodes from reference triangle to specified
    * trial element.
@@ -330,9 +325,9 @@ protected:
    * @param[in] rot_trial Virtual rotation of the trial element.
    * @param[out] quadr_nodes_trl Structure to write mapped nodes to.
    */
-  void triangles_to_geometry_trl( lo i_trl, int n_shared_vertices, int rot_trial,
-    quadrature_nodes & quadr_nodes_trl) const ;
-  
+  void triangles_to_geometry_trl( lo i_trl, int n_shared_vertices,
+    int rot_trial, quadrature_nodes & quadr_nodes_trl ) const;
+
   /*!
    * Maps quadratures nodes from hypercube to triangles
    * @param[in] ksi ksi variable in (0,1).
@@ -372,7 +367,7 @@ protected:
         return;
     }
   }
-  
+
   /*!
    * Maps quadratures nodes from hypercube to triangles (shared vertex case)
    * @param[in] ksi ksi variable in (0,1).
@@ -393,7 +388,7 @@ protected:
   void hypercube_to_triangles_vertex( sc ksi, sc eta1, sc eta2, sc eta3,
     int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref, sc & y2_ref,
     sc & jacobian ) const;
-    
+
   /**
    * Maps quadratures nodes from hypercube to triangles (shared edge case)
    * @param[in] ksi ksi variable in (0,1).
@@ -436,15 +431,13 @@ protected:
     int simplex, sc & x1_ref, sc & x2_ref, sc & y1_ref, sc & y2_ref,
     sc & jacobian ) const;
 
-protected:
-
-  quadrature_reference quadr_reference; //!< Reference quadrature nodes
-  kernel_type * _kernel; //!< Kernel temporal antiderivative.
-  test_space_type * _test_space; //!< Boundary element test space.
-  trial_space_type * _trial_space; //!< Boundary element trial space.
-  int _order_singular; //!< Line quadrature order for the singular integrals.
-  int _order_regular; //!< Triangle quadrature order for the regular integrals.
-  
+ protected:
+  quadrature_reference quadr_reference;  //!< Reference quadrature nodes
+  kernel_type * _kernel;                 //!< Kernel temporal antiderivative.
+  test_space_type * _test_space;         //!< Boundary element test space.
+  trial_space_type * _trial_space;       //!< Boundary element trial space.
+  int _order_singular;  //!< Line quadrature order for the singular integrals.
+  int _order_regular;  //!< Triangle quadrature order for the regular integrals.
 
   static constexpr std::array< int, 5 > map{ 0, 1, 2, 0,
     1 };  //!< Auxiliary array for mapping DOFs under
@@ -453,8 +446,6 @@ protected:
   static constexpr std::array< int, 4 > n_simplices{ 1, 2, 5,
     6 };  //!< Number of simplices for all configurations (disjoint, shared
           // vertex, shared edge, identical).
-
 };
-
 
 #endif /* INCLUDE_BESTHEA_UNIFORM_SPACETIME_BE_MATRIX_ONTHEFLY_CPU_H_ */
