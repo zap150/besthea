@@ -34,6 +34,8 @@ Beside the Boost, Eigen, and Lyra submodules, BESTHEA requires the installation 
 
 OpenMP is a dependency usually accompanying a compiler. For a note on AppleClang see the next section.
 
+If one wants to use the GPU-accelerated functionality implemented in the `besthea_cuda` library, CUDA should also be installed.
+
 **Build**
 
 The compilation of BESTHEA is based on CMake. Since in-source build is disabled, create a build directory and call cmake from within as
@@ -73,9 +75,15 @@ To specify the vector length processed in OpenMP SIMD loops, i.e. the `simdlen` 
 cmake -DBESTHEA_SIMD_WIDTH=4 ..
 ```
 
+If CUDA is found on the system and CMake >= 1.18 is used, the library `besthea_cuda` containing the GPU-accelerated functionality is also built. To alter this behaviour, set the value of the `BESTHEA_CUDA` CMake variable to `enable`, `disable` or `auto`, e.g.
+```
+cmake -DBESTHEA_CUDA=disable ..
+```
+If the value is `enable` and any of the prerequisities are not met, the configuration step fails with an error. `disable` entirely disables compilation of the GPU-accelerated code. `auto` is the default (equivalent to not setting the value of `BESTHEA_CUDA` at all), which tries to build the `besthea_cuda` library if it is possible, and if not, no errors are produced.
+
 **Usage**
 
-The `install` target installs the static library to `${CMAKE_INSTALL_PREFIX}/lib/besthea`, include files to `${CMAKE_INSTALL_PREFIX}/include/besthea`, and executable examples to `${CMAKE_INSTALL_PREFIX}/bin/besthea` together with example mesh files. One can run an example
+The `install` target installs the static libraries to `${CMAKE_INSTALL_PREFIX}/lib/besthea`, include files to `${CMAKE_INSTALL_PREFIX}/include/besthea`, and executable examples to `${CMAKE_INSTALL_PREFIX}/bin/besthea` together with example mesh files. One can run an example
 ```
 ./uniform_tensor_neumann --mesh cube_192.txt --grid grid_cube_xy.txt
 ```
