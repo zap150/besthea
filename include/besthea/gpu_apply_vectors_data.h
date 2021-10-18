@@ -38,7 +38,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/settings.h"
 
 namespace besthea::bem::onthefly {
-  class gpu_apply_vectors_data;
+  struct gpu_apply_vectors_data;
 }
 
 /*!

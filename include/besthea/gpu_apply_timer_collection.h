@@ -42,7 +42,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 namespace besthea::bem::onthefly {
-  class gpu_apply_timer_collection;
+  struct gpu_apply_timer_collection;
 }
 
 /*!
