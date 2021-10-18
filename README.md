@@ -75,7 +75,7 @@ To specify the vector length processed in OpenMP SIMD loops, i.e. the `simdlen` 
 cmake -DBESTHEA_SIMD_WIDTH=4 ..
 ```
 
-If CUDA is found on the system and CMake >= 1.18 is used, the library `besthea_cuda` containing the GPU-accelerated functionality is also built. To alter this behaviour, set the value of the `BESTHEA_CUDA` CMake variable to `enable`, `disable` or `auto`, e.g.
+If CUDA is found on the system and CMake >= 1.18 is used, the library `besthea_cuda` containing the GPU-accelerated functionality is also built. To alter this behaviour, set the value of the `BESTHEA_CUDA` variable to `enable`, `disable` or `auto`, e.g.
 ```
 cmake -DBESTHEA_CUDA=disable ..
 ```
