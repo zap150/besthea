@@ -40,6 +40,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 #include <cuda_runtime.h>
 #include <vector>
+#include <iostream>
 
 namespace besthea::bem::onthefly::helpers {
   template< int quadr_order >
