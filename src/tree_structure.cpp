@@ -127,7 +127,7 @@ void besthea::mesh::tree_structure::assign_slices_to_clusters(
 }
 
 void besthea::mesh::tree_structure::reduce_2_essential( ) {
-  determine_essential_clusters( _my_process_id, *_root );
+  determine_essential_clusters( );
   // traverse the tree structure and reduce it by eliminating all
   // non-essential clusters. In addition, correct the nearfield, interaction
   // lists and children of all clusters and reset _levels and _leaves.
@@ -764,24 +764,10 @@ void besthea::mesh::tree_structure::prepare_essential_reduction(
   scheduling_time_cluster & root ) {
   // call routine recursively
   if ( root.get_n_children( ) > 0 ) {
-    char max_child_status = 0;
     const std::vector< scheduling_time_cluster * > * children
       = root.get_children( );
     for ( auto it : *children ) {
       prepare_essential_reduction( *it );
-      char child_status = it->get_essential_status( );
-      if ( child_status > max_child_status ) {
-        max_child_status = child_status;
-      }
-    }
-    // Change the status of the current cluster if at least one of its
-    // children is essential. If a child is local, then the parent is needed
-    // in both locally essential trees (time and space-time). Otherwise the
-    // essential status is inherited from the children.
-    if ( max_child_status > 0
-      && root.get_essential_status( ) < max_child_status ) {
-      char new_status = ( max_child_status == 3 ) ? (char) 2 : max_child_status;
-      root.set_essential_status( new_status );
     }
   }
   if ( root.get_essential_status( ) > 0 ) {
@@ -859,24 +845,32 @@ void besthea::mesh::tree_structure::execute_essential_reduction(
   }
 }
 
-void besthea::mesh::tree_structure::determine_essential_clusters(
-  const lo my_process_id, scheduling_time_cluster & root ) const {
-  // traverse the tree and set the status of each cluster
-  if ( root.get_n_children( ) > 0 ) {
-    std::vector< scheduling_time_cluster * > * children = root.get_children( );
+void besthea::mesh::tree_structure::determine_essential_clusters( ) const {
+  // traverse the tree twice to determine the essential clusters correctly.
+  determine_essential_clusters_first_traversal( *_root );
+  determine_essential_clusters_second_traversal( *_root );
+}
+
+void besthea::mesh::tree_structure::
+  determine_essential_clusters_first_traversal(
+    scheduling_time_cluster & current_cluster ) const {
+  // traverse the tree and set the status of clusters starting from the leaves
+  if ( current_cluster.get_n_children( ) > 0 ) {
+    std::vector< scheduling_time_cluster * > * children
+      = current_cluster.get_children( );
     for ( lou i = 0; i < children->size( ); ++i ) {
-      determine_essential_clusters( my_process_id, *( *children )[ i ] );
+      determine_essential_clusters_first_traversal( *( *children )[ i ] );
     }
   }
-  lo current_process_id = root.get_process_id( );
-  char root_status
-    = ( current_process_id == my_process_id ) ? (char) 3 : (char) 0;
-  if ( root_status == 3 ) {
+  lo current_process_id = current_cluster.get_process_id( );
+  char current_cluster_status
+    = ( current_process_id == _my_process_id ) ? (char) 3 : (char) 0;
+  if ( current_cluster_status == 3 ) {
     // set status of each child to 1 if it is 0 (child is essential in time
     // tree)
-    if ( root.get_n_children( ) > 0 ) {
+    if ( current_cluster.get_n_children( ) > 0 ) {
       const std::vector< scheduling_time_cluster * > * children
-        = root.get_children( );
+        = current_cluster.get_children( );
       for ( auto it : *children ) {
         if ( it->get_essential_status( ) == 0 ) {
           it->set_essential_status( 1 );
@@ -885,61 +879,156 @@ void besthea::mesh::tree_structure::determine_essential_clusters(
     }
     // set status of each cluster in the interaction list to 2 if it is 0
     // (cluster in interaction list is essential in time and space-time trees)
-    if ( root.get_interaction_list( ) != nullptr ) {
+    if ( current_cluster.get_interaction_list( ) != nullptr ) {
       const std::vector< scheduling_time_cluster * > * interaction_list
-        = root.get_interaction_list( );
+        = current_cluster.get_interaction_list( );
       for ( auto it : *interaction_list ) {
         if ( it->get_essential_status( ) == 0 ) {
           it->set_essential_status( 2 );
         }
       }
     }
-    // if root is a leaf set status of all clusters in the nearfield from 0 to
-    // 2 (nearfield clusters are essential in time and space-time tree)
-    if ( root.get_n_children( ) == 0 ) {
-      const std::vector< scheduling_time_cluster * > * nearfield
-        = root.get_nearfield_list( );
-      for ( auto it : *nearfield ) {
-        if ( it->get_essential_status( ) == 0 ) {
+    // go through all clusters J in the nearfield of the current cluster. if
+    // either J or current_cluster is a leaf, set status of J to 2, if it is
+    // smaller than that. (nearfield clusters are essential in time and
+    // space-time tree)
+    bool current_cluster_is_leaf = current_cluster.get_n_children( ) == 0;
+    const std::vector< scheduling_time_cluster * > * nearfield
+      = current_cluster.get_nearfield_list( );
+    for ( auto it : *nearfield ) {
+      if ( current_cluster_is_leaf || it->get_n_children( ) == 0 ) {
+        if ( it->get_essential_status( ) < 2 ) {
           it->set_essential_status( 2 );
         }
       }
     }
   } else {
     // if the status of a cluster in the interaction list is 3 set status to 1
-    if ( root.get_interaction_list( ) != nullptr ) {
+    if ( current_cluster.get_interaction_list( ) != nullptr ) {
       const std::vector< scheduling_time_cluster * > * interaction_list
-        = root.get_interaction_list( );
+        = current_cluster.get_interaction_list( );
       for ( auto it : *interaction_list ) {
         if ( it->get_essential_status( ) == 3 ) {
-          root_status = 1;
-        }
-      }
-    }
-    // if root is a leaf and the status of a cluster in the nearfield is 3 set
-    // status to 1.
-    // @todo: Check later, whether this has to be changed! According to the
-    // current assignment of processes to clusters all descendants of the
-    // neighbors of root would be assigned to the same process as the neighbor
-    // itself. If this changes, one has to traverse the nearfield starting
-    // from the neighboring clusters to see whether it contains a local
-    // cluster.
-    if ( ( root.get_n_children( ) == 0 ) && ( root_status == 0 ) ) {
-      const std::vector< scheduling_time_cluster * > * nearfield
-        = root.get_nearfield_list( );
-      lou i = 0;
-      if ( nearfield != nullptr ) {
-        while ( root_status == 0 && i < nearfield->size( ) ) {
-          if ( ( *nearfield )[ i ]->get_essential_status( ) == 3 ) {
-            root_status = 1;
-          }
-          ++i;
+          current_cluster_status = 1;
         }
       }
     }
   }
-  // set the status of root to the determined status
-  root.set_essential_status( root_status );
+  // set the status of current_cluster to the determined status
+  current_cluster.set_essential_status( current_cluster_status );
+}
+
+void besthea::mesh::tree_structure::
+  determine_essential_clusters_second_traversal(
+    scheduling_time_cluster & current_cluster ) const {
+  // traverse the tree and set the status of clusters starting from the leaves
+  if ( current_cluster.get_n_children( ) > 0 ) {
+    std::vector< scheduling_time_cluster * > * children
+      = current_cluster.get_children( );
+    char max_child_status = 0;
+    for ( auto child : *children ) {
+      determine_essential_clusters_second_traversal( *child );
+      char child_status = child->get_essential_status( );
+      if ( child_status > max_child_status ) {
+        max_child_status = child_status;
+      }
+    }
+    // Change the status of the current cluster if at least one of its
+    // children is essential. The essential status is inherited from the
+    // child with the maximal essential status.
+    if ( max_child_status > 0
+      && current_cluster.get_essential_status( ) < max_child_status ) {
+      current_cluster.set_essential_status( max_child_status );
+      // if the status of the cluster was set to 3, go through its interaction
+      // and send list and update essential status of clusters if necessary.
+      if ( max_child_status == 3 ) {
+        if ( current_cluster.get_interaction_list( ) != nullptr ) {
+          for ( auto source_cluster :
+            *current_cluster.get_interaction_list( ) ) {
+            if ( source_cluster->get_essential_status( ) == 0 ) {
+              source_cluster->set_essential_status( 1 );
+              // if we update the status of a cluster in the interaction list,
+              // we have to guarantee that its ancestors are in the locally
+              // essential tree too. Some of them might not be visited anymore
+              // during the tree traversal, so we visit them directly and update
+              // their essential status if necessary.
+              scheduling_time_cluster * current_parent
+                = source_cluster->get_parent( );
+              scheduling_time_cluster * current_source = source_cluster;
+              while ( current_parent != nullptr
+                && current_parent->get_essential_status( )
+                  < source_cluster->get_essential_status( ) ) {
+                current_parent->set_essential_status(
+                  current_source->get_essential_status( ) );
+                current_source = current_parent;
+                current_parent = current_source->get_parent( );
+              }
+            }
+          }
+        }
+        if ( current_cluster.get_send_list( ) != nullptr ) {
+          for ( auto target_cluster : *current_cluster.get_send_list( ) ) {
+            if ( target_cluster->get_essential_status( ) == 0 ) {
+              target_cluster->set_essential_status( 1 );
+            }
+            // the target cluster's ancestors essential status will still be
+            // updated in this routine, so we do not have to do it manually.
+          }
+        }
+      }
+    }
+  }
+
+  // if current_cluster is a leaf and the status of a cluster in the physical
+  // nearfield is 3 set current_cluster's status to 1.
+  // NOTE: We use that the status of a cluster is set to 3 if one of its
+  // descendants status is 3.
+  char current_cluster_status = current_cluster.get_essential_status( );
+  if ( ( current_cluster.get_n_children( ) == 0 )
+    && ( current_cluster_status == 0 ) ) {
+    // consider all clusters in the physical nearfield of current_cluster
+    // whose level is at most that of current_cluster. If one of them has
+    // essential_status 3, set current_cluster's status to 1.
+
+    // first, find the relevant nearfield clusters
+    std::vector< scheduling_time_cluster * > relevant_nearfield_clusters;
+    std::vector< scheduling_time_cluster * > * parent_nearfield
+      = current_cluster.get_parent( )->get_nearfield_list( );
+    for ( lou i = 0; i < parent_nearfield->size( ); ++i ) {
+      // check if neighbor of parent is a leaf cluster
+      if ( ( *parent_nearfield )[ i ]->get_n_children( ) == 0 ) {
+        // add a leaf in the nearfield of parent to the nearfield of root
+        relevant_nearfield_clusters.push_back( ( *parent_nearfield )[ i ] );
+      } else {
+        // check admissibility of all children
+        std::vector< scheduling_time_cluster * > * relevant_clusters
+          = ( *parent_nearfield )[ i ]->get_children( );
+        for ( lou j = 0; j < relevant_clusters->size( ); ++j ) {
+          scheduling_time_cluster * src_cluster = ( *relevant_clusters )[ j ];
+          if ( src_cluster->get_center( ) < current_cluster.get_center( ) ) {
+            if ( !current_cluster.determine_admissibility( src_cluster ) ) {
+              relevant_nearfield_clusters.push_back( src_cluster );
+            }
+          }
+        }
+      }
+    }
+
+    // now, update the status of current_cluster if necessary
+    lo i = 0;
+    if ( relevant_nearfield_clusters.size( ) > 0 ) {
+      while ( current_cluster_status == 0
+        && i < (lo) relevant_nearfield_clusters.size( ) ) {
+        if ( relevant_nearfield_clusters[ i ]->get_essential_status( ) == 3 ) {
+          current_cluster_status = 1;
+        }
+        ++i;
+      }
+    }
+    if ( current_cluster_status != 0 ) {
+      current_cluster.set_essential_status( current_cluster_status );
+    }
+  }
 }
 
 void besthea::mesh::tree_structure::determine_levelwise_output_string(
