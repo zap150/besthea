@@ -1179,6 +1179,11 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     _l_list;  //!< L2L-list for the execution of the FMM.
   std::list< mesh::scheduling_time_cluster * >
     _n_list;  //!< N-list for the execution of the FMM.
+  std::list< mesh::scheduling_time_cluster * >
+    _m2t_list;  //!< M2T-list for the execution of the FMM.
+  std::list< mesh::scheduling_time_cluster * >
+    _s2l_list;  //!< S2l-list for the execution of the FMM.
+
   std::vector< std::pair< mesh::scheduling_time_cluster *, lo > >
     _receive_data_information;  //!< Contains for each data which has to be
                                 //!< received the corresponding scheduling time

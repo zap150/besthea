@@ -998,6 +998,9 @@ void besthea::mesh::tree_structure::determine_essential_clusters(
     }
   } else {
     // if the status of a cluster in the interaction list is 3 set status to 1
+    // NOTE: By construction, clusters in the interaction list are visited
+    // earlier during the tree traversal of determine_essential_clusters, so
+    // their status is already set!
     if ( root.get_interaction_list( ) != nullptr ) {
       const std::vector< scheduling_time_cluster * > * interaction_list
         = root.get_interaction_list( );
