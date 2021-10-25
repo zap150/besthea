@@ -564,10 +564,9 @@ class besthea::mesh::tree_structure {
 
   /**
    * Prepares the reduction of the tree structure to the locally essential part,
-   * by updating nearfields, interaction lists and send lists and detecting
-   * the remaining essential clusters (those which lie on a path between the
-   * root and another essential cluster). In addition, @p _levels is reset. The
-   * method is based on a tree traversal.
+   * by updating nearfields, interaction lists and send lists.
+   *
+   * In addition, @p _levels is reset. The method is based on a tree traversal.
    * @param[in] root  Current cluster in the tree traversal.
    * @note This method is solely used by @ref reduce_2_essential.
    */
@@ -582,38 +581,65 @@ class besthea::mesh::tree_structure {
 
   /**
    * Determines the clusters which are essential for the current process by
-   * traversing the tree recursively.
-   * A cluster is essential in the temporal tree structure if it meets one of
-   * the following requirements:
-   * -#  It is assigned to the process.
-   * -#  It is in the interaction list of a cluster which is assigned to the
+   * traversing the tree recursively twice.
+   *
+   * A cluster I is essential in the temporal tree structure if it meets one
+   * of the following requirements:
+   * -#  I is assigned to the process (i.e. I is local).
+   * -#  I is in the interaction list of a cluster which is assigned to the
    *     process.
-   * -#  It is in the nearfield of a leaf cluster which is assigned to the
+   * -#  I is in the nearfield of a cluster J which is assigned to the
+   *     process and either I or J are leaves. (cases where I is a leaf are
+   *     included to enable S2L operations)
+   * -#  I contains a cluster in its interaction list which is assigned to the
    *     process.
-   * -#  It contains a cluster in its interaction list which is assigned to the
-   *     process.
-   * -#  It is a child of a cluster which is assigned to the process.
-   * -#  It is a leaf cluster and one of the clusters in its nearfield is
-   *     assigned to the process. (Such a cluster is strictly speaking not
-   *     essential, but we keep it to make expansions simpler)
+   * -#  I is a child of a cluster which is assigned to the process.
+   * -#  (*) I is a leaf cluster and one of the clusters in its physical
+   *     nearfield is assigned to the process. (Such a cluster might be needed
+   *     to extend the tree communicatively or for M2T operations)
+   * -#  (*) I is a cluster on a path between the root of a tree and another
+   *     essential cluster.
+   * -#  (*) I is in the interaction list of a cluster K, where K is on a path
+   *     between the root of the tree and a local cluster.
+   * -#  (*) I contains a cluster K in its interaction list, and K is on a path
+   *     between the root of the tree and a local cluster.
    *
    * If a cluster satisfies one of the first three conditions the associated
    * space-time clusters in a space-time cluster tree are also locally
    * essential.
    *
+   * The criteria are checked for all clusters by traversing the tree structure
+   * twice. Criteria marked by (*) are checked during the second tree traversal,
+   * the other ones during the first.
+   *
    * The member @p essential_status of the clusters is set by this
    * function. (see @ref scheduling_time_cluster::_essential_status for a list
    * of possible status )
-   * @param[in] my_process_id Id of the current process.
-   * @param[in] root  Current cluster in the tree traversal.
-   * @note The locally essential tree should also contain clusters which are
-   * contained in a path from the root of the tree structure to a cluster which
-   * meets one of the above requirements. Such clusters are not detected here,
-   * but in the routine @ref prepare_essential_reduction.
-   * @note This method is solely used by @ref reduce_2_essential.
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   *
+   * @note This method is solely used by @ref reduce_2_essential. It executes
+   * the routines @ref determine_essential_clusters_first_traversal and
+   * @ref determine_essential_clusters_second_traversal.
    */
-  void determine_essential_clusters(
-    const lo my_process_id, scheduling_time_cluster & root ) const;
+  void determine_essential_clusters( ) const;
+
+  /**
+   * Auxiliary routine that is used to determine essential clusters in the tree
+   * structure by a first recursive tree traversal.
+   *
+   * See @ref determine_essential_clusters for details.
+   */
+  void determine_essential_clusters_first_traversal(
+    scheduling_time_cluster & current_cluster ) const;
+
+  /**
+   * Auxiliary routine that is used to determine essential clusters in the tree
+   * structure by a second recursive tree traversal.
+   *
+   * See @ref determine_essential_clusters for details.
+   */
+  void determine_essential_clusters_second_traversal(
+    scheduling_time_cluster & current_cluster ) const;
 
   /**
    * Removes scheduling cluster from the tree structure which are not associated
