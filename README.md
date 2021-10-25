@@ -101,4 +101,4 @@ See [the project website](https://sites.google.com/view/besthea/).
 
 ## Acknowledgements
 
-Authors acknowledge the support provided by the Czech Science Foundation under the project 17-22615S, the Austrian Science Fund (FWF) under the project I 4033-N32, and by The Ministry of Education, Youth and Sports from the Large Infrastructures for Research, Experimental Development, and Innovations project 'e-INFRA CZ – LM2018140'.
+Authors acknowledge the support provided by the Czech Science Foundation under the project 19-29698L, the Austrian Science Fund (FWF) under the project I 4033-N32, and by The Ministry of Education, Youth and Sports from the Large Infrastructures for Research, Experimental Development, and Innovations project 'e-INFRA CZ – LM2018140'.
