@@ -471,6 +471,14 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
+   * Deletes @ref _m2t_list of the cluster.
+   */
+  void clear_m2t_list( ) {
+    delete _m2t_list;
+    _m2t_list = nullptr;
+  }
+
+  /**
    * Adds a cluster to @ref _s2l_list.
    * @param[in] src_cluster Pointer to a source cluster for which s2l operations
    * have to be exectued.
@@ -495,6 +503,14 @@ class besthea::mesh::scheduling_time_cluster {
    */
   const std::vector< scheduling_time_cluster * > * get_s2l_list( ) const {
     return _s2l_list;
+  }
+
+  /**
+   * Deletes @ref _s2l_list of the cluster.
+   */
+  void clear_s2l_list( ) {
+    delete _s2l_list;
+    _s2l_list = nullptr;
   }
 
   /**
@@ -1043,20 +1059,20 @@ class besthea::mesh::scheduling_time_cluster {
     if ( _global_leaf_status ) {
       std::cout << ", is global leaf";
     }
-    if ( _m2t_list != nullptr ) {
-      std::cout << ", m2t list: ";
-      for ( lou i = 0; i < _m2t_list->size( ); ++i ) {
-        std::cout << "(" << ( *_m2t_list )[ i ]->get_level( ) << ", "
-                  << ( *_m2t_list )[ i ]->get_global_index( ) << "), ";
-      }
-    }
-    if ( _s2l_list != nullptr ) {
-      std::cout << ", s2l list: ";
-      for ( lou i = 0; i < _s2l_list->size( ); ++i ) {
-        std::cout << "(" << ( *_s2l_list )[ i ]->get_level( ) << ", "
-                  << ( *_s2l_list )[ i ]->get_global_index( ) << "), ";
-      }
-    }
+    // if ( _m2t_list != nullptr ) {
+    //  std::cout << ", m2t list: ";
+    //  for ( lou i = 0; i < _m2t_list->size( ); ++i ) {
+    //    std::cout << "(" << ( *_m2t_list )[ i ]->get_level( ) << ", "
+    //              << ( *_m2t_list )[ i ]->get_global_index( ) << "), ";
+    //  }
+    //}
+    // if ( _s2l_list != nullptr ) {
+    //  std::cout << ", s2l list: ";
+    //  for ( lou i = 0; i < _s2l_list->size( ); ++i ) {
+    //    std::cout << "(" << ( *_s2l_list )[ i ]->get_level( ) << ", "
+    //              << ( *_s2l_list )[ i ]->get_global_index( ) << "), ";
+    //  }
+    //}
     // if ( _nearfield_list != nullptr ) {
     //   std::cout << ", nearfield: ";
     //   for ( lou i = 0; i < _nearfield_list->size( ); ++i ) {

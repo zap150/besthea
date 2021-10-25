@@ -666,11 +666,13 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     }
   }
   // clear the nearfield, interaction and send list of each cluster and fill
-  // them anew, to guarantee correctness.
+  // them anew, to guarantee correctness. m2t lists and s2l lists are cleared
+  // and not filled again.
   distribution_tree->clear_nearfield_send_and_interaction_lists(
     distribution_tree->get_root( ) );
   distribution_tree->set_nearfield_interaction_and_send_list(
     *distribution_tree->get_root( ) );
+  distribution_tree->clear_m2t_and_s2l_lists( distribution_tree->get_root( ) );
   // determine activity of clusters in upward and downward path of FMM anew
   distribution_tree->determine_cluster_activity(
     *distribution_tree->get_root( ) );

@@ -188,13 +188,41 @@ class besthea::mesh::tree_structure {
   void set_m2t_and_s2l_lists( );
 
   /**
+   * Initializes the m2t and s2l lists preliminarily by traversing only the
+   * temporal tree structure.
+   *
+   * This routine has to be called also when no single sided expansions are used
+   * in the later FMM algorithm. In fact, m2t lists are used to decide on local
+   * subtree communication after local extensions of the tree.
+   *
+   * m2t lists are constructed for local and non-local clusters, s2l lists only
+   * for local clusters.
+   *
+   * The routine is based on a recursive tree traversal.
+   *
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   */
+  void set_m2t_and_s2l_lists_preliminarily(
+    scheduling_time_cluster & current_cluster );
+
+  /**
+   * Auxiliary routine used to traverse a subtree starting at a given source
+   * cluster to update the m2t list of a given target cluster. The source
+   * subtree is traversed recursively.
+   * @param[in] current_source  Current source cluster in the tree traversal.
+   * @param[in] target_cluster  Target cluster whose m2t list is updated.
+   */
+  void determine_m2t_list_in_subtree( scheduling_time_cluster & current_source,
+    scheduling_time_cluster & target_cluster );
+
+  /**
    * Traverses the tree recursively and adds all relevant clusters assigned to
    * the process @p _my_process_id to the 4 lists for scheduling operations in
    * the FMM.
    * @param[in] root Current cluster in the tree traversal.
    * @param[in,out] m_list  List for scheduling upward path operations.
-   * @param[in,out] m2l_list  List for scheduling interactions and downward pass
-   *                          operations.
+   * @param[in,out] m2l_list  List for scheduling interactions and downward
+   * pass operations.
    * @param[in,out] l_list  List for scheduling downward path operations.
    * @param[in,out] n_list  List for scheduling nearfield operations.
    * @note The routine is solely called by
@@ -210,8 +238,8 @@ class besthea::mesh::tree_structure {
    * Traverses the tree structure recursively and allocates and initializes the
    * moments for all clusters which are active in the upward path of the FMM.
    * @param[in] root  Current cluster in the tree traversal.
-   * @param[in] contribution_size Size of the contribution of a single spacetime
-   *                              cluster.
+   * @param[in] contribution_size Size of the contribution of a single
+   * spacetime cluster.
    */
   void initialize_moment_contributions(
     scheduling_time_cluster & root, lou contribution_size );
@@ -228,8 +256,8 @@ class besthea::mesh::tree_structure {
    * local contributions for all clusters which are active in the downward path
    * of the FMM.
    * @param[in] root  Current cluster in the tree traversal.
-   * @param[in] contribution_size Size of the contribution of a single spacetime
-   *                              cluster.
+   * @param[in] contribution_size Size of the contribution of a single
+   * spacetime cluster.
    */
   void initialize_local_contributions(
     scheduling_time_cluster & root, lou contribution_size );
@@ -246,8 +274,8 @@ class besthea::mesh::tree_structure {
    * local contributions for all clusters which are active in the downward path
    * of an initial pFMM operator.
    * @param[in] root  Current cluster in the tree traversal.
-   * @param[in] contribution_size Size of the contribution of a single spacetime
-   * cluster.
+   * @param[in] contribution_size Size of the contribution of a single
+   * spacetime cluster.
    */
   void initialize_local_contributions_initial_op(
     scheduling_time_cluster & root, lou contribution_size );
@@ -350,7 +378,8 @@ class besthea::mesh::tree_structure {
   /**
    * Recursively constructs the tree structure from a given array.
    * @param[in] tree_array Contains the data needed for tree construction.
-   * @param[in,out] root  Current cluster, to which the next clusters are added.
+   * @param[in,out] root  Current cluster, to which the next clusters are
+   * added.
    * @param[in,out] position  Auxiliary variable to keep track of the current
    *                          position in the tree_vector.
    * @note  The child of a cluster inherits the process id from its parent in
@@ -365,7 +394,8 @@ class besthea::mesh::tree_structure {
    * and a given array of cluster bounds.
    * @param[in] tree_array Contains the tree structure data.
    * @param[in] cluster_bounds  Contains the data of the clusters' bounds.
-   * @param[in,out] root  Current cluster, to which the next clusters are added.
+   * @param[in,out] root  Current cluster, to which the next clusters are
+   * added.
    * @param[in,out] position  Auxiliary variable to keep track of the current
    *                          position in the vectors.
    * @note  This method is supposed to be called by the constructor.
@@ -392,11 +422,12 @@ class besthea::mesh::tree_structure {
   void collect_leaves( scheduling_time_cluster & root );
 
   /**
-   * Sets the global indices of all clusters in the tree structure by traversing
-   * it recursively. The parent cluster with id k sets the indices of its
-   * children: the left gets the index 2k+1, the right the index 2k+2.
+   * Sets the global indices of all clusters in the tree structure by
+   * traversing it recursively. The parent cluster with id k sets the indices
+   * of its children: the left gets the index 2k+1, the right the index 2k+2.
    * @param[in] root Current cluster in the tree traversal.
-   * @note The index of the root s assumed to be 0 before the routine is called.
+   * @note The index of the root s assumed to be 0 before the routine is
+   * called.
    */
   void set_indices( scheduling_time_cluster & root );
 
@@ -414,7 +445,8 @@ class besthea::mesh::tree_structure {
    * tree starting from the initial @p current_cluster, and adds all descendant
    * leaves to the nearfield of the leaf @p target_cluster.
    * @param[in] current_cluster Current cluster in the tree traversal.
-   * @param[in] target_cluster  Cluster to whose nearfield the leaves are added.
+   * @param[in] target_cluster  Cluster to whose nearfield the leaves are
+   * added.
    */
   void add_leaves_to_nearfield_list( scheduling_time_cluster & current_cluster,
     scheduling_time_cluster & target_cluster );
@@ -425,9 +457,11 @@ class besthea::mesh::tree_structure {
    * a recursive tree traversal.
    * @param[in] current_cluster Current cluster in the tree traversal. Its m2t
    * and s2l list are initialized if necessary.
-   * @param[in] global_index_to_cluster Auxiliary structure to access scheduling
-   * time clusters by knowing only their global index in the tree structure.
-   * @note The unordered map @p global_index_to_cluster can be constructed using
+   * @param[in] global_index_to_cluster Auxiliary structure to access
+   * scheduling time clusters by knowing only their global index in the tree
+   * structure.
+   * @note The unordered map @p global_index_to_cluster can be constructed
+   * using
    * @ref initialize_map_global_index_to_cluster.
    */
   void set_m2t_and_s2l_lists_recursively(
@@ -481,13 +515,13 @@ class besthea::mesh::tree_structure {
    * Determines those clusters in the tree structure for which data has to be
    * exchanged.
    *
-   * The subtree send and receive lists are relevant, when the tree structure is
-   * refined based on a locally essential space-time cluster tree, see
+   * The subtree send and receive lists are relevant, when the tree structure
+   * is refined based on a locally essential space-time cluster tree, see
    * @ref distributed_spacetime_cluster_tree::expand_distribution_tree_locally.
    *
-   * The leaf info send and receive list are required to determine leaf statuses
-   * of non-local space-time clusters, whose moments have to be communicated in
-   * the FMM algorithm.
+   * The leaf info send and receive list are required to determine leaf
+   * statuses of non-local space-time clusters, whose moments have to be
+   * communicated in the FMM algorithm.
    *
    * The output vectors are filled with pairs (p, idx) of process ids and
    * pointers to clusters. They are used as follows:
@@ -506,18 +540,17 @@ class besthea::mesh::tree_structure {
    *                                  clusters for which subtree data has to be
    *                                  sent.
    * @param[in,out] subtree_receive_list  Set storing process ids and pointers
-   *                                      of clusters for which subtree data has
-   *                                      to be received.
+   *                                      of clusters for which subtree data
+   * has to be received.
    * @param[in,out] leaf_info_send_list Set storing process ids and pointers of
    *                                    clusters for which leaf information has
    *                                    to be sent.
-   * @param[in,out] leaf_info_receive_list  Set storing process ids and pointers
-   *                                        of clusters for which leaf
-   *                                        information has to be received.
+   * @param[in,out] leaf_info_receive_list  Set storing process ids and
+   * pointers of clusters for which leaf information has to be received.
    * @note We call this routine after executing
    * @ref remove_clusters_with_no_association. This routine gets rid of
-   * unnecessary scheduling time clusters, and updates the global leaf status of
-   * clusters which turn into leaves in this process. Such clusters are also
+   * unnecessary scheduling time clusters, and updates the global leaf status
+   * of clusters which turn into leaves in this process. Such clusters are also
    * added to the send and receive list, even though this would not be
    * necessary.
    */
@@ -546,6 +579,14 @@ class besthea::mesh::tree_structure {
     scheduling_time_cluster * root );
 
   /**
+   * Clears the m2t and s2l lists of al clusters in the tree.
+   *
+   * The method is based on a recursive tree traversal.
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   */
+  void clear_m2t_and_s2l_lists( scheduling_time_cluster * current_cluster );
+
+  /**
    * Clears the lists of associated spacetime clusters of all clusters in the
    * tree structure.
    *
@@ -563,8 +604,8 @@ class besthea::mesh::tree_structure {
   void determine_cluster_activity( scheduling_time_cluster & root );
 
   /**
-   * Prepares the reduction of the tree structure to the locally essential part,
-   * by updating nearfields, interaction lists and send lists.
+   * Prepares the reduction of the tree structure to the locally essential
+   * part, by updating nearfields, interaction lists and send lists.
    *
    * In addition, @p _levels is reset. The method is based on a tree traversal.
    * @param[in] root  Current cluster in the tree traversal.
@@ -609,8 +650,8 @@ class besthea::mesh::tree_structure {
    * essential.
    *
    * The criteria are checked for all clusters by traversing the tree structure
-   * twice. Criteria marked by (*) are checked during the second tree traversal,
-   * the other ones during the first.
+   * twice. Criteria marked by (*) are checked during the second tree
+   * traversal, the other ones during the first.
    *
    * The member @p essential_status of the clusters is set by this
    * function. (see @ref scheduling_time_cluster::_essential_status for a list
@@ -642,8 +683,8 @@ class besthea::mesh::tree_structure {
     scheduling_time_cluster & current_cluster ) const;
 
   /**
-   * Removes scheduling cluster from the tree structure which are not associated
-   * with any space-time clusters.
+   * Removes scheduling cluster from the tree structure which are not
+   * associated with any space-time clusters.
    *
    * The clusters are not only removed but deleted. The routine is based on a
    * recursive tree traversal.
