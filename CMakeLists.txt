@@ -126,7 +126,6 @@ set(besthea_INCLUDES
 )
 
 set(besthea_cuda_INCLUDES
-  ${besthea_INCLUDES}
   include/besthea/besthea_cuda.h
   include/besthea/gpu_apply_load_distribution.h
   include/besthea/gpu_apply_timer_collection.h
@@ -136,8 +135,6 @@ set(besthea_cuda_INCLUDES
   include/besthea/uniform_spacetime_be_matrix_onthefly_gpu.h
   include/besthea/uniform_spacetime_tensor_mesh_gpu.h
 )
-
-set(all_besthea_INCLUDES ${besthea_cuda_INCLUDES})
 
 set(besthea_SOURCES
   src/basis_tetra_p1.cpp
@@ -261,18 +258,19 @@ if(BESTHEA_USE_CUDA)
     BESTHEA_USE_CUDA)
 endif()
 
-
 install(TARGETS ${PROJECT_NAME}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}
   )  
+install(FILES ${besthea_INCLUDES}
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
+
 if(BESTHEA_USE_CUDA)
   install(TARGETS besthea_cuda
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}
     )
+  install(FILES ${besthea_cuda_INCLUDES}
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 endif()
-
-install(FILES ${all_besthea_INCLUDES}
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 
 option(BUILD_EXAMPLES "Build examples using the library" ON)
 
