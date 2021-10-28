@@ -42,7 +42,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 besthea::mesh::distributed_spacetime_tensor_mesh::
   distributed_spacetime_tensor_mesh( const std::string & decomposition_file,
     const std::string & tree_file, const std::string & cluster_bounds_file,
-    const std::string & distribution_file, MPI_Comm * comm )
+    const std::string & distribution_file, MPI_Comm * comm, lo & status )
   : _my_mesh( nullptr ),
     _space_mesh( nullptr ),
     _time_mesh( nullptr ),
@@ -51,7 +51,32 @@ besthea::mesh::distributed_spacetime_tensor_mesh::
   MPI_Comm_rank( *_comm, &_my_rank );
   MPI_Comm_size( *_comm, &_n_processes );
 
-  load( decomposition_file, tree_file, cluster_bounds_file, distribution_file );
+  load( decomposition_file, tree_file, cluster_bounds_file, distribution_file,
+    status );
+
+  // check whether some process produced a warning
+  if ( _my_rank == 0 ) {
+    std::vector< lo > all_load_status( _n_processes );
+    MPI_Gather( &status, 1, get_index_type< lo >::MPI_LO( ),
+      all_load_status.data( ), 1, get_index_type< lo >::MPI_LO( ), 0, *_comm );
+    bool first_warning = true;
+    for ( lo i = 0; i < _n_processes; ++i ) {
+      if ( all_load_status[ i ] == -1 ) {
+        if ( first_warning ) {
+          std::cout
+            << "WARNING: nearfield mesh was not connected for process: ";
+          first_warning = false;
+        }
+        std::cout << i << " ";
+      }
+    }
+    if ( !first_warning ) {
+      std::cout << std::endl;
+    }
+  } else {
+    MPI_Gather( &status, 1, get_index_type< lo >::MPI_LO( ), nullptr, 1,
+      get_index_type< lo >::MPI_LO( ), 0, *_comm );
+  }
 
   // get global data
   MPI_Barrier( *_comm );
@@ -137,7 +162,7 @@ void besthea::mesh::distributed_spacetime_tensor_mesh::find_slices_to_load(
 bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
   const std::string & decomposition_file, const std::string & tree_file,
   const std::string & cluster_bounds_file,
-  const std::string & distribution_file ) {
+  const std::string & distribution_file, lo & status ) {
   // load the file with basic description of the decomposed mesh
   std::ifstream filestream( decomposition_file.c_str( ) );
 
@@ -170,6 +195,25 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
   std::set< lo > local_slice_indices;
   std::set< lo > nearfield_slice_indices;
   find_slices_to_load( nearfield_slice_indices, local_slice_indices );
+
+  // ensure that the nearfield slices are connected
+  if ( !nearfield_slice_indices.empty( ) ) {
+    auto first_it = nearfield_slice_indices.begin( );
+    auto second_it = nearfield_slice_indices.begin( );
+    ++second_it;
+    while ( second_it != nearfield_slice_indices.end( ) ) {
+      if ( ( *second_it ) != ( *first_it ) + 1 ) {
+        // insert the missing nearfield slice, and set status to -1 to warn the
+        // user
+        nearfield_slice_indices.insert( first_it, ( *first_it ) + 1 );
+        status = -1;
+        ++first_it;
+      } else {
+        ++first_it;
+        ++second_it;
+      }
+    }
+  }
 
   _n_meshes_per_rank = local_slice_indices.size( );
 

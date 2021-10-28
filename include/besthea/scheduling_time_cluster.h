@@ -93,12 +93,14 @@ class besthea::mesh::scheduling_time_cluster {
       _m2t_list( nullptr ),
       _s2l_list( nullptr ),
       _send_list( nullptr ),
+      _diagonal_send_list( nullptr ),
       _essential_status( -1 ),
       _active_upward_path( false ),
       _active_downward_path( false ),
       _status_initial_op_downward_path( 0 ),
       _upward_path_counter( -1 ),
       _m2l_counter( 0 ),
+      _s2l_execution_status( true ),
       _downward_path_status( 0 ),
       _associated_spacetime_clusters( nullptr ),
       _n_associated_leaves( 0 ),
@@ -109,7 +111,9 @@ class besthea::mesh::scheduling_time_cluster {
       _pos_in_m_list( -1 ),
       _pos_in_l_list( -1 ),
       _pos_in_m2l_list( -1 ),
-      _ready_interaction_list_size( 0 ) {
+      _pos_in_s2l_list( -1 ),
+      _n_ready_m2l_sources( 0 ),
+      _n_ready_m2t_sources( 0 ) {
   }
 
   scheduling_time_cluster( const scheduling_time_cluster & that ) = delete;
@@ -138,6 +142,8 @@ class besthea::mesh::scheduling_time_cluster {
       delete _s2l_list;
     if ( _send_list != nullptr )
       delete _send_list;
+    if ( _diagonal_send_list != nullptr )
+      delete _diagonal_send_list;
     if ( _associated_spacetime_clusters != nullptr )
       delete _associated_spacetime_clusters;
     if ( _associated_moments != nullptr )
@@ -168,18 +174,35 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Deletes the ready interaction list
-   */
-  void delete_ready_interaction_list( ) {
-    _ready_interaction_list_size = 0;
-  }
-
-  /**
    * Deletes the send list
    */
   void delete_send_list( ) {
     delete _send_list;
     _send_list = nullptr;
+  }
+
+  /**
+   * Deletes @ref _m2t_list of the cluster.
+   */
+  void delete_m2t_list( ) {
+    delete _m2t_list;
+    _m2t_list = nullptr;
+  }
+
+  /**
+   * Deletes @ref _s2l_list of the cluster.
+   */
+  void delete_s2l_list( ) {
+    delete _s2l_list;
+    _s2l_list = nullptr;
+  }
+
+  /**
+   * Delete @ref _diagonal_send_list of the cluster.
+   */
+  void delete_diagonal_send_list( ) {
+    delete _diagonal_send_list;
+    _diagonal_send_list = nullptr;
   }
 
   /**
@@ -471,14 +494,6 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Deletes @ref _m2t_list of the cluster.
-   */
-  void clear_m2t_list( ) {
-    delete _m2t_list;
-    _m2t_list = nullptr;
-  }
-
-  /**
    * Adds a cluster to @ref _s2l_list.
    * @param[in] src_cluster Pointer to a source cluster for which s2l operations
    * have to be exectued.
@@ -503,14 +518,6 @@ class besthea::mesh::scheduling_time_cluster {
    */
   const std::vector< scheduling_time_cluster * > * get_s2l_list( ) const {
     return _s2l_list;
-  }
-
-  /**
-   * Deletes @ref _s2l_list of the cluster.
-   */
-  void clear_s2l_list( ) {
-    delete _s2l_list;
-    _s2l_list = nullptr;
   }
 
   /**
@@ -562,37 +569,83 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Adds a cluster to @p _ready_interaction_list.
+   * Adds a cluster to @p _diagonal_send_list.
+   * @param[in] tar_cluster Pointer to a target cluster.
+   * @note If @p _diagonal_send_list is not allocated this is done here.
    */
-  void add_to_ready_interaction_list( ) {
-#pragma omp atomic update
-    _ready_interaction_list_size++;
+  void add_to_diagonal_send_list( scheduling_time_cluster * tar_cluster ) {
+    if ( _diagonal_send_list == nullptr ) {
+      _diagonal_send_list = new std::vector< scheduling_time_cluster * >( );
+    }
+    _diagonal_send_list->push_back( tar_cluster );
   }
 
   /**
-   * Clears the ready interaction list.
+   * Returns a pointer to the const diagonal send list.
    */
-  void clear_ready_interaction_list( ) {
+  const std::vector< scheduling_time_cluster * > * get_diagonal_send_list( )
+    const {
+    return _diagonal_send_list;
+  }
+
+  /**
+   * Returns a pointer to the diagonal send list.
+   */
+  std::vector< scheduling_time_cluster * > * get_diagonal_send_list( ) {
+    return _diagonal_send_list;
+  }
+
+  /**
+   * Resets @ref _n_ready_m2l_sources to 0.
+   */
+  void reset_n_ready_m2l_sources( ) {
 #pragma omp atomic write
-    _ready_interaction_list_size = 0;
+    _n_ready_m2l_sources = 0;
   }
 
   /**
-   * Increases the value of @ref _ready_interaction_list_size by 1.
+   * Increases the value of @ref _n_ready_m2l_sources by 1.
    */
-  void update_ready_interaction_size( ) {
+  void update_n_ready_m2l_sources( ) {
 #pragma omp atomic update
-    _ready_interaction_list_size++;
+    _n_ready_m2l_sources++;
   }
 
   /**
    * Returns the number of clusters ready for interaction, i.e. the value of
-   * @ref _ready_interaction_list_size.
+   * @ref _n_ready_m2l_sources.
    */
-  lou get_ready_interaction_list_size( ) {
+  lou get_n_ready_m2l_sources( ) {
     lou size;
 #pragma omp atomic read
-    size = _ready_interaction_list_size;
+    size = _n_ready_m2l_sources;
+    return size;
+  }
+
+  /**
+   * Resets @ref _n_ready_m2t_sources to 0.
+   */
+  void reset_n_ready_m2t_sources( ) {
+#pragma omp atomic write
+    _n_ready_m2t_sources = 0;
+  }
+
+  /**
+   * Increases the value of @ref _n_ready_m2t_sources by 1.
+   */
+  void update_n_ready_m2t_sources( ) {
+#pragma omp atomic update
+    _n_ready_m2t_sources++;
+  }
+
+  /**
+   * Returns the number of clusters ready for interaction, i.e. the value of
+   * @ref _n_ready_m2t_sources.
+   */
+  lou get_n_ready_m2t_sources( ) {
+    lou size;
+#pragma omp atomic read
+    size = _n_ready_m2t_sources;
     return size;
   }
 
@@ -706,6 +759,25 @@ class besthea::mesh::scheduling_time_cluster {
   void set_m2l_counter( const slou new_value ) {
 #pragma omp atomic write
     _m2l_counter = new_value;
+  }
+
+  /**
+   * Returns the value of @ref _s2l_execution_status.
+   */
+  bool get_s2l_execution_status( ) const {
+    bool status;
+#pragma omp atomic read
+    status = _s2l_execution_status;
+    return status;
+  }
+
+  /**
+   * Sets the m2l counter to a new given value.
+   * @param[in] new_value Value to which the counter is set.
+   */
+  void set_s2l_execution_status( const bool new_value ) {
+#pragma omp atomic write
+    _s2l_execution_status = new_value;
   }
 
   /**
@@ -1122,16 +1194,16 @@ class besthea::mesh::scheduling_time_cluster {
 
   /**
    * Setter for the @ref _pos_in_m_list variable
-   * @param[in] index Index of the cluster in the @ref
-   * besthea::linear_algebra::distributed_pFMM_matrix::_m_list
+   * @param[in] index Index of the cluster in
+   * @ref besthea::linear_algebra::distributed_pFMM_matrix::_m_list
    */
   void set_pos_in_m_list( lo index ) {
     _pos_in_m_list = index;
   }
 
   /**
-   * Returns position in @ref
-   * besthea::linear_algebra::distributed_pFMM_matrix::_m_list
+   * Returns position in
+   * @ref besthea::linear_algebra::distributed_pFMM_matrix::_m_list
    */
   lo get_pos_in_m_list( ) const {
     return _pos_in_m_list;
@@ -1139,16 +1211,16 @@ class besthea::mesh::scheduling_time_cluster {
 
   /**
    * Setter for the @ref _pos_in_l_list variable
-   * @param[in] index Index of the cluster in the @ref
-   * besthea::linear_algebra::distributed_pFMM_matrix::_l_list
+   * @param[in] index Index of the cluster in
+   * @ref besthea::linear_algebra::distributed_pFMM_matrix::_l_list
    */
   void set_pos_in_l_list( lo index ) {
     _pos_in_l_list = index;
   }
 
   /**
-   * Returns position in @ref
-   * besthea::linear_algebra::distributed_pFMM_matrix::_l_list
+   * Returns position in
+   * @ref besthea::linear_algebra::distributed_pFMM_matrix::_l_list
    */
   lo get_pos_in_l_list( ) const {
     return _pos_in_l_list;
@@ -1156,19 +1228,36 @@ class besthea::mesh::scheduling_time_cluster {
 
   /**
    * Setter for the @ref _pos_in_m2l_list variable
-   * @param[in] index Index of the cluster in the @ref
-   * besthea::linear_algebra::distributed_pFMM_matrix::_m2l_list
+   * @param[in] index Index of the cluster in
+   * @ref besthea::linear_algebra::distributed_pFMM_matrix::_m2l_list
    */
   void set_pos_in_m2l_list( lo index ) {
     _pos_in_m2l_list = index;
   }
 
   /**
-   * Returns position in @ref
-   * besthea::linear_algebra::distributed_pFMM_matrix::_m2l_list
+   * Returns position in
+   * @ref besthea::linear_algebra::distributed_pFMM_matrix::_m2l_list
    */
   lo get_pos_in_m2l_list( ) const {
     return _pos_in_m2l_list;
+  }
+
+  /**
+   * Setter for the @ref _pos_in_s2l_list variable
+   * @param[in] index Index of the cluster in
+   * @ref besthea::linear_algebra::distributed_pFMM_matrix::_s2l_list
+   */
+  void set_pos_in_s2l_list( lo index ) {
+    _pos_in_s2l_list = index;
+  }
+
+  /**
+   * Returns position in
+   * @ref besthea::linear_algebra::distributed_pFMM_matrix::_s2l_list
+   */
+  lo get_pos_in_s2l_list( ) const {
+    return _pos_in_s2l_list;
   }
 
  private:
@@ -1209,6 +1298,9 @@ class besthea::mesh::scheduling_time_cluster {
   std::vector< scheduling_time_cluster * > *
     _send_list;  //!< Contains all clusters in whose interaction list the
                  //!< cluster is contained.
+  std::vector< scheduling_time_cluster * > *
+    _diagonal_send_list;   //!< Contains all clusters in whose m2t list the
+                           //!< cluster is contained.
   char _essential_status;  //!< Indicates the status of a cluster in a
                            //!< distributed tree. Possible status are:
                            //!< - 0: not essential
@@ -1233,7 +1325,10 @@ class besthea::mesh::scheduling_time_cluster {
   lo _upward_path_counter;  //!< Used to keep track of the dependencies in the
                             //!< upward path. If it is 0, the dependencies are
                             //!< fulfilled.
-  slou _m2l_counter;  //!< Used to keep track of the completed m2l operations.
+  slou _m2l_counter;  //!< Used to keep track of the completed m2l operations in
+                      //!< pFMM.
+  bool _s2l_execution_status;  //!< Used to check if s2l have already been
+                               //!< executed in pFMM.
 
   char
     _downward_path_status;  //!< Used to keep track of the status in the
@@ -1282,9 +1377,20 @@ class besthea::mesh::scheduling_time_cluster {
     _pos_in_m2l_list;  //!< auxiliary variable storing position in the m2l list
                        //!< used in @ref
                        //!< besthea::linear_algebra::distributed_pFMM_matrix::apply
-  lou _ready_interaction_list_size;  //!< size of the ready interaction list
-                                     //!< (stored as variable due to possible
-                                     //!< data races)
+  lo
+    _pos_in_s2l_list;  //!< auxiliary variable storing position in the s2l list
+                       //!< used in @ref
+                       //!< besthea::linear_algebra::distributed_pFMM_matrix::apply
+  lou _n_ready_m2l_sources;  //!< Number of source clusters whose moments are
+                             //!< available for m2l operations. This is an
+                             //!< auxiliary variable used in pFMM. If it equals
+                             //!< the size of the interaction list, m2l list
+                             //!< operations can be started.
+  lou _n_ready_m2t_sources;  //!< Number of source clusters whose moments are
+                             //!< available for m2t operations. This is an
+                             //!< auxiliary variable used in pFMM. If it equals
+                             //!< the size of the interaction list, m2t list
+                             //!< operations can be started.
 };
 
 /**

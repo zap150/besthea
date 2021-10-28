@@ -207,11 +207,11 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   tree_structure * distribution_tree = get_distribution_tree( );
   distribution_tree->remove_clusters_with_no_association(
     *distribution_tree->get_root( ) );
-  // reset the nearfield, send and interaction lists of all scheduling time
-  // clusters.
-  distribution_tree->clear_nearfield_send_and_interaction_lists(
+  // reset the operations lists (nearfield, send, interaction, ...) of all
+  // scheduling time clusters.
+  distribution_tree->clear_cluster_operation_lists(
     distribution_tree->get_root( ) );
-  distribution_tree->set_nearfield_interaction_and_send_list(
+  distribution_tree->set_cluster_operation_lists(
     *distribution_tree->get_root( ) );
   // clear the lists of cluster associations. they are reset again below after
   // the distribution tree is locally extended.
@@ -264,8 +264,8 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   // addition the m2t and s2l of appropriate clusters if desired.
   if ( enable_m2t_and_s2l ) {
     fill_nearfield_interaction_m2t_and_s2l_lists( *_root );
-    // fill the m2t and s2l of the scheduling time clusters too
-    distribution_tree->set_m2t_and_s2l_lists( );
+    // update the m2t and s2l of the scheduling time clusters
+    distribution_tree->update_m2t_and_s2l_lists( );
   } else {
     fill_nearfield_and_interaction_lists( *_root );
   }
@@ -586,10 +586,10 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
       expand_tree_structure_recursively(
         distribution_tree, spacetime_root, time_root, refine_map );
     }
-    // clear the nearfield, interaction and send list of each cluster and fill
-    // them anew, to guarantee correctness.
-    distribution_tree->clear_nearfield_send_and_interaction_lists( time_root );
-    distribution_tree->set_nearfield_interaction_and_send_list( *time_root );
+    // clear the operation lists (nearfield, interaction, send, ...) of each
+    // cluster and fill them anew, to guarantee correctness.
+    distribution_tree->clear_cluster_operation_lists( time_root );
+    distribution_tree->set_cluster_operation_lists( *time_root );
     // determine activity of clusters in upward and downward path of FMM anew
     distribution_tree->determine_cluster_activity( *time_root );
   } else {
@@ -665,18 +665,15 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
         current_send_clusters, global_tree_levels, offset );
     }
   }
-  // clear the nearfield, interaction and send list of each cluster and fill
-  // them anew, to guarantee correctness. m2t lists and s2l lists are cleared
-  // and not filled again.
-  distribution_tree->clear_nearfield_send_and_interaction_lists(
+  // clear the operation lists (nearfield, interaction, send, ...) of each
+  // cluster and fill them anew, to guarantee correctness.
+  distribution_tree->clear_cluster_operation_lists(
     distribution_tree->get_root( ) );
-  distribution_tree->set_nearfield_interaction_and_send_list(
+  distribution_tree->set_cluster_operation_lists(
     *distribution_tree->get_root( ) );
-  distribution_tree->clear_m2t_and_s2l_lists( distribution_tree->get_root( ) );
   // determine activity of clusters in upward and downward path of FMM anew
   distribution_tree->determine_cluster_activity(
     *distribution_tree->get_root( ) );
-  // reduce the tree to make it essential again
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::

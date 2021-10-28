@@ -252,10 +252,9 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @note The clusters which are refined are determined using the routine
    *       @ref tree_structure::determine_clusters_to_refine and the refinement
    *       is executed by @ref expand_tree_structure_recursively.
-   * @note The nearfields, interaction lists and send lists of the distribution
-   *       tree are cleared using the routine
-   *       @ref tree_structure::clear_nearfield_send_and_interaction_lists and
-   *       filled anew.
+   * @note The operations lists (nearfield, interaction, send, ...) of the
+   *       distribution tree are cleared using the routine
+   *       @ref tree_structure::clear_cluster_operation_lists and filled anew.
    * @note After execution the distribution tree is possibly not locally
    *       essential anymore. Call the routine
    *       @ref tree_structure::reduce_2_essential on the distribution tree to

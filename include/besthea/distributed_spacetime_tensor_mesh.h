@@ -89,10 +89,12 @@ class besthea::mesh::distributed_spacetime_tensor_mesh
    * assignments for the clusters in the initial temporal cluster tree.
    * @param[in] comm Pointer to the MPI communicator associated with
    * decomposition.
+   * @param[in,out] status  Indicates if the mesh construction was successfull
+   *                        (status 0) or there was a warning (status -1)
    */
   distributed_spacetime_tensor_mesh( const std::string & decomposition_file,
     const std::string & tree_file, const std::string & cluster_bounds_file,
-    const std::string & distribution_file, MPI_Comm * comm );
+    const std::string & distribution_file, MPI_Comm * comm, lo & status );
 
   /**
    * Destructor.
@@ -354,10 +356,12 @@ class besthea::mesh::distributed_spacetime_tensor_mesh
    * bounds of the clusters in the initial temporal cluster tree
    * @param[in] distribution_file Path to the file describing the time-slices
    * distribution among MPI processes.
+   * @param[in,out] status  Indicates if the mesh construction was successfull
+   *                        (status 0) or there was a warning (status -1)
    */
   bool load( const std::string & decomposition_file,
     const std::string & tree_file, const std::string & cluster_bounds_file,
-    const std::string & distribution_file );
+    const std::string & distribution_file, lo & status );
 
   /**
    * Goes through the leaves of the temporal tree and adds time slice indices

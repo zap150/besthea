@@ -338,7 +338,10 @@ int main( int argc, char * argv[] ) {
     // construct distributed mesh
     distributed_spacetime_tensor_mesh distributed_mesh(
       geometry_dir + "test_mesh_d.txt", tree_vector_file, cluster_bounds_file,
-      process_assignment_file, &comm );
+      process_assignment_file, &comm, status );
+    // reset status to 0.
+    status = 0;
+
     lo n_global_timesteps = distributed_mesh.get_n_temporal_elements( );
     lo n_global_space_elements
       = distributed_mesh.get_local_mesh( )->get_n_spatial_elements( );

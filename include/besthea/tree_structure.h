@@ -83,7 +83,7 @@ class besthea::mesh::tree_structure {
    * geometrical data of the clusters.
    */
   tree_structure( const std::string & filename, const sc start_time,
-    const sc end_time, lo process_id = -1 );
+    const sc end_time, lo process_id = -1, bool enable_m2t_and_s2l = false );
 
   /**
    * Constructs a tree structure by reading it from files
@@ -96,7 +96,8 @@ class besthea::mesh::tree_structure {
    *                        value is -1.
    */
   tree_structure( const std::string & structure_file,
-    const std::string & cluster_bounds_file, lo process_id = -1 );
+    const std::string & cluster_bounds_file, lo process_id = -1,
+    bool enable_m2t_and_s2l = false );
 
   /**
    * Destructor.
@@ -180,40 +181,28 @@ class besthea::mesh::tree_structure {
     scheduling_time_cluster & current_cluster );
 
   /**
-   * Initializes the m2t and s2l lists of all local scheduling time clusters,
-   * whose associated space-time clusters have non-empty m2t or s2l lists.
+   * Updates the m2t and s2l lists of all local non-leaf scheduling time
+   * clusters, whose associated space-time clusters have non-empty m2t or s2l
+   * lists.
    * @note This routine is basically just a wrapper for
-   * @ref set_m2t_and_s2l_lists_recursively
+   * @ref update_m2t_and_s2l_lists_recursively
    */
-  void set_m2t_and_s2l_lists( );
+  void update_m2t_and_s2l_lists( );
 
   /**
-   * Initializes the m2t and s2l lists preliminarily by traversing only the
-   * temporal tree structure.
+   * Initializes the m2t lists of clusters by traversing the temporal tree
+   * structure recursively.
    *
    * This routine has to be called also when no single sided expansions are used
    * in the later FMM algorithm. In fact, m2t lists are used to decide on local
    * subtree communication after local extensions of the tree.
    *
-   * m2t lists are constructed for local and non-local clusters, s2l lists only
-   * for local clusters.
-   *
-   * The routine is based on a recursive tree traversal.
+   * m2t lists are constructed for local and non-local clusters
    *
    * @param[in] current_cluster Current cluster in the tree traversal.
    */
-  void set_m2t_and_s2l_lists_preliminarily(
+  void set_m2t_lists_for_subtree_communication(
     scheduling_time_cluster & current_cluster );
-
-  /**
-   * Auxiliary routine used to traverse a subtree starting at a given source
-   * cluster to update the m2t list of a given target cluster. The source
-   * subtree is traversed recursively.
-   * @param[in] current_source  Current source cluster in the tree traversal.
-   * @param[in] target_cluster  Target cluster whose m2t list is updated.
-   */
-  void determine_m2t_list_in_subtree( scheduling_time_cluster & current_source,
-    scheduling_time_cluster & target_cluster );
 
   /**
    * Traverses the tree recursively and adds all relevant clusters assigned to
@@ -223,14 +212,21 @@ class besthea::mesh::tree_structure {
    * @param[in,out] m_list  List for scheduling upward path operations.
    * @param[in,out] m2l_list  List for scheduling interactions and downward
    * pass operations.
+   * @param[in,out] m2t_task_list  List for scheduling m2t operations.
+   * @param[in,out] s2l_task_list  List for scheduling s2l operations.
    * @param[in,out] l_list  List for scheduling downward path operations.
    * @param[in,out] n_list  List for scheduling nearfield operations.
    * @note The routine is solely called by
    * @ref linear_algebra::distributed_pFMM_matrix::prepare_fmm.
+   * @note Please distinguish the task lists (e.g. m2t_task_list) and the
+   * respective lists of the individual clusters (e.g. m2t_list of a given
+   * cluster)
    */
   void init_fmm_lists( scheduling_time_cluster & root,
     std::list< scheduling_time_cluster * > & m_list,
     std::list< scheduling_time_cluster * > & m2l_list,
+    std::list< scheduling_time_cluster * > & m2t_task_list,
+    std::list< scheduling_time_cluster * > & s2l_task_list,
     std::list< scheduling_time_cluster * > & l_list,
     std::list< scheduling_time_cluster * > & n_list ) const;
 
@@ -360,6 +356,9 @@ class besthea::mesh::tree_structure {
  private:
   scheduling_time_cluster * _root;  //!< root cluster of the tree structure
   lo _levels;                       //!< number of levels in the tree
+  bool _enable_m2t_and_s2l;  //!< Indicates whether the tree structure is built
+                             //!< such that m2t and s2l operations are supported
+                             //!< in the later FMM algorithm.
   std::vector< scheduling_time_cluster * >
     _leaves;          //!< vector of all clusters without descendants
   lo _my_process_id;  //!< id of the process executing the operations
@@ -432,29 +431,50 @@ class besthea::mesh::tree_structure {
   void set_indices( scheduling_time_cluster & root );
 
   /**
-   * Computes and sets the nearfield, interaction list and send list for every
-   * cluster in the tree structure by recursively traversing the tree.
+   * Computes and sets the operation lists (nearfield, interaction, m2t, s2l,
+   * send, diagonal send) for every cluster in the tree structure by recursively
+   * traversing the tree.
+   *
+   * @note if @ref _enable_m2t_and_s2l is set to false, m2t, s2l and
+   * diagonal send lists are not set.
    * @param[in] root  Current cluster in the tree traversal.
    */
-  void set_nearfield_interaction_and_send_list(
-    scheduling_time_cluster & root );
+  void set_cluster_operation_lists( scheduling_time_cluster & root );
 
   /**
-   * Used for the construction of nearfields of leaf clusters by
-   * @ref set_nearfield_interaction_and_send_list. It recursively traverses the
-   * tree starting from the initial @p current_cluster, and adds all descendant
-   * leaves to the nearfield of the leaf @p target_cluster.
+   * Used for the construction of nearfields and m2t lists of leaf clusters by
+   * @ref set_cluster_operation_lists.
+   *
+   * It recursively traverses the tree starting from the initial
+   * @p current_cluster, and adds all appropriate descendants to the
+   * corresponding list of the leaf @p target_cluster.
+   *
+   * If a cluster I is added to the m2t list of a cluster J, J is added to I's
+   * diagonal send list.
    * @param[in] current_cluster Current cluster in the tree traversal.
    * @param[in] target_cluster  Cluster to whose nearfield the leaves are
    * added.
    */
-  void add_leaves_to_nearfield_list( scheduling_time_cluster & current_cluster,
+  void determine_operation_lists_in_subtree(
+    scheduling_time_cluster & current_cluster,
     scheduling_time_cluster & target_cluster );
 
   /**
-   * Initializes the m2t and s2l lists of all local scheduling time clusters,
-   * whose associated space-time clusters have non-empty m2t or s2l lists, by
-   * a recursive tree traversal.
+   * Auxiliary routine used to traverse a subtree starting at a given source
+   * cluster to update the m2t list of a given target cluster. The source
+   * subtree is traversed recursively.
+   *
+   * @note Diagonal send lists are not set by this routine.
+   * @param[in] current_source  Current source cluster in the tree traversal.
+   * @param[in] target_cluster  Target cluster whose m2t list is updated.
+   */
+  void determine_m2t_list_in_subtree( scheduling_time_cluster & current_source,
+    scheduling_time_cluster & target_cluster );
+
+  /**
+   * Updates the m2t and s2l lists of all local non-leaf scheduling time
+   * clusters, whose associated space-time clusters have non-empty m2t or s2l
+   * lists, by a recursive tree traversal.
    * @param[in] current_cluster Current cluster in the tree traversal. Its m2t
    * and s2l list are initialized if necessary.
    * @param[in] global_index_to_cluster Auxiliary structure to access
@@ -464,7 +484,7 @@ class besthea::mesh::tree_structure {
    * using
    * @ref initialize_map_global_index_to_cluster.
    */
-  void set_m2t_and_s2l_lists_recursively(
+  void update_m2t_and_s2l_lists_recursively(
     scheduling_time_cluster & current_cluster,
     const std::unordered_map< lo, scheduling_time_cluster * > &
       global_index_to_cluster );
@@ -569,22 +589,15 @@ class besthea::mesh::tree_structure {
       leaf_info_receive_list ) const;
 
   /**
-   * Clears the nearfield, interaction and send list of all clusters in the
-   * tree.
+   * Clears the operation lists (nearfield, interaction, m2t, s2l, send,
+   * diagonal send) of all clusters in the tree.
    *
    * The method relies on a tree traversal.
-   * @param[in] root  Current cluster in the tree traversal.
-   */
-  void clear_nearfield_send_and_interaction_lists(
-    scheduling_time_cluster * root );
-
-  /**
-   * Clears the m2t and s2l lists of al clusters in the tree.
    *
-   * The method is based on a recursive tree traversal.
-   * @param[in] current_cluster Current cluster in the tree traversal.
+   * @param[in] root  Current cluster in the tree traversal.
+   * @note m2t, s2l and diagonal send lists are not only cleared, but deleted.
    */
-  void clear_m2t_and_s2l_lists( scheduling_time_cluster * current_cluster );
+  void clear_cluster_operation_lists( scheduling_time_cluster * root );
 
   /**
    * Clears the lists of associated spacetime clusters of all clusters in the

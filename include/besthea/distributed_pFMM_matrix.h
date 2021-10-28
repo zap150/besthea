@@ -174,7 +174,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
       _m2l_subtask_times( omp_get_max_threads( ) ),
       _l_subtask_times( omp_get_max_threads( ) ),
       _n_subtask_times( omp_get_max_threads( ) ),
-      _mpi_send_m2l( omp_get_max_threads( ) ),
+      _mpi_send_m2l_or_m2t( omp_get_max_threads( ) ),
       _mpi_send_m_parent( omp_get_max_threads( ) ),
       _mpi_send_l_children( omp_get_max_threads( ) ),
       _mpi_recv_m2l( omp_get_max_threads( ) ),
@@ -812,35 +812,56 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     char & status ) const;
 
   /**
-   * Returns an iterator pointing to the next cluster in the m2l-list whose
-   * dependencies are satisfied. In case a cluster is found the status is
-   * updated. If no cluster is found the iterator points to the end of the list
-   * and the status is not modified.
+   * Returns an iterator pointing to the next cluster in the m2l-list or
+   * s2l_list whose operations should be executed and whose dependencies are
+   * satisfied. In case a cluster is found the status is updated. If no cluster
+   * is found the iterator points to the end of the m2l_list and the status is
+   * not modified.
    * @param[in] m2l_list  A list containing the clusters of @ref _m2l_list whose
-   *                      operations have not been executed yet.
-   * @param[out] it_next_cluster  If a cluster is found in the list this
-   *                              iterator points to it. Else it points to the
-   *                              end of the list.
-   * @param[out] status Set to 3 if a cluster is found.
+   * operations have not been executed yet.
+   * @param[in] s2l_list  A list containing the clusters of @ref _s2l_list whose
+   * operations have not been executed yet.
+   * @param[out] it_next_cluster  If a cluster is found in one of the lists this
+   * iterator points to it. Else it points to the end of @p m2l_list.
+   * @param[out] status If a cluster is found in the s2l-list or m2l-list it is
+   * set to 3 or 4, respectively.
    */
-  void find_cluster_in_m2l_list(
+  void find_cluster_in_m2l_or_s2l_list(
     std::list< mesh::scheduling_time_cluster * > & m2l_list,
+    std::list< mesh::scheduling_time_cluster * > & s2l_list,
     std::list< mesh::scheduling_time_cluster * >::iterator & it_next_cluster,
     char & status ) const;
 
   /**
-   * Updates dependency flags or sends moments for M2L operations.
+   * Returns an iterator pointing to the next cluster in the m2t-list whose
+   * dependencies are satisfied. In case a cluster is found the status is
+   * updated. If no cluster is found the iterator points to the end of the list
+   * and the status is not modified.
+   * @param[in] m2t_list  A list containing the clusters of @ref _m2t_list whose
+   * operations have not been executed yet.
+   * @param[out] it_next_cluster  If a cluster is found in the list this
+   * iterator points to it. Else it points to the end of the list.
+   * @param[out] status Set to 5 if a cluster is found.
+   */
+  void find_cluster_in_m2t_list(
+    std::list< mesh::scheduling_time_cluster * > & m2t_list,
+    std::list< mesh::scheduling_time_cluster * >::iterator & it_next_cluster,
+    char & status ) const;
+
+  /**
+   * Updates dependency flags or sends moments for M2L or M2T operations.
    * @param[in] src_cluster Considered scheduling time cluster. If a cluster in
-   *                        its send list is handled by a different process, the
-   *                        moments are send to this process.
+   *                        its send list or diagonal send list is handled by a
+   * different process, the moments are send to this process.
    * @param[in] verbose If true, the process reports about all initiated send
    *                    operations. (Updates of dependency flags are not
    *                    reported)
    * @param[in] verbose_file  If @p verbose is true, this is used as output
    *                          file.
    */
-  void provide_moments_for_m2l( mesh::scheduling_time_cluster * src_cluster,
-    bool verbose, const std::string & verbose_file ) const;
+  void provide_moments_for_m2l_or_m2t(
+    mesh::scheduling_time_cluster * src_cluster, bool verbose,
+    const std::string & verbose_file ) const;
 
   /**
    * Updates dependency flags or sends moments for upward path.
@@ -1101,8 +1122,16 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     std::vector< lou > & n_l2t_operations ) const;
 
   /**
-   * Task in the M-list
-   * @param[in] x Input vector
+   * Primary task for a time cluster in the M-list.
+   *
+   * Depending on the given time cluster it executes (or schedules secondary
+   * tasks for) the following operations:
+   * - S2M operations for space-time leaf clusters
+   * - M2M operations from the current cluster to its parent
+   * - providing moments for M2L or M2T operations (sending via MPI if
+   *   necessary)
+   * - providing moments to the parent (sending via MPI if necessary)
+   * @param[in] x Input vector; might be used to compute moments in S2M.
    * @param[in] t_cluster  Considered scheduling time cluster.
    * @param[in] verbose If true, the required time is written to file.
    * @param[in] verbose_file  If @p verbose is true, this is used as output
@@ -1117,8 +1146,16 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     const std::string & verbose_file ) const;
 
   /**
-   * Task in the L-list
-   * @param[in] y_pFMM Output vector
+   * Primary task for a time cluster in the L-list.
+   *
+   * Depending on the given time cluster it executes (or schedules secondary
+   * tasks for) the following operations:
+   * - L2L operations from the parent of the current cluster to itself
+   * - L2T or downward send operations if the local contributions are ready.
+   * @note Local contributions are ready, when all required L2L, M2L and S2L
+   * operations have been executed.
+   * @param[in] y_pFMM Output vector; might be updated with results from L2T
+   * operations.
    * @param[in] t_cluster  Considered scheduling time cluster.
    * @param[in] verbose If true, the required time is written to file.
    * @param[in] verbose_file  If @p verbose is true, this is used as output
@@ -1133,8 +1170,17 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     const std::string & verbose_file ) const;
 
   /**
-   * Task in the M2L-list
-   * @param[in] y_pFMM Output vector
+   * Primary task for a time cluster in the M2L-list.
+   *
+   * Depending on the given time cluster it executes (or schedules secondary
+   * tasks for) the following operations:
+   * - M2L operations, where the space-time clusters associated with the given
+   *   time cluster act as targets.
+   * - L2T or downward send operations if the local contributions are ready.
+   * @note Local contributions are ready, when all required L2L, M2L and S2L
+   * operations have been executed.
+   * @param[in] y_pFMM Output vector; might be updated with results from L2T
+   * operations.
    * @param[in] t_cluster  Considered scheduling time cluster.
    * @param[in] verbose If true, the required time is written to file.
    * @param[in] verbose_file  If @p verbose is true, this is used as output
@@ -1145,6 +1191,55 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   template< slou run_count >
   void m2l_list_task( distributed_block_vector & y_pFMM,
+    mesh::scheduling_time_cluster * t_cluster, bool verbose,
+    const std::string & verbose_file ) const;
+
+  /**
+   * Primary task for a time cluster in the M2L-list.
+   *
+   * Depending on the given time cluster it executes (or schedules secondary
+   * tasks for) the following operations:
+   * - M2T operations, where the space-time clusters associated with the given
+   *   time cluster act as targets.
+   * @param[in] y_pFMM Output vector; updated with results from M2T operations.
+   * @param[in] t_cluster  Considered scheduling time cluster.
+   * @param[in] verbose If true, the required time is written to file.
+   * @param[in] verbose_file  If @p verbose is true, this is used as output
+   *                          file.
+   * @tparam run_count  Run count of the corresponding pFMM procedure. It is
+   *                    used to choose the appropriate m2t operations for this
+   *                    run in case of the hypersingular operator.
+   */
+  template< slou run_count >
+  void m2t_list_task( distributed_block_vector & y_pFMM,
+    mesh::scheduling_time_cluster * t_cluster, bool verbose,
+    const std::string & verbose_file ) const;
+
+  /**
+   * Primary task for a time cluster in the S2L-list.
+   *
+   * Depending on the given time cluster it executes (or schedules secondary
+   * tasks for) the following operations:
+   * - S2L operations, where the space-time clusters associated with the given
+   *   time cluster act as targets.
+   * - L2T or downward send operations if the local contributions are ready.
+   * @note Local contributions are ready, when all required L2L, M2L and S2L
+   * operations have been executed.
+   *
+   * @param[in] x Input vector; used for S2L operations.
+   * @param[in] y_pFMM Output vector; might be updated with results from L2T
+   * operations.
+   * @param[in] t_cluster  Considered scheduling time cluster.
+   * @param[in] verbose If true, the required time is written to file.
+   * @param[in] verbose_file  If @p verbose is true, this is used as output
+   *                          file.
+   * @tparam run_count  Run count of the corresponding pFMM procedure. It is
+   *                    used to choose the appropriate s2l operations for this
+   *                    run in case of the hypersingular operator.
+   */
+  template< slou run_count >
+  void s2l_list_task( const distributed_block_vector & x,
+    distributed_block_vector & y_pFMM,
     mesh::scheduling_time_cluster * t_cluster, bool verbose,
     const std::string & verbose_file ) const;
 
@@ -1178,11 +1273,11 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   std::list< mesh::scheduling_time_cluster * >
     _l_list;  //!< L2L-list for the execution of the FMM.
   std::list< mesh::scheduling_time_cluster * >
-    _n_list;  //!< N-list for the execution of the FMM.
-  std::list< mesh::scheduling_time_cluster * >
     _m2t_list;  //!< M2T-list for the execution of the FMM.
   std::list< mesh::scheduling_time_cluster * >
-    _s2l_list;  //!< S2l-list for the execution of the FMM.
+    _s2l_list;  //!< S2L-list for the execution of the FMM.
+  std::list< mesh::scheduling_time_cluster * >
+    _n_list;  //!< N-list for the execution of the FMM.
 
   std::vector< std::pair< mesh::scheduling_time_cluster *, lo > >
     _receive_data_information;  //!< Contains for each data which has to be
@@ -1194,16 +1289,18 @@ class besthea::linear_algebra::distributed_pFMM_matrix
                                 //!< The first @p _n_moments_to_receive_upward
                                 //!< entries belong to moments which have to be
                                 //!< received in the upward path of the FMM, the
-                                //!< next @p _n_moments_to_receive_m2l entries
-                                //!< to moments which have to be received for
-                                //!< M2L operations and the remaining entries to
-                                //!< local contributions which have to be
-                                //!< received in the downward path.
+                                //!< next @p _n_moments_to_receive_m2l_or_m2t
+                                //!< entries to moments which have to be
+                                //!< received for M2L operations and the
+                                //!< remaining entries to local contributions
+                                //!< which have to be received in the downward
+                                //!< path.
   lou _n_moments_to_receive_upward;  //!< Number of grouped moments which have
                                      //!< to be received in the upward path of
                                      //!< the FMM.
-  lou _n_moments_to_receive_m2l;  //!< Number of grouped moments which have to
-                                  //!< be received for M2L operations.
+  lou _n_moments_to_receive_m2l_or_m2t;  //!< Number of grouped moments which
+                                         //!< have to be received for M2L or M2T
+                                         //!< operations.
 
   std::vector< vector_type >
     _m2m_coeffs_s_dim_0_left;  //!< left spatial m2m matrices along dimension 0
@@ -1309,6 +1406,12 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     _l_task_times;  //!< Same as @ref _m_task_times for primary l-list
                     //!< tasks.
   mutable std::vector< std::vector< time_type::rep > >
+    _m2t_task_times;  //!< Same as @ref _m_task_times for primary m2t-list
+                      //!< tasks.
+  mutable std::vector< std::vector< time_type::rep > >
+    _s2l_task_times;  //!< Same as @ref _m_task_times for primary s2l-list
+                      //!< tasks.
+  mutable std::vector< std::vector< time_type::rep > >
     _n_task_times;  //!< Same as @ref _m_task_times for primary n-list
                     //!< tasks.
 
@@ -1323,20 +1426,26 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     _l_subtask_times;  //!< Same as @ref _m_subtask_times for l-list
                        //!< subtasks.
   mutable std::vector< std::vector< time_type::rep > >
+    _m2t_subtask_times;  //!< Same as @ref _m_subtask_times for m2t-list
+                         //!< subtasks.
+  mutable std::vector< std::vector< time_type::rep > >
+    _s2l_subtask_times;  //!< Same as @ref _m_subtask_times for s2l-list
+                         //!< subtasks.
+  mutable std::vector< std::vector< time_type::rep > >
     _n_subtask_times;  //!< Same as @ref _m_subtask_times for n-list
                        //!< subtasks.
 
   mutable std::vector< std::vector< time_type::rep > >
-    _mpi_send_m2l;  //!< Contains a vector for each thread. The entries in these
-                    //!< vectors are the times when the sending of a group of
-                    //!< moments to another process for m2l-list operations has
-                    //!< started.
+    _mpi_send_m2l_or_m2t;  //!< Contains a vector for each thread. The entries
+                           //!< in these vectors are the times when the sending
+                           //!< of a group of moments to another process for
+                           //!< m2l-list operations has started.
   mutable std::vector< std::vector< time_type::rep > >
-    _mpi_send_m_parent;  //!< Same as @ref _mpi_send_m2l for sending moments
-                         //!< for m-list operations.
+    _mpi_send_m_parent;  //!< Same as @ref _mpi_send_m2l_or_m2t for sending
+                         //!< moments for m-list operations.
   mutable std::vector< std::vector< time_type::rep > >
-    _mpi_send_l_children;  //!< Same as @ref _mpi_send_m2l for sending local
-                           //!< contributions for l-list operations.
+    _mpi_send_l_children;  //!< Same as @ref _mpi_send_m2l_or_m2t for sending
+                           //!< local contributions for l-list operations.
 
   mutable std::vector< std::vector< time_type::rep > >
     _mpi_recv_m2l;  //!< Contains a vector for each thread. The entries in these

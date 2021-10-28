@@ -34,8 +34,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <unordered_set>
 
 besthea::mesh::tree_structure::tree_structure( const std::string & filename,
-  const sc start_time, const sc end_time, const lo process_id )
-  : _levels( 0 ), _my_process_id( process_id ) {
+  const sc start_time, const sc end_time, const lo process_id,
+  bool enable_m2t_and_s2l )
+  : _levels( 0 ),
+    _enable_m2t_and_s2l( enable_m2t_and_s2l ),
+    _my_process_id( process_id ) {
   // load tree structure from file
   std::vector< char > tree_vector
     = read_vector_from_bin_file< char >( filename );
@@ -55,10 +58,14 @@ besthea::mesh::tree_structure::tree_structure( const std::string & filename,
   // set the global indices of all the clusters in the structure
   _root->set_index( 0 );
   set_indices( *_root );
-  // construct the operation lists (including preliminar single sided operation
-  // lists, even if such operations might not be used)
-  set_nearfield_interaction_and_send_list( *_root );
-  set_m2t_and_s2l_lists_preliminarily( *_root );
+  // construct the operation lists
+  set_cluster_operation_lists( *_root );
+  if ( !_enable_m2t_and_s2l ) {
+    // m2t lists are always needed for simpler subtree communication in the
+    // construction of a distributed space-time cluster tree.
+    set_m2t_lists_for_subtree_communication( *_root );
+  }
+
   // determine activity of clusters in upward and downward path of FMM
   determine_cluster_activity( *_root );
   collect_leaves( *_root );
@@ -66,8 +73,10 @@ besthea::mesh::tree_structure::tree_structure( const std::string & filename,
 
 besthea::mesh::tree_structure::tree_structure(
   const std::string & structure_file, const std::string & cluster_bounds_file,
-  const lo process_id )
-  : _levels( 0 ), _my_process_id( process_id ) {
+  const lo process_id, bool enable_m2t_and_s2l )
+  : _levels( 0 ),
+    _enable_m2t_and_s2l( enable_m2t_and_s2l ),
+    _my_process_id( process_id ) {
   // load tree structure from file
   std::vector< char > tree_vector
     = read_vector_from_bin_file< char >( structure_file );
@@ -91,10 +100,14 @@ besthea::mesh::tree_structure::tree_structure(
   // set the global indices of all the clusters in the structure
   _root->set_index( 0 );
   set_indices( *_root );
-  // construct the operation lists (including preliminar single sided operation
-  // lists, even if such operations might not be used)
-  set_nearfield_interaction_and_send_list( *_root );
-  set_m2t_and_s2l_lists_preliminarily( *_root );
+  // construct the operation lists
+  set_cluster_operation_lists( *_root );
+  if ( !_enable_m2t_and_s2l ) {
+    // m2t lists are always needed for simpler subtree communication in the
+    // construction of a distributed space-time cluster tree.
+    set_m2t_lists_for_subtree_communication( *_root );
+  }
+
   // determine activity of clusters in upward and downward path of FMM
   determine_cluster_activity( *_root );
   collect_leaves( *_root );
@@ -236,28 +249,17 @@ void besthea::mesh::tree_structure::initialize_local_contributions_initial_op(
   }
 }
 
-void besthea::mesh::tree_structure::set_m2t_and_s2l_lists_preliminarily(
+void besthea::mesh::tree_structure::set_m2t_lists_for_subtree_communication(
   scheduling_time_cluster & current_cluster ) {
-  if ( current_cluster.get_parent( ) != nullptr ) {
-    sc current_center = current_cluster.get_center( );
-    // go through parent's nearfield list to determine current_cluster's lists
-    std::vector< scheduling_time_cluster * > * parent_nearfield
-      = current_cluster.get_parent( )->get_nearfield_list( );
-    for ( auto parent_nearfield_cluster : *parent_nearfield ) {
-      // check if the parent's nearfield cluster is a leaf
-      if ( parent_nearfield_cluster->get_n_children( ) == 0 ) {
-        // check if s2l operations are admissible for the parent's current
-        // nearfield cluster
-        if ( current_cluster.determine_admissibility(
-               parent_nearfield_cluster ) ) {
-          // update s2l list only for local clusters
-          if ( current_cluster.get_process_id( ) == _my_process_id ) {
-            current_cluster.add_to_s2l_list( parent_nearfield_cluster );
-          }
-        }
-      } else {
-        // only for leaves we have to check other clusters and fill m2t lists.
-        if ( current_cluster.get_n_children( ) == 0 ) {
+  if ( current_cluster.get_n_children( ) == 0 ) {
+    if ( current_cluster.get_parent( ) != nullptr ) {
+      sc current_center = current_cluster.get_center( );
+      // go through parent's nearfield list to determine current_cluster's lists
+      std::vector< scheduling_time_cluster * > * parent_nearfield
+        = current_cluster.get_parent( )->get_nearfield_list( );
+      for ( auto parent_nearfield_cluster : *parent_nearfield ) {
+        // ensure that parent's nearfield cluster is not a leaf
+        if ( parent_nearfield_cluster->get_n_children( ) > 0 ) {
           // check for potential m2t operations in all relevant child-subtrees
           std::vector< scheduling_time_cluster * > * relevant_clusters
             = parent_nearfield_cluster->get_children( );
@@ -270,6 +272,10 @@ void besthea::mesh::tree_structure::set_m2t_and_s2l_lists_preliminarily(
           }
         }
       }
+    }
+  } else {
+    for ( auto child : *current_cluster.get_children( ) ) {
+      set_m2t_lists_for_subtree_communication( *child );
     }
   }
 }
@@ -289,14 +295,14 @@ void besthea::mesh::tree_structure::determine_m2t_list_in_subtree(
   }
 }
 
-void besthea::mesh::tree_structure::set_m2t_and_s2l_lists( ) {
+void besthea::mesh::tree_structure::update_m2t_and_s2l_lists( ) {
   // first construct an auxiliary map from global indices to cluster pointers
   std::unordered_map< lo, scheduling_time_cluster * >
     global_indices_to_clusters;
   initialize_map_global_index_to_cluster( *_root, global_indices_to_clusters );
   // determine m2t and s2l lists for all clusters in the tree recursively by
   // using the proper routine.
-  set_m2t_and_s2l_lists_recursively( *_root, global_indices_to_clusters );
+  update_m2t_and_s2l_lists_recursively( *_root, global_indices_to_clusters );
 }
 
 void besthea::mesh::tree_structure::init_fmm_lists(
@@ -304,6 +310,8 @@ void besthea::mesh::tree_structure::init_fmm_lists(
   std::list< scheduling_time_cluster * > & m_list,
   std::list< scheduling_time_cluster * > & m2l_list,
   std::list< scheduling_time_cluster * > & l_list,
+  std::list< scheduling_time_cluster * > & m2t_task_list,
+  std::list< scheduling_time_cluster * > & s2l_task_list,
   std::list< scheduling_time_cluster * > & n_list ) const {
   // if the cluster is local and active in the upward path add it to the
   // m-list and initialize the appropriate dependency data
@@ -325,6 +333,20 @@ void besthea::mesh::tree_structure::init_fmm_lists(
     m2l_list.push_back( &root );
   }
 
+  // add the cluster to the m2t-list, if it is local and has a non-empty
+  // m2t-list
+  if ( root.get_process_id( ) == _my_process_id
+    && root.get_m2t_list( ) != nullptr ) {
+    m2t_task_list.push_back( &root );
+  }
+
+  // add the cluster to the s2l-list, if it is local and has a non-empty
+  // s2l-list
+  if ( root.get_process_id( ) == _my_process_id
+    && root.get_s2l_list( ) != nullptr ) {
+    s2l_task_list.push_back( &root );
+  }
+
   // add the cluster to the n-list, if it is associated with spacetime leaf
   // clusters
   if ( root.get_process_id( ) == _my_process_id
@@ -337,7 +359,8 @@ void besthea::mesh::tree_structure::init_fmm_lists(
     const std::vector< scheduling_time_cluster * > * children
       = root.get_children( );
     for ( auto it = children->begin( ); it != children->end( ); ++it ) {
-      init_fmm_lists( **it, m_list, m2l_list, l_list, n_list );
+      init_fmm_lists(
+        **it, m_list, m2l_list, l_list, m2t_task_list, s2l_task_list, n_list );
     }
   }
 }
@@ -540,7 +563,7 @@ void besthea::mesh::tree_structure::set_indices(
   }
 }
 
-void besthea::mesh::tree_structure::set_nearfield_interaction_and_send_list(
+void besthea::mesh::tree_structure::set_cluster_operation_lists(
   scheduling_time_cluster & root ) {
   if ( root.get_parent( ) == nullptr ) {
     root.add_to_nearfield_list( &root );
@@ -550,10 +573,26 @@ void besthea::mesh::tree_structure::set_nearfield_interaction_and_send_list(
     std::vector< scheduling_time_cluster * > * parent_nearfield
       = root.get_parent( )->get_nearfield_list( );
     for ( lou i = 0; i < parent_nearfield->size( ); ++i ) {
+      scheduling_time_cluster * parent_nf_cluster = ( *parent_nearfield )[ i ];
       // check if neighbor of parent is a leaf cluster
-      if ( ( *parent_nearfield )[ i ]->get_n_children( ) == 0 ) {
-        // add a leaf in the nearfield of parent to the nearfield of root
-        root.add_to_nearfield_list( ( *parent_nearfield )[ i ] );
+      if ( parent_nf_cluster->get_n_children( ) == 0 ) {
+        if ( _enable_m2t_and_s2l ) {
+          // check whether to add the cluster to the s2l or nearfield list
+          if ( root.determine_admissibility( parent_nf_cluster ) ) {
+            if ( root.get_process_id( ) == _my_process_id
+              && parent_nf_cluster->is_global_leaf( ) ) {
+              // s2l lists are only needed and constructed for local clusters.
+              // Only global leaves are added to s2l lists.
+              root.add_to_s2l_list( parent_nf_cluster );
+            }
+          } else {
+            root.add_to_nearfield_list( parent_nf_cluster );
+          }
+        } else {
+          // in case that s2l operations are not used, add the cluster directly
+          // to the nearfield.
+          root.add_to_nearfield_list( parent_nf_cluster );
+        }
       } else {
         // check admissibility of all children
         std::vector< scheduling_time_cluster * > * relevant_clusters
@@ -567,12 +606,15 @@ void besthea::mesh::tree_structure::set_nearfield_interaction_and_send_list(
               root.add_to_interaction_list( src_cluster );
               src_cluster->add_to_send_list( &root );
             } else {
-              // if root is not a leaf, add src_cluster directly, else add all
-              // of the leaves of src_cluster to the nearfield
-              if ( root.get_n_children( ) > 0 ) {
+              // If root is not a leaf in the global tree structure, add
+              // src_cluster to the nearfield. Otherwise traverse src_cluster's
+              // subtree to update the nearfield and m2t list of root.
+              if ( !root.is_global_leaf( ) ) {
                 root.add_to_nearfield_list( src_cluster );
               } else {
-                add_leaves_to_nearfield_list( *src_cluster, root );
+                // only for global leaves we have to determine the correct
+                // operation lists by traversing the subtree of src_cluster
+                determine_operation_lists_in_subtree( *src_cluster, root );
               }
             }
           }
@@ -583,24 +625,33 @@ void besthea::mesh::tree_structure::set_nearfield_interaction_and_send_list(
   if ( root.get_n_children( ) > 0 ) {
     std::vector< scheduling_time_cluster * > * children = root.get_children( );
     for ( lou i = 0; i < children->size( ); ++i ) {
-      set_nearfield_interaction_and_send_list( *( *children )[ i ] );
+      set_cluster_operation_lists( *( *children )[ i ] );
     }
   }
 }
 
-void besthea::mesh::tree_structure::add_leaves_to_nearfield_list(
+void besthea::mesh::tree_structure::determine_operation_lists_in_subtree(
   scheduling_time_cluster & current_cluster,
   scheduling_time_cluster & target_cluster ) {
-  if ( current_cluster.get_n_children( ) == 0 ) {
-    target_cluster.add_to_nearfield_list( &current_cluster );
-    // std::cout << "called this " << std::endl;
-    // target_cluster.print( );
-    // current_cluster.print( );
-  } else {
-    std::vector< scheduling_time_cluster * > * children
-      = current_cluster.get_children( );
-    for ( auto it = children->begin( ); it != children->end( ); ++it ) {
-      add_leaves_to_nearfield_list( **it, target_cluster );
+  bool continue_search = true;
+  if ( _enable_m2t_and_s2l ) {
+    if ( target_cluster.determine_admissibility( &current_cluster ) ) {
+      target_cluster.add_to_m2t_list( &current_cluster );
+      if ( current_cluster.get_process_id( ) == _my_process_id ) {
+        current_cluster.add_to_diagonal_send_list( &target_cluster );
+      }
+      continue_search = false;
+    }
+  }
+  if ( continue_search ) {
+    if ( current_cluster.get_n_children( ) == 0 ) {
+      target_cluster.add_to_nearfield_list( &current_cluster );
+    } else {
+      std::vector< scheduling_time_cluster * > * children
+        = current_cluster.get_children( );
+      for ( auto it = children->begin( ); it != children->end( ); ++it ) {
+        determine_operation_lists_in_subtree( **it, target_cluster );
+      }
     }
   }
 }
@@ -618,69 +669,63 @@ void besthea::mesh::tree_structure::initialize_map_global_index_to_cluster(
   }
 }
 
-void besthea::mesh::tree_structure::set_m2t_and_s2l_lists_recursively(
+void besthea::mesh::tree_structure::update_m2t_and_s2l_lists_recursively(
   scheduling_time_cluster & current_cluster,
   const std::unordered_map< lo, scheduling_time_cluster * > &
     global_index_to_cluster ) {
-  // m2t and s2l lists are only set for local clusters
-  if ( current_cluster.get_process_id( ) == _my_process_id ) {
-    const std::vector< general_spacetime_cluster * > *
-      associated_spacetime_clusters
-      = current_cluster.get_associated_spacetime_clusters( );
-    if ( associated_spacetime_clusters != nullptr ) {
-      std::unordered_set< lo > m2t_list_indices;
-      std::unordered_set< lo > s2l_list_indices;
-      // for all associated space-time clusters check if they have a non-empty
-      // m2t- or s2l-list; if yes, update the time clusters list accordingly.
-      for ( auto st_cluster : *associated_spacetime_clusters ) {
-        // consider the m2t list first
-        std::vector< general_spacetime_cluster * > * current_m2t_list
-          = st_cluster->get_m2t_list( );
-        if ( current_m2t_list != nullptr ) {
-          for ( auto m2t_source_cluster : *current_m2t_list ) {
-            m2t_list_indices.insert(
-              m2t_source_cluster->get_global_time_index( ) );
+  // m2t and s2l lists have to be updated only for local non-leaf clusters
+  if ( current_cluster.get_n_children( ) > 0 ) {
+    if ( current_cluster.get_process_id( ) == _my_process_id ) {
+      const std::vector< general_spacetime_cluster * > *
+        associated_spacetime_clusters
+        = current_cluster.get_associated_spacetime_clusters( );
+      if ( associated_spacetime_clusters != nullptr ) {
+        std::unordered_set< lo > m2t_list_indices;
+        std::unordered_set< lo > s2l_list_indices;
+        // for all associated space-time clusters check if they have a non-empty
+        // m2t- or s2l-list; if yes, update the time clusters list accordingly.
+        for ( auto st_cluster : *associated_spacetime_clusters ) {
+          // consider the m2t list first
+          std::vector< general_spacetime_cluster * > * current_m2t_list
+            = st_cluster->get_m2t_list( );
+          if ( current_m2t_list != nullptr ) {
+            for ( auto m2t_source_cluster : *current_m2t_list ) {
+              m2t_list_indices.insert(
+                m2t_source_cluster->get_global_time_index( ) );
+            }
+          }
+          // now consider the s2l list
+          std::vector< general_spacetime_cluster * > * current_s2l_list
+            = st_cluster->get_s2l_list( );
+          if ( current_s2l_list != nullptr ) {
+            for ( auto s2l_source_cluster : *current_s2l_list ) {
+              s2l_list_indices.insert(
+                s2l_source_cluster->get_global_time_index( ) );
+            }
           }
         }
-        // now consider the s2l list
-        std::vector< general_spacetime_cluster * > * current_s2l_list
-          = st_cluster->get_s2l_list( );
-        if ( current_s2l_list != nullptr ) {
-          for ( auto s2l_source_cluster : *current_s2l_list ) {
-            s2l_list_indices.insert(
-              s2l_source_cluster->get_global_time_index( ) );
+        // use the sets of m2t and s2l cluster indices and the map from global
+        // indices to temporal clusters to fill the m2t and s2l list of the
+        // current time cluster.
+        if ( !m2t_list_indices.empty( ) ) {
+          for ( auto m2t_source_cluster_index : m2t_list_indices ) {
+            scheduling_time_cluster * current_source
+              = global_index_to_cluster.at( m2t_source_cluster_index );
+            current_cluster.add_to_m2t_list( current_source );
+            current_source->add_to_diagonal_send_list( &current_cluster );
           }
         }
-      }
-      // use the sets of m2t and s2l cluster indices and the  map from global
-      // indices to temporal clusters to fill the m2t and s2l list of the
-      // current time cluster.
-      if ( !m2t_list_indices.empty( ) ) {
-        for ( auto m2t_source_cluster_index : m2t_list_indices ) {
-          if ( _my_process_id == 1 ) {
-            std::cout << "target index is: "
-                      << current_cluster.get_global_index( );
-            std::cout << ", source index is: " << m2t_source_cluster_index;
+        if ( !s2l_list_indices.empty( ) ) {
+          for ( auto s2l_source_cluster_index : s2l_list_indices ) {
+            current_cluster.add_to_s2l_list(
+              global_index_to_cluster.at( s2l_source_cluster_index ) );
           }
-          current_cluster.add_to_m2t_list(
-            global_index_to_cluster.at( m2t_source_cluster_index ) );
-          if ( _my_process_id == 1 ) {
-            std::cout << ", access successfull" << std::endl;
-          }
-        }
-      }
-      if ( !s2l_list_indices.empty( ) ) {
-        for ( auto s2l_source_cluster_index : s2l_list_indices ) {
-          current_cluster.add_to_s2l_list(
-            global_index_to_cluster.at( s2l_source_cluster_index ) );
         }
       }
     }
-  }
-  // call the routine recursively for all children.
-  if ( current_cluster.get_n_children( ) > 0 ) {
+    // call the routine recursively for all children.
     for ( auto child : *current_cluster.get_children( ) ) {
-      set_m2t_and_s2l_lists_recursively( *child, global_index_to_cluster );
+      update_m2t_and_s2l_lists_recursively( *child, global_index_to_cluster );
     }
   }
 }
@@ -875,7 +920,7 @@ void besthea::mesh::tree_structure::determine_cluster_communication_lists(
   }
 }
 
-void besthea::mesh::tree_structure::clear_nearfield_send_and_interaction_lists(
+void besthea::mesh::tree_structure::clear_cluster_operation_lists(
   scheduling_time_cluster * root ) {
   // call the routine recursively for non-leaf clusters which were in the tree
   // before the expansion
@@ -885,23 +930,16 @@ void besthea::mesh::tree_structure::clear_nearfield_send_and_interaction_lists(
     root->get_interaction_list( )->clear( );
   if ( root->get_send_list( ) != nullptr )
     root->get_send_list( )->clear( );
+  if ( root->get_m2t_list( ) != nullptr )
+    root->delete_m2t_list( );
+  if ( root->get_s2l_list( ) != nullptr )
+    root->delete_s2l_list( );
+  if ( root->get_diagonal_send_list( ) != nullptr )
+    root->delete_diagonal_send_list( );
   if ( root->get_n_children( ) > 0 ) {
     std::vector< scheduling_time_cluster * > * children = root->get_children( );
     for ( auto it = children->begin( ); it != children->end( ); ++it ) {
-      clear_nearfield_send_and_interaction_lists( *it );
-    }
-  }
-}
-
-void besthea::mesh::tree_structure::clear_m2t_and_s2l_lists(
-  scheduling_time_cluster * current_cluster ) {
-  if ( current_cluster->get_m2t_list( ) != nullptr )
-    current_cluster->clear_m2t_list( );
-  if ( current_cluster->get_s2l_list( ) != nullptr )
-    current_cluster->clear_s2l_list( );
-  if ( current_cluster->get_n_children( ) > 0 ) {
-    for ( auto child : *current_cluster->get_children( ) ) {
-      clear_m2t_and_s2l_lists( child );
+      clear_cluster_operation_lists( *it );
     }
   }
 }
@@ -922,12 +960,14 @@ void besthea::mesh::tree_structure::determine_cluster_activity(
   scheduling_time_cluster & root ) {
   // check if cluster is active in upward path
   if ( ( root.get_send_list( ) != nullptr )
+    || ( root.get_diagonal_send_list( ) != nullptr )
     || ( root.get_parent( ) != nullptr
       && root.get_parent( )->is_active_in_upward_path( ) ) ) {
     root.set_active_upward_path_status( true );
   }
   // check if cluster is active in downward path
   if ( ( root.get_interaction_list( ) != nullptr )
+    || ( root.get_s2l_list( ) != nullptr )
     || ( root.get_parent( ) != nullptr
       && root.get_parent( )->is_active_in_downward_path( ) ) ) {
     root.set_active_downward_path_status( true );
