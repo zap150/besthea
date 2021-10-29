@@ -6,8 +6,15 @@ include(GNUInstallDirs)
 include(cmake/macros.cmake)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake/Modules)
 
+# like option but works for more than two values
+set(BESTHEA_CUDA_OPTION_DESCRIPTION "Also build besthea_cuda to enable "
+  "GPU-accelerated functionality of besthea using CUDA")
+set(BESTHEA_CUDA "AUTO" CACHE STRING "${BESTHEA_CUDA_OPTION_DESCRIPTION}")
+set_property(CACHE BESTHEA_CUDA PROPERTY STRINGS "AUTO" "ENABLE" "DISABLE")
+
 check_insource()
 setup_compiler()
+setup_CUDA()
 
 enable_filesystem()
 enable_MKL()
@@ -100,6 +107,7 @@ set(besthea_INCLUDES
   include/besthea/uniform_spacetime_be_assembler.h
   include/besthea/uniform_spacetime_be_evaluator.h
   include/besthea/uniform_spacetime_be_identity.h
+  include/besthea/uniform_spacetime_be_matrix_onthefly_cpu.h
   include/besthea/uniform_spacetime_be_solver.h
   include/besthea/uniform_spacetime_be_space.h
   include/besthea/uniform_spacetime_initial_assembler.h
@@ -115,6 +123,17 @@ set(besthea_INCLUDES
   include/besthea/tetrahedral_spacetime_be_assembler.h
   include/besthea/spacetime_constant_kernel.h
   include/besthea/tetrahedral_spacetime_be_evaluator.h
+)
+
+set(besthea_cuda_INCLUDES
+  include/besthea/besthea_cuda.h
+  include/besthea/gpu_apply_load_distribution.h
+  include/besthea/gpu_apply_timer_collection.h
+  include/besthea/gpu_apply_vectors_data.h
+  include/besthea/gpu_onthefly_helpers.h
+  include/besthea/timer_cuda.h
+  include/besthea/uniform_spacetime_be_matrix_onthefly_gpu.h
+  include/besthea/uniform_spacetime_tensor_mesh_gpu.h
 )
 
 set(besthea_SOURCES
@@ -151,6 +170,7 @@ set(besthea_SOURCES
   src/mkl_cg_inverse.cpp
   src/mkl_fgmres_inverse.cpp
   src/quadrature.cpp
+  src/settings.cpp
   src/volume_space_cluster_tree.cpp
   src/spacetime_be_identity.cpp
   src/spacetime_be_space.cpp
@@ -166,6 +186,7 @@ set(besthea_SOURCES
   src/uniform_spacetime_be_assembler.cpp
   src/uniform_spacetime_be_evaluator.cpp
   src/uniform_spacetime_be_identity.cpp
+  src/uniform_spacetime_be_matrix_onthefly_cpu.cpp
   src/uniform_spacetime_be_solver.cpp
   src/uniform_spacetime_be_space.cpp
   src/uniform_spacetime_initial_assembler.cpp
@@ -180,12 +201,20 @@ set(besthea_SOURCES
   src/tetrahedral_spacetime_be_evaluator.cpp
 )
 
+set(besthea_cuda_SOURCES
+  src/gpu_apply_load_distribution.cpp
+  src/gpu_apply_timer_collection.cpp
+  src/gpu_apply_vectors_data.cpp
+  src/gpu_onthefly_helpers.cpp
+  src/uniform_spacetime_be_matrix_onthefly_gpu.cu
+  src/uniform_spacetime_tensor_mesh_gpu.cpp
+)
 
-if (NOT DEFINED DATA_WIDTH)
-  set(DATA_WIDTH 8)
+if (NOT DEFINED BESTHEA_SIMD_WIDTH)
+  set(BESTHEA_SIMD_WIDTH 8)
 endif()
 
-message(STATUS "Setting DATA_WIDTH to ${DATA_WIDTH}")
+message(STATUS "Setting BESTHEA_SIMD_WIDTH to ${BESTHEA_SIMD_WIDTH}")
 
 set(besthea_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
 add_library(besthea STATIC ${besthea_SOURCES})
@@ -202,13 +231,46 @@ target_link_libraries(besthea PUBLIC
   ${MPI_CXX_LIBRARIES})
 target_compile_definitions(besthea PUBLIC
   MKL_INT=long
-  DATA_WIDTH=${DATA_WIDTH})
+  BESTHEA_SIMD_WIDTH=${BESTHEA_SIMD_WIDTH})
+  
+if(BESTHEA_USE_CUDA)
+  set(besthea_cuda_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
+  add_library(besthea_cuda STATIC ${besthea_cuda_SOURCES})
+  target_include_directories(besthea_cuda PUBLIC
+    ${besthea_cuda_INCLUDE_DIRS}
+    ${besthea_INCLUDE_DIRS})
+  target_include_directories(besthea_cuda SYSTEM PUBLIC
+    ${Boost_INCLUDE_DIRS}
+    ${Eigen_INCLUDE_DIRS}
+    ${Lyra_INCLUDE_DIRS}
+    ${MKL_INCLUDE_DIRS}
+    ${MPI_INCLUDE_DIRS}
+    ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+  target_link_libraries(besthea_cuda PUBLIC
+    ${STDFS_LIBRARIES}
+    ${MKL_LIBRARIES}
+    ${MPI_CXX_LIBRARIES}
+    ${CUDA_LIBRARIES}
+    besthea)
+  target_compile_definitions(besthea_cuda PUBLIC
+    MKL_INT=long
+    BESTHEA_SIMD_WIDTH=${BESTHEA_SIMD_WIDTH}
+    BESTHEA_USE_CUDA)
+endif()
 
 install(TARGETS ${PROJECT_NAME}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}
-  )
+  )  
 install(FILES ${besthea_INCLUDES}
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
+
+if(BESTHEA_USE_CUDA)
+  install(TARGETS besthea_cuda
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}
+    )
+  install(FILES ${besthea_cuda_INCLUDES}
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
+endif()
 
 option(BUILD_EXAMPLES "Build examples using the library" ON)
 

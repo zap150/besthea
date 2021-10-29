@@ -28,64 +28,6 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file spacetime_constant_kernel.h
- * @brief
- */
-
-#ifndef INCLUDE_BESTHEA_SPACETIME_CONSTANT_KERNEL_H_
-#define INCLUDE_BESTHEA_SPACETIME_CONSTANT_KERNEL_H_
-
 #include "besthea/settings.h"
-#include "besthea/spacetime_kernel.h"
 
-#include <vector>
-
-namespace besthea {
-  namespace bem {
-    class spacetime_constant_kernel;
-  }
-}
-
-/**
- *  Class representing a spacetime heat kernel.
- */
-class besthea::bem::spacetime_constant_kernel
-  : public besthea::bem::spacetime_kernel<
-      besthea::bem::spacetime_constant_kernel > {
- public:
-  /**
-   * Constructor.
-   * @param[in] alpha Heat conductivity.
-   */
-  spacetime_constant_kernel( sc alpha ) : _alpha( alpha ) {
-  }
-
-  /**
-   * Destructor.
-   */
-  virtual ~spacetime_constant_kernel( ) {
-  }
-
-  /**
-   * Evaluates the kernel.
-   * @param[in] xy1 First coordinate of `x - y`.
-   * @param[in] xy2 Second coordinate of `x - y`.
-   * @param[in] xy3 Third coordinate of `x - y`.
-   * @param[in] nx Normal in the `x` variable.
-   * @param[in] ny Normal in the `y` variable.
-   * @param[in] ttau `t-tau`.
-   */
-#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( BESTHEA_SIMD_WIDTH )
-  sc do_evaluate( [[maybe_unused]] sc xy1, [[maybe_unused]] sc xy2,
-    [[maybe_unused]] sc xy3, [[maybe_unused]] const sc * nx,
-    [[maybe_unused]] const sc * ny, [[maybe_unused]] sc ttau ) const {
-    // return _alpha;
-
-    return _alpha;
-  }
-
- protected:
-  sc _alpha;  //!< Constant kernel.
-};
-
-#endif /* INCLUDE_BESTHEA_SPACETIME_CONSTANT_KERNEL_H_ */
+besthea::settings::verbose_levels besthea::settings::output_verbosity;

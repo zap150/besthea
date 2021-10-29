@@ -222,6 +222,15 @@ class besthea::linear_algebra::vector {
   }
 
   /*!
+   * @brief Vector addition this += alpha * v, where v is raw data.
+   * @param[in] v
+   * @param[in] alpha
+   */
+  void add_from_raw( const sc * v, sc alpha = 1.0 ) {
+    cblas_daxpy( _size, alpha, v, 1, _data.data( ), 1 );
+  }
+
+  /*!
    * @brief Scales the vecotr's element with alpha.
    * @param[in] alpha
    */

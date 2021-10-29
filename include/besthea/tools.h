@@ -38,4 +38,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/timer.h"
 #include "io_routines.h"
 
+#ifdef BESTHEA_USE_CUDA
+#include "besthea/timer_cuda.h"
+#endif
+
 #endif /* INCLUDE_BESTHEA_TOOLS_H_ */
