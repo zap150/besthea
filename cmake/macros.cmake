@@ -194,7 +194,7 @@ macro(enable_Lyra)
 endmacro()
 
 macro(setup_CUDA)
-  string(TOUPPER "${BESTHEA_CUDA}" BESTHEA_CUDA )
+  string(TOUPPER "${BESTHEA_CUDA}" BESTHEA_CUDA)
 
   if(NOT (
     "${BESTHEA_CUDA}" STREQUAL "ENABLE" OR
@@ -241,5 +241,11 @@ macro(setup_CUDA)
     if("${BESTHEA_CUDA}" STREQUAL "ENABLE")
       message(FATAL_ERROR "CMake >= 3.18 required to support besthea_cuda")
     endif()
+  endif()
+
+  if(BESTHEA_USE_CUDA)
+    message(STATUS "CUDA enabled (to disable, set BESTHEA_CUDA=disable)")
+  else()
+    message(STATUS "CUDA disabled")
   endif()
 endmacro()
