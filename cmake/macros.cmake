@@ -218,8 +218,11 @@ macro(setup_CUDA)
     endif()
 
     if(CUDA_FOUND)
-      set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})    
+      if(NOT DEFINED CMAKE_CUDA_HOST_COMPILER)
+        set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
+      endif()
       enable_language(CUDA)
+      message(STATUS "CUDA host compiler is " ${CMAKE_CUDA_HOST_COMPILER})
 
       # older nvcc does not support -forward-unknown-to-host-compiler at all
       if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 10.2.89)

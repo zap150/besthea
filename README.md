@@ -79,7 +79,11 @@ If CUDA is found on the system and CMake >= 1.18 is used, the library `besthea_c
 ```
 cmake -DBESTHEA_CUDA=disable ..
 ```
-If the value is `enable` and any of the prerequisities are not met, the configuration step fails with an error. `disable` entirely disables compilation of the GPU-accelerated code. `auto` is the default (equivalent to not setting the value of `BESTHEA_CUDA` at all), which tries to build the `besthea_cuda` library if it is possible, and if not, no errors are produced.
+If the value is `enable` and any of the prerequisities are not met, the configuration step fails with an error. `disable` entirely disables compilation of the GPU-accelerated code. `auto` is the default (equivalent to not setting the value of `BESTHEA_CUDA` at all), which tries to build the `besthea_cuda` library if it is possible, and if not, no errors are produced. By default we set the CUDA host compiler to be the same as the CXX compiler. To change it, set the `CMAKE_CUDA_HOST_COMPILER` variable, e.g.
+```
+CXX=g++-11 cmake -DCMAKE_CUDA_HOST_COMPILER=g++-9 ..
+```
+Using empty string reverts to nvcc's default behaviour.
 
 **Usage**
 
