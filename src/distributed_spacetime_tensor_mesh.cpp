@@ -42,7 +42,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 besthea::mesh::distributed_spacetime_tensor_mesh::
   distributed_spacetime_tensor_mesh( const std::string & decomposition_file,
     const std::string & tree_file, const std::string & cluster_bounds_file,
-    const std::string & distribution_file, MPI_Comm * comm, lo & status )
+    const std::string & distribution_file, const bool enable_m2t_and_s2l,
+    MPI_Comm * comm, lo & status )
   : _my_mesh( nullptr ),
     _space_mesh( nullptr ),
     _time_mesh( nullptr ),
@@ -52,7 +53,7 @@ besthea::mesh::distributed_spacetime_tensor_mesh::
   MPI_Comm_size( *_comm, &_n_processes );
 
   load( decomposition_file, tree_file, cluster_bounds_file, distribution_file,
-    status );
+    enable_m2t_and_s2l, status );
 
   // check whether some process produced a warning
   if ( _my_rank == 0 ) {
@@ -162,7 +163,8 @@ void besthea::mesh::distributed_spacetime_tensor_mesh::find_slices_to_load(
 bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
   const std::string & decomposition_file, const std::string & tree_file,
   const std::string & cluster_bounds_file,
-  const std::string & distribution_file, lo & status ) {
+  const std::string & distribution_file, const bool enable_m2t_and_s2l,
+  lo & status ) {
   // load the file with basic description of the decomposed mesh
   std::ifstream filestream( decomposition_file.c_str( ) );
 
@@ -188,7 +190,8 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
   }
 
   // read and reconstruct temporal tree and distribution of clusters
-  _dist_tree = new tree_structure( tree_file, cluster_bounds_file, _my_rank );
+  _dist_tree = new tree_structure(
+    tree_file, cluster_bounds_file, _my_rank, enable_m2t_and_s2l );
   _dist_tree->load_process_assignments( distribution_file );
   _dist_tree->assign_slices_to_clusters( _slices );
 

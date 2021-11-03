@@ -87,6 +87,9 @@ class besthea::mesh::distributed_spacetime_tensor_mesh
    * bounds of the clusters in the initial temporal cluster tree.
    * @param[in] distribution_file Path to the file containing the process
    * assignments for the clusters in the initial temporal cluster tree.
+   * @param[in] enable_m2t_and_s2l If true, structures for the
+   * realization of m2t and s2l operations are initialized when constructing the
+   * distribution tree.
    * @param[in] comm Pointer to the MPI communicator associated with
    * decomposition.
    * @param[in,out] status  Indicates if the mesh construction was successfull
@@ -94,7 +97,8 @@ class besthea::mesh::distributed_spacetime_tensor_mesh
    */
   distributed_spacetime_tensor_mesh( const std::string & decomposition_file,
     const std::string & tree_file, const std::string & cluster_bounds_file,
-    const std::string & distribution_file, MPI_Comm * comm, lo & status );
+    const std::string & distribution_file, const bool enable_m2t_and_s2l,
+    MPI_Comm * comm, lo & status );
 
   /**
    * Destructor.
@@ -356,12 +360,16 @@ class besthea::mesh::distributed_spacetime_tensor_mesh
    * bounds of the clusters in the initial temporal cluster tree
    * @param[in] distribution_file Path to the file describing the time-slices
    * distribution among MPI processes.
+   * @param[in] enable_m2t_and_s2l If true, structures for the
+   * realization of m2t and s2l operations are initialized when constructing the
+   * distribution tree.
    * @param[in,out] status  Indicates if the mesh construction was successfull
    *                        (status 0) or there was a warning (status -1)
    */
   bool load( const std::string & decomposition_file,
     const std::string & tree_file, const std::string & cluster_bounds_file,
-    const std::string & distribution_file, lo & status );
+    const std::string & distribution_file, const bool enable_m2t_and_s2l,
+    lo & status );
 
   /**
    * Goes through the leaves of the temporal tree and adds time slice indices

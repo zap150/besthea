@@ -296,6 +296,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::compute_chebyshev( ) {
+  // first, resize the relevant containers of the class that are used to store
+  // chebyshev nodes and evaluated chebyshev polynomials
+  _cheb_nodes_integrate.resize( _m2l_integration_order + 1 );
+  _all_poly_vals_integrate.resize(
+    ( _m2l_integration_order + 1 ) * ( _spat_order + 1 ) );
+
+  // initialize the Chebyshev nodes
   for ( lo i = 0; i <= _m2l_integration_order; ++i ) {
     _cheb_nodes_integrate[ i ] = std::cos(
       M_PI * ( 2 * i + 1 ) / ( 2 * ( _m2l_integration_order + 1 ) ) );
