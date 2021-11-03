@@ -71,8 +71,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * space-time clusters.
    * @param[in] spatial_nearfield_limit Number of clusters in the vicinity of a
    * given clusters to be considered as nearfield
-   * @param[in] enable_m2t_and_s2l If true, structures for the realization of
-   * m2t and s2l operations are initialized.
+   * @param[in] enable_single_sided_expansions If true, structures for the
+   * realization of m2t and s2l operations are initialized.
    * @param[in] comm MPI communicator associated with the tree.
    * @param[in,out] status  Indicates if the tree construction was successfull
    *                        (status 0) or not (status 1)
@@ -746,8 +746,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   /**
    * Initializes the nearfield list and interaction list for every cluster in
    * the distributed spacetime cluster tree by recursively traversing the tree.
-   * In addition, it initializes the m2t and s2l of appropriate clusters.
-   * @param[in] root  Current cluster in the tree traversal.
+   * In addition, it initializes the m2t and s2l lists of appropriate clusters.
+   * @param[in] current_cluster  Current cluster in the tree traversal.
    * @warning The construction is based only on the local part of the cluster
    * tree. Only for local clusters the nearfield and interaction lists are the
    * same as in the global tree.

@@ -79,6 +79,8 @@ class besthea::mesh::tree_structure {
    * @param[in] end_time  End time of the time mesh.
    * @param[in] process_id  Id of the process which calls the method. Default
    *                        value is -1.
+   * @param[in] enable_m2t_and_s2l  If true, structures for the
+   * realization of m2t and s2l operations are initialized.
    * @note The start and end point of the mesh are used to generate the
    * geometrical data of the clusters.
    */
@@ -94,6 +96,8 @@ class besthea::mesh::tree_structure {
    *                                  tree structure.
    * @param[in] process_id  Id of the process which calls the method. Default
    *                        value is -1.
+   * @param[in] enable_m2t_and_s2l  If true, structures for the
+   * realization of m2t and s2l operations are initialized.
    */
   tree_structure( const std::string & structure_file,
     const std::string & cluster_bounds_file, lo process_id = -1,
@@ -669,7 +673,6 @@ class besthea::mesh::tree_structure {
    * The member @p essential_status of the clusters is set by this
    * function. (see @ref scheduling_time_cluster::_essential_status for a list
    * of possible status )
-   * @param[in] current_cluster Current cluster in the tree traversal.
    *
    * @note This method is solely used by @ref reduce_2_essential. It executes
    * the routines @ref determine_essential_clusters_first_traversal and

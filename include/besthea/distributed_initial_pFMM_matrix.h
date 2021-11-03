@@ -498,28 +498,29 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * Applies the appropriate L2T operation for the given target cluster
    * depending on the boundary integral operator and writes the result to the
    * appropriate part of the output vector.
-   * @param[in] cluster  Considered spacetime cluster.
+   * @param[in] st_cluster  Considered spacetime cluster.
    * @param[in,out] output_vector Global result vector to which the result of
    *                              the operation is added.
    * @todo This routine is essentially the same as
    * @ref distributed_pFMM_matrix::apply_l2t_operation. Can we get rid
    * of the duplication?
    */
-  void apply_l2t_operation( const mesh::general_spacetime_cluster * cluster,
+  void apply_l2t_operation( const mesh::general_spacetime_cluster * st_cluster,
     distributed_block_vector & output_vector ) const;
 
   /**
    * Applies the L2T operation for the given target cluster for p0 basis
    * functions and writes the result to the appropriate part of the output
    * vector.
-   * @param[in] cluster  Considered spacetime cluster.
+   * @param[in] st_cluster  Considered spacetime cluster.
    * @param[in,out] output_vector Global result vector to which the result of
    *                              the operation is added.
    * @todo This is a duplicate of
    * @ref distributed_pFMM_matrix::apply_l2t_operation_p0. Can we restructure
    * the code to get rid of duplication.
    */
-  void apply_l2t_operation_p0( const mesh::general_spacetime_cluster * cluster,
+  void apply_l2t_operation_p0(
+    const mesh::general_spacetime_cluster * st_cluster,
     distributed_block_vector & output_vector ) const;
 
   /**
@@ -527,7 +528,7 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * functions and normal derivatives of spatial polynomials (for operator M1
    * (normal trace of initial potential)) and writes the result to the
    * appropriate part of the output vector.
-   * @param[in] cluster  Considered spacetime cluster.
+   * @param[in] st_cluster  Considered spacetime cluster.
    * @param[in,out] output_vector Global result vector to which the result of
    *                              the operation is added.
    * @todo This is a duplicate of
@@ -535,7 +536,7 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * restructure the code to get rid of duplication.
    */
   void apply_l2t_operation_p1_normal_drv(
-    const mesh::general_spacetime_cluster * cluster,
+    const mesh::general_spacetime_cluster * st_cluster,
     distributed_block_vector & output_vector ) const;
 
   /**

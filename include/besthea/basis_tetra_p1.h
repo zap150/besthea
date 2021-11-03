@@ -89,7 +89,7 @@ class besthea::bem::basis_tetra_p1
   /**
    * Evaluates a basis function in a point in a tetrahedron. The point is given
    * by coordinates in the reference tetrahedron
-   * (\f$ (x_1,x_2,x_3) \in (0,1)\times(0,1-x_1)\times(0,1-x_1-x_2) \f$).
+   * \f$ (x_1,x_2,x_3) \in (0,1)\times(0,1-x_1)\times(0,1-x_1-x_2) \f$.
    * @param[in] i_elem Index of the tetrahedron.
    * @param[in] i_fun Local basis function index.
    * @param[in] x1_ref First coordinate of reference quadrature point.

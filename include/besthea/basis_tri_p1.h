@@ -101,7 +101,7 @@ class besthea::bem::basis_tri_p1
   /**
    * Evaluates a basis function in a point in an element. The point is given by
    * coordinates in the reference triangle
-   * (\f$ (x_1,x_2) \in (0,1)\times(0,1-x_1) \f$).
+   * \f$ (x_1,x_2) \in (0,1)\times(0,1-x_1) \f$.
    * @param[in] i_elem Element index.
    * @param[in] i_fun Local basis function index.
    * @param[in] x1_ref First coordinate of reference quadrature point.
@@ -130,7 +130,7 @@ class besthea::bem::basis_tri_p1
   /**
    * Evaluates a basis function in a point in an element. The point is given by
    * coordinates in the reference triangle
-   * (\f$ (x_1,x_2) \in (0,1)\times(0,1-x_1) \f$).
+   * \f$ (x_1,x_2) \in (0,1)\times(0,1-x_1) \f$.
    * @param[in] i_elem Element index.
    * @param[in] i_fun Local basis function index.
    * @param[in] x1_ref First coordinate of reference quadrature point.

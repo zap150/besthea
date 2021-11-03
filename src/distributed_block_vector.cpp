@@ -391,7 +391,7 @@ template<>
 void besthea::linear_algebra::distributed_block_vector::get_local_part<
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 > >(
-  besthea::mesh::general_spacetime_cluster * cluster,
+  const besthea::mesh::general_spacetime_cluster * cluster,
   besthea::linear_algebra::vector & local_vector ) const {
   lo n_time_elements = cluster->get_n_time_elements( );
   lo n_space_elements = cluster->get_n_space_elements( );
@@ -434,7 +434,7 @@ template<>
 void besthea::linear_algebra::distributed_block_vector::get_local_part<
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p1 > >(
-  besthea::mesh::general_spacetime_cluster * cluster,
+  const besthea::mesh::general_spacetime_cluster * cluster,
   besthea::linear_algebra::vector & local_vector ) const {
   lo n_time_elements = cluster->get_n_time_elements( );
   lo n_space_elements = cluster->get_n_space_elements( );
@@ -560,7 +560,7 @@ template<>
 void besthea::linear_algebra::distributed_block_vector::get_local_part<
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 > >(
-  besthea::mesh::general_spacetime_cluster * cluster,
+  const besthea::mesh::general_spacetime_cluster * cluster,
   besthea::linear_algebra::full_matrix & local_part ) const {
   lo n_time_elements = cluster->get_n_time_elements( );
   lo n_space_elements = cluster->get_n_space_elements( );
@@ -609,7 +609,7 @@ template<>
 void besthea::linear_algebra::distributed_block_vector::get_local_part<
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p1 > >(
-  besthea::mesh::general_spacetime_cluster * cluster,
+  const besthea::mesh::general_spacetime_cluster * cluster,
   besthea::linear_algebra::full_matrix & local_part ) const {
   lo n_time_elements = cluster->get_n_time_elements( );
   lo n_space_elements = cluster->get_n_space_elements( );

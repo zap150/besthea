@@ -821,7 +821,7 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space,
   source_space >::apply_l2t_operation( const mesh::general_spacetime_cluster *
-  /*cluster*/,
+  /*st_cluster*/,
   distributed_block_vector & /*output_vector*/ ) const {
   std::cout << "L2T operation not implemented!" << std::endl;
 }
@@ -833,9 +833,9 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix<
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 >,
   besthea::bem::fe_space< besthea::bem::basis_tetra_p1 > >::
-  apply_l2t_operation( const mesh::general_spacetime_cluster * cluster,
+  apply_l2t_operation( const mesh::general_spacetime_cluster * st_cluster,
     distributed_block_vector & output_vector ) const {
-  apply_l2t_operation_p0( cluster, output_vector );
+  apply_l2t_operation_p0( st_cluster, output_vector );
 }
 
 //! template specialization for initial potential M1 p1-p1 PFMM matrix
@@ -845,28 +845,29 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix<
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p1 >,
   besthea::bem::fe_space< besthea::bem::basis_tetra_p1 > >::
-  apply_l2t_operation( const mesh::general_spacetime_cluster * cluster,
+  apply_l2t_operation( const mesh::general_spacetime_cluster * st_cluster,
     distributed_block_vector & output_vector ) const {
-  apply_l2t_operation_p1_normal_drv( cluster, output_vector );
+  apply_l2t_operation_p1_normal_drv( st_cluster, output_vector );
 }
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space, source_space >::
-  apply_l2t_operation_p0( const mesh::general_spacetime_cluster * cluster,
+  apply_l2t_operation_p0( const mesh::general_spacetime_cluster * st_cluster,
     distributed_block_vector & output_vector ) const {
-  lo n_time_elements = cluster->get_n_time_elements( );
-  lo n_space_elements = cluster->get_n_space_elements( );
+  lo n_time_elements = st_cluster->get_n_time_elements( );
+  lo n_space_elements = st_cluster->get_n_space_elements( );
   full_matrix targets( n_time_elements, n_space_elements, false );
   full_matrix aux_matrix( n_time_elements, _spat_contribution_size, false );
 
   // get references local contribution and all required matrices
-  const sc * local_contribution = cluster->get_pointer_to_local_contribution( );
+  const sc * local_contribution
+    = st_cluster->get_pointer_to_local_contribution( );
 
   full_matrix T;
-  compute_chebyshev_quadrature_p0( cluster, T );
+  compute_chebyshev_quadrature_p0( st_cluster, T );
   full_matrix L;
-  compute_lagrange_quadrature( cluster, L );
+  compute_lagrange_quadrature( st_cluster, L );
 
   // compute D = trans(L) * lambda and then the result Y = D * trans(T)
   //  D = trans(L) * lambda with explicit cblas routine call:
@@ -884,26 +885,27 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   targets.multiply( aux_matrix, T, false, true );
 
   // add the results to the correct positions of the output vector
-  output_vector.add_local_part< target_space >( cluster, targets );
+  output_vector.add_local_part< target_space >( st_cluster, targets );
 }
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space, source_space >::
   apply_l2t_operation_p1_normal_drv(
-    const mesh::general_spacetime_cluster * cluster,
+    const mesh::general_spacetime_cluster * st_cluster,
     distributed_block_vector & output_vector ) const {
-  lo n_time_elements = cluster->get_n_time_elements( );
-  lo n_space_nodes = cluster->get_n_space_nodes( );
+  lo n_time_elements = st_cluster->get_n_time_elements( );
+  lo n_space_nodes = st_cluster->get_n_space_nodes( );
   full_matrix targets( n_time_elements, n_space_nodes, false );
   full_matrix aux_matrix( n_time_elements, _spat_contribution_size, false );
 
   // get references local contribution and all required matrices
-  const sc * local_contribution = cluster->get_pointer_to_local_contribution( );
+  const sc * local_contribution
+    = st_cluster->get_pointer_to_local_contribution( );
   full_matrix T_drv;
-  compute_normal_drv_chebyshev_quadrature_p1( cluster, T_drv );
+  compute_normal_drv_chebyshev_quadrature_p1( st_cluster, T_drv );
   full_matrix L;
-  compute_lagrange_quadrature( cluster, L );
+  compute_lagrange_quadrature( st_cluster, L );
 
   // compute D = trans(L) * lambda and then the result Y = D * trans(T_drv)
   //  D = trans(L) * lambda with explicit cblas routine call:
@@ -921,7 +923,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   targets.multiply( aux_matrix, T_drv, false, true );
 
   // add the results to the correct positions of the output vector
-  output_vector.add_local_part< target_space >( cluster, targets );
+  output_vector.add_local_part< target_space >( st_cluster, targets );
 }
 
 template< class kernel_type, class target_space, class source_space >

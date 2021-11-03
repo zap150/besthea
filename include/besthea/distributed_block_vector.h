@@ -431,7 +431,7 @@ class besthea::linear_algebra::distributed_block_vector {
    * correctly.
    */
   template< class space_type >
-  void get_local_part( besthea::mesh::general_spacetime_cluster * cluster,
+  void get_local_part( const besthea::mesh::general_spacetime_cluster * cluster,
     besthea::linear_algebra::vector & local_vector ) const;
 
   /*!
@@ -445,7 +445,7 @@ class besthea::linear_algebra::distributed_block_vector {
    * @note Rows of the output matrix correspond to time, columns to space.
    */
   template< class space_type >
-  void get_local_part( besthea::mesh::general_spacetime_cluster * cluster,
+  void get_local_part( const besthea::mesh::general_spacetime_cluster * cluster,
     besthea::linear_algebra::full_matrix & local_part ) const;
 
   /*!

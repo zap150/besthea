@@ -236,7 +236,7 @@ class besthea::mesh::spacetime_tensor_mesh : public besthea::mesh::mesh {
 
   /**
    * Returns the nodal normal vector of a given spatial node.
-   * @param[in] i_node Index of the spatial node.
+   * @param[in] i_space_node Index of the spatial node.
    * @param[out] n Coordinates of the normal vector.
    * @note The spatial node index is needed, do not use indices of space-time
    * nodes.

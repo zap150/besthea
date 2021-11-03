@@ -772,7 +772,7 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Sets the m2l counter to a new given value.
+   * Sets the s2l execution status to a new value (true/false).
    * @param[in] new_value Value to which the counter is set.
    */
   void set_s2l_execution_status( const bool new_value ) {
