@@ -1131,25 +1131,25 @@ class besthea::mesh::scheduling_time_cluster {
     if ( _global_leaf_status ) {
       std::cout << ", is global leaf";
     }
-    // if ( _m2t_list != nullptr ) {
-    //  std::cout << ", m2t list: ";
-    //  for ( lou i = 0; i < _m2t_list->size( ); ++i ) {
-    //    std::cout << "(" << ( *_m2t_list )[ i ]->get_level( ) << ", "
-    //              << ( *_m2t_list )[ i ]->get_global_index( ) << "), ";
-    //  }
-    //}
-    // if ( _s2l_list != nullptr ) {
-    //  std::cout << ", s2l list: ";
-    //  for ( lou i = 0; i < _s2l_list->size( ); ++i ) {
-    //    std::cout << "(" << ( *_s2l_list )[ i ]->get_level( ) << ", "
-    //              << ( *_s2l_list )[ i ]->get_global_index( ) << "), ";
-    //  }
-    //}
     // if ( _nearfield_list != nullptr ) {
     //   std::cout << ", nearfield: ";
     //   for ( lou i = 0; i < _nearfield_list->size( ); ++i ) {
     //     std::cout << "(" << ( *_nearfield_list )[ i ]->get_level( ) << ", "
     //               << ( *_nearfield_list )[ i ]->get_global_index( ) << "), ";
+    //   }
+    // }
+    // if ( _m2t_list != nullptr ) {
+    //   std::cout << "m2t list: ";
+    //   for ( lou i = 0; i < _m2t_list->size( ); ++i ) {
+    //     std::cout << "(" << ( *_m2t_list )[ i ]->get_level( ) << ", "
+    //               << ( *_m2t_list )[ i ]->get_global_index( ) << "), ";
+    //   }
+    // }
+    // if ( _s2l_list != nullptr ) {
+    //   std::cout << "s2l list: ";
+    //   for ( lou i = 0; i < _s2l_list->size( ); ++i ) {
+    //     std::cout << "(" << ( *_s2l_list )[ i ]->get_level( ) << ", "
+    //               << ( *_s2l_list )[ i ]->get_global_index( ) << "), ";
     //   }
     // }
     // if ( _interaction_list != nullptr ) {
@@ -1174,7 +1174,7 @@ class besthea::mesh::scheduling_time_cluster {
 
     if ( _associated_spacetime_clusters != nullptr ) {
       if ( _process_id == executing_process_id ) {
-        std::cout << ", number of associated leaves: " << _n_associated_leaves
+        std::cout << "number of associated leaves: " << _n_associated_leaves
                   << ", number of associated non-leaves: "
                   << _associated_spacetime_clusters->size( )
             - _n_associated_leaves;

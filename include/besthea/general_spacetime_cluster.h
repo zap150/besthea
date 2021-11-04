@@ -966,7 +966,7 @@ class besthea::mesh::general_spacetime_cluster {
     //   }
     // }
     // if ( _m2t_list != nullptr ) {
-    //   std::cout << ", m2t list: ";
+    //   std::cout << "m2t list: ";
     //   for ( auto m2t_cluster : *_m2t_list ) {
     //     std::vector< slou > m2t_box_coordinate
     //       = m2t_cluster->get_box_coordinate( );
@@ -979,7 +979,7 @@ class besthea::mesh::general_spacetime_cluster {
     // }
 
     // if ( _s2l_list != nullptr ) {
-    //   std::cout << ", s2l list: ";
+    //   std::cout << "s2l list: ";
     //   for ( auto s2l_cluster : *_s2l_list ) {
     //     std::vector< slou > s2l_box_coordinate
     //       = s2l_cluster->get_box_coordinate( );

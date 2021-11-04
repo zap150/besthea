@@ -2005,9 +2005,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           * quad_space_w[ i_quad_s ] * s_area_elem * t_size_elem;
         sc * tar_local_contributions
           = tar_cluster->get_pointer_to_local_contribution( );
-#pragma omp simd aligned(                                      \
-  coupling_coeffs_tensor_product_data, tar_local_contributions \
-  : DATA_ALIGN ) simdlen( DATA_WIDTH )
+        // FIXME: simd-vectorization does not work. might it be due to missing
+        // alignment of the local contributions of the target cluster
+        // #pragma omp simd aligned(                                      \
+//   coupling_coeffs_tensor_product_data, tar_local_contributions \
+//   : DATA_ALIGN ) simdlen( DATA_WIDTH )
         for ( lo glob_index = 0; glob_index < _contribution_size;
               ++glob_index ) {
           tar_local_contributions[ glob_index ]
@@ -2190,9 +2192,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         // target cluster
         sc * tar_local_contributions
           = tar_cluster->get_pointer_to_local_contribution( );
-#pragma omp simd aligned(                                      \
-  coupling_coeffs_tensor_product_data, tar_local_contributions \
-  : DATA_ALIGN ) simdlen( DATA_WIDTH )
+        // FIXME: simd vectorization does not work
+        // #pragma omp simd aligned(                                      \
+//   coupling_coeffs_tensor_product_data, tar_local_contributions \
+//   : DATA_ALIGN ) simdlen( DATA_WIDTH )
         for ( lo glob_index = 0; glob_index < _contribution_size;
               ++glob_index ) {
           tar_local_contributions[ glob_index ]
@@ -2326,6 +2329,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       else
         ++it_next_cluster;
     }
+  }
+  // determine whether there are s2l list clusters left. in fact, s2l list
+  // clusters whose levels are greater than the level of all m2l_list
+  // clusters are not detected in the while loop above.
+  if ( it_next_cluster == m2l_list.end( ) && !s2l_list.empty( ) ) {
+    status = 3;
+    it_next_cluster = s2l_list.begin( );
   }
 }
 
@@ -3860,6 +3870,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   std::list< mesh::scheduling_time_cluster * > m2t_list = _m2t_list;
   std::list< mesh::scheduling_time_cluster * > s2l_list = _s2l_list;
   std::list< mesh::scheduling_time_cluster * > n_list;
+
   // in case of the hypersingular operator, the n_list is only initialized
   // in the first run. All nearfield operations are executed in this run.
   // for all other operators run_count equals zero by default, so the list
@@ -3939,7 +3950,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       start_receive_operations( array_of_requests );
       while ( true ) {
         if ( m_list.empty( ) && m2l_list.empty( ) && l_list.empty( )
-          && n_list.empty( ) ) {
+          && n_list.empty( ) && s2l_list.empty( ) && m2t_list.empty( ) ) {
           break;
         }
 
@@ -5108,8 +5119,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // Check if all the m2l-list and l-list operations have been executed
   // yet. If yes, execute l2t operations or downward send operations if
   // necessary
-  if ( current_cluster->get_m2l_counter( )
-      == current_cluster->get_interaction_list( )->size( )
+  if ( ( current_cluster->get_interaction_list( ) == nullptr
+         || current_cluster->get_m2l_counter( )
+           == current_cluster->get_interaction_list( )->size( ) )
     && current_cluster->get_downward_path_status( ) == 1 ) {
     // set status of the current cluster's local contributions to
     // completed

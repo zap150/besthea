@@ -364,10 +364,9 @@ sc besthea::bem::distributed_fast_spacetime_be_space<
         }
       }
     }
-    // std::cout << "timestep " << d
-    //           << ": rel. l2 err = " << l2_err_timestep /
-    // l2_norm_timestep
-    //           << ", l2 norm = " << l2_norm_timestep << std::endl;
+    std::cout << "timestep " << d
+              << ": rel. l2 err = " << l2_err_timestep / l2_norm_timestep
+              << ", l2 norm = " << l2_norm_timestep << std::endl;
     l2_err += l2_err_timestep;
     l2_norm += l2_norm_timestep;
   }
@@ -474,10 +473,10 @@ sc besthea::bem::distributed_fast_spacetime_be_space< basis_type >::
         }
       }
     }
-    // std::cout << "timestep " << d << ": rel. weighted l2 err = "
-    //           << weight_l2_err_timestep / weight_l2_norm_timestep
-    //           << ", rel. weighted l2 norm = " << weight_l2_norm_timestep
-    //           << std::endl;
+    std::cout << "timestep " << d << ": rel. weighted l2 err = "
+              << weight_l2_err_timestep / weight_l2_norm_timestep
+              << ", rel. weighted l2 norm = " << weight_l2_norm_timestep
+              << std::endl;
     weight_l2_err += weight_l2_err_timestep;
     weight_l2_norm += weight_l2_norm_timestep;
   }
