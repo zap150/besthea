@@ -97,9 +97,9 @@ to see all command line options.
 
 Please cite this research as:
 
-* Jan Zapletal, Raphael Watschinger, Günther Of, Michal Merta, *Semi-analytic integration for a parallel space-time boundary element method modeling the heat equation*, 2021, [arXiv:2102.09811](https://arxiv.org/abs/2102.09811).
+* J. Zapletal, R. Watschinger, G. Of, M. Merta, *Semi-analytic integration for a parallel space-time boundary element method modeling the heat equation*, Comput. Math. Appl. 103 (2021) 156-170, [10.1016/j.camwa.2021.10.025](https://doi.org/10.1016/j.camwa.2021.10.025).
 
-* Raphael Watschinger, Michal Merta, Günther Of, Jan Zapletal, *A parallel fast multipole method for a space-time boundary element method for the heat equation*, 2021, [arXiv:2106.15911](https://arxiv.org/abs/2106.15911).\
+* R. Watschinger, M. Merta, G. Of, J. Zapletal, *A parallel fast multipole method for a space-time boundary element method for the heat equation*, 2021, [arXiv:2106.15911](https://arxiv.org/abs/2106.15911).\
 See this [guide](./examples/distributed_tensor_dirichlet/experiments_parallel_fmm.md) to **reproduce** experiments from the paper.
 
 
