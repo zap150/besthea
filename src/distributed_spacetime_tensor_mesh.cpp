@@ -123,27 +123,51 @@ besthea::mesh::distributed_spacetime_tensor_mesh::get_distribution_tree( ) {
   return _dist_tree;
 }
 
-void besthea::mesh::distributed_spacetime_tensor_mesh::find_slices_to_load(
-  std::set< lo > & nearfield_slice_indices,
-  std::set< lo > & local_slice_indices ) const {
-  for ( auto leaf_cluster : _dist_tree->get_leaves( ) ) {
-    lo cluster_owner = leaf_cluster->get_process_id( );
-    if ( cluster_owner == _my_rank ) {
-      // add all the indices of slices in the local cluster to the corresponding
-      // set
-      const std::vector< lo > * slices = leaf_cluster->get_time_slices( );
+void besthea::mesh::distributed_spacetime_tensor_mesh::
+  find_slices_to_load_recursively( scheduling_time_cluster & current_cluster,
+    std::set< lo > & nearfield_slice_indices,
+    std::set< lo > & local_slice_indices ) const {
+  lo cluster_owner = current_cluster.get_process_id( );
+  // only for local clusters we have to check for slices to load.
+  if ( cluster_owner == _my_rank ) {
+    // if a cluster is in the s2l list of current cluster and current
+    // cluster is local, we need to load the slices of the s2l source cluster.
+    std::vector< scheduling_time_cluster * > * s2l_list
+      = current_cluster.get_s2l_list( );
+    if ( s2l_list != nullptr ) {
+      for ( auto s2l_source_cluster : *s2l_list ) {
+        lo s2l_source_owner = s2l_source_cluster->get_process_id( );
+        if ( s2l_source_owner != _my_rank ) {
+          // time slices of non-local s2l source clusters have to be loaded as
+          // nearfield slices to allow an access to these meshes.
+          const std::vector< lo > * s2l_source_slices
+            = s2l_source_cluster->get_time_slices( );
+          if ( s2l_source_slices != nullptr ) {
+            for ( auto idx : *s2l_source_slices ) {
+              nearfield_slice_indices.insert( idx );
+            }
+          }
+          // remember that this cluster's mesh is available
+          s2l_source_cluster->set_mesh_availability( true );
+        }
+      }
+    }
+    if ( current_cluster.get_n_children( ) == 0 ) {
+      // add all the indices of slices in the local cluster to the
+      // corresponding set
+      const std::vector< lo > * slices = current_cluster.get_time_slices( );
       if ( slices != nullptr ) {
         for ( auto idx : *slices ) {
           local_slice_indices.insert( idx );
         }
       }
       // remember that this cluster's mesh is available
-      leaf_cluster->set_mesh_availability( true );
+      current_cluster.set_mesh_availability( true );
 
       // if a cluster in the nearfield is not local, add its slices to the
       // corresponding set
       std::vector< scheduling_time_cluster * > * nearfield
-        = leaf_cluster->get_nearfield_list( );
+        = current_cluster.get_nearfield_list( );
       for ( auto nearfield_cluster : *nearfield ) {
         lo nearfield_cluster_owner = nearfield_cluster->get_process_id( );
         if ( nearfield_cluster_owner != _my_rank ) {
@@ -156,6 +180,12 @@ void besthea::mesh::distributed_spacetime_tensor_mesh::find_slices_to_load(
           nearfield_cluster->set_mesh_availability( true );
         }
       }
+    }
+  }
+  if ( current_cluster.get_n_children( ) > 0 ) {
+    for ( auto child : *current_cluster.get_children( ) ) {
+      find_slices_to_load_recursively(
+        *child, nearfield_slice_indices, local_slice_indices );
     }
   }
 }
@@ -197,7 +227,8 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
 
   std::set< lo > local_slice_indices;
   std::set< lo > nearfield_slice_indices;
-  find_slices_to_load( nearfield_slice_indices, local_slice_indices );
+  find_slices_to_load_recursively(
+    *_dist_tree->get_root( ), nearfield_slice_indices, local_slice_indices );
 
   // ensure that the nearfield slices are connected
   if ( !nearfield_slice_indices.empty( ) ) {
@@ -206,8 +237,8 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::load(
     ++second_it;
     while ( second_it != nearfield_slice_indices.end( ) ) {
       if ( ( *second_it ) != ( *first_it ) + 1 ) {
-        // insert the missing nearfield slice, and set status to -1 to warn the
-        // user
+        // insert the missing nearfield slice, and set status to -1 to warn
+        // the user
         nearfield_slice_indices.insert( first_it, ( *first_it ) + 1 );
         status = -1;
         ++first_it;
@@ -398,7 +429,8 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::print_ensight_case(
   // first, determine how many selected timesteps each process has
   MPI_Gather( &n_my_selected_timesteps, 1, MPI_INT, individual_sizes.data( ), 1,
     MPI_INT, root_process, *_comm );
-  // compute the displacement for the right access in all_selected_time_centers
+  // compute the displacement for the right access in
+  // all_selected_time_centers
   if ( _my_rank == root_process ) {
     displacements.resize( _n_processes );
     displacements[ 0 ] = 0;
@@ -479,7 +511,8 @@ bool besthea::mesh::distributed_spacetime_tensor_mesh::print_ensight_case(
       case_file.close( );
     }
   }
-  // the root process tells the other processes if the operation was successfull
+  // the root process tells the other processes if the operation was
+  // successfull
   MPI_Bcast( &return_value, 1, MPI_CXX_BOOL, root_process, *_comm );
   return return_value;
 }

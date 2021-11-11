@@ -914,11 +914,6 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
                                   //!< access)
   slou _spatial_nearfield_limit;  //!< number of the clusters in the vicinity to
                                   //!< be considered as nearfield
-  // bool _enable_m2t_and_s2l;       //!< If this is true, s2l- and m2t-lists
-  //                                 //!< of appropriate clusters in the tree
-  //                                 //!< are initiliazed in addition to the
-  //                                 //!< nearfield and interaction lists.
-
   const std::vector< std::vector< lo > > _idx_2_coord = { { 1, 1, 1 },
     { 0, 1, 1 }, { 0, 0, 1 }, { 1, 0, 1 }, { 1, 1, 0 }, { 0, 1, 0 },
     { 0, 0, 0 },

@@ -717,6 +717,16 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
 
   /**
    * Counts the number of all FMM operations levelwise
+   * @param[in,out] n_s2m_operations  Container to store the numbers of
+   * levelwise S2M operations.
+   * @param[in,out] n_m2m_operations  Container to store the numbers of
+   * levelwise M2M operations.
+   * @param[in,out] n_m2l_operations  Container to store the numbers of
+   * levelwise M2L operations.
+   * @param[in,out] n_l2l_operations  Container to store the numbers of
+   * levelwise L2L operations.
+   * @param[in,out] n_l2t_operations  Container to store the numbers of
+   * levelwise L2T operations.
    * @note m2m and l2l operations are counted for the levels of the children
    */
   void count_fmm_operations_levelwise( std::vector< lou > & n_s2m_operations,

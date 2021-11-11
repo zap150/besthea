@@ -37,7 +37,7 @@ besthea::mesh::tree_structure::tree_structure( const std::string & filename,
   const sc start_time, const sc end_time, const lo process_id,
   bool enable_m2t_and_s2l )
   : _levels( 0 ),
-    _enable_m2t_and_s2l( enable_m2t_and_s2l ),
+    _supports_m2t_and_s2l( enable_m2t_and_s2l ),
     _my_process_id( process_id ) {
   // load tree structure from file
   std::vector< char > tree_vector
@@ -60,7 +60,7 @@ besthea::mesh::tree_structure::tree_structure( const std::string & filename,
   set_indices( *_root );
   // construct the operation lists
   set_cluster_operation_lists( *_root );
-  if ( !_enable_m2t_and_s2l ) {
+  if ( !_supports_m2t_and_s2l ) {
     // m2t lists are always needed for simpler subtree communication in the
     // construction of a distributed space-time cluster tree.
     set_m2t_lists_for_subtree_communication( *_root );
@@ -75,7 +75,7 @@ besthea::mesh::tree_structure::tree_structure(
   const std::string & structure_file, const std::string & cluster_bounds_file,
   const lo process_id, bool enable_m2t_and_s2l )
   : _levels( 0 ),
-    _enable_m2t_and_s2l( enable_m2t_and_s2l ),
+    _supports_m2t_and_s2l( enable_m2t_and_s2l ),
     _my_process_id( process_id ) {
   // load tree structure from file
   std::vector< char > tree_vector
@@ -102,7 +102,7 @@ besthea::mesh::tree_structure::tree_structure(
   set_indices( *_root );
   // construct the operation lists
   set_cluster_operation_lists( *_root );
-  if ( !_enable_m2t_and_s2l ) {
+  if ( !_supports_m2t_and_s2l ) {
     // m2t lists are always needed for simpler subtree communication in the
     // construction of a distributed space-time cluster tree.
     set_m2t_lists_for_subtree_communication( *_root );
@@ -576,7 +576,7 @@ void besthea::mesh::tree_structure::set_cluster_operation_lists(
       scheduling_time_cluster * parent_nf_cluster = ( *parent_nearfield )[ i ];
       // check if neighbor of parent is a leaf cluster
       if ( parent_nf_cluster->get_n_children( ) == 0 ) {
-        if ( _enable_m2t_and_s2l ) {
+        if ( _supports_m2t_and_s2l ) {
           // check whether to add the cluster to the s2l or nearfield list
           if ( root.determine_admissibility( parent_nf_cluster ) ) {
             if ( root.get_process_id( ) == _my_process_id
@@ -634,7 +634,7 @@ void besthea::mesh::tree_structure::determine_operation_lists_in_subtree(
   scheduling_time_cluster & current_cluster,
   scheduling_time_cluster & target_cluster ) {
   bool continue_search = true;
-  if ( _enable_m2t_and_s2l ) {
+  if ( _supports_m2t_and_s2l ) {
     if ( target_cluster.determine_admissibility( &current_cluster ) ) {
       target_cluster.add_to_m2t_list( &current_cluster );
       if ( current_cluster.get_process_id( ) == _my_process_id ) {
@@ -1098,13 +1098,35 @@ void besthea::mesh::tree_structure::
         }
       }
     }
-    // set status of each cluster in the interaction list to 2 if it is 0
+    // set status of each cluster in the interaction list to 2 if it is smaller
     // (cluster in interaction list is essential in time and space-time trees)
     if ( current_cluster.get_interaction_list( ) != nullptr ) {
       const std::vector< scheduling_time_cluster * > * interaction_list
         = current_cluster.get_interaction_list( );
       for ( auto it : *interaction_list ) {
-        if ( it->get_essential_status( ) == 0 ) {
+        if ( it->get_essential_status( ) < 2 ) {
+          it->set_essential_status( 2 );
+        }
+      }
+    }
+    // set status of each cluster in the m2t list to 2 if it is smaller
+    // (cluster in m2t list is essential in time and space-time trees)
+    if ( current_cluster.get_m2t_list( ) != nullptr ) {
+      const std::vector< scheduling_time_cluster * > * current_m2t_list
+        = current_cluster.get_m2t_list( );
+      for ( auto it : *current_m2t_list ) {
+        if ( it->get_essential_status( ) < 2 ) {
+          it->set_essential_status( 2 );
+        }
+      }
+    }
+    // set status of each cluster in the s2l list to 2 if it is smaller
+    // (cluster in s2l list is essential in time and space-time trees)
+    if ( current_cluster.get_s2l_list( ) != nullptr ) {
+      const std::vector< scheduling_time_cluster * > * current_s2l_list
+        = current_cluster.get_s2l_list( );
+      for ( auto it : *current_s2l_list ) {
+        if ( it->get_essential_status( ) < 2 ) {
           it->set_essential_status( 2 );
         }
       }

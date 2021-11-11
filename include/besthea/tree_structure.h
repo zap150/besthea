@@ -119,6 +119,10 @@ class besthea::mesh::tree_structure {
     return _levels;
   }
 
+  bool supports_m2t_and_s2l_operations( ) const {
+    return _supports_m2t_and_s2l;
+  }
+
   /**
    * Returns the root of the tree.
    */
@@ -360,9 +364,9 @@ class besthea::mesh::tree_structure {
  private:
   scheduling_time_cluster * _root;  //!< root cluster of the tree structure
   lo _levels;                       //!< number of levels in the tree
-  bool _enable_m2t_and_s2l;  //!< Indicates whether the tree structure is built
-                             //!< such that m2t and s2l operations are supported
-                             //!< in the later FMM algorithm.
+  bool _supports_m2t_and_s2l;       //!< Indicates whether the tree structure is
+                               //!< built such that m2t and s2l operations are
+                               //!< supported in the later FMM algorithm.
   std::vector< scheduling_time_cluster * >
     _leaves;          //!< vector of all clusters without descendants
   lo _my_process_id;  //!< id of the process executing the operations
@@ -439,7 +443,7 @@ class besthea::mesh::tree_structure {
    * send, diagonal send) for every cluster in the tree structure by recursively
    * traversing the tree.
    *
-   * @note if @ref _enable_m2t_and_s2l is set to false, m2t, s2l and
+   * @note if @ref _supports_m2t_and_s2l is set to false, m2t, s2l and
    * diagonal send lists are not set.
    * @param[in] root  Current cluster in the tree traversal.
    */

@@ -372,20 +372,19 @@ class besthea::mesh::distributed_spacetime_tensor_mesh
     lo & status );
 
   /**
-   * Goes through the leaves of the temporal tree and adds time slice indices
+   * Recursively goes through the distribution tree and adds time slice indices
    * whose meshes have to be loaded to the appropriate sets.
+   * @param[in] current_cluster Current cluster in the tree traversal.
    * @param[in, out] nearfield_slice_indices  Set of all slice indices
-   *                                          corresponding to slices contained
-   *                                          in the nearfield of local
-   *                                          clusters.
+   * orresponding to slices contained in the nearfield or s2l-list of local
+   * clusters.
    * @param[in, out] local_slice_indices  Set of all slice indices corresponding
-   *                                      to slices contained in local leaf
-   *                                      clusters.
+   * to slices contained in local leaf clusters.
    * @note (Sorted) sets are used instead of vectors to avoid repeated entries
-   * (in particular relevant for nearfield_slices in case of general
-   * admissibility criteria).
    */
-  void find_slices_to_load( std::set< lo > & nearfield_slice_indices,
+  void find_slices_to_load_recursively(
+    scheduling_time_cluster & current_cluster,
+    std::set< lo > & nearfield_slice_indices,
     std::set< lo > & local_slice_indices ) const;
 
   int _n_processes;       //!< total number of MPI processes in the communicator

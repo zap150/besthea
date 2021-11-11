@@ -172,10 +172,14 @@ class besthea::linear_algebra::distributed_pFMM_matrix
       _m_task_times( omp_get_max_threads( ) ),
       _m2l_task_times( omp_get_max_threads( ) ),
       _l_task_times( omp_get_max_threads( ) ),
+      _m2t_task_times( omp_get_max_threads( ) ),
+      _s2l_task_times( omp_get_max_threads( ) ),
       _n_task_times( omp_get_max_threads( ) ),
       _m_subtask_times( omp_get_max_threads( ) ),
       _m2l_subtask_times( omp_get_max_threads( ) ),
       _l_subtask_times( omp_get_max_threads( ) ),
+      _m2t_subtask_times( omp_get_max_threads( ) ),
+      _s2l_subtask_times( omp_get_max_threads( ) ),
       _n_subtask_times( omp_get_max_threads( ) ),
       _mpi_send_m2l_or_m2t( omp_get_max_threads( ) ),
       _mpi_send_m_parent( omp_get_max_threads( ) ),
@@ -697,7 +701,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   void apply_m2t_operation_p0(
     const mesh::general_spacetime_cluster * src_cluster,
     const mesh::general_spacetime_cluster * tar_cluster,
-    vector_type & local_output_vector ) const;
+    vector_type & local_output_vector, const lo quad_order_space = 2 ) const;
 
   /**
    * Applies an M2T operation for the given space-time source and target
@@ -763,7 +767,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   void apply_s2l_operation_p0( const distributed_block_vector & src_vector,
     const mesh::general_spacetime_cluster * src_cluster,
-    mesh::general_spacetime_cluster * tar_cluster ) const;
+    mesh::general_spacetime_cluster * tar_cluster,
+    const lo quad_order_space = 2 ) const;
 
   /**
    * Applies an S2L operation for the given space-time source and target
@@ -1317,7 +1322,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[out] my_quadrature Wrapper holding quadrature data.
    * @todo This is redundant. Can we restructure the code?
    */
-  void init_quadrature_polynomials( quadrature_wrapper & my_quadrature ) const;
+  void init_quadrature_polynomials(
+    quadrature_wrapper & my_quadrature, const lo quadrature_order = 5 ) const;
 
   /**
    * Maps all quadrature nodes (integration of Chebyshev polynomials) from the
@@ -1387,13 +1393,29 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   /**
    * Counts the number of all FMM operations levelwise
+   * @param[in,out] n_s2m_operations  Container to store the numbers of
+   * levelwise S2M operations.
+   * @param[in,out] n_m2m_operations  Container to store the numbers of
+   * levelwise M2M operations.
+   * @param[in,out] n_m2l_operations  Container to store the numbers of
+   * levelwise M2L operations.
+   * @param[in,out] n_l2l_operations  Container to store the numbers of
+   * levelwise L2L operations.
+   * @param[in,out] n_l2t_operations  Container to store the numbers of
+   * levelwise L2T operations.
+   * @param[in,out] n_s2l_operations  Container to store the numbers of
+   * levelwise S2L operations.
+   * @param[in,out] n_m2t_operations  Container to store the numbers of
+   * levelwise M2T operations.
    * @note m2m and l2l operations are counted for the levels of the children
    */
   void count_fmm_operations_levelwise( std::vector< lou > & n_s2m_operations,
     std::vector< lou > & n_m2m_operations,
     std::vector< lou > & n_m2l_operations,
     std::vector< lou > & n_l2l_operations,
-    std::vector< lou > & n_l2t_operations ) const;
+    std::vector< lou > & n_l2t_operations,
+    std::vector< lou > & n_s2l_operations,
+    std::vector< lou > & n_m2t_operations ) const;
 
   /**
    * Primary task for a time cluster in the M-list.

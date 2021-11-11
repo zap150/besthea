@@ -30,7 +30,7 @@ git submodule update --init --recursive
 
 **Dependencies**
 
-Beside the Boost, Eigen, and Lyra submodules, BESTHEA requires the installation of MPI and Intel MKL. To configure the project make sure that the `MKLROOT` and `LIBRARY_PATH` variables are set by calling the scripts `mklvars.sh` and `compilervars.sh` provided by the MKL installation (in the case of Intel OneAPI, use the script `setvars.sh`). 
+Beside the Boost, Eigen, and Lyra submodules, BESTHEA requires the installation of MPI and Intel MKL. To configure the project make sure that the `MKLROOT` and `LIBRARY_PATH` variables are set by calling the scripts `mklvars.sh` and `compilervars.sh` provided by the MKL installation (in the case of Intel OneAPI, use the script `setvars.sh`).
 
 OpenMP is a dependency usually accompanying a compiler. For a note on AppleClang see the next section.
 
@@ -68,7 +68,7 @@ The BESTHEA library uses OpenMP SIMD. To fully leverage its potential we recomme
 CXXFLAGS="-xcore-avx512 -qopt-zmm-usage=high" cmake ..
 ```
 Vectorisation with GNU or Clang does not work optimally from our experience, however, one can try to use `CXXFLAGS="-march=skylake-avx512"`, `CXXFLAGS="-mavx512*"`, and similar.
-To specify the vector length processed in OpenMS SIMD loops, i.e. the `simdlen` clause, we provide the variable `DATA_WIDTH` implicitly set to 8. This can be modified by e.g.
+To specify the vector length processed in OpenMP SIMD loops, i.e. the `simdlen` clause, we provide the variable `DATA_WIDTH` implicitly set to 8. This can be modified by e.g.
 ```
 cmake -DDATA_WIDTH=4 ..
 ```
