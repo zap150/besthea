@@ -37,6 +37,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <chrono>
 #include <iomanip>
+#include <iostream>
 #include <sstream>
 #include <string>
 
@@ -79,6 +80,7 @@ class besthea::tools::timer {
     if ( !msg.empty( ) ) {
       std::cout << msg << std::endl;
     }
+    _elapsed_time = std::chrono::steady_clock::duration::zero( );
     _start = clock_type::now( );
   }
 
@@ -111,8 +113,46 @@ class besthea::tools::timer {
     return ret.count( );
   }
 
+  /**
+   * Starts the timer.
+   * @param[in] continuePaused If true, the timer is started with the duration
+   * it had when it was previously stopped. Effectively un-pausing a paused
+   * timer.
+   */
+  void start( bool continuePaused = false ) {
+    clock_type::time_point start_time = clock_type::now( );
+    if ( continuePaused )
+      start_time -= _elapsed_time;
+    this->_start = start_time;
+  }
+
+  /**
+   * Stops the timer and stores the elapsed duration.
+   */
+  void stop( ) {
+    clock_type::time_point stop_time = clock_type::now( );
+    this->_elapsed_time = stop_time - _start;
+  }
+
+  /**
+   * Returns the duration between the start and stop methods calls.
+   */
+  clock_type::duration get_elapsed_time( ) {
+    return _elapsed_time;
+  }
+
+  /**
+   * Returns the elapsed time between start and stop methods calls, in seconds.
+   */
+  double get_elapsed_time_in_seconds( ) {
+    return _elapsed_time.count( ) * _tick_time;
+  }
+
  private:
-  clock_type::time_point _start;  //!< Starting time point.
+  clock_type::time_point _start;       //!< Starting time point.
+  clock_type::duration _elapsed_time;  //!< Elapsed time
+  static constexpr double _tick_time = ( (double) clock_type::period::num )
+    / clock_type::period::den;  //!< Duration of a clock tick in seconds
 };
 
 #endif /* INCLUDE_BESTHEA_TIMER_H_ */

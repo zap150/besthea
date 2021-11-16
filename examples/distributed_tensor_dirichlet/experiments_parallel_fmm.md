@@ -38,7 +38,7 @@ The results in Table 5.1 and Figure 5.1 were generated using the following param
 
 The number of OpenMP threads was set using the `OMP_NUM_THREADS` environmental variable. 
 
-The level of the vectorization (used in Figure 5.1) must be set when generating the Cmake configuration (see [`README.md`](../../README.md)) passing in appropriate compiler flags. In the case of the Intel Compiler, we used the `-no-vec -no-simd -qno-openmp-simd` flags for the non-vectorized version and `-xcore-avx512 -qopt-zmm-usage=high` for the vectorized version with the length of the vector registers set using the `DATA_WIDTH` variable.
+The level of the vectorization (used in Figure 5.1) must be set when generating the Cmake configuration (see [`README.md`](../../README.md)) passing in appropriate compiler flags. In the case of the Intel Compiler, we used the `-no-vec -no-simd -qno-openmp-simd` flags for the non-vectorized version and `-xcore-avx512 -qopt-zmm-usage=high` for the vectorized version with the length of the vector registers set using the `BESTHEA_SIMD_WIDTH` variable.
 
 ## Example 2: Task measurement
 

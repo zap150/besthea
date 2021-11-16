@@ -28,72 +28,9 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file spacetime_kernel.h
- * @brief
- */
+#include "besthea/gpu_onthefly_helpers.h"
 
-#ifndef INCLUDE_BESTHEA_SPACETIME_KERNEL_H_
-#define INCLUDE_BESTHEA_SPACETIME_KERNEL_H_
-
-#include "besthea/settings.h"
-
-namespace besthea {
-  namespace bem {
-    template< class derived_type >
-    class spacetime_kernel;
-  }
-}
-
-/**
- *  Class representing a spacetime kernel.
- */
-template< class derived_type >
-class besthea::bem::spacetime_kernel {
- public:
-  /**
-   * Constructor.
-   */
-  spacetime_kernel( ) {
-  }
-
-  /**
-   * Destructor.
-   */
-  virtual ~spacetime_kernel( ) {
-  }
-
-  /**
-   * Returns this cast to the descendant's type.
-   */
-  derived_type * derived( ) {
-    return static_cast< derived_type * >( this );
-  }
-
-  /**
-   * Returns this cast to the descendant's type.
-   */
-  const derived_type * derived( ) const {
-    return static_cast< const derived_type * >( this );
-  }
-
-  /**
-   * Evaluates the kernel.
-   * @param[in] xy1 First coordinate of `x - y`.
-   * @param[in] xy2 Second coordinate of `x - y`.
-   * @param[in] xy3 Third coordinate of `x - y`.
-   * @param[in] nx Normal in the `x` variable.
-   * @param[in] ny Normal in the `y` variable.
-   * @param[in] ttau `t-tau`.
-   */
-#pragma omp declare simd uniform( this, nx, ny, ttau ) \
-  simdlen( BESTHEA_SIMD_WIDTH )
-  sc evaluate(
-    sc xy1, sc xy2, sc xy3, const sc * nx, const sc * ny, sc ttau ) const {
-    return derived( )->do_evaluate( xy1, xy2, xy3, nx, ny, ttau );
-  }
-
- protected:
-  static constexpr sc _eps{ 1e-12 };  //!< Auxiliary variable
-};
-
-#endif /* INCLUDE_BESTHEA_SPACETIME_KERNEL_H_ */
+bool besthea::bem::onthefly::helpers::is_gpu_quadr_order5_initialized = false;
+bool besthea::bem::onthefly::helpers::is_gpu_quadr_order4_initialized = false;
+bool besthea::bem::onthefly::helpers::is_gpu_quadr_order2_initialized = false;
+bool besthea::bem::onthefly::helpers::is_gpu_quadr_order1_initialized = false;

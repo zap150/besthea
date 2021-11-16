@@ -83,7 +83,7 @@ class besthea::bem::spacetime_initial_kernel_antiderivative {
    * @param[in] xy3 Third coordinate of `x - y`.
    * @param[in] n Normal.
    */
-#pragma omp declare simd uniform( this, n ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, n ) simdlen( BESTHEA_SIMD_WIDTH )
   sc anti_t_limit( sc xy1, sc xy2, sc xy3, const sc * n ) const {
     return derived( )->do_anti_t_limit( xy1, xy2, xy3, n );
   }
@@ -96,7 +96,7 @@ class besthea::bem::spacetime_initial_kernel_antiderivative {
    * @param[in] n Normal.
    * @param[in] t `t`.
    */
-#pragma omp declare simd uniform( this, n, t ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, n, t ) simdlen( BESTHEA_SIMD_WIDTH )
   sc anti_t_regular( sc xy1, sc xy2, sc xy3, const sc * n, sc t ) const {
     return derived( )->do_anti_t_regular( xy1, xy2, xy3, n, t );
   }
@@ -109,7 +109,7 @@ class besthea::bem::spacetime_initial_kernel_antiderivative {
    * @param[in] n Normal.
    * @param[in] t End of first time interval.
    */
-#pragma omp declare simd uniform( this, n, t ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, n, t ) simdlen( BESTHEA_SIMD_WIDTH )
   sc definite_integral_over_first_interval(
     sc xy1, sc xy2, sc xy3, const sc * n, sc t ) const {
     return derived( )->do_definite_integral_over_first_interval(
@@ -126,7 +126,8 @@ class besthea::bem::spacetime_initial_kernel_antiderivative {
    * @param[in] t0 Start of the time interval.
    * @param[in] t1 End of the time interval.
    */
-#pragma omp declare simd uniform( this, n, t0, t1 ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, n, t0, t1 ) \
+  simdlen( BESTHEA_SIMD_WIDTH )
   sc definite_integral_over_regular_interval(
     sc xy1, sc xy2, sc xy3, const sc * n, sc t0, sc t1 ) const {
     return derived( )->do_definite_integral_over_regular_interval(

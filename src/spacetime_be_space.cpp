@@ -104,7 +104,7 @@ void besthea::bem::spacetime_be_space< basis_type, block_vector_type >::
   lo size = my_quadrature._wx.size( );
 
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, x1_ref, x2_ref \
-                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     x1_mapped[ i ] = x1[ 0 ] + ( x2[ 0 ] - x1[ 0 ] ) * x1_ref[ i ]
       + ( x3[ 0 ] - x1[ 0 ] ) * x2_ref[ i ];
@@ -126,7 +126,7 @@ void besthea::bem::spacetime_be_space< basis_type,
 
   sc interval_length = time_interval_end - time_interval_begin;
 
-#pragma omp simd aligned( t_mapped, t_ref ) simdlen( DATA_WIDTH )
+#pragma omp simd aligned( t_mapped, t_ref ) simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     t_mapped[ i ] = time_interval_begin + interval_length * t_ref[ i ];
   }

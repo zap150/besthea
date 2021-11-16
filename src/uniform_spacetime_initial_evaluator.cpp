@@ -142,7 +142,8 @@ void besthea::bem::uniform_spacetime_initial_evaluator< kernel_type,
       }
 
       // copying points into local buffers
-#pragma omp simd aligned( x1, x2, x3 : DATA_ALIGN ) simdlen( DATA_WIDTH )
+#pragma omp simd aligned( x1, x2, x3 \
+                          : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
       for ( lo i_point = 0; i_point < size_chunk; ++i_point ) {
         x1[ i_point ] = my_x_data[ 3 * ( chunk_offset + i_point ) ];
         x2[ i_point ] = my_x_data[ 3 * ( chunk_offset + i_point ) + 1 ];
@@ -161,7 +162,7 @@ void besthea::bem::uniform_spacetime_initial_evaluator< kernel_type,
           for ( lo i_quad = 0; i_quad < size_quad; ++i_quad ) {
 #pragma omp simd aligned(                                      \
   x1, x2, x3, y1_mapped, y2_mapped, y3_mapped, kernel_data, wy \
-  : DATA_ALIGN ) simdlen( DATA_WIDTH )
+  : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
             for ( lo i_point = 0; i_point < size_chunk; ++i_point ) {
               kernel_data[ i_point ]
                 = _kernel->evaluate( x1[ i_point ] - y1_mapped[ i_quad ],
@@ -180,7 +181,7 @@ void besthea::bem::uniform_spacetime_initial_evaluator< kernel_type,
               density_value = density.get( l2g[ i_loc ] ) * basis_value;
 
 #pragma omp simd aligned( kernel_data, my_result_data \
-                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
               for ( lo i_point = 0; i_point < size_chunk; ++i_point ) {
                 my_result_data[ i_point ]
                   += kernel_data[ i_point ] * density_value;
@@ -236,7 +237,7 @@ void besthea::bem::uniform_spacetime_initial_evaluator< kernel_type,
 
 #pragma omp simd aligned(                                 \
   y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, y3_ref \
-  : DATA_ALIGN ) simdlen( DATA_WIDTH )
+  : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     y1_mapped[ i ] = x1[ 0 ] + ( x2[ 0 ] - x1[ 0 ] ) * y1_ref[ i ]
       + ( x3[ 0 ] - x1[ 0 ] ) * y2_ref[ i ]

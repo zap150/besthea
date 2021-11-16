@@ -167,7 +167,7 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, t_mapped,   \
                           y1_mapped, y2_mapped, y3_mapped, tau_mapped, \
                           kernel_data, w                               \
-                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
         for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
           kernel_data[ i_quad ]
             = _kernel->evaluate( x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -183,7 +183,7 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
             value = 0.0;
 #pragma omp simd aligned( x1_ref, x2_ref, x3_ref, y1_ref, y2_ref, y3_ref, \
 kernel_data : DATA_ALIGN ) \
-private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
+private( test, trial ) reduction( + : value ) simdlen( BESTHEA_SIMD_WIDTH )
             for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
               test = test_basis.evaluate( i_test, i_loc_test, x1_ref[ i_quad ],
                 x2_ref[ i_quad ], x3_ref[ i_quad ], iperm_test_data );
@@ -589,7 +589,7 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, t_mapped      \
                           : DATA_ALIGN ) aligned( x1_ref, x2_ref, x3_ref \
                                                   : DATA_ALIGN )         \
-  simdlen( DATA_WIDTH )
+  simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     x1_mapped[ i ] = x1rot[ 0 ] + ( x2rot[ 0 ] - x1rot[ 0 ] ) * x1_ref[ i ]
       + ( x3rot[ 0 ] - x1rot[ 0 ] ) * x2_ref[ i ]
@@ -608,7 +608,7 @@ void besthea::bem::tetrahedral_spacetime_be_assembler< kernel_type,
 #pragma omp simd aligned( y1_mapped, y2_mapped, y3_mapped, tau_mapped \
                           : DATA_ALIGN ) aligned( y1_ref, y2_ref      \
                                                   : DATA_ALIGN )      \
-  simdlen( DATA_WIDTH )
+  simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     y1_mapped[ i ] = y1rot[ 0 ] + ( y2rot[ 0 ] - y1rot[ 0 ] ) * y1_ref[ i ]
       + ( y3rot[ 0 ] - y1rot[ 0 ] ) * y2_ref[ i ]

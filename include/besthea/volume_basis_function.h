@@ -118,7 +118,7 @@ class besthea::bem::volume_basis_function {
    * @param[in] x2_ref Second coordinate of reference quadrature point.
    * @param[in] x3_ref Third coordinate of reference quadrature point.
    */
-#pragma omp declare simd uniform( i_elem, i_fun ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( i_elem, i_fun ) simdlen( BESTHEA_SIMD_WIDTH )
   sc evaluate( lo i_elem, lo i_fun, sc x1_ref, sc x2_ref, sc x3_ref ) const {
     return derived( )->do_evaluate( i_elem, i_fun, x1_ref, x2_ref, x3_ref );
   }

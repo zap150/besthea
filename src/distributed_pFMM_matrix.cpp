@@ -1042,7 +1042,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           // unique positions
           for ( lo a = 0; a <= _temp_order; ++a ) {
 #pragma omp simd aligned( aux_buffer_0_data, buffer_for_coeffs_data \
-                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
             for ( lo b = 0; b <= _temp_order; ++b ) {
               aux_buffer_0_data[ buffer_0_index * hlp_acs_beta + hlp_acs_a * a
                 + b ]
@@ -1076,7 +1076,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           for ( lo a = 0; a <= _temp_order; ++a ) {
 #pragma omp simd aligned(                                      \
   aux_buffer_1_data, buffer_for_coeffs_data, aux_buffer_0_data \
-  : DATA_ALIGN ) simdlen( DATA_WIDTH )
+  : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
             for ( lo b = 0; b <= _temp_order; ++b ) {
               aux_buffer_1_data[ buffer_1_index * hlp_acs_beta + hlp_acs_a * a
                 + b ]
@@ -1110,7 +1110,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           for ( lo a = 0; a <= _temp_order; ++a ) {
             val = 0;
 #pragma omp simd aligned( buffer_for_coeffs_data, aux_buffer_1_data : \
-                      DATA_ALIGN ) simdlen( DATA_WIDTH) reduction( + : val)
+                  DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH) reduction( + : val)
             for ( lo b = 0; b <= _temp_order; ++b ) {
               val += buffer_for_coeffs_data[ alpha0 * hlp_acs_alpha
                        + beta0 * hlp_acs_beta + a * hlp_acs_a + b ]
@@ -1629,7 +1629,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         sc val = 0.0;
         const sc * src_moment = src_cluster->get_pointer_to_moment( );
 #pragma omp simd aligned( coupling_coeffs_tensor_product_data :  DATA_ALIGN ) \
-                          simdlen( DATA_WIDTH) reduction( + : val)
+                          simdlen( BESTHEA_SIMD_WIDTH) reduction( + : val)
         for ( lo glob_index = 0; glob_index < _contribution_size;
               ++glob_index ) {
           val += coupling_coeffs_tensor_product_data[ glob_index ]
@@ -1779,7 +1779,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         sc val = 0.0;
         const sc * src_moment = src_cluster->get_pointer_to_moment( );
 #pragma omp simd aligned( coupling_coeffs_tensor_product_data :  DATA_ALIGN ) \
-                          simdlen( DATA_WIDTH) reduction( + : val)
+                          simdlen( BESTHEA_SIMD_WIDTH) reduction( + : val)
         for ( lo glob_index = 0; glob_index < _contribution_size;
               ++glob_index ) {
           val += coupling_coeffs_tensor_product_data[ glob_index ]
@@ -2055,7 +2055,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         sc * tar_local_contributions
           = tar_cluster->get_pointer_to_local_contribution( );
 #pragma omp simd aligned( coupling_coeffs_tensor_product_data \
-                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
         for ( lo glob_index = 0; glob_index < _contribution_size;
               ++glob_index ) {
           tar_local_contributions[ glob_index ]
@@ -2241,7 +2241,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         sc * tar_local_contributions
           = tar_cluster->get_pointer_to_local_contribution( );
 #pragma omp simd aligned( coupling_coeffs_tensor_product_data \
-                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
         for ( lo glob_index = 0; glob_index < _contribution_size;
               ++glob_index ) {
           tar_local_contributions[ glob_index ]
@@ -3150,7 +3150,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       sc h_delta_ab = h_alpha / ( tar_time_nodes[ a ] - src_time_nodes[ b ] );
       lou i = 0;
 #pragma omp simd aligned( cheb_nodes_sum_coll_data, buffer_for_gaussians_data \
-                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
       for ( i = 0; i < _cheb_nodes_sum_coll.size( ); ++i ) {
         buffer_for_gaussians_data[ index_gaussian + i ] = std::exp( -h_delta_ab
           * ( scaled_center_diff + cheb_nodes_sum_coll_data[ i ] )
@@ -3176,7 +3176,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             + beta * _cheb_nodes_sum_coll.size( );
           const sc * curr_ptr = all_poly_vals_mult_coll_data;  // + start_idx;
           std::vector< sc, besthea::allocator_type< sc > >::size_type idx;
-#pragma omp simd aligned( buffer_for_gaussians_data,curr_ptr : DATA_ALIGN ) reduction( + : val ) simdlen( DATA_WIDTH )
+#pragma omp simd aligned( buffer_for_gaussians_data,curr_ptr : \
+           DATA_ALIGN ) reduction( + : val ) simdlen( BESTHEA_SIMD_WIDTH )
           for ( idx = 0; idx < _cheb_nodes_sum_coll.size( ); ++idx ) {
             val += buffer_for_gaussians_data[ index_gaussian + idx ]
               * curr_ptr[ start_idx + idx ];
@@ -3226,7 +3227,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   for ( lo a = 0; a <= _temp_order; ++a ) {
     sc h_delta_a = h_alpha / ( time_node_differences[ a ] );
 #pragma omp simd aligned( cheb_nodes_integrate_data, buffer_for_gaussians_data \
-                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
     for ( lo i = 0; i < _cheb_nodes_integrate.size( ); ++i ) {
       buffer_for_gaussians_data[ index_gaussian + i ] = std::exp( -h_delta_a
         * ( transformed_eval_point - cheb_nodes_integrate_data[ i ] )
@@ -3247,7 +3248,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       lo index_poly = alpha * _cheb_nodes_integrate.size( );
       const sc * curr_ptr = all_poly_vals_integrate_data;
 #pragma omp simd aligned( buffer_for_gaussians_data, curr_ptr : DATA_ALIGN ) \
-                         reduction( + : val ) simdlen( DATA_WIDTH )
+                         reduction( + : val ) simdlen( BESTHEA_SIMD_WIDTH )
       for ( lo idx = 0; idx < _cheb_nodes_integrate.size( ); ++idx ) {
         val += buffer_for_gaussians_data[ index_gaussian + idx ]
           * curr_ptr[ index_poly + idx ];
@@ -3293,7 +3294,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     for ( lo alpha1 = 0; alpha1 <= _spat_order - alpha0; ++alpha1 ) {
 #pragma omp simd aligned(                                              \
   buffer_coeffs_0_data, buffer_coeffs_1_data, aux_buffer_assembly_data \
-  : DATA_ALIGN ) simdlen( DATA_WIDTH )
+  : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
       for ( lo a = 0; a <= _temp_order; ++a ) {
         aux_buffer_assembly_data[ a ]
           = buffer_coeffs_0_data[ alpha0 * ( _temp_order + 1 ) + a ]
@@ -3302,7 +3303,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       for ( lo alpha2 = 0; alpha2 <= _spat_order - alpha0 - alpha1; ++alpha2 ) {
 #pragma omp simd aligned(                                                     \
   buffer_coeffs_2_data, aux_buffer_assembly_data, coupling_coeffs_tensor_data \
-  : DATA_ALIGN ) simdlen( DATA_WIDTH )
+  : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
         for ( lo a = 0; a <= _temp_order; ++a ) {
           coupling_coeffs_tensor_data[ spat_index * ( _temp_order + 1 ) + a ]
             = aux_buffer_assembly_data[ a ]
@@ -3336,7 +3337,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     sc h_delta_a = h_alpha / ( time_node_differences[ a ] );
 #pragma omp simd aligned(                                  \
   cheb_nodes_integrate_data, buffer_for_drv_gaussians_data \
-  : DATA_ALIGN ) simdlen( DATA_WIDTH )
+  : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
     for ( lo i = 0; i < _cheb_nodes_integrate.size( ); ++i ) {
       // the missing factor 2/half_size from the derivative is multiplied later
       buffer_for_drv_gaussians_data[ index_gaussian + i ]
@@ -3363,7 +3364,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       lo index_poly = alpha * _cheb_nodes_integrate.size( );
       const sc * curr_ptr = all_poly_vals_integrate_data;
 #pragma omp simd aligned( buffer_for_drv_gaussians_data,curr_ptr : \
-                      DATA_ALIGN ) reduction( + : val ) simdlen( DATA_WIDTH )
+                DATA_ALIGN ) reduction( + : val ) simdlen( BESTHEA_SIMD_WIDTH )
       for ( lo idx = 0; idx < _cheb_nodes_integrate.size( ); ++idx ) {
         val += buffer_for_drv_gaussians_data[ index_gaussian + idx ]
           * curr_ptr[ index_poly + idx ];
@@ -3418,7 +3419,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 #pragma omp simd aligned( buffer_coeffs_0_data, buffer_drv_coeffs_0_data, \
                           buffer_coeffs_1_data, buffer_drv_coeffs_1_data, \
                           aux_buffer_assembly_0_data                      \
-                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
       for ( lo a = 0; a <= _temp_order; ++a ) {
         aux_buffer_assembly_0_data[ a ]
           = buffer_drv_coeffs_0_data[ alpha0 * ( _temp_order + 1 ) + a ]
@@ -3430,7 +3431,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       }
 #pragma omp simd aligned(                                                \
   buffer_coeffs_0_data, buffer_coeffs_1_data, aux_buffer_assembly_1_data \
-  : DATA_ALIGN ) simdlen( DATA_WIDTH )
+  : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
       for ( lo a = 0; a <= _temp_order; ++a ) {
         aux_buffer_assembly_1_data[ a ]
           = buffer_coeffs_0_data[ alpha0 * ( _temp_order + 1 ) + a ]
@@ -3441,7 +3442,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 #pragma omp simd aligned(                                                     \
   buffer_coeffs_2_data, buffer_drv_coeffs_2_data, aux_buffer_assembly_0_data, \
   aux_buffer_assembly_1_data, coupling_coeffs_tensor_data                     \
-  : DATA_ALIGN ) simdlen( DATA_WIDTH )
+  : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
         for ( lo a = 0; a <= _temp_order; ++a ) {
           coupling_coeffs_tensor_data[ spat_index * ( _temp_order + 1 ) + a ]
             = aux_buffer_assembly_0_data[ a ]
@@ -3549,7 +3550,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // y%_mapped are the %th components of the vectors to which y#_ref is
   // mapped
 #pragma omp simd aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref \
-                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     y1_mapped[ i ] = x1[ 0 ] + ( x2[ 0 ] - x1[ 0 ] ) * y1_ref[ i ]
       + ( x3[ 0 ] - x1[ 0 ] ) * y2_ref[ i ];

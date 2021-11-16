@@ -946,7 +946,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
     sc h_delta_a = h_alpha / ( tar_time_nodes[ a ] );
     lou i = 0;
 #pragma omp simd aligned( cheb_nodes_sum_coll_data, buffer_for_gaussians_data \
-                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
     for ( i = 0; i < _cheb_nodes_sum_coll.size( ); ++i ) {
       buffer_for_gaussians_data[ index_gaussian + i ] = std::exp( -h_delta_a
         * ( scaled_center_diff + cheb_nodes_sum_coll_data[ i ] )
@@ -971,7 +971,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
         const sc * curr_ptr = all_poly_vals_mult_coll_data;  // + start_idx;
         std::vector< sc, besthea::allocator_type< sc > >::size_type idx;
 #pragma omp simd aligned( buffer_for_gaussians_data,curr_ptr : \
-                       DATA_ALIGN ) reduction( + : val ) simdlen( DATA_WIDTH )
+                       DATA_ALIGN ) reduction( + : val ) simdlen( BESTHEA_SIMD_WIDTH )
         for ( idx = 0; idx < _cheb_nodes_sum_coll.size( ); ++idx ) {
           val += buffer_for_gaussians_data[ index_gaussian + idx ]
             * curr_ptr[ start_idx + idx ];
@@ -1568,7 +1568,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   // mapped
 #pragma omp simd aligned(                                 \
   y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref, y3_ref \
-  : DATA_ALIGN ) simdlen( DATA_WIDTH )
+  : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     y1_mapped[ i ] = x1[ 0 ] + ( x2[ 0 ] - x1[ 0 ] ) * y1_ref[ i ]
       + ( x3[ 0 ] - x1[ 0 ] ) * y2_ref[ i ]
@@ -1602,7 +1602,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   // y%_mapped are the %th components of the vectors to which y#_ref is
   // mapped
 #pragma omp simd aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref \
-                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     y1_mapped[ i ] = x1[ 0 ] + ( x2[ 0 ] - x1[ 0 ] ) * y1_ref[ i ]
       + ( x3[ 0 ] - x1[ 0 ] ) * y2_ref[ i ];
