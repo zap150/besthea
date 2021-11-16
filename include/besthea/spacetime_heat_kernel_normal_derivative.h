@@ -76,7 +76,7 @@ class besthea::bem::spacetime_heat_kernel_normal_derivative
    * @param[in] ny Normal in the `y` variable.
    * @param[in] ttau `t-tau`.
    */
-#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, nx, ny, ttau ) simdlen( BESTHEA_SIMD_WIDTH )
   sc do_evaluate( sc xy1, sc xy2, sc xy3, [[maybe_unused]] const sc * nx,
     const sc * ny, sc ttau ) const {
     sc value = 0.0;

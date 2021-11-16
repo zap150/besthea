@@ -15,7 +15,12 @@ macro(setup_compiler)
         " compiled only with g++ 8.3.0 or higher")
     endif()
 
-    add_compile_options(-Wall -Wextra -pedantic-errors)
+    add_compile_options(-Wall -Wextra)
+    # can't use add_compile_options here, need to pass this only to c++ compiler
+    # gcc, as nvcc's host compiler, produces some of such errors, which originate
+    # from some nvcc preprocessing
+    string(APPEND CMAKE_CXX_FLAGS " -pedantic-errors")
+
     # GNU cannot vectorise complicated loops
     #add_compile_options(-fopt-info-omp-vec-optimized-missed)
 
@@ -52,6 +57,8 @@ macro(setup_compiler)
       add_compile_options(-Wno-dtor-name)
     endif()
 
+    add_compile_options(-Wno-overlength-strings)
+
   elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel
     AND NOT CMAKE_CXX_COMPILER_ID MATCHES IntelLLVM)
     message(STATUS "Using Intel ${CMAKE_CXX_COMPILER_VERSION} toolchain")
@@ -66,24 +73,37 @@ macro(setup_compiler)
     #add_compile_options(-qopt-report=5 -qopt-report-phase=vec)
 
     # zero used for undefined preprocessing identifier
-    add_compile_options("SHELL:-diag-disable 193")
+    add_compile_options(-diag-disable=193)
     # attribute appears more than once
-    add_compile_options("SHELL:-diag-disable 2620")
+    add_compile_options(-diag-disable=2620)
     # parameter was never referenced
-    add_compile_options("SHELL:-diag-disable 869")
+    add_compile_options(-diag-disable=869)
     # declaration hides variable
-    add_compile_options("SHELL:-diag-disable 1599")
+    add_compile_options(-diag-disable=1599)
     # value copied to temporary, reference to temporary used
-    add_compile_options("SHELL:-diag-disable 383")
+    add_compile_options(-diag-disable=383)
     # inlining inhibited by limit max-total-size
-    add_compile_options("SHELL:-diag-disable 11074")
+    add_compile_options(-diag-disable=11074)
     # to get full report use -qopt-report=4 -qopt-report-phase ipo
-    add_compile_options("SHELL:-diag-disable 11076")
+    add_compile_options(-diag-disable=11076)
     # specified as both a system and non-system include directory
-    add_compile_options("SHELL:-diag-disable 2547")
+    add_compile_options(-diag-disable=2547)
+    # unrecognised GCC pragma
+    add_compile_options(-diag-disable=2282)
+    # floating-point equality and inequality comparisons
+    add_compile_options(-diag-disable=1572)
+    # external function definition with no prior declaration
+    add_compile_options(-diag-disable=1418)
+    # selector expression is constant
+    add_compile_options(-diag-disable=280)
 
   elseif (CMAKE_CXX_COMPILER_ID MATCHES IntelLLVM)
     message(STATUS "Using IntelLLVM ${CMAKE_CXX_COMPILER_VERSION} toolchain")
+
+    if(${CMAKE_VERSION} VERSION_LESS "3.20.2")
+      message(FATAL_ERROR
+        "CMake >= 3.20.2 required to compile with the Intel LLVM compiler")
+    endif()
 
     add_compile_options(-Wall -Wextra -pedantic-errors)
 
@@ -171,4 +191,61 @@ endmacro()
 
 macro(enable_Lyra)
   set(Lyra_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/Lyra/include)
+endmacro()
+
+macro(setup_CUDA)
+  string(TOUPPER "${BESTHEA_CUDA}" BESTHEA_CUDA)
+
+  if(NOT (
+    "${BESTHEA_CUDA}" STREQUAL "ENABLE" OR
+    "${BESTHEA_CUDA}" STREQUAL "AUTO" OR
+    "${BESTHEA_CUDA}" STREQUAL "DISABLE")
+    )
+    message(WARNING "Invalid value of variable"
+    " BESTHEA_CUDA=\"${BESTHEA_CUDA}\". Using auto-detection.")
+    set(BESTHEA_CUDA "AUTO")
+  endif()
+  
+  set(BESTHEA_USE_CUDA OFF)
+
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.18)
+    cmake_policy(SET CMP0074 NEW)
+
+    if("${BESTHEA_CUDA}" STREQUAL "ENABLE")
+      find_package(CUDA REQUIRED)
+    elseif("${BESTHEA_CUDA}" STREQUAL "AUTO")
+      find_package(CUDA QUIET)
+    endif()
+
+    if(CUDA_FOUND)
+      set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})    
+      enable_language(CUDA)
+
+      # older nvcc does not support -forward-unknown-to-host-compiler at all
+      if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 10.2.89)
+        set(BESTHEA_USE_CUDA ON)
+      else()
+        if("${BESTHEA_CUDA}" STREQUAL "ENABLE")
+          message(FATAL_ERROR "CUDA compiler is too old, besthea_cuda can be"
+            " compiled only with nvcc 10.2.89 or higher")
+        else()
+          message(WARNING "CUDA compiler is too old, besthea_cuda can be"
+            " compiled only with nvcc 10.2.89 or higher. CUDA will not be used")
+        endif()
+      endif()
+    
+      cmake_policy(SET CMP0104 NEW)
+      set(CMAKE_CUDA_ARCHITECTURES 60-virtual)
+    endif()
+  else()
+    if("${BESTHEA_CUDA}" STREQUAL "ENABLE")
+      message(FATAL_ERROR "CMake >= 3.18 required to support besthea_cuda")
+    endif()
+  endif()
+
+  if(BESTHEA_USE_CUDA)
+    message(STATUS "CUDA enabled (to disable, set BESTHEA_CUDA=disable)")
+  else()
+    message(STATUS "CUDA disabled")
+  endif()
 endmacro()

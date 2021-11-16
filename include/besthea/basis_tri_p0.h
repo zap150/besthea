@@ -113,7 +113,7 @@ class besthea::bem::basis_tri_p0
    * independent of the provided parameters. In particular, all parameters are
    * ignored.
    */
-#pragma omp declare simd uniform( this, i_elem, i_fun, n ) simdlen( DATA_WIDTH )
+#pragma omp declare simd uniform( this, i_elem, i_fun, n ) simdlen( BESTHEA_SIMD_WIDTH )
   sc do_evaluate( [[maybe_unused]] lo i_elem, [[maybe_unused]] lo i_fun,
     [[maybe_unused]] sc x1_ref, [[maybe_unused]] sc x2_ref,
     [[maybe_unused]] const sc * n ) const {
@@ -136,7 +136,7 @@ class besthea::bem::basis_tri_p0
    * ignored.
    */
 #pragma omp declare simd uniform( this, i_elem, i_fun, n, n_shared_vertices, \
-  rotation, swap ) simdlen( DATA_WIDTH )
+  rotation, swap ) simdlen( BESTHEA_SIMD_WIDTH )
   sc do_evaluate( [[maybe_unused]] lo i_elem, [[maybe_unused]] lo i_fun,
     [[maybe_unused]] sc x1_ref, [[maybe_unused]] sc x2_ref,
     [[maybe_unused]] const sc * n, [[maybe_unused]] int n_shared_vertices,

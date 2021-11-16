@@ -73,6 +73,56 @@ void besthea::linear_algebra::block_vector::copy( block_vector const & that ) {
   }
 }
 
+void besthea::linear_algebra::block_vector::copy_permute( const block_vector & that, sc alpha ) {
+  resize_to_match_permute(that, false);
+
+  constexpr lo tile_size = 128; // chosen experimentally, the best for double on 1 thread on Barbora
+  lo bb_max = (that._n_blocks - 1) / tile_size;
+  lo ii_max = (that._size - 1) / tile_size;
+
+  for (lo bb = 0; bb < bb_max; bb++) {
+    lo BB = bb * tile_size;
+    for (lo ii = 0; ii < ii_max; ii++) {
+      lo II = ii * tile_size;
+      for (lo b = 0; b < tile_size; b++) {
+        lo B = BB + b;
+        for (lo i = 0; i < tile_size; i++) {
+          lo I = II + i;
+          sc val = that.get(B, I);
+          this->set(I, B, alpha * val);
+        }
+      }
+    }
+    for(lo I = tile_size * ii_max; I < that._size; I++) {
+      for (lo b = 0; b < tile_size; b++) {
+        lo B = BB + b;
+        sc val = that.get(B, I);
+        this->set(I, B, alpha * val);
+      }
+    }
+  }
+  for (lo B = tile_size * bb_max; B < that._n_blocks; B++) {
+    for(lo I = 0; I < that._size; I++) {
+      sc val = that.get(B, I);
+      this->set(I, B, alpha * val);
+    }
+  }
+
+
+
+  // performance benefit of using mkl_domatcopy is very small and comsumes much more memory because of the required buffers
+  // if the data in this class were stored in one contiguous buffer, mkl_domatcopy should be a much better option
+
+  // sc * raw_data_in = new sc[_size * _block_size];
+  // sc * raw_data_out = new sc[_size * _block_size];
+  // that.copy_to_raw(raw_data_in);
+  // mkl_domatcopy('C', 'T', that._size, that._block_size, alpha, raw_data_in, that._size, raw_data_out, that._block_size);
+  // this->copy_from_raw(that._size, that._block_size, raw_data_out);    
+  // delete[] raw_data_in;
+  // delete[] raw_data_out;
+
+}
+
 void besthea::linear_algebra::block_vector::copy_from_raw(
   lo n_blocks, lo size, const sc * data ) {
   if ( n_blocks != _n_blocks ) {
@@ -90,6 +140,81 @@ void besthea::linear_algebra::block_vector::copy_to_raw( sc * data ) const {
   for ( lo i = 0; i < _n_blocks; ++i ) {
     _data[ i ].copy_to_raw( data + i * _size );
   }
+}
+  
+void besthea::linear_algebra::block_vector::copy_from_raw_permute(
+    lo block_size, lo size, const sc * data, sc alpha ) {
+  resize( size );
+  resize_blocks( block_size );
+
+  constexpr lo tile_size = 128;
+  lo bb_max = (block_size - 1) / tile_size;
+  lo ii_max = (size - 1) / tile_size;
+
+  for (lo bb = 0; bb < bb_max; bb++) {
+    lo BB = bb * tile_size;
+    for (lo ii = 0; ii < ii_max; ii++) {
+      lo II = ii * tile_size;
+      for (lo b = 0; b < tile_size; b++) {
+        lo B = BB + b;
+        for (lo i = 0; i < tile_size; i++) {
+          lo I = II + i;
+          sc val = data[B * size + I];
+          this->set(I, B, alpha * val);
+        }
+      }
+    }
+    for(lo I = tile_size * ii_max; I < size; I++) {
+      for (lo b = 0; b < tile_size; b++) {
+        lo B = BB + b;
+        sc val = data[B * size + I];
+        this->set(I, B, alpha * val);
+      }
+    }
+  }
+  for (lo B = tile_size * bb_max; B < block_size; B++) {
+    for(lo I = 0; I < size; I++) {
+      sc val = data[B * size + I];
+      this->set(I, B, alpha * val);
+    }
+  }
+
+}
+
+void besthea::linear_algebra::block_vector::copy_to_raw_permute( sc * data, sc alpha ) const {
+
+  constexpr lo tile_size = 128;
+  lo bb_max = (_n_blocks - 1) / tile_size;
+  lo ii_max = (_size - 1) / tile_size;
+
+  for (lo bb = 0; bb < bb_max; bb++) {
+    lo BB = bb * tile_size;
+    for (lo ii = 0; ii < ii_max; ii++) {
+      lo II = ii * tile_size;
+      for (lo b = 0; b < tile_size; b++) {
+        lo B = BB + b;
+        for (lo i = 0; i < tile_size; i++) {
+          lo I = II + i;
+          sc val = get(B, I);
+          data[I * _n_blocks + B] = alpha * val;
+        }
+      }
+    }
+    for(lo I = tile_size * ii_max; I < _size; I++) {
+      for (lo b = 0; b < tile_size; b++) {
+        lo B = BB + b;
+        sc val = get(B, I);
+        data[I * _n_blocks + B] = alpha * val;
+      }
+    }
+  }
+  for (lo B = tile_size * bb_max; B < _n_blocks; B++) {
+    for(lo I = 0; I < _size; I++) {
+      sc val = get(B, I);
+      data[I * _n_blocks + B] = alpha * val;
+    }
+  }
+
 }
 
 void besthea::linear_algebra::block_vector::copy_from_vector(
@@ -113,4 +238,39 @@ void besthea::linear_algebra::block_vector::copy_to_vector(
   for ( lo i = 0; i < _n_blocks; ++i ) {
     _data[ i ].copy_to_raw( data.data( ) + i * _size );
   }
+}
+
+void besthea::linear_algebra::block_vector::add_permute( const block_vector & that, sc alpha ) {
+  constexpr lo tile_size = 128; // chosen experimentally, the best for double on 1 thread on Barbora
+  lo bb_max = (that._n_blocks - 1) / tile_size;
+  lo ii_max = (that._size - 1) / tile_size;
+
+  for (lo bb = 0; bb < bb_max; bb++) {
+    lo BB = bb * tile_size;
+    for (lo ii = 0; ii < ii_max; ii++) {
+      lo II = ii * tile_size;
+      for (lo b = 0; b < tile_size; b++) {
+        lo B = BB + b;
+        for (lo i = 0; i < tile_size; i++) {
+          lo I = II + i;
+          sc val = that.get(B, I);
+          this->add(I, B, alpha * val);
+        }
+      }
+    }
+    for(lo I = tile_size * ii_max; I < that._size; I++) {
+      for (lo b = 0; b < tile_size; b++) {
+        lo B = BB + b;
+        sc val = that.get(B, I);
+        this->add(I, B, alpha * val);
+      }
+    }
+  }
+  for (lo B = tile_size * bb_max; B < that._n_blocks; B++) {
+    for(lo I = 0; I < that._size; I++) {
+      sc val = that.get(B, I);
+      this->add(I, B, alpha * val);
+    }
+  }
+
 }

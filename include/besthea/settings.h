@@ -56,6 +56,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // NOTE: this is only relevant in case of non-distributed pFMM
 #define NEARFIELD_CLUSTERWISE  //!< Pragma to control nearfield computation
 
+#ifndef BESTHEA_SIMD_WIDTH
+#define BESTHEA_SIMD_WIDTH 8
+#endif
+
 namespace besthea {
   using scalar = double;  //!< Floating point type.
   // using index = std::size_t; //!< Indexing type.
@@ -79,6 +83,23 @@ using los = besthea::index_signed;           //!< Signed indexing type.
 using lou = besthea::index_unsigned;         //!< Unsigned indexing type.
 using slos = besthea::short_index;           //!< Short signed indexing type.
 using slou = besthea::short_index_unsigned;  //!< Short unsigned indexing type.
+
+namespace besthea::settings {
+  struct verbose_levels;
+
+  extern verbose_levels output_verbosity;
+}
+
+/**
+ * Struct holding settings regarding output verbosity
+ */
+struct besthea::settings::verbose_levels {
+  int warnings;              //!< 0 for no warnings, 1 warnings are on
+  int timers;                //!< 0=off, 1=basic, 2=all available
+  int onthefly_loadbalance;  //!< 0=off, 1=before apply, 2=adapt info
+  verbose_levels( ) : warnings( 1 ), timers( 0 ), onthefly_loadbalance( 0 ) {
+  }
+};
 
 // structures to deduce MPI datatypes
 

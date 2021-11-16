@@ -368,7 +368,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
           if ( shared_t_element ) {
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
                           y2_mapped, y3_mapped, kernel_data, w        \
-                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
             for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
               kernel_data[ i_quad ]
                 = _kernel->definite_integral_over_same_interval(
@@ -381,7 +381,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
           } else {
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped, y1_mapped, \
                           y2_mapped, y3_mapped, kernel_data, w        \
-                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
             for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
               kernel_data[ i_quad ]
                 = _kernel->definite_integral_over_different_intervals(
@@ -399,7 +399,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
               value = 0.0;
 #pragma omp simd \
       aligned( x1_ref, x2_ref, y1_ref, y2_ref, kernel_data : DATA_ALIGN ) \
-      private( test, trial ) reduction( + : value ) simdlen( DATA_WIDTH )
+      private( test, trial ) reduction( + : value ) simdlen( BESTHEA_SIMD_WIDTH )
               for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
                 // for p0 and p1 basis functions only the values of
                 // i_loc_test, x1_ref and x2_ref are used, the other variables
@@ -668,7 +668,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler<
        reduction( + : value11, value12, value13 ) \
        reduction( + : value21, value22, value23 ) \
        reduction( + : value31, value32, value33 ) \
-       simdlen( DATA_WIDTH )
+       simdlen( BESTHEA_SIMD_WIDTH )
             for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
               _kernel->definite_integral_over_same_interval(
                 x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -715,7 +715,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler<
        reduction( + : value11, value12, value13 ) \
        reduction( + : value21, value22, value23 ) \
        reduction( + : value31, value32, value33 ) \
-       simdlen( DATA_WIDTH )
+       simdlen( BESTHEA_SIMD_WIDTH )
             for ( lo i_quad = 0; i_quad < size; ++i_quad ) {
               _kernel->definite_integral_over_different_intervals(
                 x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
@@ -1011,7 +1011,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   // x1, x2, x3 are vectors in R^3,
   // y%_mapped are the %th components of the vectors to which y%_ref is mapped
 #pragma omp simd aligned( y1_mapped, y2_mapped, y3_mapped, y1_ref, y2_ref \
-                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     y1_mapped[ i ] = x1[ 0 ] + ( x2[ 0 ] - x1[ 0 ] ) * y1_ref[ i ]
       + ( x3[ 0 ] - x1[ 0 ] ) * y2_ref[ i ];
@@ -1155,7 +1155,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 #pragma omp simd aligned( x1_mapped, x2_mapped, x3_mapped        \
                           : DATA_ALIGN ) aligned( x1_ref, x2_ref \
                                                   : DATA_ALIGN ) \
-  simdlen( DATA_WIDTH )
+  simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     x1_mapped[ i ] = x1rot[ 0 ] + ( x2rot[ 0 ] - x1rot[ 0 ] ) * x1_ref[ i ]
       + ( x3rot[ 0 ] - x1rot[ 0 ] ) * x2_ref[ i ];
@@ -1168,7 +1168,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 #pragma omp simd aligned( y1_mapped, y2_mapped, y3_mapped        \
                           : DATA_ALIGN ) aligned( y1_ref, y2_ref \
                                                   : DATA_ALIGN ) \
-  simdlen( DATA_WIDTH )
+  simdlen( BESTHEA_SIMD_WIDTH )
   for ( lo i = 0; i < size; ++i ) {
     y1_mapped[ i ] = y1rot[ 0 ] + ( y2rot[ 0 ] - y1rot[ 0 ] ) * y1_ref[ i ]
       + ( y3rot[ 0 ] - y1rot[ 0 ] ) * y2_ref[ i ];
