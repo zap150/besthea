@@ -912,9 +912,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           // no need for reduction, in a single inner cycle data are written on
           // unique positions
           for ( lo a = 0; a <= _temp_order; ++a ) {
-#pragma omp simd aligned(                               \
-  aux_buffer_0_data, buffer_for_coeffs_data, src_moment \
-  : DATA_ALIGN ) simdlen( DATA_WIDTH )
+#pragma omp simd aligned( aux_buffer_0_data, buffer_for_coeffs_data \
+                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
             for ( lo b = 0; b <= _temp_order; ++b ) {
               aux_buffer_0_data[ buffer_0_index * hlp_acs_beta + hlp_acs_a * a
                 + b ]
@@ -979,7 +978,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         for ( lo beta0 = 0; beta0 <= _spat_order - alpha1 - alpha2; ++beta0 ) {
           for ( lo a = 0; a <= _temp_order; ++a ) {
             val = 0;
-#pragma omp simd aligned( buffer_for_coeffs_data, aux_buffer_1_data, tar_local : DATA_ALIGN ) simdlen( DATA_WIDTH) reduction( + : val)
+#pragma omp simd aligned( buffer_for_coeffs_data, aux_buffer_1_data : DATA_ALIGN ) simdlen( DATA_WIDTH) reduction( + : val)
             for ( lo b = 0; b <= _temp_order; ++b ) {
               val += buffer_for_coeffs_data[ alpha0 * hlp_acs_alpha
                        + beta0 * hlp_acs_beta + a * hlp_acs_a + b ]
