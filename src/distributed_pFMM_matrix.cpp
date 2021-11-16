@@ -1041,9 +1041,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           // no need for reduction, in a single inner cycle data are written on
           // unique positions
           for ( lo a = 0; a <= _temp_order; ++a ) {
-#pragma omp simd aligned(                               \
-  aux_buffer_0_data, buffer_for_coeffs_data, src_moment \
-  : DATA_ALIGN ) simdlen( DATA_WIDTH )
+#pragma omp simd aligned( aux_buffer_0_data, buffer_for_coeffs_data \
+                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
             for ( lo b = 0; b <= _temp_order; ++b ) {
               aux_buffer_0_data[ buffer_0_index * hlp_acs_beta + hlp_acs_a * a
                 + b ]
@@ -1629,10 +1628,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         // a scalar product of 2 vectors
         sc val = 0.0;
         const sc * src_moment = src_cluster->get_pointer_to_moment( );
-        // FIXME: simd-vectorization does not work.
-        // #pragma omp simd aligned( coupling_coeffs_tensor_product_data, \
-//                           src_moment:  DATA_ALIGN ) \
-//                           simdlen( DATA_WIDTH) reduction( + : val)
+#pragma omp simd aligned( coupling_coeffs_tensor_product_data :  DATA_ALIGN ) \
+                          simdlen( DATA_WIDTH) reduction( + : val)
         for ( lo glob_index = 0; glob_index < _contribution_size;
               ++glob_index ) {
           val += coupling_coeffs_tensor_product_data[ glob_index ]
@@ -1781,10 +1778,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         // a scalar product of 2 vectors
         sc val = 0.0;
         const sc * src_moment = src_cluster->get_pointer_to_moment( );
-        // FIXME: simd-vectorization does not work.
-        // #pragma omp simd aligned( coupling_coeffs_tensor_product_data, \
-//                           src_moment:  DATA_ALIGN ) \
-//                           simdlen( DATA_WIDTH) reduction( + : val)
+#pragma omp simd aligned( coupling_coeffs_tensor_product_data :  DATA_ALIGN ) \
+                          simdlen( DATA_WIDTH) reduction( + : val)
         for ( lo glob_index = 0; glob_index < _contribution_size;
               ++glob_index ) {
           val += coupling_coeffs_tensor_product_data[ glob_index ]
@@ -2059,11 +2054,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           * quad_space_w[ i_quad_s ] * s_area_elem * t_size_elem;
         sc * tar_local_contributions
           = tar_cluster->get_pointer_to_local_contribution( );
-        // FIXME: simd-vectorization does not work. might it be due to missing
-        // alignment of the local contributions of the target cluster
-        // #pragma omp simd aligned(                                      \
-//   coupling_coeffs_tensor_product_data, tar_local_contributions \
-//   : DATA_ALIGN ) simdlen( DATA_WIDTH )
+#pragma omp simd aligned( coupling_coeffs_tensor_product_data \
+                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
         for ( lo glob_index = 0; glob_index < _contribution_size;
               ++glob_index ) {
           tar_local_contributions[ glob_index ]
@@ -2248,10 +2240,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         // target cluster
         sc * tar_local_contributions
           = tar_cluster->get_pointer_to_local_contribution( );
-        // FIXME: simd vectorization does not work
-        // #pragma omp simd aligned(                                      \
-//   coupling_coeffs_tensor_product_data, tar_local_contributions \
-//   : DATA_ALIGN ) simdlen( DATA_WIDTH )
+#pragma omp simd aligned( coupling_coeffs_tensor_product_data \
+                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
         for ( lo glob_index = 0; glob_index < _contribution_size;
               ++glob_index ) {
           tar_local_contributions[ glob_index ]
@@ -4042,6 +4032,17 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
 #pragma omp single
     {
+      if ( _verbose ) {
+#pragma omp critical( verbose )
+        {
+          std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
+          if ( outfile.is_open( ) ) {
+            outfile << "Scheduling thread is " << omp_get_thread_num( )
+                    << std::endl;
+            outfile.close( );
+          }
+        }
+      }
       // start the receive operations
       std::vector< MPI_Request > array_of_requests(
         _receive_data_information.size( ) );
