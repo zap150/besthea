@@ -429,6 +429,23 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   void get_inverse_diagonal(
     distributed_block_vector & inverse_diagonal ) const;
 
+  /**
+   *
+   * @note In the target interval we apply a Gauss quadrature rule with
+   * ( _temp_order + 1 ) points, which is exact for polynomials up to order
+   *  2 * _temp_order + 1. This are roughly twice as many quadrature points
+   * as we use for s2m and l2t operations, so they should be sufficient.
+   */
+  void apply_m2ls_operation(
+    const mesh::general_spacetime_cluster * src_cluster,
+    mesh::general_spacetime_cluster * tar_cluster,
+    sc * tar_spatial_local_contributions ) const;
+
+  void apply_ls2t_operation_p0(
+    const mesh::general_spacetime_cluster * st_cluster,
+    distributed_block_vector & output_vector,
+    const sc * tar_spatial_local_contributions ) const;
+
  private:
   /**
    * Calls all S2M operations associated with a given scheduling time cluster.
