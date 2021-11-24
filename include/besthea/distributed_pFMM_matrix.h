@@ -446,6 +446,23 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     distributed_block_vector & output_vector,
     const sc * tar_spatial_local_contributions ) const;
 
+  void apply_s2m_operation_p0( const distributed_block_vector & source_vector,
+    mesh::general_spacetime_cluster * source_cluster ) const;
+
+  void apply_m2t_operation_p0(
+    const mesh::general_spacetime_cluster * src_cluster,
+    const mesh::general_spacetime_cluster * tar_cluster,
+    vector_type & local_output_vector, const lo quad_order_space = 2 ) const;
+
+  void apply_m2l_operation( const mesh::general_spacetime_cluster * src_cluster,
+    mesh::general_spacetime_cluster * tar_cluster,
+    sc * tar_local = nullptr ) const;
+
+  void apply_l2t_operation_p0(
+    const mesh::general_spacetime_cluster * st_cluster,
+    distributed_block_vector & output_vector,
+    const sc * local_contribution = nullptr ) const;
+
  private:
   /**
    * Calls all S2M operations associated with a given scheduling time cluster.
@@ -489,8 +506,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @todo Store the quadratures of Chebyshev polynomials in space and Lagrange
    * polynomials in time again?
    */
-  void apply_s2m_operation_p0( const distributed_block_vector & source_vector,
-    mesh::general_spacetime_cluster * source_cluster ) const;
+  // void apply_s2m_operation_p0( const distributed_block_vector &
+  // source_vector,
+  //   mesh::general_spacetime_cluster * source_cluster ) const;
 
   /**
    * Applies the S2M operation for the given source cluster and sources for
@@ -610,8 +628,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in,out] tar_cluster Spacetime target cluster for the M2L operation.
    * @todo add buffers instead of reallocation?
    */
-  void apply_m2l_operation( const mesh::general_spacetime_cluster * src_cluster,
-    mesh::general_spacetime_cluster * tar_cluster ) const;
+  // void apply_m2l_operation( const mesh::general_spacetime_cluster *
+  // src_cluster,
+  //   mesh::general_spacetime_cluster * tar_cluster ) const;
 
   /**
    * Calls all L2L operations associated with a given scheduling time cluster.
@@ -715,10 +734,10 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @todo Use buffers instead of reallocating targets and aux buffer in every
    * function call?
    */
-  void apply_m2t_operation_p0(
-    const mesh::general_spacetime_cluster * src_cluster,
-    const mesh::general_spacetime_cluster * tar_cluster,
-    vector_type & local_output_vector, const lo quad_order_space = 2 ) const;
+  // void apply_m2t_operation_p0(
+  //   const mesh::general_spacetime_cluster * src_cluster,
+  //   const mesh::general_spacetime_cluster * tar_cluster,
+  //   vector_type & local_output_vector, const lo quad_order_space = 2 ) const;
 
   /**
    * Applies an M2T operation for the given space-time source and target
@@ -848,9 +867,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @todo Store the quadratures of Chebyshev polynomials in space and Lagrange
    * polynomials in time again?
    */
-  void apply_l2t_operation_p0(
-    const mesh::general_spacetime_cluster * st_cluster,
-    distributed_block_vector & output_vector ) const;
+  // void apply_l2t_operation_p0(
+  //   const mesh::general_spacetime_cluster * st_cluster,
+  //   distributed_block_vector & output_vector ) const;
 
   /**
    * Applies the L2T operation for the given target cluster for p1 basis

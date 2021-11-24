@@ -928,7 +928,7 @@ class besthea::mesh::general_spacetime_cluster {
   /**
    * Prints info of the object.
    */
-  void print( ) {
+  void print( ) const {
     std::cout << "level: " << _level;
     std::cout << ", temporal center: " << _time_center;
     std::cout << ", temporal half size: " << _time_half_size;

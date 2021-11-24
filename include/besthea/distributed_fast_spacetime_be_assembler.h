@@ -218,6 +218,11 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
   void assemble(
     pfmm_matrix_type & global_matrix, bool info_mode = false ) const;
 
+  void assemble_nearfield_matrix(
+    mesh::general_spacetime_cluster * target_cluster,
+    mesh::general_spacetime_cluster * source_cluster,
+    full_matrix_type & nearfield_matrix ) const;
+
  private:
   /**
    * Initializes quadrature structures for evaluation of nearfield integrals of
@@ -265,10 +270,10 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
    *                            spacetime target cluster.
    * @param[in,out] nearfield_matrix Reference to the matrix which is assembled.
    */
-  void assemble_nearfield_matrix(
-    mesh::general_spacetime_cluster * target_cluster,
-    mesh::general_spacetime_cluster * source_cluster,
-    full_matrix_type & nearfield_matrix ) const;
+  // void assemble_nearfield_matrix(
+  //   mesh::general_spacetime_cluster * target_cluster,
+  //   mesh::general_spacetime_cluster * source_cluster,
+  //   full_matrix_type & nearfield_matrix ) const;
 
   /**
    * Determines the configuration of two spatial, triangular elements
