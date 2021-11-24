@@ -1682,6 +1682,35 @@ void besthea::mesh::distributed_spacetime_cluster_tree::collect_local_leaves(
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::
+  create_subtree_pure_spatial_refinements(
+    general_spacetime_cluster & current_cluster, const lo n_min_elems_space_ref,
+    const lo n_max_new_levels ) {
+  sc time_half_size;
+  vector_type space_half_size( 3 );
+  current_cluster.get_half_size( space_half_size, time_half_size );
+  if ( n_max_new_levels == 0
+    || current_cluster.get_n_elements( ) < n_min_elems_space_ref
+    || current_cluster.get_max_element_space_diameter( )
+      > space_half_size[ 0 ] ) {
+    current_cluster.set_n_children( 0 );
+    current_cluster.set_global_leaf_status( true );
+    // compute also the node mapping and set the number of space nodes for the
+    // leaf cluster
+    current_cluster.compute_node_mapping( );
+    current_cluster.set_n_space_nodes( );
+    return;
+  }
+
+  // execute the spatial refinements
+  refine_cluster_in_space( current_cluster );
+
+  for ( auto child : *( current_cluster.get_children( ) ) ) {
+    create_subtree_pure_spatial_refinements(
+      *child, n_min_elems_space_ref, n_max_new_levels - 1 );
+  }
+}
+
+void besthea::mesh::distributed_spacetime_cluster_tree::
   collect_non_local_leaves( general_spacetime_cluster & root,
     std::vector< general_spacetime_cluster * > & non_local_leaves ) const {
   std::vector< general_spacetime_cluster * > * children = root.get_children( );

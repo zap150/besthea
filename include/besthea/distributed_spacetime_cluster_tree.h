@@ -222,6 +222,10 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   void collect_local_leaves( general_spacetime_cluster & current_cluster,
     std::vector< general_spacetime_cluster * > & leaf_vector ) const;
 
+  void create_subtree_pure_spatial_refinements(
+    general_spacetime_cluster & current_cluster, const lo n_min_elems_space_ref,
+    const lo n_max_new_levels );
+
  private:
   /**
    * Builds the spacetime cluster tree in a communicative way in the upper part

@@ -429,23 +429,6 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   void get_inverse_diagonal(
     distributed_block_vector & inverse_diagonal ) const;
 
-  /**
-   *
-   * @note In the target interval we apply a Gauss quadrature rule with
-   * ( _temp_order + 1 ) points, which is exact for polynomials up to order
-   *  2 * _temp_order + 1. This are roughly twice as many quadrature points
-   * as we use for s2m and l2t operations, so they should be sufficient.
-   */
-  void apply_m2ls_operation(
-    const mesh::general_spacetime_cluster * src_cluster,
-    mesh::general_spacetime_cluster * tar_cluster,
-    sc * tar_spatial_local_contributions ) const;
-
-  void apply_ls2t_operation_p0(
-    const mesh::general_spacetime_cluster * st_cluster,
-    distributed_block_vector & output_vector,
-    const sc * tar_spatial_local_contributions ) const;
-
  private:
   /**
    * Calls all S2M operations associated with a given scheduling time cluster.
@@ -709,9 +692,6 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] tar_cluster  Considered spacetime target cluster.
    * @param[in,out] local_output_vector Local result vector to which the result
    * of the operation is added.
-   * @tparam run_count  Run count of the corresponding pFMM procedure. It is
-   *                    used to choose the appropriate m2t operation for this
-   *                    run in case of the hypersingular operator.
    * @todo Use buffers instead of reallocating targets and aux buffer in every
    * function call?
    */
@@ -729,9 +709,6 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] tar_cluster  Considered spacetime target cluster.
    * @param[in,out] local_output_vector Local result vector to which the result
    * of the operation is added.
-   * @tparam run_count  Run count of the corresponding pFMM procedure. It is
-   *                    used to choose the appropriate m2t operation for this
-   *                    run in case of the hypersingular operator.
    * @todo Use buffers instead of reallocating targets and aux buffer in every
    * function call?
    */
@@ -739,6 +716,34 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     const mesh::general_spacetime_cluster * src_cluster,
     const mesh::general_spacetime_cluster * tar_cluster,
     vector_type & local_output_vector ) const;
+
+  /**
+   * Applies an M2Ls operations for the given space-time source and target
+   * clusters.
+   * @param[in] src_cluster  Considered spacetime source cluster.
+   * @param[in] tar_cluster  Considered spacetime target cluster.
+   * @note In the target interval we apply a Gauss quadrature rule with
+   * ( _temp_order + 1 ) points, which is exact for polynomials up to order
+   *  2 * _temp_order + 1. This are roughly twice as many quadrature points
+   * as we use for s2m and l2t operations, so they should be sufficient.
+   */
+  void apply_m2ls_operation(
+    const mesh::general_spacetime_cluster * src_cluster,
+    mesh::general_spacetime_cluster * tar_cluster,
+    sc * tar_spatial_local_contributions ) const;
+
+  /**
+   * Applies an Ls2T operation for the given space-time cluster for p0 basis
+   * functions in space and writes the result to the appropriate part of the
+   * (global) output vector.
+   * @param[in] st_cluster  Considered spacetime cluster.
+   * @param[in,out] output_vector Global result vector to which the result
+   * of the operation is added at the correct position.
+   */
+  void apply_ls2t_operation_p0(
+    const mesh::general_spacetime_cluster * st_cluster,
+    distributed_block_vector & output_vector,
+    const sc * tar_spatial_local_contributions ) const;
 
   /**
    * Calls all S2L operations associated with a given scheduling time cluster.
