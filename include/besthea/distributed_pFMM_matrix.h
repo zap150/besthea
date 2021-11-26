@@ -439,12 +439,12 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   void apply_m2ls_operation(
     const mesh::general_spacetime_cluster * src_cluster,
     mesh::general_spacetime_cluster * tar_cluster,
-    sc * tar_spatial_local_contributions ) const;
+    std::vector< sc * > & tar_spatial_local_contributions ) const;
 
   void apply_ls2t_operation_p0(
     const mesh::general_spacetime_cluster * st_cluster,
     distributed_block_vector & output_vector,
-    const sc * tar_spatial_local_contributions ) const;
+    std::vector< sc * > & tar_spatial_local_contributions ) const;
 
   void apply_s2m_operation_p0( const distributed_block_vector & source_vector,
     mesh::general_spacetime_cluster * source_cluster ) const;
