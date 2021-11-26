@@ -2,6 +2,10 @@ add_subdirectory(distributed_tensor_dirichlet)
 add_subdirectory(uniform_tensor_dirichlet)
 add_subdirectory(uniform_tensor_neumann)
 
+if(BESTHEA_USE_CUDA)
+  add_subdirectory(onthefly_experiments)
+endif()
+
 install(FILES
   mesh_files/cube_192.txt
   mesh_files/grid_cube_xy.txt
