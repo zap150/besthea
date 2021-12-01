@@ -1826,7 +1826,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   source_space >::apply_m2ls_operation( const mesh::general_spacetime_cluster *
                                           src_cluster,
   mesh::general_spacetime_cluster * tar_cluster,
-  sc * tar_spatial_local_contributions ) const {
+  std::vector< sc * > & tar_spatial_local_contributions ) const {
   lo n_quad_points_time = _temp_order + 1;
   // ATTENTION: When changing n_quad_points_time one has to adapt the size of
   // the auxiliary buffers!
@@ -1898,6 +1898,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // m2ls operations have to be executed for each time element in the target
   // cluster individually.
   for ( lo i_tar_time = 0; i_tar_time < n_tar_time_elems; ++i_tar_time ) {
+    aux_buffer_0.fill( 0.0 );
+    aux_buffer_1.fill( 0.0 );
     // get the endpoints of the current target time element
     sc tar_t_elem_start, tar_t_elem_end;
     lo local_tar_elem_idx = distributed_mesh.global_2_local( local_start_idx,
@@ -2033,7 +2035,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             }
             ++buffer_1_index;
           }
-          tar_spatial_local_contributions[ local_index ] += val;
+          tar_spatial_local_contributions[ i_tar_time ][ local_index ] += val;
           ++local_index;
         }
         // correction for buffer_1 index; this is necessary since alpha0 does
@@ -2049,23 +2051,28 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::
   apply_ls2t_operation_p0( const mesh::general_spacetime_cluster * st_cluster,
     distributed_block_vector & output_vector,
-    const sc * tar_spatial_local_contributions ) const {
+    std::vector< sc * > & tar_spatial_local_contributions ) const {
+  lo n_time_elems = st_cluster->get_n_time_elements( );
   lo n_space_elements = st_cluster->get_n_space_elements( );
-
-  // TODO. Load proper local contributions here later on
 
   full_matrix T;
   compute_chebyshev_quadrature_p0( st_cluster, T );
   // T has dimensions (n_space_elements, _spat_contribution_size)
   // multiply T by the spatial local contributions to get the local result
   // and add this to the output vector
-  vector local_result_vector( n_space_elements, true );
-  // blas routine is called explicitly here, since local contributions are
-  // provided as raw vector.
-  cblas_dgemv( CblasColMajor, CblasNoTrans, n_space_elements,
-    _spat_contribution_size, 1.0, T.data( ), n_space_elements,
-    tar_spatial_local_contributions, 1, 0.0, local_result_vector.data( ), 1 );
 
+  vector local_result_vector( n_space_elements * n_time_elems, true );
+  for ( lo i_tar = 0; i_tar < n_time_elems; ++i_tar ) {
+    // TODO: load the correct local contributions here
+    sc * current_local_result_vector
+      = local_result_vector.data( ) + i_tar * n_space_elements;
+    // blas routine is called explicitly here, since local contributions
+    // are provided as raw vector.
+    cblas_dgemv( CblasColMajor, CblasNoTrans, n_space_elements,
+      _spat_contribution_size, 1.0, T.data( ), n_space_elements,
+      tar_spatial_local_contributions[ i_tar ], 1, 0.0,
+      current_local_result_vector, 1 );
+  }
   // add the results to the correct positions of the output vector
   output_vector.add_local_part< target_space >(
     st_cluster, local_result_vector );

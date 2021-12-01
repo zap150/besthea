@@ -730,7 +730,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   void apply_m2ls_operation(
     const mesh::general_spacetime_cluster * src_cluster,
     mesh::general_spacetime_cluster * tar_cluster,
-    sc * tar_spatial_local_contributions ) const;
+    std::vector< sc * > & tar_spatial_local_contributions ) const;
 
   /**
    * Applies an Ls2T operation for the given space-time cluster for p0 basis
@@ -743,7 +743,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   void apply_ls2t_operation_p0(
     const mesh::general_spacetime_cluster * st_cluster,
     distributed_block_vector & output_vector,
-    const sc * tar_spatial_local_contributions ) const;
+    std::vector< sc * > & tar_spatial_local_contributions ) const;
 
   /**
    * Calls all S2L operations associated with a given scheduling time cluster.
