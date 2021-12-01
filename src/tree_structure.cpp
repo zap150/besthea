@@ -637,9 +637,7 @@ void besthea::mesh::tree_structure::determine_operation_lists_in_subtree(
   if ( _supports_m2t_and_s2l ) {
     if ( target_cluster.determine_admissibility( &current_cluster ) ) {
       target_cluster.add_to_m2t_list( &current_cluster );
-      if ( current_cluster.get_process_id( ) == _my_process_id ) {
-        current_cluster.add_to_diagonal_send_list( &target_cluster );
-      }
+      current_cluster.add_to_diagonal_send_list( &target_cluster );
       continue_search = false;
     }
   }
