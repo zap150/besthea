@@ -642,7 +642,7 @@ class besthea::mesh::scheduling_time_cluster {
    * Returns the number of clusters ready for interaction, i.e. the value of
    * @ref _n_ready_m2t_sources.
    */
-  lou get_n_ready_m2t_sources( ) {
+  lou get_n_ready_m2t_sources( ) const {
     lou size;
 #pragma omp atomic read
     size = _n_ready_m2t_sources;
@@ -1123,73 +1123,74 @@ class besthea::mesh::scheduling_time_cluster {
   /**
    * Prints info of the object.
    */
-  void print( lo executing_process_id = -1 ) const {
-    std::cout << "level: " << _level << ", center: " << _center
-              << ", half size: " << _half_size
-              << ", global_index: " << _global_index
-              << ", proc_id: " << _process_id;
+  void print(
+    lo executing_process_id = -1, std::ostream & stream = std::cout ) const {
+    stream << "level: " << _level << ", center: " << _center
+           << ", half size: " << _half_size
+           << ", global_index: " << _global_index
+           << ", proc_id: " << _process_id;
     if ( _global_leaf_status ) {
-      std::cout << ", is global leaf";
+      stream << ", is global leaf";
     }
     // if ( _nearfield_list != nullptr ) {
-    //   std::cout << ", nearfield: ";
+    //   stream << ", nearfield: ";
     //   for ( lou i = 0; i < _nearfield_list->size( ); ++i ) {
-    //     std::cout << "(" << ( *_nearfield_list )[ i ]->get_level( ) << ", "
+    //     stream << "(" << ( *_nearfield_list )[ i ]->get_level( ) << ", "
     //               << ( *_nearfield_list )[ i ]->get_global_index( ) << "), ";
     //   }
     // }
     // if ( _m2t_list != nullptr ) {
-    //   std::cout << "m2t list: ";
+    //   stream << "m2t list: ";
     //   for ( lou i = 0; i < _m2t_list->size( ); ++i ) {
-    //     std::cout << "(" << ( *_m2t_list )[ i ]->get_level( ) << ", "
+    //     stream << "(" << ( *_m2t_list )[ i ]->get_level( ) << ", "
     //               << ( *_m2t_list )[ i ]->get_global_index( ) << "), ";
     //   }
     // }
     // if ( _s2l_list != nullptr ) {
-    //   std::cout << "s2l list: ";
+    //   stream << "s2l list: ";
     //   for ( lou i = 0; i < _s2l_list->size( ); ++i ) {
-    //     std::cout << "(" << ( *_s2l_list )[ i ]->get_level( ) << ", "
+    //     stream << "(" << ( *_s2l_list )[ i ]->get_level( ) << ", "
     //               << ( *_s2l_list )[ i ]->get_global_index( ) << "), ";
     //   }
     // }
     // if ( _interaction_list != nullptr ) {
-    //   std::cout << "interaction_list: ";
+    //   stream << "interaction_list: ";
     //   for ( lou i = 0; i < _interaction_list->size( ); ++i ) {
-    //     std::cout << "(" << ( *_interaction_list )[ i ]->get_level( ) << ", "
+    //     stream << "(" << ( *_interaction_list )[ i ]->get_level( ) << ", "
     //               << ( *_interaction_list )[ i ]->get_global_index( )
     //               << "), ";
     //   }
     // }
     // if ( _send_list != nullptr ) {
-    //   std::cout << "send_list: ";
+    //   stream << "send_list: ";
     //   for ( lou i = 0; i < _send_list->size( ); ++i ) {
-    //     std::cout << "(" << ( *_send_list )[ i ]->get_level( ) << ", "
+    //     stream << "(" << ( *_send_list )[ i ]->get_level( ) << ", "
     //               << ( *_send_list )[ i ]->get_global_index( )
     //               << "), ";
     //   }
     // }
-    // std::cout << ", upward_path_counter: " << _upward_path_counter;
-    // std::cout << ", downward_path_status: " << (lo) _downward_path_status;
-    // std::cout << ", m2l counter: " << _m2l_counter;
+    // stream << ", upward_path_counter: " << _upward_path_counter;
+    // stream << ", downward_path_status: " << (lo) _downward_path_status;
+    // stream << ", m2l counter: " << _m2l_counter;
 
     if ( _associated_spacetime_clusters != nullptr ) {
       if ( _process_id == executing_process_id ) {
-        std::cout << "number of associated leaves: " << _n_associated_leaves
-                  << ", number of associated non-leaves: "
-                  << _associated_spacetime_clusters->size( )
+        stream << "number of associated leaves: " << _n_associated_leaves
+               << ", number of associated non-leaves: "
+               << _associated_spacetime_clusters->size( )
             - _n_associated_leaves;
       } else {
-        std::cout << ", number of associated clusters: "
-                  << _associated_spacetime_clusters->size( );
+        stream << ", number of associated clusters: "
+               << _associated_spacetime_clusters->size( );
       }
     }
     if ( _time_slices != nullptr ) {
-      std::cout << ", time slices: ";
+      stream << ", time slices: ";
       for ( auto idx : *_time_slices ) {
-        std::cout << idx << ", ";
+        stream << idx << ", ";
       }
     }
-    std::cout << std::endl;
+    stream << std::endl;
   }
 
   /**
@@ -1318,8 +1319,8 @@ class besthea::mesh::scheduling_time_cluster {
   char
     _status_initial_op_downward_path;  //!< Indicates if the cluster is active
                                        //!< in the downward path of the FMM for
-                                       //!< initial potential operators. This is
-                                       //!< the case if its subtree contains
+                                       //!< initial potential operators. This
+                                       //!< is the case if its subtree contains
                                        //!< clusters associated with local
                                        //!< space-time leaf clusters.
   lo _upward_path_counter;  //!< Used to keep track of the dependencies in the
