@@ -729,8 +729,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   void apply_m2ls_operation(
     const mesh::general_spacetime_cluster * src_cluster,
-    mesh::general_spacetime_cluster * tar_cluster,
-    std::vector< sc * > & tar_spatial_local_contributions ) const;
+    mesh::general_spacetime_cluster * tar_cluster ) const;
 
   /**
    * Applies an Ls2T operation for the given space-time cluster for p0 basis
@@ -742,8 +741,20 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   void apply_ls2t_operation_p0(
     const mesh::general_spacetime_cluster * st_cluster,
-    distributed_block_vector & output_vector,
-    std::vector< sc * > & tar_spatial_local_contributions ) const;
+    distributed_block_vector & output_vector ) const;
+
+  /**
+   * Applies an Ls2T operation for the given space-time cluster for p1 basis
+   * functions and normal derivatives of spatial polynomials (for adjoint
+   * double layer operator and hypersingular operator) and writes the result to
+   * the appropriate part of the (global) output vector.
+   * @param[in] st_cluster  Considered spacetime cluster.
+   * @param[in,out] output_vector Global result vector to which the result
+   * of the operation is added at the correct position.
+   */
+  void apply_ls2t_operation_p1_normal_drv(
+    const mesh::general_spacetime_cluster * st_cluster,
+    distributed_block_vector & output_vector ) const;
 
   /**
    * Calls all S2L operations associated with a given scheduling time cluster.
@@ -803,6 +814,13 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   void apply_s2l_operation_p1_normal_drv(
     const distributed_block_vector & src_vector,
+    const mesh::general_spacetime_cluster * src_cluster,
+    mesh::general_spacetime_cluster * tar_cluster ) const;
+
+  void apply_s2ms_operation_p0( const distributed_block_vector & src_vector,
+    mesh::general_spacetime_cluster * src_cluster ) const;
+
+  void apply_ms2l_operation(
     const mesh::general_spacetime_cluster * src_cluster,
     mesh::general_spacetime_cluster * tar_cluster ) const;
 

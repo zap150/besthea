@@ -884,6 +884,54 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
+   * Sets the pointer to the spatial moments.
+   * @param[in] spatial_moments_address Address of the spatial moments (in the
+   * array stored in the associated scheduling_time_cluster)
+   */
+  void set_pointer_to_spatial_moments( sc * spatial_moments_address ) {
+    _spatial_moments = spatial_moments_address;
+  }
+
+  /**
+   * Returns a pointer to the spatial moments of the current cluster.
+   */
+  sc * get_pointer_to_spatial_moments( ) {
+    return _spatial_moments;
+  }
+
+  /**
+   * Returns a pointer to the const spatial moments of the current cluster.
+   */
+  const sc * get_pointer_to_spatial_moments( ) const {
+    return _spatial_moments;
+  }
+
+  /**
+   * Sets the pointer to the spatial local contributions
+   * @param[in] spatial_lc_address Address of the spatial local contributions
+   * (in the array stored in the associated scheduling_time_cluster)
+   */
+  void set_pointer_to_spatial_local_contributions( sc * spatial_lc_address ) {
+    _spatial_local_contributions = spatial_lc_address;
+  }
+
+  /**
+   * Returns a pointer to the spatial local contributions of the current
+   * cluster.
+   */
+  sc * get_pointer_to_spatial_local_contributions( ) {
+    return _spatial_local_contributions;
+  }
+
+  /**
+   * Returns a pointer to the const spatial local contributions of the current
+   * cluster.
+   */
+  const sc * get_pointer_to_spatial_local_contributions( ) const {
+    return _spatial_local_contributions;
+  }
+
+  /**
    * Returns the number of degrees of freedom in the cluster (depending on the
    * underlying space)
    */
@@ -1068,6 +1116,16 @@ class besthea::mesh::general_spacetime_cluster {
   sc * _local_contribution;  //!< pointer to the local contribution of the
                              //!< cluster, which is stored in the associated
                              //!< scheduling_time_cluster
+  sc * _spatial_moments;  //!< pointer to all the spatial moments of the cluster
+                          //!< (one per time-step), which is stored in the
+                          //!< associated scheduling_time_cluster. The first
+                          //!< _spat_contribution_size entries correspond to the
+                          //!< spatial moment of the first time-step, ...
+  sc * _spatial_local_contributions;  //!< pointer to the spatial local
+                                      //!< contributions (one per time-step),
+                                      //!< which is stored in the associated
+                                      //!< scheduling_time_cluster. Same access
+                                      //!< per time-step as for spatial moments.
 };
 
 /** specialization of @ref besthea::mesh::general_spacetime_cluster::get_n_dofs
