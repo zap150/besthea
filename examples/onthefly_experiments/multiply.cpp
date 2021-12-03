@@ -140,7 +140,7 @@ int main( int argc, char * argv[] ) {
   bool printCheckErrors = true;
   
   besthea::settings::output_verbosity.timers = 2;
-  besthea::settings::output_verbosity.onthefly_loadbalance = 0;
+  besthea::settings::output_verbosity.onthefly_loadbalance = 1;
 
   tm_init.start();
 
@@ -393,104 +393,140 @@ int main( int argc, char * argv[] ) {
 
   tm_check.start();
 
-  bool equalVc = true;
-  bool equalVg = true;
-  for (lo b = 0; b < c.n_timeslices; b++) {
-    for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
-      sc vm = yVm.get(b, i);
-      sc vf = yVfc.get(b, i);
-      if( std::abs((vm - vf) / vm) > 1e-6 ) {
-        if(printCheckErrors)
-          printf("Vectors Vc dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
-        equalVc = false;
+  if(c.do_in_memory && c.do_onthefly_cpu && c.do_V)
+  {
+    bool equalVc = true;
+    for (lo b = 0; b < c.n_timeslices; b++) {
+      for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
+        sc vm = yVm.get(b, i);
+        sc vf = yVfc.get(b, i);
+        if( std::abs((vm - vf) / vm) > 1e-6 ) {
+          if(printCheckErrors)
+            printf("Vectors Vc dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
+          equalVc = false;
+        }
       }
     }
-  }
-  for (lo b = 0; b < c.n_timeslices; b++) {
-    for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
-      sc vm = yVm.get(b, i);
-      sc vf = yVfg.get(b, i);
-      if( std::abs((vm - vf) / vm) > 1e-6 ) {
-        if(printCheckErrors)
-          printf("Vectors Vg dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
-        equalVg = false;
-      }
-    }
+    printf("Vectors Vc are%s equal!\n", (equalVc ? "" : " NOT"));
   }
 
-  bool equalKc = true;
-  bool equalKg = true;
-  for (lo b = 0; b < c.n_timeslices; b++) {
-    for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
-      sc vm = yKm.get(b, i);
-      sc vf = yKfc.get(b, i);
-      if( std::abs((vm - vf) / vm) > 1e-6 ) {
-        if(printCheckErrors)
-          printf("Vectors Kc dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
-        equalKc = false;
+  if(c.do_in_memory && c.do_onthefly_gpu && c.do_V)
+  {
+    bool equalVg = true;
+    for (lo b = 0; b < c.n_timeslices; b++) {
+      for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
+        sc vm = yVm.get(b, i);
+        sc vf = yVfg.get(b, i);
+        if( std::abs((vm - vf) / vm) > 1e-6 ) {
+          if(printCheckErrors)
+            printf("Vectors Vg dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
+          equalVg = false;
+        }
       }
     }
-  }
-  for (lo b = 0; b < c.n_timeslices; b++) {
-    for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
-      sc vm = yKm.get(b, i);
-      sc vf = yKfg.get(b, i);
-      if( std::abs((vm - vf) / vm) > 1e-6 ) {
-        if(printCheckErrors)
-          printf("Vectors Kg dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
-        equalKg = false;
-      }
-    }
+    printf("Vectors Vg are%s equal!\n", (equalVg ? "" : " NOT"));
   }
 
-  bool equalAc = true;
-  bool equalAg = true;
-  for (lo b = 0; b < c.n_timeslices; b++) {
-    for (lo i = 0; i < spacetime_mesh.get_n_spatial_nodes(); i++) {
-      sc vm = yAm.get(b, i);
-      sc vf = yAfc.get(b, i);
-      if( std::abs((vm - vf) / vm) > 1e-6 ) {
-        if(printCheckErrors)
-          printf("Vectors Ac dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
-        equalAc = false;
+  if(c.do_in_memory && c.do_onthefly_cpu && c.do_K)
+  {
+    bool equalKc = true;
+    for (lo b = 0; b < c.n_timeslices; b++) {
+      for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
+        sc vm = yKm.get(b, i);
+        sc vf = yKfc.get(b, i);
+        if( std::abs((vm - vf) / vm) > 1e-6 ) {
+          if(printCheckErrors)
+            printf("Vectors Kc dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
+          equalKc = false;
+        }
       }
     }
+    printf("Vectors Kc are%s equal!\n", (equalKc ? "" : " NOT"));
   }
-  for (lo b = 0; b < c.n_timeslices; b++) {
-    for (lo i = 0; i < spacetime_mesh.get_n_spatial_nodes(); i++) {
-      sc vm = yAm.get(b, i);
-      sc vf = yAfg.get(b, i);
-      if( std::abs((vm - vf) / vm) > 1e-6 ) {
-        if(printCheckErrors)
-          printf("Vectors Ag dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
-        equalAg = false;
+  
+  if(c.do_in_memory && c.do_onthefly_gpu && c.do_K)
+  {
+    bool equalKg = true;
+    for (lo b = 0; b < c.n_timeslices; b++) {
+      for (lo i = 0; i < spacetime_mesh.get_n_spatial_elements(); i++) {
+        sc vm = yKm.get(b, i);
+        sc vf = yKfg.get(b, i);
+        if( std::abs((vm - vf) / vm) > 1e-6 ) {
+          if(printCheckErrors)
+            printf("Vectors Kg dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
+          equalKg = false;
+        }
       }
     }
+    printf("Vectors Kg are%s equal!\n", (equalKg ? "" : " NOT"));
   }
 
-  bool equalDc = true;
-  bool equalDg = true;
-  for (lo b = 0; b < c.n_timeslices; b++) {
-    for (lo i = 0; i < spacetime_mesh.get_n_spatial_nodes(); i++) {
-      sc vm = yDm.get(b, i);
-      sc vf = yDfc.get(b, i);
-      if( std::abs((vm - vf) / vm) > 1e-6 ) {
-        if(printCheckErrors)
-          printf("Vectors Dc dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
-        equalDc = false;
+  if(c.do_in_memory && c.do_onthefly_cpu && c.do_A)
+  {
+    bool equalAc = true;
+    for (lo b = 0; b < c.n_timeslices; b++) {
+      for (lo i = 0; i < spacetime_mesh.get_n_spatial_nodes(); i++) {
+        sc vm = yAm.get(b, i);
+        sc vf = yAfc.get(b, i);
+        if( std::abs((vm - vf) / vm) > 1e-6 ) {
+          if(printCheckErrors)
+            printf("Vectors Ac dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
+          equalAc = false;
+        }
       }
     }
+    printf("Vectors Ac are%s equal!\n", (equalAc ? "" : " NOT"));
   }
-  for (lo b = 0; b < c.n_timeslices; b++) {
-    for (lo i = 0; i < spacetime_mesh.get_n_spatial_nodes(); i++) {
-      sc vm = yDm.get(b, i);
-      sc vf = yDfg.get(b, i);
-      if( std::abs((vm - vf) / vm) > 1e-6 ) {
-        if(printCheckErrors)
-          printf("Vectors Dg dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
-        equalDg = false;
+  
+  if(c.do_in_memory && c.do_onthefly_gpu && c.do_A)
+  {
+    bool equalAg = true;
+    for (lo b = 0; b < c.n_timeslices; b++) {
+      for (lo i = 0; i < spacetime_mesh.get_n_spatial_nodes(); i++) {
+        sc vm = yAm.get(b, i);
+        sc vf = yAfg.get(b, i);
+        if( std::abs((vm - vf) / vm) > 1e-6 ) {
+          if(printCheckErrors)
+            printf("Vectors Ag dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
+          equalAg = false;
+        }
       }
     }
+    printf("Vectors Ag are%s equal!\n", (equalAg ? "" : " NOT"));
+  }
+
+  if(c.do_in_memory && c.do_onthefly_cpu && c.do_D)
+  {
+    bool equalDc = true;
+    for (lo b = 0; b < c.n_timeslices; b++) {
+      for (lo i = 0; i < spacetime_mesh.get_n_spatial_nodes(); i++) {
+        sc vm = yDm.get(b, i);
+        sc vf = yDfc.get(b, i);
+        if( std::abs((vm - vf) / vm) > 1e-6 ) {
+          if(printCheckErrors)
+            printf("Vectors Dc dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
+          equalDc = false;
+        }
+      }
+    }
+    printf("Vectors Dc are%s equal!\n", (equalDc ? "" : " NOT"));
+  }
+  
+  if(c.do_in_memory && c.do_onthefly_gpu && c.do_D)
+  {
+    bool equalDg = true;
+    for (lo b = 0; b < c.n_timeslices; b++) {
+      for (lo i = 0; i < spacetime_mesh.get_n_spatial_nodes(); i++) {
+        sc vm = yDm.get(b, i);
+        sc vf = yDfg.get(b, i);
+        if( std::abs((vm - vf) / vm) > 1e-6 ) {
+          if(printCheckErrors)
+            printf("Vectors Dg dont match: B%ld I%ld %f %f\n", b, i, vm, vf);
+          equalDg = false;
+        }
+      }
+    }
+    printf("Vectors Dg are%s equal!\n", (equalDg ? "" : " NOT"));
   }
 
   tm_check.stop();
@@ -498,14 +534,6 @@ int main( int argc, char * argv[] ) {
 
 
   // print results
-  printf("Vectors Vc are%s equal!\n", (equalVc ? "" : " NOT"));
-  printf("Vectors Vg are%s equal!\n", (equalVg ? "" : " NOT"));
-  printf("Vectors Kc are%s equal!\n", (equalKc ? "" : " NOT"));
-  printf("Vectors Kg are%s equal!\n", (equalKg ? "" : " NOT"));
-  printf("Vectors Ac are%s equal!\n", (equalAc ? "" : " NOT"));
-  printf("Vectors Ag are%s equal!\n", (equalAg ? "" : " NOT"));
-  printf("Vectors Dc are%s equal!\n", (equalDc ? "" : " NOT"));
-  printf("Vectors Dg are%s equal!\n", (equalDg ? "" : " NOT"));
   printf("\n");
   printf("Time init:  %10.6f\n", tm_init.get_elapsed_time_in_seconds());
   printf("Time check: %10.6f\n", tm_check.get_elapsed_time_in_seconds());
