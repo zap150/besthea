@@ -39,6 +39,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/settings.h"
 
 #include <iostream>
+#include <math.h>
 #include <mkl.h>
 #include <vector>
 
@@ -262,6 +263,17 @@ class besthea::linear_algebra::full_matrix
    * @param[in] n_rhs Number of right-hand sides.
    */
   void cholesky_solve( vector_type & rhs, lo n_rhs = 1 );
+
+  /**
+   * @brief Returns the Frobenius norm of the matrix.
+   */
+  sc frobenius_norm( ) {
+    sc norm_sq = 0.0;
+    for ( lo i = 0; i < _n_columns * _n_rows; ++i ) {
+      norm_sq += _data[ i ] * _data[ i ];
+    }
+    return std::sqrt( norm_sq );
+  }
 
   /*!
    * Resizes the matrix.

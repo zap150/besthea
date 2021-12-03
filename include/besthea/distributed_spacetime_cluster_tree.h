@@ -119,6 +119,15 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   }
 
   /**
+   * Returns the vector of additional local leaves created during
+   * refinement of spatially large clusters.
+   */
+  const std::vector< general_spacetime_cluster * > &
+  get_additional_local_leaves( ) {
+    return _additional_local_leaves;
+  }
+
+  /**
    * Returns the vector of levelwise spatial paddings.
    */
   const std::vector< sc > & get_spatial_paddings( ) const {
@@ -220,6 +229,17 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * added.
    */
   void collect_local_leaves( general_spacetime_cluster & current_cluster,
+    std::vector< general_spacetime_cluster * > & leaf_vector ) const;
+
+  /**
+   * Collects the leaves created by an additional refinement of spatially
+   * large clusters.
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   * @param[in,out] leaf_vector Vector to which the detected local leaves are
+   * added.
+   */
+  void collect_additional_local_leaves(
+    general_spacetime_cluster & current_cluster,
     std::vector< general_spacetime_cluster * > & leaf_vector ) const;
 
   void create_subtree_pure_spatial_refinements(
@@ -670,6 +690,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * space-time elements are fully contained in the resulting child clusters. \n
    * The resulting clusters are added to the parent cluster's list of children.
    * @param[in] parent_cluster  Cluster which is refined.
+   * @param[in] is_auxiliary    Cluster was created during additional refinement
+   *                            of spatially large blocks.
    * @note It is not checked, whether the refinement is appropriate, e.g. if
    * the number of elements contained in the cluster or their sizes allow for a
    * refinement.
@@ -678,7 +700,15 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @warning The space-time level of the constructed clusters does not
    * correspond anymore to their temporal level.
    */
-  void refine_cluster_in_space( general_spacetime_cluster & parent_cluster );
+  void refine_cluster_in_space(
+    general_spacetime_cluster & parent_cluster, bool is_auxiliary = false );
+
+  /**
+   * Traverses the tree to find abnormal space-time clusters (large in space,
+   * single temporal element) and refines them only in space.
+   */
+  void refine_large_clusters_in_space(
+    general_spacetime_cluster * current_cluster );
 
   /**
    * Finds the associated spacetime clusters for each scheduling time cluster in
@@ -705,6 +735,31 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    *        spacetime root at level -1.
    */
   void associate_scheduling_clusters_and_space_time_clusters_recursively(
+    scheduling_time_cluster * t_root, general_spacetime_cluster * st_root );
+
+  /**
+   * Finds the associated spacetime leaves created by additional splitting of
+   * spatially large clusters for each scheduling time cluster in
+   * the distribution tree.
+   * @note The routine
+   * @ref associate_scheduling_clusters_and_space_time_clusters_recursively
+   * is executed to find the associated clusters.
+   */
+  void associate_scheduling_clusters_and_additional_space_time_leaves( );
+
+  /**
+   * Recursively finds the associated spacetime clusters for each
+   * scheduling time cluster in the distribution tree. For this purpose the
+   * distribution tree and the distributed spacetime cluster tree are traversed
+   * simultaneously in a recursvie manner.
+   * @param[in] t_root  Current cluster in the distribution tree.
+   * @param[in] st_root  Current cluster in the distributed spacetime cluster
+   *                     tree.
+   * @note  Call this routine for the spacetime roots at level 0, not the
+   *        spacetime root at level -1.
+   */
+  void
+  associate_scheduling_clusters_and_additional_space_time_leaves_recursively(
     scheduling_time_cluster * t_root, general_spacetime_cluster * st_root );
 
   /**
@@ -894,6 +949,11 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     _local_leaves;  //!< Vector containing the leaves of the distributed
                     //!< space-time cluster tree which are local, i.e.
                     //!< assigned to the process with rank @p _my_rank.
+
+  std::vector< general_spacetime_cluster * >
+    _additional_local_leaves;  //!< Vector containing the leaves created by an
+                               //!< an additional refinement of spatially large
+                               //!< clusters.
 
   lo _initial_space_refinement;  //!< auxiliary variable determining the
                                  //!< number of spatial refinements executed to

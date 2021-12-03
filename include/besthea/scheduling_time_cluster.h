@@ -103,6 +103,7 @@ class besthea::mesh::scheduling_time_cluster {
       _s2l_execution_status( true ),
       _downward_path_status( 0 ),
       _associated_spacetime_clusters( nullptr ),
+      _associated_additional_spacetime_leaves( nullptr ),
       _n_associated_leaves( 0 ),
       _associated_moments( nullptr ),
       _associated_local_contributions( nullptr ),
@@ -146,6 +147,8 @@ class besthea::mesh::scheduling_time_cluster {
       delete _diagonal_send_list;
     if ( _associated_spacetime_clusters != nullptr )
       delete _associated_spacetime_clusters;
+    if ( _associated_additional_spacetime_leaves != nullptr )
+      delete _associated_additional_spacetime_leaves;
     if ( _associated_moments != nullptr )
       delete[] _associated_moments;
     if ( _associated_local_contributions != nullptr )
@@ -814,6 +817,22 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
+   * Adds a space-time cluster to @p _associated_additional_spacetime_clusters.
+   * @param[in] cluster Cluster which is added to the list.
+   * @note If @p _associated_additional_spacetime_clusters is not allocated this
+   * is done here.
+   */
+  void add_associated_additional_spacetime_leaf(
+    general_spacetime_cluster * cluster ) {
+    if ( _associated_additional_spacetime_leaves == nullptr ) {
+      _associated_additional_spacetime_leaves
+        = new std::vector< general_spacetime_cluster * >( );
+    }
+
+    _associated_additional_spacetime_leaves->push_back( cluster );
+  }
+
+  /**
    * Returns a pointer to the const list of associated spacetime clusters.
    */
   const std::vector< general_spacetime_cluster * > *
@@ -1342,6 +1361,10 @@ class besthea::mesh::scheduling_time_cluster {
     _associated_spacetime_clusters;  //!< List of space-time clusters
                                      //!< associated to the scheduling time
                                      //!< cluster.
+  std::vector< general_spacetime_cluster * > *
+    _associated_additional_spacetime_leaves;  //!< List of space-time clusters
+                                              //!< associated to the scheduling
+                                              //!< time cluster.
   lou _n_associated_leaves;  //!< Number of associated space-time leaf clusters.
                              //!< These are first in the list of associated
                              //!< space-time clusters.

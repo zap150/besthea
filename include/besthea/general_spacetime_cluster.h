@@ -122,7 +122,9 @@ class besthea::mesh::general_spacetime_cluster {
       _m2t_list( nullptr ),
       _s2l_list( nullptr ),
       _moment( nullptr ),
-      _local_contribution( nullptr ) {
+      _local_contribution( nullptr ),
+      _has_additional_spatial_children( false ),
+      _is_auxiliary_ref_cluster( false ) {
     if ( reserve_elements ) {
       _elements.reserve( _n_elements );
     }
@@ -349,6 +351,38 @@ class besthea::mesh::general_spacetime_cluster {
    */
   std::vector< general_spacetime_cluster * > * get_m2t_list( ) {
     return _m2t_list;
+  }
+
+  /**
+   * * Is the leaf cluster additionally refined in space?
+   */
+  bool has_additional_spatial_children( ) {
+    return _has_additional_spatial_children;
+  }
+
+  /**
+   * @param[in] children Boolean indicating whether the cluster
+   *                     is additinally refined in space only.
+   */
+  void set_has_additional_spatial_children( bool children ) {
+    _has_additional_spatial_children = children;
+  }
+
+  /**
+   * Indicates whether the cluster was created by additional spatial
+   * refinement.
+   */
+  bool is_auxiliary_ref_cluster( ) {
+    return _is_auxiliary_ref_cluster;
+  }
+
+  /**
+   *
+   * @param[in] is_auxiliary_ref_cluster Was the cluster created as
+   * an auxiliary one during additional spatial subdivision?
+   */
+  void set_auxiliary_ref_cluster_status( bool is_auxiliary_ref_cluster ) {
+    _is_auxiliary_ref_cluster = is_auxiliary_ref_cluster;
   }
 
   /**
@@ -991,24 +1025,30 @@ class besthea::mesh::general_spacetime_cluster {
     std::cout << ", octant: " << _octant;
     std::cout << ", global_leaf_status: " << _global_leaf_status;
     std::cout << ", process id: " << _process_id;
+    std::cout << ", n_space_div: " << _n_space_div;
+    std::cout << ", is_auxiliary_ref_cluster: " << _is_auxiliary_ref_cluster;
     // std::cout << ", elements: ";
     // for ( lou i = 0; i < _elements.size( ); ++i ) {
     //   std::cout << _elements[ i ] << " ";
     // }
     // std::cout << ", nearfield: ";
     // for ( auto nf_cluster : *_nearfield_list ) {
-    //   std::vector< slou > nf_box_coordinate = nf_cluster->get_box_coordinate(
+    //   std::vector< slou > nf_box_coordinate =
+    //   nf_cluster->get_box_coordinate(
     //   ); std::cout << "(" << nf_box_coordinate[ 0 ] << ", "
-    //             << nf_box_coordinate[ 1 ] << ", " << nf_box_coordinate[ 2 ]
+    //             << nf_box_coordinate[ 1 ] << ", " <<
+    //             nf_box_coordinate[ 2 ]
     //             << ", " << nf_box_coordinate[ 3 ] << ", "
     //             << nf_box_coordinate[ 4 ] << "), ";
     // }
     // if ( _interaction_list != nullptr ) {
     //   std::cout << ", interaction list: ";
     //   for ( auto ff_cluster : *_interaction_list ) {
-    //   std::vector< slou > ff_box_coordinate = ff_cluster->get_box_coordinate(
+    //   std::vector< slou > ff_box_coordinate =
+    //   ff_cluster->get_box_coordinate(
     //   ); std::cout << "(" << ff_box_coordinate[ 0 ] << ", "
-    //             << ff_box_coordinate[ 1 ] << ", " << ff_box_coordinate[ 2 ]
+    //             << ff_box_coordinate[ 1 ] << ", " <<
+    //             ff_box_coordinate[ 2 ]
     //             << ", " << ff_box_coordinate[ 3 ] << ", "
     //             << ff_box_coordinate[ 4 ] << "), ";
     //   }
@@ -1050,6 +1090,33 @@ class besthea::mesh::general_spacetime_cluster {
     // }
   }
 
+  /**
+   * Detects whether the current cluster is separated from the other cluster.
+   *
+   * @param cluster Cluster with respect to which we check the spatial
+   * separation.
+   */
+  bool is_separated_in_space( const general_spacetime_cluster * cluster ) {
+    const std::vector< slou > & this_coordinates = this->get_box_coordinate( );
+    const std::vector< slou > & cluster_coordinates
+      = cluster->get_box_coordinate( );
+    lo x_diff, y_diff, z_diff;
+    x_diff = this_coordinates[ 1 ] - cluster_coordinates[ 1 ];
+    y_diff = this_coordinates[ 2 ] - cluster_coordinates[ 2 ];
+    z_diff = this_coordinates[ 3 ] - cluster_coordinates[ 3 ];
+    bool are_separated = ( std::abs( x_diff ) > 1 || std::abs( y_diff ) > 1
+      || std::abs( z_diff ) > 1 );
+    return are_separated;
+  }
+
+  /**
+   * Returns the pointer to the cluster from which this cluster was
+   * created by an additional subdivision of the spatially large cluster.
+   */
+  general_spacetime_cluster * get_original_leaf_ascendant( ) {
+    return compute_original_leaf_ascendant( this );
+  }
+
  private:
   lo _n_elements;             //!< number of spacetime elements in the cluster.
   lo _n_time_elements;        //!< number of different time steps in the
@@ -1078,7 +1145,11 @@ class besthea::mesh::general_spacetime_cluster {
   std::vector< general_spacetime_cluster * > *
     _children;               //!< children of the current cluster
   bool _global_leaf_status;  //!< indicates whether the cluster is a leaf in the
-                             //!< global tree (true) or not (false).
+                             //!< global tree (true) or not (false). Note:
+                             //!< Auxiliary spatial refinements are not taken
+                             //!< into account, so an auxiliary refined cluster
+                             //!< keeps global_leaf_status true, and its
+                             //!< descendants' status is set to false.
   const distributed_spacetime_tensor_mesh &
     _mesh;  //!< distributed spacetime mesh associated with the cluster
   bool _elements_are_local;  //!< Indicates if the elements contained in the
@@ -1126,6 +1197,27 @@ class besthea::mesh::general_spacetime_cluster {
                                       //!< which is stored in the associated
                                       //!< scheduling_time_cluster. Same access
                                       //!< per time-step as for spatial moments.
+  bool _has_additional_spatial_children;  //!< determines whether the cluster
+                                          //!< has been additionally subdivided
+                                          //!< in space
+  bool _is_auxiliary_ref_cluster;  //!< was the cluster created by additional
+                                   //!< spatial refinement?
+
+  /**
+   * Computer the pointer to the cluster from which this cluster was
+   * created by an additional subdivision of the spatially large cluster.
+   */
+  general_spacetime_cluster * compute_original_leaf_ascendant(
+    general_spacetime_cluster * cluster ) {
+    general_spacetime_cluster * ret;
+    if ( !cluster->has_additional_spatial_children( ) ) {
+      ret = compute_original_leaf_ascendant( cluster->_parent );
+    } else {
+      ret = cluster;
+    }
+    // std::cout << ret <<std::endl;
+    return ret;
+  }
 };
 
 /** specialization of @ref besthea::mesh::general_spacetime_cluster::get_n_dofs
