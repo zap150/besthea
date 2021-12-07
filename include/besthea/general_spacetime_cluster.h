@@ -121,6 +121,8 @@ class besthea::mesh::general_spacetime_cluster {
       _interaction_list( nullptr ),
       _m2t_list( nullptr ),
       _s2l_list( nullptr ),
+      _n_hybrid_m2t_operations( -1 ),
+      _n_hybrid_s2l_operations( -1 ),
       _moment( nullptr ),
       _local_contribution( nullptr ),
       _has_additional_spatial_children( false ),
@@ -351,6 +353,36 @@ class besthea::mesh::general_spacetime_cluster {
    */
   std::vector< general_spacetime_cluster * > * get_m2t_list( ) {
     return _m2t_list;
+  }
+
+  /**
+   * Sets the value of @ref _n_hybrid_m2t_operations to a given value.
+   * @param[in] value Value to be set.
+   */
+  void set_n_hybrid_m2t_operations( lo value ) {
+    _n_hybrid_m2t_operations = value;
+  }
+
+  /**
+   * Returns the value of @ref _n_hybrid_m2t_operations
+   */
+  lo get_n_hybrid_m2t_operations( ) const {
+    return _n_hybrid_m2t_operations;
+  }
+
+  /**
+   * Sets the value of @ref _n_hybrid_s2l_operations to a given value.
+   * @param[in] value Value to be set.
+   */
+  void set_n_hybrid_s2l_operations( lo value ) {
+    _n_hybrid_s2l_operations = value;
+  }
+
+  /**
+   * Returns the value of @ref _n_hybrid_s2l_operations
+   */
+  lo get_n_hybrid_s2l_operations( ) const {
+    return _n_hybrid_s2l_operations;
   }
 
   /**
@@ -1031,15 +1063,17 @@ class besthea::mesh::general_spacetime_cluster {
     // for ( lou i = 0; i < _elements.size( ); ++i ) {
     //   std::cout << _elements[ i ] << " ";
     // }
-    // std::cout << ", nearfield: ";
+    // if ( _nearfield_list != nullptr ) {
+    //   std::cout << ", nearfield: n_clusters is " << _nearfield_list->size( );
+    // std::cout << ", list: ";
     // for ( auto nf_cluster : *_nearfield_list ) {
-    //   std::vector< slou > nf_box_coordinate =
-    //   nf_cluster->get_box_coordinate(
-    //   ); std::cout << "(" << nf_box_coordinate[ 0 ] << ", "
-    //             << nf_box_coordinate[ 1 ] << ", " <<
-    //             nf_box_coordinate[ 2 ]
+    //   std::vector< slou > nf_box_coordinate
+    //     = nf_cluster->get_box_coordinate( );
+    //   std::cout << "(" << nf_box_coordinate[ 0 ] << ", "
+    //             << nf_box_coordinate[ 1 ] << ", " << nf_box_coordinate[ 2 ]
     //             << ", " << nf_box_coordinate[ 3 ] << ", "
     //             << nf_box_coordinate[ 4 ] << "), ";
+    // }
     // }
     // if ( _interaction_list != nullptr ) {
     //   std::cout << ", interaction list: ";
@@ -1054,7 +1088,8 @@ class besthea::mesh::general_spacetime_cluster {
     //   }
     // }
     // if ( _m2t_list != nullptr ) {
-    //   std::cout << "m2t list: ";
+    //   std::cout << "m2t list (total = " << _m2t_list->size( )
+    //             << ", n_hybrid = " << _n_hybrid_m2t_operations << "): ";
     //   for ( auto m2t_cluster : *_m2t_list ) {
     //     std::vector< slou > m2t_box_coordinate
     //       = m2t_cluster->get_box_coordinate( );
@@ -1067,7 +1102,8 @@ class besthea::mesh::general_spacetime_cluster {
     // }
 
     // if ( _s2l_list != nullptr ) {
-    //   std::cout << "s2l list: ";
+    //   std::cout << "s2l list (total = " << _s2l_list->size( )
+    //             << ",n_hybrid = " << _n_hybrid_s2l_operations << "): ";
     //   for ( auto s2l_cluster : *_s2l_list ) {
     //     std::vector< slou > s2l_box_coordinate
     //       = s2l_cluster->get_box_coordinate( );
@@ -1182,6 +1218,12 @@ class besthea::mesh::general_spacetime_cluster {
   std::vector< general_spacetime_cluster * > *
     _s2l_list;  //!< list of source clusters for which s2l operations have to be
                 //!< executed.
+  lo _n_hybrid_m2t_operations;  //!< number of clusters in m2t list, for which
+                                //!< hybrid m2t operations can be executed. They
+                                //!< come first in _m2t_list.
+  lo _n_hybrid_s2l_operations;  //!< number of clusters in s2l list, for which
+                                //!< hybrid s2l operations can be executed. They
+                                //!< come first in _s2l_list.
   sc * _moment;  //!< pointer to the moment of the cluster, which is stored in
                  //!< the associated scheduling_time_cluster
   sc * _local_contribution;  //!< pointer to the local contribution of the

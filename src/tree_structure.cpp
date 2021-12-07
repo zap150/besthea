@@ -614,7 +614,8 @@ void besthea::mesh::tree_structure::set_cluster_operation_lists(
               } else {
                 // only for global leaves we have to determine the correct
                 // operation lists by traversing the subtree of src_cluster
-                determine_operation_lists_in_subtree( *src_cluster, root );
+                determine_operation_lists_in_source_subtree(
+                  *src_cluster, root );
               }
             }
           }
@@ -630,7 +631,7 @@ void besthea::mesh::tree_structure::set_cluster_operation_lists(
   }
 }
 
-void besthea::mesh::tree_structure::determine_operation_lists_in_subtree(
+void besthea::mesh::tree_structure::determine_operation_lists_in_source_subtree(
   scheduling_time_cluster & current_cluster,
   scheduling_time_cluster & target_cluster ) {
   bool continue_search = true;
@@ -648,7 +649,7 @@ void besthea::mesh::tree_structure::determine_operation_lists_in_subtree(
       std::vector< scheduling_time_cluster * > * children
         = current_cluster.get_children( );
       for ( auto it = children->begin( ); it != children->end( ); ++it ) {
-        determine_operation_lists_in_subtree( **it, target_cluster );
+        determine_operation_lists_in_source_subtree( **it, target_cluster );
       }
     }
   }
@@ -860,9 +861,9 @@ void besthea::mesh::tree_structure::determine_cluster_communication_lists(
 
       // go through the send list of the cluster. If it contains a non-local
       // cluster add root together with the process id of the non-local
-      // cluster to the leaf info send list NOTE: if root is falsely added
-      // (because its mesh is available for the receiving process, it is
-      // removed from the list below)
+      // cluster to the leaf info send list
+      // NOTE: if root is falsely added (because its mesh is available for the
+      // receiving process, it is removed from the list below)
       if ( root->get_send_list( ) != nullptr ) {
         for ( auto it_sl : *( root->get_send_list( ) ) ) {
           lo sl_process_id = it_sl->get_process_id( );

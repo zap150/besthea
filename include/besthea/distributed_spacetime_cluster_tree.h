@@ -803,20 +803,21 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     general_spacetime_cluster & target_cluster );
 
   /**
-   * Initializes the nearfield list and interaction list for every cluster in
-   * the distributed spacetime cluster tree by recursively traversing the tree.
-   * In addition, it initializes the m2t and s2l lists of appropriate clusters.
-   * @param[in] current_cluster  Current cluster in the tree traversal.
+   * Initializes the nearfield, interaction, m2t and s2l list for every cluster
+   * in the distributed spacetime cluster tree by recursively traversing the
+   * tree.
+   * @param[in] crrnt_tar_cluster  Current cluster in the tree traversal.
    * @warning The construction is based only on the local part of the cluster
    * tree. Only for local clusters the nearfield and interaction lists are the
    * same as in the global tree.
+   * @note Auxiliary spatially refined clusters are handled explicitly.
    */
-  void fill_nearfield_interaction_m2t_and_s2l_lists(
-    general_spacetime_cluster & current_cluster );
+  void fill_cluster_operation_lists(
+    general_spacetime_cluster & crrnt_tar_cluster );
 
   /**
    * Used for the construction of nearfields and m2t lists of early leaf
-   * clusters by @ref fill_nearfield_interaction_m2t_and_s2l_lists. It
+   * clusters by @ref fill_cluster_operation_lists. It
    * recursively traverses the tree starting from the initial cluster
    * @p current_source, and updates the nearfield and m2t list of
    * @p target_cluster appropriately.
@@ -824,9 +825,41 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @param[in] target_cluster  Cluster whose nearfield and m2t lists are
    * updated.
    */
-  void determine_operation_lists_in_subtree(
+  void determine_operation_lists_in_source_subtree(
     general_spacetime_cluster & current_source,
     general_spacetime_cluster & target_cluster );
+
+  /**
+   * This is an auxiliary routine which is used in
+   * @ref fill_cluster_operation_lists to handle target clusters whose children
+   * are auxiliary (spatially refined) clusters.
+   *
+   * It is used to decide whether @p source_cluster is added to the nearfield of
+   * @p target_cluster directly, or whether @p source_cluster's children are
+   * visited and added either to the nearfield or m2t list of @p target_cluster.
+   * @param[in] source_cluster  Source cluster in the nearfield of the current
+   * target cluster.
+   * @param[in] target_cluster  Current target cluster.
+   */
+  void determine_operation_lists_subroutine_targets_with_aux_children(
+    general_spacetime_cluster & source_cluster,
+    general_spacetime_cluster & target_cluster );
+
+  /**
+   * This routine decides for all clusters in the local space-time tree with
+   * non-empty m2t or s2l list whether hybrid or standard m2t or s2l operations
+   * have to be executed, respectively. It is based on a recursive tree
+   * traversal.
+   *
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   * @note  The routine sorts the m2t and s2l lists of each cluster, such that
+   * clusters for which hybrid operations are admissible come first in the list.
+   * It uses @ref general_spacetime_cluster::set_n_hybrid_m2t_operations and
+   * @ref general_spacetime_cluster::set_n_hybrid_s2l_operations to store the
+   * number of hybrid operations for each cluster.
+   */
+  void distinguish_hybrid_and_standard_m2t_and_s2l_operations(
+    general_spacetime_cluster & current_cluster );
 
   /**
    * Recursively computes padding of clusters in the tree

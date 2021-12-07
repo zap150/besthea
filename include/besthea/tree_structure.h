@@ -463,7 +463,7 @@ class besthea::mesh::tree_structure {
    * @param[in] target_cluster  Cluster to whose nearfield the leaves are
    * added.
    */
-  void determine_operation_lists_in_subtree(
+  void determine_operation_lists_in_source_subtree(
     scheduling_time_cluster & current_cluster,
     scheduling_time_cluster & target_cluster );
 
