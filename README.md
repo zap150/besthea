@@ -94,6 +94,10 @@ Please cite this research as:
 * R. Watschinger, M. Merta, G. Of, J. Zapletal, *A parallel fast multipole method for a space-time boundary element method for the heat equation*, 2021, [arXiv:2106.15911](https://arxiv.org/abs/2106.15911).\
 See this [guide](./examples/distributed_tensor_dirichlet/experiments_parallel_fmm.md) to **reproduce** experiments from the paper.
 
+Other related publications:
+
+* R. Watschinger, G. Of, *An integration by parts formula for the bilinear form of the hypersingular boundary integral operator for the transient heat equation in three spatial dimensions*, 2021, J. Integral Equ. Appl. (accepted). [arXiv:2104.15024](https://arxiv.org/abs/2104.15024)
+
 
 ## Contact
 
