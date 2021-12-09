@@ -61,6 +61,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   _distributed_spacetime_tree = distributed_spacetime_tree;
   _scheduling_tree_structure
     = _distributed_spacetime_tree->get_distribution_tree( );
+  // FIXME: the following has to be changed in case of more advanced nearfield
+  // computation strategies.
   const std::vector< general_spacetime_cluster * > & local_leaves
     = distributed_spacetime_tree->get_local_leaves( );
   for ( auto leaf : local_leaves ) {
@@ -89,8 +91,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     _scheduling_tree_structure->compare_clusters_top_down_right_2_left );
   _m2t_list.sort(
     _scheduling_tree_structure->compare_clusters_top_down_right_2_left );
-  // note: no operations depend on m2t operations, so in principle there is no
-  // need to sort them. The order could, however, influence the performance.
 
   // allocate the timers
   for ( auto & it : _m_task_times ) {
@@ -190,6 +190,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
   }
   _n_moments_to_receive_upward = _receive_data_information.size( );
+
   // check for receive operations in the interaction phase
   for ( auto it = _m2l_list.begin( ); it != _m2l_list.end( ); ++it ) {
     std::vector< scheduling_time_cluster * > * interaction_list
@@ -206,6 +207,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       }
     }
   }
+
   // check for receive operations for m2t operations
   for ( auto it = _m2t_list.begin( ); it != _m2t_list.end( ); ++it ) {
     std::vector< scheduling_time_cluster * > * clusters_m2t_list
@@ -234,7 +236,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   auto new_end = std::unique(
     _receive_data_information.begin( ) + _n_moments_to_receive_upward,
     _receive_data_information.end( ),
-    []( const std::pair< scheduling_time_cluster *, lo > pair_one,
+    [ & ]( const std::pair< scheduling_time_cluster *, lo > pair_one,
       const std::pair< scheduling_time_cluster *, lo > pair_two ) {
       return pair_one.first == pair_two.first;
     } );
@@ -242,6 +244,40 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     std::distance( _receive_data_information.begin( ), new_end ) );
   _n_moments_to_receive_m2l_or_m2t
     = _receive_data_information.size( ) - _n_moments_to_receive_upward;
+  lo n_st_moments = _receive_data_information.size( );
+
+  // check for receive operations for s2l operations (spatial moments)
+  for ( auto it = _s2l_list.begin( ); it != _s2l_list.end( ); ++it ) {
+    std::vector< mesh::scheduling_time_cluster * > * cluster_s2l_list
+      = ( *it )->get_s2l_list( );
+    for ( auto s2l_source_cluster : *cluster_s2l_list ) {
+      if ( s2l_source_cluster->get_n_children( ) == 0
+        && s2l_source_cluster->get_process_id( ) != _my_rank ) {
+        _receive_data_information.push_back(
+          { s2l_source_cluster, s2l_source_cluster->get_process_id( ) } );
+      }
+    }
+  }
+  // spatial moments of each cluster have to be received only once -> find and
+  // eliminate double entries in the third part of the receive vector
+  std::sort( _receive_data_information.begin( ) + n_st_moments,
+    _receive_data_information.end( ),
+    [ & ]( const std::pair< scheduling_time_cluster *, lo > pair_one,
+      const std::pair< scheduling_time_cluster *, lo > pair_two ) {
+      return _scheduling_tree_structure->compare_clusters_top_down_right_2_left(
+        pair_one.first, pair_two.first );
+    } );
+  new_end = std::unique( _receive_data_information.begin( ) + n_st_moments,
+    _receive_data_information.end( ),
+    [ & ]( const std::pair< scheduling_time_cluster *, lo > pair_one,
+      const std::pair< scheduling_time_cluster *, lo > pair_two ) {
+      return pair_one.first == pair_two.first;
+    } );
+  _receive_data_information.resize(
+    std::distance( _receive_data_information.begin( ), new_end ) );
+  _n_spatial_moments_to_receive
+    = _receive_data_information.size( ) - n_st_moments;
+
   // check for receive operations in the downward path
   for ( auto it = _l_list.begin( ); it != _l_list.end( ); ++it ) {
     scheduling_time_cluster * parent = ( *it )->get_parent( );
@@ -3179,7 +3215,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // start the receive operations for the local contributions
   // std::cout << "receive operations for local contributions: " <<
   // std::endl;
-  for ( lou i = _n_moments_to_receive_upward + _n_moments_to_receive_m2l_or_m2t;
+  for ( lou i = _n_moments_to_receive_upward + _n_moments_to_receive_m2l_or_m2t
+          + _n_spatial_moments_to_receive;
         i < _receive_data_information.size( ); ++i ) {
     lo source_id = _receive_data_information[ i ].second;
     scheduling_time_cluster * receive_cluster
@@ -4658,7 +4695,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 #pragma omp task depend( inout : aux_dep_m [idx:1] ) priority( 1000 )
               upward_path_task( current_index, current_cluster );
             } else if ( current_index < _n_moments_to_receive_upward
-                + _n_moments_to_receive_m2l_or_m2t ) {
+                + _n_moments_to_receive_m2l_or_m2t
+                + _n_spatial_moments_to_receive ) {
               if ( _measure_tasks ) {
                 _mpi_recv_m2l.at( omp_get_thread_num( ) )
                   .push_back(

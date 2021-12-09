@@ -102,8 +102,8 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 
   initialize_moment_and_local_contributions( );
 
-  // fill the m-list, m2l-list, n-list and l2l-list of the distributed pFMM
-  // matrix and determine the receive information data.
+  // fill the m-list, m2l-list, l-list, m2t-list, s2l-list and n-list of the
+  // distributed pFMM matrix and determine the receive information data.
   global_matrix.prepare_fmm( );
 
   // precompute Chebyshev nodes and values

@@ -300,7 +300,7 @@ std::vector< lo > besthea::mesh::time_cluster_tree::compute_process_assignments(
         // clusters in a stable manner, and assign clusters to the first few
         // processes
         stable_sort( clusters_per_process.begin( ), clusters_per_process.end( ),
-          []( std::pair< lo, lo > a, std::pair< lo, lo > b ) {
+          [ & ]( std::pair< lo, lo > a, std::pair< lo, lo > b ) {
             return ( a.second < b.second );
           } );
         n_clusters /= 2;
@@ -321,7 +321,7 @@ std::vector< lo > besthea::mesh::time_cluster_tree::compute_process_assignments(
         levelwise_assignment[ 1 ] = levelwise_assignment[ access_index + 2 ];
         clusters_per_process[ 2 ].second += 1;
         stable_sort( clusters_per_process.begin( ), clusters_per_process.end( ),
-          []( std::pair< lo, lo > a, std::pair< lo, lo > b ) {
+          [ & ]( std::pair< lo, lo > a, std::pair< lo, lo > b ) {
             return ( a.second < b.second );
           } );
         levelwise_assignment[ 2 ] = clusters_per_process[ 0 ].first;

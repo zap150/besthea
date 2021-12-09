@@ -240,50 +240,44 @@ void besthea::mesh::tree_structure::clear_local_contributions(
 void besthea::mesh::tree_structure::allocate_spatial_moments_in_tree(
   scheduling_time_cluster & current_cluster, lou spatial_contribution_size,
   lo first_space_refinement_level ) {
-  if ( current_cluster.is_active_in_upward_path( ) ) {
-    std::vector< scheduling_time_cluster * > * s2l_send_list
-      = current_cluster.get_s2l_send_list( );
-    const std::vector< lo > * n_associated_leaves_and_aux_clusters
-      = current_cluster.get_n_associated_leaves_and_aux_clusters_per_level( );
-    if ( s2l_send_list != nullptr
-      && n_associated_leaves_and_aux_clusters != nullptr ) {
-      // determine the spatial levels, for which spatial moments might have to
-      // be created
-      std::set< lo > relative_spatial_levels;
-      lo current_time_level = current_cluster.get_level( );
-      lo current_space_level
-        = ( current_time_level >= first_space_refinement_level )
-        ? ( current_time_level - first_space_refinement_level ) / 2 + 1
+  std::vector< scheduling_time_cluster * > * s2l_send_list
+    = current_cluster.get_s2l_send_list( );
+  const std::vector< lo > * n_associated_leaves_and_aux_clusters
+    = current_cluster.get_n_associated_leaves_and_aux_clusters_per_level( );
+  // note: spatial moments are only allocated for leaf clusters.
+  if ( current_cluster.get_n_children( ) == 0 && s2l_send_list != nullptr
+    && n_associated_leaves_and_aux_clusters != nullptr ) {
+    // determine the maximal relative spatial level, for which spatial moments
+    // have to be created (relative to the "natural" spatial level of the
+    // current time cluster)
+    lou max_rel_space_level = 0;
+    lo current_time_level = current_cluster.get_level( );
+    lo current_space_level
+      = ( current_time_level >= first_space_refinement_level )
+      ? ( current_time_level - first_space_refinement_level ) / 2 + 1
+      : 0;
+    // note: Space levels are only computed correctly if there are no
+    // initial refinements in the space-time cluster tree. Since we are only
+    // interested in differences of spatial levels this does not matter.
+    for ( auto s2l_target_cluster : *s2l_send_list ) {
+      lo target_time_level = s2l_target_cluster->get_level( );
+      lo target_space_level
+        = ( target_time_level >= first_space_refinement_level )
+        ? ( target_time_level - first_space_refinement_level ) / 2 + 1
         : 0;
-      // note: Current space level is only computed correctly if there are no
-      // initial refinements in the space-time cluster tree. Since we are only
-      // interested in differences of spatial levels this does not matter.
-      for ( auto s2l_target_cluster : *s2l_send_list ) {
-        lo target_time_level = s2l_target_cluster->get_level( );
-        lo target_space_level
-          = ( target_time_level >= first_space_refinement_level )
-          ? ( target_time_level - first_space_refinement_level ) / 2 + 1
-          : 0;
-        relative_spatial_levels.insert(
-          target_space_level - current_space_level );
-      }
-      // determine the maximal relative level for which spatial moments are
-      // required and allocate spatial moments for all required levels
-      lou max_rel_level = ( n_associated_leaves_and_aux_clusters->size( ) - 1
-                            < (lou) *relative_spatial_levels.rbegin( ) )
-        ? n_associated_leaves_and_aux_clusters->size( ) - 1
-        : *relative_spatial_levels.rbegin( );
-      auto set_iterator = relative_spatial_levels.begin( );
-      lou rel_level = *set_iterator;
-      while ( rel_level <= max_rel_level
-        && set_iterator != relative_spatial_levels.end( ) ) {
-        rel_level = *set_iterator;
-        // allocate the spatial moments for the current relative spatial level
-        current_cluster.allocate_associated_spatial_moments(
-          spatial_contribution_size, rel_level );
-        ++set_iterator;
+      lou rel_space_level = target_space_level - current_space_level;
+      if ( rel_space_level > max_rel_space_level ) {
+        max_rel_space_level = rel_space_level;
       }
     }
+    // max_rel_space_level has to be updated, if there are no auxiliary refined
+    // clusters at that level
+    if ( max_rel_space_level
+      > n_associated_leaves_and_aux_clusters->size( ) - 1 ) {
+      max_rel_space_level = n_associated_leaves_and_aux_clusters->size( ) - 1;
+    }
+    current_cluster.allocate_associated_spatial_moments(
+      spatial_contribution_size, max_rel_space_level );
   }
   if ( current_cluster.get_n_children( ) > 0 ) {
     for ( auto child : *current_cluster.get_children( ) ) {
@@ -295,7 +289,7 @@ void besthea::mesh::tree_structure::allocate_spatial_moments_in_tree(
 
 void besthea::mesh::tree_structure::clear_spatial_moment_contributions(
   scheduling_time_cluster & current_cluster ) {
-  current_cluster.clear_all_associated_spatial_moments( );
+  current_cluster.clear_associated_spatial_moments( );
   if ( current_cluster.get_n_children( ) > 0 ) {
     for ( auto t_child : *current_cluster.get_children( ) ) {
       clear_spatial_moment_contributions( *t_child );
@@ -307,52 +301,44 @@ void besthea::mesh::tree_structure::
   allocate_spatial_local_contributions_in_tree(
     scheduling_time_cluster & current_cluster, lou spatial_contribution_size,
     lo first_space_refinement_level ) {
-  if ( current_cluster.is_active_in_downward_path( ) ) {
-    std::vector< scheduling_time_cluster * > * m2t_list
-      = current_cluster.get_m2t_list( );
-    const std::vector< lo > * n_associated_leaves_and_aux_clusters
-      = current_cluster.get_n_associated_leaves_and_aux_clusters_per_level( );
-    if ( m2t_list != nullptr
-      && n_associated_leaves_and_aux_clusters != nullptr ) {
-      // determine the spatial levels, for which spatial local contributions
-      // might have to be created
-      std::set< lo > relative_spatial_levels;
-      lo current_time_level = current_cluster.get_level( );
-      lo current_space_level
-        = ( current_time_level >= first_space_refinement_level )
-        ? ( current_time_level - first_space_refinement_level ) / 2 + 1
+  std::vector< scheduling_time_cluster * > * m2t_list
+    = current_cluster.get_m2t_list( );
+  const std::vector< lo > * n_associated_leaves_and_aux_clusters
+    = current_cluster.get_n_associated_leaves_and_aux_clusters_per_level( );
+  // note: spatial local contributions are only allocated for leaf clusters.
+  if ( current_cluster.get_n_children( ) == 0 && m2t_list != nullptr
+    && n_associated_leaves_and_aux_clusters != nullptr ) {
+    // determine the maximal relative spatial level, for which spatial moments
+    // have to be created (relative to the "natural" spatial level of the
+    // current time cluster)
+    lou max_rel_space_level = 0;
+    lo current_time_level = current_cluster.get_level( );
+    lo current_space_level
+      = ( current_time_level >= first_space_refinement_level )
+      ? ( current_time_level - first_space_refinement_level ) / 2 + 1
+      : 0;
+    // note: Current space level is only computed correctly if there are no
+    // initial refinements in the space-time cluster tree. Since we are only
+    // interested in differences of spatial levels this does not matter.
+    for ( auto m2t_source_cluster : *m2t_list ) {
+      lo source_time_level = m2t_source_cluster->get_level( );
+      lo source_space_level
+        = ( source_time_level >= first_space_refinement_level )
+        ? ( source_time_level - first_space_refinement_level ) / 2 + 1
         : 0;
-      // note: Current space level is only computed correctly if there are no
-      // initial refinements in the space-time cluster tree. Since we are only
-      // interested in differences of spatial levels this does not matter.
-      for ( auto m2t_source_cluster : *m2t_list ) {
-        lo source_time_level = m2t_source_cluster->get_level( );
-        lo source_space_level
-          = ( source_time_level >= first_space_refinement_level )
-          ? ( source_time_level - first_space_refinement_level ) / 2 + 1
-          : 0;
-        relative_spatial_levels.insert(
-          source_space_level - current_space_level );
-      }
-      // determine the maximal relative level for which spatial local
-      // contributions are required and allocate spatial local contributions for
-      // all required levels
-      lou max_rel_level = ( n_associated_leaves_and_aux_clusters->size( ) - 1
-                            < (lou) *relative_spatial_levels.rbegin( ) )
-        ? n_associated_leaves_and_aux_clusters->size( ) - 1
-        : *relative_spatial_levels.rbegin( );
-      auto set_iterator = relative_spatial_levels.begin( );
-      lou rel_level = *set_iterator;
-      while ( rel_level <= max_rel_level
-        && set_iterator != relative_spatial_levels.end( ) ) {
-        rel_level = *set_iterator;
-        // allocate the spatial local contributins for the current relative
-        // spatial level
-        current_cluster.allocate_associated_spatial_local_contributions(
-          spatial_contribution_size, rel_level );
-        ++set_iterator;
+      lou rel_space_level = source_space_level - current_space_level;
+      if ( rel_space_level > max_rel_space_level ) {
+        max_rel_space_level = rel_space_level;
       }
     }
+    // max_rel_space_level has to be updated, if there are no auxiliary refined
+    // clusters at that level
+    if ( max_rel_space_level
+      > n_associated_leaves_and_aux_clusters->size( ) - 1 ) {
+      max_rel_space_level = n_associated_leaves_and_aux_clusters->size( ) - 1;
+    }
+    current_cluster.allocate_associated_spatial_local_contributions(
+      spatial_contribution_size, max_rel_space_level );
   }
   if ( current_cluster.get_n_children( ) > 0 ) {
     for ( auto child : *current_cluster.get_children( ) ) {
@@ -364,7 +350,7 @@ void besthea::mesh::tree_structure::
 
 void besthea::mesh::tree_structure::clear_spatial_local_contributions(
   scheduling_time_cluster & current_cluster ) {
-  current_cluster.clear_all_associated_spatial_local_contributions( );
+  current_cluster.clear_associated_spatial_local_contributions( );
   if ( current_cluster.get_n_children( ) > 0 ) {
     for ( auto t_child : *current_cluster.get_children( ) ) {
       clear_spatial_local_contributions( *t_child );
@@ -486,6 +472,7 @@ void besthea::mesh::tree_structure::init_fmm_lists(
 
   // add the cluster to the n-list, if it is associated with spacetime leaf
   // clusters
+  // FIXME: maybe this has to be updated for more advanced nearfield operations.
   if ( root.get_process_id( ) == _my_process_id
     && root.get_n_associated_leaves( ) > 0 ) {
     n_list.push_back( &root );
@@ -1124,7 +1111,7 @@ void besthea::mesh::tree_structure::determine_cluster_activity(
   // check if cluster is active in downward path
   if ( ( root.get_interaction_list( ) != nullptr )
     || ( root.get_s2l_list( ) != nullptr )
-    || ( root.get_m2t_list( ) != nullptr )
+    // || ( root.get_m2t_list( ) != nullptr ) FIXME: is this needed?
     || ( root.get_parent( ) != nullptr
       && root.get_parent( )->is_active_in_downward_path( ) ) ) {
     root.set_active_downward_path_status( true );

@@ -3014,7 +3014,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   // clusters can never be associated with the same time cluster.
   if ( associated_st_clusters != nullptr ) {
     std::sort( associated_st_clusters->begin( ), associated_st_clusters->end( ),
-      []( general_spacetime_cluster * first,
+      [ & ]( general_spacetime_cluster * first,
         general_spacetime_cluster * second ) {
         // compare booleans:
         // (true > false, so leaves "are bigger" than non-leaves)
@@ -3041,7 +3041,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     if ( t_root->is_global_leaf( ) ) {
       std::stable_sort( associated_st_clusters->begin( ),
         associated_st_clusters->end( ),
-        []( general_spacetime_cluster * first,
+        [ & ]( general_spacetime_cluster * first,
           general_spacetime_cluster * second ) {
           // compare spatial levels:
           // cluster with small level < cluster with large level)
@@ -3461,7 +3461,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
       // sort the clusters in the m2t list by their spatial level in
       // increasing order
       std::sort( current_m2t_list->begin( ), current_m2t_list->end( ),
-        []( general_spacetime_cluster * first,
+        [ & ]( general_spacetime_cluster * first,
           general_spacetime_cluster * second ) {
           lo first_space_level, second_space_level, dummy;
           first->get_n_divs( first_space_level, dummy );
@@ -3496,7 +3496,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
       // sort the clusters in the s2l list by their spatial level in
       // decreasing order
       std::sort( current_s2l_list->begin( ), current_s2l_list->end( ),
-        []( general_spacetime_cluster * first,
+        [ & ]( general_spacetime_cluster * first,
           general_spacetime_cluster * second ) {
           lo first_space_level, second_space_level, dummy;
           first->get_n_divs( first_space_level, dummy );

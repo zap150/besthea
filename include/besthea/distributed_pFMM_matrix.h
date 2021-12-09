@@ -1637,6 +1637,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   lou _n_moments_to_receive_m2l_or_m2t;  //!< Number of grouped moments which
                                          //!< have to be received for M2L or M2T
                                          //!< operations.
+  lou _n_spatial_moments_to_receive;     //!< Number of grouped spatial moments
+                                      //!< which have to be received for hybrid
+                                      //!< S2L operations.
 
   std::vector< vector_type >
     _m2m_coeffs_s_dim_0_left;  //!< left spatial m2m matrices along dimension 0
