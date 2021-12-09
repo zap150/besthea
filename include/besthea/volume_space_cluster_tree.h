@@ -193,12 +193,12 @@ class besthea::mesh::volume_space_cluster_tree {
   }
 
   /**
-   * Traverses the cluster tree recursively and allocates and initializes the
+   * Traverses the cluster tree recursively and allocates the
    * moments for all clusters.
    * @param[in] current_cluster  Current cluster in the tree traversal.
    * @param[in] contribution_size Size of the moment of a cluster.
    */
-  void initialize_moment_contributions(
+  void allocate_moments_in_tree(
     volume_space_cluster & current_cluster, lou contribution_size );
 
   /**

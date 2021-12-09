@@ -2970,32 +2970,32 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   bool verbose, const std::string & verbose_file ) const {
   std::vector< scheduling_time_cluster * > * send_list
     = src_cluster->get_send_list( );
-  std::vector< scheduling_time_cluster * > * diagonal_send_list
-    = src_cluster->get_diagonal_send_list( );
+  std::vector< scheduling_time_cluster * > * m2t_send_list
+    = src_cluster->get_m2t_send_list( );
   // go through the send and diagonal send list and see whether there are
   // target clusters handled by other processes.
   std::set< lo > process_send_list;
   std::vector< scheduling_time_cluster * >::iterator list_iterator;
   std::vector< scheduling_time_cluster * >::iterator list_end;
-  bool in_diagonal_send_list;
+  bool in_m2t_send_list;
   if ( send_list != nullptr ) {
     list_iterator = send_list->begin( );
-    in_diagonal_send_list = false;
-    if ( diagonal_send_list == nullptr ) {
+    in_m2t_send_list = false;
+    if ( m2t_send_list == nullptr ) {
       list_end = send_list->end( );
     } else {
-      list_end = diagonal_send_list->end( );
+      list_end = m2t_send_list->end( );
     }
-  } else if ( diagonal_send_list != nullptr ) {
-    list_iterator = diagonal_send_list->begin( );
-    in_diagonal_send_list = true;
-    list_end = diagonal_send_list->end( );
+  } else if ( m2t_send_list != nullptr ) {
+    list_iterator = m2t_send_list->begin( );
+    in_m2t_send_list = true;
+    list_end = m2t_send_list->end( );
   }
-  if ( send_list != nullptr || diagonal_send_list != nullptr ) {
+  if ( send_list != nullptr || m2t_send_list != nullptr ) {
     while ( list_iterator != list_end ) {
       lo tar_process_id = ( *list_iterator )->get_process_id( );
       if ( tar_process_id == _my_rank ) {
-        if ( in_diagonal_send_list ) {
+        if ( in_m2t_send_list ) {
           ( *list_iterator )->update_n_ready_m2t_sources( );
         } else {
           ( *list_iterator )->update_n_ready_m2l_sources( );
@@ -3031,10 +3031,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         process_send_list.insert( tar_process_id );
       }
       ++list_iterator;
-      if ( !in_diagonal_send_list && diagonal_send_list != nullptr
+      if ( !in_m2t_send_list && m2t_send_list != nullptr
         && list_iterator == send_list->end( ) ) {
-        list_iterator = diagonal_send_list->begin( );
-        in_diagonal_send_list = true;
+        list_iterator = m2t_send_list->begin( );
+        in_m2t_send_list = true;
       }
     }
   }
@@ -4689,11 +4689,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                   }
                 }
               }
-              std::vector< scheduling_time_cluster * > * diagonal_send_list
-                = current_cluster->get_diagonal_send_list( );
-              if ( diagonal_send_list != nullptr ) {
-                for ( auto it = diagonal_send_list->begin( );
-                      it != diagonal_send_list->end( ); ++it ) {
+              std::vector< scheduling_time_cluster * > * m2t_send_list
+                = current_cluster->get_m2t_send_list( );
+              if ( m2t_send_list != nullptr ) {
+                for ( auto it = m2t_send_list->begin( );
+                      it != m2t_send_list->end( ); ++it ) {
                   lo tar_process_id = ( *it )->get_process_id( );
                   if ( tar_process_id == _my_rank ) {
                     // FIXME: Discuss: Here we do not introduce a separate

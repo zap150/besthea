@@ -908,13 +908,13 @@ void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
   lou spat_contribution_size
     = ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6;
   // allocate memory to store moments for all volume clusters
-  _space_source_tree->initialize_moment_contributions(
+  _space_source_tree->allocate_moments_in_tree(
     *_space_source_tree->get_root( ), spat_contribution_size );
 
   lou contribution_size = spat_contribution_size * ( _temp_order + 1 );
   tree_structure * test_distribution_tree
     = _test_space->get_tree( )->get_distribution_tree( );
-  test_distribution_tree->initialize_local_contributions_initial_op(
+  test_distribution_tree->allocate_local_contributions_in_tree_initial_op(
     *test_distribution_tree->get_root( ), contribution_size );
 }
 

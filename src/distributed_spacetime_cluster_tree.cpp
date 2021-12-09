@@ -246,43 +246,46 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     subtree_send_list, subtree_receive_list );
   distribution_tree->reduce_2_essential( );
 
-  associate_scheduling_clusters_and_space_time_clusters( );
+  // fill the nearfield and interaction lists of all space-time clusters here
+  // already, if no m2t and s2l operations should be executed. Otherwise, refine
+  // large spatial clusters first
+  if ( enable_m2t_and_s2l ) {
+    refine_large_clusters_in_space( _root );
+    // collect the auxiliary leaves in the local part of the spacetime cluster
+    // NOTE: currently we do not use these leaves
+    collect_additional_local_leaves( *_root, _additional_local_leaves );
+
+    fill_cluster_operation_lists( *_root );
+    distinguish_hybrid_and_standard_m2t_and_s2l_operations( *_root );
+
+    associate_scheduling_clusters_and_space_time_clusters( );
+    // update the m2t and s2l of the scheduling time clusters (cluster
+    // association is required for that!)
+    distribution_tree->update_m2t_and_s2l_lists( );
+  } else {
+    // FIXME: this has to be unified further (best case scenario: a single
+    // routine to fill operation lists (that handles enabling/disabling of m2t
+    // and s2l operations))
+    fill_nearfield_and_interaction_lists( *_root );
+    associate_scheduling_clusters_and_space_time_clusters( );
+  }
+
   // communicate necessary leaf information
   communicate_necessary_leaf_information(
     leaf_info_send_list, leaf_info_receive_list );
-
-  std::vector< general_spacetime_cluster * > leaf_buffer;
-  std::vector< general_spacetime_cluster * > non_leaf_buffer;
   sort_associated_space_time_clusters_recursively(
-    distribution_tree->get_root( ), leaf_buffer, non_leaf_buffer );
-  // clear the buffer vectors
-  leaf_buffer.clear( );
-  leaf_buffer.shrink_to_fit( );
-  non_leaf_buffer.clear( );
-  non_leaf_buffer.shrink_to_fit( );
+    distribution_tree->get_root( ) );
+
+  if ( enable_m2t_and_s2l ) {
+    // Sorting of associated space-time clusters has to be done before calling
+    // the following routine
+    determine_tasks_of_associated_clusters( distribution_tree->get_root( ) );
+  }
+
   // determine auxiliary variables used to determine relevant clusters in the
   // downward path of an initial pFMM matrix.
   distribution_tree->determine_downward_path_initial_op_status_recursively(
     *distribution_tree->get_root( ) );
-
-  // fill the nearfield and interaction lists of all space-time clusters here
-  // already, if no m2t and s2l operations should be executed. Otherwise, refine
-  // large spatial clusters first
-  if ( !enable_m2t_and_s2l ) {
-    fill_nearfield_and_interaction_lists( *_root );
-  }
-
-  refine_large_clusters_in_space( _root );
-  // collect the leaves in the local part of the spacetime cluster
-  collect_additional_local_leaves( *_root, _additional_local_leaves );
-  associate_scheduling_clusters_and_additional_space_time_leaves( );
-  if ( enable_m2t_and_s2l ) {
-    std::cout << "entered here" << std::endl;
-    fill_cluster_operation_lists( *_root );
-    distinguish_hybrid_and_standard_m2t_and_s2l_operations( *_root );
-    // update the m2t and s2l of the scheduling time clusters
-    distribution_tree->update_m2t_and_s2l_lists( );
-  }
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
@@ -2921,6 +2924,15 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
         }
       }
     }
+  } else if ( t_root->get_n_children( ) == 0
+    && st_root->get_n_children( ) > 0 ) {
+    // this is only possible if st_root has auxiliary spatially refined
+    // children, so we can associate all of the children of st_root with the
+    // scheduling time cluster t_root.
+    for ( auto spacetime_child : *st_root->get_children( ) ) {
+      associate_scheduling_clusters_and_space_time_clusters_recursively(
+        t_root, spacetime_child );
+    }
   }
 }
 
@@ -2984,42 +2996,144 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
 
 void besthea::mesh::distributed_spacetime_cluster_tree::
   sort_associated_space_time_clusters_recursively(
-    scheduling_time_cluster * t_root,
-    std::vector< general_spacetime_cluster * > & leaf_buffer,
-    std::vector< general_spacetime_cluster * > & non_leaf_buffer ) {
+    scheduling_time_cluster * t_root ) {
   // execute the routine first for all children
   if ( t_root->get_n_children( ) > 0 ) {
     for ( auto t_child : *t_root->get_children( ) ) {
-      sort_associated_space_time_clusters_recursively(
-        t_child, leaf_buffer, non_leaf_buffer );
+      sort_associated_space_time_clusters_recursively( t_child );
     }
   }
   std::vector< general_spacetime_cluster * > * associated_st_clusters
     = t_root->get_associated_spacetime_clusters( );
+
+  // we sort the clusters such that global leaf clusters come first. since
+  // original leaf clusters that are refined in space are still regarded as
+  // global leaf clusters (and their children not), the sorting works also if
+  // auxiliary space-time clusters are associated with t_root. (Note that
+  // "regular" non-leaf clusters (having non-auxiliary children) and auxiliary
+  // clusters can never be associated with the same time cluster.
   if ( associated_st_clusters != nullptr ) {
-    // construct vectors to temporarily store the leaf and non-leaf clusters.
-    leaf_buffer.resize( 0 );
-    non_leaf_buffer.resize( 0 );
-    leaf_buffer.reserve( associated_st_clusters->size( ) );
-    non_leaf_buffer.reserve( associated_st_clusters->size( ) );
-    // go through the associated spacetime clusters and separate leaf and
-    // non-leaf clusters
-    for ( auto st_cluster : *associated_st_clusters ) {
-      if ( st_cluster->is_global_leaf( ) ) {
-        leaf_buffer.push_back( st_cluster );
+    std::sort( associated_st_clusters->begin( ), associated_st_clusters->end( ),
+      []( general_spacetime_cluster * first,
+        general_spacetime_cluster * second ) {
+        // compare booleans:
+        // (true > false, so leaves "are bigger" than non-leaves)
+        return ( first->is_global_leaf( ) > second->is_global_leaf( ) );
+      } );
+
+    // count the number of leaves:
+    lou n_leaves = 0;
+    bool still_leaf = true;
+    while ( n_leaves < associated_st_clusters->size( ) && still_leaf ) {
+      if ( ( *associated_st_clusters )[ n_leaves ]->is_global_leaf( ) ) {
+        ++n_leaves;
+        // update the counter in the corresponding vector of t_root
+        t_root->update_n_associated_leaves_and_aux_clusters_per_level( 0 );
       } else {
-        non_leaf_buffer.push_back( st_cluster );
+        still_leaf = false;
       }
     }
-    // overwrite the associated_st_clusters by adding first the clusters of
-    // leaf_buffer and then those of non_leaf_buffer
-    lou n_leaves = leaf_buffer.size( );
     t_root->set_n_associated_leaves( n_leaves );
-    for ( lou i = 0; i < n_leaves; ++i ) {
-      ( *associated_st_clusters )[ i ] = leaf_buffer[ i ];
+
+    // in case that t_root is a global leaf, sort all the space-time clusters
+    // with respect to their spatial level in ascending order (small levels
+    // first)
+    if ( t_root->is_global_leaf( ) ) {
+      std::stable_sort( associated_st_clusters->begin( ),
+        associated_st_clusters->end( ),
+        []( general_spacetime_cluster * first,
+          general_spacetime_cluster * second ) {
+          // compare spatial levels:
+          // cluster with small level < cluster with large level)
+          lo first_spatial_level, second_spatial_level, dummy;
+          first->get_n_divs( first_spatial_level, dummy );
+          second->get_n_divs( second_spatial_level, dummy );
+          return ( first_spatial_level < second_spatial_level );
+        } );
+      // count the number of associated auxiliary clusters on each level
+      lo original_space_level, dummy;
+      ( *associated_st_clusters )[ 0 ]->get_n_divs(
+        original_space_level, dummy );
+      for ( lou i = 0; i < associated_st_clusters->size( ); ++i ) {
+        lo current_relative_space_level;
+        ( *associated_st_clusters )[ i ]->get_n_divs(
+          current_relative_space_level, dummy );
+        current_relative_space_level -= original_space_level;
+        if ( current_relative_space_level > 0 ) {
+          t_root->update_n_associated_leaves_and_aux_clusters_per_level(
+            current_relative_space_level );
+        }
+      }
     }
-    for ( lou i = 0; i < non_leaf_buffer.size( ); ++i ) {
-      ( *associated_st_clusters )[ n_leaves + i ] = non_leaf_buffer[ i ];
+  }
+}
+
+void besthea::mesh::distributed_spacetime_cluster_tree::
+  determine_tasks_of_associated_clusters( scheduling_time_cluster * t_root ) {
+  std::vector< general_spacetime_cluster * > * associated_spacetime_clusters
+    = t_root->get_associated_spacetime_clusters( );
+  if ( t_root->get_process_id( ) == _my_rank
+    && associated_spacetime_clusters != nullptr ) {
+    // check if m2t operations have to be executed for the current cluster
+    if ( t_root->get_m2t_list( ) != nullptr ) {
+      // go through the list of associated space-time clusters, and determine
+      // those for which to execute standard/ hybrid m2t operations.
+      for ( lo i = 0; (lou) i < associated_spacetime_clusters->size( ); ++i ) {
+        general_spacetime_cluster * st_cluster
+          = ( *associated_spacetime_clusters )[ i ];
+        if ( st_cluster->get_m2t_list( ) != nullptr ) {
+          lo st_clusters_m2t_list_size = st_cluster->get_m2t_list( )->size( );
+          lo st_clusters_n_hybrid_m2t_ops
+            = st_cluster->get_n_hybrid_m2t_operations( );
+          if ( st_clusters_n_hybrid_m2t_ops > 0 ) {
+            t_root->add_index_to_assoc_hybrid_m2t_targets( i );
+          }
+          if ( st_clusters_m2t_list_size > st_clusters_n_hybrid_m2t_ops ) {
+            t_root->add_index_to_assoc_standard_m2t_targets( i );
+          }
+        }
+      }
+    }
+    // check if s2l operations have to be executed for the current cluster
+    if ( t_root->get_s2l_list( ) != nullptr ) {
+      // go through the list of associated space-time clusters, and determine
+      // those for which to execute standard/ hybrid s2l operations.
+      for ( lo i = 0; (lou) i < associated_spacetime_clusters->size( ); ++i ) {
+        general_spacetime_cluster * st_cluster
+          = ( *associated_spacetime_clusters )[ i ];
+        if ( st_cluster->get_s2l_list( ) != nullptr ) {
+          lo st_clusters_s2l_list_size = st_cluster->get_s2l_list( )->size( );
+          lo st_clusters_n_hybrid_s2l_ops
+            = st_cluster->get_n_hybrid_s2l_operations( );
+          if ( st_clusters_n_hybrid_s2l_ops > 0 ) {
+            t_root->add_index_to_assoc_hybrid_s2l_targets( i );
+          }
+          if ( st_clusters_s2l_list_size > st_clusters_n_hybrid_s2l_ops ) {
+            t_root->add_index_to_assoc_standard_s2l_targets( i );
+          }
+        }
+      }
+    }
+
+    // check if nearfield operations have to be executed for the current cluster
+    if ( t_root->get_n_associated_leaves( ) > 0 ) {
+      // todo: adapt this later on?
+      // in case of auxiliary spatially refined clusters in the tree, we execute
+      // nearfield operations for all leaves in the extended tree (i.e.
+      // auxiliary leaves or non-refined original leaves).
+      for ( lo i = 0; (lou) i < associated_spacetime_clusters->size( ); ++i ) {
+        general_spacetime_cluster * st_cluster
+          = ( *associated_spacetime_clusters )[ i ];
+        if ( st_cluster->get_n_children( ) == 0 ) {
+          t_root->add_index_to_assoc_nearfield_targets( i );
+        }
+      }
+    }
+  }
+  // call the routine recursively for all children.
+  if ( t_root->get_n_children( ) > 0 ) {
+    for ( auto t_child : *t_root->get_children( ) ) {
+      determine_tasks_of_associated_clusters( t_child );
     }
   }
 }
@@ -3094,7 +3208,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   if ( crrnt_tar_cluster.get_parent( ) == nullptr ) {
     crrnt_tar_cluster.add_to_nearfield_list( &crrnt_tar_cluster );
   } else {
-    // get information about the temporal and spatial part of crrnt_tar_cluster
+    // get information about the temporal and spatial part of
+    // crrnt_tar_cluster
     sc target_temporal_center = crrnt_tar_cluster.get_time_center( );
     sc target_temporal_half_size = crrnt_tar_cluster.get_time_half_size( );
     lo target_spatial_level, dummy;
@@ -3103,12 +3218,13 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
       = crrnt_tar_cluster.get_box_coordinate( );
 
     crrnt_tar_cluster.get_n_divs( target_spatial_level, dummy );
-    // determine whether the current cluster is an auxiliary cluster and whether
-    // its potential children are
+    // determine whether the current cluster is an auxiliary cluster and
+    // whether its potential children are
     bool target_is_auxiliary = crrnt_tar_cluster.is_auxiliary_ref_cluster( );
     bool target_children_auxiliary = target_is_auxiliary
       || crrnt_tar_cluster.has_additional_spatial_children( );
-    // go through parent's nearfield list to determine crrnt_tar_cluster's lists
+    // go through parent's nearfield list to determine crrnt_tar_cluster's
+    // lists
     std::vector< general_spacetime_cluster * > * parent_nearfield
       = crrnt_tar_cluster.get_parent( )->get_nearfield_list( );
     for ( auto parent_nf_cluster : *parent_nearfield ) {
@@ -3129,10 +3245,10 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
 
       // we distinguish two cases:
       // 1): parent_nf_cluster is a leaf, or its children are auxiliary
-      // clusters, whose spatial level is greater than the spatial level of the
-      // current cluster. In these cases, the parent_nf_cluster itself (not its
-      // children!) has to be considered for the operation lists of the current
-      // cluster.
+      // clusters, whose spatial level is greater than the spatial level of
+      // the current cluster. In these cases, the parent_nf_cluster itself
+      // (not its children!) has to be considered for the operation lists of
+      // the current cluster.
       if ( parent_nf_cluster->get_n_children( ) == 0
         || ( parent_nf_cluster_has_aux_children
           && parent_nf_cluster_child_space_level > target_spatial_level ) ) {
@@ -3169,18 +3285,18 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
             : target_temporal_half_size;
           bool source_is_auxiliary
             = current_source->is_auxiliary_ref_cluster( );
-          // check if current cluster is not in the future (if this is violated
-          // the current cluster is not added to any list). This is done by
-          // checking the distance of the endpoints of the target and source
-          // interval (with some tolerance)
+          // check if current cluster is not in the future (if this is
+          // violated the current cluster is not added to any list). This is
+          // done by checking the distance of the endpoints of the target and
+          // source interval (with some tolerance)
           if ( ( source_temporal_center - source_temporal_half_size )
               - ( target_temporal_center + target_temporal_half_size )
             < -1e-8 * min_temporal_half_size ) {
             // we have to distinguish standard and auxiliary clusters below
             // a) both, source and current target cluster are not auxiliary
             if ( !target_is_auxiliary && !source_is_auxiliary ) {
-              // only source clusters in the spatial vicinity are relevant, all
-              // others are dropped
+              // only source clusters in the spatial vicinity are relevant,
+              // all others are dropped
               if ( crrnt_tar_cluster.is_in_spatial_vicinity(
                      current_source, _spatial_nearfield_limit ) ) {
                 // add the current cluster to the appropriate list
@@ -3203,9 +3319,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
                       determine_operation_lists_subroutine_targets_with_aux_children(
                         *current_source, crrnt_tar_cluster );
                     } else {
-                      // The children of the current target cluster are regular
-                      // space-time clusters, so no special treatment is
-                      // required.
+                      // The children of the current target cluster are
+                      // regular space-time clusters, so no special treatment
+                      // is required.
                       crrnt_tar_cluster.add_to_nearfield_list( current_source );
                     }
                   }
@@ -3301,17 +3417,17 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   if ( source_cluster.get_n_children( ) == 0 ) {
     target_cluster.add_to_nearfield_list( &source_cluster );
   } else {
-    // determine the spatial level of the target cluster and the children of the
-    // source cluster
+    // determine the spatial level of the target cluster and the children of
+    // the source cluster
     lo next_child_space_level, target_space_level, dummy;
     target_cluster.get_n_divs( target_space_level, dummy );
     ( *source_cluster.get_children( ) )[ 0 ]->get_n_divs(
       next_child_space_level, dummy );
     if ( next_child_space_level == target_space_level ) {
-      // the children of the current source cluster have the same spatial level
-      // as the current target cluster, while its own children have a higher
-      // spatial level. Thus, we have to consider operations between the target
-      // cluster and the children of the current source cluster.
+      // the children of the current source cluster have the same spatial
+      // level as the current target cluster, while its own children have a
+      // higher spatial level. Thus, we have to consider operations between
+      // the target cluster and the children of the current source cluster.
       for ( auto source_child : *source_cluster.get_children( ) ) {
         if ( target_cluster.determine_temporal_admissibility( source_child ) ) {
           // m2t lists are only created for local clusters
@@ -3323,10 +3439,10 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
         }
       }
     } else {
-      // the spatial level of the current target cluster is the same as the one
-      // of the current spatial source cluster, and the same holds for their
-      // respective children. Thus, we can add source_cluster itself to the
-      // nearfield of the current target's nearfield.
+      // the spatial level of the current target cluster is the same as the
+      // one of the current spatial source cluster, and the same holds for
+      // their respective children. Thus, we can add source_cluster itself to
+      // the nearfield of the current target's nearfield.
       target_cluster.add_to_nearfield_list( &source_cluster );
     }
   }
@@ -3342,8 +3458,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     std::vector< general_spacetime_cluster * > * current_m2t_list
       = current_cluster.get_m2t_list( );
     if ( current_m2t_list != nullptr ) {
-      // sort the clusters in the m2t list by their spatial level in increasing
-      // order
+      // sort the clusters in the m2t list by their spatial level in
+      // increasing order
       std::sort( current_m2t_list->begin( ), current_m2t_list->end( ),
         []( general_spacetime_cluster * first,
           general_spacetime_cluster * second ) {
@@ -3352,8 +3468,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
           second->get_n_divs( second_space_level, dummy );
           return ( first_space_level < second_space_level );
         } );
-      // determine the number of hybrid m2t operations by counting the number of
-      // clusters in the sorted m2t list with spatial level equal to
+      // determine the number of hybrid m2t operations by counting the number
+      // of clusters in the sorted m2t list with spatial level equal to
       // current_space_level (or rather counting all others + subtraction)
       lo n_hybrid_m2t_operations = current_m2t_list->size( );
       lo access_index = n_hybrid_m2t_operations - 1;
@@ -3377,8 +3493,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     std::vector< general_spacetime_cluster * > * current_s2l_list
       = current_cluster.get_s2l_list( );
     if ( current_s2l_list != nullptr ) {
-      // sort the clusters in the s2l list by their spatial level in decreasing
-      // order
+      // sort the clusters in the s2l list by their spatial level in
+      // decreasing order
       std::sort( current_s2l_list->begin( ), current_s2l_list->end( ),
         []( general_spacetime_cluster * first,
           general_spacetime_cluster * second ) {
@@ -3387,8 +3503,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
           second->get_n_divs( second_space_level, dummy );
           return ( first_space_level > second_space_level );
         } );
-      // determine the number of hybrid s2l operations by counting the number of
-      // clusters in the sorted s2l list with spatial level equal to
+      // determine the number of hybrid s2l operations by counting the number
+      // of clusters in the sorted s2l list with spatial level equal to
       // current_space_level (or rather counting all others + subtraction)
       lo n_hybrid_s2l_operations = current_s2l_list->size( );
       lo access_index = n_hybrid_s2l_operations - 1;

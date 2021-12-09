@@ -530,12 +530,12 @@ void besthea::mesh::volume_space_cluster_tree::collect_leaf_descendants(
   }
 }
 
-void besthea::mesh::volume_space_cluster_tree::initialize_moment_contributions(
+void besthea::mesh::volume_space_cluster_tree::allocate_moments_in_tree(
   volume_space_cluster & current_cluster, lou contribution_size ) {
   current_cluster.resize_moments( contribution_size );
   if ( current_cluster.get_n_children( ) > 0 ) {
     for ( auto child : *current_cluster.get_children( ) ) {
-      initialize_moment_contributions( *child, contribution_size );
+      allocate_moments_in_tree( *child, contribution_size );
     }
   }
 }

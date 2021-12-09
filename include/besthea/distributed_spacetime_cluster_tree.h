@@ -242,6 +242,11 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     general_spacetime_cluster & current_cluster,
     std::vector< general_spacetime_cluster * > & leaf_vector ) const;
 
+  /**
+   * @note The global leaf status of the refined clusters is not changed. So an
+   * original global leaf that is refined purely in space has still
+   * global_leaf_status = true.
+   */
   void create_subtree_pure_spatial_refinements(
     general_spacetime_cluster & current_cluster, const lo n_min_elems_space_ref,
     const lo n_max_new_levels );
@@ -768,17 +773,23 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * associated spacetime clusters such that the first n clusters are the
    * leaves.
    * @param[in] t_root  Current cluster in the tree traversal.
-   * @param[in] leaf_buffer Vector in which leaves are temporarily stored.
-   * @param[in] non_leaf_buffer Vector in which non-leaves are temporarily
-   *                            stored.
-   * @note  At input the buffer sizes can be 0. The buffers are resized
-   *        in the routine as necessary. After the execution of the routine,
-   *        the buffers should be cleared manually, if storage is limited.
    */
   void sort_associated_space_time_clusters_recursively(
-    scheduling_time_cluster * t_root,
-    std::vector< general_spacetime_cluster * > & leaf_buffer,
-    std::vector< general_spacetime_cluster * > & non_leaf_buffer );
+    scheduling_time_cluster * t_root );
+
+  /**
+   * Determines for each scheduling time cluster the operations (standard and
+   * hybrid s2l/m2t, nearfield) which have to be executed for each of its
+   * associated space-time clusters.
+   *
+   * The routine is based on a recursive tree traversal. It initializes vectors
+   * like @ref scheduling_time_cluster::assoc_standard_m2t_targets for each
+   * scheduling time cluster.
+   * @param[in] t_root  Current cluster in the tree traversal.
+   * @todo Adapt nearfield lists later on.
+   */
+  void determine_tasks_of_associated_clusters(
+    scheduling_time_cluster * t_root );
 
   /**
    * Initializes the nearfield list and interaction list for every cluster in
@@ -993,8 +1004,6 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
                                  //!< get clusters at level 0
   lo _start_space_refinement;    //!< auxiliary variable to determine in which
                                  //!< level the spatial refinement starts
-                                 //!< (relevant if
-                                 //!< _initial_space_refinement == 0)
   lo _local_n_space_levels;      //!< Number of spatial levels in the local
                                  //!< space-time tree owned by the current rank
   lo _global_n_space_levels;     //!< Number of spatial levels in the global

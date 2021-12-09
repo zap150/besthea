@@ -1246,16 +1246,28 @@ template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   test_space_type,
   trial_space_type >::initialize_moment_and_local_contributions( ) const {
-  lou contribution_size = ( _temp_order + 1 )
-    * ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6;
-  tree_structure * trial_distribution_tree
+  lou spat_contribution_size
+    = ( ( _spat_order + 3 ) * ( _spat_order + 2 ) * ( _spat_order + 1 ) ) / 6;
+  lou contribution_size = ( _temp_order + 1 ) * spat_contribution_size;
+  mesh::tree_structure * trial_distribution_tree
     = _trial_space->get_tree( )->get_distribution_tree( );
-  trial_distribution_tree->initialize_moment_contributions(
+  // initialize moments and spatial moments for all relevant clusters in the
+  // space-time cluster tree (of the trial space).
+  trial_distribution_tree->allocate_moments_in_tree(
     *trial_distribution_tree->get_root( ), contribution_size );
-  tree_structure * test_distribution_tree
+  trial_distribution_tree->allocate_spatial_moments_in_tree(
+    *trial_distribution_tree->get_root( ), spat_contribution_size,
+    _trial_space->get_tree( )->get_start_space_refinement( ) );
+
+  mesh::tree_structure * test_distribution_tree
     = _test_space->get_tree( )->get_distribution_tree( );
-  test_distribution_tree->initialize_local_contributions(
+  // initialize space-time and spatial local contributions for all relevant
+  // clusters in the space-time cluster tree (of the test space).
+  test_distribution_tree->allocate_local_contributions_in_tree(
     *test_distribution_tree->get_root( ), contribution_size );
+  test_distribution_tree->allocate_spatial_local_contributions_in_tree(
+    *test_distribution_tree->get_root( ), spat_contribution_size,
+    _test_space->get_tree( )->get_start_space_refinement( ) );
 }
 
 template class besthea::bem::distributed_fast_spacetime_be_assembler<

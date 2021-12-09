@@ -93,7 +93,8 @@ class besthea::mesh::scheduling_time_cluster {
       _m2t_list( nullptr ),
       _s2l_list( nullptr ),
       _send_list( nullptr ),
-      _diagonal_send_list( nullptr ),
+      _m2t_send_list( nullptr ),
+      _s2l_send_list( nullptr ),
       _essential_status( -1 ),
       _active_upward_path( false ),
       _active_downward_path( false ),
@@ -103,10 +104,18 @@ class besthea::mesh::scheduling_time_cluster {
       _s2l_execution_status( true ),
       _downward_path_status( 0 ),
       _associated_spacetime_clusters( nullptr ),
+      _n_associated_leaves_and_aux_clusters_per_level( nullptr ),
       _associated_additional_spacetime_leaves( nullptr ),
       _n_associated_leaves( 0 ),
       _associated_moments( nullptr ),
       _associated_local_contributions( nullptr ),
+      _levelwise_assoc_spatial_moments( nullptr ),
+      _levelwise_assoc_spatial_local_contributions( nullptr ),
+      _assoc_nearfield_targets( nullptr ),
+      _assoc_standard_m2t_targets( nullptr ),
+      _assoc_hybrid_m2t_targets( nullptr ),
+      _assoc_standard_s2l_targets( nullptr ),
+      _assoc_hybrid_s2l_targets( nullptr ),
       _contribution_size( 0 ),
       _map_to_moment_receive_buffers( nullptr ),
       _pos_in_m_list( -1 ),
@@ -143,16 +152,43 @@ class besthea::mesh::scheduling_time_cluster {
       delete _s2l_list;
     if ( _send_list != nullptr )
       delete _send_list;
-    if ( _diagonal_send_list != nullptr )
-      delete _diagonal_send_list;
+    if ( _m2t_send_list != nullptr )
+      delete _m2t_send_list;
+    if ( _s2l_send_list != nullptr )
+      delete _s2l_send_list;
     if ( _associated_spacetime_clusters != nullptr )
       delete _associated_spacetime_clusters;
+    if ( _n_associated_leaves_and_aux_clusters_per_level != nullptr )
+      delete _n_associated_leaves_and_aux_clusters_per_level;
     if ( _associated_additional_spacetime_leaves != nullptr )
       delete _associated_additional_spacetime_leaves;
     if ( _associated_moments != nullptr )
       delete[] _associated_moments;
     if ( _associated_local_contributions != nullptr )
       delete[] _associated_local_contributions;
+    if ( _levelwise_assoc_spatial_moments != nullptr ) {
+      for ( auto spatial_moment_array : *_levelwise_assoc_spatial_moments ) {
+        delete[] spatial_moment_array;
+      }
+      delete _levelwise_assoc_spatial_moments;
+    }
+    if ( _levelwise_assoc_spatial_local_contributions != nullptr ) {
+      for ( auto spatial_local_contribution_array :
+        *_levelwise_assoc_spatial_local_contributions ) {
+        delete[] spatial_local_contribution_array;
+      }
+      delete _levelwise_assoc_spatial_local_contributions;
+    }
+    if ( _assoc_nearfield_targets != nullptr )
+      delete _assoc_nearfield_targets;
+    if ( _assoc_standard_m2t_targets != nullptr )
+      delete _assoc_standard_m2t_targets;
+    if ( _assoc_hybrid_m2t_targets != nullptr )
+      delete _assoc_hybrid_m2t_targets;
+    if ( _assoc_standard_s2l_targets != nullptr )
+      delete _assoc_standard_s2l_targets;
+    if ( _assoc_hybrid_s2l_targets != nullptr )
+      delete _assoc_hybrid_s2l_targets;
     for ( auto moment_buffer : _associated_moments_receive_buffers ) {
       delete[] moment_buffer;
     }
@@ -201,11 +237,19 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Delete @ref _diagonal_send_list of the cluster.
+   * Delete @ref _m2t_send_list of the cluster.
    */
-  void delete_diagonal_send_list( ) {
-    delete _diagonal_send_list;
-    _diagonal_send_list = nullptr;
+  void delete_m2t_send_list( ) {
+    delete _m2t_send_list;
+    _m2t_send_list = nullptr;
+  }
+
+  /**
+   * Delete @ref _s2l_send_list of the cluster.
+   */
+  void delete_s2l_send_list( ) {
+    delete _s2l_send_list;
+    _s2l_send_list = nullptr;
   }
 
   /**
@@ -443,6 +487,24 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
+   * Adds and index to @ref _assoc_nearfield_targets.
+   * @param[in] new_index Index to be added to the list.
+   */
+  void add_index_to_assoc_nearfield_targets( lo new_index ) {
+    if ( _assoc_nearfield_targets == nullptr ) {
+      _assoc_nearfield_targets = new std::vector< lo >( );
+    }
+    _assoc_nearfield_targets->push_back( new_index );
+  }
+
+  /**
+   * Returns a pointer to (const) @ref _assoc_nearfield_targets.
+   */
+  const std::vector< lo > * get_assoc_nearfield_targets( ) const {
+    return _assoc_nearfield_targets;
+  }
+
+  /**
    * Returns a pointer to the const interaction list.
    */
   const std::vector< scheduling_time_cluster * > * get_interaction_list( )
@@ -497,6 +559,41 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
+   * Adds and index to @ref _assoc_standard_m2t_targets.
+   * @param[in] new_index Index to be added to the list.
+   */
+  void add_index_to_assoc_standard_m2t_targets( lo new_index ) {
+    if ( _assoc_standard_m2t_targets == nullptr ) {
+      _assoc_standard_m2t_targets = new std::vector< lo >( );
+    }
+    _assoc_standard_m2t_targets->push_back( new_index );
+  }
+
+  /**
+   * Adds and index to @ref _assoc_hybrid_m2t_targets.
+   * @param[in] new_index Index to be added to the list.
+   */
+  void add_index_to_assoc_hybrid_m2t_targets( lo new_index ) {
+    if ( _assoc_hybrid_m2t_targets == nullptr ) {
+      _assoc_hybrid_m2t_targets = new std::vector< lo >( );
+    }
+    _assoc_hybrid_m2t_targets->push_back( new_index );
+  }
+
+  /**
+   * Returns a pointer to (const) @ref _assoc_standard_m2t_targets.
+   */
+  const std::vector< lo > * get_assoc_standard_m2t_targets( ) const {
+    return _assoc_standard_m2t_targets;
+  }
+
+  /**
+   * Returns a pointer to (const) @ref _assoc_hybrid_m2t_targets.
+   */
+  const std::vector< lo > * get_assoc_hybrid_m2t_targets( ) const {
+    return _assoc_hybrid_m2t_targets;
+  }
+  /**
    * Adds a cluster to @ref _s2l_list.
    * @param[in] src_cluster Pointer to a source cluster for which s2l operations
    * have to be exectued.
@@ -521,6 +618,42 @@ class besthea::mesh::scheduling_time_cluster {
    */
   const std::vector< scheduling_time_cluster * > * get_s2l_list( ) const {
     return _s2l_list;
+  }
+
+  /**
+   * Adds and index to @ref _assoc_standard_s2l_targets.
+   * @param[in] new_index Index to be added to the list.
+   */
+  void add_index_to_assoc_standard_s2l_targets( lo new_index ) {
+    if ( _assoc_standard_s2l_targets == nullptr ) {
+      _assoc_standard_s2l_targets = new std::vector< lo >( );
+    }
+    _assoc_standard_s2l_targets->push_back( new_index );
+  }
+
+  /**
+   * Adds and index to @ref _assoc_hybrid_s2l_targets.
+   * @param[in] new_index Index to be added to the list.
+   */
+  void add_index_to_assoc_hybrid_s2l_targets( lo new_index ) {
+    if ( _assoc_hybrid_s2l_targets == nullptr ) {
+      _assoc_hybrid_s2l_targets = new std::vector< lo >( );
+    }
+    _assoc_hybrid_s2l_targets->push_back( new_index );
+  }
+
+  /**
+   * Returns a pointer to (const) @ref _assoc_standard_s2l_targets.
+   */
+  const std::vector< lo > * get_assoc_standard_s2l_targets( ) const {
+    return _assoc_standard_s2l_targets;
+  }
+
+  /**
+   * Returns a pointer to (const) @ref _assoc_hybrid_s2l_targets.
+   */
+  const std::vector< lo > * get_assoc_hybrid_s2l_targets( ) const {
+    return _assoc_hybrid_s2l_targets;
   }
 
   /**
@@ -572,30 +705,55 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Adds a cluster to @p _diagonal_send_list.
+   * Adds a cluster to @p _m2t_send_list.
    * @param[in] tar_cluster Pointer to a target cluster.
-   * @note If @p _diagonal_send_list is not allocated this is done here.
+   * @note If @p _m2t_send_list is not allocated this is done here.
    */
-  void add_to_diagonal_send_list( scheduling_time_cluster * tar_cluster ) {
-    if ( _diagonal_send_list == nullptr ) {
-      _diagonal_send_list = new std::vector< scheduling_time_cluster * >( );
+  void add_to_m2t_send_list( scheduling_time_cluster * tar_cluster ) {
+    if ( _m2t_send_list == nullptr ) {
+      _m2t_send_list = new std::vector< scheduling_time_cluster * >( );
     }
-    _diagonal_send_list->push_back( tar_cluster );
+    _m2t_send_list->push_back( tar_cluster );
   }
 
   /**
    * Returns a pointer to the const diagonal send list.
    */
-  const std::vector< scheduling_time_cluster * > * get_diagonal_send_list( )
-    const {
-    return _diagonal_send_list;
+  const std::vector< scheduling_time_cluster * > * get_m2t_send_list( ) const {
+    return _m2t_send_list;
   }
 
   /**
    * Returns a pointer to the diagonal send list.
    */
-  std::vector< scheduling_time_cluster * > * get_diagonal_send_list( ) {
-    return _diagonal_send_list;
+  std::vector< scheduling_time_cluster * > * get_m2t_send_list( ) {
+    return _m2t_send_list;
+  }
+
+  /**
+   * Adds a cluster to @p _s2l_send_list.
+   * @param[in] tar_cluster Pointer to a target cluster.
+   * @note If @p _s2l_send_list is not allocated this is done here.
+   */
+  void add_to_s2l_send_list( scheduling_time_cluster * tar_cluster ) {
+    if ( _s2l_send_list == nullptr ) {
+      _s2l_send_list = new std::vector< scheduling_time_cluster * >( );
+    }
+    _s2l_send_list->push_back( tar_cluster );
+  }
+
+  /**
+   * Returns a pointer to the const diagonal send list.
+   */
+  const std::vector< scheduling_time_cluster * > * get_s2l_send_list( ) const {
+    return _s2l_send_list;
+  }
+
+  /**
+   * Returns a pointer to the diagonal send list.
+   */
+  std::vector< scheduling_time_cluster * > * get_s2l_send_list( ) {
+    return _s2l_send_list;
   }
 
   /**
@@ -814,6 +972,41 @@ class besthea::mesh::scheduling_time_cluster {
         = new std::vector< general_spacetime_cluster * >( );
     }
     _associated_spacetime_clusters->push_back( cluster );
+  }
+
+  /**
+   * Updates the counter of associated leaves and auxiliary clusters for a given
+   * level by one.
+   * @param[in] relative_level  Relative spatial level for which the counter is
+   * increased.
+   *
+   * @note @ref _n_associated_leaves_and_aux_clusters_per_level is modified or
+   * allocated.
+   */
+  void update_n_associated_leaves_and_aux_clusters_per_level(
+    lo relative_level ) {
+    if ( _n_associated_leaves_and_aux_clusters_per_level == nullptr ) {
+      _n_associated_leaves_and_aux_clusters_per_level
+        = new std::vector< lo >( );
+    }
+    if ( (lo) _n_associated_leaves_and_aux_clusters_per_level->size( )
+      <= relative_level ) {
+      _n_associated_leaves_and_aux_clusters_per_level->resize(
+        relative_level + 1 );
+      ( *_n_associated_leaves_and_aux_clusters_per_level )[ relative_level ]
+        = 1;
+    } else {
+      ( *_n_associated_leaves_and_aux_clusters_per_level )[ relative_level ]++;
+    }
+  }
+
+  /**
+   * Returns a pointer to (const)
+   * @ref _n_associated_leaves_and_aux_clusters_per_level.
+   */
+  const std::vector< lo > *
+  get_n_associated_leaves_and_aux_clusters_per_level( ) const {
+    return _n_associated_leaves_and_aux_clusters_per_level;
   }
 
   /**
@@ -1140,6 +1333,162 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
+   * Allocates an array containing all the spatial moments of the associated
+   * spacetime clusters for a given relative spatial level
+   *
+   * In addition, for each involved associated spacetime cluster it sets the
+   * pointer to the appropriate spatial moment.
+   * @param[in] spatial_contribution_size Size of the spatial moment of a single
+   * space-time cluster.
+   * @param[in] relative_spatial_level  Relative spatial level for which the
+   * spatial moments are allocated.
+   * @note Before calling this routine the spacetime clusters have to be
+   * associated with this cluster.
+   * @note The reference level for the relative spatial level is the spatial
+   * level of the non-auxiliary clusters associated with the current time
+   * cluster. (i.e. the "natural" spatial level)
+   */
+  void allocate_associated_spatial_moments(
+    const lou spatial_contribution_size, const lo rel_space_level ) {
+    if ( _associated_spacetime_clusters != nullptr ) {
+      // allocate the vector holding the spatial moments, if it does not exist
+      if ( _levelwise_assoc_spatial_moments == nullptr ) {
+        _levelwise_assoc_spatial_moments = new std::vector< sc * >( );
+        _spatial_contribution_size = spatial_contribution_size;
+      }
+      // resize the vector if necessary
+      if ( _levelwise_assoc_spatial_moments->size( )
+        < (lou) rel_space_level + 1 ) {
+        _levelwise_assoc_spatial_moments->resize( rel_space_level + 1 );
+      }
+      // allocate the spatial moments if they are not allocated already
+      if ( ( *_levelwise_assoc_spatial_moments )[ rel_space_level ]
+        == nullptr ) {
+        lo n_involved_st_clusters
+          = ( *_n_associated_leaves_and_aux_clusters_per_level )
+            [ rel_space_level ];
+        ( *_levelwise_assoc_spatial_moments )[ rel_space_level ]
+          = new sc[ spatial_contribution_size * n_involved_st_clusters ];
+        // determine the position in _associated_spacetime_clusters where the
+        // group of clusters with the appropriate relative spatial level starts
+        lo start_pos = 0;
+        for ( lo i = 0; i < rel_space_level; ++i ) {
+          start_pos
+            += ( *_n_associated_leaves_and_aux_clusters_per_level )[ i ];
+        }
+        // assign the individual spatial moments to the corresponding space-time
+        // clusters
+        for ( lo i = 0; i < n_involved_st_clusters; ++i ) {
+          general_spacetime_cluster * current_spacetime_cluster
+            = ( *_associated_spacetime_clusters )[ start_pos + i ];
+          current_spacetime_cluster->set_pointer_to_spatial_moments(
+            &( ( *_levelwise_assoc_spatial_moments )[ rel_space_level ][ i
+              * spatial_contribution_size ] ) );
+        }
+      }
+    }
+  }
+
+  /**
+   * Sets all associated spatial moments to 0.
+   */
+  void clear_all_associated_spatial_moments( ) {
+    if ( _levelwise_assoc_spatial_moments != nullptr ) {
+      for ( lou i = 0; i < _levelwise_assoc_spatial_moments->size( ); ++i ) {
+        sc * current_moments = ( *_levelwise_assoc_spatial_moments )[ i ];
+        if ( current_moments != nullptr ) {
+          for ( lou j = 0; j < _spatial_contribution_size
+                  * ( *_n_associated_leaves_and_aux_clusters_per_level )[ i ];
+                ++j ) {
+            current_moments[ j ] = 0.0;
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Allocates an array containing all the spatial local contributions of the
+   * associated spacetime clusters for a given relative spatial level
+   *
+   * In addition, for each involved associated spacetime cluster it sets the
+   * pointer to the appropriate spatial local contribution.
+   * @param[in] spatial_contribution_size Size of the spatial local contribution
+   * of a single space-time cluster.
+   * @param[in] rel_space_level  Relative spatial level for which the
+   * spatial local contributions are allocated.
+   * @note Before calling this routine the spacetime clusters have to be
+   * associated with this cluster.
+   * @note The reference level for the relative spatial level is the spatial
+   * level of the non-auxiliary clusters associated with the current time
+   * cluster. (i.e. the "natural" spatial level)
+   */
+  void allocate_associated_spatial_local_contributions(
+    const lou spatial_contribution_size, const lo rel_space_level ) {
+    if ( _associated_spacetime_clusters != nullptr ) {
+      // allocate the vector holding the spatial local contributions, if it does
+      // not exist
+      if ( _levelwise_assoc_spatial_local_contributions == nullptr ) {
+        _levelwise_assoc_spatial_local_contributions
+          = new std::vector< sc * >( );
+        _spatial_contribution_size = spatial_contribution_size;
+      }
+      // resize the vector if necessary
+      if ( _levelwise_assoc_spatial_local_contributions->size( )
+        < (lou) rel_space_level + 1 ) {
+        _levelwise_assoc_spatial_local_contributions->resize(
+          rel_space_level + 1 );
+      }
+      // allocate the spatial local contributions if they are not allocated
+      // already
+      if ( ( *_levelwise_assoc_spatial_local_contributions )[ rel_space_level ]
+        == nullptr ) {
+        lo n_involved_st_clusters
+          = ( *_n_associated_leaves_and_aux_clusters_per_level )
+            [ rel_space_level ];
+        ( *_levelwise_assoc_spatial_local_contributions )[ rel_space_level ]
+          = new sc[ spatial_contribution_size * n_involved_st_clusters ];
+        // determine the position in _associated_spacetime_clusters where the
+        // group of clusters with the appropriate relative spatial level starts
+        lo start_pos = 0;
+        for ( lo i = 0; i < rel_space_level; ++i ) {
+          start_pos
+            += ( *_n_associated_leaves_and_aux_clusters_per_level )[ i ];
+        }
+        // assign the individual spatial local contributions to the
+        // corresponding space-time clusters
+        for ( lo i = 0; i < n_involved_st_clusters; ++i ) {
+          general_spacetime_cluster * current_spacetime_cluster
+            = ( *_associated_spacetime_clusters )[ start_pos + i ];
+          current_spacetime_cluster->set_pointer_to_spatial_local_contributions(
+            &( ( *_levelwise_assoc_spatial_local_contributions )
+                [ rel_space_level ][ i * spatial_contribution_size ] ) );
+        }
+      }
+    }
+  }
+
+  /**
+   * Sets all associated spatial moments to 0.
+   */
+  void clear_all_associated_spatial_local_contributions( ) {
+    if ( _levelwise_assoc_spatial_local_contributions != nullptr ) {
+      for ( lou i = 0;
+            i < _levelwise_assoc_spatial_local_contributions->size( ); ++i ) {
+        sc * current_local_contributions
+          = ( *_levelwise_assoc_spatial_local_contributions )[ i ];
+        if ( current_local_contributions != nullptr ) {
+          for ( lou j = 0; j < _spatial_contribution_size
+                  * ( *_n_associated_leaves_and_aux_clusters_per_level )[ i ];
+                ++j ) {
+            current_local_contributions[ j ] = 0.0;
+          }
+        }
+      }
+    }
+  }
+
+  /**
    * Prints info of the object.
    */
   void print(
@@ -1319,8 +1668,11 @@ class besthea::mesh::scheduling_time_cluster {
     _send_list;  //!< Contains all clusters in whose interaction list the
                  //!< cluster is contained.
   std::vector< scheduling_time_cluster * > *
-    _diagonal_send_list;   //!< Contains all clusters in whose m2t list the
-                           //!< cluster is contained.
+    _m2t_send_list;  //!< Contains all clusters in whose m2t list the
+                     //!< cluster is contained.
+  std::vector< scheduling_time_cluster * > *
+    _s2l_send_list;  //!< Contains all clusters in whose s2l list the cluster is
+                     //!< contained.
   char _essential_status;  //!< Indicates the status of a cluster in a
                            //!< distributed tree. Possible status are:
                            //!< - 0: not essential
@@ -1361,6 +1713,18 @@ class besthea::mesh::scheduling_time_cluster {
     _associated_spacetime_clusters;  //!< List of space-time clusters
                                      //!< associated to the scheduling time
                                      //!< cluster.
+  std::vector< lo > *
+    _n_associated_leaves_and_aux_clusters_per_level;  //!< List that contains
+                                                      //!< the numbers of all
+                                                      //!< associated leaves and
+                                                      //!< auxiliary clusters
+                                                      //!< per level (entry 0
+                                                      //!< contains the number
+                                                      //!< of leaves, entry 1
+                                                      //!< the number of one
+                                                      //!< time spatially
+                                                      //!< refined clusters,
+                                                      //!< ...).
   std::vector< general_spacetime_cluster * > *
     _associated_additional_spacetime_leaves;  //!< List of space-time clusters
                                               //!< associated to the scheduling
@@ -1368,17 +1732,62 @@ class besthea::mesh::scheduling_time_cluster {
   lou _n_associated_leaves;  //!< Number of associated space-time leaf clusters.
                              //!< These are first in the list of associated
                              //!< space-time clusters.
+
   sc * _associated_moments;  //!< Array containing all the moments of the
                              //!< associated general spacetime clusters.
   sc * _associated_local_contributions;  //!< Array containing all the local
-                                         //!< contributions of the associated
-                                         //!< general spacetime clusters.
-  lou _contribution_size;  //!< Size of a single contribution (moments or local
-                           //!< contribution) in the array of associated
-                           //!< contributions
-                           //!< @todo Is there a better way to make this value
-                           //!< accessible for all clusters without storing it
-                           //!< in each instance separately?
+  //!< contributions of the associated
+  //!< general spacetime clusters.
+  std::vector< sc * > *
+    _levelwise_assoc_spatial_moments;  //!< Vector containing all spatial
+                                       //!< moments of associated general
+                                       //!< space-time clusters, stored in a
+                                       //!< levelwise manner. (array with entry
+                                       //!< 0 stores spatial moments of
+                                       //!< associated leaves, entry 1 those of
+                                       //!< their spatially refined children,
+                                       //!< ...) Relevant only for hybrid s2l
+                                       //!< operations.
+  std::vector< sc * > *
+    _levelwise_assoc_spatial_local_contributions;  //!< Vector containing all
+                                                   //!< spatial local
+                                                   //!< contributions of
+                                                   //!< associated general
+                                                   //!< space-time clusters,
+                                                   //!< stored in a levelwise
+                                                   //!< manner. Relevant only
+                                                   //!< for hybrid m2t
+                                                   //!< operations.
+  std::vector< lo > *
+    _assoc_nearfield_targets;  //!< Vector containing the indices of all
+                               //!< associated space-time clusters for which
+                               //!< nearfield operations have to be executed.
+  std::vector< lo > *
+    _assoc_standard_m2t_targets;  //!< Vector containing the indices of all
+                                  //!< associated space-time clusters for which
+                                  //!< standard m2t operations have to be
+                                  //!< executed.
+  std::vector< lo > *
+    _assoc_hybrid_m2t_targets;  //!< Vector containing the indices of all
+                                //!< associated space-time clusters for which
+                                //!< hybrid m2t operations have to be executed.
+  std::vector< lo > *
+    _assoc_standard_s2l_targets;  //!< Vector containing the indices of all
+                                  //!< associated space-time clusters for which
+                                  //!< standard s2l operations have to be
+                                  //!< executed.
+  std::vector< lo > *
+    _assoc_hybrid_s2l_targets;  //!< Vector containing the indices of all
+                                //!< associated space-time clusters for which
+                                //!< hybrid s2l operations have to be executed.
+  lou _contribution_size;       //!< Size of a single contribution (moments or
+                                //!< local contribution) in the array of
+                                //!< associated contributions
+                                //!< @todo Is there a better way to make this
+                                //!< value accessible for all clusters without
+                                //!< storing it in each instance separately?
+  lou _spatial_contribution_size;  //!< Size of single spatial contribution
+                                   //!< (moment or local contribution)
   std::vector< sc * >
     _associated_moments_receive_buffers;  //!< In case that moments have to be
                                           //!< received from other processes

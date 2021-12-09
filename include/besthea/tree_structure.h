@@ -239,13 +239,13 @@ class besthea::mesh::tree_structure {
     std::list< scheduling_time_cluster * > & n_list ) const;
 
   /**
-   * Traverses the tree structure recursively and allocates and initializes the
-   * moments for all clusters which are active in the upward path of the FMM.
+   * Traverses the tree structure recursively and allocates the moments for all
+   * clusters which are active in the upward path of the FMM.
    * @param[in] root  Current cluster in the tree traversal.
    * @param[in] contribution_size Size of the contribution of a single
    * spacetime cluster.
    */
-  void initialize_moment_contributions(
+  void allocate_moments_in_tree(
     scheduling_time_cluster & root, lou contribution_size );
 
   /**
@@ -256,14 +256,14 @@ class besthea::mesh::tree_structure {
   void clear_moment_contributions( scheduling_time_cluster & root );
 
   /**
-   * Traverses the tree structure recursively and allocates and initializes the
-   * local contributions for all clusters which are active in the downward path
-   * of the FMM.
+   * Traverses the tree structure recursively and allocates the local
+   * contributions for all clusters which are active in the downward path of the
+   * FMM.
    * @param[in] root  Current cluster in the tree traversal.
    * @param[in] contribution_size Size of the contribution of a single
    * spacetime cluster.
    */
-  void initialize_local_contributions(
+  void allocate_local_contributions_in_tree(
     scheduling_time_cluster & root, lou contribution_size );
 
   /**
@@ -274,6 +274,53 @@ class besthea::mesh::tree_structure {
   void clear_local_contributions( scheduling_time_cluster & root );
 
   /**
+   * Traverses the tree structure recursively and allocates the spatial moments
+   * for all clusters which are active in the upward path of the FMM.
+   * @param[in] current_cluster Current time cluster in the tree traversal.
+   * @param[in] spatial_contribution_size Size of the spatial contribution of a
+   * single spacetime cluster.
+   * @param[in] first_space_refinement_level  First space-time level in the
+   * underlying space-time tree where clusters are refined in space. This is
+   * used to determine the clusters for which spatial moments have to be
+   * allocated.
+   */
+  void allocate_spatial_moments_in_tree(
+    scheduling_time_cluster & current_cluster, lou spatial_contribution_size,
+    lo first_space_refinement_level );
+
+  /**
+   * Fills the associated spatial moments of all clusters in the tree with
+   * zeros. The tree is traversed recursively by the routine.
+   * @param[in] current_cluster  Current cluster in the tree traversal.
+   */
+  void clear_spatial_moment_contributions(
+    scheduling_time_cluster & current_cluster );
+
+  /**
+   * Traverses the tree structure recursively and allocates the spatial local
+   * contributions for all clusters which are active in the downward path of the
+   * FMM.
+   * @param[in] current_cluster Current time cluster in the tree traversal.
+   * @param[in] spatial_contribution_size Size of the spatial contribution of a
+   * single spacetime cluster.
+   * @param[in] first_space_refinement_level  First space-time level in the
+   * underlying space-time tree where clusters are refined in space. This is
+   * used to determine the clusters for which spatial local contributions have
+   * to be allocated.
+   */
+  void allocate_spatial_local_contributions_in_tree(
+    scheduling_time_cluster & current_cluster, lou spatial_contribution_size,
+    lo first_space_refinement_level );
+
+  /**
+   * Fills the associated spatial local contributions of all clusters in the
+   * tree with zeros. The tree is traversed recursively by the routine.
+   * @param[in] current_cluster  Current cluster in the tree traversal.
+   */
+  void clear_spatial_local_contributions(
+    scheduling_time_cluster & current_cluster );
+
+  /**
    * Traverses the tree structure recursively and allocates and initializes the
    * local contributions for all clusters which are active in the downward path
    * of an initial pFMM operator.
@@ -281,7 +328,7 @@ class besthea::mesh::tree_structure {
    * @param[in] contribution_size Size of the contribution of a single
    * spacetime cluster.
    */
-  void initialize_local_contributions_initial_op(
+  void allocate_local_contributions_in_tree_initial_op(
     scheduling_time_cluster & root, lou contribution_size );
 
   /**
@@ -653,6 +700,8 @@ class besthea::mesh::tree_structure {
    * -#  I is in the nearfield of a cluster J which is assigned to the
    *     process and either I or J are leaves. (cases where I is a leaf are
    *     included to enable S2L operations)
+   * -#  I is in the S2L-list or M2T-list of a cluster which is assigned to the
+   *     process (if such lists are constructed)
    * -#  I contains a cluster in its interaction list which is assigned to the
    *     process.
    * -#  I is a child of a cluster which is assigned to the process.
