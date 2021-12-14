@@ -1181,6 +1181,7 @@ bool besthea::linear_algebra::block_linear_operator::gmres_solve(
     gamma[ k + 1 ] = -s[ k ] * gamma[ k ];
     gamma[ k ] *= c[ k ];
 
+    // std::cout << "gmres run " << k << " finished." << std::endl;
     ++k;
   }
 

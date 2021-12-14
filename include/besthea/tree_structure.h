@@ -249,8 +249,8 @@ class besthea::mesh::tree_structure {
     scheduling_time_cluster & root, lou contribution_size );
 
   /**
-   * Fills the associated moments of all clusters in the tree with zeros.
-   * The tree is traversed recursively by the routine.
+   * Fills the associated (spatial and space-time) moments of all clusters in
+   * the tree with zeros. The tree is traversed recursively by the routine.
    * @param[in] root  Current cluster in the tree traversal.
    */
   void clear_moment_contributions( scheduling_time_cluster & root );
@@ -267,8 +267,9 @@ class besthea::mesh::tree_structure {
     scheduling_time_cluster & root, lou contribution_size );
 
   /**
-   * Fills the associated local contributions of all clusters in the tree with
-   * zeros. The tree is traversed recursively by the routine.
+   * Fills the associated (spatial and space-time) local contributions of all
+   * clusters in the tree with zeros. The tree is traversed recursively by the
+   * routine.
    * @param[in] root  Current cluster in the tree traversal.
    */
   void clear_local_contributions( scheduling_time_cluster & root );
@@ -289,14 +290,6 @@ class besthea::mesh::tree_structure {
     lo first_space_refinement_level );
 
   /**
-   * Fills the associated spatial moments of all clusters in the tree with
-   * zeros. The tree is traversed recursively by the routine.
-   * @param[in] current_cluster  Current cluster in the tree traversal.
-   */
-  void clear_spatial_moment_contributions(
-    scheduling_time_cluster & current_cluster );
-
-  /**
    * Traverses the tree structure recursively and allocates the spatial local
    * contributions for all clusters which are active in the downward path of the
    * FMM.
@@ -311,14 +304,6 @@ class besthea::mesh::tree_structure {
   void allocate_spatial_local_contributions_in_tree(
     scheduling_time_cluster & current_cluster, lou spatial_contribution_size,
     lo first_space_refinement_level );
-
-  /**
-   * Fills the associated spatial local contributions of all clusters in the
-   * tree with zeros. The tree is traversed recursively by the routine.
-   * @param[in] current_cluster  Current cluster in the tree traversal.
-   */
-  void clear_spatial_local_contributions(
-    scheduling_time_cluster & current_cluster );
 
   /**
    * Traverses the tree structure recursively and allocates and initializes the

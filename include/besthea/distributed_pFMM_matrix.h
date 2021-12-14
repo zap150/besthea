@@ -181,10 +181,10 @@ class besthea::linear_algebra::distributed_pFMM_matrix
       _m2t_subtask_times( omp_get_max_threads( ) ),
       _s2l_subtask_times( omp_get_max_threads( ) ),
       _n_subtask_times( omp_get_max_threads( ) ),
-      _mpi_send_m2l_or_m2t( omp_get_max_threads( ) ),
+      _mpi_send_m2l_m2t_or_s2l( omp_get_max_threads( ) ),
       _mpi_send_m_parent( omp_get_max_threads( ) ),
       _mpi_send_l_children( omp_get_max_threads( ) ),
-      _mpi_recv_m2l( omp_get_max_threads( ) ),
+      _mpi_recv_m2l_m2t_or_s2l( omp_get_max_threads( ) ),
       _mpi_recv_m_parent( omp_get_max_threads( ) ),
       _mpi_recv_l_children( omp_get_max_threads( ) ) {
   }
@@ -542,7 +542,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] child_configuration Indicates for which children the m2m
    *                                operations are executed:
    *                                - 0: left children w.r.t. to time.
-   *                                - 1: right chilren w.r.t. to time.
+   *                                - 1: right children w.r.t. to time.
    */
   void apply_grouped_m2m_operation(
     mesh::general_spacetime_cluster * parent_cluster,
@@ -613,7 +613,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] child_configuration Indicates for which children the l2l
    *                                operations are executed:
    *                                - 0: left children w.r.t. to time.
-   *                                - 1: right chilren w.r.t. to time.
+   *                                - 1: right children w.r.t. to time.
    */
   void apply_grouped_l2l_operation(
     mesh::general_spacetime_cluster * parent_cluster,
@@ -718,18 +718,69 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     vector_type & local_output_vector ) const;
 
   /**
-   * Applies an M2Ls operations for the given space-time source and target
-   * clusters.
+   * Applies the appropriate M2Ls operation for the given space-time source and
+   * target clusters, depending on the boundary integral operator.
+   * @param[in] src_cluster  Considered spacetime source cluster.
+   * @param[in] tar_cluster  Considered spacetime target cluster.
+   */
+  template< slou run_count >
+  void apply_m2ls_operation(
+    const mesh::general_spacetime_cluster * src_cluster,
+    mesh::general_spacetime_cluster * tar_cluster ) const;
+
+  /**
+   * Applies an M2Ls operation with for the given space-time source and target
+   * clusters and p0 basis functions in time.
    * @param[in] src_cluster  Considered spacetime source cluster.
    * @param[in] tar_cluster  Considered spacetime target cluster.
    * @note In the target interval we apply a Gauss quadrature rule with
    * ( _temp_order + 1 ) points, which is exact for polynomials up to order
    *  2 * _temp_order + 1. This are roughly twice as many quadrature points
-   * as we use for s2m and l2t operations, so they should be sufficient.
+   * as we use for the quadrature in time in s2m and l2t operations, so they
+   * should be sufficient.
    */
-  void apply_m2ls_operation(
+  void apply_m2ls_operation_p0_time(
     const mesh::general_spacetime_cluster * src_cluster,
     mesh::general_spacetime_cluster * tar_cluster ) const;
+
+  /**
+   * Applies the appropriate L2Ls operation for the given space-time target
+   * cluster, depending on the boundary integral operator.
+   * @param[in] current_cluster Space-time target cluster for which the L2Ls
+   * operation is executed.
+   */
+  template< slou run_count >
+  void apply_l2ls_operation(
+    mesh::general_spacetime_cluster * current_cluster ) const;
+
+  /**
+   * Applies an L2Ls operation for the given space-time target cluster and
+   * piecewise constant basis functions in time.
+   * @param[in] current_cluster Space-time target cluster for which the L2Ls
+   * operation is executed.
+   */
+  void apply_l2ls_operation_p0_time(
+    mesh::general_spacetime_cluster * current_cluster ) const;
+
+  /**
+   * Applies an Ls2Ls operation for the given parent and child cluster.
+   * @param[in] parent_cluster  Current parent cluster.
+   * @param[in] child_cluster Current child cluster.
+   */
+  void apply_ls2ls_operation( mesh::general_spacetime_cluster * parent_cluster,
+    mesh::general_spacetime_cluster * child_cluster ) const;
+
+  /**
+   * Applies the appropriate Ls2T operation for the given space-time cluster,
+   * depending on the boundary integral operator. The result is written to the
+   * given global result vector.
+   * @param[in] st_cluster  Cluster for which Ls2T operation is executed.
+   * @param[in,out] output_vector The results of the Ls2T operation are added to
+   * the appropriate positions of this global result vector.
+   */
+  template< slou run_count >
+  void apply_ls2t_operation( const mesh::general_spacetime_cluster * st_cluster,
+    distributed_block_vector & output_vector ) const;
 
   /**
    * Applies an Ls2T operation for the given space-time cluster for p0 basis
@@ -817,10 +868,78 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     const mesh::general_spacetime_cluster * src_cluster,
     mesh::general_spacetime_cluster * tar_cluster ) const;
 
+  /**
+   * Applies the appropriate S2Ms operation for a given source cluster,
+   * depending on the boundary integral operator.
+   * @param[in] src_vector  Global vector containing the sources used for the
+   * operation.
+   * @param[in] src_cluster Cluster whose spatial moments are computed via an
+   * S2Ms operation.
+   */
+  template< slou run_count >
+  void apply_s2ms_operation( const distributed_block_vector & src_vector,
+    mesh::general_spacetime_cluster * src_cluster ) const;
+
+  /**
+   * Applies an S2Ms operation for a given source cluster and p0 basis functions
+   * in time.
+   * @param[in] src_vector  Global vector containing the sources used for the
+   * operation.
+   * @param[in] src_cluster Cluster whose spatial moments are computed via an
+   * S2Ms operation.
+   */
   void apply_s2ms_operation_p0( const distributed_block_vector & src_vector,
     mesh::general_spacetime_cluster * src_cluster ) const;
 
+  /**
+   * Applies an Ms2Ms operation for a given child and parent cluster.
+   * @param[in] child_cluster Current child cluster.
+   * @param[in] parent_cluster  Current parent cluster.
+   */
+  void apply_ms2ms_operation(
+    const mesh::general_spacetime_cluster * child_cluster,
+    mesh::general_spacetime_cluster * parent_cluster ) const;
+
+  /**
+   * Applies the appropriate Ms2M operation for a given space-time source
+   * cluster, depending on the boundary integral operator.
+   * @param[in] current_cluster Current source cluster.
+   */
+  template< slou run_count >
+  void apply_ms2m_operation(
+    mesh::general_spacetime_cluster * current_cluster ) const;
+
+  /**
+   * Applies an Ms2M operation for a given space-time source
+   * cluster and p0 basis functions in time.
+   * @param[in] current_cluster Current source cluster.
+   */
+  void apply_ms2m_operation_p0_time(
+    mesh::general_spacetime_cluster * current_cluster ) const;
+
+  /**
+   * Applies the appropriate Ms2L operation for a given source and target
+   * cluster, depending on the boundary integral operator.
+   * @param[in] src_cluster Current source cluster.
+   * @param[in] tar_cluster Current target cluster.
+   */
+  template< slou run_count >
   void apply_ms2l_operation(
+    const mesh::general_spacetime_cluster * src_cluster,
+    mesh::general_spacetime_cluster * tar_cluster ) const;
+
+  /**
+   * Applies an Ms2L operation for a given source and target cluster and p0
+   * basis functions in time.
+   * @param[in] src_cluster Current source cluster.
+   * @param[in] tar_cluster Current target cluster.
+   * @note In the source interval we apply a Gauss quadrature rule with
+   * ( _temp_order + 1 ) points, which is exact for polynomials up to order
+   *  2 * _temp_order + 1. This are roughly twice as many quadrature points
+   * as we use for the quadrature in time in s2m and l2t operations, so they
+   * should be sufficient.
+   */
+  void apply_ms2l_operation_p0_time(
     const mesh::general_spacetime_cluster * src_cluster,
     mesh::general_spacetime_cluster * tar_cluster ) const;
 
@@ -995,22 +1114,34 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     char & status ) const;
 
   /**
-   * Returns an iterator pointing to the next cluster in the m2l-list or
-   * s2l_list whose operations should be executed and whose dependencies are
-   * satisfied. In case a cluster is found the status is updated. If no cluster
-   * is found the iterator points to the end of the m2l_list and the status is
-   * not modified.
+   * Returns an iterator pointing to the next cluster in the m2l-list whose
+   * operations should be executed and whose dependencies are satisfied. In case
+   * a cluster is found the status is updated. If no cluster is found the
+   * iterator points to the end of the m2l_list and the status is not modified.
    * @param[in] m2l_list  A list containing the clusters of @ref _m2l_list whose
-   * operations have not been executed yet.
-   * @param[in] s2l_list  A list containing the clusters of @ref _s2l_list whose
    * operations have not been executed yet.
    * @param[out] it_next_cluster  If a cluster is found in one of the lists this
    * iterator points to it. Else it points to the end of @p m2l_list.
-   * @param[out] status If a cluster is found in the s2l-list or m2l-list it is
-   * set to 3 or 4, respectively.
+   * @param[out] status If a cluster is found in the m2l-list it is
+   * set to 4.
    */
-  void find_cluster_in_m2l_or_s2l_list(
+  void find_cluster_in_m2l_list(
     std::list< mesh::scheduling_time_cluster * > & m2l_list,
+    std::list< mesh::scheduling_time_cluster * >::iterator & it_next_cluster,
+    char & status ) const;
+
+  /**
+   * Returns an iterator pointing to the next cluster in the s2l-list whose
+   * operations should be executed and whose dependencies are satisfied. In case
+   * a cluster is found the status is updated. If no cluster is found the
+   * iterator points to the end of the s2l_list and the status is not modified.
+   * @param[in] s2l_list  A list containing the clusters of @ref _s2l_list whose
+   * operations have not been executed yet.
+   * @param[out] it_next_cluster  If a cluster is found in one of the lists this
+   * iterator points to it. Else it points to the end of @p s2l_list.
+   * @param[out] status If a cluster is found in the s2l-list it is set to 3.
+   */
+  void find_cluster_in_s2l_list(
     std::list< mesh::scheduling_time_cluster * > & s2l_list,
     std::list< mesh::scheduling_time_cluster * >::iterator & it_next_cluster,
     char & status ) const;
@@ -1034,15 +1165,29 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   /**
    * Updates dependency flags or sends moments for M2L or M2T operations.
    * @param[in] src_cluster Considered scheduling time cluster. If a cluster in
-   *                        its send list or diagonal send list is handled by a
-   * different process, the moments are send to this process.
+   * its send list or diagonal send list is handled by a different process, the
+   * moments are sent to this process.
    * @param[in] verbose If true, the process reports about all initiated send
-   *                    operations. (Updates of dependency flags are not
-   *                    reported)
+   * operations. (Updates of dependency flags are not reported)
    * @param[in] verbose_file  If @p verbose is true, this is used as output
-   *                          file.
+   * file.
    */
   void provide_moments_for_m2l_or_m2t(
+    mesh::scheduling_time_cluster * src_cluster, bool verbose,
+    const std::string & verbose_file ) const;
+
+  /**
+   * Updates dependency flags or sends spatial moments for hybrid S2L
+   * operations.
+   * @param[in] src_cluster Considered scheduling time cluster. If a cluster in
+   * its s2l send list is handled by a different process, the spatial moments
+   * are sent to this process.
+   * @param[in] verbose If true, the process reports about all initiated send
+   * operations. (Updates of dependency flags are not reported)
+   * @param[in] verbose_file  If @p verbose is true, this is used as output
+   * file.
+   */
+  void provide_spatial_moments_for_hybrid_s2l(
     mesh::scheduling_time_cluster * src_cluster, bool verbose,
     const std::string & verbose_file ) const;
 
@@ -1785,28 +1930,31 @@ class besthea::linear_algebra::distributed_pFMM_matrix
                        //!< subtasks.
 
   mutable std::vector< std::vector< time_type::rep > >
-    _mpi_send_m2l_or_m2t;  //!< Contains a vector for each thread. The entries
-                           //!< in these vectors are the times when the sending
-                           //!< of a group of moments to another process for
-                           //!< m2l-list operations has started.
+    _mpi_send_m2l_m2t_or_s2l;  //!< Contains a vector for each thread. The
+                               //!< entries in these vectors are the times when
+                               //!< the sending of a group of moments to another
+                               //!< process for m2l-list operations has started.
   mutable std::vector< std::vector< time_type::rep > >
-    _mpi_send_m_parent;  //!< Same as @ref _mpi_send_m2l_or_m2t for sending
+    _mpi_send_m_parent;  //!< Same as @ref _mpi_send_m2l_m2t_or_s2l for sending
                          //!< moments for m-list operations.
   mutable std::vector< std::vector< time_type::rep > >
-    _mpi_send_l_children;  //!< Same as @ref _mpi_send_m2l_or_m2t for sending
-                           //!< local contributions for l-list operations.
+    _mpi_send_l_children;  //!< Same as @ref _mpi_send_m2l_m2t_or_s2l for
+                           //!< sending local contributions for l-list
+                           //!< operations.
 
   mutable std::vector< std::vector< time_type::rep > >
-    _mpi_recv_m2l;  //!< Contains a vector for each thread. The entries in these
-                    //!< vectors are the times when the thread has detected the
-                    //!< reception of a group of moments needed for m2l-list
-                    //!< operations.
+    _mpi_recv_m2l_m2t_or_s2l;  //!< Contains a vector for each thread. The
+                               //!< entries in these vectors are the times when
+                               //!< the thread has detected the reception of a
+                               //!< group of moments needed for m2l-list
+                               //!< operations.
   mutable std::vector< std::vector< time_type::rep > >
-    _mpi_recv_m_parent;  //!< Same as @ref _mpi_recv_m2l for receiving moments
-                         //!< needed for m-list operations.
+    _mpi_recv_m_parent;  //!< Same as @ref _mpi_recv_m2l_m2t_or_s2l for
+                         //!< receiving moments needed for m-list operations.
   mutable std::vector< std::vector< time_type::rep > >
-    _mpi_recv_l_children;  //!< Same as @ref _mpi_recv_m2l for receiving local
-                           //!< contributions needed for l-list operations.
+    _mpi_recv_l_children;  //!< Same as @ref _mpi_recv_m2l_m2t_or_s2l for
+                           //!< receiving local contributions needed for l-list
+                           //!< operations.
 
   /**
    * Saves task duration measurement per thread in files (1 per MPI rank).
