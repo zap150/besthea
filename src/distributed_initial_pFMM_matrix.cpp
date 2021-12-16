@@ -119,7 +119,11 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   for ( auto m2l_time_cluster : _time_clusters_for_m2l ) {
     const std::vector< general_spacetime_cluster * > * associated_clusters
       = m2l_time_cluster->get_associated_spacetime_clusters( );
-    for ( lou i = 0; i < associated_clusters->size( ); ++i ) {
+    lo n_relevant_st_clusters
+      = m2l_time_cluster->get_n_st_clusters_w_local_contributions( );
+    // by construction, the clusters with local contributions are first in the
+    // list of all associated space-time clusters.
+    for ( lo i = 0; i < n_relevant_st_clusters; ++i ) {
       general_spacetime_cluster * st_cluster = ( *associated_clusters )[ i ];
       std::vector< slou > cluster_coords = st_cluster->get_box_coordinate( );
       std::vector< slou > spatial_grid_coords
@@ -557,8 +561,10 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
     = parent_cluster->get_associated_spacetime_clusters( );
   lou n_associated_leaves = parent_cluster->get_n_associated_leaves( );
   // call the l2l operations for all non-leaf spacetime clusters which are
-  // associated with the parent scheduling time cluster
-  // there is an implicit taskgroup after this taskloop
+  // associated with the parent scheduling time cluster (note: there cannot
+  // be any auxiliary clusters associated with the parent)
+
+  // there is an implicit taskgroup associated with this taskloop
 #pragma omp taskloop
   for ( lou i = n_associated_leaves; i < associated_spacetime_clusters->size( );
         ++i ) {
@@ -808,7 +814,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
       = t_cluster->get_associated_spacetime_clusters( );
     lou i = 0;
     lou n = t_cluster->get_n_associated_leaves( );
-    // there is an implicit taskgroup after this taskloop
+    // there is an implicit taskgroup associated with this taskloop
 #pragma omp taskloop shared( output_vector, associated_spacetime_clusters )
     for ( i = 0; i < n; ++i ) {
       apply_l2t_operation(
@@ -1767,14 +1773,18 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
     = current_cluster.get_status_in_initial_op_downward_path( );
   lo current_level = current_cluster.get_level( );
   if ( downpard_path_status == 1 ) {
-    lo n_associated_clusters
-      = current_cluster.get_associated_spacetime_clusters( )->size( );
+    // l2l operations are executed for all associated space-time clusters for
+    // which local contributions are allocated (i.e. all non-auxiliary
+    // associated clusters).
+    lo n_assoc_st_clusters_w_local_contributions
+      = current_cluster.get_n_st_clusters_w_local_contributions( );
     lo n_associated_leaves = current_cluster.get_n_associated_leaves( );
     const mesh::scheduling_time_cluster * current_parent
       = current_cluster.get_parent( );
     if ( current_parent != nullptr
       && ( current_parent->get_status_in_initial_op_downward_path( ) == 1 ) ) {
-      n_l2l_operations[ current_level ] += n_associated_clusters;
+      n_l2l_operations[ current_level ]
+        += n_assoc_st_clusters_w_local_contributions;
     }
     n_l2t_operations[ current_level ] += n_associated_leaves;
   }

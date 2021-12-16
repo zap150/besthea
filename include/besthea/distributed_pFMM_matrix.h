@@ -354,6 +354,21 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   }
 
   /**
+   * Returns a pointer to (const) @ref _clusters_with_nearfield_operations.
+   */
+  const std::vector< mesh::general_spacetime_cluster * > *
+  get_pointer_to_clusters_with_nearfield_operations( ) const {
+    return &_clusters_with_nearfield_operations;
+  }
+
+  /**
+   * Initializes @ref _clusters_with_nearfield_operations and prepares
+   * @ref _clusterwise_nearfield_matrices by creating a map for each space-time
+   * target cluster and associated list of nearfield matrices.
+   */
+  void initialize_nearfield_containers( );
+
+  /**
    * Fills the 4 lists used for scheduling the FMM operations by adding pointers
    * to clusters assigned to the process with id @p _my_process_id. In addition
    * it determines all pairs of clusters and process ids from which data is
@@ -369,12 +384,13 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   /**
    * Creates a nearfield matrix for two clusters
-   * @param[in] leaf_index  Index of the local leaf cluster, which acts as the
-   *                        target.
+   * @param[in] nf_cluster_index  Index of the nearfield cluster in
+   * @ref _clusters_with_nearfield_operations, which acts as the target.
    * @param[in] source_index  Index of the source cluster in the nearfield list
    *                          of the target cluster.
    */
-  full_matrix * create_nearfield_matrix( lou leaf_index, lou source_index );
+  full_matrix * create_nearfield_matrix(
+    lou nf_cluster_index, lou source_index );
 
   /**
    * Compute the spatial m2m coefficients for all local spatial levels.
@@ -418,7 +434,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * Auxiliary method that sorts clusters within the _n_list to improve shared
    * memory scalability during matrix vector multiplication.
    */
-  void sort_clusters_in_nearfield( );
+  void sort_clusters_in_n_list( );
 
   /**
    * Extracts the diagonal from the pFMM matrix, inverts each entry, and writes
@@ -882,13 +898,26 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   /**
    * Applies an S2Ms operation for a given source cluster and p0 basis functions
-   * in time.
+   * in space.
    * @param[in] src_vector  Global vector containing the sources used for the
    * operation.
    * @param[in] src_cluster Cluster whose spatial moments are computed via an
    * S2Ms operation.
    */
   void apply_s2ms_operation_p0( const distributed_block_vector & src_vector,
+    mesh::general_spacetime_cluster * src_cluster ) const;
+
+  /**
+   * Applies an S2Ms operation for a given source cluster for p1 basis functions
+   * in space and normal derivatives of spatial polynomials (for double layer
+   * operator).
+   * @param[in] src_vector  Global vector containing the sources used for the
+   * operation.
+   * @param[in] src_cluster Cluster whose spatial moments are computed via an
+   * S2Ms operation.
+   */
+  void apply_s2ms_operation_p1_normal_drv(
+    const distributed_block_vector & src_vector,
     mesh::general_spacetime_cluster * src_cluster ) const;
 
   /**
@@ -1740,6 +1769,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   mesh::tree_structure *
     _scheduling_tree_structure;  //!< Temporal tree structure used for
                                  //!< scheduling the FMM operations
+
+  std::vector< mesh::general_spacetime_cluster * >
+    _clusters_with_nearfield_operations;
 
   std::unordered_map< mesh::general_spacetime_cluster *,
     std::vector< full_matrix * > >

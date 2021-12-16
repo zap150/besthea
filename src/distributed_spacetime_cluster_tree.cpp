@@ -1685,7 +1685,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::collect_local_leaves(
   std::vector< general_spacetime_cluster * > & leaf_vector ) const {
   std::vector< general_spacetime_cluster * > * children
     = current_cluster.get_children( );
-  if ( children != nullptr ) {
+  if ( children != nullptr
+    && !current_cluster.has_additional_spatial_children( ) ) {
     for ( auto it : *children ) {
       collect_local_leaves( *it, leaf_vector );
     }
@@ -3682,31 +3683,27 @@ void besthea::mesh::distributed_spacetime_cluster_tree::send_leaf_info(
   const std::vector< scheduling_time_cluster * > & send_cluster_vector,
   const lo communication_offset ) const {
   if ( send_cluster_vector.size( ) > 0 ) {
-    // determine first the size of the array of leaf info which is sent
-    lou array_size = 0;
-    for ( auto send_cluster : send_cluster_vector ) {
-      // if send_cluster has no associated spacetime clusters, also the
-      // receiving process knows this. Note that this should not happen, since
-      // we reduce the distribution tree in such cases.
-      if ( send_cluster->get_associated_spacetime_clusters( ) != nullptr ) {
-        array_size
-          += send_cluster->get_associated_spacetime_clusters( )->size( );
-      }
-    }
-    bool * leaf_info_array = new bool[ array_size ];
-    // fill the array appropriately
-    lo pos = 0;
+    // fill the vector containing the info of all leaves appropriately
+    std::vector< bool > leaf_info_vector;
     for ( auto send_cluster : send_cluster_vector ) {
       if ( send_cluster->get_associated_spacetime_clusters( ) != nullptr ) {
         for ( auto st_cluster :
           *send_cluster->get_associated_spacetime_clusters( ) ) {
-          leaf_info_array[ pos ] = st_cluster->is_global_leaf( );
-          pos++;
+          if ( !st_cluster->is_auxiliary_ref_cluster( ) ) {
+            leaf_info_vector.push_back( st_cluster->is_global_leaf( ) );
+          }
         }
       }
     }
+    // copy the entries of leaf_info_vector to an array, and send the array
+    // (this is necessary, since std::vector<bool> does not provide the routine
+    // .data() )
+    bool * leaf_info_array = new bool[ leaf_info_vector.size( ) ];
+    for ( lou i = 0; i < leaf_info_vector.size( ); ++i ) {
+      leaf_info_array[ i ] = leaf_info_vector[ i ];
+    }
     // send the whole array at once to the appropriate process
-    MPI_Send( leaf_info_array, array_size, MPI_CXX_BOOL,
+    MPI_Send( leaf_info_array, leaf_info_vector.size( ), MPI_CXX_BOOL,
       _my_rank + communication_offset, communication_offset, *_comm );
     delete[] leaf_info_array;
   }
@@ -3722,6 +3719,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::receive_leaf_info(
       // if receive_cluster has no associated spacetime clusters, also the
       // sending process knows this. Note that this should not happen, since
       // we reduce the distribution tree in such cases.
+      // Note that the receiving clusters will never have auxiliary refined the
+      // cluster, so we can simply consider all associated space-time clusters
       if ( receive_cluster->get_associated_spacetime_clusters( ) != nullptr ) {
         array_size
           += receive_cluster->get_associated_spacetime_clusters( )->size( );

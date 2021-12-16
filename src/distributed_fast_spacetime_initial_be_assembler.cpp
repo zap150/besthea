@@ -103,13 +103,12 @@ void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
     _order_regular_tetra, _order_regular_line );
   global_matrix.set_alpha( _alpha );
   global_matrix.set_m2l_integration_order( _m2l_integration_order );
+  initialize_moment_and_local_contributions( );
   // ###########################################################################
   global_matrix.initialize_fmm_data(
     _test_space->get_tree( ), _space_source_tree );
 
   global_matrix.initialize_spatial_m2m_coeffs( );
-
-  initialize_moment_and_local_contributions( );
 
   // precompute Chebyshev nodes and values
   global_matrix.compute_chebyshev( );

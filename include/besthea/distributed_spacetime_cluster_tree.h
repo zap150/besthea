@@ -222,8 +222,14 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
 
   /**
    * Collects the leaves of the cluster tree which are owned by the current MPI
-   * process, i.e. local. The routine is based on a tree traversal. It can also
-   * be used to find local leaves of a subtree.
+   * process, i.e. local.
+   *
+   * The routine excludes auxiliary spatially refined clusters. A cluster having
+   * only auxiliary spatially refined clusters as children is considered to be a
+   * leaf.
+   *
+   * The routine is based on a tree traversal. It can also be used to find local
+   * leaves of a subtree.
    * @param[in] current_cluster Current cluster in the tree traversal.
    * @param[in,out] leaf_vector Vector to which the detected local leaves are
    * added.

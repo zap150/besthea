@@ -354,10 +354,22 @@ class besthea::mesh::tree_structure {
    *
    * This is an auxiliary routine which helps to estimate the memory
    * requirements of the farfield part of distributed pFMM matrices in
-   * @ref distributed_pFMM_matrix.h.
+   * @ref distributed_pFMM_matrix.h. It is based on a recursive tree traversal.
+   * @param[in] root  Current cluster in the tree traversal.
+   * @param[in,out] n_moments Counter for the number of moments in the tree.
+   * @param[in,out] n_moments_receive Counter for the number of separately
+   * received moments in the tree (such moments are only used to store received
+   * moments for a parent cluster in the upward path of the FMM)
+   * @param[in,out] n_local_contributions Counter for the number of local
+   * contributions in the tree.
+   * @param[in,out] n_spat_moments  Counter for the number of spatial moments in
+   * the tree.
+   * @param[in,out] n_spat_local_contribution Counter for the number of spatial
+   * local contributions in the tree.
    */
   void count_number_of_contributions( scheduling_time_cluster * root,
-    lo & n_moments, lo & n_moments_receive, lo & n_local_contributions );
+    lo & n_moments, lo & n_moments_receive, lo & n_local_contributions,
+    lo & n_spat_moments, lo & n_spat_local_contributions ) const;
 
   /**
    * Computes the tree structure and prints it to a binary file

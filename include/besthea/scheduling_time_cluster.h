@@ -111,9 +111,13 @@ class besthea::mesh::scheduling_time_cluster {
       _associated_additional_spacetime_leaves( nullptr ),
       _n_associated_leaves( 0 ),
       _associated_moments( nullptr ),
+      _n_st_clusters_w_moments( 0 ),
       _associated_local_contributions( nullptr ),
+      _n_st_clusters_w_local_contributions( 0 ),
       _assoc_spatial_moments( nullptr ),
+      _n_st_clusters_w_spatial_moments( 0 ),
       _assoc_spatial_local_contributions( nullptr ),
+      _n_st_clusters_w_spatial_local_contributions( 0 ),
       _assoc_nearfield_targets( nullptr ),
       _assoc_standard_m2t_targets( nullptr ),
       _assoc_hybrid_m2t_targets( nullptr ),
@@ -528,7 +532,7 @@ class besthea::mesh::scheduling_time_cluster {
   /**
    * Adds a cluster to @ref _m2t_list.
    * @param[in] src_cluster Pointer to a source cluster for which m2t operations
-   * have to be exectued.
+   * have to be executed.
    * @note If @p _m2t_list is not allocated this is done here.
    */
   void add_to_m2t_list( scheduling_time_cluster * src_cluster ) {
@@ -590,7 +594,7 @@ class besthea::mesh::scheduling_time_cluster {
   /**
    * Adds a cluster to @ref _s2l_list.
    * @param[in] src_cluster Pointer to a source cluster for which s2l operations
-   * have to be exectued.
+   * have to be executed.
    * @note If @p _s2l_list is not allocated this is done here.
    */
   void add_to_s2l_list( scheduling_time_cluster * src_cluster ) {
@@ -1088,13 +1092,16 @@ class besthea::mesh::scheduling_time_cluster {
    * @param[in] proc_id Key value of the element to be added
    * @note @p _map_to_moment_receive_buffers is allocated if it does not exist
    * allready.
+   * @warning The actual moments for this clusters have to exist already.
+   * Otherwise @ref _n_st_clusters_w_moments is 0 and no receive buffers are
+   * allocated.
    */
   void add_receive_buffer( const lo proc_id ) {
     if ( _map_to_moment_receive_buffers == nullptr ) {
       _map_to_moment_receive_buffers = new std::map< lo, lou >( );
     }
     sc * moment_buffer
-      = new sc[ _contribution_size * _associated_spacetime_clusters->size( ) ];
+      = new sc[ _contribution_size * _n_st_clusters_w_moments ];
     _associated_moments_receive_buffers.push_back( moment_buffer );
     _map_to_moment_receive_buffers->insert(
       { proc_id, _associated_moments_receive_buffers.size( ) - 1 } );
@@ -1282,17 +1289,17 @@ class besthea::mesh::scheduling_time_cluster {
     if ( _associated_spacetime_clusters != nullptr ) {
       if ( _associated_moments == nullptr ) {
         _contribution_size = moment_size;
-        lo n_clusters_with_moments = _associated_spacetime_clusters->size( );
+        _n_st_clusters_w_moments = _associated_spacetime_clusters->size( );
         // we do not have to allocate space-time moments for auxiliary clusters
         // associated with the current time cluster, so we check if such
         // clusters exist, and allocate moments only for other clusters
         if ( _n_associated_leaves_and_aux_clusters_per_level != nullptr
           && _n_associated_leaves_and_aux_clusters_per_level->size( ) > 1 ) {
-          n_clusters_with_moments
+          _n_st_clusters_w_moments
             = ( *_n_associated_leaves_and_aux_clusters_per_level )[ 0 ];
         }
-        _associated_moments = new sc[ moment_size * n_clusters_with_moments ];
-        for ( lo i = 0; i < n_clusters_with_moments; ++i ) {
+        _associated_moments = new sc[ moment_size * _n_st_clusters_w_moments ];
+        for ( lo i = 0; i < _n_st_clusters_w_moments; ++i ) {
           general_spacetime_cluster * current_spacetime_cluster
             = ( *_associated_spacetime_clusters )[ i ];
           current_spacetime_cluster->set_pointer_to_moment(
@@ -1307,8 +1314,7 @@ class besthea::mesh::scheduling_time_cluster {
    */
   void clear_associated_moments( ) {
     if ( _associated_moments != nullptr ) {
-      for ( lou i = 0;
-            i < _contribution_size * _associated_spacetime_clusters->size( );
+      for ( lou i = 0; i < _contribution_size * _n_st_clusters_w_moments;
             ++i ) {
         _associated_moments[ i ] = 0.0;
       }
@@ -1320,6 +1326,13 @@ class besthea::mesh::scheduling_time_cluster {
    */
   sc * get_associated_moments( ) {
     return _associated_moments;
+  }
+
+  /**
+   * Returns the value of @ref _n_st_clusters_w_moments.
+   */
+  lo get_n_st_clusters_w_moments( ) const {
+    return _n_st_clusters_w_moments;
   }
 
   /**
@@ -1335,7 +1348,7 @@ class besthea::mesh::scheduling_time_cluster {
     if ( _associated_spacetime_clusters != nullptr ) {
       if ( _associated_local_contributions == nullptr ) {
         _contribution_size = contribution_size;
-        lo n_clusters_with_local_contributions
+        _n_st_clusters_w_local_contributions
           = _associated_spacetime_clusters->size( );
         // we do not have to allocate space-time local contributions for
         // auxiliary clusters associated with the current time cluster, so we
@@ -1343,12 +1356,12 @@ class besthea::mesh::scheduling_time_cluster {
         // for other clusters
         if ( _n_associated_leaves_and_aux_clusters_per_level != nullptr
           && _n_associated_leaves_and_aux_clusters_per_level->size( ) > 1 ) {
-          n_clusters_with_local_contributions
+          _n_st_clusters_w_local_contributions
             = ( *_n_associated_leaves_and_aux_clusters_per_level )[ 0 ];
         }
         _associated_local_contributions
-          = new sc[ contribution_size * n_clusters_with_local_contributions ];
-        for ( lo i = 0; i < n_clusters_with_local_contributions; ++i ) {
+          = new sc[ contribution_size * _n_st_clusters_w_local_contributions ];
+        for ( lo i = 0; i < _n_st_clusters_w_local_contributions; ++i ) {
           general_spacetime_cluster * current_spacetime_cluster
             = ( *_associated_spacetime_clusters )[ i ];
           current_spacetime_cluster->set_pointer_to_local_contribution(
@@ -1364,7 +1377,7 @@ class besthea::mesh::scheduling_time_cluster {
   void clear_associated_local_contributions( ) {
     if ( _associated_local_contributions != nullptr ) {
       for ( lou i = 0;
-            i < _contribution_size * _associated_spacetime_clusters->size( );
+            i < _contribution_size * _n_st_clusters_w_local_contributions;
             ++i ) {
         _associated_local_contributions[ i ] = 0.0;
       }
@@ -1376,6 +1389,13 @@ class besthea::mesh::scheduling_time_cluster {
    */
   sc * get_associated_local_contributions( ) {
     return _associated_local_contributions;
+  }
+
+  /**
+   * Returns the value of @ref _n_st_clusters_w_moments.
+   */
+  lo get_n_st_clusters_w_local_contributions( ) const {
+    return _n_st_clusters_w_local_contributions;
   }
 
   /**
@@ -1402,16 +1422,16 @@ class besthea::mesh::scheduling_time_cluster {
       if ( _assoc_spatial_moments == nullptr ) {
         _spatial_contribution_size = spatial_contribution_size;
         _max_relative_space_level_s2ms = max_rel_space_level;
-        _n_assoc_spatial_moments = 0;
+        _n_st_clusters_w_spatial_moments = 0;
         for ( lo i = 0; i <= max_rel_space_level; ++i ) {
-          _n_assoc_spatial_moments
+          _n_st_clusters_w_spatial_moments
             += ( *_n_associated_leaves_and_aux_clusters_per_level )[ i ];
         }
-        _assoc_spatial_moments
-          = new sc[ spatial_contribution_size * _n_assoc_spatial_moments ];
+        _assoc_spatial_moments = new sc[ spatial_contribution_size
+          * _n_st_clusters_w_spatial_moments ];
         // assign the individual spatial moments to the corresponding
         // space-time clusters
-        for ( lo i = 0; i < _n_assoc_spatial_moments; ++i ) {
+        for ( lo i = 0; i < _n_st_clusters_w_spatial_moments; ++i ) {
           general_spacetime_cluster * current_spacetime_cluster
             = ( *_associated_spacetime_clusters )[ i ];
           current_spacetime_cluster->set_pointer_to_spatial_moments(
@@ -1427,7 +1447,8 @@ class besthea::mesh::scheduling_time_cluster {
   void clear_associated_spatial_moments( ) {
     if ( _assoc_spatial_moments != nullptr ) {
       for ( lou j = 0;
-            j < _spatial_contribution_size * _n_assoc_spatial_moments; ++j ) {
+            j < _spatial_contribution_size * _n_st_clusters_w_spatial_moments;
+            ++j ) {
         _assoc_spatial_moments[ j ] = 0.0;
       }
     }
@@ -1448,10 +1469,10 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Returns the value of @ref _n_assoc_spatial_moments.
+   * Returns the value of @ref _n_st_clusters_w_spatial_moments.
    */
-  lo get_n_associated_spatial_moments( ) const {
-    return _n_assoc_spatial_moments;
+  lo get_n_st_clusters_w_spatial_moments( ) const {
+    return _n_st_clusters_w_spatial_moments;
   }
 
   /**
@@ -1478,16 +1499,16 @@ class besthea::mesh::scheduling_time_cluster {
       // already
       _spatial_contribution_size = spatial_contribution_size;
       _max_relative_space_level_ls2t = max_rel_space_level;
-      _n_assoc_spatial_local_contributions = 0;
+      _n_st_clusters_w_spatial_local_contributions = 0;
       for ( lo i = 0; i <= max_rel_space_level; ++i ) {
-        _n_assoc_spatial_local_contributions
+        _n_st_clusters_w_spatial_local_contributions
           += ( *_n_associated_leaves_and_aux_clusters_per_level )[ i ];
       }
       _assoc_spatial_local_contributions = new sc[ spatial_contribution_size
-        * _n_assoc_spatial_local_contributions ];
+        * _n_st_clusters_w_spatial_local_contributions ];
       // assign the individual spatial local contributions to the
       // corresponding space-time clusters
-      for ( lo i = 0; i < _n_assoc_spatial_local_contributions; ++i ) {
+      for ( lo i = 0; i < _n_st_clusters_w_spatial_local_contributions; ++i ) {
         general_spacetime_cluster * current_spacetime_cluster
           = ( *_associated_spacetime_clusters )[ i ];
         current_spacetime_cluster->set_pointer_to_spatial_local_contributions(
@@ -1502,8 +1523,8 @@ class besthea::mesh::scheduling_time_cluster {
    */
   void clear_associated_spatial_local_contributions( ) {
     if ( _assoc_spatial_local_contributions != nullptr ) {
-      for ( lou j = 0; j
-            < _spatial_contribution_size * _n_assoc_spatial_local_contributions;
+      for ( lou j = 0; j < _spatial_contribution_size
+              * _n_st_clusters_w_spatial_local_contributions;
             ++j ) {
         _assoc_spatial_local_contributions[ j ] = 0.0;
       }
@@ -1527,10 +1548,10 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Returns the value of @ref _n_assoc_spatial_local_contributions.
+   * Returns the value of @ref _n_st_clusters_w_spatial_local_contributions.
    */
-  lo get_n_associated_spatial_local_contributions( ) const {
-    return _n_assoc_spatial_local_contributions;
+  lo get_n_st_clusters_w_spatial_local_contributions( ) const {
+    return _n_st_clusters_w_spatial_local_contributions;
   }
 
   /**
@@ -1798,11 +1819,18 @@ class besthea::mesh::scheduling_time_cluster {
                              //!< clusters. These are first in the list of
                              //!< associated space-time clusters.
 
-  sc * _associated_moments;  //!< Array containing all the moments of the
-                             //!< associated general spacetime clusters.
-  sc * _associated_local_contributions;  //!< Array containing all the local
-  //!< contributions of the associated
-  //!< general spacetime clusters.
+  sc * _associated_moments;     //!< Array containing all the moments of the
+                                //!< associated general spacetime clusters.
+  lo _n_st_clusters_w_moments;  //!< Number of associated space-time
+                                //!< clusters for which moments are stored.
+  sc * _associated_local_contributions;     //!< Array containing all the local
+                                            //!< contributions of the associated
+                                            //!< general spacetime clusters.
+  lo _n_st_clusters_w_local_contributions;  //!< Number of associated
+                                            //!< space-time
+                                            //!< clusters for which
+                                            //!< local contributions are
+                                            //!< stored.
   sc *
     _assoc_spatial_moments;  //!< Array containing all spatial moments of
                              //!< associated general space-time clusters,
@@ -1810,17 +1838,19 @@ class besthea::mesh::scheduling_time_cluster {
                              //!< moments of associated leaves, then those of
                              //!< their spatially refined children, ...)
                              //!< Relevant only for hybrid s2l operations.
-  lo _n_assoc_spatial_moments;  //!< Number of associated spatial moments that
-                                //!< are stored for the current cluster.
+  lo _n_st_clusters_w_spatial_moments;      //!< Number of associated space-time
+                                            //!< clusters for which spatial
+                                            //!< moments are stored.
   sc * _assoc_spatial_local_contributions;  //!< Array containing all spatial
                                             //!< local contributions of
                                             //!< associated general space-time
                                             //!< clusters, stored in a levelwise
                                             //!< manner. Relevant only for
                                             //!< hybrid m2t operations.
-  lo _n_assoc_spatial_local_contributions;  //!< Number of associated spatial
-                                            //!< local contributions that are
-                                            //!< stored for the current cluster.
+  lo _n_st_clusters_w_spatial_local_contributions;  //!< Number of associated
+                                                    //!< space-time clusters
+                                                    //!< for which local
+                                                    //!< contributions are.
   std::vector< lo > *
     _assoc_nearfield_targets;  //!< Vector containing the indices of all
                                //!< associated space-time clusters for which

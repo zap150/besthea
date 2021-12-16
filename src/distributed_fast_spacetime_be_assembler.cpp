@@ -98,11 +98,13 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   global_matrix.resize( n_timesteps, n_columns, n_rows );
   // ###########################################################################
 
-  global_matrix.initialize_spatial_m2m_coeffs( );
-
   initialize_moment_and_local_contributions( );
 
-  // fill the m-list, m2l-list, l-list, m2t-list, s2l-list and n-list of the
+  global_matrix.initialize_spatial_m2m_coeffs( );
+
+  global_matrix.initialize_nearfield_containers( );
+
+    // fill the m-list, m2l-list, l-list, m2t-list, s2l-list and n-list of the
   // distributed pFMM matrix and determine the receive information data.
   global_matrix.prepare_fmm( );
 
@@ -112,6 +114,8 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   // assemble the nearfield matrices of the pFMM matrix
   if ( !info_mode ) {
     assemble_nearfield( global_matrix );
+    // sort pointers in _n_list of the matrix for matrix-vector multiplication
+    global_matrix.sort_clusters_in_n_list( );
   }
 }
 
@@ -119,14 +123,18 @@ template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   test_space_type, trial_space_type >::assemble_nearfield( pfmm_matrix_type &
     global_matrix ) const {
-  const std::vector< general_spacetime_cluster * > & local_leaves
-    = _test_space->get_tree( )->get_local_leaves( );
-
-  // first, sort by size of matrices in the nearfield
-  std::vector< lo > total_sizes( local_leaves.size( ), 0 );
-  for ( std::vector< general_spacetime_cluster * >::size_type leaf_index = 0;
-        leaf_index < local_leaves.size( ); ++leaf_index ) {
-    general_spacetime_cluster * current_cluster = local_leaves[ leaf_index ];
+  const std::vector< general_spacetime_cluster * > *
+    clusters_with_nearfield_operations
+    = global_matrix.get_pointer_to_clusters_with_nearfield_operations( );
+  // for the assembly, sort the clusters with nearfield operations by the size
+  // of matrices in the nearfield
+  std::vector< lo > total_sizes(
+    clusters_with_nearfield_operations->size( ), 0 );
+  for ( std::vector< general_spacetime_cluster * >::size_type cluster_index = 0;
+        cluster_index < clusters_with_nearfield_operations->size( );
+        ++cluster_index ) {
+    general_spacetime_cluster * current_cluster
+      = ( *clusters_with_nearfield_operations )[ cluster_index ];
     std::vector< general_spacetime_cluster * > * nearfield_list
       = current_cluster->get_nearfield_list( );
     lo n_dofs_target = current_cluster->get_n_dofs< test_space_type >( );
@@ -135,7 +143,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
       general_spacetime_cluster * nearfield_cluster
         = ( *nearfield_list )[ src_index ];
       lo n_dofs_source = nearfield_cluster->get_n_dofs< trial_space_type >( );
-      total_sizes[ leaf_index ] += n_dofs_source * n_dofs_target;
+      total_sizes[ cluster_index ] += n_dofs_source * n_dofs_target;
     }
   }
   std::vector< lo > permutation_index( total_sizes.size( ), 0 );
@@ -147,11 +155,14 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
       return ( total_sizes[ a ] > total_sizes[ b ] );
     } );
 
+// assemble the nearfield matrices in parallel
 #pragma omp parallel for schedule( dynamic, 1 )
-  for ( std::vector< general_spacetime_cluster * >::size_type leaf_index = 0;
-        leaf_index < local_leaves.size( ); ++leaf_index ) {
+  for ( std::vector< general_spacetime_cluster * >::size_type cluster_index = 0;
+        cluster_index < clusters_with_nearfield_operations->size( );
+        ++cluster_index ) {
     general_spacetime_cluster * current_cluster
-      = local_leaves[ permutation_index[ leaf_index ] ];
+      = ( *clusters_with_nearfield_operations )
+        [ permutation_index[ cluster_index ] ];
     std::vector< general_spacetime_cluster * > * nearfield_list
       = current_cluster->get_nearfield_list( );
     for ( std::vector< general_spacetime_cluster * >::size_type src_index = 0;
@@ -160,13 +171,10 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
         = ( *nearfield_list )[ src_index ];
 
       full_matrix_type * block = global_matrix.create_nearfield_matrix(
-        permutation_index[ leaf_index ], src_index );
+        permutation_index[ cluster_index ], src_index );
       assemble_nearfield_matrix( current_cluster, nearfield_cluster, *block );
     }
   }
-
-  // sort pointers in _n_list of the matrix for matrix-vector multiplication
-  global_matrix.sort_clusters_in_nearfield( );
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >

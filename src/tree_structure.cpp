@@ -1542,24 +1542,25 @@ void besthea::mesh::tree_structure::remove_clusters_with_no_association(
 
 void besthea::mesh::tree_structure::count_number_of_contributions(
   scheduling_time_cluster * root, lo & n_moments, lo & n_moments_receive,
-  lo & n_local_contributions ) {
-  if ( root->is_active_in_upward_path( )
-    && root->get_associated_spacetime_clusters( ) != nullptr ) {
-    n_moments += root->get_associated_spacetime_clusters( )->size( );
+  lo & n_local_contributions, lo & n_spat_moments,
+  lo & n_spat_local_contributions ) const {
+  if ( root->is_active_in_upward_path( ) ) {
+    n_moments += root->get_n_st_clusters_w_moments( );
+    n_spat_moments += root->get_n_st_clusters_w_spatial_moments( );
   }
-  if ( root->is_active_in_downward_path( )
-    && root->get_associated_spacetime_clusters( ) != nullptr ) {
-    n_local_contributions
-      += root->get_associated_spacetime_clusters( )->size( );
+  if ( root->is_active_in_downward_path( ) ) {
+    n_local_contributions += root->get_n_st_clusters_w_local_contributions( );
+    n_spat_local_contributions
+      += root->get_n_st_clusters_w_spatial_local_contributions( );
   }
   if ( root->get_n_associated_moment_receive_buffers( ) > 0 ) {
     n_moments_receive += root->get_n_associated_moment_receive_buffers( )
-      * root->get_associated_spacetime_clusters( )->size( );
+      * root->get_n_st_clusters_w_moments( );
   }
   if ( root->get_n_children( ) > 0 ) {
     for ( auto child : *root->get_children( ) ) {
-      count_number_of_contributions(
-        child, n_moments, n_moments_receive, n_local_contributions );
+      count_number_of_contributions( child, n_moments, n_moments_receive,
+        n_local_contributions, n_spat_moments, n_spat_local_contributions );
     }
   }
 }

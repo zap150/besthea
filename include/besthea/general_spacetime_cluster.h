@@ -394,7 +394,7 @@ class besthea::mesh::general_spacetime_cluster {
 
   /**
    * @param[in] children Boolean indicating whether the cluster
-   *                     is additinally refined in space only.
+   *                     is additionally refined in space only.
    */
   void set_has_additional_spatial_children( bool children ) {
     _has_additional_spatial_children = children;
@@ -1065,15 +1065,18 @@ class besthea::mesh::general_spacetime_cluster {
     // }
     // if ( _nearfield_list != nullptr ) {
     //   std::cout << ", nearfield: n_clusters is " << _nearfield_list->size( );
-    // std::cout << ", list: ";
-    // for ( auto nf_cluster : *_nearfield_list ) {
-    //   std::vector< slou > nf_box_coordinate
-    //     = nf_cluster->get_box_coordinate( );
-    //   std::cout << "(" << nf_box_coordinate[ 0 ] << ", "
-    //             << nf_box_coordinate[ 1 ] << ", " << nf_box_coordinate[ 2 ]
-    //             << ", " << nf_box_coordinate[ 3 ] << ", "
-    //             << nf_box_coordinate[ 4 ] << "), ";
-    // }
+    //   std::cout << ", list: ";
+    //   for ( auto nf_cluster : *_nearfield_list ) {
+    //     std::vector< slou > nf_box_coordinate
+    //       = nf_cluster->get_box_coordinate( );
+    //     lo dummy, nf_cluster_space_div;
+    //     nf_cluster->get_n_divs( nf_cluster_space_div, dummy );
+    //     std::cout << "(" << nf_box_coordinate[ 0 ] << ", "
+    //               << nf_box_coordinate[ 1 ] << ", " << nf_box_coordinate[ 2 ]
+    //               << ", " << nf_box_coordinate[ 3 ] << ", "
+    //               << nf_box_coordinate[ 4 ] << ", " << nf_cluster_space_div
+    //               << "), ";
+    //   }
     // }
     // if ( _interaction_list != nullptr ) {
     //   std::cout << ", interaction list: ";
@@ -1093,11 +1096,14 @@ class besthea::mesh::general_spacetime_cluster {
     //   for ( auto m2t_cluster : *_m2t_list ) {
     //     std::vector< slou > m2t_box_coordinate
     //       = m2t_cluster->get_box_coordinate( );
+    //     lo dummy, m2t_cluster_space_div;
+    //     m2t_cluster->get_n_divs( m2t_cluster_space_div, dummy );
     //     std::cout << "(" << m2t_box_coordinate[ 0 ] << ", "
     //               << m2t_box_coordinate[ 1 ] << ", " << m2t_box_coordinate[ 2
     //               ]
     //               << ", " << m2t_box_coordinate[ 3 ] << ", "
-    //               << m2t_box_coordinate[ 4 ] << "), ";
+    //               << m2t_box_coordinate[ 4 ] << ", " << m2t_cluster_space_div
+    //               << "), ";
     //   }
     // }
 
