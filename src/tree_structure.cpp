@@ -853,75 +853,35 @@ void besthea::mesh::tree_structure::update_m2t_and_s2l_lists_recursively(
   }
 }
 
-void besthea::mesh::tree_structure::determine_clusters_to_refine(
+void besthea::mesh::tree_structure::determine_clusters_to_refine_locally(
   scheduling_time_cluster * root,
   std::unordered_map< lo, bool > & refine_map ) const {
-  if ( root->get_n_children( ) > 0 ) {
-    // if root is handled by process _my_process_id go through its nearfield
-    // and mark leaf clusters as clusters which have to be refined.
-    if ( root->get_process_id( ) == _my_process_id ) {
-      std::vector< scheduling_time_cluster * > * nearfield
-        = root->get_nearfield_list( );
-      for ( auto it = nearfield->begin( ); it != nearfield->end( ); ++it ) {
-        if ( ( *it )->get_n_children( ) == 0 ) {
-          refine_map[ ( *it )->get_global_index( ) ] = true;
-        }
-      }
-    }
-    std::vector< scheduling_time_cluster * > * children = root->get_children( );
-    for ( auto it = children->begin( ); it != children->end( ); ++it ) {
-      determine_clusters_to_refine( *it, refine_map );
-    }
-  } else {
-    if ( root->get_process_id( ) == _my_process_id ) {
-      // mark root and all leaf clusters in its nearfield as clusters which
-      // have to be refined. note: by construction all clusters in the
-      // nearfield are leaves, and root itself is contained in its own
-      // nearfield.
-      std::vector< scheduling_time_cluster * > * nearfield
-        = root->get_nearfield_list( );
-      for ( auto it = nearfield->begin( ); it != nearfield->end( ); ++it ) {
-        // updates the value of the cluster in the refine_map,
-        // or creates a new entry
+  if ( root->get_process_id( ) == _my_process_id ) {
+    // if root is handled by the current process, each leaf cluster in its
+    // nearfield is marked as cluster that has to be refined.
+    std::vector< scheduling_time_cluster * > * nearfield
+      = root->get_nearfield_list( );
+    for ( auto it = nearfield->begin( ); it != nearfield->end( ); ++it ) {
+      if ( ( *it )->get_n_children( ) == 0 ) {
         refine_map[ ( *it )->get_global_index( ) ] = true;
       }
-    } else {
-      // if clusters in the nearfield of root at root's level or their
-      // descendants are local, mark root as cluster which has to be
-      // refined.
-      std::vector< scheduling_time_cluster * > nearfield;
-      // determine the nearfield on the level of root (or lower levels) by
-      // considering the children of the clusters in the nearfield of its
-      // parent
-      std::vector< scheduling_time_cluster * > * parent_nearfield
-        = root->get_parent( )->get_nearfield_list( );
-      for ( auto it_nf_par = parent_nearfield->begin( );
-            it_nf_par != parent_nearfield->end( ); ++it_nf_par ) {
-        if ( ( *it_nf_par )->get_n_children( ) == 0 ) {
-          nearfield.push_back( *it_nf_par );
-        } else {
-          std::vector< scheduling_time_cluster * > * relevant_clusters
-            = ( *it_nf_par )->get_children( );
-          for ( auto it_rel = relevant_clusters->begin( );
-                it_rel != relevant_clusters->end( ); ++it_rel ) {
-            if ( ( *it_rel )->get_center( ) < root->get_center( )
-              && ( !root->determine_admissibility( *it_rel ) ) ) {
-              nearfield.push_back( *it_rel );
-            }
-          }
-        }
+    }
+
+    // if root has a non-empty s2l list, each of its s2l source clusters has to
+    // be marked as well
+    std::vector< scheduling_time_cluster * > * s2l_list = root->get_s2l_list( );
+    if ( s2l_list != nullptr ) {
+      for ( auto s2l_src_cluster : *s2l_list ) {
+        refine_map[ s2l_src_cluster->get_global_index( ) ] = true;
       }
-      bool nearfield_contains_local = false;
-      auto it = nearfield.begin( );
-      while ( !nearfield_contains_local && it != nearfield.end( ) ) {
-        nearfield_contains_local = subtree_contains_local_cluster( *it );
-        ++it;
-      }
-      if ( nearfield_contains_local ) {
-        refine_map[ root->get_global_index( ) ] = true;
-      } else {
-        refine_map[ root->get_global_index( ) ] = false;
-      }
+    }
+  }
+
+  if ( root->get_n_children( ) > 0 ) {
+    // traverse the tree further to determine all clusters to refine
+    std::vector< scheduling_time_cluster * > * children = root->get_children( );
+    for ( auto it = children->begin( ); it != children->end( ); ++it ) {
+      determine_clusters_to_refine_locally( *it, refine_map );
     }
   }
 }
@@ -1034,10 +994,18 @@ void besthea::mesh::tree_structure::determine_cluster_communication_lists(
       }
       // if root's m2t list is not empty and contains a local cluster do the
       // same, if root has not yet been added
-      if ( !added_cluster ) {
-        std::vector< scheduling_time_cluster * > * m2t_list
-          = root->get_m2t_list( );
-        if ( m2t_list != nullptr ) {
+
+      std::vector< scheduling_time_cluster * > * m2t_list
+        = root->get_m2t_list( );
+      if ( m2t_list != nullptr ) {
+        auto it_m2t = m2t_list->begin( );
+        while ( !added_cluster && it_m2t != m2t_list->end( ) ) {
+          lo m2t_process_id = ( *it_m2t )->get_process_id( );
+          if ( m2t_process_id == _my_process_id ) {
+            subtree_receive_list.insert( { root_process_id, root } );
+            added_cluster = true;
+          }
+          ++it_m2t;
         }
       }
     }

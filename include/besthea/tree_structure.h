@@ -556,23 +556,23 @@ class besthea::mesh::tree_structure {
       global_index_to_cluster ) const;
 
   /**
-   * Determines all clusters which should be refined during an expansion of the
-   * tree structure. Therefore, an entry is added to @p refine_map for every
+   * Determines all clusters which should be refined during a local expansion of
+   * the tree structure. Therefore, an entry is added to @p refine_map for every
    * leaf cluster in the tree structure, with the global cluster index as key
    * and a bool indicating if it should be refined or not.
    * A leaf cluster should be refined if:
    * - it is handled by process @p _my_process_id
    * - it is in the nearfield of a cluster which is handled by process
-   *    @p _my_process_id
-   * - there is a cluster handled by process @p _my_process_id in its direct
-   *   nearfield or one of the descendants of such a cluster is handled by it.
+   *   @p _my_process_id
+   * - it is in the s2l-list of a cluster which is handled by process
+   *   @p _my_process_id
    * The routine is based on a recursive tree traversal.
    * @param[in] root  Current cluster in the tree traversal.
    * @param[in] refine_map  Stores which clusters should be refined. The keys
    *                        of the entries are the global indices of the
    *                        clusters.
    */
-  void determine_clusters_to_refine( scheduling_time_cluster * root,
+  void determine_clusters_to_refine_locally( scheduling_time_cluster * root,
     std::unordered_map< lo, bool > & refine_map ) const;
 
   /**

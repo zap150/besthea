@@ -277,6 +277,11 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    *                    (status 0). Status 1 means that for some cluster the
    *                    number of assigned elements did not match with the
    *                    predetermined value.
+   * @warning The space-time tree in the lower part might contain space-time
+   * clusters which are not essential for the FMM. In particular, it might be
+   * locally finer than the related temporal distribution tree.
+   * @todo Reduce te space-time cluster tree by getting rid of non-essential
+   * space-time clusters?
    */
   void build_tree_new( lo & status );
 
@@ -285,8 +290,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * relevant time clusters which appear as components of spacetime clusters in
    * the current tree but are not in the distribution tree.
    * @note The clusters which are refined are determined using the routine
-   *       @ref tree_structure::determine_clusters_to_refine and the refinement
-   *       is executed by @ref expand_tree_structure_recursively.
+   *       @ref tree_structure::determine_clusters_to_refine_locally and the
+   * refinement is executed by @ref expand_tree_structure_recursively.
    * @note The operations lists (nearfield, interaction, send, ...) of the
    *       distribution tree are cleared using the routine
    *       @ref tree_structure::clear_cluster_operation_lists and filled anew.

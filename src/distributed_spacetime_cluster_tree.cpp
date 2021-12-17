@@ -590,7 +590,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   std::unordered_map< lo, bool > refine_map;
   tree_structure * distribution_tree = get_distribution_tree( );
   scheduling_time_cluster * time_root = distribution_tree->get_root( );
-  distribution_tree->determine_clusters_to_refine( time_root, refine_map );
+  distribution_tree->determine_clusters_to_refine_locally(
+    time_root, refine_map );
   if ( _root != nullptr ) {
     // expand the tree structure according to the spacetime tree, by
     // traversing the distribution tree and the spacetime tree (for each
@@ -2903,36 +2904,42 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
 void besthea::mesh::distributed_spacetime_cluster_tree::
   associate_scheduling_clusters_and_space_time_clusters_recursively(
     scheduling_time_cluster * t_root, general_spacetime_cluster * st_root ) {
-  t_root->add_associated_spacetime_cluster( st_root );
-
-  if ( st_root->get_n_children( ) > 0 && t_root->get_n_children( ) > 0 ) {
-    // if t_root is not a leaf traverse the two trees further to find the
-    // associated spacetime clusters of the descendants.
-    std::vector< scheduling_time_cluster * > * time_children
-      = t_root->get_children( );
-    std::vector< general_spacetime_cluster * > * spacetime_children
-      = st_root->get_children( );
-    for ( auto time_child : *time_children ) {
-      short time_child_configuration = time_child->get_configuration( );
-      for ( auto spacetime_child : *spacetime_children ) {
-        short spacetime_child_configuration
-          = spacetime_child->get_temporal_configuration( );
-        // check if the temporal component of the spacetime child is the same
-        // as the current temporal child and call routine recursively if yes
-        if ( time_child_configuration == spacetime_child_configuration ) {
-          associate_scheduling_clusters_and_space_time_clusters_recursively(
-            time_child, spacetime_child );
+  // we associate a space-time cluster and a time-cluster only if they have the
+  // same level (which means they have been refined in time the same number of
+  // times) or if the space-time cluster is an auxiliary spatially refined
+  // cluster.
+  if ( t_root->get_level( ) == st_root->get_level( )
+    || st_root->is_auxiliary_ref_cluster( ) ) {
+    t_root->add_associated_spacetime_cluster( st_root );
+    if ( st_root->get_n_children( ) > 0 && t_root->get_n_children( ) > 0 ) {
+      // if t_root is not a leaf traverse the two trees further to find the
+      // associated spacetime clusters of the descendants.
+      std::vector< scheduling_time_cluster * > * time_children
+        = t_root->get_children( );
+      std::vector< general_spacetime_cluster * > * spacetime_children
+        = st_root->get_children( );
+      for ( auto time_child : *time_children ) {
+        short time_child_configuration = time_child->get_configuration( );
+        for ( auto spacetime_child : *spacetime_children ) {
+          short spacetime_child_configuration
+            = spacetime_child->get_temporal_configuration( );
+          // check if the temporal component of the spacetime child is the same
+          // as the current temporal child and call routine recursively if yes
+          if ( time_child_configuration == spacetime_child_configuration ) {
+            associate_scheduling_clusters_and_space_time_clusters_recursively(
+              time_child, spacetime_child );
+          }
         }
       }
-    }
-  } else if ( t_root->get_n_children( ) == 0
-    && st_root->get_n_children( ) > 0 ) {
-    // this is only possible if st_root has auxiliary spatially refined
-    // children, so we can associate all of the children of st_root with the
-    // scheduling time cluster t_root.
-    for ( auto spacetime_child : *st_root->get_children( ) ) {
-      associate_scheduling_clusters_and_space_time_clusters_recursively(
-        t_root, spacetime_child );
+    } else if ( t_root->get_n_children( ) == 0
+      && st_root->get_n_children( ) > 0 ) {
+      // this is only possible if st_root has auxiliary spatially refined
+      // children, so we can associate all of the children of st_root with the
+      // scheduling time cluster t_root.
+      for ( auto spacetime_child : *st_root->get_children( ) ) {
+        associate_scheduling_clusters_and_space_time_clusters_recursively(
+          t_root, spacetime_child );
+      }
     }
   }
 }
@@ -3014,7 +3021,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   // "regular" non-leaf clusters (having non-auxiliary children) and auxiliary
   // clusters can never be associated with the same time cluster.
   if ( associated_st_clusters != nullptr ) {
-    std::sort( associated_st_clusters->begin( ), associated_st_clusters->end( ),
+    std::stable_sort( associated_st_clusters->begin( ),
+      associated_st_clusters->end( ),
       [ & ]( general_spacetime_cluster * first,
         general_spacetime_cluster * second ) {
         // compare booleans:

@@ -1615,23 +1615,32 @@ class besthea::mesh::scheduling_time_cluster {
     // stream << ", downward_path_status: " << (lo) _downward_path_status;
     // stream << ", m2l counter: " << _m2l_counter;
 
-    if ( _associated_spacetime_clusters != nullptr ) {
-      if ( _process_id == executing_process_id ) {
-        stream << ", number of associated leaves: " << _n_associated_leaves
-               << ", number of associated non-leaves: "
-               << _associated_spacetime_clusters->size( )
-            - _n_associated_leaves;
-      } else {
-        stream << ", number of associated clusters: "
-               << _associated_spacetime_clusters->size( );
-      }
-    }
-    if ( _time_slices != nullptr ) {
-      stream << ", time slices: ";
-      for ( auto idx : *_time_slices ) {
-        stream << idx << ", ";
-      }
-    }
+    // if ( _associated_spacetime_clusters != nullptr ) {
+    //   std::cout << ", associated clusters: ";
+    //   for ( auto st_cluster : *_associated_spacetime_clusters ) {
+    //     auto box_coordinates = st_cluster->get_box_coordinate( );
+    //     std::cout << "(" << box_coordinates[ 0 ] << ", " << box_coordinates[
+    //     1 ]
+    //               << ", " << box_coordinates[ 2 ] << ", "
+    //               << box_coordinates[ 3 ] << ", " << box_coordinates[ 4 ]
+    //               << "), ";
+    //   }
+    // if ( _process_id == executing_process_id ) {
+    //   stream << ", number of associated leaves: " << _n_associated_leaves
+    //          << ", number of associated non-leaves: "
+    //          << _associated_spacetime_clusters->size( )
+    //       - _n_associated_leaves;
+    // } else {
+    //   stream << ", number of associated clusters: "
+    //          << _associated_spacetime_clusters->size( );
+    // }
+    // }
+    // if ( _time_slices != nullptr ) {
+    //   stream << ", time slices: ";
+    //   for ( auto idx : *_time_slices ) {
+    //     stream << idx << ", ";
+    //   }
+    // }
     stream << std::endl;
   }
 
