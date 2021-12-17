@@ -1097,27 +1097,13 @@ void besthea::mesh::tree_structure::prepare_essential_reduction(
     // remove them in the affirmative case.
     std::vector< scheduling_time_cluster * > * nearfield
       = root.get_nearfield_list( );
-    auto it = nearfield->begin( );
-    while ( it != nearfield->end( ) ) {
-      if ( ( *it )->get_essential_status( ) == 0 ) {
-        it = nearfield->erase( it );
-      } else {
-        ++it;
-      }
-    }
+    remove_non_essential_clusters_from_vector( nearfield );
     // same for the send list. If the resulting send list is empty, delete
     // it.
     std::vector< scheduling_time_cluster * > * send_list
       = root.get_send_list( );
     if ( send_list != nullptr ) {
-      it = send_list->begin( );
-      while ( it != send_list->end( ) ) {
-        if ( ( *it )->get_essential_status( ) == 0 ) {
-          it = send_list->erase( it );
-        } else {
-          ++it;
-        }
-      }
+      remove_non_essential_clusters_from_vector( send_list );
       if ( send_list->size( ) == 0 ) {
         root.delete_send_list( );
       }
@@ -1127,16 +1113,43 @@ void besthea::mesh::tree_structure::prepare_essential_reduction(
     std::vector< scheduling_time_cluster * > * interaction_list
       = root.get_interaction_list( );
     if ( interaction_list != nullptr ) {
-      it = interaction_list->begin( );
-      while ( it != interaction_list->end( ) ) {
-        if ( ( *it )->get_essential_status( ) == 0 ) {
-          it = interaction_list->erase( it );
-        } else {
-          ++it;
-        }
-      }
+      remove_non_essential_clusters_from_vector( interaction_list );
       if ( interaction_list->size( ) == 0 ) {
         root.delete_interaction_list( );
+      }
+    }
+
+    // same for the m2t and m2t send list
+    std::vector< scheduling_time_cluster * > * m2t_list = root.get_m2t_list( );
+    if ( m2t_list != nullptr ) {
+      remove_non_essential_clusters_from_vector( m2t_list );
+      if ( m2t_list->size( ) == 0 ) {
+        root.delete_m2t_list( );
+      }
+    }
+    std::vector< scheduling_time_cluster * > * m2t_send_list
+      = root.get_m2t_send_list( );
+    if ( m2t_send_list != nullptr ) {
+      remove_non_essential_clusters_from_vector( m2t_send_list );
+      if ( m2t_send_list->size( ) == 0 ) {
+        root.delete_m2t_send_list( );
+      }
+    }
+
+    // same for the s2l send list
+    std::vector< scheduling_time_cluster * > * s2l_list = root.get_s2l_list( );
+    if ( s2l_list != nullptr ) {
+      remove_non_essential_clusters_from_vector( s2l_list );
+      if ( s2l_list->size( ) == 0 ) {
+        root.delete_s2l_list( );
+      }
+    }
+    std::vector< scheduling_time_cluster * > * s2l_send_list
+      = root.get_s2l_send_list( );
+    if ( s2l_send_list != nullptr ) {
+      remove_non_essential_clusters_from_vector( s2l_send_list );
+      if ( s2l_send_list->size( ) == 0 ) {
+        root.delete_s2l_send_list( );
       }
     }
   }
@@ -1504,6 +1517,20 @@ void besthea::mesh::tree_structure::remove_clusters_with_no_association(
     if ( children->size( ) == 0 ) {
       current_cluster.delete_children( );
       current_cluster.set_global_leaf_status( true );
+    }
+  }
+}
+
+void besthea::mesh::tree_structure::remove_non_essential_clusters_from_vector(
+  std::vector< scheduling_time_cluster * > * vector_of_clusters ) const {
+  auto vector_it = vector_of_clusters->begin( );
+  while ( vector_it != vector_of_clusters->end( ) ) {
+    if ( ( *vector_it )->get_essential_status( ) == 0 ) {
+      // the routine is typically called for very short vectors where
+      // performance of erase is not an issue.
+      vector_it = vector_of_clusters->erase( vector_it );
+    } else {
+      vector_it++;
     }
   }
 }

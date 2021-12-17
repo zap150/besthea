@@ -760,6 +760,17 @@ class besthea::mesh::tree_structure {
     scheduling_time_cluster & current_cluster );
 
   /**
+   * Considers all clusters in a given vector and removes those which have
+   * essential_status 0.
+   * @param[in,out] vector_of_clusters  Pointer to vector which is considered.
+   * @note This routine can be very inefficient for long vectors, because it
+   * iterates through the vector and calls erase for all relevant entries. In
+   * practice it is only executed for short vectors, though.
+   */
+  void remove_non_essential_clusters_from_vector(
+    std::vector< scheduling_time_cluster * > * vector_of_clusters ) const;
+
+  /**
    * Aux for printing
    */
   void print_internal( scheduling_time_cluster * root ) {
