@@ -894,7 +894,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   template< slou run_count >
   void apply_s2ms_operation( const distributed_block_vector & src_vector,
-    mesh::general_spacetime_cluster * src_cluster ) const;
+    mesh::general_spacetime_cluster * src_cluster,
+    mesh::general_spacetime_cluster * src_geometry_cluster = nullptr ) const;
 
   /**
    * Applies an S2Ms operation for a given source cluster and p0 basis functions
@@ -905,7 +906,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * S2Ms operation.
    */
   void apply_s2ms_operation_p0( const distributed_block_vector & src_vector,
-    mesh::general_spacetime_cluster * src_cluster ) const;
+    mesh::general_spacetime_cluster * src_cluster,
+    mesh::general_spacetime_cluster * src_geometry_cluster ) const;
 
   /**
    * Applies an S2Ms operation for a given source cluster for p1 basis functions
@@ -918,6 +920,11 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   void apply_s2ms_operation_p1_normal_drv(
     const distributed_block_vector & src_vector,
+    mesh::general_spacetime_cluster * src_cluster,
+    [[maybe_unused]] mesh::general_spacetime_cluster * src_geometry_cluster
+    = nullptr ) const;
+
+  void sum_up_auxiliary_spatial_moments(
     mesh::general_spacetime_cluster * src_cluster ) const;
 
   /**
@@ -1265,62 +1272,68 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   /**
    * Compute quadrature of the Chebyshev polynomials and p0 basis functions for
    * the spatial part of a spacetime cluster
-   * @param[in] source_cluster  Cluster for whose spatial component the
-   *                            quadratures are computed.
    * @param[out] T  Full matrix where the quadratures are stored. The elements
-   *                of the cluster vary along the rows, the order of the
-   *                polynomial along the columns of the matrix.
+   * of the cluster vary along the rows, the order of the polynomial along the
+   * columns of the matrix.
+   * @param[in] source_cluster  Cluster for whose spatial elements the
+   * quadratures are computed.
+   * @param[in] source_geometry_cluster Cluster whose geometric box is used to
+   * compute the quadratures.
    */
-  void compute_chebyshev_quadrature_p0(
+  void compute_chebyshev_quadrature_p0( full_matrix & T,
     const mesh::general_spacetime_cluster * source_cluster,
-    full_matrix & T ) const;
+    const mesh::general_spacetime_cluster * source_geometry_cluster
+    = nullptr ) const;
 
   /**
    * Computes quadrature of the normal derivatives of the Chebyshev polynomials
    * times p1 basis functions for the spatial part of a spacetime cluster.
-   * @param[in] source_cluster  Cluster for whose spatial component the
-   *                            quadratures are computed.
    * @param[out] T_drv  Full matrix where the quadratures are stored. The
    * nodes of the cluster vary along the rows, the order of the polynomial
    * along the columns of the matrix.
+   * @param[in] source_cluster  Cluster for whose spatial elements the
+   * quadratures are computed.
+   * @param[in] source_geometry_cluster Cluster whose geometric box is used to
+   * compute the quadratures.
    */
-  void compute_normal_drv_chebyshev_quadrature_p1(
+  void compute_normal_drv_chebyshev_quadrature_p1( full_matrix & T_drv,
     const mesh::general_spacetime_cluster * source_cluster,
-    full_matrix & T_drv ) const;
+    const mesh::general_spacetime_cluster * source_geometry_cluster
+    = nullptr ) const;
 
   /**
    * Computes quadrature of the Chebyshev polynomials times a selected component
    * of the surface curls of p1 basis functions for the spatial part of a
    * spacetime cluster.
-   * @param[in] source_cluster  Cluster for whose spatial component the
-   *                            quadratures are computed.
    * @param[out] T_curl_along_dim Full matrix where the quadratures are stored.
    *                              The nodes of the cluster vary along the rows,
    *                              the order of the polynomial along the columns
    *                              of the matrix.
+   * @param[in] source_cluster  Cluster for whose spatial component the
+   *                            quadratures are computed.
    * @tparam dim  Used to select the component of the surface curls (0,1 or 2).
    */
   template< slou dim >
   void compute_chebyshev_times_p1_surface_curls_along_dimension(
-    const mesh::general_spacetime_cluster * source_cluster,
-    full_matrix & T_curl_along_dim ) const;
+    full_matrix & T_curl_along_dim,
+    const mesh::general_spacetime_cluster * source_cluster ) const;
 
   /**
    * Computes quadrature of a selected component of the normal derivatives of
    * the Chebyshev polynomials times p1 basis functions for the spatial part of
    * a spacetime cluster.
-   * @param[in] source_cluster  Cluster for whose spatial component the
-   *                            quadratures are computed.
-   * @param[in] dim Used to select the component of the normal derivatives of
-   *                the Chebyshev polynomials (0,1 or 2).
    * @param[out] T_normal_along_dim Full matrix where the quadratures are
    *                                stored. The nodes of the cluster vary along
    *                                the rows, the order of the polynomial along
    *                                the columns of the matrix.
+   * @param[in] dim Used to select the component of the normal derivatives of
+   *                the Chebyshev polynomials (0,1 or 2).
+   * @param[in] source_cluster  Cluster for whose spatial component the
+   *                            quadratures are computed.
    */
   void compute_chebyshev_times_normal_quadrature_p1_along_dimension(
-    const mesh::general_spacetime_cluster * source_cluster, const slou dim,
-    full_matrix & T_normal_along_dim ) const;
+    full_matrix & T_normal_along_dim, const slou dim,
+    const mesh::general_spacetime_cluster * source_cluster ) const;
 
   /**
    * Compute quadrature of the Lagrange polynomials and p0 basis functions for
@@ -1331,23 +1344,21 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                elements of the cluster vary along the columns, the order
    *                of the polynomial along the rows of the matrix.
    */
-  void compute_lagrange_quadrature(
-    const mesh::general_spacetime_cluster * source_cluster,
-    full_matrix & L ) const;
+  void compute_lagrange_quadrature( full_matrix & L,
+    const mesh::general_spacetime_cluster * source_cluster ) const;
 
   /**
    * Compute quadrature of the derivative of Lagrange polynomials and p0 basis
-   * functions for the temporal part of a spacetime cluster
-   * @param[in] source_cluster  Cluster for whose temporal component the
-   *                            quadratures are computed.
+   * functions for the temporal part of a spacetime cluster#
    * @param[out] L_drv  Full matrix where the quadratures are stored. The
    *                    temporal elements of the cluster vary along the columns,
    *                    the order of the polynomial along the rows of the
    *                    matrix.
+   * @param[in] source_cluster  Cluster for whose temporal component the
+   *                            quadratures are computed.
    */
-  void compute_lagrange_drv_quadrature(
-    const mesh::general_spacetime_cluster * source_cluster,
-    full_matrix & L_drv ) const;
+  void compute_lagrange_drv_quadrature( full_matrix & L_drv,
+    const mesh::general_spacetime_cluster * source_cluster ) const;
 
   /**
    * Computes coupling coefficients for the spacetime m2l operation for one of

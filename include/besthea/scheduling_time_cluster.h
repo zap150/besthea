@@ -118,11 +118,14 @@ class besthea::mesh::scheduling_time_cluster {
       _n_st_clusters_w_spatial_moments( 0 ),
       _assoc_spatial_local_contributions( nullptr ),
       _n_st_clusters_w_spatial_local_contributions( 0 ),
+      _assoc_aux_spatial_moments( nullptr ),
+      _n_st_clusters_w_aux_spatial_moments( 0 ),
       _assoc_nearfield_targets( nullptr ),
       _assoc_standard_m2t_targets( nullptr ),
       _assoc_hybrid_m2t_targets( nullptr ),
       _assoc_standard_s2l_targets( nullptr ),
       _assoc_hybrid_s2l_targets( nullptr ),
+      _assoc_aux_s2ms_cluster_pairs( nullptr ),
       _contribution_size( 0 ),
       _map_to_moment_receive_buffers( nullptr ),
       _pos_in_m_list( -1 ),
@@ -177,6 +180,8 @@ class besthea::mesh::scheduling_time_cluster {
       delete[] _assoc_spatial_moments;
     if ( _assoc_spatial_local_contributions != nullptr )
       delete[] _assoc_spatial_local_contributions;
+    if ( _assoc_aux_spatial_moments != nullptr )
+      delete[] _assoc_aux_spatial_moments;
     if ( _assoc_nearfield_targets != nullptr )
       delete _assoc_nearfield_targets;
     if ( _assoc_standard_m2t_targets != nullptr )
@@ -187,6 +192,8 @@ class besthea::mesh::scheduling_time_cluster {
       delete _assoc_standard_s2l_targets;
     if ( _assoc_hybrid_s2l_targets != nullptr )
       delete _assoc_hybrid_s2l_targets;
+    if ( _assoc_aux_s2ms_cluster_pairs != nullptr )
+      delete _assoc_aux_s2ms_cluster_pairs;
     for ( auto moment_buffer : _associated_moments_receive_buffers ) {
       delete[] moment_buffer;
     }
@@ -652,6 +659,27 @@ class besthea::mesh::scheduling_time_cluster {
    */
   const std::vector< lo > * get_assoc_hybrid_s2l_targets( ) const {
     return _assoc_hybrid_s2l_targets;
+  }
+
+  /**
+   * Adds a new pair to @ref _assoc_aux_s2ms_cluster_pairs.
+   * @param[in] new_pair Pair to be added to the list.
+   */
+  void add_pair_to_assoc_aux_s2ms_cluster_pairs(
+    const std::pair< lo, general_spacetime_cluster * > & new_pair ) {
+    if ( _assoc_aux_s2ms_cluster_pairs == nullptr ) {
+      _assoc_aux_s2ms_cluster_pairs
+        = new std::vector< std::pair< lo, general_spacetime_cluster * > >( );
+    }
+    _assoc_aux_s2ms_cluster_pairs->push_back( new_pair );
+  }
+
+  /**
+   * Returns a pointer to (const) @ref _assoc_aux_s2ms_clusters.
+   */
+  const std::vector< std::pair< lo, general_spacetime_cluster * > > *
+  get_assoc_aux_s2ms_clusters( ) const {
+    return _assoc_aux_s2ms_cluster_pairs;
   }
 
   /**
@@ -1476,12 +1504,137 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
+   * Determines the associated space-time clusters, for which auxiliary spatial
+   * moments are needed. The spatial moments are allocated in a single large
+   * array, and assigned to the correct space-time clusters (and their coarse
+   * ancestors at level @p max_rel_space_level_s_moments ).
+   *
+   * In addition, the routine initializes @ref _assoc_aux_s2ms_cluster_pairs,
+   * which is used to access the determined space-time clusters in the
+   * application of a pFMM matrix.
+   * @param[in] spatial_contribution_size Size of the auxiliary spatial moment
+   * of a single space-time cluster.
+   * @param[in] max_rel_space_level_s_moments  Maximal relative spatial level
+   * for which spatial moments have already been allocated. Auxiliary spatial
+   * moments are only allocated for clusters with higher levels.
+   */
+  void allocate_associated_aux_spatial_moments(
+    const lou spatial_contribution_size,
+    const lo max_rel_space_level_s_moments ) {
+    // determine the space-time clusters for which auxiliary S2M operations
+    // have to be executed.
+    lo n_clusters_before_max_rel_lvl = 0;
+    for ( lo i = 0; i < max_rel_space_level_s_moments; ++i ) {
+      n_clusters_before_max_rel_lvl
+        += ( *_n_associated_leaves_and_aux_clusters_per_level )[ i ];
+    }
+    lo idx_offset = n_clusters_before_max_rel_lvl
+      + ( *_n_associated_leaves_and_aux_clusters_per_level )
+        [ max_rel_space_level_s_moments ];
+    for ( lou rel_space_level = max_rel_space_level_s_moments + 1;
+          rel_space_level
+          < _n_associated_leaves_and_aux_clusters_per_level->size( );
+          ++rel_space_level ) {
+      for ( lo cluster_idx = 0;
+            cluster_idx < ( *_n_associated_leaves_and_aux_clusters_per_level )
+              [ rel_space_level ];
+            ++cluster_idx ) {
+        general_spacetime_cluster * current_st_cluster
+          = ( *_associated_spacetime_clusters )[ idx_offset + cluster_idx ];
+        if ( current_st_cluster->get_n_children( ) == 0 ) {
+          // determine the ancestor of the current_st_cluster which has the
+          // relative space level max_rel_space_level_s_moments by ascending in
+          // the tree.
+          general_spacetime_cluster * current_ancestor_for_aux_s2ms
+            = current_st_cluster;
+          for ( lou lvl = 0;
+                lvl < rel_space_level - max_rel_space_level_s_moments; ++lvl ) {
+            current_ancestor_for_aux_s2ms = current_st_cluster->get_parent( );
+          }
+          add_pair_to_assoc_aux_s2ms_cluster_pairs(
+            { idx_offset + cluster_idx, current_ancestor_for_aux_s2ms } );
+        }
+      }
+      idx_offset += ( *_n_associated_leaves_and_aux_clusters_per_level )
+        [ rel_space_level ];
+    }
+
+    _n_st_clusters_w_aux_spatial_moments
+      = _assoc_aux_s2ms_cluster_pairs->size( );
+    _assoc_aux_spatial_moments = new sc[ _n_st_clusters_w_aux_spatial_moments
+      * spatial_contribution_size ];
+    _spatial_contribution_size = spatial_contribution_size;
+
+    // assign the individual auxiliary spatial moments to the appropriate
+    // space-time clusters
+    lo moment_counter = 0;
+    for ( lo cluster_idx = 0;
+          cluster_idx < ( *_n_associated_leaves_and_aux_clusters_per_level )
+            [ max_rel_space_level_s_moments ];
+          ++cluster_idx ) {
+      general_spacetime_cluster * current_st_cluster
+        = ( *_associated_spacetime_clusters )[ cluster_idx ];
+      if ( current_st_cluster->get_n_children( ) > 0 ) {
+        current_st_cluster->set_pointer_to_aux_spatial_moments(
+          &( _assoc_aux_spatial_moments[ moment_counter
+            * spatial_contribution_size ] ) );
+        lo previous_moment_counter = moment_counter;
+        set_pointers_to_aux_spatial_moments_recursively(
+          current_st_cluster, moment_counter );
+        current_st_cluster->set_n_aux_spatial_moments(
+          moment_counter - previous_moment_counter );
+      }
+    }
+  }
+
+  /**
+   * Auxiliary routine that is used to assign the appropriate parts of the large
+   * array @ref _assoc_aux_spatial_moments to the auxiliary spatially refined
+   * leaf clusters.
+   *
+   * The routine is based on a recursive subtree traversal.
+   * @param[in] current_st_cluster  Current space-time cluster. If it is a leaf,
+   * an auxiliary moment is assigned to it, otherwise its subtree is visited.
+   * @param[in] current_moment_index  Indicates which part of the global array
+   * of auxiliary spatial moments to assign next.
+   */
+  void set_pointers_to_aux_spatial_moments_recursively(
+    general_spacetime_cluster * current_st_cluster,
+    lo & current_moment_index ) {
+    if ( current_st_cluster->get_n_children( ) > 0 ) {
+      for ( auto st_child : *current_st_cluster->get_children( ) ) {
+        set_pointers_to_aux_spatial_moments_recursively(
+          st_child, current_moment_index );
+      }
+    } else {
+      current_st_cluster->set_pointer_to_aux_spatial_moments(
+        &( _assoc_aux_spatial_moments[ current_moment_index
+          * _spatial_contribution_size ] ) );
+      current_moment_index++;
+      current_st_cluster->set_n_aux_spatial_moments( 1 );
+    }
+  }
+
+  /**
+   * Sets all associated auxiliary spatial moments to 0.
+   */
+  void clear_associated_aux_spatial_moments( ) {
+    if ( _assoc_aux_spatial_moments != nullptr ) {
+      for ( lou j = 0; j
+            < _spatial_contribution_size * _n_st_clusters_w_aux_spatial_moments;
+            ++j ) {
+        _assoc_aux_spatial_moments[ j ] = 0.0;
+      }
+    }
+  }
+
+  /**
    * Allocates an array containing all the spatial local contributions of the
    * associated spacetime clusters for all necessary spatial levels.
    *
    * In addition, for each involved associated spacetime cluster it sets the
-   * pointer to the appropriate spatial local contribution, and initializes the
-   * value of @ref _max_relative_space_level_ls2t.
+   * pointer to the appropriate spatial local contribution, and initializes
+   * the value of @ref _max_relative_space_level_ls2t.
    * @param[in] spatial_contribution_size Size of the spatial local
    * contribution of a single space-time cluster.
    * @param[in] max_rel_space_level  Maximal relative spatial level for which
@@ -1519,7 +1672,7 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Sets all associated spatial moments to 0.
+   * Sets all associated spatial local contributions to 0.
    */
   void clear_associated_spatial_local_contributions( ) {
     if ( _assoc_spatial_local_contributions != nullptr ) {
@@ -1557,8 +1710,8 @@ class besthea::mesh::scheduling_time_cluster {
   /**
    * Prints info of the object.
    */
-  void print(
-    lo executing_process_id = -1, std::ostream & stream = std::cout ) const {
+  void print( [[maybe_unused]] lo executing_process_id = -1,
+    std::ostream & stream = std::cout ) const {
     stream << "level: " << _level << ", center: " << _center
            << ", half size: " << _half_size
            << ", global_index: " << _global_index
@@ -1619,8 +1772,8 @@ class besthea::mesh::scheduling_time_cluster {
     //   std::cout << ", associated clusters: ";
     //   for ( auto st_cluster : *_associated_spacetime_clusters ) {
     //     auto box_coordinates = st_cluster->get_box_coordinate( );
-    //     std::cout << "(" << box_coordinates[ 0 ] << ", " << box_coordinates[
-    //     1 ]
+    //     std::cout << "(" << box_coordinates[ 0 ] << ", " <<
+    //     box_coordinates[ 1 ]
     //               << ", " << box_coordinates[ 2 ] << ", "
     //               << box_coordinates[ 3 ] << ", " << box_coordinates[ 4 ]
     //               << "), ";
@@ -1817,8 +1970,8 @@ class besthea::mesh::scheduling_time_cluster {
                                       //!< spatial level of the time cluster).
   lo _max_relative_space_level_ls2t;  //!< Maximal relative spatial level for
                                       //!< which spatial local contributions
-                                      //!< have to be evaluated (Relative to the
-                                      //!< "natural" spatial level of the
+                                      //!< have to be evaluated (Relative to
+                                      //!< the "natural" spatial level of the
                                       //!< cluster).
   std::vector< general_spacetime_cluster * > *
     _associated_additional_spacetime_leaves;  //!< List of space-time clusters
@@ -1858,8 +2011,16 @@ class besthea::mesh::scheduling_time_cluster {
                                             //!< hybrid m2t operations.
   lo _n_st_clusters_w_spatial_local_contributions;  //!< Number of associated
                                                     //!< space-time clusters
-                                                    //!< for which local
-                                                    //!< contributions are.
+                                                    //!< for which spatial
+                                                    //!< local contributions
+                                                    //!< are stored.
+  sc * _assoc_aux_spatial_moments;  //!< Array containing all auxiliary
+                                    //!< spatial moments of associated general
+                                    //!< space-time clusters.
+  lo _n_st_clusters_w_aux_spatial_moments;  //!< Number of associated
+                                            //!< space-time clusters for which
+                                            //!< auxiliary spatial moments are
+                                            //!< stored.
   std::vector< lo > *
     _assoc_nearfield_targets;  //!< Vector containing the indices of all
                                //!< associated space-time clusters for which
@@ -1884,12 +2045,20 @@ class besthea::mesh::scheduling_time_cluster {
                                 //!< associated space-time clusters for which
                                 //!< hybrid s2l operations have to be
                                 //!< executed.
-  lou _contribution_size;       //!< Size of a single contribution (moments or
-                                //!< local contribution) in the array of
-                                //!< associated contributions
-                                //!< @todo Is there a better way to make this
-                                //!< value accessible for all clusters without
-                                //!< storing it in each instance separately?
+  std::vector< std::pair< lo, general_spacetime_cluster * > > *
+    _assoc_aux_s2ms_cluster_pairs;  //!< Vector containing pairs of indices of
+                                    //!< all associated space-time clusters for
+                                    //!< which auxiliary s2ms operations have to
+                                    //!< be executed, and pointers to their
+                                    //!< respective ancestors for which the
+                                    //!< actual spatial moments are needed.
+
+  lou _contribution_size;  //!< Size of a single contribution (moments or
+                           //!< local contribution) in the array of
+                           //!< associated contributions
+                           //!< @todo Is there a better way to make this
+                           //!< value accessible for all clusters without
+                           //!< storing it in each instance separately?
   lou _spatial_contribution_size;  //!< Size of single spatial contribution
                                    //!< (moment or local contribution)
   std::vector< sc * >

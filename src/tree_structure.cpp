@@ -209,6 +209,7 @@ void besthea::mesh::tree_structure::clear_moment_contributions(
   scheduling_time_cluster & root ) {
   root.clear_associated_moments( );
   root.clear_associated_spatial_moments( );
+  root.clear_associated_aux_spatial_moments( );
   if ( root.get_n_children( ) > 0 ) {
     for ( auto child : *root.get_children( ) ) {
       clear_moment_contributions( *child );
@@ -247,12 +248,12 @@ void besthea::mesh::tree_structure::allocate_spatial_moments_in_tree(
   const std::vector< lo > * n_associated_leaves_and_aux_clusters
     = current_cluster.get_n_associated_leaves_and_aux_clusters_per_level( );
   // note: spatial moments are only allocated for leaf clusters.
+  lou max_rel_space_level = 0;
   if ( current_cluster.get_n_children( ) == 0 && s2l_send_list != nullptr
     && n_associated_leaves_and_aux_clusters != nullptr ) {
     // determine the maximal relative spatial level, for which spatial moments
     // have to be created (relative to the "natural" spatial level of the
     // current time cluster)
-    lou max_rel_space_level = 0;
     lo current_time_level = current_cluster.get_level( );
     lo current_space_level
       = ( current_time_level >= first_space_refinement_level )
@@ -272,8 +273,8 @@ void besthea::mesh::tree_structure::allocate_spatial_moments_in_tree(
         max_rel_space_level = rel_space_level;
       }
     }
-    // max_rel_space_level has to be updated, if there are no auxiliary refined
-    // clusters at that level
+    // max_rel_space_level has to be updated, if there are no
+    // auxiliary refined clusters at that level
     if ( max_rel_space_level
       > n_associated_leaves_and_aux_clusters->size( ) - 1 ) {
       max_rel_space_level = n_associated_leaves_and_aux_clusters->size( ) - 1;
@@ -281,6 +282,24 @@ void besthea::mesh::tree_structure::allocate_spatial_moments_in_tree(
     current_cluster.allocate_associated_spatial_moments(
       spatial_contribution_size, max_rel_space_level );
   }
+  // allocate auxiliary spatial moments to subdivide large S2M/S2Ms operations
+  if ( current_cluster.get_process_id( ) == _my_process_id
+    && n_associated_leaves_and_aux_clusters != nullptr
+    && n_associated_leaves_and_aux_clusters->size( ) - 1
+      > max_rel_space_level ) {
+    current_cluster.allocate_associated_aux_spatial_moments(
+      spatial_contribution_size, max_rel_space_level );
+
+    // if associated spatial moments have not been allocated already for
+    // clusters with relative level max_rel_space_level, we have to do this here
+    // too. (note: this is only possible if max_rel_space_level = 0 and
+    // s2l_send_list is empty).
+    if ( current_cluster.get_associated_spatial_moments( ) == nullptr ) {
+      current_cluster.allocate_associated_spatial_moments(
+        spatial_contribution_size, max_rel_space_level );
+    }
+  }
+
   if ( current_cluster.get_n_children( ) > 0 ) {
     for ( auto child : *current_cluster.get_children( ) ) {
       allocate_spatial_moments_in_tree(

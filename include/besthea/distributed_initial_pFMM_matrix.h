@@ -562,64 +562,60 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * Computes integrals of Chebyshev polynomials and p1 tetrahedral
    * basis functions for a given spatial volume cluster approximately. These are
    * needed for S2M operations.
-   * @param[in] source_cluster  Spatial cluster used for the computations.
    * @param[in,out] T_vol Matrix in which the resulting integrals are stored.
    * The nodes of the cluster vary along the columns of the matrix, the order of
    * the polynomials along the columns of the matrix.
+   * @param[in] source_cluster  Spatial cluster used for the computations.
    */
-  void compute_chebyshev_quadrature_p1_volume(
-    const mesh::volume_space_cluster * source_cluster,
-    full_matrix & T_vol ) const;
+  void compute_chebyshev_quadrature_p1_volume( full_matrix & T_vol,
+    const mesh::volume_space_cluster * source_cluster ) const;
 
   /**
    * Compute quadrature of the Lagrange polynomials and p0 basis functions for
    * the temporal part of a spacetime cluster
-   * @param[in] source_cluster  Cluster for whose temporal component the
-   *                            quadratures are computed.
    * @param[out] L  Full matrix where the quadratures are stored. The temporal
    *                elements of the cluster vary along the columns, the order
    *                of the polynomial along the rows of the matrix.
+   * @param[in] source_cluster  Cluster for whose temporal component the
+   *                            quadratures are computed.
    * @todo This is a duplicate of
    * @ref distributed_pFMM_matrix::compute_lagrange_quadrature. Can we
    * restructure the code to get rid of duplication.
    */
-  void compute_lagrange_quadrature(
-    const mesh::general_spacetime_cluster * source_cluster,
-    full_matrix & L ) const;
+  void compute_lagrange_quadrature( full_matrix & L,
+    const mesh::general_spacetime_cluster * source_cluster ) const;
 
   /**
    * Compute quadrature of the Chebyshev polynomials and p0 basis functions for
    * the spatial part of a spacetime cluster
-   * @param[in] source_cluster  Cluster for whose spatial component the
-   *                            quadratures are computed.
    * @param[out] T  Full matrix where the quadratures are stored. The elements
    *                of the cluster vary along the rows, the order of the
    *                polynomial along the columns of the matrix.
+   * @param[in] source_cluster  Cluster for whose spatial component the
+   *                            quadratures are computed.
    * @todo This is almost a duplicate of
    * @ref distributed_pFMM_matrix::compute_chebyshev_quadrature_p0. (different
    * spatial padding is used) Can we restructure the code to get rid of
    * duplication.
    */
-  void compute_chebyshev_quadrature_p0(
-    const mesh::general_spacetime_cluster * source_cluster,
-    full_matrix & T ) const;
+  void compute_chebyshev_quadrature_p0( full_matrix & T,
+    const mesh::general_spacetime_cluster * source_cluster ) const;
 
   /**
    * Computes quadrature of the normal derivatives of the Chebyshev polynomials
    * times p1 basis functions for the spatial part of a spacetime cluster.
-   * @param[in] source_cluster  Cluster for whose spatial component the
-   *                            quadratures are computed.
    * @param[out] T_drv  Full matrix where the quadratures are stored. The
    * nodes of the cluster vary along the rows, the order of the polynomial
    * along the columns of the matrix.
+   * @param[in] source_cluster  Cluster for whose spatial component the
+   *                            quadratures are computed.
    * @todo This is almost a duplicate of
    * @ref distributed_pFMM_matrix::compute_normal_drv_chebyshev_quadrature_p1.
    * (different spatial padding is used) Can we restructure the code to get rid
    * of duplication.
    */
-  void compute_normal_drv_chebyshev_quadrature_p1(
-    const mesh::general_spacetime_cluster * source_cluster,
-    full_matrix & T_drv ) const;
+  void compute_normal_drv_chebyshev_quadrature_p1( full_matrix & T_drv,
+    const mesh::general_spacetime_cluster * source_cluster ) const;
 
   /**
    * Initializes quadrature structures used to integrate Chebyshev polynomials

@@ -125,6 +125,9 @@ class besthea::mesh::general_spacetime_cluster {
       _n_hybrid_s2l_operations( -1 ),
       _moment( nullptr ),
       _local_contribution( nullptr ),
+      _spatial_moments( nullptr ),
+      _spatial_local_contributions( nullptr ),
+      _aux_spatial_moments( nullptr ),
       _has_additional_spatial_children( false ),
       _is_auxiliary_ref_cluster( false ) {
     if ( reserve_elements ) {
@@ -998,6 +1001,45 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
+   * Sets the pointer to the auxiliary spatial moments.
+   * @param[in] spatial_moments_address Address of the spatial moments (in the
+   * array stored in the associated scheduling_time_cluster)
+   */
+  void set_pointer_to_aux_spatial_moments( sc * spatial_moments_address ) {
+    _aux_spatial_moments = spatial_moments_address;
+  }
+
+  /**
+   * Returns a pointer to the auxiliary spatial moments of the current cluster.
+   */
+  sc * get_pointer_to_aux_spatial_moments( ) {
+    return _aux_spatial_moments;
+  }
+
+  /**
+   * Returns a pointer to the (const) auxiliary spatial moments of the current
+   * cluster.
+   */
+  const sc * get_pointer_to_aux_spatial_moments( ) const {
+    return _aux_spatial_moments;
+  }
+
+  /**
+   * Sets @ref _n_aux_spatial_moments to a new value.
+   * @param[in] new_value Value to be set.
+   */
+  void set_n_aux_spatial_moments( lo new_value ) {
+    _n_aux_spatial_moments = new_value;
+  }
+
+  /**
+   * Returns the value of @ref _n_aux_spatial_moments.
+   */
+  lo get_n_aux_spatial_moments( ) const {
+    return _n_aux_spatial_moments;
+  }
+
+  /**
    * Returns the number of degrees of freedom in the cluster (depending on the
    * underlying space)
    */
@@ -1236,15 +1278,29 @@ class besthea::mesh::general_spacetime_cluster {
                              //!< cluster, which is stored in the associated
                              //!< scheduling_time_cluster
   sc * _spatial_moments;  //!< pointer to all the spatial moments of the cluster
-                          //!< (one per time-step), which is stored in the
+                          //!< (one per time-step), which are stored in the
                           //!< associated scheduling_time_cluster. The first
                           //!< _spat_contribution_size entries correspond to the
                           //!< spatial moment of the first time-step, ...
   sc * _spatial_local_contributions;  //!< pointer to the spatial local
                                       //!< contributions (one per time-step),
-                                      //!< which is stored in the associated
+                                      //!< which are stored in the associated
                                       //!< scheduling_time_cluster. Same access
                                       //!< per time-step as for spatial moments.
+  sc *
+    _aux_spatial_moments;  //!< Pointer to all the auxiliary spatial moments
+                           //!< of the cluster, which are stored in the
+                           //!< associated scheduling_time_cluster. These are
+                           //!< used to subdivide S2M/S2Ms operations for large
+                           //!< clusters. If the current cluster is large, the
+                           //!< pointer points to a contiguous array of all the
+                           //!< auxiliary spatial moments of its descendants.
+  lo _n_aux_spatial_moments;  //!< Number of all auxiliary spatial moments to
+                              //!< which @ref _aux_spatial_moments points. This
+                              //!< is relevant for leaf or auxiliary clusters
+                              //!< containing many spatial elements, in which
+                              //!< case it indicates the number of leaf
+                              //!< descendants.
   bool _has_additional_spatial_children;  //!< determines whether the cluster
                                           //!< has been additionally subdivided
                                           //!< in space

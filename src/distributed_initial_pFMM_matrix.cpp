@@ -273,7 +273,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space, source_space >::apply_s2m_operation( const vector & sources,
   mesh::volume_space_cluster * leaf ) const {
   full_matrix T_vol;
-  compute_chebyshev_quadrature_p1_volume( leaf, T_vol );
+  compute_chebyshev_quadrature_p1_volume( T_vol, leaf );
   vector & moments = leaf->get_moments( );
   vector sources_in_leaf;
   sources.get_local_part< source_space >( leaf, sources_in_leaf );
@@ -871,9 +871,9 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
     = st_cluster->get_pointer_to_local_contribution( );
 
   full_matrix T;
-  compute_chebyshev_quadrature_p0( st_cluster, T );
+  compute_chebyshev_quadrature_p0( T, st_cluster );
   full_matrix L;
-  compute_lagrange_quadrature( st_cluster, L );
+  compute_lagrange_quadrature( L, st_cluster );
 
   // compute D = trans(L) * lambda and then the result Y = D * trans(T)
   //  D = trans(L) * lambda with explicit cblas routine call:
@@ -909,9 +909,9 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   const sc * local_contribution
     = st_cluster->get_pointer_to_local_contribution( );
   full_matrix T_drv;
-  compute_normal_drv_chebyshev_quadrature_p1( st_cluster, T_drv );
+  compute_normal_drv_chebyshev_quadrature_p1( T_drv, st_cluster );
   full_matrix L;
-  compute_lagrange_quadrature( st_cluster, L );
+  compute_lagrange_quadrature( L, st_cluster );
 
   // compute D = trans(L) * lambda and then the result Y = D * trans(T_drv)
   //  D = trans(L) * lambda with explicit cblas routine call:
@@ -1008,10 +1008,9 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
-  target_space, source_space >::
-  compute_chebyshev_quadrature_p1_volume(
-    const mesh::volume_space_cluster * source_cluster,
-    full_matrix & T_vol ) const {
+  target_space,
+  source_space >::compute_chebyshev_quadrature_p1_volume( full_matrix & T_vol,
+  const mesh::volume_space_cluster * source_cluster ) const {
   lo n_space_elems = source_cluster->get_n_elements( );
   lo n_space_nodes = source_cluster->get_n_nodes( );
   T_vol.resize( _spat_contribution_size, n_space_nodes );
@@ -1096,10 +1095,8 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
-  target_space, source_space >::
-  compute_lagrange_quadrature(
-    const mesh::general_spacetime_cluster * source_cluster,
-    full_matrix & L ) const {
+  target_space, source_space >::compute_lagrange_quadrature( full_matrix & L,
+  const mesh::general_spacetime_cluster * source_cluster ) const {
   lo n_temp_elems = source_cluster->get_n_time_elements( );
   lo n_spat_elems = source_cluster->get_n_space_elements( );
   L.resize( _temp_order + 1, n_temp_elems );
@@ -1163,9 +1160,9 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
-  target_space, source_space >::
-  compute_chebyshev_quadrature_p0(
-    const general_spacetime_cluster * source_cluster, full_matrix & T ) const {
+  target_space, source_space >::compute_chebyshev_quadrature_p0( full_matrix &
+                                                                   T,
+  const general_spacetime_cluster * source_cluster ) const {
   lo n_space_elems = source_cluster->get_n_space_elements( );
   T.resize( n_space_elems, _spat_contribution_size );
   // get some info on the current cluster
@@ -1247,10 +1244,10 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
-  target_space, source_space >::
-  compute_normal_drv_chebyshev_quadrature_p1(
-    const general_spacetime_cluster * source_cluster,
-    full_matrix & T_drv ) const {
+  target_space,
+  source_space >::compute_normal_drv_chebyshev_quadrature_p1( full_matrix &
+                                                                T_drv,
+  const general_spacetime_cluster * source_cluster ) const {
   lo n_space_elems = source_cluster->get_n_space_elements( );
   lo n_space_nodes = source_cluster->get_n_space_nodes( );
   T_drv.resize( n_space_nodes, _spat_contribution_size );
