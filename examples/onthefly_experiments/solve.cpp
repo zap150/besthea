@@ -253,7 +253,7 @@ int main( int argc, char * argv[] ) {
       printf("assembly V\n");
       for(int i = 0; i < total_repetitions; i++) {
         V_mem.clear();
-        if(i >= c.pre_repetitions) tm_assemble_v_mem.start();
+        if(i >= c.pre_repetitions) tm_assemble_v_mem.start(true);
         assembler_v.assemble(V_mem);
         if(i >= c.pre_repetitions) tm_assemble_v_mem.stop();
       }
@@ -262,7 +262,7 @@ int main( int argc, char * argv[] ) {
       printf("assembly D\n");
       for(int i = 0; i < total_repetitions; i++) {
         D_mem.clear();
-        if(i >= c.pre_repetitions) tm_assemble_d_mem.start();
+        if(i >= c.pre_repetitions) tm_assemble_d_mem.start(true);
         assembler_d.assemble(D_mem);
         if(i >= c.pre_repetitions) tm_assemble_d_mem.stop();
       }
@@ -270,7 +270,7 @@ int main( int argc, char * argv[] ) {
     printf("assembly K\n");
     for(int i = 0; i < total_repetitions; i++) {
       K_mem.clear();
-      if(i >= c.pre_repetitions) tm_assemble_k_mem.start();
+      if(i >= c.pre_repetitions) tm_assemble_k_mem.start(true);
       assembler_k.assemble(K_mem);
       if(i >= c.pre_repetitions) tm_assemble_k_mem.stop();
     }
@@ -350,7 +350,7 @@ int main( int argc, char * argv[] ) {
         sol_mem.copy(rhs_mem);
         gmres_prec_dir_mem = prec;
         gmres_iter_dir_mem = iter;
-        if(i >= c.pre_repetitions) tm_solve_dir_mem.start();
+        if(i >= c.pre_repetitions) tm_solve_dir_mem.start(true);
         V_mem.mkl_fgmres_solve    (rhs_mem,     sol_mem,     gmres_prec_dir_mem,     gmres_iter_dir_mem,     gmres_iter_dir_mem);
         if(i >= c.pre_repetitions) tm_solve_dir_mem.stop();
       }
@@ -361,7 +361,7 @@ int main( int argc, char * argv[] ) {
         sol_fly_cpu.copy(rhs_fly_cpu);
         gmres_prec_dir_fly_cpu = prec;
         gmres_iter_dir_fly_cpu = iter;
-        if(i >= c.pre_repetitions) tm_solve_dir_fly_cpu.start();
+        if(i >= c.pre_repetitions) tm_solve_dir_fly_cpu.start(true);
         V_fly_cpu.mkl_fgmres_solve(rhs_fly_cpu, sol_fly_cpu, gmres_prec_dir_fly_cpu, gmres_iter_dir_fly_cpu, gmres_iter_dir_fly_cpu);
         if(i >= c.pre_repetitions) tm_solve_dir_fly_cpu.stop();
       }
@@ -372,7 +372,7 @@ int main( int argc, char * argv[] ) {
         sol_fly_gpu.copy(rhs_fly_gpu);
         gmres_prec_dir_fly_gpu = prec;
         gmres_iter_dir_fly_gpu = iter;
-        if(i >= c.pre_repetitions) tm_solve_dir_fly_gpu.start();
+        if(i >= c.pre_repetitions) tm_solve_dir_fly_gpu.start(true);
         V_fly_gpu.mkl_fgmres_solve(rhs_fly_gpu, sol_fly_gpu, gmres_prec_dir_fly_gpu, gmres_iter_dir_fly_gpu, gmres_iter_dir_fly_gpu);
         if(i >= c.pre_repetitions) tm_solve_dir_fly_gpu.stop();
       }
@@ -432,7 +432,7 @@ int main( int argc, char * argv[] ) {
         sol_mem.copy(rhs_mem);
         gmres_prec_neu_mem = prec;
         gmres_iter_neu_mem = iter;
-        if(i >= c.pre_repetitions) tm_solve_neu_mem.start();
+        if(i >= c.pre_repetitions) tm_solve_neu_mem.start(true);
         D_mem.mkl_fgmres_solve    (rhs_mem,     sol_mem,     gmres_prec_neu_mem,     gmres_iter_neu_mem,     gmres_iter_neu_mem);
         if(i >= c.pre_repetitions) tm_solve_neu_mem.stop();
       }
@@ -443,7 +443,7 @@ int main( int argc, char * argv[] ) {
         sol_fly_cpu.copy(rhs_fly_cpu);
         gmres_prec_neu_fly_cpu = prec;
         gmres_iter_neu_fly_cpu = iter;
-        if(i >= c.pre_repetitions) tm_solve_neu_fly_cpu.start();
+        if(i >= c.pre_repetitions) tm_solve_neu_fly_cpu.start(true);
         D_fly_cpu.mkl_fgmres_solve(rhs_fly_cpu, sol_fly_cpu, gmres_prec_neu_fly_cpu, gmres_iter_neu_fly_cpu, gmres_iter_neu_fly_cpu);
         if(i >= c.pre_repetitions) tm_solve_neu_fly_cpu.stop();
       }
@@ -454,7 +454,7 @@ int main( int argc, char * argv[] ) {
         sol_fly_gpu.copy(rhs_fly_gpu);
         gmres_prec_neu_fly_gpu = prec;
         gmres_iter_neu_fly_gpu = iter;
-        if(i >= c.pre_repetitions) tm_solve_neu_fly_gpu.start();
+        if(i >= c.pre_repetitions) tm_solve_neu_fly_gpu.start(true);
         D_fly_gpu.mkl_fgmres_solve(rhs_fly_gpu, sol_fly_gpu, gmres_prec_neu_fly_gpu, gmres_iter_neu_fly_gpu, gmres_iter_neu_fly_gpu);
         if(i >= c.pre_repetitions) tm_solve_neu_fly_gpu.stop();
       }

@@ -20,7 +20,6 @@ echo "                 V            K            KT           D" >> ${resfile}
 
 # applies only to the Karolina nodes, change it on other clusters
 export OMP_NUM_THREADS=128
-export MKL_NUM_THREADS=128
 export KMP_AFFINITY=granularity=core,compact
 export KMP_HW_SUBSET=2s,64c
 
@@ -33,8 +32,8 @@ do
 
     COMMAND="${executable}"
     COMMAND+=" --mesh ${PWD}/bin/besthea/cube_24.txt"
-    COMMAND+=" --space-refine 3"
-    COMMAND+=" --timesteps 64"
+    COMMAND+=" --space-refine 4"
+    COMMAND+=" --timesteps 256"
     COMMAND+=" --endtime 1"
     COMMAND+=" --hc 1"
     COMMAND+=" --do-onthefly-gpu"
@@ -48,7 +47,7 @@ do
     COMMAND+=" --qo-regular 4"
 
     maxgpuidx=$((${ngpus}-1))
-    CUDA_VISIBLE_DEVICES=$(seq -s"," 0 ${maxgpuidx}) ${COMMAND} | tee ${outfile}
+    CUDA_VISIBLE_DEVICES=$(seq -s"," 0 ${maxgpuidx}) ${COMMAND} >> ${outfile}
 
     grep "fly_mult_gpu" ${outfile} | sed "s/fly_mult_gpu//" >> ${resfile}
 
