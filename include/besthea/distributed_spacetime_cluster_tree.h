@@ -862,6 +862,8 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @param[in] source_cluster  Source cluster in the nearfield of the current
    * target cluster.
    * @param[in] target_cluster  Current target cluster.
+   * @note In @ref fill_cluster_operation_lists this routine is called only for
+   * temporally inadmissible source clusters.
    */
   void determine_operation_lists_subroutine_targets_with_aux_children(
     general_spacetime_cluster & source_cluster,

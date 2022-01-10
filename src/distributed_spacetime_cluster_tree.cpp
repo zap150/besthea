@@ -3362,8 +3362,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
               // an auxiliary cluster
             } else if ( target_is_auxiliary ) {
               // the construction guarantees that the spatial level of the
-              // current source and target cluster is the same (see (**) and
-              // (***))
+              // current source and target cluster is the same (see (**))
               if ( crrnt_tar_cluster.determine_temporal_admissibility(
                      current_source ) ) {
                 // update m2t list only for local space-time clusters
@@ -3450,8 +3449,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     } else {
       // the spatial level of the current target cluster is the same as the
       // one of the current spatial source cluster, and the same holds for
-      // their respective children. Thus, we can add source_cluster itself to
-      // the nearfield of the current target's nearfield.
+      // their respective children. Thus, we can add the (inadmissible!)
+      // source_cluster itself to the nearfield of the current target's
+      // nearfield.
       target_cluster.add_to_nearfield_list( &source_cluster );
     }
   }
