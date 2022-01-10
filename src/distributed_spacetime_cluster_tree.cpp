@@ -247,23 +247,17 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     subtree_send_list, subtree_receive_list );
   distribution_tree->reduce_2_essential( );
 
-  // fill the nearfield and interaction lists of all space-time clusters here
-  // already, if no m2t and s2l operations should be executed. Otherwise, refine
-  // large spatial clusters first
-  if ( _enable_m2t_and_s2l ) {
-    refine_large_clusters_in_space( _root );
-    // collect the auxiliary leaves in the local part of the spacetime cluster
-    collect_additional_local_leaves( *_root, _additional_local_leaves );
-  }
-
+  // Refine large spatial clusters first
+  refine_large_clusters_in_space( _root );
+  // collect the auxiliary leaves in the local part of the spacetime cluster
+  collect_additional_local_leaves( *_root, _additional_local_leaves );
+  // Fill the cluster operation lists (nearfield, interaction, m2t, s2l, ...)
   fill_cluster_operation_lists( *_root );
-  if ( _enable_m2t_and_s2l ) {
-    distinguish_hybrid_and_standard_m2t_and_s2l_operations( *_root );
-  }
 
   associate_scheduling_clusters_and_space_time_clusters( );
 
   if ( _enable_m2t_and_s2l ) {
+    distinguish_hybrid_and_standard_m2t_and_s2l_operations( *_root );
     // update the m2t and s2l of the scheduling time clusters (cluster
     // association is required for that!)
     distribution_tree->update_m2t_and_s2l_lists( );
@@ -3119,21 +3113,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
           if ( st_clusters_s2l_list_size > st_clusters_n_hybrid_s2l_ops ) {
             t_root->add_index_to_assoc_standard_s2l_targets( i );
           }
-        }
-      }
-    }
-
-    // check if nearfield operations have to be executed for the current cluster
-    if ( t_root->get_n_associated_leaves( ) > 0 ) {
-      // todo: adapt this later on?
-      // in case of auxiliary spatially refined clusters in the tree, we execute
-      // nearfield operations for all leaves in the extended tree (i.e.
-      // auxiliary leaves or non-refined original leaves).
-      for ( lo i = 0; (lou) i < associated_spacetime_clusters->size( ); ++i ) {
-        general_spacetime_cluster * st_cluster
-          = ( *associated_spacetime_clusters )[ i ];
-        if ( st_cluster->get_n_children( ) == 0 ) {
-          t_root->add_index_to_assoc_nearfield_targets( i );
         }
       }
     }
