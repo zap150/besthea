@@ -790,38 +790,55 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * Applies the appropriate Ls2T operation for the given space-time cluster,
    * depending on the boundary integral operator. The result is written to the
    * given global result vector.
-   * @param[in] st_cluster  Cluster for which Ls2T operation is executed.
    * @param[in,out] output_vector The results of the Ls2T operation are added to
    * the appropriate positions of this global result vector.
+   * @param[in] tar_cluster  Cluster providing the local contributions and the
+   * geometry for the Ls2T operation.
+   * @param[in] tar_element_cluster  Cluster for whose elements Ls2T
+   * operations are executed.
+   * @note If @p tar_element_cluster is not provided, @p tar_cluster takes its
+   * role.
+   * @note @p tar_element_cluster needs to be provided only in case of
+   * auxiliary Ls2T operations, in which case it should be a leaf descendant of
+   * @p tar_cluster in the cluster tree.
    */
   template< slou run_count >
-  void apply_ls2t_operation( const mesh::general_spacetime_cluster * st_cluster,
-    distributed_block_vector & output_vector ) const;
+  void apply_ls2t_operation( distributed_block_vector & output_vector,
+    const mesh::general_spacetime_cluster * tar_cluster,
+    const mesh::general_spacetime_cluster * tar_element_cluster
+    = nullptr ) const;
 
   /**
    * Applies an Ls2T operation for the given space-time cluster for p0 basis
    * functions in space and writes the result to the appropriate part of the
    * (global) output vector.
-   * @param[in] st_cluster  Considered spacetime cluster.
    * @param[in,out] output_vector Global result vector to which the result
-   * of the operation is added at the correct position.
+   * @param[in] tar_cluster  Cluster providing the local contributions and the
+   * geometry for the Ls2T operation.
+   * @param[in] tar_element_cluster  Cluster for whose elements Ls2T
+   * operations are executed.
+   * @note See also @ref apply_ls2t_operation for more details.
    */
-  void apply_ls2t_operation_p0(
-    const mesh::general_spacetime_cluster * st_cluster,
-    distributed_block_vector & output_vector ) const;
+  void apply_ls2t_operation_p0( distributed_block_vector & output_vector,
+    const mesh::general_spacetime_cluster * tar_cluster,
+    const mesh::general_spacetime_cluster * tar_element_cluster ) const;
 
   /**
    * Applies an Ls2T operation for the given space-time cluster for p1 basis
    * functions and normal derivatives of spatial polynomials (for adjoint
    * double layer operator and hypersingular operator) and writes the result to
    * the appropriate part of the (global) output vector.
-   * @param[in] st_cluster  Considered spacetime cluster.
    * @param[in,out] output_vector Global result vector to which the result
-   * of the operation is added at the correct position.
+   * @param[in] tar_cluster  Cluster providing the local contributions and the
+   * geometry for the Ls2T operation.
+   * @param[in] tar_element_cluster  Cluster for whose elements Ls2T
+   * operations are executed.
+   * @note See also @ref apply_ls2t_operation for more details.
    */
   void apply_ls2t_operation_p1_normal_drv(
-    const mesh::general_spacetime_cluster * st_cluster,
-    distributed_block_vector & output_vector ) const;
+    distributed_block_vector & output_vector,
+    const mesh::general_spacetime_cluster * tar_cluster,
+    const mesh::general_spacetime_cluster * tar_element_cluster ) const;
 
   /**
    * Calls all S2L operations associated with a given scheduling time cluster.
@@ -889,8 +906,15 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * depending on the boundary integral operator.
    * @param[in] src_vector  Global vector containing the sources used for the
    * operation.
-   * @param[in] src_cluster Cluster whose spatial moments are computed via an
-   * S2Ms operation.
+   * @param[in] src_cluster Cluster whose spatial elements are used to compute
+   * the moments via an S2Ms operation.
+   * @param[in] src_geometry_cluster  Cluster whose box boundaries are used to
+   * compute the moments.
+   * @note If @p src_geometry_cluster is not provided, @p src_cluster takes its
+   * role.
+   * @note @p src_geometry_cluster needs to be provided only in case of
+   * auxiliary S2Ms operations, in which case it should be a coarse ancestor of
+   * @p src_cluster in the cluster tree.
    */
   template< slou run_count >
   void apply_s2ms_operation( const distributed_block_vector & src_vector,
@@ -902,8 +926,11 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * in space.
    * @param[in] src_vector  Global vector containing the sources used for the
    * operation.
-   * @param[in] src_cluster Cluster whose spatial moments are computed via an
-   * S2Ms operation.
+   * @param[in] src_cluster Cluster whose spatial elements are used to compute
+   * the moments via an S2Ms operation.
+   * @param[in] src_geometry_cluster  Cluster whose box boundaries are used to
+   * compute the moments.
+   * @note See also @ref apply_s2ms_operation for more details.
    */
   void apply_s2ms_operation_p0( const distributed_block_vector & src_vector,
     mesh::general_spacetime_cluster * src_cluster,
@@ -915,8 +942,11 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * operator).
    * @param[in] src_vector  Global vector containing the sources used for the
    * operation.
-   * @param[in] src_cluster Cluster whose spatial moments are computed via an
-   * S2Ms operation.
+   * @param[in] src_cluster Cluster whose spatial elements are used to compute
+   * the moments via an S2Ms operation.
+   * @param[in] src_geometry_cluster  Cluster whose box boundaries are used to
+   * compute the moments.
+   * @note See also @ref apply_s2ms_operation for more details.
    */
   void apply_s2ms_operation_p1_normal_drv(
     const distributed_block_vector & src_vector,
@@ -1275,14 +1305,14 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[out] T  Full matrix where the quadratures are stored. The elements
    * of the cluster vary along the rows, the order of the polynomial along the
    * columns of the matrix.
-   * @param[in] source_cluster  Cluster for whose spatial elements the
+   * @param[in] source_elem_cluster  Cluster for whose spatial elements the
    * quadratures are computed.
-   * @param[in] source_geometry_cluster Cluster whose geometric box is used to
+   * @param[in] source_geom_cluster Cluster whose geometric box is used to
    * compute the quadratures.
    */
   void compute_chebyshev_quadrature_p0( full_matrix & T,
-    const mesh::general_spacetime_cluster * source_cluster,
-    const mesh::general_spacetime_cluster * source_geometry_cluster
+    const mesh::general_spacetime_cluster * source_elem_cluster,
+    const mesh::general_spacetime_cluster * source_geom_cluster
     = nullptr ) const;
 
   /**
@@ -1291,14 +1321,14 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[out] T_drv  Full matrix where the quadratures are stored. The
    * nodes of the cluster vary along the rows, the order of the polynomial
    * along the columns of the matrix.
-   * @param[in] source_cluster  Cluster for whose spatial elements the
+   * @param[in] source_elem_cluster  Cluster for whose spatial elements the
    * quadratures are computed.
-   * @param[in] source_geometry_cluster Cluster whose geometric box is used to
+   * @param[in] source_geom_cluster Cluster whose geometric box is used to
    * compute the quadratures.
    */
   void compute_normal_drv_chebyshev_quadrature_p1( full_matrix & T_drv,
-    const mesh::general_spacetime_cluster * source_cluster,
-    const mesh::general_spacetime_cluster * source_geometry_cluster
+    const mesh::general_spacetime_cluster * source_elem_cluster,
+    const mesh::general_spacetime_cluster * source_geom_cluster
     = nullptr ) const;
 
   /**
@@ -1309,14 +1339,14 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    *                              The nodes of the cluster vary along the rows,
    *                              the order of the polynomial along the columns
    *                              of the matrix.
-   * @param[in] source_cluster  Cluster for whose spatial component the
+   * @param[in] source_elem_cluster  Cluster for whose spatial component the
    *                            quadratures are computed.
    * @tparam dim  Used to select the component of the surface curls (0,1 or 2).
    */
   template< slou dim >
   void compute_chebyshev_times_p1_surface_curls_along_dimension(
     full_matrix & T_curl_along_dim,
-    const mesh::general_spacetime_cluster * source_cluster ) const;
+    const mesh::general_spacetime_cluster * source_elem_cluster ) const;
 
   /**
    * Computes quadrature of a selected component of the normal derivatives of

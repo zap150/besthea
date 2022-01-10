@@ -126,6 +126,7 @@ class besthea::mesh::scheduling_time_cluster {
       _assoc_standard_s2l_targets( nullptr ),
       _assoc_hybrid_s2l_targets( nullptr ),
       _assoc_aux_s2ms_cluster_pairs( nullptr ),
+      _assoc_aux_ls2t_cluster_pairs( nullptr ),
       _contribution_size( 0 ),
       _map_to_moment_receive_buffers( nullptr ),
       _pos_in_m_list( -1 ),
@@ -194,6 +195,8 @@ class besthea::mesh::scheduling_time_cluster {
       delete _assoc_hybrid_s2l_targets;
     if ( _assoc_aux_s2ms_cluster_pairs != nullptr )
       delete _assoc_aux_s2ms_cluster_pairs;
+    if ( _assoc_aux_ls2t_cluster_pairs != nullptr )
+      delete _assoc_aux_ls2t_cluster_pairs;
     for ( auto moment_buffer : _associated_moments_receive_buffers ) {
       delete[] moment_buffer;
     }
@@ -678,8 +681,21 @@ class besthea::mesh::scheduling_time_cluster {
    * Returns a pointer to (const) @ref _assoc_aux_s2ms_clusters.
    */
   const std::vector< std::pair< lo, general_spacetime_cluster * > > *
-  get_assoc_aux_s2ms_clusters( ) const {
+  get_assoc_aux_s2ms_cluster_pairs( ) const {
     return _assoc_aux_s2ms_cluster_pairs;
+  }
+
+  /**
+   * Adds a new pair to @ref _assoc_aux_s2ms_cluster_pairs.
+   * @param[in] new_pair Pair to be added to the list.
+   */
+  void add_pair_to_assoc_aux_ls2t_cluster_pairs(
+    const std::pair< lo, general_spacetime_cluster * > & new_pair ) {
+    if ( _assoc_aux_ls2t_cluster_pairs == nullptr ) {
+      _assoc_aux_ls2t_cluster_pairs
+        = new std::vector< std::pair< lo, general_spacetime_cluster * > >( );
+    }
+    _assoc_aux_ls2t_cluster_pairs->push_back( new_pair );
   }
 
   /**
@@ -1504,24 +1520,16 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Determines the associated space-time clusters, for which auxiliary spatial
-   * moments are needed. The spatial moments are allocated in a single large
-   * array, and assigned to the correct space-time clusters (and their coarse
-   * ancestors at level @p max_rel_space_level_s_moments ).
-   *
-   * In addition, the routine initializes @ref _assoc_aux_s2ms_cluster_pairs,
+   * Initializes @ref _assoc_aux_s2ms_cluster_pairs,
    * which is used to access the determined space-time clusters in the
-   * application of a pFMM matrix.
-   * @param[in] spatial_contribution_size Size of the auxiliary spatial moment
-   * of a single space-time cluster.
+   * application of auxiliary S2Ms operations of a pFMM matrix.
    * @param[in] max_rel_space_level_s_moments  Maximal relative spatial level
    * for which spatial moments have already been allocated. Auxiliary spatial
    * moments are only allocated for clusters with higher levels.
    */
-  void allocate_associated_aux_spatial_moments(
-    const lou spatial_contribution_size,
+  void initialize_assoc_aux_s2ms_cluster_pairs(
     const lo max_rel_space_level_s_moments ) {
-    // determine the space-time clusters for which auxiliary S2M operations
+    // determine the space-time clusters for which auxiliary S2Ms operations
     // have to be executed.
     lo n_clusters_before_max_rel_lvl = 0;
     for ( lo i = 0; i < max_rel_space_level_s_moments; ++i ) {
@@ -1549,7 +1557,8 @@ class besthea::mesh::scheduling_time_cluster {
             = current_st_cluster;
           for ( lou lvl = 0;
                 lvl < rel_space_level - max_rel_space_level_s_moments; ++lvl ) {
-            current_ancestor_for_aux_s2ms = current_st_cluster->get_parent( );
+            current_ancestor_for_aux_s2ms
+              = current_ancestor_for_aux_s2ms->get_parent( );
           }
           add_pair_to_assoc_aux_s2ms_cluster_pairs(
             { idx_offset + cluster_idx, current_ancestor_for_aux_s2ms } );
@@ -1558,7 +1567,25 @@ class besthea::mesh::scheduling_time_cluster {
       idx_offset += ( *_n_associated_leaves_and_aux_clusters_per_level )
         [ rel_space_level ];
     }
+  }
 
+  /**
+   * Determines the associated space-time clusters, for which auxiliary spatial
+   * moments are needed. The spatial moments are allocated in a single large
+   * array, and assigned to the correct space-time clusters (and their coarse
+   * ancestors at level @p max_rel_space_level_s_moments ).
+
+   * @param[in] spatial_contribution_size Size of the auxiliary spatial moment
+   * of a single space-time cluster.
+   * @param[in] max_rel_space_level_s_moments  Maximal relative spatial level
+   * for which spatial moments have already been allocated. Auxiliary spatial
+   * moments are only allocated for clusters with higher levels.
+   * @note The routine @ref initialize_assoc_aux_s2ms_cluster_pairs has to be
+   called first.
+   */
+  void allocate_associated_aux_spatial_moments(
+    const lou spatial_contribution_size,
+    const lo max_rel_space_level_s_moments ) {
     _n_st_clusters_w_aux_spatial_moments
       = _assoc_aux_s2ms_cluster_pairs->size( );
     _assoc_aux_spatial_moments = new sc[ _n_st_clusters_w_aux_spatial_moments
@@ -1705,6 +1732,65 @@ class besthea::mesh::scheduling_time_cluster {
    */
   lo get_n_st_clusters_w_spatial_local_contributions( ) const {
     return _n_st_clusters_w_spatial_local_contributions;
+  }
+
+  /**
+   * Initializes @ref _assoc_aux_ls2t_cluster_pairs,
+   * which is used to access the determined space-time clusters in the
+   * application of auxiliary Ls2T operations of a pFMM matrix.
+   * @param[in] max_rel_space_level_s_locals  Maximal relative spatial level
+   * for which spatial local contributions have already been allocated.
+   * Auxiliary spatial local contributions are only allocated for clusters with
+   * higher levels.
+   */
+  void initialize_assoc_aux_ls2t_cluster_pairs(
+    const lo max_rel_space_level_s_locals ) {
+    // determine the space-time clusters for which auxiliary Ls2T operations
+    // have to be executed.
+    lo n_clusters_before_max_rel_lvl = 0;
+    for ( lo i = 0; i < max_rel_space_level_s_locals; ++i ) {
+      n_clusters_before_max_rel_lvl
+        += ( *_n_associated_leaves_and_aux_clusters_per_level )[ i ];
+    }
+    lo idx_offset = n_clusters_before_max_rel_lvl
+      + ( *_n_associated_leaves_and_aux_clusters_per_level )
+        [ max_rel_space_level_s_locals ];
+    for ( lou rel_space_level = max_rel_space_level_s_locals + 1;
+          rel_space_level
+          < _n_associated_leaves_and_aux_clusters_per_level->size( );
+          ++rel_space_level ) {
+      for ( lo cluster_idx = 0;
+            cluster_idx < ( *_n_associated_leaves_and_aux_clusters_per_level )
+              [ rel_space_level ];
+            ++cluster_idx ) {
+        general_spacetime_cluster * current_st_cluster
+          = ( *_associated_spacetime_clusters )[ idx_offset + cluster_idx ];
+        if ( current_st_cluster->get_n_children( ) == 0 ) {
+          // determine the ancestor of the current_st_cluster which has the
+          // relative space level max_rel_space_level_s_locals by ascending in
+          // the tree.
+          general_spacetime_cluster * current_ancestor_for_aux_ls2t
+            = current_st_cluster;
+          for ( lou lvl = 0;
+                lvl < rel_space_level - max_rel_space_level_s_locals; ++lvl ) {
+            current_ancestor_for_aux_ls2t
+              = current_ancestor_for_aux_ls2t->get_parent( );
+          }
+          add_pair_to_assoc_aux_ls2t_cluster_pairs(
+            { idx_offset + cluster_idx, current_ancestor_for_aux_ls2t } );
+        }
+      }
+      idx_offset += ( *_n_associated_leaves_and_aux_clusters_per_level )
+        [ rel_space_level ];
+    }
+  }
+
+  /**
+   * Returns a pointer to (const) @ref _assoc_aux_ls2t_cluster_pairs.
+   */
+  const std::vector< std::pair< lo, general_spacetime_cluster * > > *
+  get_assoc_aux_ls2t_cluster_pairs( ) const {
+    return _assoc_aux_ls2t_cluster_pairs;
   }
 
   /**
@@ -2052,7 +2138,13 @@ class besthea::mesh::scheduling_time_cluster {
                                     //!< be executed, and pointers to their
                                     //!< respective ancestors for which the
                                     //!< actual spatial moments are needed.
-
+  std::vector< std::pair< lo, general_spacetime_cluster * > > *
+    _assoc_aux_ls2t_cluster_pairs;  //!< Vector containing pairs of indices of
+                                    //!< all associated space-time clusters for
+                                    //!< which auxiliary ls2t operations have to
+                                    //!< be executed, and pointers to their
+                                    //!< respective ancestors from which the
+                                    //!< spatial local contributions are taken.
   lou _contribution_size;  //!< Size of a single contribution (moments or
                            //!< local contribution) in the array of
                            //!< associated contributions

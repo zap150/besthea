@@ -926,7 +926,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       m2m_coeffs_s_dim_2 = &( _m2m_coeffs_s_dim_2_left[ n_space_div_parent ] );
       break;
     default:  // default case should never be used, program will crash!
-      assert( -1 < octant && octant < 8 );
+      assert( octant < 8 );
       m2m_coeffs_s_dim_0 = nullptr;
       m2m_coeffs_s_dim_1 = nullptr;
       m2m_coeffs_s_dim_2 = nullptr;
@@ -2474,10 +2474,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 template< class kernel_type, class target_space, class source_space >
 template< slou run_count >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space,
-  source_space >::apply_ls2t_operation( const mesh::general_spacetime_cluster *
-  /*st_cluster*/,
-  distributed_block_vector & /*output_vector*/ ) const {
+  target_space, source_space >::
+  apply_ls2t_operation( distributed_block_vector & /*output_vector*/,
+    const mesh::general_spacetime_cluster *
+    /*tar_cluster*/,
+    const mesh::general_spacetime_cluster * /*tar_element_cluster*/
+  ) const {
   std::cout << "General Ls2T operation not implemented." << std::endl;
 }
 
@@ -2490,9 +2492,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
     besthea::bem::basis_tri_p0 >,
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 > >::
-  apply_ls2t_operation< 0 >( const mesh::general_spacetime_cluster * st_cluster,
-    distributed_block_vector & output_vector ) const {
-  apply_ls2t_operation_p0( st_cluster, output_vector );
+  apply_ls2t_operation< 0 >( distributed_block_vector & output_vector,
+    const mesh::general_spacetime_cluster * tar_cluster,
+    const mesh::general_spacetime_cluster * tar_element_cluster ) const {
+  apply_ls2t_operation_p0( output_vector, tar_cluster, tar_element_cluster );
 }
 
 //! template specialization for double layer p0p1 matrix
@@ -2504,9 +2507,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
     besthea::bem::basis_tri_p0 >,
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p1 > >::
-  apply_ls2t_operation< 0 >( const mesh::general_spacetime_cluster * st_cluster,
-    distributed_block_vector & output_vector ) const {
-  apply_ls2t_operation_p0( st_cluster, output_vector );
+  apply_ls2t_operation< 0 >( distributed_block_vector & output_vector,
+    const mesh::general_spacetime_cluster * tar_cluster,
+    const mesh::general_spacetime_cluster * tar_element_cluster ) const {
+  apply_ls2t_operation_p0( output_vector, tar_cluster, tar_element_cluster );
 }
 
 //! template specialization for adjoint double layer p1p0 matrix
@@ -2518,30 +2522,42 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
     besthea::bem::basis_tri_p1 >,
   besthea::bem::distributed_fast_spacetime_be_space<
     besthea::bem::basis_tri_p0 > >::
-  apply_ls2t_operation< 0 >( const mesh::general_spacetime_cluster * st_cluster,
-    distributed_block_vector & output_vector ) const {
-  apply_ls2t_operation_p1_normal_drv( st_cluster, output_vector );
+  apply_ls2t_operation< 0 >( distributed_block_vector & output_vector,
+    const mesh::general_spacetime_cluster * tar_cluster,
+    const mesh::general_spacetime_cluster * tar_element_cluster ) const {
+  apply_ls2t_operation_p1_normal_drv(
+    output_vector, tar_cluster, tar_element_cluster );
 }
 
 // FIXME: add template specialization for hypersingular operator
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::
-  apply_ls2t_operation_p0( const mesh::general_spacetime_cluster * st_cluster,
-    distributed_block_vector & output_vector ) const {
-  lo n_time_elems = st_cluster->get_n_time_elements( );
-  lo n_space_elements = st_cluster->get_n_space_elements( );
+  target_space,
+  source_space >::apply_ls2t_operation_p0( distributed_block_vector &
+                                             output_vector,
+  const mesh::general_spacetime_cluster * tar_cluster,
+  const mesh::general_spacetime_cluster * tar_element_cluster ) const {
+  // determine the actual tar element cluster (in case that tar_element_cluster
+  // == nullptr)
+  const mesh::general_spacetime_cluster * actual_tar_elem_cluster
+    = tar_element_cluster;
+  if ( actual_tar_elem_cluster == nullptr ) {
+    actual_tar_elem_cluster = tar_cluster;
+  }
+
+  lo n_time_elems = actual_tar_elem_cluster->get_n_time_elements( );
+  lo n_space_elements = actual_tar_elem_cluster->get_n_space_elements( );
 
   full_matrix T;
-  compute_chebyshev_quadrature_p0( T, st_cluster );
+  compute_chebyshev_quadrature_p0( T, actual_tar_elem_cluster, tar_cluster );
   // T has dimensions (n_space_elements, _spat_contribution_size)
   // multiply T by the spatial local contributions to get the local result
   // and add this to the output vector
 
   vector local_result_vector( n_space_elements * n_time_elems, true );
   const sc * all_spatial_local_contributions
-    = st_cluster->get_pointer_to_spatial_local_contributions( );
+    = tar_cluster->get_pointer_to_spatial_local_contributions( );
 
   for ( lo i_tar_time = 0; i_tar_time < n_time_elems; ++i_tar_time ) {
     const sc * current_spatial_local_contributions = &(
@@ -2556,27 +2572,37 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   }
   // add the results to the correct positions of the output vector
   output_vector.add_local_part< target_space >(
-    st_cluster, local_result_vector );
+    actual_tar_elem_cluster, local_result_vector );
 }
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::
-  apply_ls2t_operation_p1_normal_drv(
-    const mesh::general_spacetime_cluster * st_cluster,
-    distributed_block_vector & output_vector ) const {
-  lo n_time_elems = st_cluster->get_n_time_elements( );
-  lo n_space_nodes = st_cluster->get_n_space_nodes( );
+  target_space,
+  source_space >::apply_ls2t_operation_p1_normal_drv( distributed_block_vector &
+                                                        output_vector,
+  const mesh::general_spacetime_cluster * tar_cluster,
+  const mesh::general_spacetime_cluster * tar_element_cluster ) const {
+  // determine the actual tar element cluster (in case that tar_element_cluster
+  // == nullptr)
+  const mesh::general_spacetime_cluster * actual_tar_elem_cluster
+    = tar_element_cluster;
+  if ( actual_tar_elem_cluster == nullptr ) {
+    actual_tar_elem_cluster = tar_cluster;
+  }
+
+  lo n_time_elems = actual_tar_elem_cluster->get_n_time_elements( );
+  lo n_space_nodes = actual_tar_elem_cluster->get_n_space_nodes( );
 
   full_matrix T_drv;
-  compute_normal_drv_chebyshev_quadrature_p1( T_drv, st_cluster );
+  compute_normal_drv_chebyshev_quadrature_p1(
+    T_drv, tar_element_cluster, tar_cluster );
   // T_drv has dimensions (n_space_nodes, _spat_contribution_size)
   // multiply T by the spatial local contributions to get the local result
   // and add this to the output vector
 
   vector local_result_vector( n_space_nodes * n_time_elems, true );
   const sc * all_spatial_local_contributions
-    = st_cluster->get_pointer_to_spatial_local_contributions( );
+    = tar_cluster->get_pointer_to_spatial_local_contributions( );
 
   for ( lo i_tar_time = 0; i_tar_time < n_time_elems; ++i_tar_time ) {
     const sc * current_spatial_local_contributions = &(
@@ -2591,7 +2617,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   }
   // add the results to the correct positions of the output vector
   output_vector.add_local_part< target_space >(
-    st_cluster, local_result_vector );
+    actual_tar_elem_cluster, local_result_vector );
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -3278,7 +3304,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       m2m_coeffs_s_dim_2 = &( _m2m_coeffs_s_dim_2_left[ parent_space_level ] );
       break;
     default:  // default case should never be used, program will crash!
-      assert( -1 < child_octant && child_octant < 8 );
+      assert( child_octant < 8 );
       m2m_coeffs_s_dim_0 = nullptr;
       m2m_coeffs_s_dim_1 = nullptr;
       m2m_coeffs_s_dim_2 = nullptr;
@@ -3766,7 +3792,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         }
       }
     } else {
-      // first, transform the space-time local contributions into spatial ones
       if ( verbose ) {
 #pragma omp critical( verbose )
         {
@@ -3779,6 +3804,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           }
         }
       }
+      // first, transform the space-time local contributions into spatial ones
       const std::vector< lo > * n_leaves_and_aux_cluster_per_level
         = t_cluster->get_n_associated_leaves_and_aux_clusters_per_level( );
 #pragma omp taskloop shared( n_leaves_and_aux_cluster_per_level )
@@ -3819,7 +3845,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               apply_ls2ls_operation( current_cluster, child );
             }
           } else {
-            apply_ls2t_operation< run_count >( current_cluster, output_vector );
+            apply_ls2t_operation< run_count >( output_vector, current_cluster );
           }
           if ( _measure_tasks ) {
             _l_subtask_times.at( omp_get_thread_num( ) )
@@ -3831,22 +3857,62 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       }
 
       // finally, apply ls2t operations for all cluster with the maximal
-      // relative space level.
-#pragma omp taskloop shared( n_leaves_and_aux_cluster_per_level, output_vector )
+      // relative space level or for their leaf descendants
+      // determine first the leaves at level max_relative_space_level_ls2t
+      std::vector< lo > leaf_indices_at_max_rel_space_level_ls2t;
       for ( lo i = 0; i < ( *n_leaves_and_aux_cluster_per_level )
                         [ max_relative_space_level_ls2t ];
+            ++i ) {
+        general_spacetime_cluster * current_cluster
+          = ( *associated_spacetime_clusters )[ offset + i ];
+        if ( current_cluster->get_n_children( ) == 0 ) {
+          leaf_indices_at_max_rel_space_level_ls2t.push_back( offset + i );
+        }
+      }
+      // now, execute all direct Ls2T operations in parallel
+#pragma omp taskloop shared( \
+  output_vector, leaf_indices_at_max_rel_space_level_ls2t )
+      for ( lou i = 0; i < leaf_indices_at_max_rel_space_level_ls2t.size( );
             ++i ) {
         if ( _measure_tasks ) {
           _l_subtask_times.at( omp_get_thread_num( ) )
             .push_back( _global_timer.get_time_from_start< time_type >( ) );
         }
         general_spacetime_cluster * current_cluster
-          = ( *associated_spacetime_clusters )[ offset + i ];
-        apply_ls2t_operation< run_count >( current_cluster, output_vector );
-
+          = ( *associated_spacetime_clusters )
+            [ leaf_indices_at_max_rel_space_level_ls2t[ i ] ];
+        apply_ls2t_operation< run_count >( output_vector, current_cluster );
         if ( _measure_tasks ) {
           _l_subtask_times.at( omp_get_thread_num( ) )
             .push_back( _global_timer.get_time_from_start< time_type >( ) );
+        }
+      }
+      // if there are auxiliary Ls2T operations to execute, do this at last.
+      // (i.e. Ls2T operations for large clusters via their leaf descendants)
+      const std::vector< std::pair< lo, general_spacetime_cluster * > > *
+        assoc_aux_ls2t_cluster_pairs
+        = t_cluster->get_assoc_aux_ls2t_cluster_pairs( );
+      if ( assoc_aux_ls2t_cluster_pairs != nullptr ) {
+#pragma omp taskloop shared( assoc_aux_ls2t_cluster_pairs, output_vector )
+        for ( lou i = 0; i < assoc_aux_ls2t_cluster_pairs->size( ); ++i ) {
+          if ( _measure_tasks ) {
+            _l_subtask_times.at( omp_get_thread_num( ) )
+              .push_back( _global_timer.get_time_from_start< time_type >( ) );
+          }
+
+          lo current_target_index
+            = ( *assoc_aux_ls2t_cluster_pairs )[ i ].first;
+          general_spacetime_cluster * current_coarse_target_cluster
+            = ( *assoc_aux_ls2t_cluster_pairs )[ i ].second;
+          general_spacetime_cluster * current_target_cluster
+            = ( *associated_spacetime_clusters )[ current_target_index ];
+          apply_ls2t_operation< run_count >( output_vector,
+            current_coarse_target_cluster, current_target_cluster );
+
+          if ( _measure_tasks ) {
+            _l_subtask_times.at( omp_get_thread_num( ) )
+              .push_back( _global_timer.get_time_from_start< time_type >( ) );
+          }
         }
       }
     }
@@ -4258,25 +4324,23 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::compute_chebyshev_quadrature_p0( full_matrix &
                                                                    T,
-  const general_spacetime_cluster * source_cluster,
-  const general_spacetime_cluster * source_geometry_cluster ) const {
-  lo n_space_elems = source_cluster->get_n_space_elements( );
+  const general_spacetime_cluster * source_elem_cluster,
+  const general_spacetime_cluster * source_geom_cluster ) const {
+  lo n_space_elems = source_elem_cluster->get_n_space_elements( );
   T.resize( n_space_elems, _spat_contribution_size );
   // get some info on the source geometry cluster
-  const general_spacetime_cluster * actual_geometry_cluster
-    = source_geometry_cluster;
-  if ( actual_geometry_cluster == nullptr ) {
-    actual_geometry_cluster = source_cluster;
+  const general_spacetime_cluster * actual_geom_cluster = source_geom_cluster;
+  if ( actual_geom_cluster == nullptr ) {
+    actual_geom_cluster = source_elem_cluster;
   }
 
   vector_type geom_cluster_s_center( 3 );
   vector_type geom_cluster_s_half( 3 );
   sc dummy;
-  actual_geometry_cluster->get_center( geom_cluster_s_center, dummy );
-  actual_geometry_cluster->get_half_size( geom_cluster_s_half, dummy );
-  sc padding
-    = _distributed_spacetime_tree
-        ->get_spatial_paddings( )[ actual_geometry_cluster->get_level( ) ];
+  actual_geom_cluster->get_center( geom_cluster_s_center, dummy );
+  actual_geom_cluster->get_half_size( geom_cluster_s_half, dummy );
+  sc padding = _distributed_spacetime_tree
+                 ->get_spatial_paddings( )[ actual_geom_cluster->get_level( ) ];
   sc start_0 = geom_cluster_s_center[ 0 ] - geom_cluster_s_half[ 0 ] - padding;
   sc end_0 = geom_cluster_s_center[ 0 ] + geom_cluster_s_half[ 0 ] + padding;
   sc start_1 = geom_cluster_s_center[ 1 ] - geom_cluster_s_half[ 1 ] - padding;
@@ -4298,7 +4362,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   vector_type cheb_dim_2( ( _spat_order + 1 ) * size_quad );
 
   const mesh::distributed_spacetime_tensor_mesh & distributed_mesh
-    = source_cluster->get_mesh( );
+    = source_elem_cluster->get_mesh( );
   const mesh::spacetime_tensor_mesh * local_mesh
     = distributed_mesh.get_local_mesh( );
   lo local_start_idx = distributed_mesh.get_local_start_idx( );
@@ -4309,7 +4373,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     // timesteps. In particular we get all spatial elements in the cluster
     // by considering the first n_space_elems spacetime elements.
     lo local_elem_idx = distributed_mesh.global_2_local(
-      local_start_idx, source_cluster->get_element( i ) );
+      local_start_idx, source_elem_cluster->get_element( i ) );
     lo local_elem_idx_space
       = local_mesh->get_space_element_index( local_elem_idx );
 
@@ -4351,27 +4415,25 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space,
   source_space >::compute_normal_drv_chebyshev_quadrature_p1( full_matrix &
                                                                 T_drv,
-  const general_spacetime_cluster * source_cluster,
-  const mesh::general_spacetime_cluster * source_geometry_cluster ) const {
-  lo n_space_elems = source_cluster->get_n_space_elements( );
-  lo n_space_nodes = source_cluster->get_n_space_nodes( );
+  const general_spacetime_cluster * source_elem_cluster,
+  const mesh::general_spacetime_cluster * source_geom_cluster ) const {
+  lo n_space_elems = source_elem_cluster->get_n_space_elements( );
+  lo n_space_nodes = source_elem_cluster->get_n_space_nodes( );
   T_drv.resize( n_space_nodes, _spat_contribution_size );
   T_drv.fill( 0.0 );
   // get some info on the source geometry cluster
-  const general_spacetime_cluster * actual_geometry_cluster
-    = source_geometry_cluster;
-  if ( actual_geometry_cluster == nullptr ) {
-    actual_geometry_cluster = source_cluster;
+  const general_spacetime_cluster * actual_geom_cluster = source_geom_cluster;
+  if ( actual_geom_cluster == nullptr ) {
+    actual_geom_cluster = source_elem_cluster;
   }
 
   vector_type geom_cluster_s_center( 3 );
   vector_type geom_cluster_s_half( 3 );
   sc dummy;
-  actual_geometry_cluster->get_center( geom_cluster_s_center, dummy );
-  actual_geometry_cluster->get_half_size( geom_cluster_s_half, dummy );
-  sc padding
-    = _distributed_spacetime_tree
-        ->get_spatial_paddings( )[ actual_geometry_cluster->get_level( ) ];
+  actual_geom_cluster->get_center( geom_cluster_s_center, dummy );
+  actual_geom_cluster->get_half_size( geom_cluster_s_half, dummy );
+  sc padding = _distributed_spacetime_tree
+                 ->get_spatial_paddings( )[ actual_geom_cluster->get_level( ) ];
   sc start_0 = geom_cluster_s_center[ 0 ] - geom_cluster_s_half[ 0 ] - padding;
   sc end_0 = geom_cluster_s_center[ 0 ] + geom_cluster_s_half[ 0 ] + padding;
   sc start_1 = geom_cluster_s_center[ 1 ] - geom_cluster_s_half[ 1 ] - padding;
@@ -4401,18 +4463,18 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   linear_algebra::coordinates< 3 > grad;
   const std::vector< lo > & elems_2_local_nodes
-    = source_cluster->get_elems_2_local_nodes( );
+    = source_elem_cluster->get_elems_2_local_nodes( );
   linear_algebra::coordinates< 3 > normal;
 
   const mesh::distributed_spacetime_tensor_mesh & distributed_mesh
-    = source_cluster->get_mesh( );
+    = source_elem_cluster->get_mesh( );
   const mesh::spacetime_tensor_mesh * local_mesh
     = distributed_mesh.get_local_mesh( );
   lo local_start_idx = distributed_mesh.get_local_start_idx( );
 
   for ( lo i = 0; i < n_space_elems; ++i ) {
     lo local_elem_idx = distributed_mesh.global_2_local(
-      local_start_idx, source_cluster->get_element( i ) );
+      local_start_idx, source_elem_cluster->get_element( i ) );
     lo local_elem_idx_space
       = local_mesh->get_space_element_index( local_elem_idx );
     local_mesh->get_spatial_normal_using_spatial_element_index(
@@ -4445,8 +4507,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           sc value2 = 0.0;
           sc value3 = 0.0;
           for ( lo j = 0; j < size_quad; ++j ) {
-            // compute the gradient of the tensor-product chebyshev polynomials
-            // using the chain rule.
+            // compute the gradient of the tensor-product chebyshev
+            // polynomials using the chain rule.
             grad[ 0 ] = cheb_drv_dim_0[ beta0 * size_quad + j ]
               * cheb_dim_1[ beta1 * size_quad + j ]
               * cheb_dim_2[ beta2 * size_quad + j ]
@@ -4467,17 +4529,17 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             value3 += weighted_normal_derivative * y2_ref[ j ];
           }
 
-          T_drv.add_atomic(
-            source_cluster->local_spacetime_node_idx_2_local_space_node_idx(
-              elems_2_local_nodes[ 6 * i ] ),
+          T_drv.add_atomic( source_elem_cluster
+                              ->local_spacetime_node_idx_2_local_space_node_idx(
+                                elems_2_local_nodes[ 6 * i ] ),
             current_index, _alpha * value1 );
-          T_drv.add_atomic(
-            source_cluster->local_spacetime_node_idx_2_local_space_node_idx(
-              elems_2_local_nodes[ 6 * i + 1 ] ),
+          T_drv.add_atomic( source_elem_cluster
+                              ->local_spacetime_node_idx_2_local_space_node_idx(
+                                elems_2_local_nodes[ 6 * i + 1 ] ),
             current_index, _alpha * value2 );
-          T_drv.add_atomic(
-            source_cluster->local_spacetime_node_idx_2_local_space_node_idx(
-              elems_2_local_nodes[ 6 * i + 2 ] ),
+          T_drv.add_atomic( source_elem_cluster
+                              ->local_spacetime_node_idx_2_local_space_node_idx(
+                                elems_2_local_nodes[ 6 * i + 2 ] ),
             current_index, _alpha * value3 );
           ++current_index;
         }
@@ -6149,19 +6211,19 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           }
         }
       }
-      // preparatory step to access associated auxiliary space-time clusters in
-      // a levelwise manner.
+      // preparatory step to access associated auxiliary space-time clusters
+      // in a levelwise manner.
       const std::vector< lo > * n_leaves_and_aux_cluster_per_level
         = t_cluster->get_n_associated_leaves_and_aux_clusters_per_level( );
       lo offset = 0;
       for ( lo i = 0; i < max_relative_space_level_s2ms; ++i ) {
         offset += ( *n_leaves_and_aux_cluster_per_level )[ i ];
       }
-      // first, apply auxiliary s2ms operations for the clusters in the list of
-      // associated auxiliary s2ms clusters.
+      // first, apply auxiliary s2ms operations for the clusters in the list
+      // of associated auxiliary s2ms clusters.
       const std::vector< std::pair< lo, general_spacetime_cluster * > > *
         assoc_aux_s2ms_cluster_pairs
-        = t_cluster->get_assoc_aux_s2ms_clusters( );
+        = t_cluster->get_assoc_aux_s2ms_cluster_pairs( );
       if ( assoc_aux_s2ms_cluster_pairs != nullptr ) {
         // auxiliary s2ms operations
 #pragma omp taskloop shared( sources, assoc_aux_s2ms_cluster_pairs )

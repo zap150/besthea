@@ -104,7 +104,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 
   global_matrix.initialize_nearfield_containers( );
 
-    // fill the m-list, m2l-list, l-list, m2t-list, s2l-list and n-list of the
+  // fill the m-list, m2l-list, l-list, m2t-list, s2l-list and n-list of the
   // distributed pFMM matrix and determine the receive information data.
   global_matrix.prepare_fmm( );
 

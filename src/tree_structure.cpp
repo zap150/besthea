@@ -287,9 +287,10 @@ void besthea::mesh::tree_structure::allocate_spatial_moments_in_tree(
     && n_associated_leaves_and_aux_clusters != nullptr
     && n_associated_leaves_and_aux_clusters->size( ) - 1
       > max_rel_space_level ) {
+    current_cluster.initialize_assoc_aux_s2ms_cluster_pairs(
+      max_rel_space_level );
     current_cluster.allocate_associated_aux_spatial_moments(
       spatial_contribution_size, max_rel_space_level );
-
     // if associated spatial moments have not been allocated already for
     // clusters with relative level max_rel_space_level, we have to do this here
     // too. (note: this is only possible if max_rel_space_level = 0 and
@@ -317,12 +318,12 @@ void besthea::mesh::tree_structure::
   const std::vector< lo > * n_associated_leaves_and_aux_clusters
     = current_cluster.get_n_associated_leaves_and_aux_clusters_per_level( );
   // note: spatial local contributions are only allocated for leaf clusters.
+  lou max_rel_space_level = 0;
   if ( current_cluster.get_n_children( ) == 0 && m2t_list != nullptr
     && n_associated_leaves_and_aux_clusters != nullptr ) {
     // determine the maximal relative spatial level, for which spatial moments
     // have to be created (relative to the "natural" spatial level of the
     // current time cluster)
-    lou max_rel_space_level = 0;
     lo current_time_level = current_cluster.get_level( );
     lo current_space_level
       = ( current_time_level >= first_space_refinement_level )
@@ -351,6 +352,24 @@ void besthea::mesh::tree_structure::
     current_cluster.allocate_associated_spatial_local_contributions(
       spatial_contribution_size, max_rel_space_level );
   }
+  // check if there are large L2T/L2Ts operations which should be subdivided
+  if ( current_cluster.get_process_id( ) == _my_process_id
+    && n_associated_leaves_and_aux_clusters != nullptr
+    && n_associated_leaves_and_aux_clusters->size( ) - 1
+      > max_rel_space_level ) {
+    current_cluster.initialize_assoc_aux_ls2t_cluster_pairs(
+      max_rel_space_level );
+    // if associated spatial local contributions have not been allocated already
+    // for clusters with relative level max_rel_space_level, we have to do this
+    // here too. (note: this is only possible if max_rel_space_level = 0 and
+    // m2t_list is empty).
+    if ( current_cluster.get_associated_spatial_local_contributions( )
+      == nullptr ) {
+      current_cluster.allocate_associated_spatial_local_contributions(
+        spatial_contribution_size, max_rel_space_level );
+    }
+  }
+
   if ( current_cluster.get_n_children( ) > 0 ) {
     for ( auto child : *current_cluster.get_children( ) ) {
       allocate_spatial_local_contributions_in_tree(
