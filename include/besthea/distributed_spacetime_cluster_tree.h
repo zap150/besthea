@@ -803,28 +803,6 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     scheduling_time_cluster * t_root );
 
   /**
-   * Initializes the nearfield list and interaction list for every cluster in
-   * the distributed spacetime cluster tree by recursively traversing the tree.
-   * @param[in] root  Current cluster in the tree traversal.
-   * @warning The construction is based only on the local part of the cluster
-   * tree. Only for local clusters the nearfield and interaction lists are the
-   * same as in the global tree.
-   */
-  void fill_nearfield_and_interaction_lists( general_spacetime_cluster & root );
-
-  /**
-   * Used for the construction of nearfields of leaf clusters by
-   * @ref fill_nearfield_and_interaction_lists. It recursively traverses the
-   * tree starting from the initial @p current_cluster, and adds all descendant
-   * leaves to the nearfield of the leaf @p target_cluster.
-   * @param[in] current_cluster Current cluster in the tree traversal.
-   * @param[in] target_cluster  Cluster to whose nearfield the leaves are added.
-   */
-  void add_leaves_to_nearfield_list(
-    general_spacetime_cluster & current_cluster,
-    general_spacetime_cluster & target_cluster );
-
-  /**
    * Initializes the nearfield, interaction, m2t and s2l list for every cluster
    * in the distributed spacetime cluster tree by recursively traversing the
    * tree.
@@ -1033,6 +1011,11 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
                                   //!< access)
   slou _spatial_nearfield_limit;  //!< number of the clusters in the vicinity to
                                   //!< be considered as nearfield
+  bool _enable_m2t_and_s2l;  //!< If this is true the cluster tree is build in
+                             //!< such a way that it enables the use of m2t and
+                             //!< s2l operations. This influences in particular
+                             //!< the construction of the space-time clusters'
+                             //!< operation lists (nearfield, interaction, etc.)
   const std::vector< std::vector< lo > > _idx_2_coord = { { 1, 1, 1 },
     { 0, 1, 1 }, { 0, 0, 1 }, { 1, 0, 1 }, { 1, 1, 0 }, { 0, 1, 0 },
     { 0, 0, 0 },

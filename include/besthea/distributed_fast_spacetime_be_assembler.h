@@ -251,7 +251,7 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
    * executing MPI process are assembled.
    *
    * @note The nearfield of a cluster is determined in @ref
-   * besthea::mesh::distributed_spacetime_cluster_tree::fill_nearfield_and_interaction_lists
+   * besthea::mesh::distributed_spacetime_cluster_tree::fill_cluster_operation_lists
    * @param[in,out] global_matrix pFMM matrix whose local nearfield (depending
    *                              on the executing MPI process) is assembled.
    */

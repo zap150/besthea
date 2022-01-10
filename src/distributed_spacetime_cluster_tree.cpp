@@ -52,6 +52,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     _n_min_elems( n_min_elems ),
     _spatial_paddings( _n_levels, 0.0 ),
     _spatial_nearfield_limit( spatial_nearfield_limit ),
+    _enable_m2t_and_s2l( enable_m2t_and_s2l ),
     _comm( comm ) {
   status = 0;
   MPI_Comm_rank( *_comm, &_my_rank );
@@ -249,25 +250,23 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   // fill the nearfield and interaction lists of all space-time clusters here
   // already, if no m2t and s2l operations should be executed. Otherwise, refine
   // large spatial clusters first
-  if ( enable_m2t_and_s2l ) {
+  if ( _enable_m2t_and_s2l ) {
     refine_large_clusters_in_space( _root );
     // collect the auxiliary leaves in the local part of the spacetime cluster
-    // NOTE: currently we do not use these leaves
     collect_additional_local_leaves( *_root, _additional_local_leaves );
+  }
 
-    fill_cluster_operation_lists( *_root );
+  fill_cluster_operation_lists( *_root );
+  if ( _enable_m2t_and_s2l ) {
     distinguish_hybrid_and_standard_m2t_and_s2l_operations( *_root );
+  }
 
-    associate_scheduling_clusters_and_space_time_clusters( );
+  associate_scheduling_clusters_and_space_time_clusters( );
+
+  if ( _enable_m2t_and_s2l ) {
     // update the m2t and s2l of the scheduling time clusters (cluster
     // association is required for that!)
     distribution_tree->update_m2t_and_s2l_lists( );
-  } else {
-    // FIXME: this has to be unified further (best case scenario: a single
-    // routine to fill operation lists (that handles enabling/disabling of m2t
-    // and s2l operations))
-    fill_nearfield_and_interaction_lists( *_root );
-    associate_scheduling_clusters_and_space_time_clusters( );
   }
 
   // communicate necessary leaf information
@@ -276,7 +275,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   sort_associated_space_time_clusters_recursively(
     distribution_tree->get_root( ) );
 
-  if ( enable_m2t_and_s2l ) {
+  if ( _enable_m2t_and_s2l ) {
     // Sorting of associated space-time clusters has to be done before calling
     // the following routine
     determine_tasks_of_associated_clusters( distribution_tree->get_root( ) );
@@ -3148,70 +3147,6 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::
-  fill_nearfield_and_interaction_lists( general_spacetime_cluster & root ) {
-  if ( root.get_parent( ) == nullptr ) {
-    root.add_to_nearfield_list( &root );
-  } else {
-    // get information about the temporal part of root
-    sc root_temporal_center = root.get_time_center( );
-    sc root_temporal_half_size = root.get_time_half_size( );
-    // go through parent's nearfield list to determine root's lists
-    std::vector< general_spacetime_cluster * > * parent_nearfield
-      = root.get_parent( )->get_nearfield_list( );
-    for ( auto parent_nearfield_cluster : *parent_nearfield ) {
-      // check if the parent's nearfield cluster is a leaf
-      if ( parent_nearfield_cluster->get_n_children( ) == 0 ) {
-        // add leaves to the nearfield of root
-        root.add_to_nearfield_list( parent_nearfield_cluster );
-      } else {
-        // check admissibility of all children
-        std::vector< general_spacetime_cluster * > * relevant_clusters
-          = parent_nearfield_cluster->get_children( );
-        for ( auto current_cluster : *relevant_clusters ) {
-          sc current_temporal_center = current_cluster->get_time_center( );
-          // check if current cluster is in the spatial vicinity of root and
-          // if it is not in the future
-          // (if one of these conditions is violated the current cluster is
-          // not added to any list)
-          if ( ( current_temporal_center
-                 < root_temporal_center + root_temporal_half_size )
-            && ( root.is_in_spatial_vicinity(
-              current_cluster, _spatial_nearfield_limit ) ) ) {
-            // add the current cluster to the appropriate list
-            if ( root.determine_temporal_admissibility( current_cluster ) ) {
-              root.add_to_interaction_list( current_cluster );
-            } else {
-              if ( root.get_n_children( ) > 0 ) {
-                root.add_to_nearfield_list( current_cluster );
-              } else {
-                add_leaves_to_nearfield_list( *current_cluster, root );
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  if ( root.get_n_children( ) > 0 ) {
-    for ( auto child : *root.get_children( ) ) {
-      fill_nearfield_and_interaction_lists( *child );
-    }
-  }
-}
-
-void besthea::mesh::distributed_spacetime_cluster_tree::
-  add_leaves_to_nearfield_list( general_spacetime_cluster & current_cluster,
-    general_spacetime_cluster & target_cluster ) {
-  if ( current_cluster.get_n_children( ) == 0 ) {
-    target_cluster.add_to_nearfield_list( &current_cluster );
-  } else {
-    for ( auto child : *current_cluster.get_children( ) ) {
-      add_leaves_to_nearfield_list( *child, target_cluster );
-    }
-  }
-}
-
-void besthea::mesh::distributed_spacetime_cluster_tree::
   fill_cluster_operation_lists(
     general_spacetime_cluster & crrnt_tar_cluster ) {
   if ( crrnt_tar_cluster.get_parent( ) == nullptr ) {
@@ -3261,10 +3196,11 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
       if ( parent_nf_cluster->get_n_children( ) == 0
         || ( parent_nf_cluster_has_aux_children
           && parent_nf_cluster_child_space_level > target_spatial_level ) ) {
-        // check if s2l operations are admissible for the parent's current
-        // nearfield cluster
-        if ( crrnt_tar_cluster.determine_temporal_admissibility(
-               parent_nf_cluster ) ) {
+        // if s2l operations are enabled, check if they are admissible for the
+        // parent's current nearfield cluster
+        if ( _enable_m2t_and_s2l
+          && crrnt_tar_cluster.determine_temporal_admissibility(
+            parent_nf_cluster ) ) {
           // update s2l list only if the target is local
           if ( crrnt_tar_cluster.get_process_id( ) == _my_rank ) {
             crrnt_tar_cluster.add_to_s2l_list( parent_nf_cluster );
@@ -3341,9 +3277,10 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
             if ( source_is_auxiliary ) {
               // We know that the current source has the same spatial level as
               // the current target cluster (since this is case 2!).
-              // We check if S2L operations are admissible
-              if ( crrnt_tar_cluster.determine_temporal_admissibility(
-                     current_source ) ) {
+              // If S2L operations are enabled we check if they are admissible
+              if ( _enable_m2t_and_s2l
+                && crrnt_tar_cluster.determine_temporal_admissibility(
+                  current_source ) ) {
                 // update s2l list only for local space-time clusters
                 if ( crrnt_tar_cluster.get_process_id( ) == _my_rank ) {
                   crrnt_tar_cluster.add_to_s2l_list( current_source );
@@ -3363,8 +3300,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
             } else if ( target_is_auxiliary ) {
               // the construction guarantees that the spatial level of the
               // current source and target cluster is the same (see (**))
-              if ( crrnt_tar_cluster.determine_temporal_admissibility(
-                     current_source ) ) {
+              if ( _enable_m2t_and_s2l
+                && crrnt_tar_cluster.determine_temporal_admissibility(
+                  current_source ) ) {
                 // update m2t list only for local space-time clusters
                 if ( crrnt_tar_cluster.get_process_id( ) == _my_rank ) {
                   crrnt_tar_cluster.add_to_m2t_list( current_source );
@@ -3402,12 +3340,13 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   determine_operation_lists_in_source_subtree(
     general_spacetime_cluster & current_source,
     general_spacetime_cluster & target_cluster ) {
-  // check if current source and target cluster are separated in time
-  if ( target_cluster.determine_temporal_admissibility( &current_source ) ) {
+  // if m2t operations are enabled, check if the current source and target
+  // cluster are separated in time
+  if ( _enable_m2t_and_s2l
+    && target_cluster.determine_temporal_admissibility( &current_source ) ) {
     target_cluster.add_to_m2t_list( &current_source );
   } else {
-    // no separation in time; continue tree traversal, or add leaf to
-    // nearfield list
+    // continue tree traversal, or add leaf to nearfield list
     if ( current_source.get_n_children( ) == 0 ) {
       target_cluster.add_to_nearfield_list( &current_source );
     } else {
@@ -3437,7 +3376,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
       // higher spatial level. Thus, we have to consider operations between
       // the target cluster and the children of the current source cluster.
       for ( auto source_child : *source_cluster.get_children( ) ) {
-        if ( target_cluster.determine_temporal_admissibility( source_child ) ) {
+        // if m2t operations are enabled we check whether they are admissibile
+        if ( _enable_m2t_and_s2l
+          && target_cluster.determine_temporal_admissibility( source_child ) ) {
           // m2t lists are only created for local clusters
           if ( target_cluster.get_process_id( ) == _my_rank ) {
             target_cluster.add_to_m2t_list( source_child );
