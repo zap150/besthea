@@ -12,6 +12,9 @@ set(BESTHEA_CUDA_OPTION_DESCRIPTION "Also build besthea_cuda to enable "
 set(BESTHEA_CUDA "AUTO" CACHE STRING "${BESTHEA_CUDA_OPTION_DESCRIPTION}")
 set_property(CACHE BESTHEA_CUDA PROPERTY STRINGS "AUTO" "ENABLE" "DISABLE")
 
+# mainly for AMD CPUs where intel threads might not work and run sequentially
+option(BESTHEA_MKL_USE_TBB "Use TBB threads instead of intel threads" OFF)
+
 check_insource()
 setup_compiler()
 setup_CUDA()

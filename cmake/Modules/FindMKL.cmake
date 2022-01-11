@@ -35,8 +35,14 @@ if (MKLROOT_PATH)
 
   # find specific library files
   find_library(LIB_MKL_CORE NAMES mkl_core HINTS ${MKL_LIBRARY_DIR})
-  find_library(LIB_MKL_INTEL_THREAD NAMES mkl_intel_thread
-    HINTS ${MKL_LIBRARY_DIR})
+  if(BESTHEA_MKL_USE_TBB)
+    find_library(LIB_MKL_TBB_THREAD NAMES mkl_tbb_thread
+      HINTS ${MKL_LIBRARY_DIR})
+    find_library(LIB_TBB NAMES tbb HINTS ${ICC_LIBRARY_DIR})
+  else()
+    find_library(LIB_MKL_INTEL_THREAD NAMES mkl_intel_thread
+      HINTS ${MKL_LIBRARY_DIR})
+  endif()
   find_library(LIB_MKL_INTEL_ILP64 NAMES mkl_intel_ilp64
     HINTS ${MKL_LIBRARY_DIR})
   find_library(LIB_IOMP5 NAMES iomp5 HINTS ${ICC_LIBRARY_DIR})
@@ -48,31 +54,74 @@ if (CMAKE_SYSTEM_NAME MATCHES Linux AND CMAKE_CXX_COMPILER_ID MATCHES GNU)
   set(NO_AS_NEEDED -Wl,--no-as-needed)
 endif (CMAKE_SYSTEM_NAME MATCHES Linux AND CMAKE_CXX_COMPILER_ID MATCHES GNU)
 
-set(MKL_LIBRARIES
-  ${NO_AS_NEEDED}
-  ${LIB_MKL_CORE}
-  ${LIB_MKL_INTEL_THREAD}
-  ${LIB_MKL_INTEL_ILP64}
-  ${LIB_IOMP5}
-  ${LIB_PTHREAD})
 
-# deal with QUIET and REQUIRED argument
 
-include(FindPackageHandleStandardArgs)
 
-find_package_handle_standard_args(MKL DEFAULT_MSG
-  MKL_LIBRARY_DIR
-  LIB_MKL_CORE
-  LIB_MKL_INTEL_THREAD
-  LIB_MKL_INTEL_ILP64
-  LIB_IOMP5
-  LIB_PTHREAD
-  MKL_INCLUDE_DIRS)
+if(BESTHEA_MKL_USE_TBB)
 
-mark_as_advanced(
-  LIB_MKL_CORE
-  LIB_MKL_INTEL_THREAD
-  LIB_MKL_INTEL_ILP64
-  LIB_IOMP5
-  LIB_PTHREAD
-  MKL_INCLUDE_DIRS)
+  message(STATUS "Using TBB MKL threading layer")
+
+  set(MKL_LIBRARIES
+    ${NO_AS_NEEDED}
+    ${LIB_MKL_CORE}
+    ${LIB_MKL_TBB_THREAD}
+    ${LIB_TBB}
+    ${LIB_MKL_INTEL_ILP64}
+    ${LIB_IOMP5}
+    ${LIB_PTHREAD})
+
+  # deal with QUIET and REQUIRED argument
+
+  include(FindPackageHandleStandardArgs)
+
+  find_package_handle_standard_args(MKL DEFAULT_MSG
+    MKL_LIBRARY_DIR
+    LIB_MKL_CORE
+    LIB_MKL_TBB_THREAD
+    LIB_TBB
+    LIB_MKL_INTEL_ILP64
+    LIB_IOMP5
+    LIB_PTHREAD
+    MKL_INCLUDE_DIRS)
+
+  mark_as_advanced(
+    LIB_MKL_CORE
+    LIB_MKL_TBB_THREAD
+    LIB_TBB
+    LIB_MKL_INTEL_ILP64
+    LIB_IOMP5
+    LIB_PTHREAD
+    MKL_INCLUDE_DIRS)
+
+else()
+
+  set(MKL_LIBRARIES
+    ${NO_AS_NEEDED}
+    ${LIB_MKL_CORE}
+    ${LIB_MKL_INTEL_THREAD}
+    ${LIB_MKL_INTEL_ILP64}
+    ${LIB_IOMP5}
+    ${LIB_PTHREAD})
+
+  # deal with QUIET and REQUIRED argument
+
+  include(FindPackageHandleStandardArgs)
+
+  find_package_handle_standard_args(MKL DEFAULT_MSG
+    MKL_LIBRARY_DIR
+    LIB_MKL_CORE
+    LIB_MKL_INTEL_THREAD
+    LIB_MKL_INTEL_ILP64
+    LIB_IOMP5
+    LIB_PTHREAD
+    MKL_INCLUDE_DIRS)
+
+  mark_as_advanced(
+    LIB_MKL_CORE
+    LIB_MKL_INTEL_THREAD
+    LIB_MKL_INTEL_ILP64
+    LIB_IOMP5
+    LIB_PTHREAD
+    MKL_INCLUDE_DIRS)
+
+endif(BESTHEA_MKL_USE_TBB)
