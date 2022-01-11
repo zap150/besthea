@@ -913,7 +913,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           // unique positions
           for ( lo a = 0; a <= _temp_order; ++a ) {
 #pragma omp simd aligned( aux_buffer_0_data, buffer_for_coeffs_data \
-                          : DATA_ALIGN ) simdlen( DATA_WIDTH )
+                          : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
             for ( lo b = 0; b <= _temp_order; ++b ) {
               aux_buffer_0_data[ buffer_0_index * hlp_acs_beta + hlp_acs_a * a
                 + b ]
@@ -979,7 +979,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           for ( lo a = 0; a <= _temp_order; ++a ) {
             val = 0;
 #pragma omp simd aligned( buffer_for_coeffs_data, aux_buffer_1_data \
-                        : DATA_ALIGN ) simdlen( DATA_WIDTH) reduction( + : val)
+                        : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH) reduction( + : val)
             for ( lo b = 0; b <= _temp_order; ++b ) {
               val += buffer_for_coeffs_data[ alpha0 * hlp_acs_alpha
                        + beta0 * hlp_acs_beta + a * hlp_acs_a + b ]
