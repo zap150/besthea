@@ -213,14 +213,14 @@ class besthea::bem::spacetime_heat_dl_kernel_antiderivative
     return value;
   }
 
-/**
- * Evaluates the first antiderivative.
- * @param[in] xy1 First coordinate of `x - y`.
- * @param[in] xy2 Second coordinate of `x - y`.
- * @param[in] xy3 Third coordinate of `x - y`.
- * @param[in] nx Normal in the `x` variable.
- * @param[in] ny Normal in the `y` variable.
- */
+  /**
+   * Evaluates the first antiderivative.
+   * @param[in] xy1 First coordinate of `x - y`.
+   * @param[in] xy2 Second coordinate of `x - y`.
+   * @param[in] xy3 Third coordinate of `x - y`.
+   * @param[in] nx Normal in the `x` variable.
+   * @param[in] ny Normal in the `y` variable.
+   */
 #pragma omp declare simd uniform( this, nx, ny ) simdlen( BESTHEA_SIMD_WIDTH )
   sc do_anti_tau_limit( sc xy1, sc xy2, sc xy3, [[maybe_unused]] const sc * nx,
     const sc * ny ) const {

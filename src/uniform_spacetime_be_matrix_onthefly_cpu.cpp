@@ -142,7 +142,6 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
   const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
   const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
-
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
   sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
@@ -188,12 +187,10 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
     lo delta, lo i_test, lo i_trial,
     const quadrature_nodes & quadr_nodes_tst,
     const quadrature_nodes & quadr_nodes_trl) const {
-
   // assuming delta > 0 && i_test == i_trial
 
   const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
   const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
-
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
   sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
@@ -243,7 +240,6 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
   const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
   const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
-
   sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
   sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
@@ -353,7 +349,6 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
   const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
   const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
-
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
   sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
@@ -418,7 +413,6 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
   const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
   const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
-
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
   sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
@@ -482,7 +476,6 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
   const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
   const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
-
   sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
   sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
@@ -544,7 +537,6 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
   const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
   const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
-
   sc timestep = test_mesh.get_timestep( );
   sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
   sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
@@ -620,7 +612,6 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
   const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
   const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
-
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
   sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
@@ -685,7 +676,6 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
   const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
   const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
-
   sc timestep = test_mesh.get_timestep( );
   sc ttau = timestep * delta;
   sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
@@ -749,7 +739,6 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
   const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
   const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
-
   sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
   sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
 
@@ -811,7 +800,6 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
 
   const uniform_spacetime_tensor_mesh & test_mesh = _test_space->get_mesh( );
   const uniform_spacetime_tensor_mesh & trial_mesh = _trial_space->get_mesh( );
-
   sc timestep = test_mesh.get_timestep( );
   sc test_area = test_mesh.get_spatial_area_using_spatial_index( i_test );
   sc trial_area = trial_mesh.get_spatial_area_using_spatial_index( i_trial );
@@ -1364,7 +1352,6 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
               quadr_nodes_tst, quadr_nodes_trl);
 
             matrix_val = -val_prev + 2*val_curr - val_next;
-
             lo max_block = n_blocks - delta;
             for (lo block = 0; block < max_block; block++) {
               lo block_row = delta + block;
@@ -1405,7 +1392,6 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu<
     sc val_curr;
     sc val_next;
     sc matrix_val;
-
 #pragma omp for
     for (lo i_elem = 0; i_elem < n_elems; i_elem++) {
       triangles_to_geometry_tst(i_elem, 0, 0, quadr_nodes_tst);
@@ -2417,7 +2403,6 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
 
   besthea::tools::timer tm_combined, tm_perm, tm_apply;
   tm_combined.start();
-
   // permuting the vector x should improve data locality
   // permuting the vector y should prevent false sharing, improve data locality
   block_vector_type x_perm;
@@ -2443,7 +2428,6 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   tm_perm.start(true);
   y.copy_permute(y_perm);
   tm_perm.stop();
-
   tm_combined.stop();
 
   if(besthea::settings::output_verbosity.timers >= 1) {
@@ -2486,7 +2470,6 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   tm_tsng.start();
   this->apply_cpu_tsng(x_perm, y_perm, alpha);
   tm_tsng.stop();
-
 
 
   if(besthea::settings::output_verbosity.timers >= 2) {
@@ -2608,7 +2591,6 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   <kernel_type, test_space_type, trial_space_type>::
   triangles_to_geometry_tst( lo i_tst, int n_shared_vertices, int rot_test,
     quadrature_nodes & quadr_nodes_tst ) const {
-
   linear_algebra::coordinates< 3 > x1, x2, x3;
   _test_space->get_mesh().get_spatial_nodes_using_spatial_element_index(
     i_tst, x1, x2, x3 );
@@ -2666,7 +2648,6 @@ void besthea::bem::onthefly::uniform_spacetime_be_matrix_onthefly_cpu
   <kernel_type, test_space_type, trial_space_type>::
   triangles_to_geometry_trl( lo i_trl, int n_shared_vertices, int rot_trial,
     quadrature_nodes & quadr_nodes_trl ) const {
-
   linear_algebra::coordinates< 3 > y1, y2, y3;
   _trial_space->get_mesh().get_spatial_nodes_using_spatial_element_index(
     i_trl, y1, y2, y3 );
