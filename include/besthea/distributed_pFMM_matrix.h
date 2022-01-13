@@ -203,6 +203,14 @@ class besthea::linear_algebra::distributed_pFMM_matrix
         delete matrix;
       }
     }
+    for ( auto it = _clusterwise_nearfield_aca_matrices.begin( );
+          it != _clusterwise_nearfield_aca_matrices.end( ); ++it ) {
+      // loop over all nearfield aca matrices associated with a given spacetime
+      // cluster and delete them.
+      for ( auto matrix : it->second ) {
+        delete matrix;
+      }
+    }
   }
 
   /**
@@ -363,8 +371,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   /**
    * Initializes @ref _clusters_with_nearfield_operations and prepares
-   * @ref _clusterwise_nearfield_matrices by creating a map for each space-time
-   * target cluster and associated list of nearfield matrices.
+   * @ref _clusterwise_nearfield_matrices and
+   * @ref _clusterwise_nearfield_aca_matrices by creating a map for each
+   * space-time target cluster and associated list of nearfield matrices.
    */
   void initialize_nearfield_containers( );
 
@@ -387,9 +396,20 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[in] nf_cluster_index  Index of the nearfield cluster in
    * @ref _clusters_with_nearfield_operations, which acts as the target.
    * @param[in] source_index  Index of the source cluster in the nearfield list
-   *                          of the target cluster.
+   * of the target cluster.
    */
   full_matrix * create_nearfield_matrix(
+    lou nf_cluster_index, lou source_index );
+
+  /**
+   * Creates a low rank nearfield matrix for two clusters which are separated in
+   * space
+   * @param[in] nf_cluster_index  Index of the nearfield cluster in
+   * @ref _clusters_with_nearfield_operations, which acts as the target.
+   * @param[in] source_index  Index of the source cluster in the spatially
+   * separated nearfield list of the target cluster.
+   */
+  full_matrix * create_nearfield_aca_matrix(
     lou nf_cluster_index, lou source_index );
 
   /**
@@ -446,6 +466,15 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     distributed_block_vector & inverse_diagonal ) const;
 
  private:
+  /**
+   * Traverses the associated distributed space-time tree recursively and adds
+   * all space-time clusters for which nearfield operations have to be executed
+   * to @ref _clusters_with_nearfield_operations.
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   */
+  void determine_clusters_with_nearfield_operations_recursively(
+    mesh::general_spacetime_cluster * current_cluster );
+
   /**
    * Calls all S2M operations associated with a given scheduling time cluster.
    * @param[in] sources Global sources containing the ones used for the S2M
@@ -1819,6 +1848,11 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     _clusterwise_nearfield_matrices;  //!< nearfield matrices for all the space-
                                       //!< time leaf clusters and their
                                       //!< nearfield clusters.
+  std::unordered_map< mesh::general_spacetime_cluster *,
+    std::vector< full_matrix * > >
+    _clusterwise_nearfield_aca_matrices;  //!< nearfield matrices for all the
+                                          //!< space- time leaf clusters and
+                                          //!< their nearfield clusters.
 
   std::list< mesh::scheduling_time_cluster * >
     _m_list;  //!< M-list for the execution of the FMM.

@@ -273,12 +273,9 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     leaf_info_send_list, leaf_info_receive_list );
   sort_associated_space_time_clusters_recursively(
     distribution_tree->get_root( ) );
-
-  if ( _enable_m2t_and_s2l ) {
-    // Sorting of associated space-time clusters has to be done before calling
-    // the following routine
-    determine_tasks_of_associated_clusters( distribution_tree->get_root( ) );
-  }
+  // Sorting of associated space-time clusters has to be done before calling
+  // the following routine and may not be changed afterwards!
+  determine_tasks_of_associated_clusters( distribution_tree->get_root( ) );
 
   // determine auxiliary variables used to determine relevant clusters in the
   // downward path of an initial pFMM matrix.
@@ -3118,6 +3115,19 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
           if ( st_clusters_s2l_list_size > st_clusters_n_hybrid_s2l_ops ) {
             t_root->add_index_to_assoc_standard_s2l_targets( i );
           }
+        }
+      }
+    }
+    // check if there are associated space-time target clusters for which
+    // nearfield operations have to be executed
+    if ( t_root->get_n_associated_leaves( ) > 0 ) {
+      for ( lo i = 0; (lou) i < associated_spacetime_clusters->size( ); ++i ) {
+        general_spacetime_cluster * st_cluster
+          = ( *associated_spacetime_clusters )[ i ];
+        if ( st_cluster->get_n_children( ) == 0
+          || st_cluster->get_spatially_admissible_nearfield_list( )
+            != nullptr ) {
+          t_root->add_index_to_assoc_nearfield_targets( i );
         }
       }
     }

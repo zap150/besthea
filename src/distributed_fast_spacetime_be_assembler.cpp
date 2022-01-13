@@ -126,53 +126,74 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   const std::vector< general_spacetime_cluster * > *
     clusters_with_nearfield_operations
     = global_matrix.get_pointer_to_clusters_with_nearfield_operations( );
+
+  // FIXME: disabled sorting temporarily
+
   // for the assembly, sort the clusters with nearfield operations by the size
   // of matrices in the nearfield
-  std::vector< lo > total_sizes(
+  // std::vector< lo > total_sizes(
+  //   clusters_with_nearfield_operations->size( ), 0 );
+  // for ( std::vector< general_spacetime_cluster * >::size_type cluster_index =
+  // 0;
+  //       cluster_index < clusters_with_nearfield_operations->size( );
+  //       ++cluster_index ) {
+  //   general_spacetime_cluster * current_cluster
+  //     = ( *clusters_with_nearfield_operations )[ cluster_index ];
+  //   std::vector< general_spacetime_cluster * > * nearfield_list
+  //     = current_cluster->get_nearfield_list( );
+  //   lo n_dofs_target = current_cluster->get_n_dofs< test_space_type >( );
+  //   for ( std::vector< general_spacetime_cluster * >::size_type src_index =
+  //   0;
+  //         src_index < nearfield_list->size( ); ++src_index ) {
+  //     general_spacetime_cluster * nearfield_cluster
+  //       = ( *nearfield_list )[ src_index ];
+  //     lo n_dofs_source = nearfield_cluster->get_n_dofs< trial_space_type >(
+  //     ); total_sizes[ cluster_index ] += n_dofs_source * n_dofs_target;
+  //   }
+  // }
+  std::vector< lo > permutation_index(
     clusters_with_nearfield_operations->size( ), 0 );
-  for ( std::vector< general_spacetime_cluster * >::size_type cluster_index = 0;
-        cluster_index < clusters_with_nearfield_operations->size( );
-        ++cluster_index ) {
-    general_spacetime_cluster * current_cluster
-      = ( *clusters_with_nearfield_operations )[ cluster_index ];
-    std::vector< general_spacetime_cluster * > * nearfield_list
-      = current_cluster->get_nearfield_list( );
-    lo n_dofs_target = current_cluster->get_n_dofs< test_space_type >( );
-    for ( std::vector< general_spacetime_cluster * >::size_type src_index = 0;
-          src_index < nearfield_list->size( ); ++src_index ) {
-      general_spacetime_cluster * nearfield_cluster
-        = ( *nearfield_list )[ src_index ];
-      lo n_dofs_source = nearfield_cluster->get_n_dofs< trial_space_type >( );
-      total_sizes[ cluster_index ] += n_dofs_source * n_dofs_target;
-    }
-  }
-  std::vector< lo > permutation_index( total_sizes.size( ), 0 );
   for ( lo i = 0; i != lo( permutation_index.size( ) ); i++ ) {
     permutation_index[ i ] = i;
   }
-  sort( permutation_index.begin( ), permutation_index.end( ),
-    [ & ]( const int & a, const int & b ) {
-      return ( total_sizes[ a ] > total_sizes[ b ] );
-    } );
+  // sort( permutation_index.begin( ), permutation_index.end( ),
+  //   [ & ]( const int & a, const int & b ) {
+  //     return ( total_sizes[ a ] > total_sizes[ b ] );
+  //   } );
 
 // assemble the nearfield matrices in parallel
 #pragma omp parallel for schedule( dynamic, 1 )
   for ( std::vector< general_spacetime_cluster * >::size_type cluster_index = 0;
         cluster_index < clusters_with_nearfield_operations->size( );
         ++cluster_index ) {
-    general_spacetime_cluster * current_cluster
+    mesh::general_spacetime_cluster * current_cluster
       = ( *clusters_with_nearfield_operations )
         [ permutation_index[ cluster_index ] ];
-    std::vector< general_spacetime_cluster * > * nearfield_list
-      = current_cluster->get_nearfield_list( );
-    for ( std::vector< general_spacetime_cluster * >::size_type src_index = 0;
-          src_index < nearfield_list->size( ); ++src_index ) {
-      general_spacetime_cluster * nearfield_cluster
-        = ( *nearfield_list )[ src_index ];
+    std::vector< general_spacetime_cluster * > * spat_adm_nearfield_list
+      = current_cluster->get_spatially_admissible_nearfield_list( );
+    if ( spat_adm_nearfield_list != nullptr ) {
+      for ( std::vector< general_spacetime_cluster * >::size_type src_index = 0;
+            src_index < spat_adm_nearfield_list->size( ); ++src_index ) {
+        general_spacetime_cluster * nearfield_cluster
+          = ( *spat_adm_nearfield_list )[ src_index ];
+        // todo: create low rank matrix here instead
+        full_matrix_type * block = global_matrix.create_nearfield_aca_matrix(
+          permutation_index[ cluster_index ], src_index );
+        assemble_nearfield_matrix( current_cluster, nearfield_cluster, *block );
+      }
+    }
+    if ( current_cluster->get_n_children( ) == 0 ) {
+      std::vector< general_spacetime_cluster * > * nearfield_list
+        = current_cluster->get_nearfield_list( );
+      for ( std::vector< general_spacetime_cluster * >::size_type src_index = 0;
+            src_index < nearfield_list->size( ); ++src_index ) {
+        general_spacetime_cluster * nearfield_cluster
+          = ( *nearfield_list )[ src_index ];
 
-      full_matrix_type * block = global_matrix.create_nearfield_matrix(
-        permutation_index[ cluster_index ], src_index );
-      assemble_nearfield_matrix( current_cluster, nearfield_cluster, *block );
+        full_matrix_type * block = global_matrix.create_nearfield_matrix(
+          permutation_index[ cluster_index ], src_index );
+        assemble_nearfield_matrix( current_cluster, nearfield_cluster, *block );
+      }
     }
   }
 }

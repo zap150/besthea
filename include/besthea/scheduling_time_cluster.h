@@ -120,6 +120,7 @@ class besthea::mesh::scheduling_time_cluster {
       _n_st_clusters_w_spatial_local_contributions( 0 ),
       _assoc_aux_spatial_moments( nullptr ),
       _n_st_clusters_w_aux_spatial_moments( 0 ),
+      _assoc_nearfield_targets( nullptr ),
       _assoc_standard_m2t_targets( nullptr ),
       _assoc_hybrid_m2t_targets( nullptr ),
       _assoc_standard_s2l_targets( nullptr ),
@@ -182,6 +183,8 @@ class besthea::mesh::scheduling_time_cluster {
       delete[] _assoc_spatial_local_contributions;
     if ( _assoc_aux_spatial_moments != nullptr )
       delete[] _assoc_aux_spatial_moments;
+    if ( _assoc_nearfield_targets != nullptr )
+      delete _assoc_nearfield_targets;
     if ( _assoc_standard_m2t_targets != nullptr )
       delete _assoc_standard_m2t_targets;
     if ( _assoc_hybrid_m2t_targets != nullptr )
@@ -546,10 +549,21 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
+   * Adds an index to @ref _assoc_nearfield_targets.
+   * @param[in] new_index Index to be added to the list.
+   */
+  void add_index_to_assoc_nearfield_targets( const lo new_index ) {
+    if ( _assoc_nearfield_targets == nullptr ) {
+      _assoc_nearfield_targets = new std::vector< lo >( );
+    }
+    _assoc_nearfield_targets->push_back( new_index );
+  }
+
+  /**
    * Adds and index to @ref _assoc_standard_m2t_targets.
    * @param[in] new_index Index to be added to the list.
    */
-  void add_index_to_assoc_standard_m2t_targets( lo new_index ) {
+  void add_index_to_assoc_standard_m2t_targets( const lo new_index ) {
     if ( _assoc_standard_m2t_targets == nullptr ) {
       _assoc_standard_m2t_targets = new std::vector< lo >( );
     }
@@ -560,11 +574,18 @@ class besthea::mesh::scheduling_time_cluster {
    * Adds and index to @ref _assoc_hybrid_m2t_targets.
    * @param[in] new_index Index to be added to the list.
    */
-  void add_index_to_assoc_hybrid_m2t_targets( lo new_index ) {
+  void add_index_to_assoc_hybrid_m2t_targets( const lo new_index ) {
     if ( _assoc_hybrid_m2t_targets == nullptr ) {
       _assoc_hybrid_m2t_targets = new std::vector< lo >( );
     }
     _assoc_hybrid_m2t_targets->push_back( new_index );
+  }
+
+  /**
+   * Returns a pointer to (const) @ref _assoc_nearfield_targets.
+   */
+  const std::vector< lo > * get_assoc_nearfield_targets( ) const {
+    return _assoc_nearfield_targets;
   }
 
   /**
@@ -2086,6 +2107,11 @@ class besthea::mesh::scheduling_time_cluster {
                                             //!< space-time clusters for which
                                             //!< auxiliary spatial moments are
                                             //!< stored.
+  std::vector< lo > *
+    _assoc_nearfield_targets;  //!< Vector containing the indices of all
+                               //!< associated space-time clusters for which
+                               //!< nearfield operations (standard or low rank)
+                               //!< have to be executed
   std::vector< lo > *
     _assoc_standard_m2t_targets;  //!< Vector containing the indices of all
                                   //!< associated space-time clusters for
