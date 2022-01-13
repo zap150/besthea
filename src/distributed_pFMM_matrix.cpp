@@ -7092,105 +7092,71 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       }
     }
   }
-  vector_type local_sources;
   const std::vector< general_spacetime_cluster * > *
     associated_spacetime_targets
     = t_cluster->get_associated_spacetime_clusters( );
-  // determine the clusters for which standard and compressed nearfield
-  // operations are executed
-  std::vector< lou > nf_cluster_indices;
-  std::vector< lou > aca_nf_cluster_indices;
-  nf_cluster_indices.reserve( associated_spacetime_targets->size( ) );
-  aca_nf_cluster_indices.reserve( associated_spacetime_targets->size( ) );
-  for ( lou i = 0; i < associated_spacetime_targets->size( ); ++i ) {
-    mesh::general_spacetime_cluster * current_cluster
-      = ( *associated_spacetime_targets )[ i ];
-    if ( current_cluster->get_n_children( ) == 0 ) {
-      nf_cluster_indices.push_back( i );
-    }
-    auto curr_spat_adm_nf_list
-      = current_cluster->get_spatially_admissible_nearfield_list( );
-    if ( curr_spat_adm_nf_list != nullptr ) {
-      aca_nf_cluster_indices.push_back( i );
-    }
-  }
+  const std::vector< lo > * assoc_nearfield_targets
+    = t_cluster->get_assoc_nearfield_targets( );
 
   // there is an implicit taskgroup associated with this taskloop
 #pragma omp taskloop shared( \
-  output_vector, _clusterwise_nearfield_matrices, nf_cluster_indices )
-  for ( lou i = 0; i < nf_cluster_indices.size( ); ++i ) {
+  output_vector, _clusterwise_nearfield_matrices, assoc_nearfield_targets )
+  for ( lou i = 0; i < assoc_nearfield_targets->size( ); ++i ) {
     if ( _measure_tasks ) {
       _n_subtask_times.at( omp_get_thread_num( ) )
         .push_back( _global_timer.get_time_from_start< time_type >( ) );
     }
+    vector_type local_sources;
     general_spacetime_cluster * current_spacetime_target
-      = ( *associated_spacetime_targets )[ nf_cluster_indices[ i ] ];
+      = ( *associated_spacetime_targets )[ ( *assoc_nearfield_targets )[ i ] ];
     // construct a local result_vector
     vector_type local_result(
       current_spacetime_target->get_n_dofs< target_space >( ), true );
-    // get the nearfield list of the current spacetime target cluster and
-    // apply the nearfield operations for all the clusters in this list.
-    std::vector< general_spacetime_cluster * > * spacetime_nearfield_list
-      = current_spacetime_target->get_nearfield_list( );
-
-    for ( lou src_index = 0; src_index < spacetime_nearfield_list->size( );
-          ++src_index ) {
-      general_spacetime_cluster * current_spacetime_source
-        = ( *spacetime_nearfield_list )[ src_index ];
-      local_sources.resize(
-        current_spacetime_source->get_n_dofs< source_space >( ) );
-      // get the sources corresponding to the current spacetime source
-      // cluster
-      sources.get_local_part< source_space >(
-        current_spacetime_source, local_sources );
-
-      full_matrix * current_block = _clusterwise_nearfield_matrices.at(
-        current_spacetime_target )[ src_index ];
-      // apply the nearfield matrix and add the result to local_result
-      current_block->apply( local_sources, local_result, trans, 1.0, 1.0 );
-    }
-    // add the local result to the output vector
-    output_vector.add_local_part< target_space >(
-      current_spacetime_target, local_result );
-    if ( _measure_tasks ) {
-      _n_subtask_times.at( omp_get_thread_num( ) )
-        .push_back( _global_timer.get_time_from_start< time_type >( ) );
-    }
-  }
-
-  // there is an implicit taskgroup associated with this taskloop
-#pragma omp taskloop shared( \
-  output_vector, _clusterwise_nearfield_aca_matrices, aca_nf_cluster_indices )
-  for ( lou i = 0; i < aca_nf_cluster_indices.size( ); ++i ) {
-    if ( _measure_tasks ) {
-      _n_subtask_times.at( omp_get_thread_num( ) )
-        .push_back( _global_timer.get_time_from_start< time_type >( ) );
-    }
-    general_spacetime_cluster * current_spacetime_target
-      = ( *associated_spacetime_targets )[ aca_nf_cluster_indices[ i ] ];
-    // construct a local result_vector
-    vector_type local_result(
-      current_spacetime_target->get_n_dofs< target_space >( ), true );
-    // get the nearfield list of the current spacetime target cluster and
-    // apply the nearfield operations for all the clusters in this list.
+    // get the spatially admissible nearfield list of the current spacetime
+    // target cluster. if it is not empty, apply the nearfield operations for
+    // all the clusters in this list.
     std::vector< general_spacetime_cluster * > * st_spat_adm_nearfield_list
       = current_spacetime_target->get_spatially_admissible_nearfield_list( );
+    if ( st_spat_adm_nearfield_list != nullptr ) {
+      for ( lou src_index = 0; src_index < st_spat_adm_nearfield_list->size( );
+            ++src_index ) {
+        general_spacetime_cluster * current_spacetime_source
+          = ( *st_spat_adm_nearfield_list )[ src_index ];
+        local_sources.resize(
+          current_spacetime_source->get_n_dofs< source_space >( ) );
+        // get the sources corresponding to the current spacetime source
+        // cluster
+        sources.get_local_part< source_space >(
+          current_spacetime_source, local_sources );
 
-    for ( lou src_index = 0; src_index < st_spat_adm_nearfield_list->size( );
-          ++src_index ) {
-      general_spacetime_cluster * current_spacetime_source
-        = ( *st_spat_adm_nearfield_list )[ src_index ];
-      local_sources.resize(
-        current_spacetime_source->get_n_dofs< source_space >( ) );
-      // get the sources corresponding to the current spacetime source
-      // cluster
-      sources.get_local_part< source_space >(
-        current_spacetime_source, local_sources );
+        full_matrix * current_block = _clusterwise_nearfield_aca_matrices.at(
+          current_spacetime_target )[ src_index ];
+        // apply the nearfield matrix and add the result to local_result
+        current_block->apply( local_sources, local_result, trans, 1.0, 1.0 );
+      }
+    }
+    if ( current_spacetime_target->get_n_children( ) == 0 ) {
+      // get the nearfield list of the current spacetime target cluster and
+      // apply the nearfield operations for all the clusters in this list.
+      std::vector< general_spacetime_cluster * > * spacetime_nearfield_list
+        = current_spacetime_target->get_nearfield_list( );
 
-      full_matrix * current_block = _clusterwise_nearfield_aca_matrices.at(
-        current_spacetime_target )[ src_index ];
-      // apply the nearfield matrix and add the result to local_result
-      current_block->apply( local_sources, local_result, trans, 1.0, 1.0 );
+      for ( lou src_index = 0; src_index < spacetime_nearfield_list->size( );
+            ++src_index ) {
+        general_spacetime_cluster * current_spacetime_source
+          = ( *spacetime_nearfield_list )[ src_index ];
+        local_sources.resize(
+          current_spacetime_source->get_n_dofs< source_space >( ) );
+        // get the sources corresponding to the current spacetime source
+        // cluster
+        sources.get_local_part< source_space >(
+          current_spacetime_source, local_sources );
+
+        full_matrix * current_block = _clusterwise_nearfield_matrices.at(
+          current_spacetime_target )[ src_index ];
+        // apply the nearfield matrix and add the result to local_result
+        current_block->apply( local_sources, local_result, trans, 1.0, 1.0 );
+      }
     }
     // add the local result to the output vector
     output_vector.add_local_part< target_space >(
@@ -7200,7 +7166,6 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         .push_back( _global_timer.get_time_from_start< time_type >( ) );
     }
   }
-
   if ( _measure_tasks ) {
     _n_task_times.at( omp_get_thread_num( ) )
       .push_back( _global_timer.get_time_from_start< time_type >( ) );
