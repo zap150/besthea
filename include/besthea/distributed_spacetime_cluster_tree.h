@@ -71,6 +71,11 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * space-time clusters.
    * @param[in] spatial_nearfield_limit Number of clusters in the vicinity of a
    * given clusters to be considered as nearfield
+   * @param[in] refine_large_cluster Enables/disables additional refining of
+   * spatially large clusters.
+   * @param[in] enable_aca_recompression  If true, structures for the
+   * realization of the aca recompression of appropriate nearfield blocks are
+   * initialized.
    * @param[in] enable_single_sided_expansions If true, structures for the
    * realization of m2t and s2l operations are initialized.
    * @param[in] comm MPI communicator associated with the tree.
@@ -80,6 +85,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   distributed_spacetime_cluster_tree(
     distributed_spacetime_tensor_mesh & spacetime_mesh, lo max_levels,
     lo n_min_elems, sc st_coeff, sc alpha, slou spatial_nearfield_limit,
+    bool refine_large_leaves_in_space, bool enable_aca_recompression,
     bool enable_single_sided_expansions, MPI_Comm * comm, lo & status );
 
   /**
@@ -803,14 +809,17 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     scheduling_time_cluster * t_root );
 
   /**
-   * Initializes the nearfield, interaction, m2t and s2l list for every cluster
-   * in the distributed spacetime cluster tree by recursively traversing the
-   * tree.
+   * Initializes the nearfield, spatially admissible nearfield, interaction, m2t
+   * and s2l list for every cluster in the distributed spacetime cluster tree by
+   * recursively traversing the tree.
    * @param[in] crrnt_tar_cluster  Current cluster in the tree traversal.
    * @warning The construction is based only on the local part of the cluster
    * tree. Only for local clusters the nearfield and interaction lists are the
    * same as in the global tree.
    * @note Auxiliary spatially refined clusters are handled explicitly.
+   * @note m2t and s2l are only filled if @ref _enable_m2t_and_s2l is true.
+   * @note spatially admissible nearfield lists are only filled if
+   * @ref _enable_aca_compression is true.
    */
   void fill_cluster_operation_lists(
     general_spacetime_cluster & crrnt_tar_cluster );
@@ -819,11 +828,14 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * Used for the construction of nearfields and m2t lists of early leaf
    * clusters by @ref fill_cluster_operation_lists. It
    * recursively traverses the tree starting from the initial cluster
-   * @p current_source, and updates the nearfield and m2t list of
+   * @p current_source, and updates the nearfield (regular and spatially
+   * admissible) and m2t list of
    * @p target_cluster appropriately.
    * @param[in] current_source  Current source cluster in the tree traversal.
    * @param[in] target_cluster  Cluster whose nearfield and m2t lists are
    * updated.
+   * @note This routine is only called for target clusters which are local
+   * leaves.
    */
   void determine_operation_lists_in_source_subtree(
     general_spacetime_cluster & current_source,
@@ -834,14 +846,18 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @ref fill_cluster_operation_lists to handle target clusters whose children
    * are auxiliary (spatially refined) clusters.
    *
-   * It is used to decide whether @p source_cluster is added to the nearfield of
-   * @p target_cluster directly, or whether @p source_cluster's children are
-   * visited and added either to the nearfield or m2t list of @p target_cluster.
+   * It is used to decide whether @p source_cluster is added to the nearfield or
+   * spatially admissible nearfield of @p target_cluster directly, or whether
+   * @p source_cluster's children are visited and added either to the nearfield
+   * or spatially admissible nearfield or m2t list of @p target_cluster.
    * @param[in] source_cluster  Source cluster in the nearfield of the current
    * target cluster.
    * @param[in] target_cluster  Current target cluster.
    * @note In @ref fill_cluster_operation_lists this routine is called only for
    * temporally inadmissible source clusters.
+   * @note m2t and s2l are only filled if @ref _enable_m2t_and_s2l is true.
+   * @note spatially admissible nearfield lists are only filled if
+   * @ref _enable_aca_compression is true.
    */
   void determine_operation_lists_subroutine_targets_with_aux_children(
     general_spacetime_cluster & source_cluster,
@@ -1011,6 +1027,12 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
                                   //!< access)
   slou _spatial_nearfield_limit;  //!< number of the clusters in the vicinity to
                                   //!< be considered as nearfield
+  bool _refine_large_leaves_in_space;  //!< additionally refines spatially large
+                                       //!< leaves in space, if possible
+  bool _enable_aca_recompression;      //!< If this is true, the nearfield of
+                                       //!< appropriate clusters is split into a
+                                       //!< spatially admissible part (which is
+  //!< approximated with ACA) and a remainder.
   bool _enable_m2t_and_s2l;  //!< If this is true the cluster tree is build in
                              //!< such a way that it enables the use of m2t and
                              //!< s2l operations. This influences in particular

@@ -42,6 +42,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   distributed_spacetime_cluster_tree(
     distributed_spacetime_tensor_mesh & spacetime_mesh, lo levels,
     lo n_min_elems, sc st_coeff, sc alpha, slou spatial_nearfield_limit,
+    bool refine_large_leaves_in_space, bool enable_aca_recompression,
     bool enable_m2t_and_s2l, MPI_Comm * comm, lo & status )
   : _n_levels( levels ),
     _real_n_levels( 0 ),
@@ -52,6 +53,8 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     _n_min_elems( n_min_elems ),
     _spatial_paddings( _n_levels, 0.0 ),
     _spatial_nearfield_limit( spatial_nearfield_limit ),
+    _refine_large_leaves_in_space( refine_large_leaves_in_space ),
+    _enable_aca_recompression( enable_aca_recompression ),
     _enable_m2t_and_s2l( enable_m2t_and_s2l ),
     _comm( comm ) {
   status = 0;
@@ -248,10 +251,12 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   distribution_tree->reduce_2_essential( );
 
   // Refine large spatial clusters first
-  refine_large_clusters_in_space( _root );
-  // collect the auxiliary leaves in the local part of the spacetime cluster
-  collect_additional_local_leaves( *_root, _additional_local_leaves );
-  // Fill the cluster operation lists (nearfield, interaction, m2t, s2l, ...)
+  if ( refine_large_leaves_in_space ) {
+    refine_large_clusters_in_space( _root );
+    // collect the auxiliary leaves in the local part of the spacetime cluster
+    collect_additional_local_leaves( *_root, _additional_local_leaves );
+    // Fill the cluster operation lists (nearfield, interaction, m2t, s2l, ...)
+  }
   fill_cluster_operation_lists( *_root );
 
   associate_scheduling_clusters_and_space_time_clusters( );
@@ -3186,7 +3191,27 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
           }
         } else {
           if ( crrnt_tar_cluster.get_n_children( ) > 0 ) {
-            crrnt_tar_cluster.add_to_nearfield_list( parent_nf_cluster );
+            // spatially admissible nearfield operations are only executed for
+            // original leaves or auxiliary clusters; target_children_auxiliary
+            // is true iff this is the case (since crrnt_tar_cluster is not a
+            // leaf here).
+            if ( _enable_aca_recompression && target_children_auxiliary ) {
+              // check if the parent nearfield cluster is spatially separated
+              // and add it to the appropriate nearfield list
+              if ( crrnt_tar_cluster.check_for_separation_in_space(
+                     parent_nf_cluster ) ) {
+                // update spatially admissible nearfield list only if the
+                // current target is local.
+                if ( crrnt_tar_cluster.get_process_id( ) == _my_rank ) {
+                  crrnt_tar_cluster.add_to_spatially_admissible_nearfield_list(
+                    parent_nf_cluster );
+                }
+              } else {
+                crrnt_tar_cluster.add_to_nearfield_list( parent_nf_cluster );
+              }
+            } else {
+              crrnt_tar_cluster.add_to_nearfield_list( parent_nf_cluster );
+            }
           } else if ( crrnt_tar_cluster.get_process_id( ) == _my_rank ) {
             // only for local leaf clusters we have to know the correct
             // nearfield, otherwise it is not relevant.
@@ -3266,7 +3291,27 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
                 }
               } else {
                 if ( crrnt_tar_cluster.get_n_children( ) > 0 ) {
-                  crrnt_tar_cluster.add_to_nearfield_list( current_source );
+                  // check if spatially admissible nearfield operations can be
+                  // executed.
+                  if ( _enable_aca_recompression
+                    && target_children_auxiliary ) {
+                    // check if the parent nearfield cluster is spatially
+                    // separated and add it to the appropriate nearfield list
+                    if ( crrnt_tar_cluster.check_for_separation_in_space(
+                           current_source ) ) {
+                      // update spatially admissible nearfield list only if the
+                      // current target is local.
+                      if ( crrnt_tar_cluster.get_process_id( ) == _my_rank ) {
+                        crrnt_tar_cluster
+                          .add_to_spatially_admissible_nearfield_list(
+                            current_source );
+                      }
+                    } else {
+                      crrnt_tar_cluster.add_to_nearfield_list( current_source );
+                    }
+                  } else {
+                    crrnt_tar_cluster.add_to_nearfield_list( current_source );
+                  }
                 } else if ( crrnt_tar_cluster.get_process_id( ) == _my_rank ) {
                   // only for local leaf clusters we have to know the correct
                   // nearfield list, otherwise it is not relevant.
@@ -3319,12 +3364,29 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   determine_operation_lists_in_source_subtree(
     general_spacetime_cluster & current_source,
     general_spacetime_cluster & target_cluster ) {
+  // bool to decide whether to continue the recursion in the source subtree
+  bool continue_recursion = true;
   // if m2t operations are enabled, check if the current source and target
   // cluster are separated in time
   if ( _enable_m2t_and_s2l
     && target_cluster.determine_temporal_admissibility( &current_source ) ) {
     target_cluster.add_to_m2t_list( &current_source );
-  } else {
+    continue_recursion = false;
+  } else if ( _enable_aca_recompression ) {
+    // First, check if source is an original leaf or an auxiliary refined
+    // cluster. Only if this is the case, it is checked whether source is
+    // spatially admissible.
+    bool source_mesh_available = ( current_source.get_n_children( ) == 0 )
+      || current_source.has_additional_spatial_children( )
+      || current_source.is_auxiliary_ref_cluster( );
+    if ( source_mesh_available
+      && target_cluster.check_for_separation_in_space( &current_source ) ) {
+      target_cluster.add_to_spatially_admissible_nearfield_list(
+        &current_source );
+      continue_recursion = false;
+    }
+  }
+  if ( continue_recursion ) {
     // continue tree traversal, or add leaf to nearfield list
     if ( current_source.get_n_children( ) == 0 ) {
       target_cluster.add_to_nearfield_list( &current_source );
@@ -3341,7 +3403,13 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     general_spacetime_cluster & source_cluster,
     general_spacetime_cluster & target_cluster ) {
   if ( source_cluster.get_n_children( ) == 0 ) {
-    target_cluster.add_to_nearfield_list( &source_cluster );
+    if ( _enable_aca_recompression
+      && target_cluster.check_for_separation_in_space( &source_cluster ) ) {
+      target_cluster.add_to_spatially_admissible_nearfield_list(
+        &source_cluster );
+    } else {
+      target_cluster.add_to_nearfield_list( &source_cluster );
+    }
   } else {
     // determine the spatial level of the target cluster and the children of
     // the source cluster
@@ -3355,12 +3423,27 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
       // higher spatial level. Thus, we have to consider operations between
       // the target cluster and the children of the current source cluster.
       for ( auto source_child : *source_cluster.get_children( ) ) {
-        // if m2t operations are enabled we check whether they are admissibile
+        // if m2t operations or aca recompression are enabled we check whether
+        // they are admissible
         if ( _enable_m2t_and_s2l
           && target_cluster.determine_temporal_admissibility( source_child ) ) {
           // m2t lists are only created for local clusters
           if ( target_cluster.get_process_id( ) == _my_rank ) {
             target_cluster.add_to_m2t_list( source_child );
+          }
+        } else if ( _enable_aca_recompression ) {
+          bool child_mesh_available = ( source_child->get_n_children( ) == 0 )
+            || source_child->has_additional_spatial_children( )
+            || source_child->is_auxiliary_ref_cluster( );
+          if ( child_mesh_available
+            && target_cluster.check_for_separation_in_space(
+              &source_cluster ) ) {
+            if ( target_cluster.get_process_id( ) == _my_rank ) {
+              target_cluster.add_to_spatially_admissible_nearfield_list(
+                source_child );
+            }
+          } else {
+            target_cluster.add_to_nearfield_list( source_child );
           }
         } else {
           target_cluster.add_to_nearfield_list( source_child );
@@ -3372,7 +3455,25 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
       // their respective children. Thus, we can add the (inadmissible!)
       // source_cluster itself to the nearfield of the current target's
       // nearfield.
-      target_cluster.add_to_nearfield_list( &source_cluster );
+      if ( _enable_aca_recompression ) {
+        // Check if source is an original leaf or an auxiliary refined
+        // cluster. Only if this is the case, it is checked whether source
+        // is spatially admissible.
+        bool source_mesh_available = ( source_cluster.get_n_children( ) == 0 )
+          || source_cluster.has_additional_spatial_children( )
+          || source_cluster.is_auxiliary_ref_cluster( );
+        if ( source_mesh_available
+          && target_cluster.check_for_separation_in_space( &source_cluster ) ) {
+          if ( target_cluster.get_process_id( ) == _my_rank ) {
+            target_cluster.add_to_spatially_admissible_nearfield_list(
+              &source_cluster );
+          }
+        } else {
+          target_cluster.add_to_nearfield_list( &source_cluster );
+        }
+      } else {
+        target_cluster.add_to_nearfield_list( &source_cluster );
+      }
     }
   }
 }
@@ -3397,9 +3498,10 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
           second->get_n_divs( second_space_level, dummy );
           return ( first_space_level < second_space_level );
         } );
-      // determine the number of hybrid m2t operations by counting the number
-      // of clusters in the sorted m2t list with spatial level equal to
-      // current_space_level (or rather counting all others + subtraction)
+      // determine the number of hybrid m2t operations by counting the
+      // number of clusters in the sorted m2t list with spatial level equal
+      // to current_space_level (or rather counting all others +
+      // subtraction)
       lo n_hybrid_m2t_operations = current_m2t_list->size( );
       lo access_index = n_hybrid_m2t_operations - 1;
       lo source_space_level;
@@ -3432,9 +3534,10 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
           second->get_n_divs( second_space_level, dummy );
           return ( first_space_level > second_space_level );
         } );
-      // determine the number of hybrid s2l operations by counting the number
-      // of clusters in the sorted s2l list with spatial level equal to
-      // current_space_level (or rather counting all others + subtraction)
+      // determine the number of hybrid s2l operations by counting the
+      // number of clusters in the sorted s2l list with spatial level equal
+      // to current_space_level (or rather counting all others +
+      // subtraction)
       lo n_hybrid_s2l_operations = current_s2l_list->size( );
       lo access_index = n_hybrid_s2l_operations - 1;
       lo source_space_level;
@@ -3572,8 +3675,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     }
     std::vector< char > receive_structure_array( receive_array_size );
     std::vector< sc > receive_cluster_bounds_array( 2 * receive_array_size );
-    // call the appropriate receive operations for the tree structure data and
-    // the cluster bounds data
+    // call the appropriate receive operations for the tree structure data
+    // and the cluster bounds data
     MPI_Status status_1, status_2;
     MPI_Recv( receive_structure_array.data( ), receive_array_size, MPI_CHAR,
       _my_rank + communication_offset, communication_offset, *_comm,
@@ -3624,8 +3727,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::send_leaf_info(
       }
     }
     // copy the entries of leaf_info_vector to an array, and send the array
-    // (this is necessary, since std::vector<bool> does not provide the routine
-    // .data() )
+    // (this is necessary, since std::vector<bool> does not provide the
+    // routine .data() )
     bool * leaf_info_array = new bool[ leaf_info_vector.size( ) ];
     for ( lou i = 0; i < leaf_info_vector.size( ); ++i ) {
       leaf_info_array[ i ] = leaf_info_vector[ i ];
@@ -3647,8 +3750,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::receive_leaf_info(
       // if receive_cluster has no associated spacetime clusters, also the
       // sending process knows this. Note that this should not happen, since
       // we reduce the distribution tree in such cases.
-      // Note that the receiving clusters will never have auxiliary refined the
-      // cluster, so we can simply consider all associated space-time clusters
+      // Note that the receiving clusters will never have auxiliary refined
+      // the cluster, so we can simply consider all associated space-time
+      // clusters
       if ( receive_cluster->get_associated_spacetime_clusters( ) != nullptr ) {
         array_size
           += receive_cluster->get_associated_spacetime_clusters( )->size( );
@@ -3660,8 +3764,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::receive_leaf_info(
     MPI_Status status;
     MPI_Recv( leaf_info_array, array_size, MPI_CXX_BOOL,
       _my_rank - communication_offset, communication_offset, *_comm, &status );
-    // update the global leaf status of all spacetime clusters associated with
-    // scheduling time clusters in the receive cluster vector
+    // update the global leaf status of all spacetime clusters associated
+    // with scheduling time clusters in the receive cluster vector
     lo pos = 0;
     for ( auto receive_cluster : receive_cluster_vector ) {
       if ( receive_cluster->get_associated_spacetime_clusters( ) != nullptr ) {
@@ -3811,7 +3915,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::print_information(
 void besthea::mesh::distributed_spacetime_cluster_tree::print_spatial_grids(
   const lo root_proc_id ) const {
   if ( _my_rank == root_proc_id ) {
-    // determine the spatial level for level 0 in the space-time cluster tree
+    // determine the spatial level for level 0 in the space-time cluster
+    // tree
     lo space_level = _initial_space_refinement;
     lo n_space_clusters_per_dim = 1 << space_level;
     lo n_space_clusters = n_space_clusters_per_dim * n_space_clusters_per_dim

@@ -118,6 +118,7 @@ class besthea::mesh::general_spacetime_cluster {
       _n_space_div( n_space_div ),
       _n_time_div( n_time_div ),
       _nearfield_list( nullptr ),
+      _spatially_admissible_nearfield_list( nullptr ),
       _interaction_list( nullptr ),
       _m2t_list( nullptr ),
       _s2l_list( nullptr ),
@@ -151,6 +152,8 @@ class besthea::mesh::general_spacetime_cluster {
     }
     if ( _nearfield_list != nullptr )
       delete _nearfield_list;
+    if ( _spatially_admissible_nearfield_list != nullptr )
+      delete _spatially_admissible_nearfield_list;
     if ( _interaction_list != nullptr )
       delete _interaction_list;
     if ( _m2t_list != nullptr )
@@ -287,7 +290,7 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
-   * Adds cluster to the nearfield list.
+   * Adds @p cluster to the nearfield list.
    * @param[in] cluster Cluster to be added.
    */
   void add_to_nearfield_list( general_spacetime_cluster * cluster ) {
@@ -298,7 +301,20 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
-   * Adds cluster to the interaction list.
+   * Adds @p cluster to the spatially admissible nearfield list.
+   * @param[in] cluster Cluster to be added.
+   */
+  void add_to_spatially_admissible_nearfield_list(
+    general_spacetime_cluster * cluster ) {
+    if ( _spatially_admissible_nearfield_list == nullptr ) {
+      _spatially_admissible_nearfield_list
+        = new std::vector< general_spacetime_cluster * >( );
+    }
+    _spatially_admissible_nearfield_list->push_back( cluster );
+  }
+
+  /**
+   * Adds @p cluster to the interaction list.
    * @param[in] cluster Cluster to be added.
    */
   void add_to_interaction_list( general_spacetime_cluster * cluster ) {
@@ -309,7 +325,7 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
-   * Adds cluster to the s2l list.
+   * Adds @p cluster to the s2l list.
    * @param[in] cluster Cluster to be added.
    */
   void add_to_s2l_list( general_spacetime_cluster * cluster ) {
@@ -320,7 +336,7 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
-   * Adds cluster to the m2t list.
+   * Adds @p cluster to the m2t list.
    * @param[in] cluster Cluster to be added.
    */
   void add_to_m2t_list( general_spacetime_cluster * cluster ) {
@@ -342,6 +358,14 @@ class besthea::mesh::general_spacetime_cluster {
    */
   std::vector< general_spacetime_cluster * > * get_nearfield_list( ) {
     return _nearfield_list;
+  }
+
+  /**
+   * Returns cluster's spatially admissible nearfield list.
+   */
+  std::vector< general_spacetime_cluster * > *
+  get_spatially_admissible_nearfield_list( ) {
+    return _spatially_admissible_nearfield_list;
   }
 
   /**
@@ -1175,21 +1199,23 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
-   * Detects whether the current cluster is separated from the other cluster.
-   *
-   * @param cluster Cluster with respect to which we check the spatial
-   * separation.
+   * Checks whether the current cluster is separated from the other cluster.
+   * @param[in] cluster Second cluster for the check.
    */
-  bool is_separated_in_space( const general_spacetime_cluster * cluster ) {
-    const std::vector< slou > & this_coordinates = this->get_box_coordinate( );
-    const std::vector< slou > & cluster_coordinates
-      = cluster->get_box_coordinate( );
-    lo x_diff, y_diff, z_diff;
-    x_diff = this_coordinates[ 1 ] - cluster_coordinates[ 1 ];
-    y_diff = this_coordinates[ 2 ] - cluster_coordinates[ 2 ];
-    z_diff = this_coordinates[ 3 ] - cluster_coordinates[ 3 ];
-    bool are_separated = ( std::abs( x_diff ) > 1 || std::abs( y_diff ) > 1
-      || std::abs( z_diff ) > 1 );
+  bool check_for_separation_in_space(
+    const general_spacetime_cluster * cluster ) const {
+    lo cluster_space_level, dummy;
+    cluster->get_n_divs( cluster_space_level, dummy );
+    bool are_separated;
+    if ( cluster_space_level == _n_space_div ) {
+      are_separated = check_for_separation_in_space_same_space_level( cluster );
+    } else if ( cluster_space_level < _n_space_div ) {
+      are_separated
+        = check_for_separation_in_space_coarser_space_level( cluster );
+    } else {
+      are_separated
+        = cluster->check_for_separation_in_space_coarser_space_level( this );
+    }
     return are_separated;
   }
 
@@ -1257,7 +1283,17 @@ class besthea::mesh::general_spacetime_cluster {
   lo _n_time_div;   //!< number of splittings in temporal dimension
 
   std::vector< general_spacetime_cluster * > *
-    _nearfield_list;  //!< nearfield list of the cluster
+    _nearfield_list;  //!< nearfield list of the cluster; if aca recompression
+                      //!< is used and the current cluster is an original leaf
+                      //!< or an auxiliary cluster then this list contains only
+                      //!< spatially inadmissible clusters.
+  std::vector< general_spacetime_cluster * > *
+    _spatially_admissible_nearfield_list;  //!< if aca recompression is used and
+                                           //!< the current cluster is an
+                                           //!< original leaf or an auxiliary
+                                           //!< cluster, this list contains only
+                                           //!< spatially admissible nearfield
+                                           //!< clusters.
   std::vector< general_spacetime_cluster * > *
     _interaction_list;  //!< interaction list of the cluster
   std::vector< general_spacetime_cluster * > *
@@ -1321,6 +1357,63 @@ class besthea::mesh::general_spacetime_cluster {
     }
     // std::cout << ret <<std::endl;
     return ret;
+  }
+
+  /**
+   * Checks whether the current cluster is separated from the other cluster
+   * which has the same spatial level.
+   * @param[in] cluster Second cluster for the check.
+   */
+  bool check_for_separation_in_space_same_space_level(
+    const general_spacetime_cluster * cluster ) const {
+    const std::vector< slou > & cluster_coordinates
+      = cluster->get_box_coordinate( );
+    lo x_diff = _box_coordinate[ 1 ] - cluster_coordinates[ 1 ];
+    lo y_diff = _box_coordinate[ 2 ] - cluster_coordinates[ 2 ];
+    lo z_diff = _box_coordinate[ 3 ] - cluster_coordinates[ 3 ];
+    bool are_separated = ( std::abs( x_diff ) > 1 || std::abs( y_diff ) > 1
+      || std::abs( z_diff ) > 1 );
+    return are_separated;
+  }
+
+  /**
+   * Checks whether the current cluster is separated from the other cluster
+   * which is coarser in space (i.e. it has a smaller spatial level)
+   *
+   * @param[in] cluster  Coarser cluster for the check.
+   */
+  bool check_for_separation_in_space_coarser_space_level(
+    const general_spacetime_cluster * cluster ) const {
+    // determine the difference in spatial levels
+    lo its_space_level, dummy;
+    cluster->get_n_divs( its_space_level, dummy );
+    lo space_level_diff = _n_space_div - its_space_level;
+    // determine the range of spatial box coordinates which the descendants at
+    // the spatial level of this cluster would have
+    const std::vector< slou > & cluster_coordinates
+      = cluster->get_box_coordinate( );
+    lo level_factor = 1 << ( space_level_diff );
+    lo coord_0_low = level_factor * cluster_coordinates[ 1 ];
+    lo coord_0_up = coord_0_low + level_factor - 1;
+    lo coord_1_low = level_factor * cluster_coordinates[ 2 ];
+    lo coord_1_up = coord_1_low + level_factor - 1;
+    lo coord_2_low = level_factor * cluster_coordinates[ 3 ];
+    lo coord_2_up = coord_2_low + level_factor - 1;
+    // determine the "coordinate difference" for each spatial dimension
+    lo x_diff = _box_coordinate[ 1 ] - coord_0_up;
+    if ( x_diff < 0 ) {
+      x_diff = coord_0_low - _box_coordinate[ 1 ];
+    }
+    lo y_diff = _box_coordinate[ 2 ] - coord_1_up;
+    if ( y_diff < 0 ) {
+      y_diff = coord_1_low - _box_coordinate[ 2 ];
+    }
+    lo z_diff = _box_coordinate[ 3 ] - coord_2_up;
+    if ( z_diff < 0 ) {
+      z_diff = coord_2_low - _box_coordinate[ 3 ];
+    }
+    bool are_separated = ( x_diff > 1 || y_diff > 1 | z_diff > 1 );
+    return are_separated;
   }
 };
 
