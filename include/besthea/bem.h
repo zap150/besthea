@@ -69,11 +69,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/uniform_spacetime_be_space.h"
 #include "besthea/uniform_spacetime_initial_assembler.h"
 #include "besthea/uniform_spacetime_initial_evaluator.h"
-#include "besthea/uniform_spacetime_be_matrix_onthefly_cpu.h"
-
-#ifdef BESTHEA_USE_CUDA
-#include "besthea/uniform_spacetime_be_matrix_onthefly_gpu.h"
-#endif
 
 #ifdef BESTHEA_USE_CUDA
 #include "besthea/uniform_spacetime_be_matrix_onthefly_gpu.h"

@@ -52,10 +52,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define M_PI 3.14159265358979323846  //!< pi
 #endif
 
-// pragma to switch between cluster- and timestep-wise nearfield computation
-// NOTE: this is only relevant in case of non-distributed pFMM
-#define NEARFIELD_CLUSTERWISE  //!< Pragma to control nearfield computation
-
 #ifndef BESTHEA_SIMD_WIDTH
 #define BESTHEA_SIMD_WIDTH 8
 #endif

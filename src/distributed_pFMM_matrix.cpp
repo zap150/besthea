@@ -88,7 +88,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       = cluster->get_spatially_admissible_nearfield_list( );
     if ( spat_adm_nearfield_list != nullptr ) {
       _clusterwise_nearfield_aca_matrices.insert(
-        { cluster, std::vector< full_matrix * >( ) } );
+        { cluster, std::vector< aca_matrix * >( ) } );
       _clusterwise_nearfield_aca_matrices[ cluster ].resize(
         spat_adm_nearfield_list->size( ) );
     }
@@ -354,19 +354,20 @@ besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
 }
 
 template< class kernel_type, class target_space, class source_space >
-besthea::linear_algebra::full_matrix *
+besthea::linear_algebra::aca_matrix *
 besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
   source_space >::create_nearfield_aca_matrix( lou nf_cluster_index,
   lou source_index ) {
   general_spacetime_cluster * target_cluster
     = _clusters_with_nearfield_operations[ nf_cluster_index ];
-  general_spacetime_cluster * source_cluster
-    = ( *( target_cluster
-             ->get_spatially_admissible_nearfield_list( ) ) )[ source_index ];
-  lo n_dofs_source = source_cluster->get_n_dofs< source_space >( );
-  lo n_dofs_target = target_cluster->get_n_dofs< target_space >( );
+  // general_spacetime_cluster * source_cluster
+  //   = ( *( target_cluster
+  //            ->get_spatially_admissible_nearfield_list( ) ) )[ source_index
+  //            ];
+  // lo n_dofs_source = source_cluster->get_n_dofs< source_space >( );
+  // lo n_dofs_target = target_cluster->get_n_dofs< target_space >( );
   // todo: create low rank matrix here instead
-  full_matrix * local_matrix = new full_matrix( n_dofs_target, n_dofs_source );
+  aca_matrix * local_matrix = new aca_matrix( _aca_eps, _aca_max_rank );
 
   _clusterwise_nearfield_aca_matrices[ target_cluster ][ source_index ]
     = local_matrix;
@@ -741,6 +742,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           / ( n_target_dofs * n_source_dofs );
     }
     std::cout << std::endl;
+    // todo: adapt this for distributed matrix
+    if ( _aca_max_rank > 0 && _local_approximated_size != 0 ) {
+      std::cout << "ACA compression rate is " << 1 - get_local_compress_ratio( )
+                << std::endl;
+    }
     std::cout << "storage per allocated vector (source): "
               << n_source_dofs * 8. / 1024. / 1024. / 1024. << " GiB."
               << std::endl;
@@ -7129,10 +7135,18 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         sources.get_local_part< source_space >(
           current_spacetime_source, local_sources );
 
-        full_matrix * current_block = _clusterwise_nearfield_aca_matrices.at(
+        aca_matrix * current_block = _clusterwise_nearfield_aca_matrices.at(
           current_spacetime_target )[ src_index ];
-        // apply the nearfield matrix and add the result to local_result
-        current_block->apply( local_sources, local_result, trans, 1.0, 1.0 );
+        // apply the approximated nearfield matrix (or the full, if compression
+        // was not successful) and add the result to local_result
+
+        if ( current_block->get_n_approximated_clusters( ) == 1 ) {
+          current_block->apply_aca_block(
+            0, local_sources, local_result, trans, 1.0, 1.0 );
+        } else {
+          current_block->apply_full_block(
+            0, local_sources, local_result, trans, 1.0, 1.0 );
+        }
       }
     }
     if ( current_spacetime_target->get_n_children( ) == 0 ) {
@@ -7543,11 +7557,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       if ( current_spat_adm_nearfield != nullptr ) {
         for ( lou src_index = 0;
               src_index < current_spat_adm_nearfield->size( ); ++src_index ) {
-          full_matrix * current_block = _clusterwise_nearfield_aca_matrices.at(
+          aca_matrix * current_block = _clusterwise_nearfield_aca_matrices.at(
             current_spacetime_target )[ src_index ];
-          lo n_rows = current_block->get_n_rows( );
-          lo n_cols = current_block->get_n_columns( );
-          total_nf_size_current_t_cluster += n_rows * n_cols;
+          total_nf_size_current_t_cluster
+            += current_block->get_compressed_size( );
         }
       }
     }

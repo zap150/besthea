@@ -150,6 +150,20 @@ class besthea::linear_algebra::full_matrix
     _data[ i + j * _n_rows ] = value;
   }
 
+  /**
+   * @brief Adds alpha * Y to the current matrix, where Y is a second matrix.
+   * @param[in] second_matrix Second matrix Y to be added.
+   * @param[in] alpha Scaling factor for sum.
+   * @warning It is not checked whether the dimensions of the matrices agree! Y
+   * should have the same number of rows and columns as the current matrix.
+   */
+  void add_matrix( const full_matrix & second_matrix, sc alpha ) {
+    const sc * second_matrix_data = second_matrix.data( );
+    for ( lo i = 0; i < _n_rows * _n_columns; ++i ) {
+      _data[ i ] += alpha * second_matrix_data[ i ];
+    }
+  }
+
   /*!
    * @brief Adds value to the (i,j)-th element of the matrix.
    * @param[in] i Row index.

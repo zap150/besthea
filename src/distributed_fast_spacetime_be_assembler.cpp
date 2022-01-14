@@ -57,7 +57,7 @@ besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
                                                                  kernel,
   test_space_type & test_space, trial_space_type & trial_space, MPI_Comm * comm,
   int order_singular, int order_regular, int temp_order, int spat_order,
-  sc alpha )
+  sc alpha, sc aca_eps, lo aca_max_rank )
   : _kernel( &kernel ),
     _test_space( &test_space ),
     _trial_space( &trial_space ),
@@ -67,6 +67,8 @@ besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
     _spat_order( spat_order ),
     _m2l_integration_order( _spat_order ),
     _alpha( alpha ),
+    _aca_eps( aca_eps ),
+    _aca_max_rank( aca_max_rank ),
     _comm( comm ) {
   MPI_Comm_rank( *_comm, &_my_rank );
 }
@@ -87,6 +89,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   global_matrix.set_orders( _spat_order, _temp_order, _order_regular );
   global_matrix.set_alpha( _alpha );
   global_matrix.set_m2l_integration_order( _m2l_integration_order );
+  global_matrix.set_aca_parameters( _aca_eps, _aca_max_rank );
 
   // number of timesteps have to be the same for test and trial meshes
   lo n_timesteps = _test_space->get_mesh( ).get_n_temporal_elements( );
@@ -169,6 +172,10 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
     mesh::general_spacetime_cluster * current_cluster
       = ( *clusters_with_nearfield_operations )
         [ permutation_index[ cluster_index ] ];
+
+    // TODO: estimate largest singular value
+    sc max_singular_value = -1.0;
+
     std::vector< general_spacetime_cluster * > * spat_adm_nearfield_list
       = current_cluster->get_spatially_admissible_nearfield_list( );
     if ( spat_adm_nearfield_list != nullptr ) {
@@ -177,9 +184,36 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
         general_spacetime_cluster * nearfield_cluster
           = ( *spat_adm_nearfield_list )[ src_index ];
         // todo: create low rank matrix here instead
-        full_matrix_type * block = global_matrix.create_nearfield_aca_matrix(
+        aca_matrix_type * aca_block = global_matrix.create_nearfield_aca_matrix(
           permutation_index[ cluster_index ], src_index );
-        assemble_nearfield_matrix( current_cluster, nearfield_cluster, *block );
+        lo n_dofs_source = nearfield_cluster->get_n_dofs< trial_space_type >( );
+        lo n_dofs_target = current_cluster->get_n_dofs< test_space_type >( );
+        // currently, the matrix is assembled fully, then approximated
+        // TODO: to speed-up the process, assemble only the necessary rows and
+        // columns
+        full_matrix_type * tmp_block
+          = new full_matrix_type( n_dofs_target, n_dofs_source );
+        assemble_nearfield_matrix(
+          current_cluster, nearfield_cluster, *tmp_block );
+        aca_block->add_aca_matrix(
+          *tmp_block, nearfield_cluster, current_cluster, max_singular_value );
+        // aca_block->add_full_matrix(
+        //   *tmp_block, nearfield_cluster, current_cluster );
+
+        global_matrix.add_to_local_approximated_size(
+          aca_block->get_compressed_size( ) );
+        global_matrix.add_to_local_full_size( aca_block->get_full_size( ) );
+
+        // in case the block could not be approximated, it is copied to the
+        // aca_matrix class member variable, therefore it is safe to delete the
+        // tmp_block object
+        delete tmp_block;
+
+        // TODO: note - it would be more consistent to store the block that
+        // could not be approximated in the same data structure as the remaining
+        // nonapproximated blocks (e.g., those that are nonadmissible in space).
+        // However, for simplicity, at this moment these full blocks are stored
+        // in the created aca_matrix member variable.
       }
     }
     if ( current_cluster->get_n_children( ) == 0 ) {
@@ -193,6 +227,10 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
         full_matrix_type * block = global_matrix.create_nearfield_matrix(
           permutation_index[ cluster_index ], src_index );
         assemble_nearfield_matrix( current_cluster, nearfield_cluster, *block );
+        global_matrix.add_to_local_approximated_size(
+          block->get_n_rows( ) * block->get_n_columns( ) );
+        global_matrix.add_to_local_full_size(
+          block->get_n_rows( ) * block->get_n_columns( ) );
       }
     }
   }

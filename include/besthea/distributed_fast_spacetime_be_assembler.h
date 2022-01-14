@@ -79,6 +79,9 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
   using full_matrix_type
     = besthea::linear_algebra::full_matrix;  //!< Shortcut for the full matrix
                                              //!< type.
+  using aca_matrix_type
+    = besthea::linear_algebra::aca_matrix;  //!< Shortcut for the aca matrix
+                                            //!< type
   using pfmm_matrix_type
     = besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       test_space_type,
@@ -190,7 +193,8 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
   distributed_fast_spacetime_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
     MPI_Comm * comm, int order_singular = 4, int order_regular = 4,
-    int temp_order = 5, int spat_order = 5, sc alpha = 1.0 );
+    int temp_order = 5, int spat_order = 5, sc alpha = 1.0, sc aca_eps = 1e-5,
+    lo aca_max_rank = 500 );
 
   distributed_fast_spacetime_be_assembler(
     const distributed_fast_spacetime_be_assembler & that )
@@ -504,6 +508,10 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
                                //!< points are used for the approximation of
                                //!< the m2l coefficients.
   sc _alpha;                   //!< Heat conductivity parameter.
+  sc _aca_eps;  //!< accuracy of the internal ACA used for temporal nearfield
+                //!< compression
+  lo _aca_max_rank;  //!< maximum allowed rank of the internal ACA used for
+                     //!< temporal nearfield compression
   static constexpr std::array< int, 5 > map{ 0, 1, 2, 0,
     1 };  //!< Auxiliary array for mapping DOFs under rotation
           //!< (regularized quadrature). Realizes a fast modulo 3

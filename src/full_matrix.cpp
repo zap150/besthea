@@ -80,7 +80,7 @@ void besthea::linear_algebra::full_matrix::random_fill( sc lower, sc upper ) {
   std::mt19937 gen( rd( ) );
   std::uniform_real_distribution< sc > dis( lower, upper );
   std::generate(
-    _data.begin( ), _data.end( ), [&gen, &dis]( ) { return dis( gen ); } );
+    _data.begin( ), _data.end( ), [ &gen, &dis ]( ) { return dis( gen ); } );
 }
 
 void besthea::linear_algebra::full_matrix::random_fill_diag(

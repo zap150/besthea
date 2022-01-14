@@ -1105,6 +1105,14 @@ class besthea::mesh::general_spacetime_cluster {
   void compute_surface_curls_p1_along_dim(
     std::vector< sc > & surface_curls_along_dim ) const;
 
+  void print_short( ) const {
+    std::cout << _n_time_elements << " time elems, " << _n_space_elements
+              << " space elems, time level " << _n_time_div << ",  space level "
+              << _n_space_div << ", coordinates " << _box_coordinate[ 1 ]
+              << ", " << _box_coordinate[ 2 ] << ", " << _box_coordinate[ 3 ]
+              << ", " << _box_coordinate[ 4 ];
+  }
+
   /**
    * Prints info of the object.
    */
