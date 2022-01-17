@@ -177,7 +177,7 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    */
   virtual ~distributed_initial_pFMM_matrix( ) {
     // delete all allocated nearfield matrices
-    for ( auto matrix_vector : _clusterwise_nearfield_matrices ) {
+    for ( auto matrix_vector : _clusterwise_nf_matrices ) {
       for ( auto matrix : matrix_vector ) {
         delete matrix;
       }
@@ -298,7 +298,7 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
   }
 
   /**
-   * Resizes @ref _clusterwise_nearfield_matrices appropriately before the
+   * Resizes @ref _clusterwise_nf_matrices appropriately before the
    * initialization of the matrices.
    * @note This routine has to be called after
    * @ref initialize_nearfield_and_interaction_lists
@@ -848,14 +848,9 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
                              //!< nearfield list of volume space clusters.
 
   std::vector< std::vector< full_matrix * > >
-    _clusterwise_nearfield_matrices;  //!< nearfield
-                                      //!< matrices for all
-                                      //!< the pairs of
-                                      //!< leaf clusters and
-                                      //!< nearfield
-                                      //!< clusters in the
-                                      //!< nearfield list
-                                      //!< vector.
+    _clusterwise_nf_matrices;  //!< nearfield matrices for all the pairs of leaf
+                               //!< clusters and nearfield clusters in the
+                               //!< nearfield list vector.
 };
 
 /** Typedef for the distributed initial potential M0 p0-p1 PFMM matrix */

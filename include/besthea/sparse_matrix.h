@@ -121,6 +121,13 @@ class besthea::linear_algebra::sparse_matrix
   void set_from_triplets( los n_rows, los n_columns,
     std::vector< Eigen::Triplet< sc, los > > & triplet_list );
 
+  /**
+   * Returns the number of stored entries of the matrix.
+   */
+  virtual lo get_n_stored_entries( ) const {
+    return _data.nonZeros( );
+  }
+
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
    * @param[in] x

@@ -36,7 +36,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDE_BESTHEA_DISTRIBUTED_PFMM_MATRIX_H_
 #define INCLUDE_BESTHEA_DISTRIBUTED_PFMM_MATRIX_H_
 
-#include "besthea/aca_matrix.h"
 #include "besthea/basis_tri_p0.h"
 #include "besthea/basis_tri_p1.h"
 #include "besthea/block_linear_operator.h"
@@ -47,6 +46,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/full_matrix.h"
 #include "besthea/general_spacetime_cluster.h"
 #include "besthea/lagrange_interpolant.h"
+#include "besthea/matrix.h"
 #include "besthea/settings.h"
 #include "besthea/spacetime_heat_adl_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
@@ -200,16 +200,16 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * Destructor
    */
   virtual ~distributed_pFMM_matrix( ) {
-    for ( auto it = _clusterwise_nearfield_matrices.begin( );
-          it != _clusterwise_nearfield_matrices.end( ); ++it ) {
+    for ( auto it = _clusterwise_nf_matrices.begin( );
+          it != _clusterwise_nf_matrices.end( ); ++it ) {
       // loop over all nearfield matrices associated with a given spacetime
       // cluster and delete them.
       for ( auto matrix : it->second ) {
         delete matrix;
       }
     }
-    for ( auto it = _clusterwise_nearfield_aca_matrices.begin( );
-          it != _clusterwise_nearfield_aca_matrices.end( ); ++it ) {
+    for ( auto it = _clusterwise_spat_adm_nf_matrices.begin( );
+          it != _clusterwise_spat_adm_nf_matrices.end( ); ++it ) {
       // loop over all nearfield aca matrices associated with a given spacetime
       // cluster and delete them.
       for ( auto matrix : it->second ) {
@@ -387,9 +387,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   /**
    * Initializes @ref _clusters_with_nearfield_operations and prepares
-   * @ref _clusterwise_nearfield_matrices and
-   * @ref _clusterwise_nearfield_aca_matrices by creating a map for each
-   * space-time target cluster and associated list of nearfield matrices.
+   * @ref _clusterwise_nf_matrices and @ref _clusterwise_spat_adm_nf_matrices by
+   * creating a map for each space-time target cluster and associated list of
+   * nearfield matrices.
    */
   void initialize_nearfield_containers( );
 
@@ -416,17 +416,17 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   full_matrix * create_nearfield_matrix(
     lou nf_cluster_index, lou source_index );
-
   /**
-   * Creates a low rank nearfield matrix for two clusters which are separated in
-   * space
+   * Inserts a matrix into the container of spatially admissible nearfield
+   * matrices.
    * @param[in] nf_cluster_index  Index of the nearfield cluster in
    * @ref _clusters_with_nearfield_operations, which acts as the target.
    * @param[in] source_index  Index of the source cluster in the spatially
    * separated nearfield list of the target cluster.
+   * @param[in] matrix Nearfield matrix (either full or low rank) inserted into
    */
-  aca_matrix * create_nearfield_aca_matrix(
-    lou nf_cluster_index, lou source_index );
+  void insert_spatially_admissible_nearfield_matrix(
+    lou nf_cluster_index, lou source_index, matrix * nf_matrix );
 
   /**
    * Compute the spatial m2m coefficients for all local spatial levels.
@@ -1888,14 +1888,14 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   std::unordered_map< mesh::general_spacetime_cluster *,
     std::vector< full_matrix * > >
-    _clusterwise_nearfield_matrices;  //!< nearfield matrices for all the space-
-                                      //!< time leaf clusters and their
-                                      //!< nearfield clusters.
+    _clusterwise_nf_matrices;  //!< nearfield matrices for all the space-
+                               //!< time leaf clusters and their
+                               //!< nearfield clusters.
   std::unordered_map< mesh::general_spacetime_cluster *,
-    std::vector< aca_matrix * > >
-    _clusterwise_nearfield_aca_matrices;  //!< nearfield matrices for all the
-                                          //!< space- time leaf clusters and
-                                          //!< their nearfield clusters.
+    std::vector< matrix * > >
+    _clusterwise_spat_adm_nf_matrices;  //!< nearfield matrices for all the
+                                        //!< space- time leaf clusters and
+                                        //!< their nearfield clusters.
 
   std::list< mesh::scheduling_time_cluster * >
     _m_list;  //!< M-list for the execution of the FMM.

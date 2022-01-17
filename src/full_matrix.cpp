@@ -44,6 +44,12 @@ besthea::linear_algebra::full_matrix::full_matrix( const full_matrix & that )
   this->_n_columns = that._n_columns;
 }
 
+besthea::linear_algebra::full_matrix::full_matrix( full_matrix && that )
+  : _data( std::move( that._data ) ) {
+  this->_n_rows = that._n_rows;
+  this->_n_columns = that._n_columns;
+}
+
 besthea::linear_algebra::full_matrix::full_matrix(
   lo n_rows, lo n_columns, std::initializer_list< sc > list )
   : _data( list ) {
@@ -62,6 +68,16 @@ besthea::linear_algebra::full_matrix::full_matrix(
 }
 
 besthea::linear_algebra::full_matrix::~full_matrix( ) {
+}
+
+besthea::linear_algebra::full_matrix &
+besthea::linear_algebra::full_matrix::operator=( full_matrix && other ) {
+  _data = std::move( other._data );
+  this->_n_rows = other._n_rows;
+  this->_n_columns = other._n_columns;
+  other._n_rows = 0;
+  other._n_columns = 0;
+  return *this;
 }
 
 void besthea::linear_algebra::full_matrix::print(

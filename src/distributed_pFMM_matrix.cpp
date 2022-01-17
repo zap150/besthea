@@ -72,14 +72,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     _distributed_spacetime_tree->get_root( ) );
   _clusters_with_nearfield_operations.shrink_to_fit( );
   // for all clusters with nearfield operations, create a proper entry in the
-  // map _clusterwise_nearfield_matrices
+  // map _clusterwise_nf_matrices
   for ( auto cluster : _clusters_with_nearfield_operations ) {
     if ( cluster->get_n_children( ) == 0 ) {
       // standard nearfield operations are executed for leaf clusters and the
       // clusters in their nearfield
-      _clusterwise_nearfield_matrices.insert(
+      _clusterwise_nf_matrices.insert(
         { cluster, std::vector< full_matrix * >( ) } );
-      _clusterwise_nearfield_matrices[ cluster ].resize(
+      _clusterwise_nf_matrices[ cluster ].resize(
         cluster->get_nearfield_list( )->size( ) );
     }
     // for clusters in the spatially admissible nearfield list nearfield
@@ -87,9 +87,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     auto spat_adm_nearfield_list
       = cluster->get_spatially_admissible_nearfield_list( );
     if ( spat_adm_nearfield_list != nullptr ) {
-      _clusterwise_nearfield_aca_matrices.insert(
-        { cluster, std::vector< aca_matrix * >( ) } );
-      _clusterwise_nearfield_aca_matrices[ cluster ].resize(
+      _clusterwise_spat_adm_nf_matrices.insert(
+        { cluster, std::vector< matrix * >( ) } );
+      _clusterwise_spat_adm_nf_matrices[ cluster ].resize(
         spat_adm_nearfield_list->size( ) );
     }
   }
@@ -347,32 +347,20 @@ besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
   lo n_dofs_target = target_cluster->get_n_dofs< target_space >( );
   full_matrix * local_matrix = new full_matrix( n_dofs_target, n_dofs_source );
 
-  _clusterwise_nearfield_matrices[ target_cluster ][ source_index ]
-    = local_matrix;
+  _clusterwise_nf_matrices[ target_cluster ][ source_index ] = local_matrix;
 
   return local_matrix;
 }
 
 template< class kernel_type, class target_space, class source_space >
-besthea::linear_algebra::aca_matrix *
-besthea::linear_algebra::distributed_pFMM_matrix< kernel_type, target_space,
-  source_space >::create_nearfield_aca_matrix( lou nf_cluster_index,
-  lou source_index ) {
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::
+  insert_spatially_admissible_nearfield_matrix(
+    lou nf_cluster_index, lou source_index, matrix * nf_matrix ) {
   general_spacetime_cluster * target_cluster
     = _clusters_with_nearfield_operations[ nf_cluster_index ];
-  // general_spacetime_cluster * source_cluster
-  //   = ( *( target_cluster
-  //            ->get_spatially_admissible_nearfield_list( ) ) )[ source_index
-  //            ];
-  // lo n_dofs_source = source_cluster->get_n_dofs< source_space >( );
-  // lo n_dofs_target = target_cluster->get_n_dofs< target_space >( );
-  // todo: create low rank matrix here instead
-  aca_matrix * local_matrix = new aca_matrix( _aca_eps, _aca_max_rank );
-
-  _clusterwise_nearfield_aca_matrices[ target_cluster ][ source_index ]
-    = local_matrix;
-
-  return local_matrix;
+  _clusterwise_spat_adm_nf_matrices[ target_cluster ][ source_index ]
+    = nf_matrix;
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -7106,7 +7094,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   // there is an implicit taskgroup associated with this taskloop
 #pragma omp taskloop shared( \
-  output_vector, _clusterwise_nearfield_matrices, assoc_nearfield_targets )
+  output_vector, _clusterwise_nf_matrices, assoc_nearfield_targets )
   for ( lou i = 0; i < assoc_nearfield_targets->size( ); ++i ) {
     if ( _measure_tasks ) {
       _n_subtask_times.at( omp_get_thread_num( ) )
@@ -7135,18 +7123,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         sources.get_local_part< source_space >(
           current_spacetime_source, local_sources );
 
-        aca_matrix * current_block = _clusterwise_nearfield_aca_matrices.at(
+        matrix * current_block = _clusterwise_spat_adm_nf_matrices.at(
           current_spacetime_target )[ src_index ];
         // apply the approximated nearfield matrix (or the full, if compression
         // was not successful) and add the result to local_result
-
-        if ( current_block->get_n_approximated_clusters( ) == 1 ) {
-          current_block->apply_aca_block(
-            0, local_sources, local_result, trans, 1.0, 1.0 );
-        } else {
-          current_block->apply_full_block(
-            0, local_sources, local_result, trans, 1.0, 1.0 );
-        }
+        current_block->apply( local_sources, local_result, trans, 1.0, 1.0 );
       }
     }
     if ( current_spacetime_target->get_n_children( ) == 0 ) {
@@ -7166,7 +7147,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         sources.get_local_part< source_space >(
           current_spacetime_source, local_sources );
 
-        full_matrix * current_block = _clusterwise_nearfield_matrices.at(
+        full_matrix * current_block = _clusterwise_nf_matrices.at(
           current_spacetime_target )[ src_index ];
         // apply the nearfield matrix and add the result to local_result
         current_block->apply( local_sources, local_result, trans, 1.0, 1.0 );
@@ -7544,7 +7525,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           = current_spacetime_target->get_nearfield_list( );
         for ( lou src_index = 0; src_index < spacetime_nearfield_list->size( );
               ++src_index ) {
-          full_matrix * current_block = _clusterwise_nearfield_matrices.at(
+          full_matrix * current_block = _clusterwise_nf_matrices.at(
             current_spacetime_target )[ src_index ];
           lo n_rows = current_block->get_n_rows( );
           lo n_cols = current_block->get_n_columns( );
@@ -7557,10 +7538,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       if ( current_spat_adm_nearfield != nullptr ) {
         for ( lou src_index = 0;
               src_index < current_spat_adm_nearfield->size( ); ++src_index ) {
-          aca_matrix * current_block = _clusterwise_nearfield_aca_matrices.at(
+          matrix * current_block = _clusterwise_spat_adm_nf_matrices.at(
             current_spacetime_target )[ src_index ];
           total_nf_size_current_t_cluster
-            += current_block->get_compressed_size( );
+            += current_block->get_n_stored_entries( );
         }
       }
     }
@@ -7605,7 +7586,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
     local_blocks, distributed_mesh.get_n_temporal_elements( ) );
   inverse_diagonal.resize_blocks(
     local_mesh->get_n_spatial_elements( ), false );
-  for ( auto nearfield_matrix_list_pair : _clusterwise_nearfield_matrices ) {
+  for ( auto nearfield_matrix_list_pair : _clusterwise_nf_matrices ) {
     mesh::general_spacetime_cluster * leaf_cluster
       = nearfield_matrix_list_pair.first;
     std::vector< mesh::general_spacetime_cluster * > * nearfield_list

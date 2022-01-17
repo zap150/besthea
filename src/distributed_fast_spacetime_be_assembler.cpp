@@ -34,6 +34,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/basis_tri_p1.h"
 #include "besthea/distributed_fast_spacetime_be_space.h"
 #include "besthea/distributed_spacetime_tensor_mesh.h"
+#include "besthea/low_rank_kernel.h"
 #include "besthea/quadrature.h"
 #include "besthea/spacetime_heat_adl_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
@@ -183,37 +184,36 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
             src_index < spat_adm_nearfield_list->size( ); ++src_index ) {
         general_spacetime_cluster * nearfield_cluster
           = ( *spat_adm_nearfield_list )[ src_index ];
-        // todo: create low rank matrix here instead
-        aca_matrix_type * aca_block = global_matrix.create_nearfield_aca_matrix(
-          permutation_index[ cluster_index ], src_index );
-        lo n_dofs_source = nearfield_cluster->get_n_dofs< trial_space_type >( );
-        lo n_dofs_target = current_cluster->get_n_dofs< test_space_type >( );
+        lo n_cols = nearfield_cluster->get_n_dofs< trial_space_type >( );
+        lo n_rows = current_cluster->get_n_dofs< test_space_type >( );
         // currently, the matrix is assembled fully, then approximated
         // TODO: to speed-up the process, assemble only the necessary rows and
         // columns
-        full_matrix_type * tmp_block
-          = new full_matrix_type( n_dofs_target, n_dofs_source );
+        full_matrix_type * full_block = new full_matrix_type( n_rows, n_cols );
         assemble_nearfield_matrix(
-          current_cluster, nearfield_cluster, *tmp_block );
-        aca_block->add_aca_matrix(
-          *tmp_block, nearfield_cluster, current_cluster, max_singular_value );
-        // aca_block->add_full_matrix(
-        //   *tmp_block, nearfield_cluster, current_cluster );
-
-        global_matrix.add_to_local_approximated_size(
-          aca_block->get_compressed_size( ) );
-        global_matrix.add_to_local_full_size( aca_block->get_full_size( ) );
-
-        // in case the block could not be approximated, it is copied to the
-        // aca_matrix class member variable, therefore it is safe to delete the
-        // tmp_block object
-        delete tmp_block;
-
-        // TODO: note - it would be more consistent to store the block that
-        // could not be approximated in the same data structure as the remaining
-        // nonapproximated blocks (e.g., those that are nonadmissible in space).
-        // However, for simplicity, at this moment these full blocks are stored
-        // in the created aca_matrix member variable.
+          current_cluster, nearfield_cluster, *full_block );
+        low_rank_matrix_type * lr_block = new low_rank_matrix_type( );
+        sc est_compression_error;
+        bool successful_compression
+          = compute_low_rank_approximation( *full_block, *lr_block,
+            est_compression_error, true, max_singular_value );
+        if ( successful_compression ) {
+          global_matrix.insert_spatially_admissible_nearfield_matrix(
+            permutation_index[ cluster_index ], src_index, lr_block );
+          delete full_block;
+          // update the auxiliary variables measuring the nearfield
+          lo rank = lr_block->get_rank( );
+          global_matrix.add_to_local_approximated_size(
+            rank * ( n_rows + n_cols ) );
+          global_matrix.add_to_local_full_size( n_rows * n_cols );
+        } else {
+          global_matrix.insert_spatially_admissible_nearfield_matrix(
+            permutation_index[ cluster_index ], src_index, full_block );
+          delete lr_block;
+          // update the auxiliary variables measuring the nearfield
+          global_matrix.add_to_local_approximated_size( n_rows * n_cols );
+          global_matrix.add_to_local_full_size( n_rows * n_cols );
+        }
       }
     }
     if ( current_cluster->get_n_children( ) == 0 ) {
@@ -863,6 +863,430 @@ void besthea::bem::distributed_fast_spacetime_be_assembler<
       }
     }
   }
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+bool besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
+  test_space_type,
+  trial_space_type >::compute_low_rank_approximation( const full_matrix_type &
+                                                        full_nf_matrix,
+  low_rank_matrix_type & lr_nf_matrix, sc & estimated_eps,
+  bool enable_svd_recompression, sc svd_recompression_reference_value ) const {
+  lo i, j, ell;             // indices
+  lo ik, jk;                // Pivot-Indices
+  lo k;                     // current rank
+  sc old_eps;               // old accuracy
+  sc error2 = 0.0;          // square of the Frobenius-norm of the update
+  sc frobnr2 = 0.0;         // square of the Frobenius-norm of the block
+  sc crit2;                 // auxiliary variable
+  sc tmp, max, pmax = 1.0;  // auxiliary variables
+  sc errU, errV;            // variables used for error computation
+  sc scale;                 // auxiliary variable
+  sc *p, *q;                // pointer to current rank-1-matrix
+  lo row_dim = full_nf_matrix.get_n_rows( );
+  lo col_dim = full_nf_matrix.get_n_columns( );
+  bool successful_compression = false;
+
+  besthea::bem::kernel_from_matrix nf_matrix_kernel( &full_nf_matrix );
+
+  // construct low rank components u and v_aux (large enough)
+  full_matrix_type u( row_dim, col_dim, true );
+  full_matrix_type v( col_dim, row_dim, true );
+
+  sc * u_data = u.data( );
+  sc * v_data = v.data( );
+
+  old_eps = _aca_eps;
+
+  // containers for row and column indices
+  std::vector< lo > Zi( row_dim, 1 );
+  std::vector< lo > Zj( col_dim, 1 );
+
+  // initialisation of indices
+  k = 0;
+  ik = 0;
+  jk = 0;
+
+  while ( 1 ) {
+    p = u_data + k * row_dim;  // memory address p = u_k
+    // compute u_k
+    {
+      // generate a new column
+      //      #pragma omp parallel for
+      for ( i = 0; i < row_dim; i++ )
+        if ( Zi[ i ] )
+          p[ i ] = nf_matrix_kernel.evaluate( i, jk );  // F(i, jk);
+
+      // compute the residuum
+      for ( ell = 0; ell < k; ell++ ) {
+        scale = v_data[ ell * col_dim + jk ];
+        q = u_data + ell * row_dim;
+        for ( i = 0; i < row_dim; i++ )
+          if ( Zi[ i ] )
+            p[ i ] -= scale * q[ i ];
+      }
+
+      // compute the maximum (pivot)
+      {
+        max = 0.0;
+        for ( i = 0; i < row_dim; i++ ) {
+          if ( Zi[ i ] ) {
+            tmp = std::abs( p[ i ] );
+
+            if ( tmp > max ) {
+              max = tmp;
+              ik = i;
+            }
+          }
+        }
+        pmax = std::max( pmax, max );
+      }
+    }
+
+    // check for zero column (TODO: currently hard coded)
+    if ( max < 1.0e-30 * pmax ) {
+      Zj[ jk ] = 0;
+      for ( jk = 0; jk < col_dim && Zj[ jk ] == 0; jk++ ) {
+      };
+
+      if ( jk == col_dim )  // all columns considered
+      {
+        if ( enable_svd_recompression && k > 0 ) {
+          low_rank_recompression( u, v, svd_recompression_reference_value, k );
+        }
+        error2 = frobnr2 * old_eps * old_eps;
+
+        if ( k * ( col_dim + row_dim ) < col_dim * row_dim ) {
+          successful_compression = true;
+        }
+
+        break;
+      }
+    } else {
+      // scale u_k
+      scale = 1.0 / p[ ik ];
+      for ( i = 0; i < row_dim; i++ )
+        if ( Zi[ i ] )
+          p[ i ] *= scale;
+
+      q = v_data + k * col_dim;  // memory address q = v_k
+
+      // compute v_k
+      {
+        // generate new row
+        //        #pragma omp parallel for
+        for ( j = 0; j < col_dim; j++ )
+          if ( Zj[ j ] )
+            q[ j ] = nf_matrix_kernel.evaluate( ik, j );  // F(ik, j);
+
+        // compute the residuum
+        for ( ell = 0; ell < k; ell++ ) {
+          scale = u_data[ ell * row_dim + ik ];
+          p = v_data + ell * col_dim;
+          for ( j = 0; j < col_dim; j++ )
+            if ( Zj[ j ] )
+              q[ j ] -= p[ j ] * scale;
+        }
+
+        // exclude rows and columns in the future iterations.
+        Zi[ ik ] = 0;
+        Zj[ jk ] = 0;
+
+        // compute the maximum (pivot)
+        max = 0.0;
+
+        for ( j = 0; j < col_dim; j++ ) {
+          if ( Zj[ j ] ) {
+            tmp = std::abs( q[ j ] );
+            if ( tmp > max ) {
+              max = tmp;
+              jk = j;
+            }
+          }
+        }
+        pmax = std::max( pmax, max );
+      }
+
+      // compute the stopping criterion
+      {
+        for ( ell = 0; ell < k; ell++ ) {
+          errU = cblas_ddot(
+            row_dim, &u_data[ ell * row_dim ], 1, &u_data[ k * row_dim ], 1 );
+          errV = cblas_ddot(
+            col_dim, &v_data[ k * col_dim ], 1, &v_data[ ell * col_dim ], 1 );
+          frobnr2 += 2.0 * errU * errV;
+        }
+
+        errU = cblas_ddot(
+          row_dim, &u_data[ k * row_dim ], 1, &u_data[ k * row_dim ], 1 );
+        errV = cblas_ddot(
+          col_dim, &v_data[ k * col_dim ], 1, &v_data[ k * col_dim ], 1 );
+        error2 = errU * errV;
+        frobnr2 += error2;
+
+        crit2 = ( _aca_eps ) * (_aca_eps) *frobnr2;
+      }
+
+      // increase the rank
+      k++;
+
+      // check the stopping criterion
+      if ( error2 < crit2 ) {
+        if ( enable_svd_recompression && k > 0 ) {
+          low_rank_recompression( u, v, svd_recompression_reference_value, k );
+        }
+
+        if ( k * ( col_dim + row_dim ) < col_dim * row_dim )
+          successful_compression = true;
+
+        break;
+      } else {
+        if ( k < _aca_max_rank && k >= std::min( col_dim, row_dim ) ) {
+          if ( enable_svd_recompression ) {
+            low_rank_recompression(
+              u, v, svd_recompression_reference_value, k );
+          }
+          error2 = frobnr2 * old_eps * old_eps;
+          if ( k * ( col_dim + row_dim ) < col_dim * row_dim )
+            successful_compression = true;
+
+          break;
+        }
+      }
+    }
+  }
+
+  // resize u, v to achieved rank
+  u.resize( row_dim, k, false );
+  v.resize( col_dim, k, false );
+
+  lr_nf_matrix
+    = std::move( low_rank_matrix_type( std::move( u ), std::move( v ) ) );
+
+  estimated_eps = sqrt( error2 / frobnr2 );
+
+  return successful_compression;
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
+  test_space_type,
+  trial_space_type >::low_rank_recompression( full_matrix_type & u,
+  full_matrix_type & v, sc svd_recompression_reference_value,
+  lo & rank ) const {
+  lo kmax;               // old rank
+  long i, j, k;          // indices
+  long lwork;            // size of workspace for LAPACK
+  long info;             // returninfo of LAPACK-routines
+  int minsize, maxsize;  // block sizes
+  sc * r_work;           // workspace for LAPACK
+  sc * sigma;            // singular values
+  sc *atmp, *btmp;       // auxiliary matrices
+  sc * rarb;             // R-matrix
+  sc *tau1, *tau2;       // auxiliary factor for QR-decomposition
+  sc *u_aux, *v_aux;     // auxiliary matrices for SVD
+  sc * csigma;           // singular values
+  sc * qr_work;          // Workspace for LAPACK
+
+  int rc_svd_flops = 0;  // Estimate of the required floating-point operations
+                         // for recompression
+
+  sc * u_data = u.data( );
+  sc * v_data = v.data( );
+  lo row_dim = u.get_n_rows( );
+  lo col_dim = v.get_n_rows( );
+
+  minsize = std::min( row_dim, col_dim );
+  maxsize = std::max( row_dim, col_dim );
+
+  kmax = rank;
+
+  atmp = new sc[ ( row_dim + col_dim ) * kmax ];
+  btmp = &atmp[ row_dim * kmax ];
+
+  // copy U to auxiliary container
+  for ( k = 0; k < kmax; k++ )
+    for ( i = 0; i < row_dim; i++ )
+      atmp[ i + k * row_dim ] = u_data[ i + k * row_dim ];
+
+#ifdef DEBUG_COMPRESS
+  printBlock< T >( "U", atmp, row_dim, kmax );
+#endif
+
+  // copy V to auxiliary container
+  for ( k = 0; k < kmax; k++ )
+    for ( j = 0; j < col_dim; j++ )
+      btmp[ j + k * col_dim ] = v_data[ j + k * col_dim ];
+
+#ifdef DEBUG_COMPRESS
+  printBlock< T >( "V", btmp, col_dim, kmax );
+#endif
+
+  // allocate storage for auxiliary variables and workspace
+  lwork = 8 * minsize + maxsize;
+  qr_work = new sc[ lwork + row_dim + col_dim + minsize + 3 * kmax * kmax ];
+  r_work = new sc[ minsize + 5 * kmax * kmax ];
+  tau1 = &qr_work[ lwork ];
+  tau2 = &qr_work[ lwork + row_dim ];
+  csigma = &qr_work[ lwork + row_dim + col_dim ];
+  rarb = &qr_work[ lwork + row_dim + col_dim + minsize ];
+  u_aux = &qr_work[ lwork + row_dim + col_dim + minsize + kmax * kmax ];
+  v_aux = &qr_work[ lwork + row_dim + col_dim + minsize + kmax * kmax
+    + kmax * kmax ];
+  sigma = &r_work[ 5 * kmax * kmax ];
+
+  // QR-decomposition of U
+  dgeqrf( &row_dim, &kmax, atmp, &row_dim, tau1, qr_work, &lwork, &info );
+  // update the number of flops by an appropriate estimate for that operation.
+  rc_svd_flops += 2 * kmax * kmax * row_dim;
+
+#ifdef DEBUG_COMPRESS
+  if ( info != 0 ) {
+    std::cout << "fatal error in recompression: RU" << std::endl;
+    exit( 1 );
+  }
+  printBlockFill( "RU", atmp, row_dim, kmax, row_dim );
+#endif
+
+  // QR-decomposition of V
+  dgeqrf( &col_dim, &kmax, btmp, &col_dim, tau2, qr_work, &lwork, &info );
+  // update the number of flops by an appropriate estimate for this operation.
+  rc_svd_flops += 2 * kmax * kmax * col_dim;
+
+#ifdef DEBUG_COMPRESS
+  if ( info != 0 ) {
+    std::cout << "fatal error in recompression: RV" << std::endl;
+    exit( 1 );
+  }
+  printBlockFill( "RV", btmp, col_dim, kmax, col_dim );
+#endif
+
+  // determine RU*RV'  (RU is the R matrix in QR decomposition of U, RV similar)
+  for ( i = 0; i < kmax * kmax; i++ ) rarb[ i ] = 0.0;
+
+  for ( i = 0; i < kmax; i++ )
+    for ( j = 0; j < kmax; j++ )
+      for ( k = std::max( i, j ); k < kmax; k++ )
+        // replaces for (k=0; k<kmax; k++) if ((k>=i) && (k>=j))
+        rarb[ i + kmax * j ]
+          += atmp[ i + k * row_dim ] * btmp[ j + k * col_dim ];
+
+#ifdef DEBUG_COMPRESS
+  printBlock< sc >( "R", rarb, kmax, kmax );
+#endif
+
+  // determine the matrix QU, i.e. Q in the QR decomposition of U
+  dorgqr(
+    &row_dim, &kmax, &kmax, atmp, &row_dim, tau1, qr_work, &lwork, &info );
+
+#ifdef DEBUG_COMPRESS
+  if ( info != 0 ) {
+    std::cout << "fatal error in recompression: QU" << std::endl;
+    exit( 1 );
+  }
+  printBlock< T >( "QU", atmp, row_dim, kmax );
+#endif
+
+  // determine the matrix QV, i.e. Q in the QR decomposition of V
+  dorgqr(
+    &col_dim, &kmax, &kmax, btmp, &col_dim, tau2, qr_work, &lwork, &info );
+
+#ifdef DEBUG_COMPRESS
+  if ( info != 0 ) {
+    std::cout << "fatal error in recompression: QV" << std::endl;
+    exit( 1 );
+  }
+  printBlock< sc >( "QV", btmp, col_dim, kmax );
+#endif
+
+  // sc diff = 0.0;  // auxiliary variable
+  // for ( i = 0; i < kmax * kmax; i++ ) {
+  //   if ( std::abs( rarb[ i ] ) < ( *eps ) * ( *eps ) )
+  //     rarb[ i ] = 0.0;
+  //   diff += std::abs( rarb[ i ] );
+  // }
+
+  // if ( diff < ( *eps ) * ( *eps ) ) {
+  //   std::cout << "RECOMPRESSION: setting new rank to 0" << std::endl;
+  //   *rank = 0;
+  // } else
+  {
+    // determine the SVD of RU*RV'
+    dgesvd( "A", "A", &kmax, &kmax, rarb, &kmax, sigma, u_aux, &kmax, v_aux,
+      &kmax, qr_work, &lwork, &info );
+    // update the number of flops by an appropriate estimate for this operation.
+    rc_svd_flops += 60 * kmax * kmax * kmax;
+
+    for ( i = 0; i < kmax; i++ ) csigma[ i ] = (sc) sigma[ i ];
+
+#ifdef DEBUG_COMPRESS
+    if ( info != 0 ) {
+      std::cout << "fatal error in recompression: SVN of R" << std::endl;
+      exit( 1 );
+    }
+    printBlock< sc >( "UR", u_aux, kmax, kmax );
+    printBlock< sc >( "SR", sigma, 1, kmax );
+    printBlockT< sc >( "VR", v_aux, kmax, kmax );
+#endif
+
+    for ( i = 0; i < kmax; i++ ) {
+      // scale UR with singular values
+      cblas_dscal(
+        kmax, csigma[ i ], &u_aux[ i * kmax ], 1 );  // for MKL and cblas
+      // dscal_ (&kmax, &sigma[i], &u_aux[i*kmax], eins_);
+      // copy VR
+      cblas_dcopy(
+        kmax, &v_aux[ i ], kmax, &rarb[ i * kmax ], 1 );  // for MKL and cblas
+      // dcopy_ (&kmax, &v_aux[i], &kmax, &rarb[i*kmax], eins_);
+    }
+
+#ifdef DEBUG_COMPRESS
+    printBlock< sc >( "URS", u_aux, kmax, kmax );
+#endif
+
+    sc actual_reference_value = sigma[ 0 ];
+    if ( svd_recompression_reference_value > 0.0 ) {
+      actual_reference_value = svd_recompression_reference_value;
+    }
+
+    for ( k = 0; ( k < kmax ) && ( k < row_dim ) && ( k < col_dim )
+          && ( sigma[ k ] > _aca_eps * actual_reference_value );
+          k++ ) {
+    };
+    // std::cout << "RECOMPRESSION: first singular value is " << sigma[ 0 ]
+    //           << ", original rank " << kmax << ", new rank " << k;
+    // if ( k < kmax ) {
+    //   std::cout << ", first truncated svd: " << sigma[ k ];
+    // }
+    // std::cout << std::endl;
+
+    rank = k;
+    if ( k > 0 ) {
+      // determine U = QU*UR
+      cblas_dgemm( CblasColMajor, CblasNoTrans, CblasNoTrans, row_dim, k, kmax,
+        1.0, atmp, row_dim, u_aux, kmax, 0.0, u_data, row_dim );
+
+      // determine V = QV*VR
+      cblas_dgemm( CblasColMajor, CblasNoTrans, CblasNoTrans, col_dim, k, kmax,
+        1.0, btmp, col_dim, rarb, kmax, 0.0, v_data, col_dim );
+      // update the number of flops by an appropriate estimate for this
+      // operation.
+      rc_svd_flops += 2 * ( row_dim + col_dim ) * k * k;
+    }
+
+#ifdef DEBUG_COMPRESS
+    printBlock< T >( "UC", u_data, row_dim, *rank );
+    printBlock< T >( "VC", v_data, col_dim, *rank );
+#endif
+  }
+
+  delete[] qr_work;
+  delete[] r_work;
+  delete[] atmp;
+
+  // std::cout << "required flops is " << rc_svd_flops << std::endl;
+
+  return;
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >

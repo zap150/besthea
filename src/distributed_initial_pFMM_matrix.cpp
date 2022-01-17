@@ -173,9 +173,9 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space, source_space >::resize_nearfield_matrix_container( ) {
   // resize the container for the clusterwise nearfield matrices
-  _clusterwise_nearfield_matrices.resize( _nearfield_list_vector.size( ) );
+  _clusterwise_nf_matrices.resize( _nearfield_list_vector.size( ) );
   for ( lou i = 0; i < _nearfield_list_vector.size( ); ++i ) {
-    _clusterwise_nearfield_matrices[ i ].resize(
+    _clusterwise_nf_matrices[ i ].resize(
       _nearfield_list_vector[ i ].second.size( ) );
   }
 }
@@ -204,8 +204,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
       sources.get_local_part< source_space >(
         space_src_cluster, local_sources );
 
-      full_matrix * current_block
-        = _clusterwise_nearfield_matrices[ i_tar ][ i_src ];
+      full_matrix * current_block = _clusterwise_nf_matrices[ i_tar ][ i_src ];
       // apply the nearfield matrix and add the result to local_result
       current_block->apply( local_sources, local_result, false, 1.0, 1.0 );
     }
@@ -1430,7 +1429,7 @@ besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   lo n_dofs_target = target_cluster->get_n_dofs< target_space >( );
   full_matrix * local_matrix = new full_matrix( n_dofs_target, n_dofs_source );
 
-  _clusterwise_nearfield_matrices[ leaf_index ][ source_index ] = local_matrix;
+  _clusterwise_nf_matrices[ leaf_index ][ source_index ] = local_matrix;
 
   return local_matrix;
 }

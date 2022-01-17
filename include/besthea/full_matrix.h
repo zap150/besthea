@@ -68,6 +68,12 @@ class besthea::linear_algebra::full_matrix
   full_matrix( const full_matrix & that );
 
   /**
+   * Move constructor
+   * @param[in] that Matrix to be moved.
+   */
+  full_matrix( full_matrix && that );
+
+  /**
    * Constructor with an initializer list.
    * @param[in] n_rows Number of rows.
    * @param[in] n_columns Number of columns.
@@ -87,6 +93,12 @@ class besthea::linear_algebra::full_matrix
    * Destructor.
    */
   virtual ~full_matrix( );
+
+  /**
+   * Move assignment operator for full matrix.
+   * @param[in] other Matrix whose data is moved.
+   */
+  full_matrix & operator=( full_matrix && other );
 
   /*!
    * @brief Prints the matrix.

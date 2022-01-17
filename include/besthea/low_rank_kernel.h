@@ -29,8 +29,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file low_rank_kernel.h
- * @brief Auxiliary routines providing kernel evaluations for aca_matrix
- * allocation.
+ * @brief Auxiliary routines providing kernel evaluations for construction of
+ * low rank matrices.
  */
 
 #ifndef INCLUDE_BESTHEA_LOW_RANK_KERNEL_H_
@@ -83,7 +83,7 @@ class besthea::bem::kernel_from_matrix
   /**
    * Constructor for the matrix kernel
    */
-  kernel_from_matrix( besthea::linear_algebra::full_matrix * matrix )
+  kernel_from_matrix( const besthea::linear_algebra::full_matrix * matrix )
     : _matrix( matrix ) {
   }
 
@@ -97,7 +97,7 @@ class besthea::bem::kernel_from_matrix
   };
 
  private:
-  besthea::linear_algebra::full_matrix * _matrix;
+  const besthea::linear_algebra::full_matrix * _matrix;
 };
 
 #endif  // INCLUDE_BESTHEA_LOW_RANK_KERNEL_H_

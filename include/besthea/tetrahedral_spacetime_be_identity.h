@@ -94,6 +94,13 @@ class besthea::bem::tetrahedral_spacetime_be_identity
     _data.print( );
   }
 
+  /**
+   * Returns the number of stored entries of the matrix.
+   */
+  virtual lo get_n_stored_entries( ) const {
+    return _data.get_n_stored_entries( );
+  }
+
   /*!
    * @brief y = beta * y + alpha * (this)^trans * x.
    * @param[in] x

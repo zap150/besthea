@@ -78,6 +78,13 @@ class besthea::linear_algebra::matrix
     return _n_columns;
   }
 
+  /**
+   * Returns the number of stored entries of the matrix.
+   */
+  virtual lo get_n_stored_entries( ) const {
+    return _n_rows * _n_columns;
+  }
+
  protected:
   lo & _n_rows{
     linear_operator::_dim_range

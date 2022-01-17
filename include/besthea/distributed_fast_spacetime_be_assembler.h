@@ -40,6 +40,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/full_matrix.h"
 #include "besthea/general_spacetime_cluster.h"
 #include "besthea/lagrange_interpolant.h"
+#include "besthea/low_rank_matrix.h"
 #include "besthea/quadrature.h"
 #include "besthea/settings.h"
 #include "besthea/tree_structure.h"
@@ -79,9 +80,10 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
   using full_matrix_type
     = besthea::linear_algebra::full_matrix;  //!< Shortcut for the full matrix
                                              //!< type.
-  using aca_matrix_type
-    = besthea::linear_algebra::aca_matrix;  //!< Shortcut for the aca matrix
-                                            //!< type
+                                             //!< type.
+  using low_rank_matrix_type
+    = besthea::linear_algebra::low_rank_matrix;  //!< Shortcut for the low rank
+                                                 //!< matrix type.
   using pfmm_matrix_type
     = besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       test_space_type,
@@ -275,18 +277,52 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
     full_matrix_type & nearfield_matrix ) const;
 
   /**
+   * Computes a low rank approximation of a given full matrix via ACA.
+   * @param[in] full_nf_matrix  Matrix for which a low rank approximation is
+   * computed.
+   * @param[in,out] lr_nf_matrix  If the routine succeeds, the low rank
+   * approximation is stored in this matrix.
+   * @param[out] estimated_eps  Estimated accuracy of the approximation.
+   * @param[in] enable_svd_recompression  If true, the low rank approximation
+   * obtained via ACA is further compressed by a truncated singular value
+   * decomposition (SVD)
+   * @param[in] svd_recompression_reference_value Reference value used to decide
+   * which singular values are truncated in case of a SVD recompression. If a
+   * value < 0 is provided, the largest singular value of the low rank matrix is
+   * used instead.
+   */
+  bool compute_low_rank_approximation( const full_matrix_type & full_nf_matrix,
+    low_rank_matrix_type & lr_nf_matrix, sc & estimated_eps,
+    bool enable_svd_recompression = false,
+    sc svd_recompression_reference_value = -1.0 ) const;
+
+  /**
+   * Tries to recompress a given low rank matrix via an SVD and subsequent
+   * truncation.
+   * @param[in] u Matrix U of the low rank matrix U*V^T.
+   * @param[in] v Matrix V of the low rank matrix U*V^T.
+   * @param[in] svd_recompression_reference_value Reference value used to decide
+   * which singular values are truncated. If a value < 0 is provided, the
+   * largest singular value of the low rank matrix is used instead.
+   * @param[out] rank New rank after recompression.
+   */
+  void low_rank_recompression( full_matrix_type & u, full_matrix_type & v,
+    sc svd_recompression_reference_value, lo & rank ) const;
+
+  /**
    * Determines the configuration of two spatial, triangular elements
-   * (triangles), i.e. whether they are disjoint, the same, or share a vertex or
-   * edge.
+   * (triangles), i.e. whether they are disjoint, the same, or share a vertex
+   * or edge.
    * @param[in] i_test_space Index of the spatial test element.
    * @param[in] i_trial_space Index of the spatial trial element.
-   * @param[out] type_int Type of the configuration (number of vertices shared).
+   * @param[out] type_int Type of the configuration (number of vertices
+   * shared).
    * @param[out] rot_test Virtual rotation of the test element.
    * @param[out] rot_trial Virtual rotation of the trial element.
    *
-   * @warning The routine relies on the fact, that the spatial mesh is the same
-   * for the nearfield mesh and the local mesh of a distributed spacetime mesh.
-   * If this is not the case the result is worng.
+   * @warning The routine relies on the fact, that the spatial mesh is the
+   * same for the nearfield mesh and the local mesh of a distributed spacetime
+   * mesh. If this is not the case the result is worng.
    */
   void get_type( lo i_test_space, lo i_trial_space, int & type_int,
     int & rot_test, int & rot_trial ) const;

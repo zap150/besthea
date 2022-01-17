@@ -35,7 +35,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_
 #define INCLUDE_BESTHEA_LINEAR_ALGEBRA_H_
 
-#include "besthea/aca_matrix.h"
 #include "besthea/block_lower_triangular_toeplitz_matrix.h"
 #include "besthea/block_mkl_cg_inverse.h"
 #include "besthea/block_mkl_fgmres_inverse.h"
@@ -51,6 +50,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/full_matrix.h"
 #include "besthea/indices.h"
 #include "besthea/low_rank_kernel.h"
+#include "besthea/low_rank_matrix.h"
 #include "besthea/mkl_cg_inverse.h"
 #include "besthea/mkl_fgmres_inverse.h"
 #include "besthea/sparse_matrix.h"

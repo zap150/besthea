@@ -25,7 +25,6 @@ enable_Eigen()
 enable_Lyra()
 
 set(besthea_INCLUDES
-  include/besthea/aca_matrix.h
   include/besthea/basis_function.h
   include/besthea/basis_tetra_p1.h
   include/besthea/basis_tri_p0.h
@@ -67,6 +66,7 @@ set(besthea_INCLUDES
   include/besthea/linear_algebra.h
   include/besthea/linear_operator.h
   include/besthea/low_rank_kernel.h
+  include/besthea/low_rank_matrix.h
   include/besthea/mainpage.h
   include/besthea/matrix.h
   include/besthea/mesh.h
@@ -139,7 +139,6 @@ set(besthea_cuda_INCLUDES
 )
 
 set(besthea_SOURCES
-  src/aca_matrix.cpp
   src/basis_tetra_p1.cpp
   src/basis_tri_p0.cpp
   src/basis_tri_p1.cpp
@@ -170,6 +169,7 @@ set(besthea_SOURCES
   src/indices.cpp
   src/io_routines.cpp
   src/linear_operator.cpp
+  src/low_rank_matrix.cpp
   src/mkl_cg_inverse.cpp
   src/mkl_fgmres_inverse.cpp
   src/quadrature.cpp
