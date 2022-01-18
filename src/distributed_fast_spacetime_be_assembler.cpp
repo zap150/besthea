@@ -165,6 +165,8 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   //     return ( total_sizes[ a ] > total_sizes[ b ] );
   //   } );
 
+  std::unordered_map< general_spacetime_cluster *, sc >
+    largest_sing_val_diag_blocks;
 // assemble the nearfield matrices in parallel
 #pragma omp parallel for schedule( dynamic, 1 )
   for ( std::vector< general_spacetime_cluster * >::size_type cluster_index = 0;
@@ -173,15 +175,85 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
     mesh::general_spacetime_cluster * current_cluster
       = ( *clusters_with_nearfield_operations )
         [ permutation_index[ cluster_index ] ];
+    if ( current_cluster->get_n_children( ) == 0 ) {
+      std::vector< general_spacetime_cluster * > * nearfield_list
+        = current_cluster->get_nearfield_list( );
+      for ( std::vector< general_spacetime_cluster * >::size_type src_index = 0;
+            src_index < nearfield_list->size( ); ++src_index ) {
+        mesh::general_spacetime_cluster * nearfield_cluster
+          = ( *nearfield_list )[ src_index ];
 
-    // TODO: estimate largest singular value
-    sc max_singular_value = -1.0;
+        full_matrix_type * block = global_matrix.create_nearfield_matrix(
+          permutation_index[ cluster_index ], src_index );
+        assemble_nearfield_matrix( current_cluster, nearfield_cluster, *block );
+        global_matrix.add_to_local_approximated_size(
+          block->get_n_rows( ) * block->get_n_columns( ) );
+        global_matrix.add_to_local_full_size(
+          block->get_n_rows( ) * block->get_n_columns( ) );
+        // if an aca recompression of spatially admissible nearfield blocks is
+        // active, estimate the largest singular value of the diagonal block.
+        if ( _aca_eps > 0.0 && current_cluster == nearfield_cluster ) {
+          sc current_max_svd = block->estimate_max_singular_value( );
+          largest_sing_val_diag_blocks.insert(
+            { current_cluster, current_max_svd } );
+        }
+      }
+    }
+  }
 
+  // in case of aca recompression, update the map of largest singular values for
+  // non-leaf clusters (where no diagonal nearfield matrix was computed)
+  if ( _aca_eps > 0.0 ) {
+    for ( std::vector< general_spacetime_cluster * >::size_type cluster_index
+          = 0;
+          cluster_index < clusters_with_nearfield_operations->size( );
+          ++cluster_index ) {
+      mesh::general_spacetime_cluster * current_cluster
+        = ( *clusters_with_nearfield_operations )
+          [ permutation_index[ cluster_index ] ];
+      if ( current_cluster->get_n_children( ) > 0 ) {
+        std::vector< general_spacetime_cluster * > current_leaf_descendants;
+        mesh::distributed_spacetime_cluster_tree * test_distributed_st_tree
+          = _test_space->get_tree( );
+        test_distributed_st_tree->collect_local_leaves(
+          *current_cluster, current_leaf_descendants );
+        // set the largest singular value for the current cluster to the maximum
+        // of all its descendants.
+        sc max_sing_val = 0.0;
+        for ( auto leaf_descendant : current_leaf_descendants ) {
+          max_sing_val = std::max(
+            max_sing_val, largest_sing_val_diag_blocks[ leaf_descendant ] );
+        }
+        largest_sing_val_diag_blocks.insert(
+          { current_cluster, max_sing_val } );
+      }
+    }
+  }
+
+  // auxiliary vectors to count the number of spatially admissible matrices and
+  // those of them which could not be compressed (in case of aca recompression)
+  std::vector< lo > n_tot_spat_adm_matrices_per_thread(
+    omp_get_max_threads( ), 0 );
+  std::vector< lo > n_failed_compression_spat_adm_per_thread(
+    omp_get_max_threads( ), 0 );
+  // next, assemble the spatially admissible nearfield matrices
+#pragma omp parallel for schedule( dynamic, 1 )
+  for ( std::vector< general_spacetime_cluster * >::size_type cluster_index = 0;
+        cluster_index < clusters_with_nearfield_operations->size( );
+        ++cluster_index ) {
+    mesh::general_spacetime_cluster * current_cluster
+      = ( *clusters_with_nearfield_operations )
+        [ permutation_index[ cluster_index ] ];
     std::vector< general_spacetime_cluster * > * spat_adm_nearfield_list
       = current_cluster->get_spatially_admissible_nearfield_list( );
     if ( spat_adm_nearfield_list != nullptr ) {
+      sc max_singular_value = 0.0;
+      if ( _aca_eps > 0.0 ) {
+        max_singular_value = largest_sing_val_diag_blocks[ current_cluster ];
+      }
       for ( std::vector< general_spacetime_cluster * >::size_type src_index = 0;
             src_index < spat_adm_nearfield_list->size( ); ++src_index ) {
+        n_tot_spat_adm_matrices_per_thread[ omp_get_thread_num( ) ]++;
         general_spacetime_cluster * nearfield_cluster
           = ( *spat_adm_nearfield_list )[ src_index ];
         lo n_cols = nearfield_cluster->get_n_dofs< trial_space_type >( );
@@ -192,48 +264,52 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
         full_matrix_type * full_block = new full_matrix_type( n_rows, n_cols );
         assemble_nearfield_matrix(
           current_cluster, nearfield_cluster, *full_block );
-        low_rank_matrix_type * lr_block = new low_rank_matrix_type( );
-        sc est_compression_error;
-        bool successful_compression
-          = compute_low_rank_approximation( *full_block, *lr_block,
-            est_compression_error, true, max_singular_value );
-        if ( successful_compression ) {
-          global_matrix.insert_spatially_admissible_nearfield_matrix(
-            permutation_index[ cluster_index ], src_index, lr_block );
-          delete full_block;
-          // update the auxiliary variables measuring the nearfield
-          lo rank = lr_block->get_rank( );
-          global_matrix.add_to_local_approximated_size(
-            rank * ( n_rows + n_cols ) );
-          global_matrix.add_to_local_full_size( n_rows * n_cols );
-        } else {
+        bool successful_compression = false;
+        if ( _aca_eps > 0.0 ) {
+          // try to compress the full_block via aca and an additional svd
+          low_rank_matrix_type * lr_block = new low_rank_matrix_type( );
+          sc est_compression_error;
+          successful_compression = compute_low_rank_approximation( *full_block,
+            *lr_block, est_compression_error, true, max_singular_value );
+          if ( successful_compression ) {
+            delete full_block;
+            lo rank = lr_block->get_rank( );
+            if ( rank > 0 ) {
+              global_matrix.insert_spatially_admissible_nearfield_matrix(
+                permutation_index[ cluster_index ], src_index, lr_block );
+            } else {
+              delete lr_block;
+            }
+            // update the auxiliary variables measuring the nearfield
+            // compression
+            global_matrix.add_to_local_approximated_size(
+              rank * ( n_rows + n_cols ) );
+            global_matrix.add_to_local_full_size( n_rows * n_cols );
+          } else {
+            delete lr_block;
+          }
+        }
+        if ( !successful_compression ) {
+          n_failed_compression_spat_adm_per_thread[ omp_get_thread_num( ) ]++;
           global_matrix.insert_spatially_admissible_nearfield_matrix(
             permutation_index[ cluster_index ], src_index, full_block );
-          delete lr_block;
           // update the auxiliary variables measuring the nearfield
           global_matrix.add_to_local_approximated_size( n_rows * n_cols );
           global_matrix.add_to_local_full_size( n_rows * n_cols );
         }
       }
     }
-    if ( current_cluster->get_n_children( ) == 0 ) {
-      std::vector< general_spacetime_cluster * > * nearfield_list
-        = current_cluster->get_nearfield_list( );
-      for ( std::vector< general_spacetime_cluster * >::size_type src_index = 0;
-            src_index < nearfield_list->size( ); ++src_index ) {
-        general_spacetime_cluster * nearfield_cluster
-          = ( *nearfield_list )[ src_index ];
-
-        full_matrix_type * block = global_matrix.create_nearfield_matrix(
-          permutation_index[ cluster_index ], src_index );
-        assemble_nearfield_matrix( current_cluster, nearfield_cluster, *block );
-        global_matrix.add_to_local_approximated_size(
-          block->get_n_rows( ) * block->get_n_columns( ) );
-        global_matrix.add_to_local_full_size(
-          block->get_n_rows( ) * block->get_n_columns( ) );
-      }
-    }
   }
+  lo n_failed_compression_spat_adm( 0 ), n_tot_spat_adm_matrices( 0 );
+  for ( lo i = 0; i < omp_get_num_threads( ); ++i ) {
+    n_failed_compression_spat_adm
+      += n_failed_compression_spat_adm_per_thread[ i ];
+    n_tot_spat_adm_matrices += n_tot_spat_adm_matrices_per_thread[ i ];
+  }
+  std::cout << "total number of spatially admissible nearfield matrices: "
+            << n_tot_spat_adm_matrices << std::endl;
+  std::cout << "failed compression in " << n_failed_compression_spat_adm
+            << " cases." << std::endl;
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >

@@ -85,6 +85,13 @@ class besthea::linear_algebra::matrix
     return _n_rows * _n_columns;
   }
 
+  /**
+   * Returns the rank of the matrix
+   */
+  virtual lo get_rank( ) const {
+    return std::min( _n_rows, _n_columns );
+  }
+
  protected:
   lo & _n_rows{
     linear_operator::_dim_range

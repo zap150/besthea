@@ -208,12 +208,12 @@ class besthea::linear_algebra::distributed_pFMM_matrix
         delete matrix;
       }
     }
-    for ( auto it = _clusterwise_spat_adm_nf_matrices.begin( );
-          it != _clusterwise_spat_adm_nf_matrices.end( ); ++it ) {
+    for ( auto it = _clusterwise_spat_adm_nf_matrix_pairs.begin( );
+          it != _clusterwise_spat_adm_nf_matrix_pairs.end( ); ++it ) {
       // loop over all nearfield aca matrices associated with a given spacetime
       // cluster and delete them.
-      for ( auto matrix : it->second ) {
-        delete matrix;
+      for ( auto matrix_pair : it->second ) {
+        delete matrix_pair.second;
       }
     }
   }
@@ -387,7 +387,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   /**
    * Initializes @ref _clusters_with_nearfield_operations and prepares
-   * @ref _clusterwise_nf_matrices and @ref _clusterwise_spat_adm_nf_matrices by
+   * @ref _clusterwise_nf_matrices and
+   * @ref _clusterwise_spat_adm_nf_matrix_pairs by
    * creating a map for each space-time target cluster and associated list of
    * nearfield matrices.
    */
@@ -1889,13 +1890,26 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   std::unordered_map< mesh::general_spacetime_cluster *,
     std::vector< full_matrix * > >
     _clusterwise_nf_matrices;  //!< nearfield matrices for all the space-
-                               //!< time leaf clusters and their
-                               //!< nearfield clusters.
+                               //!< time leaf clusters and the clusters in their
+                               //!< nearfield.
   std::unordered_map< mesh::general_spacetime_cluster *,
-    std::vector< matrix * > >
-    _clusterwise_spat_adm_nf_matrices;  //!< nearfield matrices for all the
-                                        //!< space- time leaf clusters and
-                                        //!< their nearfield clusters.
+    std::vector< std::pair< lo, matrix * > > >
+    _clusterwise_spat_adm_nf_matrix_pairs;  //!< For each cluster with a
+                                            //!< non-empty spatially admissible
+                                            //!< nearfield, this map points to a
+                                            //!< vector. The pairs of this
+                                            //!< vector consist of indices of
+                                            //!< clusters in the spatially
+                                            //!< admissible nearfield list, for
+                                            //!< which a non-zero nearfield
+                                            //!< matrix (full or low-rank) is
+                                            //!< stored and the respective
+                                            //!< matrix. Note: If an index of a
+                                            //!< cluster in the spatially
+                                            //!< admissible nearfield list is
+                                            //!< missing, the corresponding
+                                            //!< nearfield matrix is negligibly
+                                            //!< small.
 
   std::list< mesh::scheduling_time_cluster * >
     _m_list;  //!< M-list for the execution of the FMM.

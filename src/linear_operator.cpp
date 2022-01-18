@@ -30,6 +30,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/linear_operator.h"
 
+#include <math.h>
 #include <mkl_rci.h>
 #include <vector>
 
@@ -348,4 +349,28 @@ bool besthea::linear_algebra::linear_operator::mkl_fgmres_solve(
   }
 
   return true;
+}
+
+sc besthea::linear_algebra::linear_operator::estimate_max_singular_value( )
+  const {
+  sc est_largest_sing_val = -1.0;
+
+  vector_type iteration_vec( _dim_domain, false );
+  iteration_vec.random_fill( 0.0, 1.0 );
+  iteration_vec.scale( 1.0 / iteration_vec.norm( ) );
+  vector_type prod_A( _dim_range, true );
+  vector_type prod_A_adj( _dim_domain, true );
+
+  // do 20 iterations of the power method
+  for ( lo i = 0; i < 20; ++i ) {
+    apply( iteration_vec, prod_A );
+    apply( prod_A, prod_A_adj, true );
+    est_largest_sing_val = std::sqrt( prod_A_adj.norm( ) );
+
+    // prepare for next iteration step
+    iteration_vec = prod_A_adj;
+    iteration_vec.scale(
+      1.0 / ( est_largest_sing_val * est_largest_sing_val ) );
+  }
+  return est_largest_sing_val;
 }

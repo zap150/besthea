@@ -1420,7 +1420,7 @@ class besthea::mesh::general_spacetime_cluster {
     if ( z_diff < 0 ) {
       z_diff = coord_2_low - _box_coordinate[ 3 ];
     }
-    bool are_separated = ( x_diff > 1 || y_diff > 1 | z_diff > 1 );
+    bool are_separated = ( x_diff > 1 || y_diff > 1 || z_diff > 1 );
     return are_separated;
   }
 };

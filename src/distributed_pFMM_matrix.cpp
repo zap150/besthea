@@ -87,9 +87,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     auto spat_adm_nearfield_list
       = cluster->get_spatially_admissible_nearfield_list( );
     if ( spat_adm_nearfield_list != nullptr ) {
-      _clusterwise_spat_adm_nf_matrices.insert(
-        { cluster, std::vector< matrix * >( ) } );
-      _clusterwise_spat_adm_nf_matrices[ cluster ].resize(
+      _clusterwise_spat_adm_nf_matrix_pairs.insert(
+        { cluster, std::vector< std::pair< lo, matrix * > >( ) } );
+      _clusterwise_spat_adm_nf_matrix_pairs[ cluster ].reserve(
         spat_adm_nearfield_list->size( ) );
     }
   }
@@ -359,8 +359,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     lou nf_cluster_index, lou source_index, matrix * nf_matrix ) {
   general_spacetime_cluster * target_cluster
     = _clusters_with_nearfield_operations[ nf_cluster_index ];
-  _clusterwise_spat_adm_nf_matrices[ target_cluster ][ source_index ]
-    = nf_matrix;
+  _clusterwise_spat_adm_nf_matrix_pairs[ target_cluster ].push_back(
+    { source_index, nf_matrix } );
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -7093,8 +7093,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     = t_cluster->get_assoc_nearfield_targets( );
 
   // there is an implicit taskgroup associated with this taskloop
-#pragma omp taskloop shared( \
-  output_vector, _clusterwise_nf_matrices, assoc_nearfield_targets )
+#pragma omp taskloop shared( output_vector, _clusterwise_nf_matrices, \
+  _clusterwise_spat_adm_nf_matrix_pairs, assoc_nearfield_targets )
   for ( lou i = 0; i < assoc_nearfield_targets->size( ); ++i ) {
     if ( _measure_tasks ) {
       _n_subtask_times.at( omp_get_thread_num( ) )
@@ -7112,8 +7112,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     std::vector< general_spacetime_cluster * > * st_spat_adm_nearfield_list
       = current_spacetime_target->get_spatially_admissible_nearfield_list( );
     if ( st_spat_adm_nearfield_list != nullptr ) {
-      for ( lou src_index = 0; src_index < st_spat_adm_nearfield_list->size( );
-            ++src_index ) {
+      const std::vector< std::pair< lo, matrix * > > & spat_adm_nf_matrix_pairs
+        = _clusterwise_spat_adm_nf_matrix_pairs.at( current_spacetime_target );
+      for ( lou pair_index = 0; pair_index < spat_adm_nf_matrix_pairs.size( );
+            ++pair_index ) {
+        lo src_index = spat_adm_nf_matrix_pairs[ pair_index ].first;
         general_spacetime_cluster * current_spacetime_source
           = ( *st_spat_adm_nearfield_list )[ src_index ];
         local_sources.resize(
@@ -7123,8 +7126,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         sources.get_local_part< source_space >(
           current_spacetime_source, local_sources );
 
-        matrix * current_block = _clusterwise_spat_adm_nf_matrices.at(
-          current_spacetime_target )[ src_index ];
+        matrix * current_block = spat_adm_nf_matrix_pairs[ pair_index ].second;
         // apply the approximated nearfield matrix (or the full, if compression
         // was not successful) and add the result to local_result
         current_block->apply( local_sources, local_result, trans, 1.0, 1.0 );
@@ -7536,10 +7538,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         current_spat_adm_nearfield
         = current_spacetime_target->get_spatially_admissible_nearfield_list( );
       if ( current_spat_adm_nearfield != nullptr ) {
-        for ( lou src_index = 0;
-              src_index < current_spat_adm_nearfield->size( ); ++src_index ) {
-          matrix * current_block = _clusterwise_spat_adm_nf_matrices.at(
-            current_spacetime_target )[ src_index ];
+        const std::vector< std::pair< lo, matrix * > > &
+          spat_adm_nf_matrix_pairs
+          = _clusterwise_spat_adm_nf_matrix_pairs.at(
+            current_spacetime_target );
+        for ( lou pair_index = 0; pair_index < spat_adm_nf_matrix_pairs.size( );
+              ++pair_index ) {
+          matrix * current_block
+            = spat_adm_nf_matrix_pairs[ pair_index ].second;
           total_nf_size_current_t_cluster
             += current_block->get_n_stored_entries( );
         }

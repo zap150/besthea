@@ -131,6 +131,15 @@ class besthea::linear_algebra::linear_operator {
     bool trans_preconditioner = false ) const;
 
   /**
+   * Computes and returns an estimate of the largest singular value of the
+   * linear operator.
+   * @warning The routine executes only 20 iterations of the power method
+   * starting from a random vector. Thus, it is not guaranteed that the
+   * resulting estimate is reliable in general.
+   */
+  sc estimate_max_singular_value( ) const;
+
+  /**
    * Returns the domain dimension.
    */
   lo get_dim_domain( ) const {

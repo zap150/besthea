@@ -97,7 +97,7 @@ class besthea::linear_algebra::low_rank_matrix
   /**
    * Returns the rank of the low rank matrix.
    */
-  lo get_rank( ) const {
+  virtual lo get_rank( ) const {
     return _u.get_n_columns( );
   }
 
