@@ -301,7 +301,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
     }
   }
   lo n_failed_compression_spat_adm( 0 ), n_tot_spat_adm_matrices( 0 );
-  for ( lo i = 0; i < omp_get_num_threads( ); ++i ) {
+  for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
     n_failed_compression_spat_adm
       += n_failed_compression_spat_adm_per_thread[ i ];
     n_tot_spat_adm_matrices += n_tot_spat_adm_matrices_per_thread[ i ];

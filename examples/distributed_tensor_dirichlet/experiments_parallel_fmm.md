@@ -10,14 +10,14 @@ To run the experiments, please build the BESTHEA library as explained in [`READM
 ```
 -DBUILD_EXAMPLES=ON
 ```
-In the following we will denote the build directory by `BUILD` and the root directory of the besthea library by `BESTHEA`. All experiments are based on the same executable `distributed_tensor_dirichlet`
-which is, after calling `make install`, located in
+In the following we will denote the build directory by `BUILD` and the root directory of the besthea library by `BESTHEA`. All experiments are based on the same executable `distributed_tensor_dirichlet`.
+After calling `make install` this executable is located in
 ```
 BUILD/bin
 ```
 The input mesh files are copied into the same directory during the installation.
 
-In the following we list the parameters to use to reproduce all the numerical examples. For details about the individual parameters please execute `distributed_tensor_dirichlet --help`. For details regarding the used hardware and compiler options of each experiment we refer to the paper.
+In the following we list the parameters to use to reproduce all the numerical examples. For details about the individual parameters please execute `distributed_tensor_dirichlet --help`. For details regarding the used hardware we refer to the paper.
 
 ## Example 1: Shared memory performance
 
