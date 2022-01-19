@@ -731,7 +731,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
     std::cout << std::endl;
     // todo: adapt this for distributed matrix
-    if ( _aca_max_rank > 0 && _local_approximated_size != 0 ) {
+    if ( _aca_eps > 0.0 && _local_approximated_size != 0 ) {
       std::cout << "ACA compression rate is " << 1 - get_local_compress_ratio( )
                 << std::endl;
     }
@@ -5753,6 +5753,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // start the main "job scheduling" algorithm
   // the "master" thread checks for new available data, spawns tasks, and
   // removes clusters from lists
+  lo scheduling_thread;
 #pragma omp parallel
   {
     _aux_buffer_0[ omp_get_thread_num( ) ].resize(
@@ -5760,31 +5761,34 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     _aux_buffer_1[ omp_get_thread_num( ) ].resize(
       ( _temp_order + 1 ) * ( _temp_order + 1 ), _spat_contribution_size );
 
-    _m_task_times.at( omp_get_thread_num( ) ).resize( 0 );
-    _m2l_task_times.at( omp_get_thread_num( ) ).resize( 0 );
-    _l_task_times.at( omp_get_thread_num( ) ).resize( 0 );
-    _n_task_times.at( omp_get_thread_num( ) ).resize( 0 );
-    _m_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
-    _m2l_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
-    _l_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
-    _m2t_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
-    _s2l_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
-    _n_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
-    _mpi_send_m2l_m2t_or_s2l.at( omp_get_thread_num( ) ).resize( 0 );
-    _mpi_send_m_parent.at( omp_get_thread_num( ) ).resize( 0 );
-    _mpi_send_l_children.at( omp_get_thread_num( ) ).resize( 0 );
-    _mpi_recv_m2l_m2t_or_s2l.at( omp_get_thread_num( ) ).resize( 0 );
-    _mpi_recv_m_parent.at( omp_get_thread_num( ) ).resize( 0 );
-    _mpi_recv_l_children.at( omp_get_thread_num( ) ).resize( 0 );
+    if ( run_count == 0 ) {
+      _m_task_times.at( omp_get_thread_num( ) ).resize( 0 );
+      _m2l_task_times.at( omp_get_thread_num( ) ).resize( 0 );
+      _l_task_times.at( omp_get_thread_num( ) ).resize( 0 );
+      _n_task_times.at( omp_get_thread_num( ) ).resize( 0 );
+      _m_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
+      _m2l_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
+      _l_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
+      _m2t_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
+      _s2l_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
+      _n_subtask_times.at( omp_get_thread_num( ) ).resize( 0 );
+      _mpi_send_m2l_m2t_or_s2l.at( omp_get_thread_num( ) ).resize( 0 );
+      _mpi_send_m_parent.at( omp_get_thread_num( ) ).resize( 0 );
+      _mpi_send_l_children.at( omp_get_thread_num( ) ).resize( 0 );
+      _mpi_recv_m2l_m2t_or_s2l.at( omp_get_thread_num( ) ).resize( 0 );
+      _mpi_recv_m_parent.at( omp_get_thread_num( ) ).resize( 0 );
+      _mpi_recv_l_children.at( omp_get_thread_num( ) ).resize( 0 );
+    }
 
 #pragma omp single
     {
+      scheduling_thread = omp_get_thread_num( );
       if ( _verbose ) {
 #pragma omp critical( verbose )
         {
           std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
           if ( outfile.is_open( ) ) {
-            outfile << "Scheduling thread is " << omp_get_thread_num( )
+            outfile << "Scheduling thread is " << scheduling_thread
                     << std::endl;
             outfile.close( );
           }
@@ -6146,8 +6150,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
   // print out task timing
   if ( _measure_tasks ) {
-    save_times( loop_end - loop_start,
-      _global_timer.get_time_from_start< time_type >( ) );
+    save_times< run_count >( loop_end - loop_start,
+      _global_timer.get_time_from_start< time_type >( ), scheduling_thread );
   }
 }
 
@@ -7170,10 +7174,25 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 }
 
 template< class kernel_type, class target_space, class source_space >
+template< slou run_count >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::save_times( time_type::rep total_loop_duration,
-  time_type::rep total_apply_duration ) const {
+  time_type::rep total_apply_duration, lo scheduling_thread ) const {
   std::filesystem::create_directory( "./task_timer/" );
+
+  std::string scheduling_thread_file = "task_timer/scheduling_threads_process_";
+  scheduling_thread_file += std::to_string( _my_rank );
+  scheduling_thread_file += ".txt";
+  if ( run_count == 0 ) {
+    remove( scheduling_thread_file.c_str( ) );
+  }
+
+  std::ofstream outfile_txt( scheduling_thread_file.c_str( ), std::ios::app );
+
+  if ( outfile_txt.is_open( ) ) {
+    outfile_txt << "Scheduling thread in run " << run_count << ": "
+                << scheduling_thread << std::endl;
+  }
 
   std::string timer_file = "task_timer/process_";
   timer_file += std::to_string( _my_rank );

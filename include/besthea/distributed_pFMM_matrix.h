@@ -77,6 +77,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
  public:
   using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
   using timer_type = besthea::tools::timer;             //!< Timer type
+  // using clock_type = std::chrono::high_resolution_clock;
+  using time_type = std::chrono::microseconds;  //!< Unit type.
 
   /**
    * Wraps the mapped quadrature point so that they can be private for OpenMP
@@ -1874,6 +1876,48 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   void upward_path_task(
     lou current_index, mesh::scheduling_time_cluster * current_cluster ) const;
 
+  /**
+   * Increases @ref _non_nf_op_count.
+   */
+  void add_nn_operations( ) const {
+#pragma omp atomic update
+    _non_nf_op_count++;
+  }
+
+  /**
+   * Decreases @ref _non_nf_op_count.
+   */
+  void reduce_nn_operations( ) const {
+#pragma omp atomic update
+    _non_nf_op_count--;
+  }
+
+  /**
+   * @returns the value of @ref _non_nf_op_count
+   */
+  lo get_nn_operations( ) const {
+    lo ret_val;
+#pragma omp atomic read
+    ret_val = _non_nf_op_count;
+    return ret_val;
+  }
+
+  /**
+   * Saves task duration measurement per thread in files (1 per MPI rank).
+   * @param[in] total_loop_duration Total duration of the pFMM loop that is
+   * printed to the file.
+   * @param[in] total_apply_duration Total duration of the pFMM procedure
+   * (including setup times, starting from the call of "apply") that is
+   * printed to the file.
+   * @param[in] scheduling_thread Number of the OpenMP thread that acted as the
+   * scheduling thread in the pFMM procedure.
+   * @tparam  run_count This parameter keeps track how often the pFMM procedure
+   *                    has been executed.
+   */
+  template< slou run_count >
+  void save_times( time_type::rep total_loop_duration,
+    time_type::rep total_apply_duration, lo scheduling_thread ) const;
+
   const MPI_Comm *
     _comm;       //!< MPI communicator associated with the pFMM matrix.
   int _my_rank;  //!< MPI rank of current process.
@@ -2030,36 +2074,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   mutable lo _non_nf_op_count;  //!< counter to keep track of the number of
                                 //!< scheduled non-nearfield operations
 
-  /**
-   * Increases @ref _non_nf_op_count.
-   */
-  void add_nn_operations( ) const {
-#pragma omp atomic update
-    _non_nf_op_count++;
-  }
-
-  /**
-   * Decreases @ref _non_nf_op_count.
-   */
-  void reduce_nn_operations( ) const {
-#pragma omp atomic update
-    _non_nf_op_count--;
-  }
-
-  /**
-   * @returns the value of @ref _non_nf_op_count
-   */
-  lo get_nn_operations( ) const {
-    lo ret_val;
-#pragma omp atomic read
-    ret_val = _non_nf_op_count;
-    return ret_val;
-  }
-
   mutable timer_type _global_timer;  //!< structure for time measurements.
-
-  // using clock_type = std::chrono::high_resolution_clock;
-  using time_type = std::chrono::microseconds;  //!< Unit type.
 
   mutable std::vector< std::vector< time_type::rep > >
     _m_task_times;  //!< Contains a vector for each thread in which the
@@ -2127,12 +2142,6 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     _mpi_recv_l_children;  //!< Same as @ref _mpi_recv_m2l_m2t_or_s2l for
                            //!< receiving local contributions needed for l-list
                            //!< operations.
-
-  /**
-   * Saves task duration measurement per thread in files (1 per MPI rank).
-   */
-  void save_times( time_type::rep total_loop_duration,
-    time_type::rep total_apply_duration ) const;
 };
 
 /** Typedef for the distributed single layer p0-p0 PFMM matrix */
