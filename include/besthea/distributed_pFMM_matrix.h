@@ -1711,9 +1711,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * returns an individual vector.
    */
   void compute_nearfield_entries_levelwise(
-    std::vector< lo > & levelwise_nf_entries_total_uncompressed,
-    std::vector< lo > & levelwise_nf_entries_spat_adm_uncompressed,
-    std::vector< lo > & levelwise_nf_entries_spat_adm_compressed ) const;
+    std::vector< long long > & levelwise_nf_entries_total_uncompressed,
+    std::vector< long long > & levelwise_nf_entries_spat_adm_uncompressed,
+    std::vector< long long > & levelwise_nf_entries_spat_adm_compressed ) const;
 
   /**
    * In this routine each process counts the number of entries in its nearfield
@@ -1728,7 +1728,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * returns an individual vector.
    */
   void compute_time_separated_nearfield_entries_levelwise(
-    std::vector< lo > & levelwise_time_separated_nearfield_entries ) const;
+    std::vector< long long > & levelwise_time_separated_nearfield_entries )
+    const;
 
   /**
    * Counts the number of all FMM operations levelwise
@@ -1748,13 +1749,14 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * levelwise M2T operations.
    * @note m2m and l2l operations are counted for the levels of the children
    */
-  void count_fmm_operations_levelwise( std::vector< lou > & n_s2m_operations,
-    std::vector< lou > & n_m2m_operations,
-    std::vector< lou > & n_m2l_operations,
-    std::vector< lou > & n_l2l_operations,
-    std::vector< lou > & n_l2t_operations,
-    std::vector< lou > & n_s2l_operations,
-    std::vector< lou > & n_m2t_operations ) const;
+  void count_fmm_operations_levelwise(
+    std::vector< long long > & n_s2m_operations,
+    std::vector< long long > & n_m2m_operations,
+    std::vector< long long > & n_m2l_operations,
+    std::vector< long long > & n_l2l_operations,
+    std::vector< long long > & n_l2t_operations,
+    std::vector< long long > & n_s2l_operations,
+    std::vector< long long > & n_m2t_operations ) const;
 
   /**
    * Primary task for a time cluster in the M-list.

@@ -725,11 +725,12 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * levelwise L2T operations.
    * @note m2m and l2l operations are counted for the levels of the children
    */
-  void count_fmm_operations_levelwise( std::vector< lou > & n_s2m_operations,
-    std::vector< lou > & n_m2m_operations,
-    std::vector< lou > & n_m2l_operations,
-    std::vector< lou > & n_l2l_operations,
-    std::vector< lou > & n_l2t_operations ) const;
+  void count_fmm_operations_levelwise(
+    std::vector< long long > & n_s2m_operations,
+    std::vector< long long > & n_m2m_operations,
+    std::vector< long long > & n_m2l_operations,
+    std::vector< long long > & n_l2l_operations,
+    std::vector< long long > & n_l2t_operations ) const;
 
   /**
    * Counts the number of m2m operations for all levels in the source volume
@@ -740,7 +741,7 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    */
   void count_m2m_operations_recursively(
     const mesh::volume_space_cluster & current_cluster,
-    std::vector< lou > & n_m2m_operations ) const;
+    std::vector< long long > & n_m2m_operations ) const;
 
   /**
    * Counts the number of l2l and l2t operations for all levels in the target
@@ -755,8 +756,8 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    */
   void count_l2l_and_l2t_operations_recursively(
     const mesh::scheduling_time_cluster & current_cluster,
-    std::vector< lou > & n_l2l_operations,
-    std::vector< lou > & n_l2t_operations ) const;
+    std::vector< long long > & n_l2l_operations,
+    std::vector< long long > & n_l2t_operations ) const;
 
   const MPI_Comm *
     _comm;       //!< MPI communicator associated with the pFMM matrix.

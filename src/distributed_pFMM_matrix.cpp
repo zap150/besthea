@@ -455,10 +455,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // compute the number of nearfield entries on each process (total, spatially
   // admissible, spatially admissible compressed) and separately those
   // corresponding to time-separated clusters
-  std::vector< lo > loc_lvlwise_tot_nf_entries_uncompressed;
-  std::vector< lo > loc_lvlwise_spat_adm_nf_entries_no_compr;
-  std::vector< lo > loc_lvlwise_spat_adm_nf_entries_compr;
-  std::vector< lo > loc_lvlwise_time_separated_nf_entries;
+  std::vector< long long > loc_lvlwise_tot_nf_entries_uncompressed;
+  std::vector< long long > loc_lvlwise_spat_adm_nf_entries_no_compr;
+  std::vector< long long > loc_lvlwise_spat_adm_nf_entries_compr;
+  std::vector< long long > loc_lvlwise_time_separated_nf_entries;
   compute_nearfield_entries_levelwise( loc_lvlwise_tot_nf_entries_uncompressed,
     loc_lvlwise_spat_adm_nf_entries_no_compr,
     loc_lvlwise_spat_adm_nf_entries_compr );
@@ -474,38 +474,37 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // gather the number of nearfield entries at the root process
   int n_processes;
   MPI_Comm_size( *_comm, &n_processes );
-  lo * all_loc_tot_nf_entries = nullptr;
-  lo * all_loc_spat_adm_nf_entries = nullptr;
-  lo * all_loc_compr_spat_adm_nf_entries = nullptr;
-  lo * all_loc_separated_entries = nullptr;
+  long long * all_loc_tot_nf_entries = nullptr;
+  long long * all_loc_spat_adm_nf_entries = nullptr;
+  long long * all_loc_compr_spat_adm_nf_entries = nullptr;
+  long long * all_loc_separated_entries = nullptr;
   if ( _my_rank == root_process ) {
-    all_loc_tot_nf_entries = new lo[ n_processes * n_global_tree_levels ];
-    all_loc_spat_adm_nf_entries = new lo[ n_processes * n_global_tree_levels ];
+    all_loc_tot_nf_entries
+      = new long long[ n_processes * n_global_tree_levels ];
+    all_loc_spat_adm_nf_entries
+      = new long long[ n_processes * n_global_tree_levels ];
     all_loc_compr_spat_adm_nf_entries
-      = new lo[ n_processes * n_global_tree_levels ];
-    all_loc_separated_entries = new lo[ n_processes * n_global_tree_levels ];
+      = new long long[ n_processes * n_global_tree_levels ];
+    all_loc_separated_entries
+      = new long long[ n_processes * n_global_tree_levels ];
   }
   MPI_Gather( loc_lvlwise_tot_nf_entries_uncompressed.data( ),
-    n_global_tree_levels, get_index_type< lo >::MPI_LO( ),
-    all_loc_tot_nf_entries, n_global_tree_levels,
-    get_index_type< lo >::MPI_LO( ), root_process, *_comm );
+    n_global_tree_levels, MPI_LONG_LONG_INT, all_loc_tot_nf_entries,
+    n_global_tree_levels, MPI_LONG_LONG_INT, root_process, *_comm );
   MPI_Gather( loc_lvlwise_spat_adm_nf_entries_no_compr.data( ),
-    n_global_tree_levels, get_index_type< lo >::MPI_LO( ),
-    all_loc_spat_adm_nf_entries, n_global_tree_levels,
-    get_index_type< lo >::MPI_LO( ), root_process, *_comm );
+    n_global_tree_levels, MPI_LONG_LONG_INT, all_loc_spat_adm_nf_entries,
+    n_global_tree_levels, MPI_LONG_LONG_INT, root_process, *_comm );
   MPI_Gather( loc_lvlwise_spat_adm_nf_entries_compr.data( ),
-    n_global_tree_levels, get_index_type< lo >::MPI_LO( ),
-    all_loc_compr_spat_adm_nf_entries, n_global_tree_levels,
-    get_index_type< lo >::MPI_LO( ), root_process, *_comm );
+    n_global_tree_levels, MPI_LONG_LONG_INT, all_loc_compr_spat_adm_nf_entries,
+    n_global_tree_levels, MPI_LONG_LONG_INT, root_process, *_comm );
   if ( !using_m2t_and_s2l_operations ) {
     MPI_Gather( loc_lvlwise_time_separated_nf_entries.data( ),
-      n_global_tree_levels, get_index_type< lo >::MPI_LO( ),
-      all_loc_separated_entries, n_global_tree_levels,
-      get_index_type< lo >::MPI_LO( ), root_process, *_comm );
+      n_global_tree_levels, MPI_LONG_LONG_INT, all_loc_separated_entries,
+      n_global_tree_levels, MPI_LONG_LONG_INT, root_process, *_comm );
   }
 
   // count the fmm operations levelwise
-  std::vector< lou > n_s2m_operations, n_m2m_operations, n_m2l_operations,
+  std::vector< long long > n_s2m_operations, n_m2m_operations, n_m2l_operations,
     n_l2l_operations, n_l2t_operations, n_s2l_operations, n_m2t_operations;
   count_fmm_operations_levelwise( n_s2m_operations, n_m2m_operations,
     n_m2l_operations, n_l2l_operations, n_l2t_operations, n_s2l_operations,
@@ -514,34 +513,34 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // operations
   if ( _my_rank == root_process ) {
     MPI_Reduce( MPI_IN_PLACE, n_s2m_operations.data( ), n_global_tree_levels,
-      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+      MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
     MPI_Reduce( MPI_IN_PLACE, n_m2m_operations.data( ), n_global_tree_levels,
-      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+      MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
     MPI_Reduce( MPI_IN_PLACE, n_m2l_operations.data( ), n_global_tree_levels,
-      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+      MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
     MPI_Reduce( MPI_IN_PLACE, n_l2l_operations.data( ), n_global_tree_levels,
-      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+      MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
     MPI_Reduce( MPI_IN_PLACE, n_l2t_operations.data( ), n_global_tree_levels,
-      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+      MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
     MPI_Reduce( MPI_IN_PLACE, n_s2l_operations.data( ), n_global_tree_levels,
-      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+      MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
     MPI_Reduce( MPI_IN_PLACE, n_m2t_operations.data( ), n_global_tree_levels,
-      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+      MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
   } else {
     MPI_Reduce( n_s2m_operations.data( ), nullptr, n_global_tree_levels,
-      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+      MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
     MPI_Reduce( n_m2m_operations.data( ), nullptr, n_global_tree_levels,
-      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+      MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
     MPI_Reduce( n_m2l_operations.data( ), nullptr, n_global_tree_levels,
-      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+      MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
     MPI_Reduce( n_l2l_operations.data( ), nullptr, n_global_tree_levels,
-      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+      MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
     MPI_Reduce( n_l2t_operations.data( ), nullptr, n_global_tree_levels,
-      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+      MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
     MPI_Reduce( n_s2l_operations.data( ), nullptr, n_global_tree_levels,
-      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+      MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
     MPI_Reduce( n_m2t_operations.data( ), nullptr, n_global_tree_levels,
-      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+      MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
   }
   // count the number of allocated moments (own and received) and
   // local contributions
@@ -680,13 +679,13 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       n_processes, 0.0 );
     // add up the nearfield entries processwise or levelwise for the respective
     // counters (and all of them for a total count)
-    lo total_nearfield_entries = 0;
-    lo total_nearfield_entries_spat_adm_no_compr = 0;
-    lo total_nearfield_entries_spat_adm_compr = 0;
+    long long total_nearfield_entries = 0;
+    long long total_nearfield_entries_spat_adm_no_compr = 0;
+    long long total_nearfield_entries_spat_adm_compr = 0;
     // in case that m2t and s2l operations are used, summing time separated
     // nearfield storage is obsolete, because all entries of the corresponding
     // arrays are zero. still it is done, since the effort is negligible.
-    lo total_nearfield_entries_time_separated_part = 0;
+    long long total_nearfield_entries_time_separated_part = 0;
     for ( lo i = 0; i < n_processes; ++i ) {
       for ( lo j = 0; j < n_global_tree_levels; ++j ) {
         global_levelwise_nearfield_storage[ j ]
@@ -735,6 +734,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       global_levelwise_time_separated_nearfield_storage[ i ]
         *= 8. / 1024. / 1024. / 1024.;
     }
+    long long total_nf_entries_compr = total_nearfield_entries
+      - total_nearfield_entries_spat_adm_no_compr
+      + total_nearfield_entries_spat_adm_compr;
     sc total_storage_nearfield
       = total_nearfield_entries * 8. / 1024. / 1024. / 1024.;
     sc total_storage_spat_adm_nf_no_compr
@@ -819,7 +821,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     std::cout << std::endl;
     if ( total_storage_spat_adm_nf_compr > 0 ) {
       std::cout << "Nearfield ratio compressed: "
-                << total_storage_nf_compr / ( n_target_dofs * n_source_dofs )
+                << (sc) total_nf_entries_compr
+          / ( n_target_dofs * n_source_dofs )
                 << std::endl;
       std::cout << "Compression rate for spatially admissible part: "
                 << 1
@@ -5406,9 +5409,10 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::
   compute_nearfield_entries_levelwise(
-    std::vector< lo > & levelwise_nf_entries_total_uncompressed,
-    std::vector< lo > & levelwise_nf_entries_spat_adm_uncompressed,
-    std::vector< lo > & levelwise_nf_entries_spat_adm_compressed ) const {
+    std::vector< long long > & levelwise_nf_entries_total_uncompressed,
+    std::vector< long long > & levelwise_nf_entries_spat_adm_uncompressed,
+    std::vector< long long > & levelwise_nf_entries_spat_adm_compressed )
+    const {
   levelwise_nf_entries_total_uncompressed.resize(
     _distributed_spacetime_tree->get_n_levels( ) );
   levelwise_nf_entries_spat_adm_uncompressed.resize(
@@ -5469,7 +5473,8 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::
   compute_time_separated_nearfield_entries_levelwise(
-    std::vector< lo > & levelwise_time_separated_nearfield_entries ) const {
+    std::vector< long long > & levelwise_time_separated_nearfield_entries )
+    const {
   levelwise_time_separated_nearfield_entries.resize(
     _distributed_spacetime_tree->get_n_levels( ) );
   for ( lo i = 0; i < _distributed_spacetime_tree->get_n_levels( ); ++i ) {
@@ -5512,12 +5517,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space,
-  source_space >::count_fmm_operations_levelwise( std::vector< lou > &
+  source_space >::count_fmm_operations_levelwise( std::vector< long long > &
                                                     n_s2m_operations,
-  std::vector< lou > & n_m2m_operations, std::vector< lou > & n_m2l_operations,
-  std::vector< lou > & n_l2l_operations, std::vector< lou > & n_l2t_operations,
-  std::vector< lou > & n_s2l_operations,
-  std::vector< lou > & n_m2t_operations ) const {
+  std::vector< long long > & n_m2m_operations,
+  std::vector< long long > & n_m2l_operations,
+  std::vector< long long > & n_l2l_operations,
+  std::vector< long long > & n_l2t_operations,
+  std::vector< long long > & n_s2l_operations,
+  std::vector< long long > & n_m2t_operations ) const {
   lo n_max_levels = _distributed_spacetime_tree->get_n_levels( );
   // count the number of s2m operations
   n_s2m_operations.resize( n_max_levels );

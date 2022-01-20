@@ -1695,11 +1695,12 @@ sc besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space,
-  source_space >::count_fmm_operations_levelwise( std::vector< lou > &
+  source_space >::count_fmm_operations_levelwise( std::vector< long long > &
                                                     n_s2m_operations,
-  std::vector< lou > & n_m2m_operations, std::vector< lou > & n_m2l_operations,
-  std::vector< lou > & n_l2l_operations,
-  std::vector< lou > & n_l2t_operations ) const {
+  std::vector< long long > & n_m2m_operations,
+  std::vector< long long > & n_m2l_operations,
+  std::vector< long long > & n_l2l_operations,
+  std::vector< long long > & n_l2t_operations ) const {
   lo n_source_levels = _space_source_tree->get_max_n_levels( );
   lo n_target_levels = _distributed_spacetime_target_tree->get_n_levels( );
   // initialize all lists of operation counters appropriately
@@ -1747,7 +1748,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space, source_space >::
   count_m2m_operations_recursively(
     const mesh::volume_space_cluster & current_cluster,
-    std::vector< lou > & n_m2m_operations ) const {
+    std::vector< long long > & n_m2m_operations ) const {
   if ( current_cluster.get_parent( ) != nullptr ) {
     n_m2m_operations[ current_cluster.get_level( ) ] += 1;
   }
@@ -1763,8 +1764,8 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   target_space, source_space >::
   count_l2l_and_l2t_operations_recursively(
     const mesh::scheduling_time_cluster & current_cluster,
-    std::vector< lou > & n_l2l_operations,
-    std::vector< lou > & n_l2t_operations ) const {
+    std::vector< long long > & n_l2l_operations,
+    std::vector< long long > & n_l2t_operations ) const {
   char downpard_path_status
     = current_cluster.get_status_in_initial_op_downward_path( );
   lo current_level = current_cluster.get_level( );
@@ -1819,7 +1820,7 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
     std::cout << "nearfield ratio = " << global_nearfield_ratio << std::endl;
   }
   // count the fmm operations levelwise
-  std::vector< lou > n_s2m_operations, n_m2m_operations, n_m2l_operations,
+  std::vector< long long > n_s2m_operations, n_m2m_operations, n_m2l_operations,
     n_l2l_operations, n_l2t_operations;
   count_fmm_operations_levelwise( n_s2m_operations, n_m2m_operations,
     n_m2l_operations, n_l2l_operations, n_l2t_operations );
@@ -1829,18 +1830,18 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
   lo n_source_levels = _space_source_tree->get_max_n_levels( );
   if ( _my_rank == root_process ) {
     MPI_Reduce( MPI_IN_PLACE, n_m2l_operations.data( ), n_target_levels,
-      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+      MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
     MPI_Reduce( MPI_IN_PLACE, n_l2l_operations.data( ), n_target_levels,
-      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+      MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
     MPI_Reduce( MPI_IN_PLACE, n_l2t_operations.data( ), n_target_levels,
-      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+      MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
   } else {
     MPI_Reduce( n_m2l_operations.data( ), nullptr, n_target_levels,
-      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+      MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
     MPI_Reduce( n_l2l_operations.data( ), nullptr, n_target_levels,
-      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+      MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
     MPI_Reduce( n_l2t_operations.data( ), nullptr, n_target_levels,
-      get_index_type< lou >::MPI_LO( ), MPI_SUM, root_process, *_comm );
+      MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
   }
   if ( _my_rank == root_process ) {
     lo start_space_refinement
