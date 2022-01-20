@@ -80,7 +80,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       _clusterwise_nf_matrices.insert(
         { cluster, std::vector< full_matrix * >( ) } );
       _clusterwise_nf_matrices[ cluster ].resize(
-        cluster->get_nearfield_list( )->size( ) );
+        cluster->get_nearfield_list( )->size( ), nullptr );
     }
     // for clusters in the spatially admissible nearfield list nearfield
     // operations compressed by aca have to be executed.
@@ -452,38 +452,58 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     _distributed_spacetime_tree->print_information( root_process );
   }
 
-  // compute the number of nearfield entries on each process (and separately
-  // those corresponding to time-separated clusters)
-  std::vector< lo > local_levelwise_nearfield_entries;
-  std::vector< lo > local_levelwise_time_separated_nearfield_entries;
-  compute_nearfield_entries_levelwise( local_levelwise_nearfield_entries );
+  // compute the number of nearfield entries on each process (total, spatially
+  // admissible, spatially admissible compressed) and separately those
+  // corresponding to time-separated clusters
+  std::vector< lo > loc_lvlwise_tot_nf_entries_uncompressed;
+  std::vector< lo > loc_lvlwise_spat_adm_nf_entries_no_compr;
+  std::vector< lo > loc_lvlwise_spat_adm_nf_entries_compr;
+  std::vector< lo > loc_lvlwise_time_separated_nf_entries;
+  compute_nearfield_entries_levelwise( loc_lvlwise_tot_nf_entries_uncompressed,
+    loc_lvlwise_spat_adm_nf_entries_no_compr,
+    loc_lvlwise_spat_adm_nf_entries_compr );
   bool using_m2t_and_s2l_operations
     = _distributed_spacetime_tree->get_distribution_tree( )
         ->supports_m2t_and_s2l_operations( );
   if ( !using_m2t_and_s2l_operations ) {
     compute_time_separated_nearfield_entries_levelwise(
-      local_levelwise_time_separated_nearfield_entries );
+      loc_lvlwise_time_separated_nf_entries );
   }
 
   lo n_global_tree_levels = _distributed_spacetime_tree->get_n_levels( );
   // gather the number of nearfield entries at the root process
   int n_processes;
   MPI_Comm_size( *_comm, &n_processes );
-  lo * all_local_entries = nullptr;
-  lo * all_local_separated_entries = nullptr;
+  lo * all_loc_tot_nf_entries = nullptr;
+  lo * all_loc_spat_adm_nf_entries = nullptr;
+  lo * all_loc_compr_spat_adm_nf_entries = nullptr;
+  lo * all_loc_separated_entries = nullptr;
   if ( _my_rank == root_process ) {
-    all_local_entries = new lo[ n_processes * n_global_tree_levels ];
-    all_local_separated_entries = new lo[ n_processes * n_global_tree_levels ];
+    all_loc_tot_nf_entries = new lo[ n_processes * n_global_tree_levels ];
+    all_loc_spat_adm_nf_entries = new lo[ n_processes * n_global_tree_levels ];
+    all_loc_compr_spat_adm_nf_entries
+      = new lo[ n_processes * n_global_tree_levels ];
+    all_loc_separated_entries = new lo[ n_processes * n_global_tree_levels ];
   }
-  MPI_Gather( local_levelwise_nearfield_entries.data( ), n_global_tree_levels,
-    get_index_type< lo >::MPI_LO( ), all_local_entries, n_global_tree_levels,
+  MPI_Gather( loc_lvlwise_tot_nf_entries_uncompressed.data( ),
+    n_global_tree_levels, get_index_type< lo >::MPI_LO( ),
+    all_loc_tot_nf_entries, n_global_tree_levels,
+    get_index_type< lo >::MPI_LO( ), root_process, *_comm );
+  MPI_Gather( loc_lvlwise_spat_adm_nf_entries_no_compr.data( ),
+    n_global_tree_levels, get_index_type< lo >::MPI_LO( ),
+    all_loc_spat_adm_nf_entries, n_global_tree_levels,
+    get_index_type< lo >::MPI_LO( ), root_process, *_comm );
+  MPI_Gather( loc_lvlwise_spat_adm_nf_entries_compr.data( ),
+    n_global_tree_levels, get_index_type< lo >::MPI_LO( ),
+    all_loc_compr_spat_adm_nf_entries, n_global_tree_levels,
     get_index_type< lo >::MPI_LO( ), root_process, *_comm );
   if ( !using_m2t_and_s2l_operations ) {
-    MPI_Gather( local_levelwise_time_separated_nearfield_entries.data( ),
+    MPI_Gather( loc_lvlwise_time_separated_nf_entries.data( ),
       n_global_tree_levels, get_index_type< lo >::MPI_LO( ),
-      all_local_separated_entries, n_global_tree_levels,
+      all_loc_separated_entries, n_global_tree_levels,
       get_index_type< lo >::MPI_LO( ), root_process, *_comm );
   }
+
   // count the fmm operations levelwise
   std::vector< lou > n_s2m_operations, n_m2m_operations, n_m2l_operations,
     n_l2l_operations, n_l2t_operations, n_s2l_operations, n_m2t_operations;
@@ -645,14 +665,24 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     // next, estimate the storage for the nearfield part
     std::vector< sc > global_levelwise_nearfield_storage(
       n_global_tree_levels, 0.0 );
+    std::vector< sc > global_levelwise_nearfield_storage_spat_adm_no_compr(
+      n_global_tree_levels, 0.0 );
+    std::vector< sc > global_levelwise_nearfield_storage_spat_adm_compr(
+      n_global_tree_levels, 0.0 );
     std::vector< sc > global_levelwise_time_separated_nearfield_storage(
       n_global_tree_levels, 0.0 );
     std::vector< sc > nearfield_storage_on_processes( n_processes, 0.0 );
+    std::vector< sc > nearfield_storage_on_processes_spat_adm_no_compr(
+      n_processes, 0.0 );
+    std::vector< sc > nearfield_storage_on_processes_spat_adm_compr(
+      n_processes, 0.0 );
     std::vector< sc > time_separated_nearfield_storage_on_processes(
       n_processes, 0.0 );
     // add up the nearfield entries processwise or levelwise for the respective
     // counters (and all of them for a total count)
     lo total_nearfield_entries = 0;
+    lo total_nearfield_entries_spat_adm_no_compr = 0;
+    lo total_nearfield_entries_spat_adm_compr = 0;
     // in case that m2t and s2l operations are used, summing time separated
     // nearfield storage is obsolete, because all entries of the corresponding
     // arrays are zero. still it is done, since the effort is negligible.
@@ -660,68 +690,120 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     for ( lo i = 0; i < n_processes; ++i ) {
       for ( lo j = 0; j < n_global_tree_levels; ++j ) {
         global_levelwise_nearfield_storage[ j ]
-          += all_local_entries[ n_global_tree_levels * i + j ];
+          += all_loc_tot_nf_entries[ n_global_tree_levels * i + j ];
+        global_levelwise_nearfield_storage_spat_adm_no_compr[ j ]
+          += all_loc_spat_adm_nf_entries[ n_global_tree_levels * i + j ];
+        global_levelwise_nearfield_storage_spat_adm_compr[ j ]
+          += all_loc_compr_spat_adm_nf_entries[ n_global_tree_levels * i + j ];
         global_levelwise_time_separated_nearfield_storage[ j ]
-          += all_local_separated_entries[ n_global_tree_levels * i + j ];
+          += all_loc_separated_entries[ n_global_tree_levels * i + j ];
         nearfield_storage_on_processes[ i ]
-          += all_local_entries[ n_global_tree_levels * i + j ];
+          += all_loc_tot_nf_entries[ n_global_tree_levels * i + j ];
+        nearfield_storage_on_processes_spat_adm_no_compr[ i ]
+          += all_loc_spat_adm_nf_entries[ n_global_tree_levels * i + j ];
+        nearfield_storage_on_processes_spat_adm_compr[ i ]
+          += all_loc_compr_spat_adm_nf_entries[ n_global_tree_levels * i + j ];
         time_separated_nearfield_storage_on_processes[ i ]
-          += all_local_separated_entries[ n_global_tree_levels * i + j ];
+          += all_loc_separated_entries[ n_global_tree_levels * i + j ];
         total_nearfield_entries
-          += all_local_entries[ n_global_tree_levels * i + j ];
+          += all_loc_tot_nf_entries[ n_global_tree_levels * i + j ];
+        total_nearfield_entries_spat_adm_no_compr
+          += all_loc_spat_adm_nf_entries[ n_global_tree_levels * i + j ];
+        total_nearfield_entries_spat_adm_compr
+          += all_loc_compr_spat_adm_nf_entries[ n_global_tree_levels * i + j ];
         total_nearfield_entries_time_separated_part
-          += all_local_separated_entries[ n_global_tree_levels * i + j ];
+          += all_loc_separated_entries[ n_global_tree_levels * i + j ];
       }
     }
     // compute required memory for storing nearfield entries in GiB levelwise,
     // processwise and total
     for ( lo i = 0; i < n_processes; ++i ) {
       nearfield_storage_on_processes[ i ] *= 8. / 1024. / 1024. / 1024.;
+      nearfield_storage_on_processes_spat_adm_no_compr[ i ]
+        *= 8. / 1024. / 1024. / 1024.;
+      nearfield_storage_on_processes_spat_adm_compr[ i ]
+        *= 8. / 1024. / 1024. / 1024.;
       time_separated_nearfield_storage_on_processes[ i ]
         *= 8. / 1024. / 1024. / 1024.;
     }
     for ( lo i = 0; i < n_global_tree_levels; ++i ) {
       global_levelwise_nearfield_storage[ i ] *= 8. / 1024. / 1024. / 1024.;
+      global_levelwise_nearfield_storage_spat_adm_no_compr[ i ]
+        *= 8. / 1024. / 1024. / 1024.;
+      global_levelwise_nearfield_storage_spat_adm_compr[ i ]
+        *= 8. / 1024. / 1024. / 1024.;
       global_levelwise_time_separated_nearfield_storage[ i ]
         *= 8. / 1024. / 1024. / 1024.;
     }
     sc total_storage_nearfield
       = total_nearfield_entries * 8. / 1024. / 1024. / 1024.;
+    sc total_storage_spat_adm_nf_no_compr
+      = total_nearfield_entries_spat_adm_no_compr * 8. / 1024. / 1024. / 1024.;
+    sc total_storage_spat_adm_nf_compr
+      = total_nearfield_entries_spat_adm_compr * 8. / 1024. / 1024. / 1024.;
     sc total_storage_time_separated_part
       = total_nearfield_entries_time_separated_part * 8. / 1024. / 1024.
       / 1024.;
 
-    std::cout << "Required storage for nearfield matrices per process: "
-              << std::endl;
+    std::cout
+      << "Required storage for nearfield matrices per process (uncompressed): "
+      << std::endl;
     for ( lo i = 0; i < n_processes; ++i ) {
       std::cout << "process " << i << ": nearfield_matrices: "
                 << nearfield_storage_on_processes[ i ] << " GiB";
       if ( !using_m2t_and_s2l_operations ) {
-        std::cout << ", of which "
+        std::cout << "; 'time separated': "
                   << time_separated_nearfield_storage_on_processes[ i ]
-                  << " GiB are 'time separated'";
+                  << " GiB";
+      }
+      if ( _aca_eps > 0.0 ) {
+        std::cout << "; spatially admissible uncompressed: "
+                  << nearfield_storage_on_processes_spat_adm_no_compr[ i ]
+                  << " GiB, compressed: "
+                  << nearfield_storage_on_processes_spat_adm_compr[ i ]
+                  << " GiB";
       }
       std::cout << std::endl;
     }
-    std::cout << "Required storage (global) per level:" << std::endl;
+    std::cout << "Required storage (global) per level (uncompressed):"
+              << std::endl;
     for ( lo i = 0; i < n_global_tree_levels; ++i ) {
       std::cout << "level " << i << ": nearfield matrices: "
                 << global_levelwise_nearfield_storage[ i ] << " GiB";
       if ( !using_m2t_and_s2l_operations ) {
-        std::cout << ", of which "
+        std::cout << "; 'time separated': "
                   << global_levelwise_time_separated_nearfield_storage[ i ]
-                  << " GiB are 'time separated'";
+                  << " GiB";
+      }
+      if ( _aca_eps > 0.0 ) {
+        std::cout << "; spatially admissible uncompressed: "
+                  << global_levelwise_nearfield_storage_spat_adm_no_compr[ i ]
+                  << " GiB, compressed: "
+                  << global_levelwise_nearfield_storage_spat_adm_compr[ i ]
+                  << " GiB";
       }
       std::cout << std::endl;
     }
-    std::cout << "Total nearfield storage: " << total_storage_nearfield
-              << " GiB";
+    std::cout << "Total nearfield storage (uncompressed): "
+              << total_storage_nearfield << " GiB";
     if ( !using_m2t_and_s2l_operations ) {
-      std::cout << ", of which " << total_storage_time_separated_part
-                << " GiB are 'time separated'";
+      std::cout << "; 'time separated': " << total_storage_time_separated_part
+                << " GiB";
+    }
+    if ( _aca_eps > 0 ) {
+      std::cout << "; spatially admissible uncompressed: "
+                << total_storage_spat_adm_nf_no_compr
+                << " GiB, compressed: " << total_storage_spat_adm_nf_compr
+                << " GiB";
     }
     std::cout << std::endl;
-    std::cout << "Nearfield ratio: "
+    sc total_storage_nf_compr = total_storage_nearfield
+      - total_storage_spat_adm_nf_no_compr + total_storage_spat_adm_nf_compr;
+    if ( total_storage_spat_adm_nf_compr > 0 ) {
+      std::cout << "Total nearfield storage compressed: "
+                << total_storage_nf_compr << std::endl;
+    }
+    std::cout << "Nearfield ratio (uncompressed): "
               << (sc) total_nearfield_entries
         / ( n_target_dofs * n_source_dofs );
     if ( !using_m2t_and_s2l_operations ) {
@@ -729,10 +811,20 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                 << (sc) total_nearfield_entries_time_separated_part
           / ( n_target_dofs * n_source_dofs );
     }
+    if ( _aca_eps > 0.0 ) {
+      std::cout << ", for spatially admissible part: "
+                << (sc) total_nearfield_entries_spat_adm_no_compr
+          / ( n_target_dofs * n_source_dofs );
+    }
     std::cout << std::endl;
-    // todo: adapt this for distributed matrix
-    if ( _aca_eps > 0.0 && _local_approximated_size != 0 ) {
-      std::cout << "ACA compression rate is " << 1 - get_local_compress_ratio( )
+    if ( total_storage_spat_adm_nf_compr > 0 ) {
+      std::cout << "Nearfield ratio compressed: "
+                << total_storage_nf_compr / ( n_target_dofs * n_source_dofs )
+                << std::endl;
+      std::cout << "Compression rate for spatially admissible part: "
+                << 1
+          - ( (sc) total_storage_spat_adm_nf_compr
+            / (sc) total_storage_spat_adm_nf_no_compr )
                 << std::endl;
     }
     std::cout << "storage per allocated vector (source): "
@@ -742,8 +834,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               << n_target_dofs * 8. / 1024. / 1024. / 1024. << " GiB."
               << std::endl;
     std::cout << std::endl;
-    delete[] all_local_entries;
-    delete[] all_local_separated_entries;
+    delete[] all_loc_tot_nf_entries;
+    delete[] all_loc_spat_adm_nf_entries;
+    delete[] all_loc_compr_spat_adm_nf_entries;
+    delete[] all_loc_separated_entries;
     delete[] all_n_moments;
     delete[] all_n_moments_receive;
     delete[] all_n_local_contributions;
@@ -5310,13 +5404,21 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space,
-  source_space >::compute_nearfield_entries_levelwise( std::vector< lo > &
-    levelwise_nearfield_entries ) const {
-  levelwise_nearfield_entries.resize(
+  target_space, source_space >::
+  compute_nearfield_entries_levelwise(
+    std::vector< lo > & levelwise_nf_entries_total_uncompressed,
+    std::vector< lo > & levelwise_nf_entries_spat_adm_uncompressed,
+    std::vector< lo > & levelwise_nf_entries_spat_adm_compressed ) const {
+  levelwise_nf_entries_total_uncompressed.resize(
+    _distributed_spacetime_tree->get_n_levels( ) );
+  levelwise_nf_entries_spat_adm_uncompressed.resize(
+    _distributed_spacetime_tree->get_n_levels( ) );
+  levelwise_nf_entries_spat_adm_compressed.resize(
     _distributed_spacetime_tree->get_n_levels( ) );
   for ( lo i = 0; i < _distributed_spacetime_tree->get_n_levels( ); ++i ) {
-    levelwise_nearfield_entries[ i ] = 0;
+    levelwise_nf_entries_total_uncompressed[ i ] = 0;
+    levelwise_nf_entries_spat_adm_uncompressed[ i ] = 0;
+    levelwise_nf_entries_spat_adm_compressed[ i ] = 0;
   }
   for ( auto it : _n_list ) {
     lo current_level = it->get_level( );
@@ -5332,7 +5434,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               ++src_index ) {
           general_spacetime_cluster * st_source
             = ( *st_nearfield_list )[ src_index ];
-          levelwise_nearfield_entries[ current_level ]
+          levelwise_nf_entries_total_uncompressed[ current_level ]
             += n_target_dofs * st_source->get_n_dofs< source_space >( );
         }
       }
@@ -5344,8 +5446,19 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               src_index < st_spat_adm_nearfield_list->size( ); ++src_index ) {
           general_spacetime_cluster * st_source
             = ( *st_spat_adm_nearfield_list )[ src_index ];
-          levelwise_nearfield_entries[ current_level ]
+          levelwise_nf_entries_total_uncompressed[ current_level ]
             += n_target_dofs * st_source->get_n_dofs< source_space >( );
+          levelwise_nf_entries_spat_adm_uncompressed[ current_level ]
+            += n_target_dofs * st_source->get_n_dofs< source_space >( );
+        }
+        const std::vector< std::pair< lo, matrix * > > &
+          spat_adm_nf_matrix_pairs
+          = _clusterwise_spat_adm_nf_matrix_pairs.at( st_target );
+        if ( spat_adm_nf_matrix_pairs.size( ) > 0 ) {
+          for ( auto nf_matrix_pair : spat_adm_nf_matrix_pairs ) {
+            levelwise_nf_entries_spat_adm_compressed[ current_level ]
+              += nf_matrix_pair.second->get_n_stored_entries( );
+          }
         }
       }
     }

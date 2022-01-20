@@ -107,7 +107,7 @@ class besthea::linear_algebra::low_rank_matrix
    * @ref _u and @ref _v.
    */
   virtual lo get_n_stored_entries( ) const {
-    return _u.get_n_columns( ) * ( _u.get_n_rows( ) * _v.get_n_rows( ) );
+    return _u.get_n_columns( ) * ( _u.get_n_rows( ) + _v.get_n_rows( ) );
   }
 
   /*!

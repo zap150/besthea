@@ -803,7 +803,6 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * like @ref scheduling_time_cluster::assoc_standard_m2t_targets for each
    * scheduling time cluster.
    * @param[in] t_root  Current cluster in the tree traversal.
-   * @todo Adapt nearfield lists later on.
    */
   void determine_tasks_of_associated_clusters(
     scheduling_time_cluster * t_root );

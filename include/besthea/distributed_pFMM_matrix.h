@@ -212,8 +212,8 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     }
     for ( auto it = _clusterwise_spat_adm_nf_matrix_pairs.begin( );
           it != _clusterwise_spat_adm_nf_matrix_pairs.end( ); ++it ) {
-      // loop over all nearfield aca matrices associated with a given spacetime
-      // cluster and delete them.
+      // loop over all nearfield aca matrix pairs associated with a given
+      // spacetime cluster and delete the associated matrices.
       for ( auto matrix_pair : it->second ) {
         delete matrix_pair.second;
       }
@@ -1695,16 +1695,25 @@ class besthea::linear_algebra::distributed_pFMM_matrix
 
   /**
    * In this routine each process counts the number of entries in its nearfield
-   * matrices levelwise. The level of the target cluster determines where the
-   * entries are added up to.
+   * matrices levelwise (by the level of the associated time cluster of the
+   * target cluster)
    *
-   * @param[out] levelwise_nearfield_entries  Contains the numbers of counted
-   * nearfield matrix entries for all levels in the cluster tree.
+   * @param[out] levelwise_nf_entries_total_uncompressed  Contains the total
+   * numbers of all uncompressed nearfield matrix entries (including
+   * uncompressed spatially admissible) for all levels in the cluster tree.
+   * @param[out] levelwise_nf_entries_spat_adm_uncompressed  Contains the total
+   * numbers of uncompressed spatially admissible nearfield matrix entries for
+   * all levels in the cluster tree.
+   * @param[out] levelwise_nf_entries_spat_adm_compressed  Contains the total
+   * numbers of compressed nearfield matrix entries for all levels in the
+   * cluster tree.
    * @note No communication among processes occurs in this routine. Each process
    * returns an individual vector.
    */
   void compute_nearfield_entries_levelwise(
-    std::vector< lo > & levelwise_nearfield_entries ) const;
+    std::vector< lo > & levelwise_nf_entries_total_uncompressed,
+    std::vector< lo > & levelwise_nf_entries_spat_adm_uncompressed,
+    std::vector< lo > & levelwise_nf_entries_spat_adm_compressed ) const;
 
   /**
    * In this routine each process counts the number of entries in its nearfield

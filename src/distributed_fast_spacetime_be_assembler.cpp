@@ -307,10 +307,13 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
         += n_failed_compression_spat_adm_per_thread[ i ];
       n_tot_spat_adm_matrices += n_tot_spat_adm_matrices_per_thread[ i ];
     }
-    std::cout << "total number of spatially admissible nearfield matrices: "
-              << n_tot_spat_adm_matrices << std::endl;
-    std::cout << "failed compression in " << n_failed_compression_spat_adm
-              << " cases." << std::endl;
+    if ( _my_rank == 0 ) {
+      std::cout << "process " << _my_rank
+                << ": total number of spatially admissible nearfield matrices: "
+                << n_tot_spat_adm_matrices << std::endl;
+      std::cout << "failed compression in " << n_failed_compression_spat_adm
+                << " cases." << std::endl;
+    }
   }
 }
 
