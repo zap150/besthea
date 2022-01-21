@@ -277,9 +277,27 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
     full_matrix_type & nearfield_matrix ) const;
 
   /**
-   * Computes a low rank approximation of a given full matrix via ACA.
-   * @param[in] full_nf_matrix  Matrix for which a low rank approximation is
-   * computed.
+   * Assembles a single entry of a nearfield matrix corresponding to given
+   * source and target clusters.
+   * @param[in] my_quadrature Initialized quadrature data,
+   * see @ref init_quadrature.
+   * @param[in] tar_cluster Target cluster of the nearfield block.
+   * @param[in] src_cluster Source cluster of the nearfield block.
+   * @param[in] loc_tar_idx Local index of the degree of freedom in the target
+   * cluster, for which the nearfield matrix entry is computed.
+   * @param[in] loc_src_idx Local index of the degree of freedom in the source
+   * cluster, for which the nearfield matrix entry is computed.
+   */
+  sc assemble_nearfield_matrix_entry( quadrature_wrapper & my_quadrature,
+    const mesh::general_spacetime_cluster * tar_cluster,
+    const mesh::general_spacetime_cluster * src_cluster, lo loc_tar_idx,
+    lo loc_src_idx ) const;
+
+  /**
+   * Computes a low rank approximation of a given nearfield matrix block via
+   * ACA.
+   * @param[in] tar_cluster Target cluster of the nearfield block.
+   * @param[in] src_cluster Source cluster of the nearfield block.
    * @param[in,out] lr_nf_matrix  If the routine succeeds, the low rank
    * approximation is stored in this matrix.
    * @param[out] estimated_eps  Estimated accuracy of the approximation.
@@ -291,7 +309,9 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
    * value < 0 is provided, the largest singular value of the low rank matrix is
    * used instead.
    */
-  bool compute_low_rank_approximation( const full_matrix_type & full_nf_matrix,
+  bool compute_low_rank_approximation(
+    const mesh::general_spacetime_cluster * tar_cluster,
+    const mesh::general_spacetime_cluster * src_cluster,
     low_rank_matrix_type & lr_nf_matrix, sc & estimated_eps,
     bool enable_svd_recompression = false,
     sc svd_recompression_reference_value = -1.0 ) const;

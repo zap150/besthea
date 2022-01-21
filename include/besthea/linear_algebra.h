@@ -49,7 +49,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/distributed_pFMM_matrix.h"
 #include "besthea/full_matrix.h"
 #include "besthea/indices.h"
-#include "besthea/low_rank_kernel.h"
 #include "besthea/low_rank_matrix.h"
 #include "besthea/mkl_cg_inverse.h"
 #include "besthea/mkl_fgmres_inverse.h"

@@ -164,8 +164,6 @@ class besthea::linear_algebra::distributed_pFMM_matrix
       _alpha( 1.0 ),
       _aca_eps( 1e-5 ),
       _aca_max_rank( 500 ),
-      _local_full_size( 0 ),
-      _local_approximated_size( 0 ),
       _cheb_nodes_integrate( _m2l_integration_order + 1 ),
       _all_poly_vals_integrate(
         ( _spat_order + 1 ) * ( _m2l_integration_order + 1 ) ),
@@ -483,33 +481,6 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   void get_inverse_diagonal(
     distributed_block_vector & inverse_diagonal ) const;
-
-  /**
-   * Updates the theoretical total size of the local (nonapproximated)
-   * nearfield blocks.
-   * @param[in] size Size of the block.
-   */
-  void add_to_local_full_size( long size ) {
-#pragma omp atomic update
-    _local_full_size += size;
-  }
-
-  /**
-   * Updates the total size of the local ACA-apprixmated nearfield blocks.
-   * @param[in] size Size of the block.
-   */
-  void add_to_local_approximated_size( long size ) {
-#pragma omp atomic update
-    _local_approximated_size += size;
-  }
-
-  /**
-   * Returns the compress ratio of the nearfield blocks approximated by ACA.
-   *
-   */
-  sc get_local_compress_ratio( ) const {
-    return (sc) _local_approximated_size / (sc) _local_full_size;
-  }
 
  private:
   /**
@@ -2047,11 +2018,6 @@ class besthea::linear_algebra::distributed_pFMM_matrix
                 //!< compression
   lo _aca_max_rank;  //!< maximum allowed rank of the internal ACA used for
                      //!< temporal nearfield compression
-  long long _local_full_size;  //!< total size of the (uncompressed) nearfield
-                               //!< blocks
-  long long _local_approximated_size;  //!< total size of the ACA-approximated
-                                       //!< nearfield blocks
-
   vector_type
     _cheb_nodes_integrate;  //!< Chebyshev nodes used for numerical quadrature
                             //!< in computation of coupling coefficients for m2l

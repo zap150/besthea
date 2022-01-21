@@ -65,7 +65,6 @@ set(besthea_INCLUDES
   include/besthea/lagrange_interpolant.h
   include/besthea/linear_algebra.h
   include/besthea/linear_operator.h
-  include/besthea/low_rank_kernel.h
   include/besthea/low_rank_matrix.h
   include/besthea/mainpage.h
   include/besthea/matrix.h

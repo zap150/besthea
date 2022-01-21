@@ -34,7 +34,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "besthea/basis_tri_p1.h"
 #include "besthea/distributed_fast_spacetime_be_space.h"
 #include "besthea/distributed_spacetime_tensor_mesh.h"
-#include "besthea/low_rank_kernel.h"
 #include "besthea/quadrature.h"
 #include "besthea/spacetime_heat_adl_kernel_antiderivative.h"
 #include "besthea/spacetime_heat_dl_kernel_antiderivative.h"
@@ -131,46 +130,65 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
     clusters_with_nearfield_operations
     = global_matrix.get_pointer_to_clusters_with_nearfield_operations( );
 
-  // FIXME: disabled sorting temporarily
-
-  // for the assembly, sort the clusters with nearfield operations by the size
-  // of matrices in the nearfield
-  // std::vector< lo > total_sizes(
-  //   clusters_with_nearfield_operations->size( ), 0 );
-  // for ( std::vector< general_spacetime_cluster * >::size_type cluster_index =
-  // 0;
-  //       cluster_index < clusters_with_nearfield_operations->size( );
-  //       ++cluster_index ) {
-  //   general_spacetime_cluster * current_cluster
-  //     = ( *clusters_with_nearfield_operations )[ cluster_index ];
-  //   std::vector< general_spacetime_cluster * > * nearfield_list
-  //     = current_cluster->get_nearfield_list( );
-  //   lo n_dofs_target = current_cluster->get_n_dofs< test_space_type >( );
-  //   for ( std::vector< general_spacetime_cluster * >::size_type src_index =
-  //   0;
-  //         src_index < nearfield_list->size( ); ++src_index ) {
-  //     general_spacetime_cluster * nearfield_cluster
-  //       = ( *nearfield_list )[ src_index ];
-  //     lo n_dofs_source = nearfield_cluster->get_n_dofs< trial_space_type >(
-  //     ); total_sizes[ cluster_index ] += n_dofs_source * n_dofs_target;
-  //   }
-  // }
+  // first nearfield matrices are assembled for leaf clusters and clusters in
+  // their nearfield_list (not the spatially admissible nearfield list!). Sort
+  // these clusters by the size of the matrices in their nearfield
+  std::vector< lo > total_sizes_std_nf(
+    clusters_with_nearfield_operations->size( ), 0 );
+  std::vector< lo > total_sizes_spat_adm_nf(
+    clusters_with_nearfield_operations->size( ), 0 );
+  for ( std::vector< general_spacetime_cluster * >::size_type cluster_index = 0;
+        cluster_index < clusters_with_nearfield_operations->size( );
+        ++cluster_index ) {
+    mesh::general_spacetime_cluster * current_cluster
+      = ( *clusters_with_nearfield_operations )[ cluster_index ];
+    lo n_dofs_target = current_cluster->get_n_dofs< test_space_type >( );
+    if ( current_cluster->get_n_children( ) == 0 ) {
+      std::vector< general_spacetime_cluster * > * nearfield_list
+        = current_cluster->get_nearfield_list( );
+      for ( std::vector< general_spacetime_cluster * >::size_type src_index = 0;
+            src_index < nearfield_list->size( ); ++src_index ) {
+        general_spacetime_cluster * nearfield_cluster
+          = ( *nearfield_list )[ src_index ];
+        lo n_dofs_source = nearfield_cluster->get_n_dofs< trial_space_type >( );
+        total_sizes_std_nf[ cluster_index ] += n_dofs_source * n_dofs_target;
+      }
+    }
+    auto spat_adm_nf_list
+      = current_cluster->get_spatially_admissible_nearfield_list( );
+    if ( spat_adm_nf_list != nullptr ) {
+      for ( auto nf_cluster : *spat_adm_nf_list ) {
+        lo n_dofs_source = nf_cluster->get_n_dofs< trial_space_type >( );
+        total_sizes_spat_adm_nf[ cluster_index ]
+          += n_dofs_source * n_dofs_target;
+      }
+    }
+  }
   std::vector< lo > permutation_index(
     clusters_with_nearfield_operations->size( ), 0 );
   for ( lo i = 0; i != lo( permutation_index.size( ) ); i++ ) {
     permutation_index[ i ] = i;
   }
-  // sort( permutation_index.begin( ), permutation_index.end( ),
-  //   [ & ]( const int & a, const int & b ) {
-  //     return ( total_sizes[ a ] > total_sizes[ b ] );
-  //   } );
+  sort( permutation_index.begin( ), permutation_index.end( ),
+    [ & ]( const lo & a, const lo & b ) {
+      return ( total_sizes_std_nf[ a ] > total_sizes_std_nf[ b ] );
+    } );
+  // find the number of clusters, for which standard nearfield matrices have to
+  // be assembled.
+  lou n_clusters_with_std_nf_matrices
+    = clusters_with_nearfield_operations->size( );
+  while ( n_clusters_with_std_nf_matrices > 0
+    && total_sizes_std_nf[ permutation_index[ n_clusters_with_std_nf_matrices
+         - 1 ] ]
+      == 0 ) {
+    n_clusters_with_std_nf_matrices--;
+  }
 
   std::unordered_map< general_spacetime_cluster *, sc >
     largest_sing_val_diag_blocks;
-// assemble the nearfield matrices in parallel
+  // assemble the nearfield matrices in parallel
 #pragma omp parallel for schedule( dynamic, 1 )
-  for ( std::vector< general_spacetime_cluster * >::size_type cluster_index = 0;
-        cluster_index < clusters_with_nearfield_operations->size( );
+  for ( lou cluster_index = 0; cluster_index < n_clusters_with_std_nf_matrices;
         ++cluster_index ) {
     mesh::general_spacetime_cluster * current_cluster
       = ( *clusters_with_nearfield_operations )
@@ -186,10 +204,6 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
         full_matrix_type * block = global_matrix.create_nearfield_matrix(
           permutation_index[ cluster_index ], src_index );
         assemble_nearfield_matrix( current_cluster, nearfield_cluster, *block );
-        global_matrix.add_to_local_approximated_size(
-          block->get_n_rows( ) * block->get_n_columns( ) );
-        global_matrix.add_to_local_full_size(
-          block->get_n_rows( ) * block->get_n_columns( ) );
         // if an aca recompression of spatially admissible nearfield blocks is
         // active, estimate the largest singular value of the diagonal block.
         if ( _aca_eps > 0.0 && current_cluster == nearfield_cluster ) {
@@ -230,6 +244,26 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
     }
   }
 
+  // Sort the clusters by the size of the matrices in their spatially admissible
+  // nearfield
+  for ( lo i = 0; i != lo( permutation_index.size( ) ); i++ ) {
+    permutation_index[ i ] = i;
+  }
+  sort( permutation_index.begin( ), permutation_index.end( ),
+    [ & ]( const lo & a, const lo & b ) {
+      return ( total_sizes_spat_adm_nf[ a ] > total_sizes_spat_adm_nf[ b ] );
+    } );
+  // find the number of clusters, for which standard nearfield matrices have to
+  // be assembled.
+  lou n_clusters_with_spat_adm_nf_matrices
+    = clusters_with_nearfield_operations->size( );
+  while ( n_clusters_with_spat_adm_nf_matrices > 0
+    && total_sizes_spat_adm_nf
+         [ permutation_index[ n_clusters_with_spat_adm_nf_matrices - 1 ] ]
+      == 0 ) {
+    n_clusters_with_spat_adm_nf_matrices--;
+  }
+
   // auxiliary vectors to count the number of spatially admissible matrices and
   // those of them which could not be compressed (in case of aca recompression)
   std::vector< lo > n_tot_spat_adm_matrices_per_thread(
@@ -238,8 +272,8 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
     omp_get_max_threads( ), 0 );
   // next, assemble the spatially admissible nearfield matrices
 #pragma omp parallel for schedule( dynamic, 1 )
-  for ( std::vector< general_spacetime_cluster * >::size_type cluster_index = 0;
-        cluster_index < clusters_with_nearfield_operations->size( );
+  for ( lou cluster_index = 0;
+        cluster_index < n_clusters_with_spat_adm_nf_matrices;
         ++cluster_index ) {
     mesh::general_spacetime_cluster * current_cluster
       = ( *clusters_with_nearfield_operations )
@@ -256,23 +290,15 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
         n_tot_spat_adm_matrices_per_thread[ omp_get_thread_num( ) ]++;
         general_spacetime_cluster * nearfield_cluster
           = ( *spat_adm_nearfield_list )[ src_index ];
-        lo n_cols = nearfield_cluster->get_n_dofs< trial_space_type >( );
-        lo n_rows = current_cluster->get_n_dofs< test_space_type >( );
-        // currently, the matrix is assembled fully, then approximated
-        // TODO: to speed-up the process, assemble only the necessary rows and
-        // columns
-        full_matrix_type * full_block = new full_matrix_type( n_rows, n_cols );
-        assemble_nearfield_matrix(
-          current_cluster, nearfield_cluster, *full_block );
         bool successful_compression = false;
         if ( _aca_eps > 0.0 ) {
-          // try to compress the full_block via aca and an additional svd
+          // try to approximate the block via aca and an additional svd
           low_rank_matrix_type * lr_block = new low_rank_matrix_type( );
           sc est_compression_error;
-          successful_compression = compute_low_rank_approximation( *full_block,
-            *lr_block, est_compression_error, true, max_singular_value );
+          successful_compression = compute_low_rank_approximation(
+            current_cluster, nearfield_cluster, *lr_block,
+            est_compression_error, true, max_singular_value );
           if ( successful_compression ) {
-            delete full_block;
             lo rank = lr_block->get_rank( );
             if ( rank > 0 ) {
               global_matrix.insert_spatially_admissible_nearfield_matrix(
@@ -280,22 +306,20 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
             } else {
               delete lr_block;
             }
-            // update the auxiliary variables measuring the nearfield
-            // compression
-            global_matrix.add_to_local_approximated_size(
-              rank * ( n_rows + n_cols ) );
-            global_matrix.add_to_local_full_size( n_rows * n_cols );
           } else {
             delete lr_block;
           }
         }
         if ( !successful_compression ) {
           n_failed_compression_spat_adm_per_thread[ omp_get_thread_num( ) ]++;
+          lo n_cols = nearfield_cluster->get_n_dofs< trial_space_type >( );
+          lo n_rows = current_cluster->get_n_dofs< test_space_type >( );
+          full_matrix_type * full_block
+            = new full_matrix_type( n_rows, n_cols );
+          assemble_nearfield_matrix(
+            current_cluster, nearfield_cluster, *full_block );
           global_matrix.insert_spatially_admissible_nearfield_matrix(
             permutation_index[ cluster_index ], src_index, full_block );
-          // update the auxiliary variables measuring the nearfield
-          global_matrix.add_to_local_approximated_size( n_rows * n_cols );
-          global_matrix.add_to_local_full_size( n_rows * n_cols );
         }
       }
     }
@@ -947,12 +971,153 @@ void besthea::bem::distributed_fast_spacetime_be_assembler<
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
-bool besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
+sc besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   test_space_type,
-  trial_space_type >::compute_low_rank_approximation( const full_matrix_type &
-                                                        full_nf_matrix,
-  low_rank_matrix_type & lr_nf_matrix, sc & estimated_eps,
-  bool enable_svd_recompression, sc svd_recompression_reference_value ) const {
+  trial_space_type >::assemble_nearfield_matrix_entry( quadrature_wrapper &
+  /*my_quadrature*/,
+  const mesh::general_spacetime_cluster * /*tar_cluster*/,
+  const mesh::general_spacetime_cluster * /*src_cluster*/, lo /*loc_tar_idx*/,
+  lo /*loc_src_idx*/ ) const {
+  std::cout << "Error: assemble_nearfield_matrix_entry not implemented for "
+               "this operator"
+            << std::endl;
+  return 0.0;
+}
+
+/** template specialization for p0p0 single layer operator */
+template<>
+sc besthea::bem::distributed_fast_spacetime_be_assembler<
+  besthea::bem::spacetime_heat_sl_kernel_antiderivative,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 >,
+  besthea::bem::distributed_fast_spacetime_be_space<
+    besthea::bem::basis_tri_p0 > >::
+  assemble_nearfield_matrix_entry( quadrature_wrapper & my_quadrature,
+    const mesh::general_spacetime_cluster * tar_cluster,
+    const mesh::general_spacetime_cluster * src_cluster, lo loc_tar_idx,
+    lo loc_src_idx ) const {
+  const distributed_spacetime_tensor_mesh & distributed_test_mesh
+    = _test_space->get_mesh( );
+  const distributed_spacetime_tensor_mesh & distributed_trial_mesh
+    = _trial_space->get_mesh( );
+  const spacetime_tensor_mesh * test_mesh;
+  const spacetime_tensor_mesh * trial_mesh;
+  lo test_mesh_start_idx, trial_mesh_start_idx;
+  if ( tar_cluster->get_process_id( ) == _my_rank ) {
+    test_mesh = distributed_test_mesh.get_local_mesh( );
+    test_mesh_start_idx = distributed_test_mesh.get_local_start_idx( );
+  } else {
+    test_mesh = distributed_test_mesh.get_nearfield_mesh( );
+    test_mesh_start_idx = distributed_test_mesh.get_nearfield_start_idx( );
+  }
+  if ( src_cluster->get_process_id( ) == _my_rank ) {
+    trial_mesh = distributed_trial_mesh.get_local_mesh( );
+    trial_mesh_start_idx = distributed_trial_mesh.get_local_start_idx( );
+  } else {
+    trial_mesh = distributed_trial_mesh.get_nearfield_mesh( );
+    trial_mesh_start_idx = distributed_trial_mesh.get_nearfield_start_idx( );
+  }
+
+  // get the global temporal and spatial indices of the target element
+  lo test_elem_st = distributed_test_mesh.global_2_local(
+    test_mesh_start_idx, tar_cluster->get_element( loc_tar_idx ) );
+  lo test_elem_t = test_mesh->get_time_element( test_elem_st );
+  lo gl_test_elem_t = test_mesh_start_idx + test_elem_t;
+  lo gl_test_elem_s = test_mesh->get_space_element_index( test_elem_st );
+  // same for the source element
+  lo trial_elem_st = distributed_trial_mesh.global_2_local(
+    trial_mesh_start_idx, src_cluster->get_element( loc_src_idx ) );
+  lo trial_elem_t = trial_mesh->get_time_element( trial_elem_st );
+  lo gl_trial_elem_t = trial_mesh_start_idx + trial_elem_t;
+  lo gl_trial_elem_s = trial_mesh->get_space_element_index( trial_elem_st );
+
+  sc entry = 0.0;
+  // due to the causality of the kernel, an entry is zero if the temporal index
+  // of the test element is less than the one of the trial element
+  if ( gl_test_elem_t >= gl_trial_elem_t ) {
+    // get the spatial and temporal data of the elements
+    sc t0, t1, tau0, tau1;
+    test_mesh->get_temporal_nodes( test_elem_t, &t0, &t1 );
+    trial_mesh->get_temporal_nodes( trial_elem_t, &tau0, &tau1 );
+    linear_algebra::coordinates< 3 > x1, x2, x3;
+    test_mesh->get_spatial_nodes_using_spatial_element_index(
+      gl_test_elem_s, x1, x2, x3 );
+    sc test_area
+      = test_mesh->get_spatial_area_using_spatial_index( gl_test_elem_s );
+    linear_algebra::coordinates< 3 > y1, y2, y3;
+    trial_mesh->get_spatial_nodes_using_spatial_element_index(
+      gl_trial_elem_s, y1, y2, y3 );
+    sc trial_area
+      = trial_mesh->get_spatial_area_using_spatial_index( gl_trial_elem_s );
+    // normal vectors are not used, and thus not initialized properly.
+    sc * nx_data = nullptr;
+    sc * ny_data = nullptr;
+
+    // determine the configuration in time and space
+    bool shared_t_element = ( gl_trial_elem_t == gl_test_elem_t );
+    bool shared_t_vertex = ( gl_trial_elem_t == gl_test_elem_t - 1 );
+    int n_shared_vertices, rot_test, rot_trial;
+    if ( shared_t_element || shared_t_vertex ) {
+      get_type( gl_test_elem_s, gl_trial_elem_s, n_shared_vertices, rot_test,
+        rot_trial );
+    } else {
+      n_shared_vertices = 0;
+      rot_test = 0;
+      rot_trial = 0;
+    }
+
+    // initialize the data in the quadrature wrapper
+    triangles_to_geometry( x1, x2, x3, y1, y2, y3, n_shared_vertices, rot_test,
+      rot_trial, my_quadrature );
+    // get pointers to the data in the quadrature wrapper
+    sc * w = my_quadrature._w[ n_shared_vertices ].data( );
+    lo n_quad_points = my_quadrature._w[ n_shared_vertices ].size( );
+    sc * x1_mapped = my_quadrature._x1.data( );
+    sc * x2_mapped = my_quadrature._x2.data( );
+    sc * x3_mapped = my_quadrature._x3.data( );
+    sc * y1_mapped = my_quadrature._y1.data( );
+    sc * y2_mapped = my_quadrature._y2.data( );
+    sc * y3_mapped = my_quadrature._y3.data( );
+
+    if ( shared_t_element ) {
+#pragma omp simd aligned(                                             \
+  x1_mapped, x2_mapped, x3_mapped, y1_mapped, y2_mapped, y3_mapped, w \
+  : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
+      for ( lo i_quad = 0; i_quad < n_quad_points; ++i_quad ) {
+        entry += _kernel->definite_integral_over_same_interval(
+                   x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                   x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                   x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data,
+                   t0, t1 )
+          * w[ i_quad ];
+      }
+    } else {
+#pragma omp simd aligned(                                             \
+  x1_mapped, x2_mapped, x3_mapped, y1_mapped, y2_mapped, y3_mapped, w \
+  : DATA_ALIGN ) simdlen( BESTHEA_SIMD_WIDTH )
+      for ( lo i_quad = 0; i_quad < n_quad_points; ++i_quad ) {
+        entry += _kernel->definite_integral_over_different_intervals(
+                   x1_mapped[ i_quad ] - y1_mapped[ i_quad ],
+                   x2_mapped[ i_quad ] - y2_mapped[ i_quad ],
+                   x3_mapped[ i_quad ] - y3_mapped[ i_quad ], nx_data, ny_data,
+                   t0, t1, tau0, tau1 )
+          * w[ i_quad ];
+      }
+    }
+    entry *= test_area * trial_area;
+  }
+  return entry;
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+bool besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
+  test_space_type, trial_space_type >::
+  compute_low_rank_approximation(
+    const mesh::general_spacetime_cluster * tar_cluster,
+    const mesh::general_spacetime_cluster * src_cluster,
+    low_rank_matrix_type & lr_nf_matrix, sc & estimated_eps,
+    bool enable_svd_recompression,
+    sc svd_recompression_reference_value ) const {
   lo i, j, ell;             // indices
   lo ik, jk;                // Pivot-Indices
   lo k;                     // current rank
@@ -964,11 +1129,10 @@ bool besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   sc errU, errV;            // variables used for error computation
   sc scale;                 // auxiliary variable
   sc *p, *q;                // pointer to current rank-1-matrix
-  lo row_dim = full_nf_matrix.get_n_rows( );
-  lo col_dim = full_nf_matrix.get_n_columns( );
-  bool successful_compression = false;
+  lo row_dim = tar_cluster->get_n_dofs< test_space_type >( );
+  lo col_dim = src_cluster->get_n_dofs< trial_space_type >( );
 
-  besthea::bem::kernel_from_matrix nf_matrix_kernel( &full_nf_matrix );
+  bool successful_compression = false;
 
   // construct low rank components u and v_aux (large enough)
   full_matrix_type u( row_dim, col_dim, true );
@@ -988,6 +1152,10 @@ bool besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   ik = 0;
   jk = 0;
 
+  // initialize quadrature wrapper
+  quadrature_wrapper my_quadrature;
+  init_quadrature( my_quadrature );
+
   while ( 1 ) {
     p = u_data + k * row_dim;  // memory address p = u_k
     // compute u_k
@@ -996,7 +1164,8 @@ bool besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
       //      #pragma omp parallel for
       for ( i = 0; i < row_dim; i++ )
         if ( Zi[ i ] )
-          p[ i ] = nf_matrix_kernel.evaluate( i, jk );  // F(i, jk);
+          p[ i ] = assemble_nearfield_matrix_entry(
+            my_quadrature, tar_cluster, src_cluster, i, jk );
 
       // compute the residuum
       for ( ell = 0; ell < k; ell++ ) {
@@ -1058,7 +1227,8 @@ bool besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
         //        #pragma omp parallel for
         for ( j = 0; j < col_dim; j++ )
           if ( Zj[ j ] )
-            q[ j ] = nf_matrix_kernel.evaluate( ik, j );  // F(ik, j);
+            q[ j ] = assemble_nearfield_matrix_entry(
+              my_quadrature, tar_cluster, src_cluster, ik, j );
 
         // compute the residuum
         for ( ell = 0; ell < k; ell++ ) {
