@@ -83,3 +83,19 @@ void besthea::linear_algebra::low_rank_matrix::apply( const vector_type & x,
     _v.apply( y_intermediate, y, false, 1.0, beta );
   }
 }
+
+void besthea::linear_algebra::low_rank_matrix::replace_matrices(
+  full_matrix && u, full_matrix && v ) {
+  _u = std::move( u );
+  _v = std::move( v );
+  this->_n_rows = _u.get_n_rows( );
+  this->_n_columns = _v.get_n_rows( );
+}
+
+void besthea::linear_algebra::low_rank_matrix::replace_matrices(
+  const full_matrix & u, const full_matrix & v ) {
+  _u = u;
+  _v = v;
+  this->_n_rows = _u.get_n_rows( );
+  this->_n_columns = _v.get_n_rows( );
+}

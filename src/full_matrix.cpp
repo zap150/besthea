@@ -80,6 +80,14 @@ besthea::linear_algebra::full_matrix::operator=( full_matrix && other ) {
   return *this;
 }
 
+besthea::linear_algebra::full_matrix &
+besthea::linear_algebra::full_matrix::operator=( const full_matrix & other ) {
+  _data = other._data;
+  this->_n_rows = other._n_rows;
+  this->_n_columns = other._n_columns;
+  return *this;
+}
+
 void besthea::linear_algebra::full_matrix::print(
   std::ostream & stream ) const {
   for ( lo i_row = 0; i_row < _n_rows; ++i_row ) {

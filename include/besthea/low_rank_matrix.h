@@ -121,6 +121,20 @@ class besthea::linear_algebra::low_rank_matrix
   virtual void apply( const vector_type & x, vector_type & y,
     bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
 
+  /**
+   * Replaces the matrices @ref _u and @ref _v by new ones using move semantics.
+   * @param[in] u Replacement for @p _u.
+   * @param[in] v Replacement for @p _v.
+   */
+  void replace_matrices( full_matrix && u, full_matrix && v );
+
+  /**
+   * Replaces the matrices @ref _u and @ref _v by copying the provided new ones.
+   * @param[in] u Replacement for @p _u.
+   * @param[in] v Replacement for @p _v.
+   */
+  void replace_matrices( const full_matrix & u, const full_matrix & v );
+
  private:
   full_matrix _u;  //!< Matrix U in the low rank representation U*V^T
   full_matrix _v;  //!< Matrix V in the low rank representation U*V^T

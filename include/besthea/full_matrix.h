@@ -100,6 +100,12 @@ class besthea::linear_algebra::full_matrix
    */
   full_matrix & operator=( full_matrix && other );
 
+  /**
+   * Copy assignment operator for full matrix.
+   * @param[in] other Matrix which is copied.
+   */
+  full_matrix & operator=( const full_matrix & other );
+
   /*!
    * @brief Prints the matrix.
    * @param[in] stream

@@ -1307,14 +1307,15 @@ bool besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
     }
   }
 
-  // resize u, v to achieved rank
-  u.resize( row_dim, k, false );
-  v.resize( col_dim, k, false );
+  if ( successful_compression ) {
+    // resize u, v to achieved rank
+    u.resize( row_dim, k, false );
+    v.resize( col_dim, k, false );
 
-  lr_nf_matrix
-    = std::move( low_rank_matrix_type( std::move( u ), std::move( v ) ) );
+    lr_nf_matrix.replace_matrices( std::move( u ), std::move( v ) );
 
-  estimated_eps = sqrt( error2 / frobnr2 );
+    estimated_eps = sqrt( error2 / frobnr2 );
+  }
 
   return successful_compression;
 }
