@@ -263,13 +263,6 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
       == 0 ) {
     n_clusters_with_spat_adm_nf_matrices--;
   }
-
-  // auxiliary vectors to count the number of spatially admissible matrices and
-  // those of them which could not be compressed (in case of aca recompression)
-  std::vector< lo > n_tot_spat_adm_matrices_per_thread(
-    omp_get_max_threads( ), 0 );
-  std::vector< lo > n_failed_compression_spat_adm_per_thread(
-    omp_get_max_threads( ), 0 );
   // next, assemble the spatially admissible nearfield matrices
 #pragma omp parallel for schedule( dynamic, 1 )
   for ( lou cluster_index = 0;
@@ -287,7 +280,6 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
       }
       for ( std::vector< general_spacetime_cluster * >::size_type src_index = 0;
             src_index < spat_adm_nearfield_list->size( ); ++src_index ) {
-        n_tot_spat_adm_matrices_per_thread[ omp_get_thread_num( ) ]++;
         general_spacetime_cluster * nearfield_cluster
           = ( *spat_adm_nearfield_list )[ src_index ];
         bool successful_compression = false;
@@ -311,7 +303,6 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
           }
         }
         if ( !successful_compression ) {
-          n_failed_compression_spat_adm_per_thread[ omp_get_thread_num( ) ]++;
           lo n_cols = nearfield_cluster->get_n_dofs< trial_space_type >( );
           lo n_rows = current_cluster->get_n_dofs< test_space_type >( );
           full_matrix_type * full_block
@@ -322,21 +313,6 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
             permutation_index[ cluster_index ], src_index, full_block );
         }
       }
-    }
-  }
-  if ( _aca_eps > 0 ) {
-    lo n_failed_compression_spat_adm( 0 ), n_tot_spat_adm_matrices( 0 );
-    for ( lo i = 0; i < omp_get_max_threads( ); ++i ) {
-      n_failed_compression_spat_adm
-        += n_failed_compression_spat_adm_per_thread[ i ];
-      n_tot_spat_adm_matrices += n_tot_spat_adm_matrices_per_thread[ i ];
-    }
-    if ( _my_rank == 0 ) {
-      std::cout << "process " << _my_rank
-                << ": total number of spatially admissible nearfield matrices: "
-                << n_tot_spat_adm_matrices << std::endl;
-      std::cout << "failed compression in " << n_failed_compression_spat_adm
-                << " cases." << std::endl;
     }
   }
 }

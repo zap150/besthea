@@ -1681,7 +1681,7 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @note No communication among processes occurs in this routine. Each process
    * returns an individual vector.
    */
-  void compute_nearfield_entries_levelwise(
+  void count_nearfield_entries_levelwise(
     std::vector< long long > & levelwise_nf_entries_total_uncompressed,
     std::vector< long long > & levelwise_nf_entries_spat_adm_uncompressed,
     std::vector< long long > & levelwise_nf_entries_spat_adm_compressed ) const;
@@ -1698,9 +1698,34 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @note No communication among processes occurs in this routine. Each process
    * returns an individual vector.
    */
-  void compute_time_separated_nearfield_entries_levelwise(
+  void count_time_separated_nearfield_entries_levelwise(
     std::vector< long long > & levelwise_time_separated_nearfield_entries )
     const;
+
+  /**
+   * Counts the number of blocks (distinguishing discarded, compressed and
+   * uncompressed) and their total sizes for all local space-time target
+   * clusters and the source clusters in their spatially admissible nearfield.
+   * @param[out] n_discarded_blocks Number of blocks that have been discarded
+   * during the aca compressed assembly.
+   * @param[out] n_tot_size_discarded_blocks  Total size of all discarded
+   * blocks, i.e. the number of entries all blocks would have.
+   * @param[out] n_compresed_blocks Number of blocks that have been successfully
+   * compressed using aca.
+   * @param[out] n_tot_size_compressed_blocks Total size of all compressed
+   * blocks, i.e. the number of entries the full blocks would have.
+   * @param[out] n_uncompressed_blocks  Number of blocks that were not
+   * compressed and could not be discarded.
+   * @param[out] n_tot_size_uncompressed_blocks Total size of all uncompressed
+   * blocks, i.e. the number of entries all these blocks have.
+   * @note No communication among processes occurs in this routine. Each process
+   * returns individual numbers.
+   */
+  void collect_information_spatially_admissible_nearfield_operations(
+    long long & n_discarded_blocks, long long & n_tot_size_discarded_blocks,
+    long long & n_compressed_blocks, long long & n_tot_size_compressed_blocks,
+    long long & n_uncompressed_blocks,
+    long long & n_tot_size_uncompressed_blocks ) const;
 
   /**
    * Counts the number of all FMM operations levelwise

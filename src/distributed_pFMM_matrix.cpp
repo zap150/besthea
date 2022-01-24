@@ -459,15 +459,53 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   std::vector< long long > loc_lvlwise_spat_adm_nf_entries_no_compr;
   std::vector< long long > loc_lvlwise_spat_adm_nf_entries_compr;
   std::vector< long long > loc_lvlwise_time_separated_nf_entries;
-  compute_nearfield_entries_levelwise( loc_lvlwise_tot_nf_entries_uncompressed,
+  count_nearfield_entries_levelwise( loc_lvlwise_tot_nf_entries_uncompressed,
     loc_lvlwise_spat_adm_nf_entries_no_compr,
     loc_lvlwise_spat_adm_nf_entries_compr );
   bool using_m2t_and_s2l_operations
     = _distributed_spacetime_tree->get_distribution_tree( )
         ->supports_m2t_and_s2l_operations( );
   if ( !using_m2t_and_s2l_operations ) {
-    compute_time_separated_nearfield_entries_levelwise(
+    count_time_separated_nearfield_entries_levelwise(
       loc_lvlwise_time_separated_nf_entries );
+  }
+
+  long long n_discarded_blocks, n_tot_size_discarded_blocks,
+    n_compressed_blocks, n_tot_size_compressed_blocks, n_uncompressed_blocks,
+    n_tot_size_uncompressed_blocks;
+  if ( _aca_eps > 0.0 ) {
+    // collect_information_of_spatially_admissible_nearfield_operations( )
+    collect_information_spatially_admissible_nearfield_operations(
+      n_discarded_blocks, n_tot_size_discarded_blocks, n_compressed_blocks,
+      n_tot_size_compressed_blocks, n_uncompressed_blocks,
+      n_tot_size_uncompressed_blocks );
+    if ( _my_rank == root_process ) {
+      MPI_Reduce( MPI_IN_PLACE, &n_discarded_blocks, 1, MPI_LONG_LONG_INT,
+        MPI_SUM, root_process, *_comm );
+      MPI_Reduce( MPI_IN_PLACE, &n_tot_size_discarded_blocks, 1,
+        MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
+      MPI_Reduce( MPI_IN_PLACE, &n_compressed_blocks, 1, MPI_LONG_LONG_INT,
+        MPI_SUM, root_process, *_comm );
+      MPI_Reduce( MPI_IN_PLACE, &n_tot_size_compressed_blocks, 1,
+        MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
+      MPI_Reduce( MPI_IN_PLACE, &n_uncompressed_blocks, 1, MPI_LONG_LONG_INT,
+        MPI_SUM, root_process, *_comm );
+      MPI_Reduce( MPI_IN_PLACE, &n_tot_size_uncompressed_blocks, 1,
+        MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
+    } else {
+      MPI_Reduce( &n_discarded_blocks, nullptr, 1, MPI_LONG_LONG_INT, MPI_SUM,
+        root_process, *_comm );
+      MPI_Reduce( &n_tot_size_discarded_blocks, nullptr, 1, MPI_LONG_LONG_INT,
+        MPI_SUM, root_process, *_comm );
+      MPI_Reduce( &n_compressed_blocks, nullptr, 1, MPI_LONG_LONG_INT, MPI_SUM,
+        root_process, *_comm );
+      MPI_Reduce( &n_tot_size_compressed_blocks, nullptr, 1, MPI_LONG_LONG_INT,
+        MPI_SUM, root_process, *_comm );
+      MPI_Reduce( &n_uncompressed_blocks, nullptr, 1, MPI_LONG_LONG_INT,
+        MPI_SUM, root_process, *_comm );
+      MPI_Reduce( &n_tot_size_uncompressed_blocks, nullptr, 1,
+        MPI_LONG_LONG_INT, MPI_SUM, root_process, *_comm );
+    }
   }
 
   lo n_global_tree_levels = _distributed_spacetime_tree->get_n_levels( );
@@ -830,6 +868,31 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             / (sc) total_storage_spat_adm_nf_no_compr )
                 << std::endl;
     }
+    if ( n_compressed_blocks > 0 || n_discarded_blocks > 0 ) {
+      std::cout << "Compression details: " << std::endl;
+      std::cout << "Total amount of spatially admissible blocks: "
+                << n_compressed_blocks + n_uncompressed_blocks
+          + n_discarded_blocks;
+      std::cout << ", size: "
+                << ( (sc) ( n_tot_size_uncompressed_blocks
+                     + n_tot_size_compressed_blocks
+                     + n_tot_size_discarded_blocks ) )
+          * 8.0 / ( 1024. * 1024. * 1024. )
+                << " GiB" << std::endl;
+      std::cout << "Compressed blocks: " << n_compressed_blocks << ", size: "
+                << (sc) n_tot_size_compressed_blocks * 8.0
+          / ( 1024. * 1024. * 1024. )
+                << " GiB" << std::endl;
+      std::cout << "Unompressed blocks: " << n_uncompressed_blocks << ", size: "
+                << (sc) n_tot_size_uncompressed_blocks * 8.0
+          / ( 1024. * 1024. * 1024. )
+                << " GiB" << std::endl;
+      std::cout << "Discarded blocks: " << n_discarded_blocks << ", size: "
+                << (sc) n_tot_size_discarded_blocks * 8.0
+          / ( 1024. * 1024. * 1024. )
+                << " GiB" << std::endl;
+    }
+
     std::cout << "storage per allocated vector (source): "
               << n_source_dofs * 8. / 1024. / 1024. / 1024. << " GiB."
               << std::endl;
@@ -5408,7 +5471,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::
-  compute_nearfield_entries_levelwise(
+  count_nearfield_entries_levelwise(
     std::vector< long long > & levelwise_nf_entries_total_uncompressed,
     std::vector< long long > & levelwise_nf_entries_spat_adm_uncompressed,
     std::vector< long long > & levelwise_nf_entries_spat_adm_compressed )
@@ -5472,7 +5535,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::
-  compute_time_separated_nearfield_entries_levelwise(
+  count_time_separated_nearfield_entries_levelwise(
     std::vector< long long > & levelwise_time_separated_nearfield_entries )
     const {
   levelwise_time_separated_nearfield_entries.resize(
@@ -5507,6 +5570,70 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             > src_time_center + src_time_half_size ) {
             levelwise_time_separated_nearfield_entries[ current_level ]
               += n_target_dofs * st_source->get_n_dofs< source_space >( );
+          }
+        }
+      }
+    }
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::
+  collect_information_spatially_admissible_nearfield_operations(
+    long long & n_discarded_blocks, long long & n_tot_size_discarded_blocks,
+    long long & n_compressed_blocks, long long & n_tot_size_compressed_blocks,
+    long long & n_uncompressed_blocks,
+    long long & n_tot_size_uncompressed_blocks ) const {
+  n_discarded_blocks = 0;
+  n_tot_size_discarded_blocks = 0;
+  n_compressed_blocks = 0;
+  n_tot_size_compressed_blocks = 0;
+  n_uncompressed_blocks = 0;
+  n_tot_size_uncompressed_blocks = 0;
+  for ( auto it : _n_list ) {
+    const std::vector< general_spacetime_cluster * > * st_targets
+      = it->get_associated_spacetime_clusters( );
+    for ( auto st_target : *st_targets ) {
+      auto st_spat_adm_nearfield_list
+        = st_target->get_spatially_admissible_nearfield_list( );
+      if ( st_spat_adm_nearfield_list != nullptr ) {
+        lo n_target_dofs = st_target->get_n_dofs< target_space >( );
+        // get the vector of assembled spatially admissible nearfield matrices
+        auto spat_adm_nf_matrix_pairs
+          = _clusterwise_spat_adm_nf_matrix_pairs.at( st_target );
+        if ( spat_adm_nf_matrix_pairs.size( ) > 0 ) {
+          lo next_nf_matrix_idx = 0;
+          lo next_nf_matrix_src_idx
+            = spat_adm_nf_matrix_pairs[ next_nf_matrix_idx ].first;
+          for ( lo src_index = 0;
+                src_index < (lo) st_spat_adm_nearfield_list->size( );
+                ++src_index ) {
+            general_spacetime_cluster * st_source
+              = ( *st_spat_adm_nearfield_list )[ src_index ];
+            lo n_source_dofs = st_source->get_n_dofs< source_space >( );
+            if ( src_index == next_nf_matrix_src_idx ) {
+              matrix * nf_matrix
+                = spat_adm_nf_matrix_pairs[ next_nf_matrix_idx ].second;
+              // check if the compression was successful or not
+              if ( nf_matrix->get_rank( ) < std::min(
+                     nf_matrix->get_n_rows( ), nf_matrix->get_n_columns( ) ) ) {
+                n_compressed_blocks++;
+                n_tot_size_compressed_blocks += n_target_dofs * n_source_dofs;
+              } else {
+                n_uncompressed_blocks++;
+                n_tot_size_uncompressed_blocks += n_target_dofs * n_source_dofs;
+              }
+              if ( (lou) next_nf_matrix_idx
+                < spat_adm_nf_matrix_pairs.size( ) - 1 ) {
+                next_nf_matrix_idx++;
+                next_nf_matrix_src_idx
+                  = spat_adm_nf_matrix_pairs[ next_nf_matrix_idx ].first;
+              }
+            } else {
+              n_discarded_blocks++;
+              n_tot_size_discarded_blocks += n_target_dofs * n_source_dofs;
+            }
           }
         }
       }
