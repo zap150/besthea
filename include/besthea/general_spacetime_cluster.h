@@ -1107,7 +1107,7 @@ class besthea::mesh::general_spacetime_cluster {
 
   void print_short( ) const {
     std::cout << _n_time_elements << " time elems, " << _n_space_elements
-              << " space elems, time level " << _n_time_div << ",  space level "
+              << " space elems, time level " << _n_time_div << ", space level "
               << _n_space_div << ", coordinates " << _box_coordinate[ 1 ]
               << ", " << _box_coordinate[ 2 ] << ", " << _box_coordinate[ 3 ]
               << ", " << _box_coordinate[ 4 ];

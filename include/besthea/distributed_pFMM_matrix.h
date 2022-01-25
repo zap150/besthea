@@ -68,6 +68,14 @@ namespace besthea {
   }
 }
 
+namespace besthea {
+  namespace bem {
+    template< class kernel_type, class test_space_type,
+      class trials_space_type >
+    class distributed_fast_spacetime_be_assembler;
+  }
+}
+
 /**
  * Class representing a matrix approximated by the pFMM method.
  */
@@ -79,6 +87,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   using timer_type = besthea::tools::timer;             //!< Timer type
   // using clock_type = std::chrono::high_resolution_clock;
   using time_type = std::chrono::microseconds;  //!< Unit type.
+  using assembler_type
+    = besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
+      target_space, source_space >;  //!< Type of the related assembler.
 
   /**
    * Wraps the mapped quadrature point so that they can be private for OpenMP
@@ -246,56 +257,20 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     sc beta = 0.0 ) const;
 
   /**
-   * @brief y = beta * y + alpha * (this)^trans * x using distributed block
-   * vectors for single, double and adjoint double layer operators.
+   * @brief Computes the result y = beta * y + alpha * this * x. The nearfield
+   * part of the matrix-vector multiplication is done on the fly, i.e. the
+   * nearfield block matrices are assembled and applied directly.
+   * @param[in] matrix_assembler  Appropriate assembler that provides the
+   * routines for the assembly of nearfield matrices.
    * @param[in] x
    * @param[in,out] y
-   * @param[in] trans Flag for transpose of individual blocks (not the whole
-   * block matrix!).
    * @param[in] alpha
    * @param[in] beta
-   * @todo we should disable trans somehow, since it is not implemented
-   * correctly.
+   *
    */
-  void apply_sl_dl( const distributed_block_vector & x,
-    distributed_block_vector & y, bool trans, sc alpha, sc beta ) const;
-
-  /**
-   * @brief y = beta * y + alpha * (this)^trans * x using distributed block
-   * vectors for the hypersingular operator.
-   * @param[in] x
-   * @param[in,out] y
-   * @param[in] trans Flag for transpose of individual blocks (not the whole
-   *                  block matrix!).
-   * @param[in] alpha
-   * @param[in] beta
-   * @todo we should disable trans somehow, since it is not implemented
-   * correctly.
-   */
-  void apply_hs( const distributed_block_vector & x,
-    distributed_block_vector & y, bool trans, sc alpha, sc beta ) const;
-
-  /**
-   * @brief Realizes one run of the distributed pFMM algorithm. (executing all
-   * farfield operations and, if @p run_count = 0 also all nearfield
-   * operations).
-   * @param[in] x Distributed vector which contains the sources.
-   * @param[in] y_pFMM  Distributed vector to which the result is added.
-   * @param[in] trans Flag for transpose of individual blocks (not the whole
-   *                  block matrix!).
-   * @tparam run_count  This parameter keeps track how often the pFMM procedure
-   *                    has been executed. It is used to select the appropriate
-   *                    s2m and l2t operations for each run of the pFMM
-   *                    algorithm for the hypersingular operator. For all other
-   *                    operators it has no effect.
-   * @todo we should disable trans somehow, since it is not implemented
-   * correctly.
-   * @note This routine is called in the routines @ref apply_sl_dl and
-   *       @ref apply_hs.
-   * */
-  template< slou run_count >
-  void apply_pFMM_procedure( const distributed_block_vector & x,
-    distributed_block_vector & y_pFMM, bool trans ) const;
+  void apply_on_the_fly( const assembler_type & matrix_assembler,
+    const distributed_block_vector & x, distributed_block_vector & y,
+    sc alpha = 1.0, sc beta = 0.0 ) const;
 
   /**
    * Sets the MPI communicator associated with the distributed pFMM matrix and
@@ -324,6 +299,14 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    */
   void set_alpha( sc alpha ) {
     _alpha = alpha;
+  }
+
+  /**
+   * Sets @ref _execute_nf_operations_in_pfmm_procedure to a given value.
+   * @param[in] new_status  New nearfield execution status.
+   */
+  void set_nearfield_execution_status( bool new_status ) {
+    _execute_nf_operations_in_pfmm_procedure = new_status;
   }
 
   /**
@@ -386,11 +369,17 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   }
 
   /**
-   * Initializes @ref _clusters_with_nearfield_operations and prepares
-   * @ref _clusterwise_nf_matrices and
-   * @ref _clusterwise_spat_adm_nf_matrix_pairs by
-   * creating a map for each space-time target cluster and associated list of
-   * nearfield matrices.
+   * Initializes @ref _clusters_with_nearfield_operations.
+   */
+  void determine_clusters_with_nearfield_operations( );
+
+  /**
+   * Prepares @ref _clusterwise_nf_matrices and
+   * @ref _clusterwise_spat_adm_nf_matrix_pairs by creating a map for each
+   * space-time target cluster and associated list of nearfield matrices.
+   * @note If @ref _clusters_with_nearfield_operations has size 0 (i.e. it is
+   * not initialized) the routine
+   * @ref determine_clusters_with_nearfield_operations is called.
    */
   void initialize_nearfield_containers( );
 
@@ -483,6 +472,72 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     distributed_block_vector & inverse_diagonal ) const;
 
  private:
+  /**
+   * @brief y = beta * y + alpha * (this)^trans * x using distributed block
+   * vectors for single, double and adjoint double layer operators.
+   * @param[in] x
+   * @param[in,out] y
+   * @param[in] trans Flag for transpose of individual blocks (not the whole
+   * block matrix!).
+   * @param[in] alpha
+   * @param[in] beta
+   * @todo we should disable trans somehow, since it is not implemented
+   * correctly.
+   */
+  void apply_sl_dl( const distributed_block_vector & x,
+    distributed_block_vector & y, bool trans, sc alpha, sc beta ) const;
+
+  /**
+   * @brief y = beta * y + alpha * (this)^trans * x using distributed block
+   * vectors for the hypersingular operator.
+   * @param[in] x
+   * @param[in,out] y
+   * @param[in] trans Flag for transpose of individual blocks (not the whole
+   *                  block matrix!).
+   * @param[in] alpha
+   * @param[in] beta
+   * @todo we should disable trans somehow, since it is not implemented
+   * correctly.
+   */
+  void apply_hs( const distributed_block_vector & x,
+    distributed_block_vector & y, bool trans, sc alpha, sc beta ) const;
+
+  /**
+   * @brief Realizes one run of the distributed pFMM algorithm. (executing all
+   * farfield operations and, if @p run_count = 0 also all nearfield
+   * operations).
+   * @param[in] x Distributed vector which contains the sources.
+   * @param[in] y_pFMM  Distributed vector to which the result is added.
+   * @param[in] trans Flag for transpose of individual blocks (not the whole
+   *                  block matrix!).
+   * @tparam run_count  This parameter keeps track how often the pFMM procedure
+   *                    has been executed. It is used to select the appropriate
+   *                    s2m and l2t operations for each run of the pFMM
+   *                    algorithm for the hypersingular operator. For all other
+   *                    operators it has no effect.
+   * @todo we should disable trans somehow, since it is not implemented
+   * correctly.
+   * @note This routine is called in the routines @ref apply_sl_dl and
+   *       @ref apply_hs.
+   * */
+  template< slou run_count >
+  void apply_pFMM_procedure( const distributed_block_vector & x,
+    distributed_block_vector & y_pFMM, bool trans ) const;
+
+  /**
+   * Computes y = y + alpha * NFP(this) * x, where NFP(this) is the
+   * nearfield-part of the current pfmm matrix. The related nearfield matrices
+   * are assembled and applied on the fly.
+   * @param[in] matrix_assembler  Appropriate assembler that provides the
+   * routines for the assembly of nearfield matrices.
+   * @param[in] x
+   * @param[in,out] y
+   * @param[in] alpha
+   */
+  void apply_nearfield_on_the_fly( const assembler_type & matrix_assembler,
+    const distributed_block_vector & x, distributed_block_vector & y,
+    sc alpha ) const;
+
   /**
    * Traverses the associated distributed space-time tree recursively and adds
    * all space-time clusters for which nearfield operations have to be executed
@@ -1961,6 +2016,15 @@ class besthea::linear_algebra::distributed_pFMM_matrix
                                             //!< missing, the corresponding
                                             //!< nearfield matrix is negligibly
                                             //!< small.
+  bool
+    _execute_nf_operations_in_pfmm_procedure;  //!< Only if this is set to true,
+                                               //!< nearfield operations are
+                                               //!< executed in the pfmm
+                                               //!< procedure, i.e. when the
+                                               //!< matrix is applied. It is set
+                                               //!< to false, e.g., when
+                                               //!< applying a matrix on the
+                                               //!< fly.
 
   std::list< mesh::scheduling_time_cluster * >
     _m_list;  //!< M-list for the execution of the FMM.

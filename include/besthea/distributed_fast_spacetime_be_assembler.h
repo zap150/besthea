@@ -224,7 +224,43 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
   void assemble(
     pfmm_matrix_type & global_matrix, bool info_mode = false ) const;
 
+  /**
+   * Initializes the given pfmm matrix for an on the fly application, i.e. an
+   * application where the nearfield matrices are not stored but assembled and
+   * applied on the fly.
+   *
+   * The routine initializes most structures of the pfmm matrix needed for the
+   * application of the farfield part (by calling
+   * @ref initialize_farfield_data), but does not assemble the nearfield
+   * matrices.
+   *
+   * @param[in] global_matrix pFMM matrix which is initialized for an on the fly
+   * application.
+   */
+  void initialize_for_on_the_fly_application(
+    pfmm_matrix_type & global_matrix ) const;
+
+  /**
+   * Assembles a nearfield matrix associated to a given target and source
+   * cluster.
+   * @param[in] target_cluster  Spacetime target cluster
+   * @param[in] source_cluster  Spacetime source cluster in the nearfield of the
+   *                            spacetime target cluster.
+   * @param[in,out] nearfield_matrix Reference to the matrix which is assembled.
+   */
+  void assemble_nearfield_block(
+    mesh::general_spacetime_cluster * target_cluster,
+    mesh::general_spacetime_cluster * source_cluster,
+    full_matrix_type & nearfield_matrix ) const;
+
  private:
+  /**
+   * Initializes all the data of the matrix which is needed for the execution of
+   * the farfield operations in its application.
+   * @param[in] global_matrix Matrix whose farfield data is initialized.
+   */
+  void initialize_farfield_data( pfmm_matrix_type & global_matrix ) const;
+
   /**
    * Initializes quadrature structures for evaluation of nearfield integrals of
    * pFMM matrix.
@@ -264,19 +300,6 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
   void assemble_nearfield( pfmm_matrix_type & global_matrix ) const;
 
   /**
-   * Assembles a nearfield matrix associated to a given target and source
-   * cluster.
-   * @param[in] target_cluster  Spacetime target cluster
-   * @param[in] source_cluster  Spacetime source cluster in the nearfield of the
-   *                            spacetime target cluster.
-   * @param[in,out] nearfield_matrix Reference to the matrix which is assembled.
-   */
-  void assemble_nearfield_matrix(
-    mesh::general_spacetime_cluster * target_cluster,
-    mesh::general_spacetime_cluster * source_cluster,
-    full_matrix_type & nearfield_matrix ) const;
-
-  /**
    * Assembles a single entry of a nearfield matrix corresponding to given
    * source and target clusters.
    * @param[in] my_quadrature Initialized quadrature data,
@@ -288,7 +311,7 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
    * @param[in] loc_src_idx Local index of the degree of freedom in the source
    * cluster, for which the nearfield matrix entry is computed.
    */
-  sc assemble_nearfield_matrix_entry( quadrature_wrapper & my_quadrature,
+  sc assemble_nearfield_block_entry( quadrature_wrapper & my_quadrature,
     const mesh::general_spacetime_cluster * tar_cluster,
     const mesh::general_spacetime_cluster * src_cluster, lo loc_tar_idx,
     lo loc_src_idx ) const;

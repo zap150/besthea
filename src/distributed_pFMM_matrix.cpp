@@ -30,6 +30,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/distributed_pFMM_matrix.h"
 
+#include "besthea/distributed_fast_spacetime_be_assembler.h"
 #include "besthea/fmm_routines.h"
 #include "besthea/quadrature.h"
 #include "besthea/timer.h"
@@ -66,11 +67,20 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::initialize_nearfield_containers( ) {
+  target_space,
+  source_space >::determine_clusters_with_nearfield_operations( ) {
   // determine the clusters, for which nearfield operations have to be executed.
   determine_clusters_with_nearfield_operations_recursively(
     _distributed_spacetime_tree->get_root( ) );
   _clusters_with_nearfield_operations.shrink_to_fit( );
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::initialize_nearfield_containers( ) {
+  if ( _clusters_with_nearfield_operations.size( ) == 0 ) {
+    determine_clusters_with_nearfield_operations( );
+  }
   // for all clusters with nearfield operations, create a proper entry in the
   // map _clusterwise_nf_matrices
   for ( auto cluster : _clusters_with_nearfield_operations ) {
@@ -841,7 +851,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       - total_storage_spat_adm_nf_no_compr + total_storage_spat_adm_nf_compr;
     if ( total_storage_spat_adm_nf_compr > 0 ) {
       std::cout << "Total nearfield storage compressed: "
-                << total_storage_nf_compr << std::endl;
+                << total_storage_nf_compr << " GiB" << std::endl;
     }
     std::cout << "Nearfield ratio (uncompressed): "
               << (sc) total_nearfield_entries
@@ -5853,6 +5863,20 @@ void besthea::linear_algebra::distributed_pFMM_matrix<
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::apply_on_the_fly( const assembler_type &
+                                                    matrix_assembler,
+  const distributed_block_vector & x, distributed_block_vector & y, sc alpha,
+  sc beta ) const {
+  y.scale( beta );
+  // apply the nearfield on the fly, then call the appropriate standard apply
+  // routine (in which the nearfield part is disabled)
+  apply_nearfield_on_the_fly( matrix_assembler, x, y, alpha );
+  apply( x, y, false, alpha, 1.0 );  // the scaling by beta has already been
+                                     // done, so it is set to 1.0 here.
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::apply_sl_dl( const distributed_block_vector & x,
   distributed_block_vector & y, bool trans, sc alpha, sc beta ) const {
   // Specialization for the single and double layer operators
@@ -5951,11 +5975,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   std::list< mesh::scheduling_time_cluster * > s2l_list = _s2l_list;
   std::list< mesh::scheduling_time_cluster * > n_list;
 
-  // in case of the hypersingular operator, the n_list is only initialized
-  // in the first run. All nearfield operations are executed in this run.
-  // for all other operators run_count equals zero by default, so the list
-  // is filled.
-  if ( run_count == 0 ) {
+  // Decide whether to execute nearfield operations. In general, this depends on
+  // the value of  _execute_nf_operations_in_pfmm_procedure.
+  // In case of the hypersingular operator, the n_list is additionally
+  // initialized only in the first run (run_count == 0, which is always the case
+  // for all other operators)
+  if ( _execute_nf_operations_in_pfmm_procedure && run_count == 0 ) {
     n_list = _n_list;
   }
 
@@ -6399,6 +6424,117 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   if ( _measure_tasks ) {
     save_times< run_count >( loop_end - loop_start,
       _global_timer.get_time_from_start< time_type >( ), scheduling_thread );
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space,
+  source_space >::apply_nearfield_on_the_fly( const assembler_type &
+                                                matrix_assembler,
+  const distributed_block_vector & x, distributed_block_vector & y,
+  sc alpha ) const {
+  // Nearfield matrices are assembled and directly applied for all clusters
+  // which are leaves or have non-empty spatially admissible nearfield lists.
+  // All these clusters are sorted by the size of the matrices in their
+  // nearfield lists (including spatially admissible) first.
+  std::vector< lo > total_sizes(
+    _clusters_with_nearfield_operations.size( ), 0 );
+  for ( std::vector< general_spacetime_cluster * >::size_type cluster_index = 0;
+        cluster_index < _clusters_with_nearfield_operations.size( );
+        ++cluster_index ) {
+    mesh::general_spacetime_cluster * current_cluster
+      = _clusters_with_nearfield_operations[ cluster_index ];
+    lo n_dofs_target = current_cluster->get_n_dofs< target_space >( );
+    if ( current_cluster->get_n_children( ) == 0 ) {
+      std::vector< general_spacetime_cluster * > * nearfield_list
+        = current_cluster->get_nearfield_list( );
+      for ( std::vector< general_spacetime_cluster * >::size_type src_index = 0;
+            src_index < nearfield_list->size( ); ++src_index ) {
+        general_spacetime_cluster * nearfield_cluster
+          = ( *nearfield_list )[ src_index ];
+        lo n_dofs_source = nearfield_cluster->get_n_dofs< source_space >( );
+        total_sizes[ cluster_index ] += n_dofs_source * n_dofs_target;
+      }
+    }
+    auto spat_adm_nf_list
+      = current_cluster->get_spatially_admissible_nearfield_list( );
+    if ( spat_adm_nf_list != nullptr ) {
+      for ( auto nf_cluster : *spat_adm_nf_list ) {
+        lo n_dofs_source = nf_cluster->get_n_dofs< source_space >( );
+        total_sizes[ cluster_index ] += n_dofs_source * n_dofs_target;
+      }
+    }
+  }
+  std::vector< lo > permutation_index(
+    _clusters_with_nearfield_operations.size( ), 0 );
+  for ( lo i = 0; i != lo( permutation_index.size( ) ); i++ ) {
+    permutation_index[ i ] = i;
+  }
+  sort( permutation_index.begin( ), permutation_index.end( ),
+    [ & ]( const lo & a, const lo & b ) {
+      return ( total_sizes[ a ] > total_sizes[ b ] );
+    } );
+
+  // parallel on the fly assembly and application of the nearfield matrices:
+#pragma omp parallel for schedule( dynamic, 1 )
+  for ( lou cluster_index = 0;
+        cluster_index < _clusters_with_nearfield_operations.size( );
+        ++cluster_index ) {
+    mesh::general_spacetime_cluster * current_cluster
+      = _clusters_with_nearfield_operations
+        [ permutation_index[ cluster_index ] ];
+    lo n_dofs_target = current_cluster->get_n_dofs< target_space >( );
+    // allocate a local target and locala source vector
+    vector_type local_target_vector( n_dofs_target, true );
+    vector_type local_source_vector;
+    // allocate a full_matrix which will be resized and filled anew for each
+    // new nearfield cluster.
+    full_matrix current_block( n_dofs_target, n_dofs_target, false );
+    if ( current_cluster->get_n_children( ) == 0 ) {
+      std::vector< general_spacetime_cluster * > * nearfield_list
+        = current_cluster->get_nearfield_list( );
+      for ( std::vector< general_spacetime_cluster * >::size_type src_index = 0;
+            src_index < nearfield_list->size( ); ++src_index ) {
+        mesh::general_spacetime_cluster * nearfield_cluster
+          = ( *nearfield_list )[ src_index ];
+        lo n_dofs_source = nearfield_cluster->get_n_dofs< source_space >( );
+        // resize the full matrix current_block, and assemble it appropriately
+        current_block.resize( n_dofs_target, n_dofs_source, false );
+        matrix_assembler.assemble_nearfield_block(
+          current_cluster, nearfield_cluster, current_block );
+        // resize and fill the local source vector appropriately
+        local_source_vector.resize( n_dofs_source );
+        x.get_local_part< source_space >(
+          nearfield_cluster, local_source_vector );
+        // apply the current block to the local source vector appropriately.
+        current_block.apply(
+          local_source_vector, local_target_vector, false, alpha, 1.0 );
+      }
+    }
+
+    std::vector< general_spacetime_cluster * > * spat_adm_nearfield_list
+      = current_cluster->get_spatially_admissible_nearfield_list( );
+    if ( spat_adm_nearfield_list != nullptr ) {
+      for ( std::vector< general_spacetime_cluster * >::size_type src_index = 0;
+            src_index < spat_adm_nearfield_list->size( ); ++src_index ) {
+        general_spacetime_cluster * nearfield_cluster
+          = ( *spat_adm_nearfield_list )[ src_index ];
+        lo n_dofs_source = nearfield_cluster->get_n_dofs< source_space >( );
+        // resize the full matrix current_block, and assemble it appropriately
+        current_block.resize( n_dofs_target, n_dofs_source, false );
+        matrix_assembler.assemble_nearfield_block(
+          current_cluster, nearfield_cluster, current_block );
+        // resize and fill the local source vector appropriately
+        local_source_vector.resize( n_dofs_source );
+        x.get_local_part< source_space >(
+          nearfield_cluster, local_source_vector );
+        // apply the current block to the local source vector appropriately.
+        current_block.apply(
+          local_source_vector, local_target_vector, false, alpha, 1.0 );
+      }
+    }
+    y.add_local_part< target_space >( current_cluster, local_target_vector );
   }
 }
 
@@ -7378,8 +7514,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           current_spacetime_source, local_sources );
 
         matrix * current_block = spat_adm_nf_matrix_pairs[ pair_index ].second;
-        // apply the approximated nearfield matrix (or the full, if compression
-        // was not successful) and add the result to local_result
+        // apply the approximated nearfield matrix (or the full, if
+        // compression was not successful) and add the result to local_result
         current_block->apply( local_sources, local_result, trans, 1.0, 1.0 );
       }
     }

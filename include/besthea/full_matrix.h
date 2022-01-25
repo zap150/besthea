@@ -192,6 +192,16 @@ class besthea::linear_algebra::full_matrix
     _data[ i + j * _n_rows ] += value;
   }
 
+  /**
+   * @brief Scales the (i,j)-th element of the matrix by alpha.
+   * @param[in] i Row index.
+   * @param[in] j Column index.
+   * @param[in] alpha Scaling factor.
+   */
+  void scale_entry( lo i, lo j, sc alpha ) {
+    _data[ i + j * _n_rows ] *= alpha;
+  }
+
   /*!
    * @brief Atomically adds value to the (i,j)-th element of the matrix.
    * @param[in] i Row index.

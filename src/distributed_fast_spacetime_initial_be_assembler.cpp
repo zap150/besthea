@@ -170,7 +170,7 @@ void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
       full_matrix_type * block
         = global_matrix.create_nearfield_matrix( leaf_index, src_index );
       // permutation_index[ leaf_index ], src_index );
-      assemble_nearfield_matrix( current_cluster, nearfield_cluster, *block );
+      assemble_nearfield_block( current_cluster, nearfield_cluster, *block );
     }
   }
 }
@@ -178,7 +178,7 @@ void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
   test_space_type, trial_space_type >::
-  assemble_nearfield_matrix( const general_spacetime_cluster * target_cluster,
+  assemble_nearfield_block( const general_spacetime_cluster * target_cluster,
     const volume_space_cluster * source_cluster,
     full_matrix_type & nearfield_matrix ) const {
   auto & trial_basis = _trial_space->get_basis( );
