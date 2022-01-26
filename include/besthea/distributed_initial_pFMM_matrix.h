@@ -67,6 +67,13 @@ namespace besthea {
   }
 }
 
+namespace besthea {
+  namespace bem {
+    template< class kernel_type, class test_space_type, class trial_space_type >
+    class distributed_fast_spacetime_initial_be_assembler;
+  }
+}
+
 /**
  * Class representing a matrix corresponding to a trace operator of initial
  * potential trace operators approximated by the pFMM method.
@@ -76,6 +83,10 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
   : public besthea::linear_algebra::linear_operator {
  public:
   using vector_type = besthea::linear_algebra::vector;  //!< Vector type.
+  using assembler_type
+    = besthea::bem::distributed_fast_spacetime_initial_be_assembler<
+      kernel_type, target_space,
+      source_space >;  //!< Type of the related assembler.
 
   /**
    * Wraps the mapped quadrature point so that they can be private for OpenMP
@@ -211,6 +222,21 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
     [[maybe_unused]] bool trans = false, sc alpha = 1.0, sc beta = 0.0 ) const;
 
   /**
+   * @brief Computes the result y = beta * y + alpha * this * x. The nearfield
+   * part of the matrix-vector multiplication is done on the fly, i.e. the
+   * nearfield block matrices are assembled and applied directly.
+   * @param[in] matrix_assembler  Appropriate assembler that provides the
+   * routines for the assembly of nearfield matrices.
+   * @param[in] x
+   * @param[in,out] y
+   * @param[in] alpha
+   * @param[in] beta
+   */
+  void apply_on_the_fly( const assembler_type & matrix_assembler,
+    const vector & x, distributed_block_vector & y, sc alpha = 1.0,
+    sc beta = 0.0 ) const;
+
+  /**
    * Sets the MPI communicator associated with the distributed pFMM matrix and
    * the rank of the executing process.
    * @param[in] comm  MPI communicator to be set.
@@ -230,10 +256,13 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    * @param[in] spacetime_target_tree  The distributed spacetime tree used as
    * target tree.
    * @param[in] space_source_tree The space cluster tree used as source tree.
+   * @param[in] prepare_nearfield_containers  If true, the containers used to
+   * store nearfield matrices are initialized appropriately.
    */
   void initialize_fmm_data(
     mesh::distributed_spacetime_cluster_tree * spacetime_target_tree,
-    mesh::volume_space_cluster_tree * space_source_tree );
+    mesh::volume_space_cluster_tree * space_source_tree,
+    bool prepare_nearfield_containers );
 
   /**
    * Sets the heat conductivity parameter.
@@ -351,6 +380,16 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
   void initialize_nearfield_and_interaction_lists( );
 
   /**
+   * Applies the farfield operations in the application of the initial pfmm
+   * matrix.
+   * @param[in] x Source vector.
+   * @param[in] y Target vector to which the result of the farfield operations
+   * is added.
+   */
+  void apply_farfield_operations(
+    const vector & x, distributed_block_vector & y ) const;
+
+  /**
    * Executes all nearfield operations assigned to the current MPI process.
    * @param[in] sources Vector containing all the sources.
    * @param[in,out] output_vector The results of the nearfield operations are
@@ -358,6 +397,19 @@ class besthea::linear_algebra::distributed_initial_pFMM_matrix
    */
   void apply_all_nearfield_operations(
     const vector & sources, distributed_block_vector & output_vector ) const;
+
+  /**
+   * Executes all nearfield operations assigned to the current MPI process by
+   * assembling and applying nearfield matrices on the fly.
+   * @param[in] matrix_assembler  Assembler used to compute the entries of the
+   * nearfield matrices.
+   * @param[in] sources Vector containing all the sources.
+   * @param[in,out] output_vector The results of the nearfield operations are
+   * added to the correct positions of this distributed vector.
+   */
+  void apply_all_nearfield_operations_on_the_fly(
+    const assembler_type & matrix_assembler, const vector & sources,
+    distributed_block_vector & output_vector ) const;
 
   /**
    * Computes the moments of all volume space clusters in the respective source

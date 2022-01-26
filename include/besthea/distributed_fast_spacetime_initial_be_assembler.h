@@ -214,26 +214,29 @@ class besthea::bem::distributed_fast_spacetime_initial_be_assembler {
    *
    * The nearfield matrices of @p global_matrix are assembled. Furthermore all
    * structures needed for the application of the distributed initial pFMM
-   * matrix vector multiplication are initialized.
+   * matrix vector multiplication are initialized by calling
+   * @ref initialize_matrix_data.
    * @param[out] global_matrix Assembled pFMM matrix.
    * @param[in] info_mode If true, the nearfield matrices are not assembled.
    */
   void assemble(
     pfmm_matrix_type & global_matrix, bool info_mode = false ) const;
 
- private:
   /**
-   * Assembles the nearfield matrices of the pFMM matrix clusterwise, i.e. by
-   * considering the cluster tree associated with the test and trial space. Only
-   * the nearfield matrices corresponding to leaf clusters owned by the
-   * executing MPI process are assembled.
+   * Initializes the given initial pfmm matrix for an on the fly application,
+   * i.e. an application where the nearfield matrices are not stored but
+   * assembled and applied on the fly.
    *
-   * @note The nearfield of a cluster is determined in @ref
-   * besthea::mesh::distributed_initial_pFMM_matrix::initialize_nearfield_and_interaction_lists
-   * @param[in,out] global_matrix pFMM matrix whose local nearfield (depending
-   *                              on the executing MPI process) is assembled.
+   * The routine initializes most structures of the pfmm matrix needed for the
+   * application of the farfield part (by calling
+   * @ref initialize_matrix_data), but does not assemble the nearfield
+   * matrices.
+   *
+   * @param[in] global_matrix pFMM matrix which is initialized for an on the fly
+   * application.
    */
-  void assemble_nearfield( pfmm_matrix_type & global_matrix ) const;
+  void initialize_for_on_the_fly_application(
+    pfmm_matrix_type & global_matrix ) const;
 
   /**
    * Assembles a nearfield matrix associated to a given target and source
@@ -247,6 +250,32 @@ class besthea::bem::distributed_fast_spacetime_initial_be_assembler {
     const mesh::general_spacetime_cluster * target_cluster,
     const mesh::volume_space_cluster * source_cluster,
     full_matrix_type & nearfield_matrix ) const;
+
+ private:
+  /**
+   * Initializes all the data of the initial pfmm matrix which is needed for the
+   * execution of the farfield operations in its application.
+   * @param[in] global_matrix Initial pfmm matrix whose farfield data is
+   * initialized.
+   * @param[in] prepare_nearfield_containers  If this is true, nearfield matrix
+   * containers are appropriately resized. In case of on the fly application it
+   * should be set to false.
+   */
+  void initialize_matrix_data(
+    pfmm_matrix_type & global_matrix, bool prepare_nearfield_containers ) const;
+
+  /**
+   * Assembles the nearfield matrices of the pFMM matrix clusterwise, i.e. by
+   * considering the cluster tree associated with the test and trial space. Only
+   * the nearfield matrices corresponding to leaf clusters owned by the
+   * executing MPI process are assembled.
+   *
+   * @note The nearfield of a cluster is determined in @ref
+   * besthea::mesh::distributed_initial_pFMM_matrix::initialize_nearfield_and_interaction_lists
+   * @param[in,out] global_matrix pFMM matrix whose local nearfield (depending
+   *                              on the executing MPI process) is assembled.
+   */
+  void assemble_nearfield( pfmm_matrix_type & global_matrix ) const;
 
   /**
    * Evaluates the definite integral of the heat kernel over a regular time

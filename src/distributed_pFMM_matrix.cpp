@@ -893,7 +893,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
                 << (sc) n_tot_size_compressed_blocks * 8.0
           / ( 1024. * 1024. * 1024. )
                 << " GiB" << std::endl;
-      std::cout << "Unompressed blocks: " << n_uncompressed_blocks << ", size: "
+      std::cout << "Uncompressed blocks: " << n_uncompressed_blocks
+                << ", size: "
                 << (sc) n_tot_size_uncompressed_blocks * 8.0
           / ( 1024. * 1024. * 1024. )
                 << " GiB" << std::endl;
@@ -5612,38 +5613,39 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         // get the vector of assembled spatially admissible nearfield matrices
         auto spat_adm_nf_matrix_pairs
           = _clusterwise_spat_adm_nf_matrix_pairs.at( st_target );
+        lo next_nf_matrix_idx = 0;
+        lo next_nf_matrix_src_idx = -1;
         if ( spat_adm_nf_matrix_pairs.size( ) > 0 ) {
-          lo next_nf_matrix_idx = 0;
-          lo next_nf_matrix_src_idx
+          next_nf_matrix_src_idx
             = spat_adm_nf_matrix_pairs[ next_nf_matrix_idx ].first;
-          for ( lo src_index = 0;
-                src_index < (lo) st_spat_adm_nearfield_list->size( );
-                ++src_index ) {
-            general_spacetime_cluster * st_source
-              = ( *st_spat_adm_nearfield_list )[ src_index ];
-            lo n_source_dofs = st_source->get_n_dofs< source_space >( );
-            if ( src_index == next_nf_matrix_src_idx ) {
-              matrix * nf_matrix
-                = spat_adm_nf_matrix_pairs[ next_nf_matrix_idx ].second;
-              // check if the compression was successful or not
-              if ( nf_matrix->get_rank( ) < std::min(
-                     nf_matrix->get_n_rows( ), nf_matrix->get_n_columns( ) ) ) {
-                n_compressed_blocks++;
-                n_tot_size_compressed_blocks += n_target_dofs * n_source_dofs;
-              } else {
-                n_uncompressed_blocks++;
-                n_tot_size_uncompressed_blocks += n_target_dofs * n_source_dofs;
-              }
-              if ( (lou) next_nf_matrix_idx
-                < spat_adm_nf_matrix_pairs.size( ) - 1 ) {
-                next_nf_matrix_idx++;
-                next_nf_matrix_src_idx
-                  = spat_adm_nf_matrix_pairs[ next_nf_matrix_idx ].first;
-              }
+        }
+        for ( lo src_index = 0;
+              src_index < (lo) st_spat_adm_nearfield_list->size( );
+              ++src_index ) {
+          general_spacetime_cluster * st_source
+            = ( *st_spat_adm_nearfield_list )[ src_index ];
+          lo n_source_dofs = st_source->get_n_dofs< source_space >( );
+          if ( src_index == next_nf_matrix_src_idx ) {
+            matrix * nf_matrix
+              = spat_adm_nf_matrix_pairs[ next_nf_matrix_idx ].second;
+            // check if the compression was successful or not
+            if ( nf_matrix->get_rank( ) < std::min(
+                   nf_matrix->get_n_rows( ), nf_matrix->get_n_columns( ) ) ) {
+              n_compressed_blocks++;
+              n_tot_size_compressed_blocks += n_target_dofs * n_source_dofs;
             } else {
-              n_discarded_blocks++;
-              n_tot_size_discarded_blocks += n_target_dofs * n_source_dofs;
+              n_uncompressed_blocks++;
+              n_tot_size_uncompressed_blocks += n_target_dofs * n_source_dofs;
             }
+            if ( (lou) next_nf_matrix_idx
+              < spat_adm_nf_matrix_pairs.size( ) - 1 ) {
+              next_nf_matrix_idx++;
+              next_nf_matrix_src_idx
+                = spat_adm_nf_matrix_pairs[ next_nf_matrix_idx ].first;
+            }
+          } else {
+            n_discarded_blocks++;
+            n_tot_size_discarded_blocks += n_target_dofs * n_source_dofs;
           }
         }
       }

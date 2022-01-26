@@ -88,6 +88,26 @@ void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
   test_space_type, trial_space_type >::assemble( pfmm_matrix_type &
                                                    global_matrix,
   bool info_mode ) const {
+  initialize_matrix_data( global_matrix, true );
+  // assemble the nearfield matrices of the pFMM matrix
+  if ( !info_mode ) {
+    assemble_nearfield( global_matrix );
+  }
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
+  test_space_type,
+  trial_space_type >::initialize_for_on_the_fly_application( pfmm_matrix_type &
+    global_matrix ) const {
+  initialize_matrix_data( global_matrix, false );
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
+  test_space_type,
+  trial_space_type >::initialize_matrix_data( pfmm_matrix_type & global_matrix,
+  bool prepare_nearfield_containers ) const {
   global_matrix.set_MPI_communicator( _comm );
 
   // determine and set the dimensions of the matrix
@@ -105,18 +125,13 @@ void besthea::bem::distributed_fast_spacetime_initial_be_assembler< kernel_type,
   global_matrix.set_m2l_integration_order( _m2l_integration_order );
   initialize_moment_and_local_contributions( );
   // ###########################################################################
-  global_matrix.initialize_fmm_data(
-    _test_space->get_tree( ), _space_source_tree );
+  global_matrix.initialize_fmm_data( _test_space->get_tree( ),
+    _space_source_tree, prepare_nearfield_containers );
 
   global_matrix.initialize_spatial_m2m_coeffs( );
 
   // precompute Chebyshev nodes and values
   global_matrix.compute_chebyshev( );
-
-  // assemble the nearfield matrices of the pFMM matrix
-  if ( !info_mode ) {
-    assemble_nearfield( global_matrix );
-  }
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >
