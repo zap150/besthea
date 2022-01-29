@@ -287,17 +287,21 @@ void besthea::mesh::tree_structure::allocate_spatial_moments_in_tree(
     && n_associated_leaves_and_aux_clusters != nullptr
     && n_associated_leaves_and_aux_clusters->size( ) - 1
       > max_rel_space_level ) {
-    current_cluster.initialize_assoc_aux_s2ms_cluster_pairs(
-      max_rel_space_level );
-    current_cluster.allocate_associated_aux_spatial_moments(
-      spatial_contribution_size, max_rel_space_level );
-    // if associated spatial moments have not been allocated already for
-    // clusters with relative level max_rel_space_level, we have to do this here
-    // too. (note: this is only possible if max_rel_space_level = 0 and
-    // s2l_send_list is empty).
-    if ( current_cluster.get_associated_spatial_moments( ) == nullptr ) {
-      current_cluster.allocate_associated_spatial_moments(
+    // check if auxiliary spatial moments and related structures already exist.
+    // If not, initialize them.
+    if ( current_cluster.get_assoc_aux_s2ms_cluster_pairs( ) == nullptr ) {
+      current_cluster.initialize_assoc_aux_s2ms_cluster_pairs(
+        max_rel_space_level );
+      current_cluster.allocate_associated_aux_spatial_moments(
         spatial_contribution_size, max_rel_space_level );
+      // if associated spatial moments have not been allocated already for
+      // clusters with relative level max_rel_space_level, we have to do this
+      // here too. (note: this is only possible if max_rel_space_level = 0 and
+      // s2l_send_list is empty).
+      if ( current_cluster.get_associated_spatial_moments( ) == nullptr ) {
+        current_cluster.allocate_associated_spatial_moments(
+          spatial_contribution_size, max_rel_space_level );
+      }
     }
   }
 
@@ -357,16 +361,18 @@ void besthea::mesh::tree_structure::
     && n_associated_leaves_and_aux_clusters != nullptr
     && n_associated_leaves_and_aux_clusters->size( ) - 1
       > max_rel_space_level ) {
-    current_cluster.initialize_assoc_aux_ls2t_cluster_pairs(
-      max_rel_space_level );
-    // if associated spatial local contributions have not been allocated already
-    // for clusters with relative level max_rel_space_level, we have to do this
-    // here too. (note: this is only possible if max_rel_space_level = 0 and
-    // m2t_list is empty).
-    if ( current_cluster.get_associated_spatial_local_contributions( )
-      == nullptr ) {
-      current_cluster.allocate_associated_spatial_local_contributions(
-        spatial_contribution_size, max_rel_space_level );
+    if ( current_cluster.get_assoc_aux_ls2t_cluster_pairs( ) == nullptr ) {
+      current_cluster.initialize_assoc_aux_ls2t_cluster_pairs(
+        max_rel_space_level );
+      // if associated spatial local contributions have not been allocated
+      // already for clusters with relative level max_rel_space_level, we have
+      // to do this here. (note: this is only possible if
+      // max_rel_space_level = 0 and m2t_list is empty).
+      if ( current_cluster.get_associated_spatial_local_contributions( )
+        == nullptr ) {
+        current_cluster.allocate_associated_spatial_local_contributions(
+          spatial_contribution_size, max_rel_space_level );
+      }
     }
   }
 

@@ -3398,12 +3398,16 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   apply_s2ms_operation_p1_normal_drv(
     const distributed_block_vector & src_vector,
     mesh::general_spacetime_cluster * src_cluster,
-    [[maybe_unused]] mesh::general_spacetime_cluster * src_geometry_cluster )
-    const {
+    mesh::general_spacetime_cluster * src_geometry_cluster ) const {
   lo n_time_elements = src_cluster->get_n_time_elements( );
   lo n_space_nodes = src_cluster->get_n_space_nodes( );
 
   sc * all_spatial_moments = src_cluster->get_pointer_to_spatial_moments( );
+  // in some cases (auxiliary s2ms operations) a src cluster can have no
+  // standard spatial moments but auxiliary spatial moments
+  if ( all_spatial_moments == nullptr ) {
+    all_spatial_moments = src_cluster->get_pointer_to_aux_spatial_moments( );
+  }
 
   full_matrix T_drv;
   compute_normal_drv_chebyshev_quadrature_p1(

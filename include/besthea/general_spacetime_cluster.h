@@ -129,6 +129,7 @@ class besthea::mesh::general_spacetime_cluster {
       _spatial_moments( nullptr ),
       _spatial_local_contributions( nullptr ),
       _aux_spatial_moments( nullptr ),
+      _n_aux_spatial_moments( 0 ),
       _has_additional_spatial_children( false ),
       _is_auxiliary_ref_cluster( false ) {
     if ( reserve_elements ) {
@@ -252,7 +253,7 @@ class besthea::mesh::general_spacetime_cluster {
   /**
    * Returns number of cluster's children.
    */
-  lo get_n_children( ) {
+  lo get_n_children( ) const {
     if ( _children != nullptr ) {
       return _children->size( );
     } else {
@@ -263,7 +264,7 @@ class besthea::mesh::general_spacetime_cluster {
   /**
    * Returns the global leaf status of the current cluster.
    */
-  bool is_global_leaf( ) {
+  bool is_global_leaf( ) const {
     return _global_leaf_status;
   }
 
@@ -1133,6 +1134,8 @@ class besthea::mesh::general_spacetime_cluster {
     std::cout << ", process id: " << _process_id;
     std::cout << ", n_space_div: " << _n_space_div;
     std::cout << ", is_auxiliary_ref_cluster: " << _is_auxiliary_ref_cluster;
+    // std::cout << ", n_children: " << get_n_children( );
+    // std::cout << ", _n_aux_spatial_moments: " << _n_aux_spatial_moments;
     // std::cout << ", elements: ";
     // for ( lou i = 0; i < _elements.size( ); ++i ) {
     //   std::cout << _elements[ i ] << " ";
@@ -1155,13 +1158,12 @@ class besthea::mesh::general_spacetime_cluster {
     // if ( _interaction_list != nullptr ) {
     //   std::cout << ", interaction list: ";
     //   for ( auto ff_cluster : *_interaction_list ) {
-    //   std::vector< slou > ff_box_coordinate =
-    //   ff_cluster->get_box_coordinate(
-    //   ); std::cout << "(" << ff_box_coordinate[ 0 ] << ", "
-    //             << ff_box_coordinate[ 1 ] << ", " <<
-    //             ff_box_coordinate[ 2 ]
-    //             << ", " << ff_box_coordinate[ 3 ] << ", "
-    //             << ff_box_coordinate[ 4 ] << "), ";
+    //     std::vector< slou > ff_box_coordinate
+    //       = ff_cluster->get_box_coordinate( );
+    //     std::cout << "(" << ff_box_coordinate[ 0 ] << ", "
+    //               << ff_box_coordinate[ 1 ] << ", " << ff_box_coordinate[ 2 ]
+    //               << ", " << ff_box_coordinate[ 3 ] << ", "
+    //               << ff_box_coordinate[ 4 ] << "), ";
     //   }
     // }
     // if ( _m2t_list != nullptr ) {

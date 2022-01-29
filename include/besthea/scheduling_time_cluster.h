@@ -1586,30 +1586,32 @@ class besthea::mesh::scheduling_time_cluster {
   void allocate_associated_aux_spatial_moments(
     const lou spatial_contribution_size,
     const lo max_rel_space_level_s_moments ) {
-    _n_st_clusters_w_aux_spatial_moments
-      = _assoc_aux_s2ms_cluster_pairs->size( );
-    _assoc_aux_spatial_moments = new sc[ _n_st_clusters_w_aux_spatial_moments
-      * spatial_contribution_size ];
-    _spatial_contribution_size = spatial_contribution_size;
+    if ( _assoc_aux_spatial_moments == nullptr ) {
+      _n_st_clusters_w_aux_spatial_moments
+        = _assoc_aux_s2ms_cluster_pairs->size( );
+      _assoc_aux_spatial_moments = new sc[ _n_st_clusters_w_aux_spatial_moments
+        * spatial_contribution_size ];
+      _spatial_contribution_size = spatial_contribution_size;
 
-    // assign the individual auxiliary spatial moments to the appropriate
-    // space-time clusters
-    lo moment_counter = 0;
-    for ( lo cluster_idx = 0;
-          cluster_idx < ( *_n_associated_leaves_and_aux_clusters_per_level )
-            [ max_rel_space_level_s_moments ];
-          ++cluster_idx ) {
-      general_spacetime_cluster * current_st_cluster
-        = ( *_associated_spacetime_clusters )[ cluster_idx ];
-      if ( current_st_cluster->get_n_children( ) > 0 ) {
-        current_st_cluster->set_pointer_to_aux_spatial_moments(
-          &( _assoc_aux_spatial_moments[ moment_counter
-            * spatial_contribution_size ] ) );
-        lo previous_moment_counter = moment_counter;
-        set_pointers_to_aux_spatial_moments_recursively(
-          current_st_cluster, moment_counter );
-        current_st_cluster->set_n_aux_spatial_moments(
-          moment_counter - previous_moment_counter );
+      // assign the individual auxiliary spatial moments to the appropriate
+      // space-time clusters
+      lo moment_counter = 0;
+      for ( lo cluster_idx = 0;
+            cluster_idx < ( *_n_associated_leaves_and_aux_clusters_per_level )
+              [ max_rel_space_level_s_moments ];
+            ++cluster_idx ) {
+        general_spacetime_cluster * current_st_cluster
+          = ( *_associated_spacetime_clusters )[ cluster_idx ];
+        if ( current_st_cluster->get_n_children( ) > 0 ) {
+          current_st_cluster->set_pointer_to_aux_spatial_moments(
+            &( _assoc_aux_spatial_moments[ moment_counter
+              * spatial_contribution_size ] ) );
+          lo previous_moment_counter = moment_counter;
+          set_pointers_to_aux_spatial_moments_recursively(
+            current_st_cluster, moment_counter );
+          current_st_cluster->set_n_aux_spatial_moments(
+            moment_counter - previous_moment_counter );
+        }
       }
     }
   }
@@ -1675,25 +1677,28 @@ class besthea::mesh::scheduling_time_cluster {
   void allocate_associated_spatial_local_contributions(
     const lou spatial_contribution_size, const lo max_rel_space_level ) {
     if ( _associated_spacetime_clusters != nullptr ) {
-      // allocate the spatial local contributions if they are not allocated
-      // already
-      _spatial_contribution_size = spatial_contribution_size;
-      _max_relative_space_level_ls2t = max_rel_space_level;
-      _n_st_clusters_w_spatial_local_contributions = 0;
-      for ( lo i = 0; i <= max_rel_space_level; ++i ) {
-        _n_st_clusters_w_spatial_local_contributions
-          += ( *_n_associated_leaves_and_aux_clusters_per_level )[ i ];
-      }
-      _assoc_spatial_local_contributions = new sc[ spatial_contribution_size
-        * _n_st_clusters_w_spatial_local_contributions ];
-      // assign the individual spatial local contributions to the
-      // corresponding space-time clusters
-      for ( lo i = 0; i < _n_st_clusters_w_spatial_local_contributions; ++i ) {
-        general_spacetime_cluster * current_spacetime_cluster
-          = ( *_associated_spacetime_clusters )[ i ];
-        current_spacetime_cluster->set_pointer_to_spatial_local_contributions(
-          &( _assoc_spatial_local_contributions[ i
-            * spatial_contribution_size ] ) );
+      if ( _assoc_spatial_local_contributions == nullptr ) {
+        // allocate the spatial local contributions if they are not allocated
+        // already
+        _spatial_contribution_size = spatial_contribution_size;
+        _max_relative_space_level_ls2t = max_rel_space_level;
+        _n_st_clusters_w_spatial_local_contributions = 0;
+        for ( lo i = 0; i <= max_rel_space_level; ++i ) {
+          _n_st_clusters_w_spatial_local_contributions
+            += ( *_n_associated_leaves_and_aux_clusters_per_level )[ i ];
+        }
+        _assoc_spatial_local_contributions = new sc[ spatial_contribution_size
+          * _n_st_clusters_w_spatial_local_contributions ];
+        // assign the individual spatial local contributions to the
+        // corresponding space-time clusters
+        for ( lo i = 0; i < _n_st_clusters_w_spatial_local_contributions;
+              ++i ) {
+          general_spacetime_cluster * current_spacetime_cluster
+            = ( *_associated_spacetime_clusters )[ i ];
+          current_spacetime_cluster->set_pointer_to_spatial_local_contributions(
+            &( _assoc_spatial_local_contributions[ i
+              * spatial_contribution_size ] ) );
+        }
       }
     }
   }
