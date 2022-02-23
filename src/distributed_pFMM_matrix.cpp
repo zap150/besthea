@@ -2826,24 +2826,24 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   source_space >::call_s2l_operations( const distributed_block_vector & sources,
   mesh::scheduling_time_cluster * t_cluster, bool verbose,
   const std::string & verbose_file ) const {
-  if ( verbose ) {
-#pragma omp critical( verbose )
-    {
-      std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
-      if ( outfile.is_open( ) ) {
-        outfile << "call S2L for cluster " << t_cluster->get_global_index( )
-                << " at level " << t_cluster->get_level( ) << std::endl;
-        outfile.close( );
-      }
-    }
-  }
-
   // execute first all standard s2l operations
   const std::vector< general_spacetime_cluster * > * assoc_spacetime_targets
     = t_cluster->get_associated_spacetime_clusters( );
   const std::vector< lo > * assoc_std_s2l_tar_indices
     = t_cluster->get_assoc_standard_s2l_targets( );
   if ( assoc_std_s2l_tar_indices != nullptr ) {
+    if ( verbose ) {
+#pragma omp critical( verbose )
+      {
+        std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
+        if ( outfile.is_open( ) ) {
+          outfile << "call standard S2L operations for cluster "
+                  << t_cluster->get_global_index( ) << " at level "
+                  << t_cluster->get_level( ) << std::endl;
+          outfile.close( );
+        }
+      }
+    }
 #pragma omp taskloop shared( \
   sources, assoc_spacetime_targets, assoc_std_s2l_tar_indices )
     for ( lou i = 0; i < assoc_std_s2l_tar_indices->size( ); ++i ) {
@@ -2876,6 +2876,18 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   const std::vector< lo > * assoc_hybrid_s2l_tar_indices
     = t_cluster->get_assoc_hybrid_s2l_targets( );
   if ( assoc_hybrid_s2l_tar_indices != nullptr ) {
+    if ( verbose ) {
+#pragma omp critical( verbose )
+      {
+        std::ofstream outfile( verbose_file.c_str( ), std::ios::app );
+        if ( outfile.is_open( ) ) {
+          outfile << "call hybrid S2L operations for cluster "
+                  << t_cluster->get_global_index( ) << " at level "
+                  << t_cluster->get_level( ) << std::endl;
+          outfile.close( );
+        }
+      }
+    }
 #pragma omp taskloop shared( \
   assoc_spacetime_targets, assoc_hybrid_s2l_tar_indices )
     for ( lou i = 0; i < assoc_hybrid_s2l_tar_indices->size( ); ++i ) {
