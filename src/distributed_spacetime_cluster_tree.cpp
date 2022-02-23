@@ -3351,7 +3351,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
                       *current_source, crrnt_tar_cluster );
                   }
                 } else {
-                  // again, we have to treat nearfield clusters in a spatial
+                  // again, we have to treat nearfield clusters in a special
                   // way, because the target's children are auxiliary clusters
                   determine_operation_lists_subroutine_targets_with_aux_children(
                     *current_source, crrnt_tar_cluster );
@@ -3412,59 +3412,41 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   determine_operation_lists_subroutine_targets_with_aux_children(
     general_spacetime_cluster & source_cluster,
     general_spacetime_cluster & target_cluster ) {
-  if ( source_cluster.get_n_children( ) == 0 ) {
-    if ( _enable_aca_recompression
-      && target_cluster.check_for_separation_in_space( &source_cluster ) ) {
-      target_cluster.add_to_spatially_admissible_nearfield_list(
-        &source_cluster );
-    } else {
-      target_cluster.add_to_nearfield_list( &source_cluster );
+  // handle the source cluster itself first
+  // NOTE: This routine is called either for temporally inadmissible source
+  // clusters or source clusters with higher temporal levels than the target
+  // cluster's temporal level. Thus, it makes sense to check for admissible m2t
+  // operations (and not other interactions).
+  if ( _enable_m2t_and_s2l
+    && target_cluster.determine_temporal_admissibility( &source_cluster ) ) {
+    // m2t lists are only created for local clusters
+    if ( target_cluster.get_process_id( ) == _my_rank ) {
+      target_cluster.add_to_m2t_list( &source_cluster );
     }
   } else {
+    lo n_source_children = source_cluster.get_n_children( );
     // determine the spatial level of the target cluster and the children of
     // the source cluster
-    lo next_child_space_level, target_space_level, dummy;
+    lo next_src_child_space_level, target_space_level, dummy;
     target_cluster.get_n_divs( target_space_level, dummy );
-    ( *source_cluster.get_children( ) )[ 0 ]->get_n_divs(
-      next_child_space_level, dummy );
-    if ( next_child_space_level == target_space_level ) {
+    if ( n_source_children > 0 ) {
+      ( *source_cluster.get_children( ) )[ 0 ]->get_n_divs(
+        next_src_child_space_level, dummy );
+    }
+    if ( n_source_children > 0
+      && next_src_child_space_level == target_space_level ) {
       // the children of the current source cluster have the same spatial
       // level as the current target cluster, while its own children have a
       // higher spatial level. Thus, we have to consider operations between
       // the target cluster and the children of the current source cluster.
+      // They are determined by calling this routine recursively.
       for ( auto source_child : *source_cluster.get_children( ) ) {
-        // if m2t operations or aca recompression are enabled we check whether
-        // they are admissible
-        if ( _enable_m2t_and_s2l
-          && target_cluster.determine_temporal_admissibility( source_child ) ) {
-          // m2t lists are only created for local clusters
-          if ( target_cluster.get_process_id( ) == _my_rank ) {
-            target_cluster.add_to_m2t_list( source_child );
-          }
-        } else if ( _enable_aca_recompression ) {
-          bool child_mesh_available = ( source_child->get_n_children( ) == 0 )
-            || source_child->has_additional_spatial_children( )
-            || source_child->is_auxiliary_ref_cluster( );
-          if ( child_mesh_available
-            && target_cluster.check_for_separation_in_space(
-              &source_cluster ) ) {
-            if ( target_cluster.get_process_id( ) == _my_rank ) {
-              target_cluster.add_to_spatially_admissible_nearfield_list(
-                source_child );
-            }
-          } else {
-            target_cluster.add_to_nearfield_list( source_child );
-          }
-        } else {
-          target_cluster.add_to_nearfield_list( source_child );
-        }
+        determine_operation_lists_subroutine_targets_with_aux_children(
+          *source_child, target_cluster );
       }
     } else {
-      // the spatial level of the current target cluster is the same as the
-      // one of the current spatial source cluster, and the same holds for
-      // their respective children. Thus, we can add the (inadmissible!)
-      // source_cluster itself to the nearfield of the current target's
-      // nearfield.
+      // source has children with higher spatial levels, so the source itself is
+      // a potential partner for operations for the target cluster.
       if ( _enable_aca_recompression ) {
         // Check if source is an original leaf or an auxiliary refined
         // cluster. Only if this is the case, it is checked whether source

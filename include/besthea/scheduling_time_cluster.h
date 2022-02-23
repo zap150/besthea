@@ -686,7 +686,7 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
-   * Adds a new pair to @ref _assoc_aux_s2ms_cluster_pairs.
+   * Adds a new pair to @ref _assoc_aux_ls2t_cluster_pairs.
    * @param[in] new_pair Pair to be added to the list.
    */
   void add_pair_to_assoc_aux_ls2t_cluster_pairs(
@@ -1531,14 +1531,10 @@ class besthea::mesh::scheduling_time_cluster {
     const lo max_rel_space_level_s_moments ) {
     // determine the space-time clusters for which auxiliary S2Ms operations
     // have to be executed.
-    lo n_clusters_before_max_rel_lvl = 0;
-    for ( lo i = 0; i < max_rel_space_level_s_moments; ++i ) {
-      n_clusters_before_max_rel_lvl
-        += ( *_n_associated_leaves_and_aux_clusters_per_level )[ i ];
+    lo idx_offset = 0;
+    for ( lo i = 0; i <= max_rel_space_level_s_moments; ++i ) {
+      idx_offset += ( *_n_associated_leaves_and_aux_clusters_per_level )[ i ];
     }
-    lo idx_offset = n_clusters_before_max_rel_lvl
-      + ( *_n_associated_leaves_and_aux_clusters_per_level )
-        [ max_rel_space_level_s_moments ];
     for ( lou rel_space_level = max_rel_space_level_s_moments + 1;
           rel_space_level
           < _n_associated_leaves_and_aux_clusters_per_level->size( );
@@ -1596,12 +1592,18 @@ class besthea::mesh::scheduling_time_cluster {
       // assign the individual auxiliary spatial moments to the appropriate
       // space-time clusters
       lo moment_counter = 0;
+      lo idx_offset = 0;
+      for ( lo rel_level = 0; rel_level < max_rel_space_level_s_moments;
+            ++rel_level ) {
+        idx_offset
+          += ( *_n_associated_leaves_and_aux_clusters_per_level )[ rel_level ];
+      }
       for ( lo cluster_idx = 0;
             cluster_idx < ( *_n_associated_leaves_and_aux_clusters_per_level )
               [ max_rel_space_level_s_moments ];
             ++cluster_idx ) {
         general_spacetime_cluster * current_st_cluster
-          = ( *_associated_spacetime_clusters )[ cluster_idx ];
+          = ( *_associated_spacetime_clusters )[ idx_offset + cluster_idx ];
         if ( current_st_cluster->get_n_children( ) > 0 ) {
           current_st_cluster->set_pointer_to_aux_spatial_moments(
             &( _assoc_aux_spatial_moments[ moment_counter
@@ -1752,14 +1754,10 @@ class besthea::mesh::scheduling_time_cluster {
     const lo max_rel_space_level_s_locals ) {
     // determine the space-time clusters for which auxiliary Ls2T operations
     // have to be executed.
-    lo n_clusters_before_max_rel_lvl = 0;
-    for ( lo i = 0; i < max_rel_space_level_s_locals; ++i ) {
-      n_clusters_before_max_rel_lvl
-        += ( *_n_associated_leaves_and_aux_clusters_per_level )[ i ];
+    lo idx_offset = 0;
+    for ( lo i = 0; i <= max_rel_space_level_s_locals; ++i ) {
+      idx_offset += ( *_n_associated_leaves_and_aux_clusters_per_level )[ i ];
     }
-    lo idx_offset = n_clusters_before_max_rel_lvl
-      + ( *_n_associated_leaves_and_aux_clusters_per_level )
-        [ max_rel_space_level_s_locals ];
     for ( lou rel_space_level = max_rel_space_level_s_locals + 1;
           rel_space_level
           < _n_associated_leaves_and_aux_clusters_per_level->size( );

@@ -200,7 +200,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   /**
    * Prints levels of the tree.
    */
-  void print( ) {
+  void print( lo max_level = std::numeric_limits< lo >::max( ) ) {
     // print general tree information
     std::cout << "number of levels of spacetime tree " << _real_n_levels
               << std::endl;
@@ -208,8 +208,15 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     for ( lou i = 0; i < _spatial_paddings.size( ); ++i ) {
       std::cout << "level " << i << ": " << _spatial_paddings[ i ] << std::endl;
     }
+    if ( max_level != std::numeric_limits< lo >::max( ) ) {
+      std::cout << "printing all clusters with levels bounded by " << max_level
+                << std::endl;
+    } else {
+      std::cout << "printing all clusters:" << std::endl;
+    }
+
     // print cluster information recursively
-    print_internal( *_root );
+    print_internal( *_root, max_level );
   }
 
   /**
@@ -972,16 +979,18 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   /**
    * Aux for printing
    */
-  void print_internal( general_spacetime_cluster & root ) {
-    root.print( );
-    std::vector< general_spacetime_cluster * > * children
-      = root.get_children( );
-    // std::cout << children->size( ) << std::endl;
-    if ( children != nullptr )
-      for ( auto it = children->begin( ); it != children->end( ); ++it ) {
-        for ( lo i = 0; i < ( *it )->get_level( ); ++i ) std::cout << " ";
-        print_internal( **it );
-      }
+  void print_internal( general_spacetime_cluster & root, lo max_level ) {
+    if ( root.get_level( ) <= max_level ) {
+      root.print( );
+      std::vector< general_spacetime_cluster * > * children
+        = root.get_children( );
+      // std::cout << children->size( ) << std::endl;
+      if ( children != nullptr )
+        for ( auto it = children->begin( ); it != children->end( ); ++it ) {
+          for ( lo i = 0; i < ( *it )->get_level( ); ++i ) std::cout << " ";
+          print_internal( **it, max_level );
+        }
+    }
   }
 
   lo _n_levels;       //!< number of levels in the tree
