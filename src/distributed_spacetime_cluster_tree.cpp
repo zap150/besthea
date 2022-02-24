@@ -3473,13 +3473,13 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
 void besthea::mesh::distributed_spacetime_cluster_tree::
   distinguish_hybrid_and_standard_m2t_and_s2l_operations(
     general_spacetime_cluster & current_cluster ) {
-  lo current_n_time_elems = current_cluster.get_n_time_elements( );
   lo current_space_level, dummy;
   current_cluster.get_n_divs( current_space_level, dummy );
-  if ( current_n_time_elems == 1 ) {
-    std::vector< general_spacetime_cluster * > * current_m2t_list
-      = current_cluster.get_m2t_list( );
-    if ( current_m2t_list != nullptr ) {
+  std::vector< general_spacetime_cluster * > * current_m2t_list
+    = current_cluster.get_m2t_list( );
+  if ( current_m2t_list != nullptr ) {
+    lo current_n_time_elems = current_cluster.get_n_time_elements( );
+    if ( current_n_time_elems == 1 ) {
       // sort the clusters in the m2t list by their spatial level in
       // increasing order
       std::sort( current_m2t_list->begin( ), current_m2t_list->end( ),
@@ -3492,70 +3492,66 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
         } );
       // determine the number of hybrid m2t operations by counting the
       // number of clusters in the sorted m2t list with spatial level equal
-      // to current_space_level (or rather counting all others +
-      // subtraction)
-      lo n_hybrid_m2t_operations = current_m2t_list->size( );
-      lo access_index = n_hybrid_m2t_operations - 1;
-      lo source_space_level;
-      general_spacetime_cluster * source_cluster
-        = ( *current_m2t_list )[ access_index ];
-      source_cluster->get_n_divs( source_space_level, dummy );
-      while (
-        access_index > 0 && ( source_space_level > current_space_level ) ) {
-        // update n_hybrid_m2t_operations, and consider the next cluster
-        n_hybrid_m2t_operations--;
-        access_index--;
-        source_cluster = ( *current_m2t_list )[ access_index ];
-        source_cluster->get_n_divs( source_space_level, dummy );
-      }
-      if ( access_index == 0 && ( source_space_level > current_space_level ) ) {
-        n_hybrid_m2t_operations--;
-      }
+      // to current_space_level
+      lo n_hybrid_m2t_operations
+        = std::count_if( current_m2t_list->begin( ), current_m2t_list->end( ),
+          [ & ]( general_spacetime_cluster * st_cluster ) {
+            lo space_level, dummy;
+            st_cluster->get_n_divs( space_level, dummy );
+            return ( space_level == current_space_level );
+          } );
       current_cluster.set_n_hybrid_m2t_operations( n_hybrid_m2t_operations );
-    }
-    std::vector< general_spacetime_cluster * > * current_s2l_list
-      = current_cluster.get_s2l_list( );
-    if ( current_s2l_list != nullptr ) {
-      // sort the clusters in the s2l list by their spatial level in
-      // decreasing order
-      std::sort( current_s2l_list->begin( ), current_s2l_list->end( ),
-        [ & ]( general_spacetime_cluster * first,
-          general_spacetime_cluster * second ) {
-          lo first_space_level, second_space_level, dummy;
-          first->get_n_divs( first_space_level, dummy );
-          second->get_n_divs( second_space_level, dummy );
-          return ( first_space_level > second_space_level );
-        } );
-      // determine the number of hybrid s2l operations by counting the
-      // number of clusters in the sorted s2l list with spatial level equal
-      // to current_space_level (or rather counting all others +
-      // subtraction)
-      lo n_hybrid_s2l_operations = current_s2l_list->size( );
-      lo access_index = n_hybrid_s2l_operations - 1;
-      lo source_space_level;
-      general_spacetime_cluster * source_cluster
-        = ( *current_s2l_list )[ access_index ];
-      source_cluster->get_n_divs( source_space_level, dummy );
-      while (
-        access_index > 0 && ( source_space_level < current_space_level ) ) {
-        // update n_hybrid_s2l_operations, and consider the next cluster
-        n_hybrid_s2l_operations--;
-        access_index--;
-        source_cluster = ( *current_s2l_list )[ access_index ];
-        source_cluster->get_n_divs( source_space_level, dummy );
-      }
-      if ( access_index == 0 && ( source_space_level < current_space_level ) ) {
-        n_hybrid_s2l_operations--;
-      }
-      current_cluster.set_n_hybrid_s2l_operations( n_hybrid_s2l_operations );
-    }
-  } else {
-    if ( current_cluster.get_m2t_list( ) != nullptr ) {
+    } else {
+      // hybrid m2t operations are only executed for target clusters containing
+      // a single time element.
       current_cluster.set_n_hybrid_m2t_operations( 0 );
     }
-    if ( current_cluster.get_s2l_list( ) != nullptr ) {
-      current_cluster.set_n_hybrid_s2l_operations( 0 );
-    }
+  }
+  std::vector< general_spacetime_cluster * > * current_s2l_list
+    = current_cluster.get_s2l_list( );
+  if ( current_s2l_list != nullptr ) {
+    // sort the clusters in the s2l list by their spatial level in
+    // decreasing order
+    std::sort( current_s2l_list->begin( ), current_s2l_list->end( ),
+      [ & ]( general_spacetime_cluster * first,
+        general_spacetime_cluster * second ) {
+        lo first_space_level, second_space_level, dummy;
+        first->get_n_divs( first_space_level, dummy );
+        second->get_n_divs( second_space_level, dummy );
+        return ( first_space_level > second_space_level );
+      } );
+    // determine the number of hybrid s2l operations by counting the
+    // number of clusters in the sorted s2l list with spatial level equal
+    // to current_space_level (or rather counting all others +
+    // subtraction)
+    lo n_hybrid_s2l_operations
+      = std::count_if( current_s2l_list->begin( ), current_s2l_list->end( ),
+        [ & ]( general_spacetime_cluster * st_cluster ) {
+          lo space_level, dummy;
+          st_cluster->get_n_divs( space_level, dummy );
+          return ( space_level == current_space_level );
+        } );
+    // we exclude additionally those source clusters that contain more than one
+    // time-step. For this purpose we sort the hybrid s2l candidates (i.e. the
+    // n_hybrid_s2l_operation first in the current s2l list) by the number of
+    // time-steps in ascending order
+    std::stable_sort( current_s2l_list->begin( ),
+      current_s2l_list->begin( ) + n_hybrid_s2l_operations,
+      [ & ]( general_spacetime_cluster * first,
+        general_spacetime_cluster * second ) {
+        lo n_time_elems_first = first->get_n_time_elements( );
+        lo n_time_elems_second = second->get_n_time_elements( );
+        return ( n_time_elems_first < n_time_elems_second );
+      } );
+    // count the number of s2l source clusters containing only a single time
+    // element
+    n_hybrid_s2l_operations = std::count_if( current_s2l_list->begin( ),
+      current_s2l_list->begin( ) + n_hybrid_s2l_operations,
+      []( general_spacetime_cluster * st_cluster ) {
+        lo n_time_elems = st_cluster->get_n_time_elements( );
+        return ( n_time_elems == 1 );
+      } );
+    current_cluster.set_n_hybrid_s2l_operations( n_hybrid_s2l_operations );
   }
   if ( current_cluster.get_n_children( ) > 0 ) {
     for ( auto child : *current_cluster.get_children( ) ) {
