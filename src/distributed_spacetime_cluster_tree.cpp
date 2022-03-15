@@ -144,7 +144,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     get_index_type< lo >::MPI_LO( ), MPI_MAX, *_comm );
 
   // collect the leaves in the local part of the spacetime cluster
-  collect_local_leaves( *_root, _local_leaves );
+  collect_local_leaves_in_non_extended_tree( *_root, _local_leaves );
 
   _spatial_paddings.resize( _n_levels );
   _spatial_paddings.shrink_to_fit( );
@@ -254,8 +254,6 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   if ( refine_large_leaves_in_space ) {
     refine_large_clusters_in_space( _root );
     // collect the auxiliary leaves in the local part of the spacetime cluster
-    collect_additional_local_leaves( *_root, _additional_local_leaves );
-    // Fill the cluster operation lists (nearfield, interaction, m2t, s2l, ...)
   }
   fill_cluster_operation_lists( *_root );
 
@@ -263,6 +261,11 @@ besthea::mesh::distributed_spacetime_cluster_tree::
 
   if ( _enable_m2t_and_s2l ) {
     distinguish_hybrid_and_standard_m2t_and_s2l_operations( *_root );
+    // turn standard m2t and s2l operations into nearfield operations, if this
+    // is desired.
+    if ( _is_std_m2t_and_s2l_nearfield ) {
+      transform_standard_m2t_and_s2l_into_nearfield_operations( *_root );
+    }
     // update the m2t and s2l of the scheduling time clusters (cluster
     // association is required for that!)
     distribution_tree->update_m2t_and_s2l_lists( );
@@ -413,8 +416,11 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree(
 
   std::vector< general_spacetime_cluster * > leaves;
   // collect the real leaves of the local spacetime cluster tree
+  // NOTE: at this stage of the algorithm we currently do NOT allow for early
+  // space-time leaves,
   for ( auto spacetime_root : *_root->get_children( ) ) {
-    collect_real_leaves( *spacetime_root, *temporal_root, leaves );
+    collect_and_mark_local_leaves_in_first_phase_st_tree_construction(
+      *spacetime_root, *temporal_root, leaves );
   }
 
   for ( auto it : leaves ) {
@@ -563,7 +569,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::build_tree_new(
   std::vector< general_spacetime_cluster * > leaves;
   // collect the real leaves of the local spacetime cluster tree
   for ( auto spacetime_root : *_root->get_children( ) ) {
-    collect_real_leaves( *spacetime_root, *temporal_root, leaves );
+    collect_and_mark_local_leaves_in_first_phase_st_tree_construction(
+      *spacetime_root, *temporal_root, leaves );
   }
 
   fill_elements_new( leaves, n_levels_dist_tree_global, space_levels,
@@ -1676,15 +1683,18 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   }
 }
 
-void besthea::mesh::distributed_spacetime_cluster_tree::collect_local_leaves(
-  general_spacetime_cluster & current_cluster,
-  std::vector< general_spacetime_cluster * > & leaf_vector ) const {
+void besthea::mesh::distributed_spacetime_cluster_tree::
+  collect_local_leaves_in_non_extended_tree(
+    general_spacetime_cluster & current_cluster,
+    std::vector< general_spacetime_cluster * > & leaf_vector ) const {
   std::vector< general_spacetime_cluster * > * children
     = current_cluster.get_children( );
   if ( children != nullptr
     && !current_cluster.has_additional_spatial_children( ) ) {
-    for ( auto it : *children ) {
-      collect_local_leaves( *it, leaf_vector );
+    if ( !current_cluster.is_auxiliary_ref_cluster( ) ) {
+      for ( auto it : *children ) {
+        collect_local_leaves_in_non_extended_tree( *it, leaf_vector );
+      }
     }
   } else if ( _my_rank == current_cluster.get_process_id( ) ) {
     leaf_vector.push_back( &current_cluster );
@@ -1692,16 +1702,31 @@ void besthea::mesh::distributed_spacetime_cluster_tree::collect_local_leaves(
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::
-  collect_additional_local_leaves( general_spacetime_cluster & current_cluster,
+  collect_auxiliary_local_leaves( general_spacetime_cluster & current_cluster,
     std::vector< general_spacetime_cluster * > & leaf_vector ) const {
   std::vector< general_spacetime_cluster * > * children
     = current_cluster.get_children( );
   if ( children != nullptr ) {
-    for ( auto it : *children ) {
-      collect_additional_local_leaves( *it, leaf_vector );
+    for ( auto child : *children ) {
+      collect_auxiliary_local_leaves( *child, leaf_vector );
     }
   } else if ( _my_rank == current_cluster.get_process_id( )
     && current_cluster.is_auxiliary_ref_cluster( ) ) {
+    leaf_vector.push_back( &current_cluster );
+  }
+}
+
+void besthea::mesh::distributed_spacetime_cluster_tree::
+  collect_extended_leaves_in_loc_essential_subtree(
+    general_spacetime_cluster & current_cluster,
+    std::vector< general_spacetime_cluster * > & leaf_vector ) const {
+  std::vector< general_spacetime_cluster * > * children
+    = current_cluster.get_children( );
+  if ( children != nullptr ) {
+    for ( auto child : *children ) {
+      collect_extended_leaves_in_loc_essential_subtree( *child, leaf_vector );
+    }
+  } else {
     leaf_vector.push_back( &current_cluster );
   }
 }
@@ -1731,31 +1756,15 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
 }
 
 void besthea::mesh::distributed_spacetime_cluster_tree::
-  collect_non_local_leaves( general_spacetime_cluster & root,
-    std::vector< general_spacetime_cluster * > & non_local_leaves ) const {
-  std::vector< general_spacetime_cluster * > * children = root.get_children( );
-  if ( children != nullptr ) {
-    for ( auto it : *children ) {
-      collect_non_local_leaves( *it, non_local_leaves );
-    }
-  } else if ( _my_rank != root.get_process_id( ) ) {
-    non_local_leaves.push_back( &root );
-  }
-}
-
-void besthea::mesh::distributed_spacetime_cluster_tree::collect_real_leaves(
-  general_spacetime_cluster & st_root, scheduling_time_cluster & t_root,
-  std::vector< general_spacetime_cluster * > & leaves ) {
+  collect_and_mark_local_leaves_in_first_phase_st_tree_construction(
+    general_spacetime_cluster & st_root, scheduling_time_cluster & t_root,
+    std::vector< general_spacetime_cluster * > & leaves ) {
   std::vector< scheduling_time_cluster * > * t_children
     = t_root.get_children( );
   if ( t_children != nullptr ) {
     std::vector< general_spacetime_cluster * > * st_children
       = st_root.get_children( );
-    if ( st_children != nullptr
-      && !st_root.has_additional_spatial_children( ) ) {
-      // note: the second check allows to identify clusters which where refined
-      // purely in space. We still identify such clusters as original leaves
-      // ignoring its auxiliary descendants.
+    if ( st_children != nullptr ) {
       lou t_idx = 0;
       scheduling_time_cluster * t_child = ( *t_children )[ t_idx ];
       short t_child_configuration = t_child->get_configuration( );
@@ -1771,13 +1780,18 @@ void besthea::mesh::distributed_spacetime_cluster_tree::collect_real_leaves(
         }
         // call the routine recursively for the appropriate pair of spacetime
         // cluster and scheduling time cluster
-        collect_real_leaves( *st_child, *t_child, leaves );
+        collect_and_mark_local_leaves_in_first_phase_st_tree_construction(
+          *st_child, *t_child, leaves );
       }
     }
-    // else if ( st_root.get_n_elements( ) < _n_min_elems ) {
-    else if ( st_root.is_global_leaf( ) ) {
-      leaves.push_back( &st_root );
-    }
+    // NOTE: currently we do not allow for early leaves in the first phase of
+    // the tree construction, so we do not have to treat them separately here.
+    // NOTE: currently we do not set the global leaf status of space-time
+    // clusters in the first phase of the tree construction. Thus, the following
+    // check is obsolete.
+    // else if ( st_root.is_global_leaf( ) ) {
+    //   leaves.push_back( &st_root );
+    // }
   }
   // if t_root is a leaf in the global tree structure, the corresponding
   // space-time clusters are leaves and have to be refined if their meshes are
@@ -1785,6 +1799,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::collect_real_leaves(
   // vector leaves.
   else if ( t_root.is_global_leaf( ) && t_root.mesh_is_available( ) ) {
     leaves.push_back( &st_root );
+    // remember that the mesh of the space-time cluster is available.
+    st_root.set_is_mesh_available( true );
   }
 }
 
@@ -2501,6 +2517,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
       clusters[ i ]->set_n_time_elements( n_time_elements_left );
       clusters[ i ]->set_elements_are_local( elements_are_local );
       clusters[ i ]->set_max_element_space_diameter( max_space_diameters[ i ] );
+      clusters[ i ]->set_is_mesh_available( true );
     }
     if ( oct_sizes[ i + 8 ] > 0 ) {
       ++n_clusters;
@@ -2518,6 +2535,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
       clusters[ i + 8 ]->set_elements_are_local( elements_are_local );
       clusters[ i + 8 ]->set_max_element_space_diameter(
         max_space_diameters[ i + 8 ] );
+      clusters[ i + 8 ]->set_is_mesh_available( true );
     }
   }
 
@@ -2649,6 +2667,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::refine_cluster_in_time(
     // all elements)
     left_child->set_max_element_space_diameter(
       parent_cluster.get_max_element_space_diameter( ) );
+    left_child->set_is_mesh_available( true );
   }
 
   // create the right temporal child cluster, if it is not empty.
@@ -2668,6 +2687,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::refine_cluster_in_time(
     // all elements)
     right_child->set_max_element_space_diameter(
       parent_cluster.get_max_element_space_diameter( ) );
+    right_child->set_is_mesh_available( true );
   }
 
   // finally, assign elements to clusters, and add the non-empty children to
@@ -2832,6 +2852,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::refine_cluster_in_space(
       clusters[ i ]->set_elements_are_local( elements_are_local );
       clusters[ i ]->set_max_element_space_diameter( max_space_diameters[ i ] );
       clusters[ i ]->set_auxiliary_ref_cluster_status( is_auxiliary );
+      clusters[ i ]->set_is_mesh_available( true );
     }
   }
 
@@ -2961,7 +2982,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     scheduling_time_cluster * t_root, general_spacetime_cluster * st_root ) {
   if ( st_root->has_additional_spatial_children( ) ) {
     std::vector< general_spacetime_cluster * > additional_leaves;
-    collect_additional_local_leaves( *st_root, additional_leaves );
+    collect_auxiliary_local_leaves( *st_root, additional_leaves );
     for ( auto cluster : additional_leaves ) {
       t_root->add_associated_additional_spacetime_leaf( cluster );
       // std::vector< slou > box_coordinate = cluster->get_box_coordinate( );
@@ -3556,6 +3577,73 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   if ( current_cluster.get_n_children( ) > 0 ) {
     for ( auto child : *current_cluster.get_children( ) ) {
       distinguish_hybrid_and_standard_m2t_and_s2l_operations( *child );
+    }
+  }
+}
+
+void besthea::mesh::distributed_spacetime_cluster_tree::
+  transform_standard_m2t_and_s2l_into_nearfield_operations(
+    general_spacetime_cluster & current_cluster ) {
+  // check if the cluster has a non-empty m2t list
+  std::vector< general_spacetime_cluster * > * current_m2t_list
+    = current_cluster.get_m2t_list( );
+  if ( current_m2t_list != nullptr ) {
+    // check if the cluster has any source clusters in its m2t list for which
+    // standard m2t operations would have to be executed.
+    lo size_m2t_list = current_m2t_list->size( );
+    lo n_hybrid_m2t_ops = current_cluster.get_n_hybrid_m2t_operations( );
+    if ( size_m2t_list != n_hybrid_m2t_ops ) {
+      for ( lo i = size_m2t_list - 1; i >= n_hybrid_m2t_ops; --i ) {
+        // for each standard m2t source cluster get its leaf descendants in the
+        // extended space-time tree and those to the nearfield lit of the
+        // current cluster.
+        general_spacetime_cluster * m2t_src_cluster
+          = ( *current_m2t_list )[ i ];
+        std::vector< general_spacetime_cluster * > src_leaf_descendants;
+        collect_extended_leaves_in_loc_essential_subtree(
+          *m2t_src_cluster, src_leaf_descendants );
+        for ( auto src_leaf : src_leaf_descendants ) {
+          assert( src_leaf->get_is_mesh_available( ) );
+          current_cluster.add_to_nearfield_list( src_leaf );
+        }
+        // remove standard m2t source clusters from the m2t list.
+        current_m2t_list->pop_back( );
+      }
+      current_m2t_list->shrink_to_fit( );
+    }
+  }
+  // check if the cluster has a non-empty s2l list
+  std::vector< general_spacetime_cluster * > * current_s2l_list
+    = current_cluster.get_s2l_list( );
+  if ( current_s2l_list != nullptr ) {
+    // check if the cluster has any source clusters in its s2l list for which
+    // standard s2l operations would have to be executed.
+    lo size_s2l_list = current_s2l_list->size( );
+    lo n_hybrid_s2l_ops = current_cluster.get_n_hybrid_s2l_operations( );
+    if ( size_s2l_list != n_hybrid_s2l_ops ) {
+      // determine the leaf descendants of the current target cluster in the
+      // extended space-time tree
+      std::vector< general_spacetime_cluster * > tar_leaf_descendants;
+      collect_extended_leaves_in_loc_essential_subtree(
+        current_cluster, tar_leaf_descendants );
+      for ( lo i = size_s2l_list - 1; i >= n_hybrid_s2l_ops; --i ) {
+        // add each standard s2l source cluster to the nearfield lists of the
+        // current target cluster's leaf descendants.
+        general_spacetime_cluster * s2l_src_cluster
+          = ( *current_s2l_list )[ i ];
+        for ( auto tar_leaf : tar_leaf_descendants ) {
+          assert( tar_leaf->get_is_mesh_available( ) );
+          tar_leaf->add_to_nearfield_list( s2l_src_cluster );
+        }
+        // remove standard s2l source clusters from the s2l list.
+        current_s2l_list->pop_back( );
+      }
+      current_s2l_list->shrink_to_fit( );
+    }
+  }
+  if ( current_cluster.get_n_children( ) > 0 ) {
+    for ( auto child : *current_cluster.get_children( ) ) {
+      transform_standard_m2t_and_s2l_into_nearfield_operations( *child );
     }
   }
 }

@@ -108,6 +108,7 @@ class besthea::mesh::general_spacetime_cluster {
       _children( nullptr ),
       _global_leaf_status( false ),
       _mesh( mesh ),
+      _is_mesh_available( false ),
       _elements_are_local( false ),
       _level( level ),
       _octant( octant ),
@@ -168,6 +169,21 @@ class besthea::mesh::general_spacetime_cluster {
    */
   const distributed_spacetime_tensor_mesh & get_mesh( ) const {
     return _mesh;
+  }
+
+  /**
+   * Sets the value of @ref _is_mesh_available to a new value.
+   * @param[in] new_value New value to set.
+   */
+  void set_is_mesh_available( const bool new_value ) {
+    _is_mesh_available = new_value;
+  }
+
+  /**
+   * Returns the value of @ref _is_mesh_available.
+   */
+  bool get_is_mesh_available( ) const {
+    return _is_mesh_available;
   }
 
   /**
@@ -1272,6 +1288,13 @@ class besthea::mesh::general_spacetime_cluster {
                              //!< descendants' status is set to false.
   const distributed_spacetime_tensor_mesh &
     _mesh;  //!< distributed spacetime mesh associated with the cluster
+  bool _is_mesh_available;  //!< Indicates if the mesh corresponding to the
+                            //!< elements in this cluster is available for the
+                            //!< current MPI rank. This is only set to true for
+                            //!< reasonably fine clusters (= for clusters which
+                            //!< are leaves at the end of the first phase of the
+                            //!< space-time tree construction and all their
+                            //!< descendants).
   bool _elements_are_local;  //!< Indicates if the elements contained in the
                              //!< cluster are in the local mesh of the
                              //!< distributed spacetime tensor mesh (true) or

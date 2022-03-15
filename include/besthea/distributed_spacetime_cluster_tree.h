@@ -125,15 +125,6 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   }
 
   /**
-   * Returns the vector of additional local leaves created during
-   * refinement of spatially large clusters.
-   */
-  const std::vector< general_spacetime_cluster * > &
-  get_additional_local_leaves( ) {
-    return _additional_local_leaves;
-  }
-
-  /**
    * Returns the vector of levelwise spatial paddings.
    */
   const std::vector< sc > & get_spatial_paddings( ) const {
@@ -234,20 +225,21 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
   void print_spatial_grids( const lo root_proc_id ) const;
 
   /**
-   * Collects the leaves of the cluster tree which are owned by the current MPI
-   * process, i.e. local.
+   * Collects the leaves of the (non-extended) cluster tree which are owned by
+   * the current MPI process, i.e. local.
    *
    * The routine excludes auxiliary spatially refined clusters. A cluster having
    * only auxiliary spatially refined clusters as children is considered to be a
    * leaf.
    *
    * The routine is based on a tree traversal. It can also be used to find local
-   * leaves of a subtree.
+   * leaves of a subtree in the non-extended cluster tree.
    * @param[in] current_cluster Current cluster in the tree traversal.
    * @param[in,out] leaf_vector Vector to which the detected local leaves are
    * added.
    */
-  void collect_local_leaves( general_spacetime_cluster & current_cluster,
+  void collect_local_leaves_in_non_extended_tree(
+    general_spacetime_cluster & current_cluster,
     std::vector< general_spacetime_cluster * > & leaf_vector ) const;
 
   /**
@@ -257,7 +249,21 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @param[in,out] leaf_vector Vector to which the detected local leaves are
    * added.
    */
-  void collect_additional_local_leaves(
+  void collect_auxiliary_local_leaves(
+    general_spacetime_cluster & current_cluster,
+    std::vector< general_spacetime_cluster * > & leaf_vector ) const;
+
+  /**
+   * Collects the leaves in the extended space-time cluster tree (extended by
+   * spatial refinements) that are descendants of @p current_cluster.
+   *
+   * The routine is based on a recursive tree traversal. All auxiliary and
+   * non-auxiliary clusters that are leaves are collected.
+   *
+   * @param[in] current_cluster Cluster whose subtree is considered.
+   * @param[in] leaf_vector Vector to which the determined leaves are added.
+   */
+  void collect_extended_leaves_in_loc_essential_subtree(
     general_spacetime_cluster & current_cluster,
     std::vector< general_spacetime_cluster * > & leaf_vector ) const;
 
@@ -587,33 +593,30 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     lo & status );
 
   /**
-   * Collects the leaves of the cluster tree which correspond to elements in the
-   * nearfield mesh of the current process. The routine is based on a tree
-   * traversal.
-   * @param[in] root Current cluster in the tree traversal.
-   * @param[out]  non_local_leaves  Non local leaves are added to this vector in
-   *                                the order in which they are detected.
-   */
-  void collect_non_local_leaves( general_spacetime_cluster & root,
-    std::vector< general_spacetime_cluster * > & non_local_leaves ) const;
-
-  /**
-   * Collects space-time leaf clusters in the locally essential part of the
-   * distributed tree which are leaves in the global tree (i.e. real leaves).
-   * The leaves include non-local leaves, which are in the nearfield of local
-   * leaf clusters.
+   * Collects space-time leaf clusters in the local part of the distributed tree
+   * which are leaves in the global tree (i.e. real leaves). The leaves include
+   * non-local leaves, which are in the nearfield of local leaf clusters. All
+   * those clusters are marked by remembering that their meshes are available.
    *
    * The routine is based on a traversal of the local part of the spacetime
    * cluster tree and the temporal tree structure.
+   *
+   * For all determined leaves the function
+   * @ref general_spacetime_cluster::set_is_mesh_available is called
+   * with the new status true.
    * @param[in] st_root Current cluster in the local spacetime tree.
    * @param[in] t_root  Current cluster in the temporal tree structure.
    * @param[in,out] leaves  Vector containing all the leaves.
    * @note  Call this routine for the spacetime roots at level 0, not the
    *        spacetime root at level -1.
    * @warning Clusters whose meshes are not available are not collected.
+   * @note This routine should only be called at the end of the first phase of
+   * the construction of the space-time tree.
+   * @warning We assume that there are no early space-time leaf clusters in this
+   * routine!
    */
-  void collect_real_leaves( general_spacetime_cluster & st_root,
-    scheduling_time_cluster & t_root,
+  void collect_and_mark_local_leaves_in_first_phase_st_tree_construction(
+    general_spacetime_cluster & st_root, scheduling_time_cluster & t_root,
     std::vector< general_spacetime_cluster * > & leaves );
 
   /**
@@ -886,6 +889,21 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     general_spacetime_cluster & current_cluster );
 
   /**
+   * Goes through all the m2t and s2l lists of all clusters in the tree. If it
+   * finds clusters for which standard m2t or s2l operations have to be executed
+   * it updates the appropriate nearfield lists to replace these operations by
+   * nearfield operations.
+   *
+   * The nearfield lists of corresponding descendants are updated if necessary.
+   *
+   * The routine is based on a recursive tree traversal (to consider all
+   * clusters and all lists).
+   * @param[in] current_cluster Current cluster in the tree traversal.
+   */
+  void transform_standard_m2t_and_s2l_into_nearfield_operations(
+    general_spacetime_cluster & current_cluster );
+
+  /**
    * Recursively computes padding of clusters in the tree
    * @param[in] root Node to stem from
    */
@@ -981,13 +999,17 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    */
   void print_internal( general_spacetime_cluster & root, lo max_level ) {
     if ( root.get_level( ) <= max_level ) {
+      // print whitespaces to indicate the level of root for a nicer
+      // visualization
+      if ( root.get_level( ) > 0 ) {
+        std::cout << std::string( root.get_level( ), ' ' );
+      }
       root.print( );
       std::vector< general_spacetime_cluster * > * children
         = root.get_children( );
       // std::cout << children->size( ) << std::endl;
       if ( children != nullptr )
         for ( auto it = children->begin( ); it != children->end( ); ++it ) {
-          for ( lo i = 0; i < ( *it )->get_level( ); ++i ) std::cout << " ";
           print_internal( **it, max_level );
         }
     }
@@ -1008,11 +1030,6 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
     _local_leaves;  //!< Vector containing the leaves of the distributed
                     //!< space-time cluster tree which are local, i.e.
                     //!< assigned to the process with rank @p _my_rank.
-
-  std::vector< general_spacetime_cluster * >
-    _additional_local_leaves;  //!< Vector containing the leaves created by an
-                               //!< an additional refinement of spatially large
-                               //!< clusters.
 
   lo _initial_space_refinement;  //!< auxiliary variable determining the
                                  //!< number of spatial refinements executed to
@@ -1046,6 +1063,12 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
                              //!< s2l operations. This influences in particular
                              //!< the construction of the space-time clusters'
                              //!< operation lists (nearfield, interaction, etc.)
+  const bool _is_std_m2t_and_s2l_nearfield{
+    true
+  };  //!< If true, cluster operation lists are modified in such a way that all
+      //!< m2t and s2l lists contain only clusters allowing for hybrid m2t and
+      //!< s2l operations. All others are added to appropriate nearfield lists.
+      //!< FIXME: make this optional.
   const std::vector< std::vector< lo > > _idx_2_coord = { { 1, 1, 1 },
     { 0, 1, 1 }, { 0, 0, 1 }, { 1, 0, 1 }, { 1, 1, 0 }, { 0, 1, 0 },
     { 0, 0, 0 },

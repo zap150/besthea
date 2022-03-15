@@ -155,8 +155,10 @@ void besthea::linear_algebra::distributed_initial_pFMM_matrix< kernel_type,
         clusters_requiring_nearfield_ops.shrink_to_fit( );
         // get all leaf descendants of the current st_cluster
         std::vector< general_spacetime_cluster * > local_leaf_descendants;
-        _distributed_spacetime_target_tree->collect_local_leaves(
-          *st_cluster, local_leaf_descendants );
+        _distributed_spacetime_target_tree
+          ->collect_local_leaves_in_non_extended_tree(
+            *st_cluster, local_leaf_descendants );
+
         // Add all leaf descendants with the corresponding list of nearfield
         // volume clusters to the nearfield list vector.
         // Note: The newly added space-time leaves are guaranteed to be

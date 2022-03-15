@@ -203,6 +203,9 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
       == 0 ) {
     n_clusters_with_std_nf_matrices--;
   }
+  // there has to be at leat one cluster with standard nearfield operations, so
+  // we don't have to consider
+  // total_sizes_std_nf[permutation_index[n_clusters_with_std_nf_matrices[0]]
 
   std::unordered_map< general_spacetime_cluster *, sc >
     largest_sing_val_diag_blocks;
@@ -236,7 +239,8 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   }
 
   // in case of aca recompression, update the map of largest singular values for
-  // non-leaf clusters (where no diagonal nearfield matrix was computed)
+  // non-leaf clusters in the extended space-time cluster tree (where no
+  // diagonal nearfield matrix was computed)
   if ( _aca_eps > 0.0 ) {
     for ( std::vector< general_spacetime_cluster * >::size_type cluster_index
           = 0;
@@ -249,8 +253,9 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
         std::vector< general_spacetime_cluster * > current_leaf_descendants;
         mesh::distributed_spacetime_cluster_tree * test_distributed_st_tree
           = _test_space->get_tree( );
-        test_distributed_st_tree->collect_local_leaves(
-          *current_cluster, current_leaf_descendants );
+        test_distributed_st_tree
+          ->collect_extended_leaves_in_loc_essential_subtree(
+            *current_cluster, current_leaf_descendants );
         // set the largest singular value for the current cluster to the maximum
         // of all its descendants.
         sc max_sing_val = 0.0;
