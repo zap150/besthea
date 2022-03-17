@@ -411,6 +411,21 @@ class besthea::mesh::triangular_surface_mesh : public besthea::mesh::mesh {
   void compute_bounding_box(
     sc & xmin, sc & xmax, sc & ymin, sc & ymax, sc & zmin, sc & zmax ) const;
 
+  /**
+   * Computes a map from the indices of the elements of the current mesh to the
+   * indices of the child elements in the refined mesh.
+   *
+   * The child elements of an element T denote those elements in the refined
+   * mesh which are contained in T.
+   *
+   * For each element index the output vector @p ref_index_map contains a vector
+   * with the 4 child element indices.
+   *
+   * @param[in,out] ref_index_map The index map is stored in this vector.
+   */
+  void compute_element_index_map_for_refinement(
+    std::vector< std::vector< lo > > & ref_index_map ) const;
+
  protected:
   /**
    * Precomputes exterior normals, diameters and areas of elements.

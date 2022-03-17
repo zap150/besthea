@@ -1065,3 +1065,16 @@ void besthea::mesh::triangular_surface_mesh::compute_bounding_box(
       zmax = node[ 2 ];
   }
 }
+
+void besthea::mesh::triangular_surface_mesh::
+  compute_element_index_map_for_refinement(
+    std::vector< std::vector< lo > > & ref_index_map ) const {
+  ref_index_map.resize( _n_elements );
+  for ( lo i = 0; i < _n_elements; ++i ) {
+    ref_index_map[ i ].resize( 4 );
+    ref_index_map[ i ][ 0 ] = 4 * i;
+    ref_index_map[ i ][ 1 ] = 4 * i + 1;
+    ref_index_map[ i ][ 2 ] = 4 * i + 2;
+    ref_index_map[ i ][ 3 ] = 4 * i + 3;
+  }
+}

@@ -167,6 +167,19 @@ bool besthea::mesh::temporal_mesh::save( const std::string & directory,
   return true;
 }
 
+void besthea::mesh::temporal_mesh::compute_element_index_map_for_refinement(
+  const lo n_refs, const lo local_start_idx,
+  std::vector< std::vector< lo > > & ref_index_map ) const {
+  lo n_child_intervals = ( 1 << n_refs );
+  ref_index_map.resize( _n_timesteps );
+  for ( lo i = 0; i < _n_timesteps; ++i ) {
+    ref_index_map[ i ].resize( n_child_intervals );
+    for ( lo j = 0; j < n_child_intervals; ++j ) {
+      ref_index_map[ i ][ j ] = ( i + local_start_idx ) * n_child_intervals + j;
+    }
+  }
+}
+
 void besthea::mesh::temporal_mesh::init_lengths( ) {
   _lengths.resize( _n_timesteps );
   for ( lo i_elem = 0; i_elem < _n_timesteps; ++i_elem ) {

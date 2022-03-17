@@ -364,8 +364,10 @@ sc besthea::bem::distributed_fast_spacetime_be_space<
         }
       }
     }
-    // std::cout << "timestep " << d
-    //           << ": rel. l2 err = " << l2_err_timestep / l2_norm_timestep
+    // std::cout << "timestep " << d << ", interval: (" << t_start << ", " <<
+    // t_end
+    //           << "), rel. l2 err = " << l2_err_timestep / l2_norm_timestep
+    //           << ", l2 err = " << l2_err_timestep
     //           << ", l2 norm = " << l2_norm_timestep << std::endl;
     l2_err += l2_err_timestep;
     l2_norm += l2_norm_timestep;

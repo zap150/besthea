@@ -50,6 +50,15 @@ void write_vector_to_bin_file(
   const std::vector< T > & print_vector, const std::string & filename );
 
 /**
+ * Writes the values of a raw array consecutively to a binary file.
+ * @param[in] print_data  Raw data which is printed to the file.
+ * @param[in] filename Name of the output file.
+ */
+template< class T >
+void write_raw_data_to_bin_file(
+  const T * print_data, const lou n_entries, const std::string & filename );
+
+/**
  * Reads a vector of consecutive values (of same type T) from a binary file.
  * @param[in] filename Name of the input file.
  * @return  Standard vector containing all values read from file.

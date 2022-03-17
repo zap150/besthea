@@ -219,6 +219,26 @@ class besthea::mesh::temporal_mesh {
   bool save( const std::string & directory, const std::string & filename,
     const std::string & suffix );
 
+  /**
+   * Computes a map from the indices of the elements of the current mesh to the
+   * indices of the child elements in the refined mesh.
+   *
+   * The child elements of an element T denote those elements in the refined
+   * mesh which are contained in T.
+   *
+   * For each element index the output vector @p ref_index_map contains a vector
+   * with the 2^(n_refs) child element indices.
+   *
+   * @param[in] n_refs  Number of refinements to obtain the refined mesh, for
+   * which the map is computed.
+   * @param[in] local_start_idx Local start index of the temporal mesh in a
+   * global time mesh.
+   * @param[in,out] ref_index_map The index map is stored in this vector.
+   */
+  void compute_element_index_map_for_refinement( const lo n_refs,
+    const lo local_start_idx,
+    std::vector< std::vector< lo > > & ref_index_map ) const;
+
  protected:
   sc _start_time;  //!< temporal interval set to (start_time, end_time)
   sc _end_time;    //!< temporal interval set to (start_time, end_time)

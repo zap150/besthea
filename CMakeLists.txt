@@ -25,6 +25,7 @@ enable_Eigen()
 enable_Lyra()
 
 set(besthea_INCLUDES
+  include/besthea/auxiliary_routines.h
   include/besthea/basis_function.h
   include/besthea/basis_tetra_p1.h
   include/besthea/basis_tri_p0.h
@@ -138,6 +139,7 @@ set(besthea_cuda_INCLUDES
 )
 
 set(besthea_SOURCES
+  src/auxiliary_routines.cpp
   src/basis_tetra_p1.cpp
   src/basis_tri_p0.cpp
   src/basis_tri_p1.cpp
@@ -234,7 +236,7 @@ target_link_libraries(besthea PUBLIC
 target_compile_definitions(besthea PUBLIC
   MKL_INT=long
   BESTHEA_SIMD_WIDTH=${BESTHEA_SIMD_WIDTH})
-  
+
 if(BESTHEA_USE_CUDA)
   set(besthea_cuda_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
   add_library(besthea_cuda STATIC ${besthea_cuda_SOURCES})
@@ -262,7 +264,7 @@ endif()
 
 install(TARGETS ${PROJECT_NAME}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}
-  )  
+  )
 install(FILES ${besthea_INCLUDES}
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 

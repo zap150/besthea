@@ -44,9 +44,22 @@ void write_vector_to_bin_file(
       reinterpret_cast< const char * >( print_vector_data ), n_chars );
     file_out.close( );
   } else {
-    std::cout << "Error. Could not open the output file for printing the tree \
-                  structure."
-              << std::endl;
+    std::cout << "Error. Could not open the output file ('" << filename
+              << "') for printing the the vector" << std::endl;
+  }
+}
+
+template< class T >
+void write_raw_data_to_bin_file(
+  const T * print_data, const lou n_entries, const std::string & filename ) {
+  std::ofstream file_out( filename.c_str( ), std::ios::binary );
+  if ( file_out.is_open( ) ) {
+    lou n_chars = n_entries * sizeof( T );
+    file_out.write( reinterpret_cast< const char * >( print_data ), n_chars );
+    file_out.close( );
+  } else {
+    std::cout << "Error. Could not open the output file ('" << filename
+              << "') for printing the data: " << std::endl;
   }
 }
 
@@ -65,9 +78,8 @@ std::vector< T > read_vector_from_bin_file( const std::string & filename ) {
     read_file.read( reinterpret_cast< char * >( out_vector.data( ) ), n_chars );
     read_file.close( );
   } else {
-    std::cout << "Error. Could not open the input file for reading the tree \
-                  structure."
-              << std::endl;
+    std::cout << "Error. Could not open the input file ('" << filename
+              << "') for reading the data: " << std::endl;
   }
   return out_vector;
 }
@@ -81,6 +93,9 @@ template void write_vector_to_bin_file< lo >(
 
 template void write_vector_to_bin_file< sc >(
   const std::vector< sc > & print_vector, const std::string & filename );
+
+template void write_raw_data_to_bin_file< sc >(
+  const sc * print_data, const lou n_entries, const std::string & filename );
 
 template std::vector< char > read_vector_from_bin_file< char >(
   const std::string & filename );
