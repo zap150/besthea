@@ -93,7 +93,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   if ( !info_mode ) {
     assemble_nearfield( global_matrix );
     // sort pointers in _n_list of the matrix for matrix-vector multiplication
-    global_matrix.sort_clusters_in_n_list( );
+    global_matrix.sort_clusters_in_n_list_and_associated_st_targets( );
   }
 }
 
@@ -203,7 +203,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
       == 0 ) {
     n_clusters_with_std_nf_matrices--;
   }
-  // there has to be at leat one cluster with standard nearfield operations, so
+  // there has to be at least one cluster with standard nearfield operations, so
   // we don't have to consider
   // total_sizes_std_nf[permutation_index[n_clusters_with_std_nf_matrices[0]]
 
@@ -278,8 +278,8 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
     [ & ]( const lo & a, const lo & b ) {
       return ( total_sizes_spat_adm_nf[ a ] > total_sizes_spat_adm_nf[ b ] );
     } );
-  // find the number of clusters, for which standard nearfield matrices have to
-  // be assembled.
+  // find the number of clusters, for which spatially admissible nearfield
+  // matrices have to be assembled.
   lou n_clusters_with_spat_adm_nf_matrices
     = clusters_with_nearfield_operations->size( );
   while ( n_clusters_with_spat_adm_nf_matrices > 0

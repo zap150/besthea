@@ -143,7 +143,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     _scheduling_tree_structure->compare_clusters_top_down_right_2_left );
   _m2t_list.sort(
     _scheduling_tree_structure->compare_clusters_top_down_right_2_left );
-  // the n-list is sorted in the routine sort_clusters_in_n_list
+  // the n-list is sorted in the routine
+  // sort_clusters_in_n_list_and_associated_st_targets
 
   // allocate the timers
   for ( auto & it : _m_task_times ) {
@@ -7928,13 +7929,16 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
 
 template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
-  target_space, source_space >::sort_clusters_in_n_list( ) {
-  std::unordered_map< mesh::scheduling_time_cluster *, lo >
+  target_space,
+  source_space >::sort_clusters_in_n_list_and_associated_st_targets( ) {
+  std::unordered_map< mesh::scheduling_time_cluster *, long long int >
     total_nf_sizes_in_n_list;
   for ( auto t_cluster : _n_list ) {
-    lo total_nf_size_current_t_cluster = 0;
+    long long int total_nf_size_current_t_cluster = 0;
     std::vector< general_spacetime_cluster * > * associated_spacetime_targets
       = t_cluster->get_associated_spacetime_clusters( );
+    std::vector< long long int > nf_sizes_assoc_st_targets(
+      associated_spacetime_targets->size( ), 0 );
     // determine the associated space-time clusters for which nearfield
     // operations have to be executed (currently: all leaves in the extended
     // tree and clusters with non-empty spatially admissible nearfield lists)
@@ -7951,7 +7955,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             current_spacetime_target )[ src_index ];
           lo n_rows = current_block->get_n_rows( );
           lo n_cols = current_block->get_n_columns( );
-          total_nf_size_current_t_cluster += n_rows * n_cols;
+          nf_sizes_assoc_st_targets[ i ] += n_rows * n_cols;
         }
       }
       const std::vector< general_spacetime_cluster * > *
@@ -7966,13 +7970,15 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               ++pair_index ) {
           matrix * current_block
             = spat_adm_nf_matrix_pairs[ pair_index ].second;
-          total_nf_size_current_t_cluster
+          nf_sizes_assoc_st_targets[ i ]
             += current_block->get_n_stored_entries( );
         }
       }
+      total_nf_size_current_t_cluster += nf_sizes_assoc_st_targets[ i ];
     }
     total_nf_sizes_in_n_list.insert(
       { t_cluster, total_nf_size_current_t_cluster } );
+    t_cluster->sort_assoc_nearfield_targets( nf_sizes_assoc_st_targets );
   }
 
   // sort nearfield clusters

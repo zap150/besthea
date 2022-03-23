@@ -589,6 +589,39 @@ class besthea::mesh::scheduling_time_cluster {
   }
 
   /**
+   * Sorts the vector of associated nearfield targets by the size of the
+   * corresponding nearfield matrices in descending order.
+   * @param[in] nf_sizes_of_assoc_nf_targets Vector containing the sizes of all
+   * the nearfield matrices for each associated space-time nearfield target
+   * cluster.
+   *
+   * @note The nearfield size of ( *_assoc_nearfield_targets )[ i ] should be
+   * stored in nf_sizes_of_assoc_nf_targets[ i ].
+   */
+  void sort_assoc_nearfield_targets(
+    const std::vector< long long int > & nf_sizes_of_assoc_nf_targets ) {
+    // initialize a vector of ascending indices (one for each assoc. nf target)
+    std::vector< lo > permutation( _assoc_nearfield_targets->size( ) );
+    for ( lou i = 0; i < _assoc_nearfield_targets->size( ); ++i ) {
+      permutation[ i ] = i;
+    }
+    // sort the permutation list according to the provided sizes of the
+    // nearfield matrices of the associated nearfield targets
+    std::sort( permutation.begin( ), permutation.end( ),
+      [ & ]( const lo & first, const lo & second ) {
+        return nf_sizes_of_assoc_nf_targets[ first ]
+          > nf_sizes_of_assoc_nf_targets[ second ];
+      } );
+    // sort the vector of associated nearfield targets according to the given
+    // permutation.
+    std::vector< lo > temp_copy_assoc_nf_targets( *_assoc_nearfield_targets );
+    for ( lou i = 0; i < _assoc_nearfield_targets->size( ); ++i ) {
+      ( *_assoc_nearfield_targets )[ i ]
+        = temp_copy_assoc_nf_targets[ permutation[ i ] ];
+    }
+  }
+
+  /**
    * Returns a pointer to (const) @ref _assoc_standard_m2t_targets.
    */
   const std::vector< lo > * get_assoc_standard_m2t_targets( ) const {

@@ -457,10 +457,15 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   }
 
   /**
-   * Auxiliary method that sorts clusters within the _n_list to improve shared
-   * memory scalability during matrix vector multiplication.
+   * Auxiliary method that sorts clusters within the _n_list according to the
+   * size of the nearfield matrices of their associated space-time target
+   * clusters in descending order. The associated space-time targets are also
+   * sorted in descending order for each of the clusters in the _n_list.
+   *
+   * This should improve shared memory scalability during matrix vector
+   * multiplication.
    */
-  void sort_clusters_in_n_list( );
+  void sort_clusters_in_n_list_and_associated_st_targets( );
 
   /**
    * Extracts the diagonal from the pFMM matrix, inverts each entry, and writes
