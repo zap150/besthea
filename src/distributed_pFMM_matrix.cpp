@@ -470,9 +470,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   std::vector< long long > loc_lvlwise_spat_adm_nf_entries_no_compr;
   std::vector< long long > loc_lvlwise_spat_adm_nf_entries_compr;
   std::vector< long long > loc_lvlwise_time_separated_nf_entries;
+  long long loc_max_n_nf_entries_per_st_target;
+  sc loc_mean_n_nf_entries_per_st_target;
   count_nearfield_entries_levelwise( loc_lvlwise_tot_nf_entries_uncompressed,
     loc_lvlwise_spat_adm_nf_entries_no_compr,
-    loc_lvlwise_spat_adm_nf_entries_compr );
+    loc_lvlwise_spat_adm_nf_entries_compr, loc_max_n_nf_entries_per_st_target,
+    loc_mean_n_nf_entries_per_st_target );
   bool using_m2t_and_s2l_operations
     = _distributed_spacetime_tree->get_distribution_tree( )
         ->supports_m2t_and_s2l_operations( );
@@ -527,6 +530,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   long long * all_loc_spat_adm_nf_entries = nullptr;
   long long * all_loc_compr_spat_adm_nf_entries = nullptr;
   long long * all_loc_separated_entries = nullptr;
+  long long * all_max_n_nf_entries_st_targets = nullptr;
+  sc * all_mean_n_nf_entries_st_targets = nullptr;
   if ( _my_rank == root_process ) {
     all_loc_tot_nf_entries
       = new long long[ n_processes * n_global_tree_levels ];
@@ -536,6 +541,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       = new long long[ n_processes * n_global_tree_levels ];
     all_loc_separated_entries
       = new long long[ n_processes * n_global_tree_levels ];
+    all_max_n_nf_entries_st_targets = new long long[ n_processes ];
+    all_mean_n_nf_entries_st_targets = new sc[ n_processes ];
   }
   MPI_Gather( loc_lvlwise_tot_nf_entries_uncompressed.data( ),
     n_global_tree_levels, MPI_LONG_LONG_INT, all_loc_tot_nf_entries,
@@ -546,6 +553,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   MPI_Gather( loc_lvlwise_spat_adm_nf_entries_compr.data( ),
     n_global_tree_levels, MPI_LONG_LONG_INT, all_loc_compr_spat_adm_nf_entries,
     n_global_tree_levels, MPI_LONG_LONG_INT, root_process, *_comm );
+  MPI_Gather( &loc_max_n_nf_entries_per_st_target, 1, MPI_LONG_LONG_INT,
+    all_max_n_nf_entries_st_targets, 1, MPI_LONG_LONG_INT, root_process,
+    *_comm );
+  MPI_Gather( &loc_mean_n_nf_entries_per_st_target, 1,
+    get_scalar_type< sc >::MPI_SC( ), all_mean_n_nf_entries_st_targets, 1,
+    get_scalar_type< sc >::MPI_SC( ), root_process, *_comm );
   if ( !using_m2t_and_s2l_operations ) {
     MPI_Gather( loc_lvlwise_time_separated_nf_entries.data( ),
       n_global_tree_levels, MPI_LONG_LONG_INT, all_loc_separated_entries,
@@ -911,7 +924,18 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     std::cout << "storage per allocated vector (target): "
               << n_target_dofs * 8. / 1024. / 1024. / 1024. << " GiB."
               << std::endl;
+    std::cout << "Max. and mean number of nearfield matrix entries per st "
+                 "target per process: "
+              << std::endl;
+    for ( lo i = 0; i < n_processes; ++i ) {
+      std::cout << "process " << i
+                << ": max n entries: " << all_max_n_nf_entries_st_targets[ i ]
+                << " mean n entries: " << all_mean_n_nf_entries_st_targets[ i ]
+                << std::endl;
+    }
+
     std::cout << std::endl;
+
     delete[] all_loc_tot_nf_entries;
     delete[] all_loc_spat_adm_nf_entries;
     delete[] all_loc_compr_spat_adm_nf_entries;
@@ -921,6 +945,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     delete[] all_n_local_contributions;
     delete[] all_n_spat_moments;
     delete[] all_n_spat_local_contributions;
+
+    delete[] all_max_n_nf_entries_st_targets;
+    delete[] all_mean_n_nf_entries_st_targets;
   }
 }
 
@@ -5502,8 +5529,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   count_nearfield_entries_levelwise(
     std::vector< long long > & levelwise_nf_entries_total_uncompressed,
     std::vector< long long > & levelwise_nf_entries_spat_adm_uncompressed,
-    std::vector< long long > & levelwise_nf_entries_spat_adm_compressed )
-    const {
+    std::vector< long long > & levelwise_nf_entries_spat_adm_compressed,
+    long long & max_n_nf_entries_per_st_target,
+    sc & mean_n_nf_entries_per_st_target ) const {
   levelwise_nf_entries_total_uncompressed.resize(
     _distributed_spacetime_tree->get_n_levels( ) );
   levelwise_nf_entries_spat_adm_uncompressed.resize(
@@ -5515,13 +5543,23 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     levelwise_nf_entries_spat_adm_uncompressed[ i ] = 0;
     levelwise_nf_entries_spat_adm_compressed[ i ] = 0;
   }
+  long long int n_st_targets_with_nf_ops = 0;
+  max_n_nf_entries_per_st_target = 0;
+  mean_n_nf_entries_per_st_target = 0.0;
   for ( auto it : _n_list ) {
     lo current_level = it->get_level( );
     const std::vector< general_spacetime_cluster * > * st_targets
       = it->get_associated_spacetime_clusters( );
     for ( lou i = 0; i < st_targets->size( ); ++i ) {
+      // increase the counter of st targets and initialize a counter for the
+      // nearfield entries for the current target.
+      bool counted_this_cluster = false;
+      long long int n_nf_entries_current_st_target = 0;
       mesh::general_spacetime_cluster * st_target = ( *st_targets )[ i ];
       if ( st_target->get_n_children( ) == 0 ) {
+        // increase the counter of st targets with nf operations
+        n_st_targets_with_nf_ops++;
+        counted_this_cluster = true;
         lo n_target_dofs = st_target->get_n_dofs< target_space >( );
         std::vector< general_spacetime_cluster * > * st_nearfield_list
           = st_target->get_nearfield_list( );
@@ -5531,11 +5569,31 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             = ( *st_nearfield_list )[ src_index ];
           levelwise_nf_entries_total_uncompressed[ current_level ]
             += n_target_dofs * st_source->get_n_dofs< source_space >( );
+          n_nf_entries_current_st_target
+            += n_target_dofs * st_source->get_n_dofs< source_space >( );
         }
       }
       auto st_spat_adm_nearfield_list
         = st_target->get_spatially_admissible_nearfield_list( );
       if ( st_spat_adm_nearfield_list != nullptr ) {
+        if ( !counted_this_cluster ) {
+          // increase the counter of st targets with nf operations
+          n_st_targets_with_nf_ops++;
+          counted_this_cluster = true;
+        }
+        const std::vector< std::pair< lo, matrix * > > &
+          spat_adm_nf_matrix_pairs
+          = _clusterwise_spat_adm_nf_matrix_pairs.at( st_target );
+        bool counted_spat_adm_nf_for_current_st_target = false;
+        if ( spat_adm_nf_matrix_pairs.size( ) > 0 ) {
+          counted_spat_adm_nf_for_current_st_target = true;
+          for ( auto nf_matrix_pair : spat_adm_nf_matrix_pairs ) {
+            levelwise_nf_entries_spat_adm_compressed[ current_level ]
+              += nf_matrix_pair.second->get_n_stored_entries( );
+            n_nf_entries_current_st_target
+              += nf_matrix_pair.second->get_n_stored_entries( );
+          }
+        }
         lo n_target_dofs = st_target->get_n_dofs< target_space >( );
         for ( lou src_index = 0;
               src_index < st_spat_adm_nearfield_list->size( ); ++src_index ) {
@@ -5545,19 +5603,19 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             += n_target_dofs * st_source->get_n_dofs< source_space >( );
           levelwise_nf_entries_spat_adm_uncompressed[ current_level ]
             += n_target_dofs * st_source->get_n_dofs< source_space >( );
-        }
-        const std::vector< std::pair< lo, matrix * > > &
-          spat_adm_nf_matrix_pairs
-          = _clusterwise_spat_adm_nf_matrix_pairs.at( st_target );
-        if ( spat_adm_nf_matrix_pairs.size( ) > 0 ) {
-          for ( auto nf_matrix_pair : spat_adm_nf_matrix_pairs ) {
-            levelwise_nf_entries_spat_adm_compressed[ current_level ]
-              += nf_matrix_pair.second->get_n_stored_entries( );
+          if ( !counted_spat_adm_nf_for_current_st_target ) {
+            n_nf_entries_current_st_target
+              += n_target_dofs * st_source->get_n_dofs< source_space >( );
           }
         }
       }
+      mean_n_nf_entries_per_st_target += n_nf_entries_current_st_target;
+      if ( n_nf_entries_current_st_target > max_n_nf_entries_per_st_target ) {
+        max_n_nf_entries_per_st_target = n_nf_entries_current_st_target;
+      }
     }
   }
+  mean_n_nf_entries_per_st_target /= ( (sc) n_st_targets_with_nf_ops );
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -7932,9 +7990,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space,
   source_space >::sort_clusters_in_n_list_and_associated_st_targets( ) {
   std::unordered_map< mesh::scheduling_time_cluster *, long long int >
-    total_nf_sizes_in_n_list;
+    max_nf_sizes_in_n_list;
   for ( auto t_cluster : _n_list ) {
-    long long int total_nf_size_current_t_cluster = 0;
+    long long int max_nf_size_current_t_cluster = 0;
     std::vector< general_spacetime_cluster * > * associated_spacetime_targets
       = t_cluster->get_associated_spacetime_clusters( );
     std::vector< long long int > nf_sizes_assoc_st_targets(
@@ -7974,19 +8032,21 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             += current_block->get_n_stored_entries( );
         }
       }
-      total_nf_size_current_t_cluster += nf_sizes_assoc_st_targets[ i ];
+      // update the maximal nf size of the current t cluster if necessary
+      if ( nf_sizes_assoc_st_targets[ i ] > max_nf_size_current_t_cluster ) {
+        max_nf_size_current_t_cluster = nf_sizes_assoc_st_targets[ i ];
+      }
     }
-    total_nf_sizes_in_n_list.insert(
-      { t_cluster, total_nf_size_current_t_cluster } );
+    max_nf_sizes_in_n_list.insert(
+      { t_cluster, max_nf_size_current_t_cluster } );
     t_cluster->sort_assoc_nearfield_targets( nf_sizes_assoc_st_targets );
   }
 
   // sort nearfield clusters
   _n_list.sort(
-    [ &total_nf_sizes_in_n_list ]( mesh::scheduling_time_cluster * lhs,
+    [ &max_nf_sizes_in_n_list ]( mesh::scheduling_time_cluster * lhs,
       mesh::scheduling_time_cluster * rhs ) {
-      return (
-        total_nf_sizes_in_n_list[ lhs ] > total_nf_sizes_in_n_list[ rhs ] );
+      return ( max_nf_sizes_in_n_list[ lhs ] > max_nf_sizes_in_n_list[ rhs ] );
     } );
 }
 

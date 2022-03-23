@@ -1738,13 +1738,20 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * @param[out] levelwise_nf_entries_spat_adm_compressed  Contains the total
    * numbers of compressed nearfield matrix entries for all levels in the
    * cluster tree.
+   * @param[out] max_n_nf_entries_per_st_target Contains the maximal number of
+   * nearfield entries of nearfield matrices associated to a single space-time
+   * target cluster.
+   * @param[out] mean_n_nf_entries_per_st_target  The mean of the number of
+   * nearfield entries per space-time target.
    * @note No communication among processes occurs in this routine. Each process
    * returns an individual vector.
    */
   void count_nearfield_entries_levelwise(
     std::vector< long long > & levelwise_nf_entries_total_uncompressed,
     std::vector< long long > & levelwise_nf_entries_spat_adm_uncompressed,
-    std::vector< long long > & levelwise_nf_entries_spat_adm_compressed ) const;
+    std::vector< long long > & levelwise_nf_entries_spat_adm_compressed,
+    long long & max_n_nf_entries_per_st_target,
+    sc & mean_n_nf_entries_per_st_target ) const;
 
   /**
    * In this routine each process counts the number of entries in its nearfield
