@@ -7990,9 +7990,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space,
   source_space >::sort_clusters_in_n_list_and_associated_st_targets( ) {
   std::unordered_map< mesh::scheduling_time_cluster *, long long int >
-    max_nf_sizes_in_n_list;
+    total_nf_sizes_in_n_list;
   for ( auto t_cluster : _n_list ) {
-    long long int max_nf_size_current_t_cluster = 0;
+    long long int total_nf_size_current_t_cluster = 0;
     std::vector< general_spacetime_cluster * > * associated_spacetime_targets
       = t_cluster->get_associated_spacetime_clusters( );
     std::vector< long long int > nf_sizes_assoc_st_targets(
@@ -8032,21 +8032,19 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             += current_block->get_n_stored_entries( );
         }
       }
-      // update the maximal nf size of the current t cluster if necessary
-      if ( nf_sizes_assoc_st_targets[ i ] > max_nf_size_current_t_cluster ) {
-        max_nf_size_current_t_cluster = nf_sizes_assoc_st_targets[ i ];
-      }
+      total_nf_size_current_t_cluster += nf_sizes_assoc_st_targets[ i ];
     }
-    max_nf_sizes_in_n_list.insert(
-      { t_cluster, max_nf_size_current_t_cluster } );
+    total_nf_sizes_in_n_list.insert(
+      { t_cluster, total_nf_size_current_t_cluster } );
     t_cluster->sort_assoc_nearfield_targets( nf_sizes_assoc_st_targets );
   }
 
   // sort nearfield clusters
   _n_list.sort(
-    [ &max_nf_sizes_in_n_list ]( mesh::scheduling_time_cluster * lhs,
+    [ &total_nf_sizes_in_n_list ]( mesh::scheduling_time_cluster * lhs,
       mesh::scheduling_time_cluster * rhs ) {
-      return ( max_nf_sizes_in_n_list[ lhs ] > max_nf_sizes_in_n_list[ rhs ] );
+      return (
+        total_nf_sizes_in_n_list[ lhs ] > total_nf_sizes_in_n_list[ rhs ] );
     } );
 }
 
