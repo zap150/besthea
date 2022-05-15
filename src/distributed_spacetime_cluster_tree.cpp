@@ -4015,15 +4015,24 @@ void besthea::mesh::distributed_spacetime_cluster_tree::print_spatial_grids(
       // print the image for the current level
       std::cout << "###+++###+++###+++###+++###+++###+++###+++###" << std::endl;
       std::cout << "level " << print_level << ": " << std::endl;
+      // count number of clusters on the level:
+      lo n_nonempty_clusters = 0;
+      for ( lo i = 0; i < n_space_clusters; ++i ) {
+        if ( image_vector[ i ] > 0 ) {
+          ++n_nonempty_clusters;
+        }
+      }
+      std::cout << "number of non-empty clusters: " << n_nonempty_clusters
+                << std::endl;
       for ( lo i_z = 0; i_z < n_space_clusters_per_dim; ++i_z ) {
         std::cout << "z index = " << i_z << std::endl;
         for ( lo i_y = n_space_clusters_per_dim - 1; i_y >= 0; --i_y ) {
           for ( lo i_x = 0; i_x < n_space_clusters_per_dim; ++i_x ) {
             lo index = i_x + i_y * n_space_clusters_per_dim
               + i_z * n_space_clusters_per_dim * n_space_clusters_per_dim;
-            if ( image_vector[ index ] == 1 ) {
+            if ( image_vector[ index ] == 2 ) {
               std::cout << "x ";
-            } else if ( image_vector[ index ] == 2 ) {
+            } else if ( image_vector[ index ] == 1 ) {
               std::cout << "o ";
             } else {
               std::cout << "- ";
@@ -4042,7 +4051,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     const lo print_level, const lo n_space_clusters_per_dim,
     std::vector< lo > & image_vector ) const {
   if ( current_cluster.get_level( ) < print_level
-    && current_cluster.get_n_children( ) > 0 ) {
+    && current_cluster.get_n_children( ) > 0
+    && !current_cluster.has_additional_spatial_children( ) ) {
     for ( auto child : *current_cluster.get_children( ) ) {
       determine_grid_image_vector(
         *child, print_level, n_space_clusters_per_dim, image_vector );
@@ -4053,10 +4063,13 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     lo box_index = coordinates[ 1 ]
       + n_space_clusters_per_dim * coordinates[ 2 ]
       + n_space_clusters_per_dim * n_space_clusters_per_dim * coordinates[ 3 ];
+
+    lo status = 2;
     if ( current_cluster.get_n_children( ) == 0 ) {
-      image_vector[ box_index ] = 2;
-    } else if ( image_vector[ box_index ] == 0 ) {
-      image_vector[ box_index ] = 1;
+      status = 1;
+    }
+    if ( status > image_vector[ box_index ] ) {
+      image_vector[ box_index ] = status;
     }
   }
 }
