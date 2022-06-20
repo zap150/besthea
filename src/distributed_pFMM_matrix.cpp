@@ -4772,17 +4772,17 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             value3 += weighted_normal_derivative * y2_ref[ j ];
           }
 
-          T_drv.add_atomic( source_elem_cluster
-                              ->local_spacetime_node_idx_2_local_space_node_idx(
-                                elems_2_local_nodes[ 6 * i ] ),
+          T_drv.add( source_elem_cluster
+                       ->local_spacetime_node_idx_2_local_space_node_idx(
+                         elems_2_local_nodes[ 6 * i ] ),
             current_index, _alpha * value1 );
-          T_drv.add_atomic( source_elem_cluster
-                              ->local_spacetime_node_idx_2_local_space_node_idx(
-                                elems_2_local_nodes[ 6 * i + 1 ] ),
+          T_drv.add( source_elem_cluster
+                       ->local_spacetime_node_idx_2_local_space_node_idx(
+                         elems_2_local_nodes[ 6 * i + 1 ] ),
             current_index, _alpha * value2 );
-          T_drv.add_atomic( source_elem_cluster
-                              ->local_spacetime_node_idx_2_local_space_node_idx(
-                                elems_2_local_nodes[ 6 * i + 2 ] ),
+          T_drv.add( source_elem_cluster
+                       ->local_spacetime_node_idx_2_local_space_node_idx(
+                         elems_2_local_nodes[ 6 * i + 2 ] ),
             current_index, _alpha * value3 );
           ++current_index;
         }
@@ -4878,15 +4878,15 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
             value2 += weight_poly * y1_ref[ j ];
             value3 += weight_poly * y2_ref[ j ];
           }
-          T_normal_along_dim.add_atomic(
+          T_normal_along_dim.add(
             source_cluster->local_spacetime_node_idx_2_local_space_node_idx(
               elems_2_local_nodes[ 6 * i ] ),
             current_index, value1 * normal[ dim ] );
-          T_normal_along_dim.add_atomic(
+          T_normal_along_dim.add(
             source_cluster->local_spacetime_node_idx_2_local_space_node_idx(
               elems_2_local_nodes[ 6 * i + 1 ] ),
             current_index, value2 * normal[ dim ] );
-          T_normal_along_dim.add_atomic(
+          T_normal_along_dim.add(
             source_cluster->local_spacetime_node_idx_2_local_space_node_idx(
               elems_2_local_nodes[ 6 * i + 2 ] ),
             current_index, value3 * normal[ dim ] );
@@ -4921,18 +4921,18 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // compute T_curl_along_dim from T and surface_curls
   for ( lo i_beta = 0; i_beta < _spat_contribution_size; ++i_beta ) {
     for ( lo i_space_el = 0; i_space_el < n_space_elements; ++i_space_el ) {
-      T_curl_along_dim.add_atomic(
+      T_curl_along_dim.add(
         source_cluster->local_spacetime_node_idx_2_local_space_node_idx(
           elems_2_local_nodes[ 6 * i_space_el ] ),
         i_beta,
         surf_curls_curr_dim[ 3 * i_space_el ] * T.get( i_space_el, i_beta ) );
-      T_curl_along_dim.add_atomic(
+      T_curl_along_dim.add(
         source_cluster->local_spacetime_node_idx_2_local_space_node_idx(
           elems_2_local_nodes[ 6 * i_space_el + 1 ] ),
         i_beta,
         surf_curls_curr_dim[ 3 * i_space_el + 1 ]
           * T.get( i_space_el, i_beta ) );
-      T_curl_along_dim.add_atomic(
+      T_curl_along_dim.add(
         source_cluster->local_spacetime_node_idx_2_local_space_node_idx(
           elems_2_local_nodes[ 6 * i_space_el + 2 ] ),
         i_beta,

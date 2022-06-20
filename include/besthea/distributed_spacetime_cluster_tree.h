@@ -76,17 +76,22 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * @param[in] enable_aca_recompression  If true, structures for the
    * realization of the aca recompression of appropriate nearfield blocks are
    * initialized.
+   * @param[in] allow_diff_space_levels_aca If true, different spatial levels
+   * are allowed in the construction of spatially admissible nearfield lists for
+   * the aca compression. If @p enable_aca_recompression is set to false, the
+   * value of this parameter is irrelevant.
    * @param[in] enable_single_sided_expansions If true, structures for the
    * realization of m2t and s2l operations are initialized.
    * @param[in] comm MPI communicator associated with the tree.
-   * @param[in,out] status  Indicates if the tree construction was successfull
+   * @param[in,out] status  Indicates if the tree construction was successful
    *                        (status 0) or not (status 1)
    */
   distributed_spacetime_cluster_tree(
     distributed_spacetime_tensor_mesh & spacetime_mesh, lo max_levels,
     lo n_min_elems, sc st_coeff, sc alpha, slou spatial_nearfield_limit,
     bool refine_large_leaves_in_space, bool enable_aca_recompression,
-    bool enable_single_sided_expansions, MPI_Comm * comm, lo & status );
+    bool allow_diff_space_levels_aca, bool enable_single_sided_expansions,
+    MPI_Comm * comm, lo & status );
 
   /**
    * Destructor.
@@ -1069,6 +1074,19 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
       //!< m2t and s2l lists contain only clusters allowing for hybrid m2t and
       //!< s2l operations. All others are added to appropriate nearfield lists.
       //!< FIXME: make this optional.
+
+  bool
+    _are_different_spat_box_sizes_in_aca_allowed;  //!< If true, a source
+                                                   //!< cluster in the spatially
+                                                   //!< admissible nearfield
+                                                   //!< list of a target cluster
+                                                   //!< is allowed to have a
+                                                   //!< different spatial box
+                                                   //!< size. This is only
+                                                   //!< relevant if ACA
+                                                   //!< recompression is
+                                                   //!< enabled.
+
   const std::vector< std::vector< lo > > _idx_2_coord = { { 1, 1, 1 },
     { 0, 1, 1 }, { 0, 0, 1 }, { 1, 0, 1 }, { 1, 1, 0 }, { 0, 1, 0 },
     { 0, 0, 0 },

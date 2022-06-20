@@ -69,6 +69,7 @@ besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
     _alpha( alpha ),
     _aca_eps( aca_eps ),
     _aca_max_rank( aca_max_rank ),
+    _is_diagonal_svd_recompression_used( true ),
     _comm( comm ) {
   MPI_Comm_rank( *_comm, &_my_rank );
 }
@@ -229,7 +230,8 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
         assemble_nearfield_block( current_cluster, nearfield_cluster, *block );
         // if an aca recompression of spatially admissible nearfield blocks is
         // active, estimate the largest singular value of the diagonal block.
-        if ( _aca_eps > 0.0 && current_cluster == nearfield_cluster ) {
+        if ( _aca_eps > 0.0 && _is_diagonal_svd_recompression_used
+          && current_cluster == nearfield_cluster ) {
           sc current_max_svd = block->estimate_max_singular_value( );
           largest_sing_val_diag_blocks.insert(
             { current_cluster, current_max_svd } );
@@ -241,7 +243,7 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   // in case of aca recompression, update the map of largest singular values for
   // non-leaf clusters in the extended space-time cluster tree (where no
   // diagonal nearfield matrix was computed)
-  if ( _aca_eps > 0.0 ) {
+  if ( _aca_eps > 0.0 && _is_diagonal_svd_recompression_used ) {
     for ( std::vector< general_spacetime_cluster * >::size_type cluster_index
           = 0;
           cluster_index < clusters_with_nearfield_operations->size( );
@@ -299,9 +301,11 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
     std::vector< general_spacetime_cluster * > * spat_adm_nearfield_list
       = current_cluster->get_spatially_admissible_nearfield_list( );
     if ( spat_adm_nearfield_list != nullptr ) {
-      sc max_singular_value = 0.0;
+      sc max_singular_value = -1.0;
       if ( _aca_eps > 0.0 ) {
-        max_singular_value = largest_sing_val_diag_blocks[ current_cluster ];
+        if ( _is_diagonal_svd_recompression_used ) {
+          max_singular_value = largest_sing_val_diag_blocks[ current_cluster ];
+        }
       }
       for ( std::vector< general_spacetime_cluster * >::size_type src_index = 0;
             src_index < spat_adm_nearfield_list->size( ); ++src_index ) {
@@ -312,9 +316,10 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
           // try to approximate the block via aca and an additional svd
           low_rank_matrix_type * lr_block = new low_rank_matrix_type( );
           sc est_compression_error;
-          successful_compression = compute_low_rank_approximation(
-            current_cluster, nearfield_cluster, *lr_block,
-            est_compression_error, true, max_singular_value );
+          successful_compression
+            = compute_low_rank_approximation( current_cluster,
+              nearfield_cluster, *lr_block, est_compression_error,
+              _is_diagonal_svd_recompression_used, max_singular_value );
           if ( successful_compression ) {
             lo rank = lr_block->get_rank( );
             if ( rank > 0 ) {
@@ -340,6 +345,15 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
       }
     }
   }
+}
+
+template< class kernel_type, class test_space_type, class trial_space_type >
+void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
+  test_space_type, trial_space_type >::
+  assemble_nearfield_block_dummy( general_spacetime_cluster * target_cluster,
+    general_spacetime_cluster * source_cluster,
+    full_matrix_type & nearfield_matrix ) const {
+  nearfield_matrix.fill( 0.0 );
 }
 
 template< class kernel_type, class test_space_type, class trial_space_type >

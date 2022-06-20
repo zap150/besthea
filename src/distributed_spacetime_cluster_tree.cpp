@@ -43,7 +43,8 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     distributed_spacetime_tensor_mesh & spacetime_mesh, lo levels,
     lo n_min_elems, sc st_coeff, sc alpha, slou spatial_nearfield_limit,
     bool refine_large_leaves_in_space, bool enable_aca_recompression,
-    bool enable_m2t_and_s2l, MPI_Comm * comm, lo & status )
+    bool allow_diff_space_levels_aca, bool enable_m2t_and_s2l, MPI_Comm * comm,
+    lo & status )
   : _n_levels( levels ),
     _real_n_levels( 0 ),
     _spacetime_mesh( spacetime_mesh ),
@@ -56,6 +57,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
     _refine_large_leaves_in_space( refine_large_leaves_in_space ),
     _enable_aca_recompression( enable_aca_recompression ),
     _enable_m2t_and_s2l( enable_m2t_and_s2l ),
+    _are_different_spat_box_sizes_in_aca_allowed( allow_diff_space_levels_aca ),
     _comm( comm ) {
   status = 0;
   MPI_Comm_rank( *_comm, &_my_rank );
@@ -3230,7 +3232,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
               // check if the parent nearfield cluster is spatially separated
               // and add it to the appropriate nearfield list
               if ( crrnt_tar_cluster.check_for_separation_in_space(
-                     parent_nf_cluster ) ) {
+                     parent_nf_cluster,
+                     _are_different_spat_box_sizes_in_aca_allowed ) ) {
                 // update spatially admissible nearfield list only if the
                 // current target is local.
                 if ( crrnt_tar_cluster.get_process_id( ) == _my_rank ) {
@@ -3329,7 +3332,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
                     // check if the parent nearfield cluster is spatially
                     // separated and add it to the appropriate nearfield list
                     if ( crrnt_tar_cluster.check_for_separation_in_space(
-                           current_source ) ) {
+                           current_source,
+                           _are_different_spat_box_sizes_in_aca_allowed ) ) {
                       // update spatially admissible nearfield list only if the
                       // current target is local.
                       if ( crrnt_tar_cluster.get_process_id( ) == _my_rank ) {
@@ -3411,7 +3415,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
       || current_source.has_additional_spatial_children( )
       || current_source.is_auxiliary_ref_cluster( );
     if ( source_mesh_available
-      && target_cluster.check_for_separation_in_space( &current_source ) ) {
+      && target_cluster.check_for_separation_in_space(
+        &current_source, _are_different_spat_box_sizes_in_aca_allowed ) ) {
       target_cluster.add_to_spatially_admissible_nearfield_list(
         &current_source );
       continue_recursion = false;
@@ -3476,7 +3481,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
           || source_cluster.has_additional_spatial_children( )
           || source_cluster.is_auxiliary_ref_cluster( );
         if ( source_mesh_available
-          && target_cluster.check_for_separation_in_space( &source_cluster ) ) {
+          && target_cluster.check_for_separation_in_space(
+            &source_cluster, _are_different_spat_box_sizes_in_aca_allowed ) ) {
           if ( target_cluster.get_process_id( ) == _my_rank ) {
             target_cluster.add_to_spatially_admissible_nearfield_list(
               &source_cluster );
@@ -3584,6 +3590,16 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
 void besthea::mesh::distributed_spacetime_cluster_tree::
   transform_standard_m2t_and_s2l_into_nearfield_operations(
     general_spacetime_cluster & current_cluster ) {
+  // determine the leaf descendants of the current target cluster in the
+  // extended space-time tree
+  std::vector< general_spacetime_cluster * > tar_leaf_descendants;
+  collect_extended_leaves_in_loc_essential_subtree(
+    current_cluster, tar_leaf_descendants );
+  general_spacetime_cluster * tar_leaf;
+  for ( lou i = 0; i < tar_leaf_descendants.size( ); ++i ) {
+    tar_leaf = tar_leaf_descendants[ i ];
+    assert( tar_leaf->get_is_mesh_available( ) );  // ine
+  }
   // check if the cluster has a non-empty m2t list
   std::vector< general_spacetime_cluster * > * current_m2t_list
     = current_cluster.get_m2t_list( );
@@ -3595,8 +3611,8 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     if ( size_m2t_list != n_hybrid_m2t_ops ) {
       for ( lo i = size_m2t_list - 1; i >= n_hybrid_m2t_ops; --i ) {
         // for each standard m2t source cluster get its leaf descendants in the
-        // extended space-time tree and those to the nearfield lit of the
-        // current cluster.
+        // extended space-time tree and add those to the nearfield list of the
+        // leaf descendants of the current cluster.
         general_spacetime_cluster * m2t_src_cluster
           = ( *current_m2t_list )[ i ];
         std::vector< general_spacetime_cluster * > src_leaf_descendants;
@@ -3604,7 +3620,10 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
           *m2t_src_cluster, src_leaf_descendants );
         for ( auto src_leaf : src_leaf_descendants ) {
           assert( src_leaf->get_is_mesh_available( ) );
-          current_cluster.add_to_nearfield_list( src_leaf );
+          for ( lou i = 0; i < tar_leaf_descendants.size( ); ++i ) {
+            tar_leaf = tar_leaf_descendants[ i ];
+            tar_leaf->add_to_nearfield_list( src_leaf );
+          }
         }
         // remove standard m2t source clusters from the m2t list.
         current_m2t_list->pop_back( );
@@ -3621,19 +3640,20 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
     lo size_s2l_list = current_s2l_list->size( );
     lo n_hybrid_s2l_ops = current_cluster.get_n_hybrid_s2l_operations( );
     if ( size_s2l_list != n_hybrid_s2l_ops ) {
-      // determine the leaf descendants of the current target cluster in the
-      // extended space-time tree
-      std::vector< general_spacetime_cluster * > tar_leaf_descendants;
-      collect_extended_leaves_in_loc_essential_subtree(
-        current_cluster, tar_leaf_descendants );
       for ( lo i = size_s2l_list - 1; i >= n_hybrid_s2l_ops; --i ) {
-        // add each standard s2l source cluster to the nearfield lists of the
-        // current target cluster's leaf descendants.
+        // add the leaf descendants of each standard s2l source cluster to the
+        // nearfield lists of the current target cluster's leaf descendants.
         general_spacetime_cluster * s2l_src_cluster
           = ( *current_s2l_list )[ i ];
-        for ( auto tar_leaf : tar_leaf_descendants ) {
-          assert( tar_leaf->get_is_mesh_available( ) );
-          tar_leaf->add_to_nearfield_list( s2l_src_cluster );
+        std::vector< general_spacetime_cluster * > src_leaf_descendants;
+        collect_extended_leaves_in_loc_essential_subtree(
+          *s2l_src_cluster, src_leaf_descendants );
+        for ( auto src_leaf : src_leaf_descendants ) {
+          assert( src_leaf->get_is_mesh_available( ) );
+          for ( lou i = 0; i < tar_leaf_descendants.size( ); ++i ) {
+            tar_leaf = tar_leaf_descendants[ i ];
+            tar_leaf->add_to_nearfield_list( src_leaf );
+          }
         }
         // remove standard s2l source clusters from the s2l list.
         current_s2l_list->pop_back( );

@@ -208,6 +208,13 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
   ~distributed_fast_spacetime_be_assembler( );
 
   /**
+   * Sets the value of @ref _is_diagonal_svd_recompression_used to false.
+   */
+  void disable_diagonal_svd_recompression( ) {
+    _is_diagonal_svd_recompression_used = false;
+  }
+
+  /**
    * Assembles the fast spacetime matrix.
    *
    * The nearfield matrices of @p global_matrix are assembled. Furthermore all
@@ -251,6 +258,19 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
   void assemble_nearfield_block(
     mesh::general_spacetime_cluster * target_cluster,
     mesh::general_spacetime_cluster * source_cluster,
+    full_matrix_type & nearfield_matrix ) const;
+
+  /**
+   * Dummy routine that fills a nearfield matrix by zeros.
+   * @param[in] target_cluster  Spacetime target cluster
+   * @param[in] source_cluster  Spacetime source cluster in the nearfield of the
+   * spacetime target cluster.
+   * @param[in,out] nearfield_matrix Reference to the matrix which is filled by
+   * zeros.
+   */
+  void assemble_nearfield_block_dummy(
+    [[maybe_unused]] mesh::general_spacetime_cluster * target_cluster,
+    [[maybe_unused]] mesh::general_spacetime_cluster * source_cluster,
     full_matrix_type & nearfield_matrix ) const;
 
  private:
@@ -591,6 +611,17 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
                 //!< compression
   lo _aca_max_rank;  //!< maximum allowed rank of the internal ACA used for
                      //!< temporal nearfield compression
+  bool _is_diagonal_svd_recompression_used;  //!< If this is true, the largest
+                                             //!< singular value of the diagonal
+                                             //!< nearfield block of a target
+                                             //!< cluster (i.e. the one where
+                                             //!< the target is the source) is
+                                             //!< used as reference value for
+                                             //!< the truncation in the svd
+                                             //!< recompression of the aca.
+                                             //!< Otherwise no recompression at
+                                             //!< all is used. The default value
+                                             //!< is true.
   static constexpr std::array< int, 5 > map{ 0, 1, 2, 0,
     1 };  //!< Auxiliary array for mapping DOFs under rotation
           //!< (regularized quadrature). Realizes a fast modulo 3

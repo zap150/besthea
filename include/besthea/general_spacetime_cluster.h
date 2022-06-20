@@ -1227,20 +1227,25 @@ class besthea::mesh::general_spacetime_cluster {
   /**
    * Checks whether the current cluster is separated from the other cluster.
    * @param[in] cluster Second cluster for the check.
+   * @param[in] are_different_spatial_sizes_allowed If true, the routine checks
+   * if two clusters with different spatial sizes are separated. Otherwise, the
+   * routine does not check if they are separated and returns false.
    */
-  bool check_for_separation_in_space(
-    const general_spacetime_cluster * cluster ) const {
+  bool check_for_separation_in_space( const general_spacetime_cluster * cluster,
+    const bool are_different_spatial_sizes_allowed ) const {
     lo cluster_space_level, dummy;
     cluster->get_n_divs( cluster_space_level, dummy );
-    bool are_separated;
+    bool are_separated = false;
     if ( cluster_space_level == _n_space_div ) {
       are_separated = check_for_separation_in_space_same_space_level( cluster );
-    } else if ( cluster_space_level < _n_space_div ) {
-      are_separated
-        = check_for_separation_in_space_coarser_space_level( cluster );
-    } else {
-      are_separated
-        = cluster->check_for_separation_in_space_coarser_space_level( this );
+    } else if ( are_different_spatial_sizes_allowed ) {
+      if ( cluster_space_level < _n_space_div ) {
+        are_separated
+          = check_for_separation_in_space_coarser_space_level( cluster );
+      } else {
+        are_separated
+          = cluster->check_for_separation_in_space_coarser_space_level( this );
+      }
     }
     return are_separated;
   }
