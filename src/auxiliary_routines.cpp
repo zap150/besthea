@@ -70,3 +70,43 @@ void scale_vector_by_inv_elem_size(
     }
   }
 }
+
+bool print_integers_in_cubic_grid( std::vector< long long > values,
+  lo edge_length, std::string & output_file_base ) {
+  lo y_stride = edge_length;
+  lo x_stride = edge_length * edge_length;
+  lo n_tot_entries = x_stride * edge_length;
+  // determine the number of zeros in the grid
+  lo n_zeros = 0;
+  for ( lo i = 0; i < n_tot_entries; ++i ) {
+    if ( values[ i ] == 0 ) {
+      n_zeros++;
+    }
+  }
+  // print the values in a grid only if they are not all zero.
+  for ( lo z_idx = 0; z_idx < edge_length; ++z_idx ) {
+    std::string output_file
+      = output_file_base + "_z_idx_" + std::to_string( z_idx ) + ".txt";
+    std::ofstream outfile( output_file.c_str( ), std::ios::app );
+    if ( outfile.is_open( ) ) {
+      for ( lo y_idx = edge_length - 1; y_idx >= 0; --y_idx ) {
+        for ( lo x_idx = 0; x_idx < edge_length; ++x_idx ) {
+          long long val = values[ x_idx * x_stride + y_idx * y_stride + z_idx ];
+          // lo digits = 1;
+          // if ( val > 0 ) {
+          //   digits = (lo) ceil( log10( (double) ( val + 1 ) ) );
+          // }
+          outfile << val;
+          if ( x_idx != edge_length - 1 ) {
+            outfile << " ";  //<< std::string( max_n_digits + 1 - digits, ' ' );
+          }
+        }
+        outfile << std::endl;
+      }
+    } else {
+      std::cout << "failed to create output file " << output_file << std::endl;
+    }
+  }
+  bool all_zeros = ( n_zeros == n_tot_entries );
+  return all_zeros;
+}

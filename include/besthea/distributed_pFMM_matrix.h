@@ -476,6 +476,20 @@ class besthea::linear_algebra::distributed_pFMM_matrix
   void get_inverse_diagonal(
     distributed_block_vector & inverse_diagonal ) const;
 
+  /**
+   * Auxiliary routine that can be used to generate files that reveal the
+   * connection between the spatial position of two clusters and the fact
+   * whether they are compressed or discarded in the aca.
+   * @param[in] output_file_base  File name used as a common basis for all
+   * generated files.
+   *
+   * @warning This function should only be used for uniform meshes in time
+   * corresponding to temporal trees which are perfect binary trees. For other
+   * meshes it is likely to lead to a crash of the executing program.
+   */
+  void analyze_spatially_admissible_nearfield_operations(
+    std::string & output_file_base ) const;
+
  private:
   /**
    * @brief y = beta * y + alpha * (this)^trans * x using distributed block
@@ -1793,6 +1807,39 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     long long & n_compressed_blocks, long long & n_tot_size_compressed_blocks,
     long long & n_uncompressed_blocks,
     long long & n_tot_size_uncompressed_blocks ) const;
+
+  /**
+   * Auxiliary routine that counts spatially admissible nearfield operations
+   * grid-wise. Grid-wise counting means that the relative position of the
+   * target and source clusters in a spatial grid is considered (if they have
+   * the same spatial level). For each relative position, a separate counter
+   * exists that is increased when an operation is detected. The operations are
+   * counted levelwise. For standard clusters the temporal level is used, for
+   * auxiliary clusters the auxiliary space level (that counts the number of
+   * additional spatial refinements needed to get this block)
+   * @param[in,out] disc_blocks_per_time_level Filled with grids of discarded
+   * blocks per time level.
+   * @param[in,out] disc_blocks_per_aux_space_level Filled with grids of
+   * discarded blocks per auxiliary space level.
+   * @param[in,out] other_disc_blocks Counts the number of extraordinary
+   * discarded blocks (corresponding to clusters with different spatial levels)
+   * @param[in,out] comp_blocks_per_time_level Filled with grids of compressed
+   * blocks per time level.
+   * @param[in,out] comp_blocks_per_aux_space_level Filled with grids of
+   * compressed blocks per auxiliary space level.
+   * @param[in,out] other_comp_blocks Counts the number of extraordinary
+   * compressed blocks (corresponding to clusters with different spatial levels)
+   *
+   * @warning This routine was not tested for adaptive meshes in time and might
+   * cause a program to crash if it is applied to such meshes.
+   */
+  void count_spatially_admissible_nearfield_operations_gridwise(
+    std::vector< std::vector< long long > > & disc_blocks_per_time_level,
+    std::vector< std::vector< long long > > & disc_blocks_per_aux_space_level,
+    long long & other_disc_blocks,
+    std::vector< std::vector< long long > > & comp_blocks_per_time_level,
+    std::vector< std::vector< long long > > & comp_blocks_per_aux_space_level,
+    long long & other_comp_blocksl ) const;
 
   /**
    * Counts the number of all FMM operations levelwise

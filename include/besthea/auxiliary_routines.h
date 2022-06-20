@@ -82,4 +82,18 @@ void scale_vector_by_inv_elem_size(
   const besthea::mesh::distributed_spacetime_tensor_mesh & st_mesh,
   besthea::linear_algebra::distributed_block_vector & vec_to_scale );
 
+/**
+ * Prints integers in a cubic grid to files.
+ * @param[in] values  Values that are printed. They have to be ordered first in
+ * x-direction, then in y-direction and then in z-direction. E.g., the value for
+ * the index combination (i_x,i_y,i_z) is given by values[i_x * edge_length^2 +
+ * i_y * edge_length + i_z]
+ * @param[in] edge_length Number of indices per direction, i.e. per edge.
+ * @param[in] output_file_base  Basic file name, which determines the names of
+ * the output files. They are of the form "BASE_z_idx_%.txt", where % is
+ * replaced by the corresponding z index.
+ */
+bool print_integers_in_cubic_grid( std::vector< long long > values,
+  lo edge_length, std::string & output_file_base );
+
 #endif  // define INCLUDE_AUXILIARY_ROUTINES_BESTHEA_H_

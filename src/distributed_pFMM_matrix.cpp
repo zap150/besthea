@@ -30,6 +30,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "besthea/distributed_pFMM_matrix.h"
 
+#include "besthea/auxiliary_routines.h"
 #include "besthea/distributed_fast_spacetime_be_assembler.h"
 #include "besthea/fmm_routines.h"
 #include "besthea/quadrature.h"
@@ -949,6 +950,131 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     delete[] all_max_n_nf_entries_st_targets;
     delete[] all_mean_n_nf_entries_st_targets;
   }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::
+  analyze_spatially_admissible_nearfield_operations(
+    std::string & output_file_base ) const {
+  std::vector< std::vector< long long > > disc_blocks_per_time_level,
+    disc_blocks_per_aux_space_level, comp_blocks_per_time_level,
+    comp_blocks_per_aux_space_level;
+  long long other_disc_blocks, other_comp_blocks;
+  // count the spatially admissible nf operations grid-wise sorted by their
+  // status (discarded/compressed)
+  count_spatially_admissible_nearfield_operations_gridwise(
+    disc_blocks_per_time_level, disc_blocks_per_aux_space_level,
+    other_disc_blocks, comp_blocks_per_time_level,
+    comp_blocks_per_aux_space_level, other_comp_blocks );
+
+  // print the results
+  lo n_time_levels
+    = _distributed_spacetime_tree->get_distribution_tree( )->get_levels( );
+  lo n_trunc_space
+    = _distributed_spacetime_tree->get_spatial_nearfield_limit( );
+  lo edge_length = 2 * n_trunc_space + 1;
+  lo edge_length_aux_s = 7;
+  std::cout << "printing discarded blocks, levelwise per time level: "
+            << std::endl;
+  // two auxiliary variables in loops:
+  bool all_zeros;
+  std::string next_output_base;
+  // print grid analysis for discarded blocks for each temporal level to files
+  for ( lo i = 0; i < n_time_levels; ++i ) {
+    next_output_base
+      = output_file_base + "_disc_t_lev_" + std::to_string( i ) + "_same_t";
+    all_zeros = print_integers_in_cubic_grid(
+      disc_blocks_per_time_level[ 2 * i ], edge_length, next_output_base );
+    if ( all_zeros ) {
+      std::cout << "time level " << i << ", nf for same time cluster, all zeros"
+                << std::endl;
+    }
+
+    next_output_base
+      = output_file_base + "_disc_t_lev_" + std::to_string( i ) + "_prev_t";
+    all_zeros = print_integers_in_cubic_grid(
+      disc_blocks_per_time_level[ 2 * i + 1 ], edge_length, next_output_base );
+    if ( all_zeros ) {
+      std::cout << "time level " << i
+                << ", nf for previous time cluster, all zeros" << std::endl;
+    }
+  }
+  // same for auxiliary refined blocks
+  std::cout << "printing discarded blocks, levelwise per aux space level: "
+            << std::endl;
+  for ( lou i = 0; i < disc_blocks_per_aux_space_level.size( ) / 2; ++i ) {
+    next_output_base = output_file_base + "_disc_aux_s_lev_"
+      + std::to_string( i + 1 ) + "_same_t";
+    all_zeros
+      = print_integers_in_cubic_grid( disc_blocks_per_aux_space_level[ 2 * i ],
+        edge_length_aux_s, next_output_base );
+    if ( all_zeros ) {
+      std::cout << "aux level " << i + 1
+                << ", nf for same time cluster, all zeros" << std::endl;
+    }
+
+    next_output_base = output_file_base + "_disc_aux_s_lev_"
+      + std::to_string( i + 1 ) + "_prev_t";
+    all_zeros = print_integers_in_cubic_grid(
+      disc_blocks_per_aux_space_level[ 2 * i + 1 ], edge_length_aux_s,
+      next_output_base );
+    if ( all_zeros ) {
+      std::cout << "aux level " << i + 1
+                << ", nf for previous time cluster, all zeros" << std::endl;
+    }
+  }
+  std::cout << "number of discarded blocks not included above: "
+            << other_disc_blocks << std::endl;
+
+  // ######## same for compressed blocks: ################
+
+  std::cout << "print compressed blocks, levelwise per time level: "
+            << std::endl;
+  for ( lo i = 0; i < n_time_levels; ++i ) {
+    next_output_base
+      = output_file_base + "_comp_t_lev_" + std::to_string( i ) + "_same_t";
+    all_zeros = print_integers_in_cubic_grid(
+      comp_blocks_per_time_level[ 2 * i ], edge_length, next_output_base );
+    if ( all_zeros ) {
+      std::cout << "time level " << i << ", nf for same time cluster, all zeros"
+                << std::endl;
+    }
+
+    next_output_base
+      = output_file_base + "_comp_t_lev_" + std::to_string( i ) + "_prev_t";
+    all_zeros = print_integers_in_cubic_grid(
+      comp_blocks_per_time_level[ 2 * i + 1 ], edge_length, next_output_base );
+    if ( all_zeros ) {
+      std::cout << "time level " << i
+                << ", nf for previous time cluster, all zeros" << std::endl;
+    }
+  }
+  std::cout << "compressed blocks, levelwise per aux space level: "
+            << std::endl;
+  for ( lou i = 0; i < comp_blocks_per_aux_space_level.size( ) / 2; ++i ) {
+    next_output_base = output_file_base + "_comp_aux_s_lev_"
+      + std::to_string( i + 1 ) + "_same_t";
+    all_zeros
+      = print_integers_in_cubic_grid( comp_blocks_per_aux_space_level[ 2 * i ],
+        edge_length_aux_s, next_output_base );
+    if ( all_zeros ) {
+      std::cout << "aux level " << i + 1
+                << ", nf for same time cluster, all zeros" << std::endl;
+    }
+
+    next_output_base = output_file_base + "_comp_aux_s_lev_"
+      + std::to_string( i + 1 ) + "_prev_t";
+    all_zeros = print_integers_in_cubic_grid(
+      comp_blocks_per_aux_space_level[ 2 * i + 1 ], edge_length_aux_s,
+      next_output_base );
+    if ( all_zeros ) {
+      std::cout << "aux level " << i + 1
+                << ", nf for previous time cluster, all zeros" << std::endl;
+    }
+  }
+  std::cout << "number of compressed blocks not included above: "
+            << other_comp_blocks << std::endl;
 }
 
 template< class kernel_type, class target_space, class source_space >
@@ -5721,6 +5847,189 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           } else {
             n_discarded_blocks++;
             n_tot_size_discarded_blocks += n_target_dofs * n_source_dofs;
+          }
+        }
+      }
+    }
+  }
+}
+
+template< class kernel_type, class target_space, class source_space >
+void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
+  target_space, source_space >::
+  count_spatially_admissible_nearfield_operations_gridwise(
+    std::vector< std::vector< long long > > & disc_blocks_per_time_level,
+    std::vector< std::vector< long long > > & disc_blocks_per_aux_space_level,
+    long long & other_disc_blocks,
+    std::vector< std::vector< long long > > & comp_blocks_per_time_level,
+    std::vector< std::vector< long long > > & comp_blocks_per_aux_space_level,
+    long long & other_comp_blocks ) const {
+  other_disc_blocks = 0;
+  other_comp_blocks = 0;
+  lo n_time_levels
+    = _distributed_spacetime_tree->get_distribution_tree( )->get_levels( );
+  lo spat_nf_limit
+    = _distributed_spacetime_tree->get_spatial_nearfield_limit( );
+  // auxiliary variables to access proper positions of clusters in a regular
+  // grid later on
+  lo y_coord_stride = ( 2 * spat_nf_limit + 1 );
+  lo x_coord_stride = y_coord_stride * y_coord_stride;
+  lo spat_nf_size = x_coord_stride * y_coord_stride;
+  // the values differ for the auxiliary spatial levels (due to the hierarchic
+  // subdivision of non-separated nearfield blocks)
+  lo y_coord_stride_aux_s = 7;
+  lo x_coord_stride_aux_s = 49;
+  lo spat_nf_size_aux_s = 343;
+  // for each time level we determine grids of spatial nearfield clusters for
+  // the same time step and the previous time step separately
+  disc_blocks_per_time_level.resize( 2 * n_time_levels );
+  comp_blocks_per_time_level.resize( 2 * n_time_levels );
+  for ( lo i = 0; i < 2 * n_time_levels; ++i ) {
+    disc_blocks_per_time_level[ i ].resize( spat_nf_size, 0 );
+    comp_blocks_per_time_level[ i ].resize( spat_nf_size, 0 );
+  }
+
+  lo dummy;
+  for ( auto it : _n_list ) {
+    lo t_level = it->get_level( );
+    lo t_tar_idx = it->get_global_index( );
+    const std::vector< mesh::general_spacetime_cluster * > * st_target_list
+      = it->get_associated_spacetime_clusters( );
+    for ( auto st_target : *st_target_list ) {
+      auto st_spat_adm_nearfield_list
+        = st_target->get_spatially_admissible_nearfield_list( );
+      bool st_target_auxiliary = st_target->is_auxiliary_ref_cluster( );
+      lo tar_s_level;
+      st_target->get_n_divs( tar_s_level, dummy );
+      lo rel_aux_level = 0;
+      if ( st_target_auxiliary ) {
+        // determine the depth of the current space-time target in the auxiliary
+        // refined subtree (i.e. length of the path to the original leaf, from
+        // which the current auxiliary cluster was created.)
+        rel_aux_level = 1;
+        auto current_parent = st_target->get_parent( );
+        while ( current_parent->is_auxiliary_ref_cluster( ) ) {
+          rel_aux_level += 1;
+          current_parent = current_parent->get_parent( );
+        }
+        if ( disc_blocks_per_aux_space_level.size( )
+          < (lou) rel_aux_level * 2 ) {
+          disc_blocks_per_aux_space_level.resize( 2 * rel_aux_level );
+          disc_blocks_per_aux_space_level[ 2 * ( rel_aux_level - 1 ) ].resize(
+            spat_nf_size_aux_s, 0 );
+          disc_blocks_per_aux_space_level[ 2 * ( rel_aux_level - 1 ) + 1 ]
+            .resize( spat_nf_size_aux_s, 0 );
+          comp_blocks_per_aux_space_level.resize( 2 * rel_aux_level );
+          comp_blocks_per_aux_space_level[ 2 * ( rel_aux_level - 1 ) ].resize(
+            spat_nf_size_aux_s, 0 );
+          comp_blocks_per_aux_space_level[ 2 * ( rel_aux_level - 1 ) + 1 ]
+            .resize( spat_nf_size_aux_s, 0 );
+        }
+      }
+      std::vector< slou > tar_coords = st_target->get_box_coordinate( );
+      if ( st_spat_adm_nearfield_list != nullptr ) {
+        // get the vector of assembled spatially admissible nearfield matrices
+        auto spat_adm_nf_matrix_pairs
+          = _clusterwise_spat_adm_nf_matrix_pairs.at( st_target );
+        lo next_nf_matrix_idx = 0;
+        lo next_nf_matrix_src_idx = -1;
+        if ( spat_adm_nf_matrix_pairs.size( ) > 0 ) {
+          next_nf_matrix_src_idx
+            = spat_adm_nf_matrix_pairs[ next_nf_matrix_idx ].first;
+        }
+        for ( lo src_index = 0;
+              src_index < (lo) st_spat_adm_nearfield_list->size( );
+              ++src_index ) {
+          mesh::general_spacetime_cluster * st_source
+            = ( *st_spat_adm_nearfield_list )[ src_index ];
+          lo t_src_idx = st_source->get_global_time_index( );
+          lo src_s_level;
+          st_source->get_n_divs( src_s_level, dummy );
+          // determine the relative grid position of the source cluster
+          // (assuming that its spatial level is the same as the one of the
+          // target cluster)
+          std::vector< slou > src_coords = st_source->get_box_coordinate( );
+          lo x_coord_diff_mod, y_coord_diff_mod, z_coord_diff_mod, pos;
+          if ( !st_target_auxiliary ) {
+            x_coord_diff_mod
+              = spat_nf_limit + (lo) src_coords[ 1 ] - (lo) tar_coords[ 1 ];
+            y_coord_diff_mod
+              = spat_nf_limit + (lo) src_coords[ 2 ] - (lo) tar_coords[ 2 ];
+            z_coord_diff_mod
+              = spat_nf_limit + (lo) src_coords[ 3 ] - (lo) tar_coords[ 3 ];
+            pos = x_coord_diff_mod * x_coord_stride
+              + y_coord_diff_mod * y_coord_stride + z_coord_diff_mod;
+          } else {
+            x_coord_diff_mod = 3 + (lo) src_coords[ 1 ] - (lo) tar_coords[ 1 ];
+            y_coord_diff_mod = 3 + (lo) src_coords[ 2 ] - (lo) tar_coords[ 2 ];
+            z_coord_diff_mod = 3 + (lo) src_coords[ 3 ] - (lo) tar_coords[ 3 ];
+            pos = x_coord_diff_mod * x_coord_stride_aux_s
+              + y_coord_diff_mod * y_coord_stride_aux_s + z_coord_diff_mod;
+          }
+          if ( src_index == next_nf_matrix_src_idx ) {
+            matrix * nf_matrix
+              = spat_adm_nf_matrix_pairs[ next_nf_matrix_idx ].second;
+            // check if the compression was successful or not
+            if ( nf_matrix->get_rank( ) < std::min(
+                   nf_matrix->get_n_rows( ), nf_matrix->get_n_columns( ) ) ) {
+              if ( !st_target_auxiliary && tar_s_level == src_s_level ) {
+                if ( t_tar_idx == t_src_idx ) {
+                  comp_blocks_per_time_level[ 2 * t_level ][ pos ] += 1;
+                } else if ( t_tar_idx == t_src_idx + 1 ) {
+                  comp_blocks_per_time_level[ 2 * t_level + 1 ][ pos ] += 1;
+                } else {
+                  other_comp_blocks++;
+                }
+              } else if ( tar_s_level == src_s_level ) {
+                // for rel_aux_level = 0 no information has to be stored, so we
+                // start counting at 1 in the levelwise vector.
+                if ( t_tar_idx == t_src_idx ) {
+                  comp_blocks_per_aux_space_level[ 2 * ( rel_aux_level - 1 ) ]
+                                                 [ pos ]
+                    += 1;
+                } else if ( t_tar_idx == t_src_idx + 1 ) {
+                  comp_blocks_per_aux_space_level[ 2 * ( rel_aux_level - 1 )
+                    + 1 ][ pos ]
+                    += 1;
+                } else {
+                  other_comp_blocks++;
+                }
+              } else {
+                other_comp_blocks++;
+              }
+            }  // currently we do not count uncompressed -> no else clause
+            if ( (lou) next_nf_matrix_idx
+              < spat_adm_nf_matrix_pairs.size( ) - 1 ) {
+              next_nf_matrix_idx++;
+              next_nf_matrix_src_idx
+                = spat_adm_nf_matrix_pairs[ next_nf_matrix_idx ].first;
+            }
+          } else {
+            if ( !st_target_auxiliary && tar_s_level == src_s_level ) {
+              if ( t_tar_idx == t_src_idx ) {
+                disc_blocks_per_time_level[ 2 * t_level ][ pos ] += 1;
+              } else if ( t_tar_idx == t_src_idx + 1 ) {
+                disc_blocks_per_time_level[ 2 * t_level + 1 ][ pos ] += 1;
+              } else {
+                other_disc_blocks++;
+              }
+            } else if ( tar_s_level == src_s_level ) {
+              // for rel_aux_level = 0 no information has to be stored, so we
+              // start counting at 1 in the levelwise vector.
+              if ( t_tar_idx == t_src_idx ) {
+                disc_blocks_per_aux_space_level[ 2 * ( rel_aux_level - 1 ) ]
+                                               [ pos ]
+                  += 1;
+              } else if ( t_tar_idx == t_src_idx + 1 ) {
+                disc_blocks_per_aux_space_level[ 2 * ( rel_aux_level - 1 ) + 1 ]
+                                               [ pos ]
+                  += 1;
+              } else {
+                other_disc_blocks++;
+              }
+            } else {
+              other_disc_blocks++;
+            }
           }
         }
       }
