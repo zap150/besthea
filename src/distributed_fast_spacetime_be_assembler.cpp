@@ -1133,12 +1133,14 @@ bool besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
     low_rank_matrix_type & lr_nf_matrix, sc & estimated_eps,
     bool enable_svd_recompression,
     sc svd_recompression_reference_value ) const {
-  sc old_eps;               // old accuracy
-  sc error2 = 0.0;          // square of the Frobenius-norm of the update
-  sc frobnr2 = 0.0;         // square of the Frobenius-norm of the block
-  sc crit2;                 // auxiliary variable
-  sc tmp, max, pmax = 1.0;  // auxiliary variables
-  // sc *p, *q;             // REMOVE: pointer to current rank-1-matrix
+  sc old_eps;        // old accuracy
+  sc error2 = 0.0;   // square of the Frobenius-norm of the update
+  sc frobnr2 = 0.0;  // square of the Frobenius-norm of the block
+  sc crit2;          // auxiliary variable
+  sc tmp, max;       // auxiliary variables
+  sc pmax = 0.0;  // auxiliary variable used as a reference to decide whether a
+                  // column contains only zeros. It keeps track of the largest
+                  // value in the rows and columns of the residual matrices.
   lo row_dim = tar_cluster->get_n_dofs< test_space_type >( );
   lo col_dim = src_cluster->get_n_dofs< trial_space_type >( );
 
@@ -1147,10 +1149,6 @@ bool besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   // construct low rank components u and v_aux (large enough)
   full_matrix_type u( row_dim, col_dim, true );
   full_matrix_type v( col_dim, row_dim, true );
-
-  // REMOVE 2 lines
-  // sc * u_data = u.data( );
-  // sc * v_data = v.data( );
 
   old_eps = _aca_eps;
 
@@ -1168,15 +1166,11 @@ bool besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   lo ik = 0;  // current row pivot index
   lo jk = 0;  // current column pivot index
   while ( 1 ) {
-    // REMOVE
-    // p = u_data + k * row_dim;  // memory address p = u_k
     // compute u_k
     {
       // generate a new column
       for ( lo i = 0; i < row_dim; i++ ) {
         if ( Zi[ i ] ) {
-          // REMOVE: p[ i ] = assemble_nearfield_block_entry(
-          //   my_quadrature, tar_cluster, src_cluster, i, jk );
           u.set( i, k,
             assemble_nearfield_block_entry(
               my_quadrature, tar_cluster, src_cluster, i, jk ) );
@@ -1185,12 +1179,9 @@ bool besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 
       // compute the residuum
       for ( lo ell = 0; ell < k; ell++ ) {
-        // REMOVE: scale = v_data[ ell * col_dim + jk ];
         sc scale = v.get( jk, ell );
-        // REMOVE: q = u_data + ell * row_dim;
         for ( lo i = 0; i < row_dim; i++ ) {
           if ( Zi[ i ] ) {
-            // REMOVE: p[ i ] -= scale * q[ i ];
             u.add( i, k, -scale * u.get( i, ell ) );
           }
         }
@@ -1201,7 +1192,6 @@ bool besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
         max = 0.0;
         for ( lo i = 0; i < row_dim; i++ ) {
           if ( Zi[ i ] ) {
-            // REMOVE: tmp = std::abs( p[ i ] );
             tmp = std::abs( u.get( i, k ) );
 
             if ( tmp > max ) {
@@ -1215,7 +1205,7 @@ bool besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
     }
 
     // check for zero column (TODO: currently hard coded)
-    if ( max < 1.0e-30 * pmax ) {
+    if ( max < 1.0e-10 * pmax ) {
       Zj[ jk ] = 0;
       // search for a new column that has not been considered before.
       for ( jk = 0; jk < col_dim && Zj[ jk ] == 0; jk++ ) {
@@ -1236,7 +1226,6 @@ bool besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
       }
     } else {
       // scale u_k
-      // REMOVE: scale = 1.0 / p[ ik ];
       sc scale = 1.0 / u.get( ik, k );
       for ( lo i = 0; i < row_dim; i++ ) {
         if ( Zi[ i ] ) {
@@ -1244,16 +1233,12 @@ bool besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
           u.scale_entry( i, k, scale );
         }
       }
-      // REMOVE:
-      // q = v_data + k * col_dim;  // memory address q = v_k
 
       // compute v_k
       {
         // generate new row
         for ( lo j = 0; j < col_dim; j++ ) {
           if ( Zj[ j ] ) {
-            // REMOVE q[ j ] = assemble_nearfield_block_entry(
-            //  my_quadrature, tar_cluster, src_cluster, ik, j );
             v.set( j, k,
               assemble_nearfield_block_entry(
                 my_quadrature, tar_cluster, src_cluster, ik, j ) );
@@ -1262,12 +1247,9 @@ bool besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 
         // compute the residuum
         for ( lo ell = 0; ell < k; ell++ ) {
-          // REMOVE: scale = u_data[ ell * row_dim + ik ];
           sc scale = u.get( ik, ell );
-          // REMOVE: p = v_data + ell * col_dim;
           for ( lo j = 0; j < col_dim; j++ ) {
             if ( Zj[ j ] ) {
-              // REMOVE: q[ j ] -= p[ j ] * scale;
               v.add( j, k, -scale * v.get( j, ell ) );
             }
           }
@@ -1282,7 +1264,6 @@ bool besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 
         for ( lo j = 0; j < col_dim; j++ ) {
           if ( Zj[ j ] ) {
-            // REMOVE: tmp = std::abs( q[ j ] );
             tmp = std::abs( v.get( j, k ) );
             if ( tmp > max ) {
               max = tmp;
@@ -1353,25 +1334,6 @@ bool besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
           error2 = frobnr2 * old_eps * old_eps;
           if ( k * ( col_dim + row_dim ) < col_dim * row_dim ) {
             successful_compression = true;
-            // #pragma omp critical( debug )
-            //             {
-            //               std::cout << "target is: ";
-            //               tar_cluster->print_short( );
-            //               std::cout << ", source is: ";
-            //               src_cluster->print_short( );
-            //               std::cout << ", rank after svd compression: " << k
-            //               << std::endl;
-            //             }
-            // } else {
-            // #pragma omp critical( debug )
-            //             {
-            //               std::cout << "target is: ";
-            //               tar_cluster->print_short( );
-            //               std::cout << ", source is: ";
-            //               src_cluster->print_short( );
-            //               std::cout << ", recompression not successful" <<
-            //               std::endl;
-            //             }
           }
           break;
         }
