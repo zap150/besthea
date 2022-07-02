@@ -216,7 +216,9 @@ class besthea::linear_algebra::distributed_pFMM_matrix
       // loop over all nearfield matrices associated with a given spacetime
       // cluster and delete them.
       for ( auto matrix : it->second ) {
-        delete matrix;
+        if ( matrix != nullptr ) {
+          delete matrix;
+        }
       }
     }
     for ( auto it = _clusterwise_spat_adm_nf_matrix_pairs.begin( );
@@ -482,13 +484,15 @@ class besthea::linear_algebra::distributed_pFMM_matrix
    * whether they are compressed or discarded in the aca.
    * @param[in] output_file_base  File name used as a common basis for all
    * generated files.
+   * @param[in] root_process  Process that collects the data and writes it to
+   * files.
    *
    * @warning This function should only be used for uniform meshes in time
    * corresponding to temporal trees which are perfect binary trees. For other
    * meshes it is likely to lead to a crash of the executing program.
    */
   void analyze_spatially_admissible_nearfield_operations(
-    std::string & output_file_base ) const;
+    std::string & output_file_base, const int root_process = 0 ) const;
 
  private:
   /**

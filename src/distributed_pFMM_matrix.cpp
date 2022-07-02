@@ -956,125 +956,218 @@ template< class kernel_type, class target_space, class source_space >
 void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space, source_space >::
   analyze_spatially_admissible_nearfield_operations(
-    std::string & output_file_base ) const {
+    std::string & output_file_base, const int root_process ) const {
   std::vector< std::vector< long long > > disc_blocks_per_time_level,
     disc_blocks_per_aux_space_level, comp_blocks_per_time_level,
     comp_blocks_per_aux_space_level;
   long long other_disc_blocks, other_comp_blocks;
   // count the spatially admissible nf operations grid-wise sorted by their
-  // status (discarded/compressed)
+  // status (discarded/compressed) on each process
   count_spatially_admissible_nearfield_operations_gridwise(
     disc_blocks_per_time_level, disc_blocks_per_aux_space_level,
     other_disc_blocks, comp_blocks_per_time_level,
     comp_blocks_per_aux_space_level, other_comp_blocks );
 
+  // communicate the results (inefficient way, but not relevant)
+  lo outer_size_per_time_vectors = disc_blocks_per_time_level.size( );
+  lo inner_size_per_time_vectors = disc_blocks_per_time_level[ 0 ].size( );
+  lo outer_size_per_aux_space_level_vectors
+    = disc_blocks_per_aux_space_level.size( );
+  lo inner_size_per_aux_space_level_vectors
+    = 343;  // warning: hard coded here and in the counting routine
+  MPI_Allreduce( MPI_IN_PLACE, &outer_size_per_time_vectors, 1,
+    get_index_type< lo >::MPI_LO( ), MPI_MAX, *_comm );
+  MPI_Allreduce( MPI_IN_PLACE, &outer_size_per_aux_space_level_vectors, 1,
+    get_index_type< lo >::MPI_LO( ), MPI_MAX, *_comm );
+  // each process fills up its own vector if it is shorter than those of the
+  // other processes
+  if ( outer_size_per_time_vectors > (lo) disc_blocks_per_time_level.size( ) ) {
+    lo old_size = disc_blocks_per_time_level.size( );
+    disc_blocks_per_time_level.resize( outer_size_per_time_vectors );
+    comp_blocks_per_time_level.resize( outer_size_per_time_vectors );
+    for ( lo i = old_size; i < outer_size_per_time_vectors; ++i ) {
+      disc_blocks_per_time_level[ i ].resize( inner_size_per_time_vectors, 0 );
+      comp_blocks_per_time_level[ i ].resize( inner_size_per_time_vectors, 0 );
+    }
+  }
+  if ( outer_size_per_aux_space_level_vectors
+    > (lo) disc_blocks_per_aux_space_level.size( ) ) {
+    lo old_size = disc_blocks_per_aux_space_level.size( );
+    disc_blocks_per_aux_space_level.resize(
+      outer_size_per_aux_space_level_vectors );
+    comp_blocks_per_aux_space_level.resize(
+      outer_size_per_aux_space_level_vectors );
+    for ( lo i = old_size; i < outer_size_per_aux_space_level_vectors; ++i ) {
+      disc_blocks_per_aux_space_level[ i ].resize(
+        inner_size_per_aux_space_level_vectors, 0 );
+      comp_blocks_per_aux_space_level[ i ].resize(
+        inner_size_per_aux_space_level_vectors, 0 );
+    }
+  }
+  // collect the total numbers at the root process via reduce operations
+  if ( _my_rank == root_process ) {
+    // Reduce operations for root process
+    // first for the "per time" vectors
+    for ( lo i = 0; i < outer_size_per_time_vectors; ++i ) {
+      MPI_Reduce( MPI_IN_PLACE, disc_blocks_per_time_level[ i ].data( ),
+        inner_size_per_time_vectors, MPI_LONG_LONG_INT, MPI_SUM, root_process,
+        *_comm );
+      MPI_Reduce( MPI_IN_PLACE, comp_blocks_per_time_level[ i ].data( ),
+        inner_size_per_time_vectors, MPI_LONG_LONG_INT, MPI_SUM, root_process,
+        *_comm );
+    }
+    // same for the "per aux space level" vectors
+    for ( lo i = 0; i < outer_size_per_aux_space_level_vectors; ++i ) {
+      MPI_Reduce( MPI_IN_PLACE, disc_blocks_per_aux_space_level[ i ].data( ),
+        inner_size_per_aux_space_level_vectors, MPI_LONG_LONG_INT, MPI_SUM,
+        root_process, *_comm );
+      MPI_Reduce( MPI_IN_PLACE, comp_blocks_per_aux_space_level[ i ].data( ),
+        inner_size_per_aux_space_level_vectors, MPI_LONG_LONG_INT, MPI_SUM,
+        root_process, *_comm );
+    }
+    // communicate also the numbers of other discarded/compressed blocks
+    MPI_Reduce( MPI_IN_PLACE, &other_disc_blocks, 1, MPI_LONG_LONG_INT, MPI_SUM,
+      root_process, *_comm );
+    MPI_Reduce( MPI_IN_PLACE, &other_comp_blocks, 1, MPI_LONG_LONG_INT, MPI_SUM,
+      root_process, *_comm );
+  } else {
+    // Reduce operations for non-root processes
+    // first for the "per time" vectors
+    for ( lo i = 0; i < outer_size_per_time_vectors; ++i ) {
+      MPI_Reduce( disc_blocks_per_time_level[ i ].data( ), nullptr,
+        inner_size_per_time_vectors, MPI_LONG_LONG_INT, MPI_SUM, root_process,
+        *_comm );
+      MPI_Reduce( comp_blocks_per_time_level[ i ].data( ), nullptr,
+        inner_size_per_time_vectors, MPI_LONG_LONG_INT, MPI_SUM, root_process,
+        *_comm );
+    }
+    // same for the "per aux space level" vectors
+    for ( lo i = 0; i < outer_size_per_aux_space_level_vectors; ++i ) {
+      MPI_Reduce( disc_blocks_per_aux_space_level[ i ].data( ), nullptr,
+        inner_size_per_aux_space_level_vectors, MPI_LONG_LONG_INT, MPI_SUM,
+        root_process, *_comm );
+      MPI_Reduce( comp_blocks_per_aux_space_level[ i ].data( ), nullptr,
+        inner_size_per_aux_space_level_vectors, MPI_LONG_LONG_INT, MPI_SUM,
+        root_process, *_comm );
+    }
+    // communicate also the numbers of other discarded/compressed blocks
+    MPI_Reduce( &other_disc_blocks, nullptr, 1, MPI_LONG_LONG_INT, MPI_SUM,
+      root_process, *_comm );
+    MPI_Reduce( &other_comp_blocks, nullptr, 1, MPI_LONG_LONG_INT, MPI_SUM,
+      root_process, *_comm );
+  }
+
   // print the results
-  lo n_time_levels
-    = _distributed_spacetime_tree->get_distribution_tree( )->get_levels( );
-  lo n_trunc_space
-    = _distributed_spacetime_tree->get_spatial_nearfield_limit( );
-  lo edge_length = 2 * n_trunc_space + 1;
-  lo edge_length_aux_s = 7;
-  std::cout << "printing discarded blocks, levelwise per time level: "
-            << std::endl;
-  // two auxiliary variables in loops:
-  bool all_zeros;
-  std::string next_output_base;
-  // print grid analysis for discarded blocks for each temporal level to files
-  for ( lo i = 0; i < n_time_levels; ++i ) {
-    next_output_base
-      = output_file_base + "_disc_t_lev_" + std::to_string( i ) + "_same_t";
-    all_zeros = print_integers_in_cubic_grid(
-      disc_blocks_per_time_level[ 2 * i ], edge_length, next_output_base );
-    if ( all_zeros ) {
-      std::cout << "time level " << i << ", nf for same time cluster, all zeros"
-                << std::endl;
-    }
+  if ( _my_rank == root_process ) {
+    lo n_time_levels
+      = _distributed_spacetime_tree->get_distribution_tree( )->get_levels( );
+    lo n_trunc_space
+      = _distributed_spacetime_tree->get_spatial_nearfield_limit( );
+    lo edge_length = 2 * n_trunc_space + 1;
+    lo edge_length_aux_s = 7;
+    std::cout << "printing discarded blocks, levelwise per time level: "
+              << std::endl;
+    // two auxiliary variables in loops:
+    bool all_zeros;
+    std::string next_output_base;
+    // print grid analysis for discarded blocks for each temporal level to files
+    for ( lo i = 0; i < n_time_levels; ++i ) {
+      next_output_base
+        = output_file_base + "_disc_t_lev_" + std::to_string( i ) + "_same_t";
+      all_zeros = print_integers_in_cubic_grid(
+        disc_blocks_per_time_level[ 2 * i ], edge_length, next_output_base );
+      if ( all_zeros ) {
+        std::cout << "time level " << i
+                  << ", nf for same time cluster, all zeros" << std::endl;
+      }
 
-    next_output_base
-      = output_file_base + "_disc_t_lev_" + std::to_string( i ) + "_prev_t";
-    all_zeros = print_integers_in_cubic_grid(
-      disc_blocks_per_time_level[ 2 * i + 1 ], edge_length, next_output_base );
-    if ( all_zeros ) {
-      std::cout << "time level " << i
-                << ", nf for previous time cluster, all zeros" << std::endl;
+      next_output_base
+        = output_file_base + "_disc_t_lev_" + std::to_string( i ) + "_prev_t";
+      all_zeros
+        = print_integers_in_cubic_grid( disc_blocks_per_time_level[ 2 * i + 1 ],
+          edge_length, next_output_base );
+      if ( all_zeros ) {
+        std::cout << "time level " << i
+                  << ", nf for previous time cluster, all zeros" << std::endl;
+      }
     }
+    // same for auxiliary refined blocks
+    std::cout << "printing discarded blocks, levelwise per aux space level: "
+              << std::endl;
+    for ( lou i = 0; i < disc_blocks_per_aux_space_level.size( ) / 2; ++i ) {
+      next_output_base = output_file_base + "_disc_aux_s_lev_"
+        + std::to_string( i + 1 ) + "_same_t";
+      all_zeros = print_integers_in_cubic_grid(
+        disc_blocks_per_aux_space_level[ 2 * i ], edge_length_aux_s,
+        next_output_base );
+      if ( all_zeros ) {
+        std::cout << "aux level " << i + 1
+                  << ", nf for same time cluster, all zeros" << std::endl;
+      }
+
+      next_output_base = output_file_base + "_disc_aux_s_lev_"
+        + std::to_string( i + 1 ) + "_prev_t";
+      all_zeros = print_integers_in_cubic_grid(
+        disc_blocks_per_aux_space_level[ 2 * i + 1 ], edge_length_aux_s,
+        next_output_base );
+      if ( all_zeros ) {
+        std::cout << "aux level " << i + 1
+                  << ", nf for previous time cluster, all zeros" << std::endl;
+      }
+    }
+    std::cout << "number of discarded blocks not included above: "
+              << other_disc_blocks << std::endl;
+
+    // ######## same for compressed blocks: ################
+
+    std::cout << "print compressed blocks, levelwise per time level: "
+              << std::endl;
+    for ( lo i = 0; i < n_time_levels; ++i ) {
+      next_output_base
+        = output_file_base + "_comp_t_lev_" + std::to_string( i ) + "_same_t";
+      all_zeros = print_integers_in_cubic_grid(
+        comp_blocks_per_time_level[ 2 * i ], edge_length, next_output_base );
+      if ( all_zeros ) {
+        std::cout << "time level " << i
+                  << ", nf for same time cluster, all zeros" << std::endl;
+      }
+
+      next_output_base
+        = output_file_base + "_comp_t_lev_" + std::to_string( i ) + "_prev_t";
+      all_zeros
+        = print_integers_in_cubic_grid( comp_blocks_per_time_level[ 2 * i + 1 ],
+          edge_length, next_output_base );
+      if ( all_zeros ) {
+        std::cout << "time level " << i
+                  << ", nf for previous time cluster, all zeros" << std::endl;
+      }
+    }
+    std::cout << "compressed blocks, levelwise per aux space level: "
+              << std::endl;
+    for ( lou i = 0; i < comp_blocks_per_aux_space_level.size( ) / 2; ++i ) {
+      next_output_base = output_file_base + "_comp_aux_s_lev_"
+        + std::to_string( i + 1 ) + "_same_t";
+      all_zeros = print_integers_in_cubic_grid(
+        comp_blocks_per_aux_space_level[ 2 * i ], edge_length_aux_s,
+        next_output_base );
+      if ( all_zeros ) {
+        std::cout << "aux level " << i + 1
+                  << ", nf for same time cluster, all zeros" << std::endl;
+      }
+
+      next_output_base = output_file_base + "_comp_aux_s_lev_"
+        + std::to_string( i + 1 ) + "_prev_t";
+      all_zeros = print_integers_in_cubic_grid(
+        comp_blocks_per_aux_space_level[ 2 * i + 1 ], edge_length_aux_s,
+        next_output_base );
+      if ( all_zeros ) {
+        std::cout << "aux level " << i + 1
+                  << ", nf for previous time cluster, all zeros" << std::endl;
+      }
+    }
+    std::cout << "number of compressed blocks not included above: "
+              << other_comp_blocks << std::endl;
   }
-  // same for auxiliary refined blocks
-  std::cout << "printing discarded blocks, levelwise per aux space level: "
-            << std::endl;
-  for ( lou i = 0; i < disc_blocks_per_aux_space_level.size( ) / 2; ++i ) {
-    next_output_base = output_file_base + "_disc_aux_s_lev_"
-      + std::to_string( i + 1 ) + "_same_t";
-    all_zeros
-      = print_integers_in_cubic_grid( disc_blocks_per_aux_space_level[ 2 * i ],
-        edge_length_aux_s, next_output_base );
-    if ( all_zeros ) {
-      std::cout << "aux level " << i + 1
-                << ", nf for same time cluster, all zeros" << std::endl;
-    }
-
-    next_output_base = output_file_base + "_disc_aux_s_lev_"
-      + std::to_string( i + 1 ) + "_prev_t";
-    all_zeros = print_integers_in_cubic_grid(
-      disc_blocks_per_aux_space_level[ 2 * i + 1 ], edge_length_aux_s,
-      next_output_base );
-    if ( all_zeros ) {
-      std::cout << "aux level " << i + 1
-                << ", nf for previous time cluster, all zeros" << std::endl;
-    }
-  }
-  std::cout << "number of discarded blocks not included above: "
-            << other_disc_blocks << std::endl;
-
-  // ######## same for compressed blocks: ################
-
-  std::cout << "print compressed blocks, levelwise per time level: "
-            << std::endl;
-  for ( lo i = 0; i < n_time_levels; ++i ) {
-    next_output_base
-      = output_file_base + "_comp_t_lev_" + std::to_string( i ) + "_same_t";
-    all_zeros = print_integers_in_cubic_grid(
-      comp_blocks_per_time_level[ 2 * i ], edge_length, next_output_base );
-    if ( all_zeros ) {
-      std::cout << "time level " << i << ", nf for same time cluster, all zeros"
-                << std::endl;
-    }
-
-    next_output_base
-      = output_file_base + "_comp_t_lev_" + std::to_string( i ) + "_prev_t";
-    all_zeros = print_integers_in_cubic_grid(
-      comp_blocks_per_time_level[ 2 * i + 1 ], edge_length, next_output_base );
-    if ( all_zeros ) {
-      std::cout << "time level " << i
-                << ", nf for previous time cluster, all zeros" << std::endl;
-    }
-  }
-  std::cout << "compressed blocks, levelwise per aux space level: "
-            << std::endl;
-  for ( lou i = 0; i < comp_blocks_per_aux_space_level.size( ) / 2; ++i ) {
-    next_output_base = output_file_base + "_comp_aux_s_lev_"
-      + std::to_string( i + 1 ) + "_same_t";
-    all_zeros
-      = print_integers_in_cubic_grid( comp_blocks_per_aux_space_level[ 2 * i ],
-        edge_length_aux_s, next_output_base );
-    if ( all_zeros ) {
-      std::cout << "aux level " << i + 1
-                << ", nf for same time cluster, all zeros" << std::endl;
-    }
-
-    next_output_base = output_file_base + "_comp_aux_s_lev_"
-      + std::to_string( i + 1 ) + "_prev_t";
-    all_zeros = print_integers_in_cubic_grid(
-      comp_blocks_per_aux_space_level[ 2 * i + 1 ], edge_length_aux_s,
-      next_output_base );
-    if ( all_zeros ) {
-      std::cout << "aux level " << i + 1
-                << ", nf for previous time cluster, all zeros" << std::endl;
-    }
-  }
-  std::cout << "number of compressed blocks not included above: "
-            << other_comp_blocks << std::endl;
 }
 
 template< class kernel_type, class target_space, class source_space >
