@@ -233,8 +233,11 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
         if ( _aca_eps > 0.0 && _is_diagonal_svd_recompression_used
           && current_cluster == nearfield_cluster ) {
           sc current_max_svd = block->estimate_max_singular_value( );
-          largest_sing_val_diag_blocks.insert(
-            { current_cluster, current_max_svd } );
+#pragma omp critical( update_singular_values )
+          {
+            largest_sing_val_diag_blocks.insert(
+              { current_cluster, current_max_svd } );
+          }
         }
       }
     }
