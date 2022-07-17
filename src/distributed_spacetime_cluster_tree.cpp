@@ -48,6 +48,7 @@ besthea::mesh::distributed_spacetime_cluster_tree::
   : _n_levels( levels ),
     _real_n_levels( 0 ),
     _spacetime_mesh( spacetime_mesh ),
+    _root( nullptr ),
     _local_n_space_levels( 0 ),
     _global_n_space_levels( 0 ),
     //_s_t_coeff( st_coeff ),

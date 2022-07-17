@@ -232,7 +232,9 @@ class besthea::mesh::scheduling_time_cluster {
    * Deletes @ref _m2t_list of the cluster.
    */
   void delete_m2t_list( ) {
-    delete _m2t_list;
+    if ( _m2t_list != nullptr ) {
+      delete _m2t_list;
+    }
     _m2t_list = nullptr;
   }
 
@@ -240,7 +242,9 @@ class besthea::mesh::scheduling_time_cluster {
    * Deletes @ref _s2l_list of the cluster.
    */
   void delete_s2l_list( ) {
-    delete _s2l_list;
+    if ( _s2l_list != nullptr ) {
+      delete _s2l_list;
+    }
     _s2l_list = nullptr;
   }
 
@@ -248,7 +252,9 @@ class besthea::mesh::scheduling_time_cluster {
    * Delete @ref _m2t_send_list of the cluster.
    */
   void delete_m2t_send_list( ) {
-    delete _m2t_send_list;
+    if ( _m2t_send_list != nullptr ) {
+      delete _m2t_send_list;
+    }
     _m2t_send_list = nullptr;
   }
 
@@ -256,7 +262,9 @@ class besthea::mesh::scheduling_time_cluster {
    * Delete @ref _s2l_send_list of the cluster.
    */
   void delete_s2l_send_list( ) {
-    delete _s2l_send_list;
+    if ( _s2l_send_list != nullptr ) {
+      delete _s2l_send_list;
+    }
     _s2l_send_list = nullptr;
   }
 

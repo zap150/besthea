@@ -368,7 +368,7 @@ sc besthea::linear_algebra::linear_operator::estimate_max_singular_value( )
     est_largest_sing_val = std::sqrt( prod_A_adj.norm( ) );
 
     // prepare for next iteration step
-    iteration_vec = prod_A_adj;
+    iteration_vec.copy( prod_A_adj );
     iteration_vec.scale(
       1.0 / ( est_largest_sing_val * est_largest_sing_val ) );
   }

@@ -97,7 +97,7 @@ class besthea::mesh::distributed_spacetime_cluster_tree {
    * Destructor.
    */
   ~distributed_spacetime_cluster_tree( ) {
-    if ( _root )
+    if ( _root != nullptr )
       delete _root;
   }
 
