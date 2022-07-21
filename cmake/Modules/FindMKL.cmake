@@ -54,74 +54,32 @@ if (CMAKE_SYSTEM_NAME MATCHES Linux AND CMAKE_CXX_COMPILER_ID MATCHES GNU)
   set(NO_AS_NEEDED -Wl,--no-as-needed)
 endif (CMAKE_SYSTEM_NAME MATCHES Linux AND CMAKE_CXX_COMPILER_ID MATCHES GNU)
 
+set(MKL_LIBRARIES
+  ${NO_AS_NEEDED}
+  ${LIB_MKL_CORE}
+  ${LIB_MKL_INTEL_THREAD}
+  ${LIB_MKL_INTEL_ILP64}
+  ${LIB_IOMP5}
+  ${LIB_PTHREAD})
 
+# deal with QUIET and REQUIRED argument
 
+include(FindPackageHandleStandardArgs)
 
-if(BESTHEA_MKL_USE_TBB)
+find_package_handle_standard_args(MKL DEFAULT_MSG
+  MKL_LIBRARY_DIR
+  LIB_MKL_CORE
+  LIB_MKL_INTEL_THREAD
+  LIB_MKL_INTEL_ILP64
+  LIB_IOMP5
+  LIB_PTHREAD
+  MKL_INCLUDE_DIRS)
 
-  message(STATUS "Using TBB MKL threading layer")
+mark_as_advanced(
+  LIB_MKL_CORE
+  LIB_MKL_INTEL_THREAD
+  LIB_MKL_INTEL_ILP64
+  LIB_IOMP5
+  LIB_PTHREAD
+  MKL_INCLUDE_DIRS)
 
-  set(MKL_LIBRARIES
-    ${NO_AS_NEEDED}
-    ${LIB_MKL_CORE}
-    ${LIB_MKL_TBB_THREAD}
-    ${LIB_TBB}
-    ${LIB_MKL_INTEL_ILP64}
-    ${LIB_IOMP5}
-    ${LIB_PTHREAD})
-
-  # deal with QUIET and REQUIRED argument
-
-  include(FindPackageHandleStandardArgs)
-
-  find_package_handle_standard_args(MKL DEFAULT_MSG
-    MKL_LIBRARY_DIR
-    LIB_MKL_CORE
-    LIB_MKL_TBB_THREAD
-    LIB_TBB
-    LIB_MKL_INTEL_ILP64
-    LIB_IOMP5
-    LIB_PTHREAD
-    MKL_INCLUDE_DIRS)
-
-  mark_as_advanced(
-    LIB_MKL_CORE
-    LIB_MKL_TBB_THREAD
-    LIB_TBB
-    LIB_MKL_INTEL_ILP64
-    LIB_IOMP5
-    LIB_PTHREAD
-    MKL_INCLUDE_DIRS)
-
-else()
-
-  set(MKL_LIBRARIES
-    ${NO_AS_NEEDED}
-    ${LIB_MKL_CORE}
-    ${LIB_MKL_INTEL_THREAD}
-    ${LIB_MKL_INTEL_ILP64}
-    ${LIB_IOMP5}
-    ${LIB_PTHREAD})
-
-  # deal with QUIET and REQUIRED argument
-
-  include(FindPackageHandleStandardArgs)
-
-  find_package_handle_standard_args(MKL DEFAULT_MSG
-    MKL_LIBRARY_DIR
-    LIB_MKL_CORE
-    LIB_MKL_INTEL_THREAD
-    LIB_MKL_INTEL_ILP64
-    LIB_IOMP5
-    LIB_PTHREAD
-    MKL_INCLUDE_DIRS)
-
-  mark_as_advanced(
-    LIB_MKL_CORE
-    LIB_MKL_INTEL_THREAD
-    LIB_MKL_INTEL_ILP64
-    LIB_IOMP5
-    LIB_PTHREAD
-    MKL_INCLUDE_DIRS)
-
-endif(BESTHEA_MKL_USE_TBB)
