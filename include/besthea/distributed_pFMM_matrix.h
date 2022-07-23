@@ -1843,7 +1843,10 @@ class besthea::linear_algebra::distributed_pFMM_matrix
     long long & other_disc_blocks,
     std::vector< std::vector< long long > > & comp_blocks_per_time_level,
     std::vector< std::vector< long long > > & comp_blocks_per_aux_space_level,
-    long long & other_comp_blocksl ) const;
+    long long & other_comp_blocks,
+    std::vector< std::vector< long long > > & uncomp_blocks_per_time_level,
+    std::vector< std::vector< long long > > & uncomp_blocks_per_aux_space_level,
+    long long & other_uncomp_blocks ) const;
 
   /**
    * Counts the number of all FMM operations levelwise

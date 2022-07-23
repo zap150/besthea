@@ -959,14 +959,17 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     std::string & output_file_base, const int root_process ) const {
   std::vector< std::vector< long long > > disc_blocks_per_time_level,
     disc_blocks_per_aux_space_level, comp_blocks_per_time_level,
-    comp_blocks_per_aux_space_level;
-  long long other_disc_blocks, other_comp_blocks;
+    comp_blocks_per_aux_space_level, uncomp_blocks_per_time_level,
+    uncomp_blocks_per_aux_space_level;
+  long long other_disc_blocks, other_comp_blocks, other_uncomp_blocks;
   // count the spatially admissible nf operations grid-wise sorted by their
   // status (discarded/compressed) on each process
   count_spatially_admissible_nearfield_operations_gridwise(
     disc_blocks_per_time_level, disc_blocks_per_aux_space_level,
     other_disc_blocks, comp_blocks_per_time_level,
-    comp_blocks_per_aux_space_level, other_comp_blocks );
+    comp_blocks_per_aux_space_level, other_comp_blocks,
+    uncomp_blocks_per_time_level, uncomp_blocks_per_aux_space_level,
+    other_uncomp_blocks );
 
   // communicate the results (inefficient way, but not relevant)
   lo outer_size_per_time_vectors = disc_blocks_per_time_level.size( );
@@ -985,9 +988,12 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     lo old_size = disc_blocks_per_time_level.size( );
     disc_blocks_per_time_level.resize( outer_size_per_time_vectors );
     comp_blocks_per_time_level.resize( outer_size_per_time_vectors );
+    uncomp_blocks_per_time_level.resize( outer_size_per_time_vectors );
     for ( lo i = old_size; i < outer_size_per_time_vectors; ++i ) {
       disc_blocks_per_time_level[ i ].resize( inner_size_per_time_vectors, 0 );
       comp_blocks_per_time_level[ i ].resize( inner_size_per_time_vectors, 0 );
+      uncomp_blocks_per_time_level[ i ].resize(
+        inner_size_per_time_vectors, 0 );
     }
   }
   if ( outer_size_per_aux_space_level_vectors
@@ -997,10 +1003,14 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       outer_size_per_aux_space_level_vectors );
     comp_blocks_per_aux_space_level.resize(
       outer_size_per_aux_space_level_vectors );
+    uncomp_blocks_per_aux_space_level.resize(
+      outer_size_per_aux_space_level_vectors );
     for ( lo i = old_size; i < outer_size_per_aux_space_level_vectors; ++i ) {
       disc_blocks_per_aux_space_level[ i ].resize(
         inner_size_per_aux_space_level_vectors, 0 );
       comp_blocks_per_aux_space_level[ i ].resize(
+        inner_size_per_aux_space_level_vectors, 0 );
+      uncomp_blocks_per_aux_space_level[ i ].resize(
         inner_size_per_aux_space_level_vectors, 0 );
     }
   }
@@ -1015,6 +1025,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       MPI_Reduce( MPI_IN_PLACE, comp_blocks_per_time_level[ i ].data( ),
         inner_size_per_time_vectors, MPI_LONG_LONG_INT, MPI_SUM, root_process,
         *_comm );
+      MPI_Reduce( MPI_IN_PLACE, uncomp_blocks_per_time_level[ i ].data( ),
+        inner_size_per_time_vectors, MPI_LONG_LONG_INT, MPI_SUM, root_process,
+        *_comm );
     }
     // same for the "per aux space level" vectors
     for ( lo i = 0; i < outer_size_per_aux_space_level_vectors; ++i ) {
@@ -1024,12 +1037,17 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       MPI_Reduce( MPI_IN_PLACE, comp_blocks_per_aux_space_level[ i ].data( ),
         inner_size_per_aux_space_level_vectors, MPI_LONG_LONG_INT, MPI_SUM,
         root_process, *_comm );
+      MPI_Reduce( MPI_IN_PLACE, uncomp_blocks_per_aux_space_level[ i ].data( ),
+        inner_size_per_aux_space_level_vectors, MPI_LONG_LONG_INT, MPI_SUM,
+        root_process, *_comm );
     }
     // communicate also the numbers of other discarded/compressed blocks
     MPI_Reduce( MPI_IN_PLACE, &other_disc_blocks, 1, MPI_LONG_LONG_INT, MPI_SUM,
       root_process, *_comm );
     MPI_Reduce( MPI_IN_PLACE, &other_comp_blocks, 1, MPI_LONG_LONG_INT, MPI_SUM,
       root_process, *_comm );
+    MPI_Reduce( MPI_IN_PLACE, &other_uncomp_blocks, 1, MPI_LONG_LONG_INT,
+      MPI_SUM, root_process, *_comm );
   } else {
     // Reduce operations for non-root processes
     // first for the "per time" vectors
@@ -1038,6 +1056,9 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
         inner_size_per_time_vectors, MPI_LONG_LONG_INT, MPI_SUM, root_process,
         *_comm );
       MPI_Reduce( comp_blocks_per_time_level[ i ].data( ), nullptr,
+        inner_size_per_time_vectors, MPI_LONG_LONG_INT, MPI_SUM, root_process,
+        *_comm );
+      MPI_Reduce( uncomp_blocks_per_time_level[ i ].data( ), nullptr,
         inner_size_per_time_vectors, MPI_LONG_LONG_INT, MPI_SUM, root_process,
         *_comm );
     }
@@ -1049,11 +1070,16 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
       MPI_Reduce( comp_blocks_per_aux_space_level[ i ].data( ), nullptr,
         inner_size_per_aux_space_level_vectors, MPI_LONG_LONG_INT, MPI_SUM,
         root_process, *_comm );
+      MPI_Reduce( uncomp_blocks_per_aux_space_level[ i ].data( ), nullptr,
+        inner_size_per_aux_space_level_vectors, MPI_LONG_LONG_INT, MPI_SUM,
+        root_process, *_comm );
     }
     // communicate also the numbers of other discarded/compressed blocks
     MPI_Reduce( &other_disc_blocks, nullptr, 1, MPI_LONG_LONG_INT, MPI_SUM,
       root_process, *_comm );
     MPI_Reduce( &other_comp_blocks, nullptr, 1, MPI_LONG_LONG_INT, MPI_SUM,
+      root_process, *_comm );
+    MPI_Reduce( &other_uncomp_blocks, nullptr, 1, MPI_LONG_LONG_INT, MPI_SUM,
       root_process, *_comm );
   }
 
@@ -1167,6 +1193,56 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     }
     std::cout << "number of compressed blocks not included above: "
               << other_comp_blocks << std::endl;
+
+    // ######## same for uncompressed blocks: ################
+
+    std::cout << "print uncompressed blocks, levelwise per time level: "
+              << std::endl;
+    for ( lo i = 0; i < n_time_levels; ++i ) {
+      next_output_base
+        = output_file_base + "_uncomp_t_lev_" + std::to_string( i ) + "_same_t";
+      all_zeros = print_integers_in_cubic_grid(
+        uncomp_blocks_per_time_level[ 2 * i ], edge_length, next_output_base );
+      if ( all_zeros ) {
+        std::cout << "time level " << i
+                  << ", nf for same time cluster, all zeros" << std::endl;
+      }
+
+      next_output_base
+        = output_file_base + "_uncomp_t_lev_" + std::to_string( i ) + "_prev_t";
+      all_zeros = print_integers_in_cubic_grid(
+        uncomp_blocks_per_time_level[ 2 * i + 1 ], edge_length,
+        next_output_base );
+      if ( all_zeros ) {
+        std::cout << "time level " << i
+                  << ", nf for previous time cluster, all zeros" << std::endl;
+      }
+    }
+    std::cout << "uncompressed blocks, levelwise per aux space level: "
+              << std::endl;
+    for ( lou i = 0; i < uncomp_blocks_per_aux_space_level.size( ) / 2; ++i ) {
+      next_output_base = output_file_base + "_uncomp_aux_s_lev_"
+        + std::to_string( i + 1 ) + "_same_t";
+      all_zeros = print_integers_in_cubic_grid(
+        uncomp_blocks_per_aux_space_level[ 2 * i ], edge_length_aux_s,
+        next_output_base );
+      if ( all_zeros ) {
+        std::cout << "aux level " << i + 1
+                  << ", nf for same time cluster, all zeros" << std::endl;
+      }
+
+      next_output_base = output_file_base + "_uncomp_aux_s_lev_"
+        + std::to_string( i + 1 ) + "_prev_t";
+      all_zeros = print_integers_in_cubic_grid(
+        uncomp_blocks_per_aux_space_level[ 2 * i + 1 ], edge_length_aux_s,
+        next_output_base );
+      if ( all_zeros ) {
+        std::cout << "aux level " << i + 1
+                  << ", nf for previous time cluster, all zeros" << std::endl;
+      }
+    }
+    std::cout << "number of uncompressed blocks not included above: "
+              << other_uncomp_blocks << std::endl;
   }
 }
 
@@ -5956,7 +6032,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     long long & other_disc_blocks,
     std::vector< std::vector< long long > > & comp_blocks_per_time_level,
     std::vector< std::vector< long long > > & comp_blocks_per_aux_space_level,
-    long long & other_comp_blocks ) const {
+    long long & other_comp_blocks,
+    std::vector< std::vector< long long > > & uncomp_blocks_per_time_level,
+    std::vector< std::vector< long long > > & uncomp_blocks_per_aux_space_level,
+    long long & other_uncomp_blocks ) const {
   other_disc_blocks = 0;
   other_comp_blocks = 0;
   lo n_time_levels
@@ -6090,7 +6169,33 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
               } else {
                 other_comp_blocks++;
               }
-            }  // currently we do not count uncompressed -> no else clause
+            } else {
+              if ( !st_target_auxiliary && tar_s_level == src_s_level ) {
+                if ( t_tar_idx == t_src_idx ) {
+                  uncomp_blocks_per_time_level[ 2 * t_level ][ pos ] += 1;
+                } else if ( t_tar_idx == t_src_idx + 1 ) {
+                  uncomp_blocks_per_time_level[ 2 * t_level + 1 ][ pos ] += 1;
+                } else {
+                  other_uncomp_blocks++;
+                }
+              } else if ( tar_s_level == src_s_level ) {
+                // for rel_aux_level = 0 no information has to be stored, so we
+                // start counting at 1 in the levelwise vector.
+                if ( t_tar_idx == t_src_idx ) {
+                  uncomp_blocks_per_aux_space_level[ 2 * ( rel_aux_level - 1 ) ]
+                                                   [ pos ]
+                    += 1;
+                } else if ( t_tar_idx == t_src_idx + 1 ) {
+                  uncomp_blocks_per_aux_space_level[ 2 * ( rel_aux_level - 1 )
+                    + 1 ][ pos ]
+                    += 1;
+                } else {
+                  other_uncomp_blocks++;
+                }
+              } else {
+                other_uncomp_blocks++;
+              }
+            }
             if ( (lou) next_nf_matrix_idx
               < spat_adm_nf_matrix_pairs.size( ) - 1 ) {
               next_nf_matrix_idx++;
