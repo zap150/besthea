@@ -6056,9 +6056,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   // the same time step and the previous time step separately
   disc_blocks_per_time_level.resize( 2 * n_time_levels );
   comp_blocks_per_time_level.resize( 2 * n_time_levels );
+  uncomp_blocks_per_time_level.resize( 2 * n_time_levels );
   for ( lo i = 0; i < 2 * n_time_levels; ++i ) {
     disc_blocks_per_time_level[ i ].resize( spat_nf_size, 0 );
     comp_blocks_per_time_level[ i ].resize( spat_nf_size, 0 );
+    uncomp_blocks_per_time_level[ i ].resize( spat_nf_size, 0 );
   }
 
   lo dummy;
@@ -6095,6 +6097,11 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
           comp_blocks_per_aux_space_level[ 2 * ( rel_aux_level - 1 ) ].resize(
             spat_nf_size_aux_s, 0 );
           comp_blocks_per_aux_space_level[ 2 * ( rel_aux_level - 1 ) + 1 ]
+            .resize( spat_nf_size_aux_s, 0 );
+          uncomp_blocks_per_aux_space_level.resize( 2 * rel_aux_level );
+          uncomp_blocks_per_aux_space_level[ 2 * ( rel_aux_level - 1 ) ].resize(
+            spat_nf_size_aux_s, 0 );
+          uncomp_blocks_per_aux_space_level[ 2 * ( rel_aux_level - 1 ) + 1 ]
             .resize( spat_nf_size_aux_s, 0 );
         }
       }
