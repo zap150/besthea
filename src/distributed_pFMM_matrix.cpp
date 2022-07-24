@@ -6038,6 +6038,7 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
     long long & other_uncomp_blocks ) const {
   other_disc_blocks = 0;
   other_comp_blocks = 0;
+  other_uncomp_blocks = 0;
   lo n_time_levels
     = _distributed_spacetime_tree->get_distribution_tree( )->get_levels( );
   lo spat_nf_limit
