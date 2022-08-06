@@ -3,7 +3,7 @@ add_subdirectory(uniform_tensor_dirichlet)
 add_subdirectory(uniform_tensor_neumann)
 
 if(BESTHEA_USE_CUDA)
-  add_subdirectory(onthefly_experiments)
+  add_subdirectory(gpu_onthefly)
 endif()
 
 install(FILES

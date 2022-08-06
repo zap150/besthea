@@ -1,5 +1,14 @@
 #!/bin/bash
 
+ml intel/2022a
+ml KAROLINA/FAKEintel
+ml CUDA/11.4.1
+export OMP_NUM_THREADS=128
+export GOMP_CPU_AFFINITY=0-127
+export MKL_NUM_THREADS=64
+
+
+
 warmups=2
 repetitions=10
 executable=bin/besthea/onthefly_multiply
@@ -21,11 +30,6 @@ echo "host ${HOSTNAME}" > ${resfile}
 # n_space_elems 48 96 192 384 768 1536 3072 6144 12288  ...
 # base_sp_elems 12 24  12  24  12   24   12   24    12
 # space_refine   1  1   2   2   3    3    4    4     5
-
-# applies to the Karolina nodes, change it on other clusters
-export OMP_NUM_THREADS=128
-export KMP_AFFINITY=granularity=core,compact
-export KMP_HW_SUBSET=2s,64c
 
 for finess_level in {3..9}
 do
