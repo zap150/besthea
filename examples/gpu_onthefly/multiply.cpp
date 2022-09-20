@@ -52,7 +52,9 @@ struct config {
       | lyra::opt( qo_sng, "quadrature order singular" )[ "--qo-singular" ](
         "Quadrature order used for singular integrals" )
       | lyra::opt( qo_reg, "quadrature order regular" )[ "--qo-regular" ](
-        "Quadrature order used for regular integrals" );
+        "Quadrature order used for regular integrals" )
+      | lyra::opt( gpu_alg, "gpu algorithm" )[ "--gpu-alg" ](
+        "GPU algorithm version used" );
 
     auto result = cli.parse( { argc, argv } );
 
@@ -103,6 +105,8 @@ struct config {
       << qo_sng << std::endl;
     std::cout << "  Quadrature order for reg. int.:                    "
       << qo_reg << std::endl;
+    std::cout << "  GPU algorithm version:                             "
+      << gpu_alg << std::endl;
   }
 
   std::string mesh_file = "";
@@ -121,6 +125,7 @@ struct config {
   int repetitions = 10;
   int qo_sng = 4;
   int qo_reg = 4;
+  int gpu_alg = 2;
 }; // struct config
 
 
@@ -174,16 +179,16 @@ int main( int argc, char * argv[] ) {
   block_lower_triangular_toeplitz_matrix D_mem; // hypersingular operator
   uniform_spacetime_be_assembler         assembler_v(kernel_v, space_p0, space_p0,                     c.qo_sng, c.qo_reg);
   uniform_spacetime_be_matrix_onthefly_cpu V_fly_cpu(kernel_v, space_p0, space_p0,                     c.qo_sng, c.qo_reg);
-  uniform_spacetime_be_matrix_onthefly_gpu V_fly_gpu(kernel_v, space_p0, space_p0, gpu_spacetime_mesh, c.qo_sng, c.qo_reg);
+  uniform_spacetime_be_matrix_onthefly_gpu V_fly_gpu(kernel_v, space_p0, space_p0, gpu_spacetime_mesh, c.qo_sng, c.qo_reg, c.gpu_alg);
   uniform_spacetime_be_assembler         assembler_k(kernel_k, space_p0, space_p1,                     c.qo_sng, c.qo_reg);
   uniform_spacetime_be_matrix_onthefly_cpu K_fly_cpu(kernel_k, space_p0, space_p1,                     c.qo_sng, c.qo_reg);
-  uniform_spacetime_be_matrix_onthefly_gpu K_fly_gpu(kernel_k, space_p0, space_p1, gpu_spacetime_mesh, c.qo_sng, c.qo_reg);
+  uniform_spacetime_be_matrix_onthefly_gpu K_fly_gpu(kernel_k, space_p0, space_p1, gpu_spacetime_mesh, c.qo_sng, c.qo_reg, c.gpu_alg);
   uniform_spacetime_be_assembler         assembler_a(kernel_a, space_p1, space_p0,                     c.qo_sng, c.qo_reg);
   uniform_spacetime_be_matrix_onthefly_cpu A_fly_cpu(kernel_a, space_p1, space_p0,                     c.qo_sng, c.qo_reg);
-  uniform_spacetime_be_matrix_onthefly_gpu A_fly_gpu(kernel_a, space_p1, space_p0, gpu_spacetime_mesh, c.qo_sng, c.qo_reg);
+  uniform_spacetime_be_matrix_onthefly_gpu A_fly_gpu(kernel_a, space_p1, space_p0, gpu_spacetime_mesh, c.qo_sng, c.qo_reg, c.gpu_alg);
   uniform_spacetime_be_assembler         assembler_d(kernel_d, space_p1, space_p1,                     c.qo_sng, c.qo_reg);
   uniform_spacetime_be_matrix_onthefly_cpu D_fly_cpu(kernel_d, space_p1, space_p1,                     c.qo_sng, c.qo_reg);
-  uniform_spacetime_be_matrix_onthefly_gpu D_fly_gpu(kernel_d, space_p1, space_p1, gpu_spacetime_mesh, c.qo_sng, c.qo_reg);
+  uniform_spacetime_be_matrix_onthefly_gpu D_fly_gpu(kernel_d, space_p1, space_p1, gpu_spacetime_mesh, c.qo_sng, c.qo_reg, c.gpu_alg);
 
   // initialize vectors
   block_vector xV  (c.n_timeslices, spacetime_mesh.get_n_spatial_elements(), false);

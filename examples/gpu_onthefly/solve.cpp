@@ -49,7 +49,9 @@ struct config {
       | lyra::opt( qo_sng, "quadrature order singular" )[ "--qo-singular" ](
         "Quadrature order used for singular integrals" )
       | lyra::opt( qo_reg, "quadrature order regular" )[ "--qo-regular" ](
-        "Quadrature order used for regular integrals" );
+        "Quadrature order used for regular integrals" )
+      | lyra::opt( gpu_alg, "gpu algorithm" )[ "--gpu-alg" ](
+        "GPU algorithm version used" );
 
     auto result = cli.parse( { argc, argv } );
 
@@ -98,6 +100,8 @@ struct config {
       << qo_sng << std::endl;
     std::cout << "  Quadrature order for reg. int.:                    "
       << qo_reg << std::endl;
+    std::cout << "  GPU algorithm version:                             "
+      << gpu_alg << std::endl;
   }
 
   std::string mesh_file = "";
@@ -115,6 +119,7 @@ struct config {
   int repetitions = 10;
   int qo_sng = 4;
   int qo_reg = 4;
+  int gpu_alg = 2;
 }; // struct config
 
 
@@ -231,16 +236,16 @@ int main( int argc, char * argv[] ) {
   tm_init_fly_cpu_d.stop();  
 
   tm_init_fly_gpu_v.start();
-  uniform_spacetime_be_matrix_onthefly_gpu V_fly_gpu(kernel_v, space_p0, space_p0, gpu_spacetime_mesh, c.qo_sng, c.qo_reg);
+  uniform_spacetime_be_matrix_onthefly_gpu V_fly_gpu(kernel_v, space_p0, space_p0, gpu_spacetime_mesh, c.qo_sng, c.qo_reg, c.gpu_alg);
   tm_init_fly_gpu_v.stop();
   tm_init_fly_gpu_k.start();
-  uniform_spacetime_be_matrix_onthefly_gpu K_fly_gpu(kernel_k, space_p0, space_p1, gpu_spacetime_mesh, c.qo_sng, c.qo_reg);
+  uniform_spacetime_be_matrix_onthefly_gpu K_fly_gpu(kernel_k, space_p0, space_p1, gpu_spacetime_mesh, c.qo_sng, c.qo_reg, c.gpu_alg);
   tm_init_fly_gpu_k.stop();
   tm_init_fly_gpu_a.start();
-  uniform_spacetime_be_matrix_onthefly_gpu A_fly_gpu(kernel_a, space_p1, space_p0, gpu_spacetime_mesh, c.qo_sng, c.qo_reg);
+  uniform_spacetime_be_matrix_onthefly_gpu A_fly_gpu(kernel_a, space_p1, space_p0, gpu_spacetime_mesh, c.qo_sng, c.qo_reg, c.gpu_alg);
   tm_init_fly_gpu_a.stop();
   tm_init_fly_gpu_d.start();
-  uniform_spacetime_be_matrix_onthefly_gpu D_fly_gpu(kernel_d, space_p1, space_p1, gpu_spacetime_mesh, c.qo_sng, c.qo_reg);
+  uniform_spacetime_be_matrix_onthefly_gpu D_fly_gpu(kernel_d, space_p1, space_p1, gpu_spacetime_mesh, c.qo_sng, c.qo_reg, c.gpu_alg);
   tm_init_fly_gpu_d.stop();
 
   uniform_spacetime_be_identity M( space_p0, space_p1, 1 );

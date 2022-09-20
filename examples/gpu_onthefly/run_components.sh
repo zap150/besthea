@@ -1,20 +1,33 @@
 #!/bin/bash
 
-warmups=2
+ml intel/2022a
+ml KAROLINA/FAKEintel
+ml CUDA/11.4.1
+export OMP_NUM_THREADS=128
+export GOMP_CPU_AFFINITY=0-127
+export MKL_NUM_THREADS=128
+
+
+
+warmups=1
 repetitions=10
 executable=bin/besthea/onthefly_multiply
 
-if [ ! -f ${executable} ]
+if [ ! -f "${executable}" ]
 then
     echo "Please cd to the directory where besthea is installed"
     exit 1
 fi
 
-outdir=onthefly_experiments_out/components
-mkdir -p ${outdir}
-datestr=$(date +%Y%m%d-%H%M%S)
-resfile="${outdir}/${datestr}_result.txt"
-echo "host ${HOSTNAME}" > ${resfile}
+datestr="$(date +%Y%m%d_%H%M%S)"
+expdir="gpu_onthefly_experiments_out/components"
+casedir="${expdir}/${datestr}"
+outdir="${casedir}/out"
+mkdir -p "${outdir}"
+ln -s -f -n "${datestr}" "${expdir}/last"
+resfile="${casedir}/results.txt"
+echo "host ${HOSTNAME}" > "${resfile}"
+date >> "${resfile}"
 
 # finess_level   1  2   3   4   5    6    7    8     9
 # n_timesteps    2  4   8  16  32   64  128  256   512
@@ -22,23 +35,18 @@ echo "host ${HOSTNAME}" > ${resfile}
 # base_sp_elems 12 24  12  24  12   24   12   24    12
 # space_refine   1  1   2   2   3    3    4    4     5
 
-# applies to the Karolina nodes, change it on other clusters
-export OMP_NUM_THREADS=128
-export KMP_AFFINITY=granularity=core,compact
-export KMP_HW_SUBSET=2s,64c
-
 for matrix in V K KT D
 do
     echo "matrix ${matrix}"
-    echo -e "\nmatrix ${matrix}" >> ${resfile}
-    echo "finess_level cpu_delta0 cpu_singular gpu_max" >> ${resfile}
+    echo -e "\nmatrix ${matrix}" >> "${resfile}"
+    echo "finess_level cpu_delta0 cpu_singular gpu_max" >> "${resfile}"
 
-    for finess_level in {3..9}
+    for finess_level in {3..10}
     do
         echo "  finess_level ${finess_level}"
-        echo -n "${finess_level}" >> ${resfile}
+        echo -n "${finess_level}" >> "${resfile}"
 
-        outfile="${outdir}/${datestr}_out_${finess_level}_${matrix}.txt"
+        outfile="${outdir}/out_${finess_level}_${matrix}.txt"
 
         timesteps=$(( 2**${finess_level} ))
         space_refine=$(( (${finess_level} + 1) / 2 ))
@@ -57,7 +65,7 @@ do
         COMMAND+=" --qo-singular 4"
         COMMAND+=" --qo-regular 4"
 
-        ${COMMAND} > ${outfile}
+        ${COMMAND} > "${outfile}"
 
         for component in cpu_delta0 cpu_singular gpu_max
         do
@@ -68,10 +76,10 @@ do
                 total=$(awk "BEGIN{print ${total}+${t}}")
             done
             avg=$(awk "BEGIN{print ${total}/${repetitions}.0}")
-            echo -n " ${avg}" >> ${resfile}
+            echo -n " ${avg}" >> "${resfile}"
         done
 
-        echo >> ${resfile}
+        echo >> "${resfile}"
 
     done
 
