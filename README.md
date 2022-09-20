@@ -77,7 +77,7 @@ cmake -DBESTHEA_SIMD_WIDTH=4 ..
 
 If CUDA is found on the system and CMake >= 1.18 is used, the library `besthea_cuda` containing the GPU-accelerated functionality is also built. To alter this behaviour, set the value of the `BESTHEA_CUDA` variable to `enable`, `disable` or `auto`, e.g.
 ```
-cmake -DBESTHEA_CUDA=disable ..
+cmake -DBESTHEA_CUDA=enable ..
 ```
 If the value is `enable` and any of the prerequisities are not met, the configuration step fails with an error. `disable` entirely disables compilation of the GPU-accelerated code. `auto` is the default (equivalent to not setting the value of `BESTHEA_CUDA` at all), which tries to build the `besthea_cuda` library if it is possible, and if not, no errors are produced. By default we set the CUDA host compiler to be the same as the CXX compiler. To change it, set the `CMAKE_CUDA_HOST_COMPILER` variable. Using empty string reverts to nvcc's default behaviour. It is highly recommended to also specify the CUDA architecture to compile the CUDA code optimally for the the target system. E.g., use `-DCMAKE_CUDA_ARCHITECTURES=80-real` for the Nvidia A100 GPU. Minimum compute capability supported is 6.0, `60-virtual` is set as the default architecture.
 
