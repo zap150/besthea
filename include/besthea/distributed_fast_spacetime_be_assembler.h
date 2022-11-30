@@ -191,6 +191,12 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
    * @param[in] spat_order Largest degree of Chebyshev polynomials for expansion
    *                       in pFMM matrix.
    * @param[in] alpha Heat conductivity parameter.
+   * @param[in] ace_eps Accuracy used for the ACA compression of suitable
+   * blocks.
+   * @param[in] aca_max_rank Highest allowed rank in ana ACA compression.
+   * @note The compression of ACA admissible low rank blocks (associated with
+   * spatially admissible nearfield lists) can be disabled by setting the
+   * parameter @p aca_eps < 0.
    */
   distributed_fast_spacetime_be_assembler( kernel_type & kernel,
     test_space_type & test_space, trial_space_type & trial_space,
@@ -258,19 +264,6 @@ class besthea::bem::distributed_fast_spacetime_be_assembler {
   void assemble_nearfield_block(
     mesh::general_spacetime_cluster * target_cluster,
     mesh::general_spacetime_cluster * source_cluster,
-    full_matrix_type & nearfield_matrix ) const;
-
-  /**
-   * Dummy routine that fills a nearfield matrix by zeros.
-   * @param[in] target_cluster  Spacetime target cluster
-   * @param[in] source_cluster  Spacetime source cluster in the nearfield of the
-   * spacetime target cluster.
-   * @param[in,out] nearfield_matrix Reference to the matrix which is filled by
-   * zeros.
-   */
-  void assemble_nearfield_block_dummy(
-    [[maybe_unused]] mesh::general_spacetime_cluster * target_cluster,
-    [[maybe_unused]] mesh::general_spacetime_cluster * source_cluster,
     full_matrix_type & nearfield_matrix ) const;
 
  private:

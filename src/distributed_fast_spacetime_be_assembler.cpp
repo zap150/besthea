@@ -352,15 +352,6 @@ void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
 
 template< class kernel_type, class test_space_type, class trial_space_type >
 void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
-  test_space_type, trial_space_type >::
-  assemble_nearfield_block_dummy( general_spacetime_cluster * target_cluster,
-    general_spacetime_cluster * source_cluster,
-    full_matrix_type & nearfield_matrix ) const {
-  nearfield_matrix.fill( 0.0 );
-}
-
-template< class kernel_type, class test_space_type, class trial_space_type >
-void besthea::bem::distributed_fast_spacetime_be_assembler< kernel_type,
   test_space_type,
   trial_space_type >::assemble_nearfield_block( general_spacetime_cluster *
                                                   target_cluster,
