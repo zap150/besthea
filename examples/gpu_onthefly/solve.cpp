@@ -119,7 +119,7 @@ struct config {
   int repetitions = 10;
   int qo_sng = 4;
   int qo_reg = 4;
-  int gpu_alg = 2;
+  int gpu_alg = 4;
 }; // struct config
 
 

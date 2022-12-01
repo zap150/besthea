@@ -77,8 +77,9 @@ namespace besthea::bem::onthefly::helpers {
       case 2:
         return 9;
       case 1:
-      default:
         return 1;
+      default:
+        return -1;
     }
   }
 
@@ -86,6 +87,8 @@ namespace besthea::bem::onthefly::helpers {
   extern bool is_gpu_quadr_order4_initialized;
   extern bool is_gpu_quadr_order2_initialized;
   extern bool is_gpu_quadr_order1_initialized;
+
+  extern bool is_gpu_kernel_max_shmem_set;
 
 }
 
@@ -130,14 +133,17 @@ struct besthea::bem::onthefly::helpers::heat_kernel_parameters {
   }
 };
 
-#define CUDA_CHECK( err )                                                  \
-  if ( err != cudaSuccess ) {                                              \
-    std::cerr << "CUDA error " << err << " '" << cudaGetErrorString( err ) \
-              << "':\n"                                                    \
-              << "  in file '" << __FILE__ << "'\n"                        \
-              << "  in function '" << __func__ << "'\n"                    \
-              << "  on line " << __LINE__ << "'\n";                        \
-    throw std::runtime_error( "BESTHEA Exception: cuda error" );           \
-  }
+#define CUDA_CHECK( err )                                                        \
+  do {                                                                           \
+    cudaError_t error = (err);                                                   \
+    if ( error != cudaSuccess ) {                                                \
+      std::cerr << "CUDA error " << error << " '" << cudaGetErrorString( error ) \
+                << "':\n"                                                        \
+                << "  in file '" << __FILE__ << "'\n"                            \
+                << "  in function '" << __func__ << "'\n"                        \
+                << "  on line " << __LINE__ << "'\n";                            \
+      throw std::runtime_error( "BESTHEA Exception: cuda error" );               \
+    }                                                                            \
+  } while(false)
 
 #endif /* INCLUDE_BESTHEA_GPU_ONTHEFLY_HELPERS_H_ */

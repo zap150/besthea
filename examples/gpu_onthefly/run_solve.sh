@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# has to be split to two jobs for walltime reasons. finess level 10 should be done in another job.
-
 ml intel/2022a
 ml KAROLINA/FAKEintel
-ml CUDA/11.4.1
+ml CUDA/11.7.0
 export OMP_NUM_THREADS=128
 export GOMP_CPU_AFFINITY=0-127
 export MKL_NUM_THREADS=128
+
+
 
 
 

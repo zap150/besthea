@@ -36,3 +36,5 @@ bool besthea::bem::onthefly::helpers::is_gpu_quadr_order5_initialized = false;
 bool besthea::bem::onthefly::helpers::is_gpu_quadr_order4_initialized = false;
 bool besthea::bem::onthefly::helpers::is_gpu_quadr_order2_initialized = false;
 bool besthea::bem::onthefly::helpers::is_gpu_quadr_order1_initialized = false;
+
+bool besthea::bem::onthefly::helpers::is_gpu_kernel_max_shmem_set = false;

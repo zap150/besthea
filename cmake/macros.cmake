@@ -96,6 +96,8 @@ macro(setup_compiler)
     add_compile_options(-diag-disable=1418)
     # selector expression is constant
     add_compile_options(-diag-disable=280)
+    # function declared but never referenced
+    add_compile_options(-diag-disable=177)
 
   elseif (CMAKE_CXX_COMPILER_ID MATCHES IntelLLVM)
     message(STATUS "Using IntelLLVM ${CMAKE_CXX_COMPILER_VERSION} toolchain")

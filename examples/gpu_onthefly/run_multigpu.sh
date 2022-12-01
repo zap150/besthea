@@ -2,10 +2,12 @@
 
 ml intel/2022a
 ml KAROLINA/FAKEintel
-ml CUDA/11.4.1
+ml CUDA/11.7.0
 export OMP_NUM_THREADS=128
 export GOMP_CPU_AFFINITY=0-127
 export MKL_NUM_THREADS=128
+
+
 
 
 
@@ -26,6 +28,12 @@ ln -s -f -n "${datestr}" "${expdir}/last"
 resfile="${casedir}/results.txt"
 echo "host ${HOSTNAME}" > "${resfile}"
 date >> "${resfile}"
+
+# finess_level   1  2   3   4   5    6    7    8     9
+# n_timesteps    2  4   8  16  32   64  128  256   512
+# n_space_elems 48 96 192 384 768 1536 3072 6144 12288  ...
+# base_sp_elems 12 24  12  24  12   24   12   24    12
+# space_refine   1  1   2   2   3    3    4    4     5
 
 finess_level_start=3
 finess_level_stop=10
