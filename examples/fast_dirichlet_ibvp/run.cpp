@@ -189,8 +189,7 @@ struct config {
   // choice of the cauchy datum
   lo cauchy_datum = 1;
   // spatial mesh data
-  std::string spatial_volume_file
-    = "../../mesh_files/cube_12_vol_half_scale.txt";
+  std::string spatial_volume_file = "cube_12_vol_half_scale.txt";
   std::string spatial_surface_file = "";
   std::string temporal_file = "";
   int vol_init_refine = 2;

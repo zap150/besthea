@@ -10,7 +10,7 @@ To run the experiments, please build the BESTHEA library as explained in [`READM
 ```
 -DBUILD_EXAMPLES=ON
 ```
-In the following, we denote the build directory by `BUILD` and the root directory of the besthea library by `BESTHEA`. The results are obtained by running the executables `fast_initial_dirichlet_bvp` and `solve_ibvp_rapidly_changing_data`.
+In the following, we denote the build directory by `BUILD` and the root directory of the besthea library by `BESTHEA`. The results are obtained by running the executables `fast_dirichlet_ibvp` and `solve_ibvp_rapidly_changing_data`.
 After calling `make install` these executables are located in
 ```
 BUILD/bin/
@@ -21,7 +21,7 @@ In the following, we list the parameters to reproduce the numerical results in t
 
 ## Example 1: Exponential Decay in Time
 
-For the results in Table 2 in Section 5.1 the single layer operator matrix `V_h` is once approximated by the standard FMM and once by the time-adaptive FMM. The results for the standard FMM are obtained by calling `fast_initial_dirichlet_bvp` with the following parameters:
+For the results in Table 2 in Section 5.1 the single layer operator matrix `V_h` is once approximated by the standard FMM and once by the time-adaptive FMM. The results for the standard FMM are obtained by calling `fast_dirichlet_ibvp` with the following parameters:
 
 * `--cauchy_datum 1`
 * `--time_mesh time_adaptive_mesh_exp_decay.txt`

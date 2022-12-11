@@ -1,5 +1,5 @@
 add_subdirectory(distributed_tensor_dirichlet)
-add_subdirectory(fast_initial_dirichlet_bvp)
+add_subdirectory(fast_dirichlet_ibvp)
 add_subdirectory(solve_ibvp_rapidly_changing_data)
 add_subdirectory(uniform_tensor_dirichlet)
 add_subdirectory(uniform_tensor_neumann)
