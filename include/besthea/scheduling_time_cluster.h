@@ -86,6 +86,7 @@ class besthea::mesh::scheduling_time_cluster {
       _global_index( -1 ),
       _process_id( process_id ),
       _time_slices( nullptr ),
+      _n_time_elements( -1 ),
       _global_leaf_status( false ),
       _mesh_available( false ),
       _nearfield_list( nullptr ),
@@ -444,6 +445,20 @@ class besthea::mesh::scheduling_time_cluster {
    */
   const std::vector< lo > * get_time_slices( ) const {
     return _time_slices;
+  }
+
+  /**
+   * Sets @ref _n_time_elements to the given value.
+   */
+  void set_n_time_elements( lo n_time_elements ) {
+    _n_time_elements = n_time_elements;
+  }
+
+  /**
+   * Returns the value of @ref _n_time_elements.
+   */
+  lo get_n_time_elements( ) const {
+    return _n_time_elements;
   }
 
   /**
@@ -1228,6 +1243,16 @@ class besthea::mesh::scheduling_time_cluster {
     return tree_vector;
   }
 
+  std::vector< lo > determine_n_time_elements_in_subtree( ) const {
+    std::vector< lo > n_time_elements_in_subtree;
+    n_time_elements_in_subtree.push_back( _n_time_elements );
+    if ( _children != nullptr ) {
+      append_n_time_elements_in_subtree_recursively(
+        n_time_elements_in_subtree );
+    }
+    return n_time_elements_in_subtree;
+  }
+
   /**
    * Determines the cluster bounds of the clusters in the subtree whose
    * root is the current cluster.
@@ -1288,6 +1313,51 @@ class besthea::mesh::scheduling_time_cluster {
     }
     if ( right_child_status == 1 ) {
       right_child->append_tree_structure_vector_recursively( tree_vector );
+    }
+  }
+
+  /**
+   * Recursively traverses the implicitly given tree structure and constructs
+   * a vector which contains the number of time elements in the tree in the
+   * usual tree format.
+   * @param[out] n_time_elements_in_subtree  Vector in which the numbers of time
+   * elements are stored.
+   */
+  void append_n_time_elements_in_subtree_recursively(
+    std::vector< lo > & n_time_elements_in_subtree ) const {
+    char left_child_status = 0;
+    char right_child_status = 0;
+    lo n_time_elements_left_child( 0 ), n_time_elements_right_child( 0 );
+    scheduling_time_cluster * left_child = nullptr;
+    scheduling_time_cluster * right_child = nullptr;
+    for ( auto child : *_children ) {
+      // determine which child it is and remember its bounds and status.
+      char * status_pointer;
+      if ( child->get_configuration( ) == 0 ) {
+        left_child = child;
+        status_pointer = &left_child_status;
+        n_time_elements_left_child = child->get_n_time_elements( );
+      } else {
+        right_child = child;
+        status_pointer = &right_child_status;
+        n_time_elements_right_child = child->get_n_time_elements( );
+      }
+      if ( child->get_n_children( ) > 0 ) {
+        *status_pointer = 1;
+      } else {
+        *status_pointer = 2;
+      }
+    }
+    // add the cluster bounds appropriately to the vector
+    n_time_elements_in_subtree.push_back( n_time_elements_left_child );
+    n_time_elements_in_subtree.push_back( n_time_elements_right_child );
+    if ( left_child_status == 1 ) {
+      left_child->append_n_time_elements_in_subtree_recursively(
+        n_time_elements_in_subtree );
+    }
+    if ( right_child_status == 1 ) {
+      right_child->append_n_time_elements_in_subtree_recursively(
+        n_time_elements_in_subtree );
     }
   }
 
@@ -1512,15 +1582,18 @@ class besthea::mesh::scheduling_time_cluster {
           _n_st_clusters_w_spatial_moments
             += ( *_n_associated_leaves_and_aux_clusters_per_level )[ i ];
         }
-        _assoc_spatial_moments = new sc[ spatial_contribution_size
-          * _n_st_clusters_w_spatial_moments ];
-        // assign the individual spatial moments to the corresponding
-        // space-time clusters
-        for ( lo i = 0; i < _n_st_clusters_w_spatial_moments; ++i ) {
-          general_spacetime_cluster * current_spacetime_cluster
-            = ( *_associated_spacetime_clusters )[ i ];
-          current_spacetime_cluster->set_pointer_to_spatial_moments(
-            &( _assoc_spatial_moments[ i * spatial_contribution_size ] ) );
+        if ( _n_st_clusters_w_spatial_moments > 0 ) {
+          _assoc_spatial_moments = new sc[ spatial_contribution_size
+            * _n_time_elements * _n_st_clusters_w_spatial_moments ];
+          // assign the individual spatial moments to the corresponding
+          // space-time clusters
+          for ( lo i = 0; i < _n_st_clusters_w_spatial_moments; ++i ) {
+            general_spacetime_cluster * current_spacetime_cluster
+              = ( *_associated_spacetime_clusters )[ i ];
+            current_spacetime_cluster->set_pointer_to_spatial_moments(
+              &( _assoc_spatial_moments[ i * _n_time_elements
+                * spatial_contribution_size ] ) );
+          }
         }
       }
     }
@@ -1626,8 +1699,12 @@ class besthea::mesh::scheduling_time_cluster {
     if ( _assoc_aux_spatial_moments == nullptr ) {
       _n_st_clusters_w_aux_spatial_moments
         = _assoc_aux_s2ms_cluster_pairs->size( );
+      lo n_spatial_moments_per_cluster = 1;
+      if ( _n_time_elements > 0 ) {
+        n_spatial_moments_per_cluster = _n_time_elements;
+      }
       _assoc_aux_spatial_moments = new sc[ _n_st_clusters_w_aux_spatial_moments
-        * spatial_contribution_size ];
+        * n_spatial_moments_per_cluster * spatial_contribution_size ];
       _spatial_contribution_size = spatial_contribution_size;
 
       // assign the individual auxiliary spatial moments to the appropriate
@@ -1648,7 +1725,7 @@ class besthea::mesh::scheduling_time_cluster {
         if ( current_st_cluster->get_n_children( ) > 0 ) {
           current_st_cluster->set_pointer_to_aux_spatial_moments(
             &( _assoc_aux_spatial_moments[ moment_counter
-              * spatial_contribution_size ] ) );
+              * n_spatial_moments_per_cluster * spatial_contribution_size ] ) );
           lo previous_moment_counter = moment_counter;
           set_pointers_to_aux_spatial_moments_recursively(
             current_st_cluster, moment_counter );
@@ -1730,17 +1807,20 @@ class besthea::mesh::scheduling_time_cluster {
           _n_st_clusters_w_spatial_local_contributions
             += ( *_n_associated_leaves_and_aux_clusters_per_level )[ i ];
         }
-        _assoc_spatial_local_contributions = new sc[ spatial_contribution_size
-          * _n_st_clusters_w_spatial_local_contributions ];
-        // assign the individual spatial local contributions to the
-        // corresponding space-time clusters
-        for ( lo i = 0; i < _n_st_clusters_w_spatial_local_contributions;
-              ++i ) {
-          general_spacetime_cluster * current_spacetime_cluster
-            = ( *_associated_spacetime_clusters )[ i ];
-          current_spacetime_cluster->set_pointer_to_spatial_local_contributions(
-            &( _assoc_spatial_local_contributions[ i
-              * spatial_contribution_size ] ) );
+        if ( _n_st_clusters_w_spatial_local_contributions > 0 ) {
+          _assoc_spatial_local_contributions = new sc[ spatial_contribution_size
+            * _n_time_elements * _n_st_clusters_w_spatial_local_contributions ];
+          // assign the individual spatial local contributions to the
+          // corresponding space-time clusters
+          for ( lo i = 0; i < _n_st_clusters_w_spatial_local_contributions;
+                ++i ) {
+            general_spacetime_cluster * current_spacetime_cluster
+              = ( *_associated_spacetime_clusters )[ i ];
+            current_spacetime_cluster
+              ->set_pointer_to_spatial_local_contributions(
+                &( _assoc_spatial_local_contributions[ i * _n_time_elements
+                  * spatial_contribution_size ] ) );
+          }
         }
       }
     }
@@ -1849,26 +1929,26 @@ class besthea::mesh::scheduling_time_cluster {
     if ( _global_leaf_status ) {
       stream << ", is global leaf";
     }
+    stream << ", n_time_elements: " << _n_time_elements;
     // if ( _nearfield_list != nullptr ) {
     //   stream << ", nearfield: ";
     //   for ( lou i = 0; i < _nearfield_list->size( ); ++i ) {
     //     stream << "(" << ( *_nearfield_list )[ i ]->get_level( ) << ", "
-    //               << ( *_nearfield_list )[ i ]->get_global_index( ) << "),
-    //               ";
+    //            << ( *_nearfield_list )[ i ]->get_global_index( ) << "), ";
     //   }
     // }
     // if ( _m2t_list != nullptr ) {
     //   stream << "m2t list: ";
     //   for ( lou i = 0; i < _m2t_list->size( ); ++i ) {
     //     stream << "(" << ( *_m2t_list )[ i ]->get_level( ) << ", "
-    //               << ( *_m2t_list )[ i ]->get_global_index( ) << "), ";
+    //            << ( *_m2t_list )[ i ]->get_global_index( ) << "), ";
     //   }
     // }
     // if ( _s2l_list != nullptr ) {
     //   stream << "s2l list: ";
     //   for ( lou i = 0; i < _s2l_list->size( ); ++i ) {
     //     stream << "(" << ( *_s2l_list )[ i ]->get_level( ) << ", "
-    //               << ( *_s2l_list )[ i ]->get_global_index( ) << "), ";
+    //            << ( *_s2l_list )[ i ]->get_global_index( ) << "), ";
     //   }
     // }
     // if ( _interaction_list != nullptr ) {
@@ -2009,6 +2089,9 @@ class besthea::mesh::scheduling_time_cluster {
   lo _process_id;    //!< Id of the process to which the cluster is assigned.
   std::vector< lo > * _time_slices;  //!< global indices of the cluster's time
                                      //!< slices (only set for leaf clusters)
+  lo _n_time_elements;  //!< Number of time elements contained in the cluster.
+                        //!< This is only if the associated space-time clusters
+                        //!< have space-time elements assigned to them.
   bool _global_leaf_status;  //!< indicates whether the cluster is a leaf (1)
                              //!< or non-leaf in a global tree structure
   bool

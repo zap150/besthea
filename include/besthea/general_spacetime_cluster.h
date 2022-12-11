@@ -353,6 +353,16 @@ class besthea::mesh::general_spacetime_cluster {
   }
 
   /**
+   * Deletes the s2l list of the cluster.
+   */
+  void delete_s2l_list( ) {
+    if ( _s2l_list != nullptr ) {
+      delete _s2l_list;
+      _s2l_list = nullptr;
+    }
+  }
+
+  /**
    * Adds @p cluster to the m2t list.
    * @param[in] cluster Cluster to be added.
    */
@@ -361,6 +371,16 @@ class besthea::mesh::general_spacetime_cluster {
       _m2t_list = new std::vector< general_spacetime_cluster * >( );
     }
     _m2t_list->push_back( cluster );
+  }
+
+  /**
+   * Deletes the m2t list of the cluster.
+   */
+  void delete_m2t_list( ) {
+    if ( _m2t_list != nullptr ) {
+      delete _m2t_list;
+      _m2t_list = nullptr;
+    }
   }
 
   /**

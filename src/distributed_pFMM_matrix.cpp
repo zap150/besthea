@@ -6473,8 +6473,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   distributed_block_vector & y, bool trans, sc alpha, sc beta ) const {
   // Specialization for the single and double layer operators
   _global_timer.reset( );
-  //############################################################################
-  //#### multiply the global result vector by beta ####
+  // ############################################################################
+  // #### multiply the global result vector by beta ####
   y.scale( beta );
 
   // allocate a global result vector to store the result of the pFMM
@@ -6498,8 +6498,8 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   distributed_block_vector & y, bool trans, sc alpha, sc beta ) const {
   // Specialization for the single and double layer operators
   _global_timer.reset( );
-  //############################################################################
-  //#### multiply the global result vector by beta ####
+  // ############################################################################
+  // #### multiply the global result vector by beta ####
   y.scale( beta );
 
   // allocate a global result vector to store the result of the pFMM
@@ -6541,10 +6541,10 @@ void besthea::linear_algebra::distributed_pFMM_matrix< kernel_type,
   target_space,
   source_space >::apply_pFMM_procedure( const distributed_block_vector & x,
   distributed_block_vector & y_pFMM, bool trans ) const {
-  //#### distributed pFMM ####
-  //############################################################################
-  //#### setup phase ####
-  // reset the contributions of all clusters to zero
+  // #### distributed pFMM ####
+  // ############################################################################
+  // #### setup phase ####
+  //  reset the contributions of all clusters to zero
   _scheduling_tree_structure->clear_moment_contributions(
     *_scheduling_tree_structure->get_root( ) );
   _scheduling_tree_structure->clear_local_contributions(

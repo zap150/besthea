@@ -2930,6 +2930,10 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
   if ( t_root->get_level( ) == st_root->get_level( )
     || st_root->is_auxiliary_ref_cluster( ) ) {
     t_root->add_associated_spacetime_cluster( st_root );
+    if ( t_root->get_n_time_elements( ) == -1
+      && st_root->get_n_time_elements( ) >= 0 ) {
+      t_root->set_n_time_elements( st_root->get_n_time_elements( ) );
+    }
     if ( st_root->get_n_children( ) > 0 && t_root->get_n_children( ) > 0 ) {
       // if t_root is not a leaf traverse the two trees further to find the
       // associated spacetime clusters of the descendants.
@@ -3631,6 +3635,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
       }
       current_m2t_list->shrink_to_fit( );
     }
+    if ( current_m2t_list->size( ) == 0 ) {
+      current_cluster.delete_m2t_list( );
+    }
   }
   // check if the cluster has a non-empty s2l list
   std::vector< general_spacetime_cluster * > * current_s2l_list
@@ -3660,6 +3667,9 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
         current_s2l_list->pop_back( );
       }
       current_s2l_list->shrink_to_fit( );
+    }
+    if ( current_s2l_list->size( ) == 0 ) {
+      current_cluster.delete_s2l_list( );
     }
   }
   if ( current_cluster.get_n_children( ) > 0 ) {
@@ -3715,9 +3725,11 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
       send_array_size += send_cluster_vec_size;
     }
     std::vector< char > send_structure_array( send_array_size );
+    std::vector< lo > send_n_time_elements_array( send_array_size );
     std::vector< sc > send_cluster_bounds_array( 2 * send_array_size );
     for ( lou i = 0; i < send_array_size; ++i ) {
       send_structure_array[ i ] = 0;
+      send_n_time_elements_array[ i ] = 0;
     }
     for ( lou i = 0; i < 2 * send_array_size; ++i ) {
       send_cluster_bounds_array[ i ] = 0;
@@ -3730,6 +3742,14 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
         = send_cluster_vector[ i ]->determine_subtree_structure( );
       for ( lou j = 0; j < subtree_structure_vector.size( ); ++j ) {
         send_structure_array[ send_array_pos + j ]
+          = subtree_structure_vector[ j ];
+      }
+      // retrieve the number of time elements in the subtree and copy them to
+      // send_n_time_elements_array
+      std::vector< lo > subtree_n_time_elements_vector
+        = send_cluster_vector[ i ]->determine_n_time_elements_in_subtree( );
+      for ( lou j = 0; j < subtree_n_time_elements_vector.size( ); ++j ) {
+        send_n_time_elements_array[ send_array_pos + j ]
           = subtree_structure_vector[ j ];
       }
       // compute the cluster bounds of the cluster in the subtree and
@@ -3747,13 +3767,16 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
         = ( 1 << ( global_tree_levels - send_cluster_level ) ) - 1;
       send_array_pos += send_cluster_vec_size;
     }
-    // send first the tree structure
+    // send first the tree structure, than the other two (increasing the tags to
+    // distinguish the messages)
     MPI_Send( send_structure_array.data( ), send_array_size, MPI_CHAR,
       _my_rank - communication_offset, communication_offset, *_comm );
-    // next, send the cluster bounds (tag increased by 1 to distinguish)
     MPI_Send( send_cluster_bounds_array.data( ), 2 * send_array_size,
       get_scalar_type< sc >::MPI_SC( ), _my_rank - communication_offset,
       communication_offset + 1, *_comm );
+    MPI_Send( send_n_time_elements_array.data( ), send_array_size,
+      get_index_type< lo >::MPI_LO( ), _my_rank - communication_offset,
+      communication_offset + 2, *_comm );
   }
 }
 
@@ -3771,16 +3794,20 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
       receive_array_size += receive_cluster_vec_size;
     }
     std::vector< char > receive_structure_array( receive_array_size );
+    std::vector< lo > receive_n_time_elements_array( receive_array_size );
     std::vector< sc > receive_cluster_bounds_array( 2 * receive_array_size );
     // call the appropriate receive operations for the tree structure data
     // and the cluster bounds data
-    MPI_Status status_1, status_2;
+    MPI_Status status_1, status_2, status_3;
     MPI_Recv( receive_structure_array.data( ), receive_array_size, MPI_CHAR,
       _my_rank + communication_offset, communication_offset, *_comm,
       &status_1 );
     MPI_Recv( receive_cluster_bounds_array.data( ), 2 * receive_array_size,
       get_scalar_type< sc >::MPI_SC( ), _my_rank + communication_offset,
       communication_offset + 1, *_comm, &status_2 );
+    MPI_Recv( receive_n_time_elements_array.data( ), receive_array_size,
+      get_index_type< lo >::MPI_LO( ), _my_rank + communication_offset,
+      communication_offset + 2, *_comm, &status_3 );
 
     // extend the distribution tree according to the received data
     tree_structure * distribution_tree = get_distribution_tree( );
@@ -3795,6 +3822,7 @@ void besthea::mesh::distributed_spacetime_cluster_tree::
         receive_clusters_vector[ i ]->set_global_leaf_status( false );
         distribution_tree->create_tree_from_arrays(
           receive_structure_array.data( ), receive_cluster_bounds_array.data( ),
+          receive_n_time_elements_array.data( ),
           *( receive_clusters_vector[ i ] ), local_pos );
       }
       // find the starting position of the entries corresponding to the

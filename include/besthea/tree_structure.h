@@ -444,7 +444,10 @@ class besthea::mesh::tree_structure {
    * Recursively constructs the tree structure from a given structure array
    * and a given array of cluster bounds.
    * @param[in] tree_array Contains the tree structure data.
-   * @param[in] cluster_bounds  Contains the data of the clusters' bounds.
+   * @param[in] cluster_bounds_array  Contains the data of the clusters' bounds.
+   * @param[in] n_time_elements_array Contains the information about the number
+   * of time steps of each cluster. @p nullptr can be inserted if this is
+   * unknown.
    * @param[in,out] root  Current cluster, to which the next clusters are
    * added.
    * @param[in,out] position  Auxiliary variable to keep track of the current
@@ -452,7 +455,8 @@ class besthea::mesh::tree_structure {
    * @note  This method is supposed to be called by the constructor.
    */
   void create_tree_from_arrays( const char * tree_array,
-    const sc * cluster_bounds, scheduling_time_cluster & root, lou & position );
+    const sc * cluster_bounds_array, const lo * n_time_elements_array,
+    scheduling_time_cluster & root, lou & position );
 
   /** Assigns to each cluster in the tree structure its respective process
    * given in the vector @p process_assignments by traversing the tree.
