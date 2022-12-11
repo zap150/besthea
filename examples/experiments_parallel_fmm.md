@@ -1,12 +1,12 @@
 
-A parallel fast multipole method for a space-time boundary element method for the heat equation - A guide to the numerical experiments
+A parallel fast multipole method for a space-time boundary element method for the heat equation - A guide to reproducing the numerical experiments
 ======================================================================================
 
 This is a short guide that helps to reproduce the numerical experiments from the paper:
 
-Raphael Watschinger, Michal Merta, Günther Of, Jan Zapletal, *A parallel fast multipole method for a space-time boundary element method for the heat equation*, 2021.
+Raphael Watschinger, Michal Merta, Günther Of, Jan Zapletal, *A parallel fast multipole method for a space-time boundary element method for the heat equation*, SIAM J. Sci. Comput. Vol. 44, Iss. 4 (2022), pp. C320-C345, https://doi.org/10.1137/21M1430157
 
-To run the experiments, please build the BESTHEA library as explained in [`README.md`](../../README.md) with the option
+To run the experiments, please build the BESTHEA library as explained in [`README.md`](../README.md) with the option
 ```
 -DBUILD_EXAMPLES=ON
 ```
@@ -25,7 +25,7 @@ The results in Table 5.1 and Figure 5.1 were generated using the following param
 
 * `--mesh cube_24_half_scale.txt`
 * `--space_init_refine 2`
-* `--endtime 0.25` 
+* `--endtime 0.25`
 * `--timeslices 16`
 * `--refine 1`
 * `--dist_tree_levels 5`
@@ -36,7 +36,7 @@ The results in Table 5.1 and Figure 5.1 were generated using the following param
 * `--spat_order 6`
 * `--gmres_prec 1e-8`
 
-The number of OpenMP threads was set using the `OMP_NUM_THREADS` environmental variable. 
+The number of OpenMP threads was set using the `OMP_NUM_THREADS` environmental variable.
 
 The level of the vectorization (used in Figure 5.1) must be set when generating the Cmake configuration (see [`README.md`](../../README.md)) passing in appropriate compiler flags. In the case of the Intel Compiler, we used the `-no-vec -no-simd -qno-openmp-simd` flags for the non-vectorized version and `-xcore-avx512 -qopt-zmm-usage=high` for the vectorized version with the length of the vector registers set using the `BESTHEA_SIMD_WIDTH` variable.
 
@@ -46,7 +46,7 @@ Figures 5.2 and 5.3 were generated using the following parameters:
 
 * `--mesh cube_24_half_scale.txt`
 * `--space_init_refine 2`
-* `--endtime 0.25` 
+* `--endtime 0.25`
 * `--timeslices 16`
 * `--refine 2`
 * `--dist_tree_levels 5`
@@ -58,7 +58,7 @@ Figures 5.2 and 5.3 were generated using the following parameters:
 * `--measure_tasks 1`
 * `--gmres_prec 1e-8`
 
-The measured execution times of process `p` are written to `./task_timer/process_p.m`. To plot the times of process `p` in a figure in the style of Figure 5.2 use Matlab to run `./task_timer/process_p.m` and to call the function `plot_tasks` provided in 
+The measured execution times of process `p` are written to `./task_timer/process_p.m`. To plot the times of process `p` in a figure in the style of Figure 5.2 use Matlab to run `./task_timer/process_p.m` and to call the function `plot_tasks` provided in
 ```
 BESTHEA/examples/distributed_tensor_dirichlet/plot_tasks.m
 ```
@@ -70,7 +70,7 @@ The results in Table 5.2 were generated using the following parameters:
 
 * `--mesh cube_12_half_scale.txt`
 * `--space_init_refine 4`
-* `--endtime 0.25` 
+* `--endtime 0.25`
 * `--timeslices 256`
 * `--refine 1`
 * `--dist_tree_levels 9`
@@ -87,7 +87,7 @@ The results in Table 5.3 were generated using:
 
 * `--mesh scaled_crankshaft_11k.txt`
 * `--space_init_refine 0`
-* `--endtime 0.25` 
+* `--endtime 0.25`
 * `--timeslices 256`
 * `--refine 1`
 * `--dist_tree_levels 8`
