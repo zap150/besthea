@@ -4,7 +4,7 @@ A Time-Adaptive Space-Time FMM for the Heat Equation - A guide to reproducing th
 
 This is a short guide that helps to reproduce the numerical experiments from the paper:
 
-Raphael Watschinger, Günther Of, *A Time-Adaptive Space-Time FMM for the Heat Equation*, Comput. Methods Appl. Math. Accepted October 2022.
+Raphael Watschinger, Günther Of, *A Time-Adaptive Space-Time FMM for the Heat Equation*, Comput. Methods Appl. Math., 2022. https://doi.org/10.1515/cmam-2022-0117
 
 To run the experiments, please build the BESTHEA library as explained in [`README.md`](../README.md) with the option
 ```
@@ -33,6 +33,7 @@ For the results in Table 2 in Section 5.1 the single layer operator matrix `V_h`
 * `--diagonal_prec`
 
 To use the time-adaptive FMM instead, one has to supply the parameter
+
 * `--use_time_adaptive_operations`
 
 in addition.
@@ -61,6 +62,7 @@ to compute the corresponding right-hand side vector. It is stored in the binary 
 * `--diagonal_prec`
 
 are used to solve the linear system with the standard FMM for the approximation of `V_h`. With the additional parameter
+
 * `--use_time_adaptive_operations`
 
 the time-adaptive FMM is used.
