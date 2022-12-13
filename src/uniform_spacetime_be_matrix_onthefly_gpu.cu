@@ -240,12 +240,12 @@ lo calc_index(lo block_idx, lo idx, lo ld)
   return ret;
 }
 
-static constexpr bool perm_x_ker1 = true;
-static constexpr bool perm_y_ker1 = false;
+static constexpr bool perm_x_ker1 = false;
+static constexpr bool perm_y_ker1 = true;
 static constexpr bool perm_x_ker2 = true;
-static constexpr bool perm_y_ker2 = false;
+static constexpr bool perm_y_ker2 = true;
 static constexpr bool perm_x_ker3 = true;
-static constexpr bool perm_y_ker3 = false;
+static constexpr bool perm_y_ker3 = true;
 static constexpr bool perm_x_ker4 = true;
 static constexpr bool perm_y_ker4 = false;
 
