@@ -99,10 +99,10 @@ Please cite this research as:
 
 * J. Zapletal, R. Watschinger, G. Of, M. Merta, *Semi-analytic integration for a parallel space-time boundary element method modeling the heat equation*, Comput. Math. Appl. 103 (2021) 156-170, [10.1016/j.camwa.2021.10.025](https://doi.org/10.1016/j.camwa.2021.10.025).
 
-* R. Watschinger, M. Merta, G. Of, J. Zapletal, *A parallel fast multipole method for a space-time boundary element method for the heat equation*, SIAM J. Sci. Comput. Vol. 44, Iss. 4 (2022), pp. C320-C345, https://doi.org/10.1137/21M1430157.\
+* R. Watschinger, M. Merta, G. Of, J. Zapletal, *A parallel fast multipole method for a space-time boundary element method for the heat equation*, SIAM J. Sci. Comput. Vol. 44, Iss. 4 (2022), pp. C320-C345, https://doi.org/10.1137/21M1430157. \
 See this [guide](./examples/experiments_parallel_fmm.md) to **reproduce** experiments from the paper.
 
-* R. Watschinger, G. Of, *A Time-Adaptive Space-Time FMM for the Heat Equation*, Comput. Methods Appl. Math., 2022. https://doi.org/10.1515/cmam-2022-0117.\
+* R. Watschinger, G. Of, *A Time-Adaptive Space-Time FMM for the Heat Equation*, Comput. Methods Appl. Math., 2022. https://doi.org/10.1515/cmam-2022-0117. \
 See this [guide](./examples/experiments_time_adaptive_fmm.md) to **reproduce** experiments from the paper.
 
 Other related publications:
