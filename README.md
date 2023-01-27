@@ -5,7 +5,7 @@ BESTHEA (Space-time boundary element methods for the heat equation)
 
 ## Acceleration of the space-time boundary element method using GPUs
 
-For replication of the experiments published in the paper titled *Acceleration of the space-time boundary element method using GPUs*, clone this repository, checkout to the correct branch and commit, and clone the submodules. Then see the the readme located in the `examples/gpu_onthefly` directory.
+For replication of the experiments published in the paper titled *Acceleration of the space-time boundary element method using GPUs*, clone this repository, checkout to the correct commit, and clone the submodules. Then see the the readme located in the `examples/gpu_onthefly` directory.
 
 ## Installation
 
