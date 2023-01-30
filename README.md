@@ -106,7 +106,7 @@ Other related publications:
 
 * R. Watschinger, G. Of, *An integration by parts formula for the bilinear form of the hypersingular boundary integral operator for the transient heat equation in three spatial dimensions*, 2021, J. Integral Equ. Appl. (accepted). [arXiv:2104.15024](https://arxiv.org/abs/2104.15024)
 
-* J. Homola, M. Merta, J. Zapletal, *Acceleration of the space-time boundary element method using GPUs*, 2023, submitted to Advances in Engeneering Software. See [this guide](./examples/gpu_onthefly/README.md) to reproduce experiments from the paper.
+* J. Homola, M. Merta, J. Zapletal, *Acceleration of the space-time boundary element method using GPUs*, under review (2023). See [this guide](./examples/gpu_onthefly/README.md) to reproduce experiments from the paper.
 
 
 ## Contact

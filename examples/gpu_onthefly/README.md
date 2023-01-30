@@ -1,13 +1,13 @@
 
 # Acceleration of the space-time boundary element method using GPUs - numerical experiments
 
-In this directory, there are experiment sources and scripts for the onthefly (matrix-free) solution of the heat equation using the space-time boundary element method.
+In this directory, there are experiment sources and scripts for the onthefly (matrix-free) solution of the heat equation using the space-time boundary element method. They are used in the paper
+
+Jakub Homola, Michal Merta, Jan Zapletal, *Acceleration of the space-time boundary element method using GPUs*
 
 
 
-## How to compile and install the besthea library
-
-Use the Karolina cluster at IT4Innovations.
+## Compilation and installation the besthea library
 
 Clone the repository using
 ```
@@ -18,14 +18,14 @@ Checkout to the specific commit using
 ```
 git checkout <COMMIT_HASH>
 ```
-where `<COMMIT_HASH>` is the hexadecimal string at the end of the URL leading to this repository, located in the References section of the article.
+where `<COMMIT_HASH>` is the hexadecimal string at the end of the URL leading to this repository, located in the References section of the paper.
 
 Clone the sumodules using
 ```
 git submodule update --init --recursive
 ```
 
-Then compile and install the library using the following commands
+On the Karolina cluster, we compiled and installed the library along with the experiments using the following commands
 ```
 mkdir build
 cd build
@@ -35,17 +35,15 @@ make
 make install
 ```
 
-The experiments are compiled together with the library.
-
 
 
 ## Running the experiments
 
-The experiments were run on the GPU accelerated nodes of Karolina (2x 64-core AMD EPYC 7763, 1TB RAM, 8x NVIDIA A100 40GB).
+The experiment programs are compiler and installed together with the library. There are two experiment programs located in the `installation/bin/besthea` directory - `onthefly_multiply` and `onthefly_solve`. These were used to perform the experiments in the paper, using command line arguments relevant to the specific experiment.
 
-Each experiment has its own bash script, `run_<experiment>.sh`. The script should be run from the installation directory (so it can easily find the executables). The results are written to the `gpu_onthefly_experiments_out/<experiment>/<datetime>` directory.
+For each of the experiments in the paper, we prepared a bash script `run_<experiment>.sh`, which loads the necessary modules, sets the environment variables, runs the program multiple times with relevant arguments and parses the output to produce a `results.txt` file in the `installation/gpu_onthefly_experiments_out/<experiment>/<timestamp>` directory. The bash script should be run from the `installation` directory.
 
-The jobs were launched using the command
+We used the following command to launch the batch jobs on the Karolina cluster
 ```
 qsub -q qgpu -A OPEN-00-00 -l select=1:ncpus=128:ngpus=8,walltime=48:00:00 job.sh
 ```
