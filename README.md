@@ -3,10 +3,6 @@ BESTHEA (Space-time boundary element methods for the heat equation)
 
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
-## Acceleration of the space-time boundary element method using GPUs
-
-For replication of the experiments published in the paper titled *Acceleration of the space-time boundary element method using GPUs*, clone this repository, checkout to the correct commit, and clone the submodules. Then see the the readme located in the `examples/gpu_onthefly` directory.
-
 ## Installation
 
 **Requirements**
@@ -109,6 +105,8 @@ See this [guide](./examples/distributed_tensor_dirichlet/experiments_parallel_fm
 Other related publications:
 
 * R. Watschinger, G. Of, *An integration by parts formula for the bilinear form of the hypersingular boundary integral operator for the transient heat equation in three spatial dimensions*, 2021, J. Integral Equ. Appl. (accepted). [arXiv:2104.15024](https://arxiv.org/abs/2104.15024)
+
+* J. Homola, M. Merta, J. Zapletal, *Acceleration of the space-time boundary element method using GPUs*, 2023, submitted to Advances in Engeneering Software. See [this guide](./examples/gpu_onthefly/README.md) to reproduce experiments from the paper.
 
 
 ## Contact

@@ -1,14 +1,31 @@
 
-# Experiments
+# Acceleration of the space-time boundary element method using GPUs - numerical experiments
 
 In this directory, there are experiment sources and scripts for the onthefly (matrix-free) solution of the heat equation using the space-time boundary element method.
 
 
 
-## How besthea was compiled and installed
+## How to compile and install the besthea library
 
-Karolina cluster at IT4Innovations was used. The library was compiled using the following commands.
+Use the Karolina cluster at IT4Innovations.
 
+Clone the repository using
+```
+git clone git@github.com:zap150/besthea.git
+cd besthea
+```
+Checkout to the specific commit using
+```
+git checkout <COMMIT_HASH>
+```
+where `<COMMIT_HASH>` is the hexadecimal string at the end of the URL leading to this repository, located in the References section of the article.
+
+Clone the sumodules using
+```
+git submodule update --init --recursive
+```
+
+Then compile and install the library using the following commands
 ```
 mkdir build
 cd build
@@ -18,7 +35,7 @@ make
 make install
 ```
 
-Experiments are compiled together with the library.
+The experiments are compiled together with the library.
 
 
 
@@ -26,10 +43,10 @@ Experiments are compiled together with the library.
 
 The experiments were run on the GPU accelerated nodes of Karolina (2x 64-core AMD EPYC 7763, 1TB RAM, 8x NVIDIA A100 40GB).
 
-Each experiment has its own bash script, `run_<experiment>.sh`. The script should be run from the directory where besthea is installed (so it can easily find the executables). The results are written to the `gpu_onthefly_experiments_out/<experiment>/<datetime>` directory.
+Each experiment has its own bash script, `run_<experiment>.sh`. The script should be run from the installation directory (so it can easily find the executables). The results are written to the `gpu_onthefly_experiments_out/<experiment>/<datetime>` directory.
 
 The jobs were launched using the command
 ```
 qsub -q qgpu -A OPEN-00-00 -l select=1:ncpus=128:ngpus=8,walltime=48:00:00 job.sh
 ```
-where `job.sh` only changes directory to the directory where besthea is installed and invokes the `run_*.sh` script, depending to the specific experiment.
+where `job.sh` only changes to the besthea installation directory and invokes the `run_<experiment>.sh` script.
